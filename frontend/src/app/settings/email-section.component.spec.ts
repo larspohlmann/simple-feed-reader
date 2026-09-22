@@ -19,6 +19,7 @@ interface SavedSearchesStoreStub {
 function search(overrides: Partial<SavedSearchDto> = {}): SavedSearchDto {
   return {
     id: 1,
+    slug: '1-kubernetes',
     term: 'kubernetes',
     wholeWord: false,
     phrase: false,

@@ -49,22 +49,3 @@
   color: var(--text-secondary);
   white-space: nowrap;
 }
-
-/* The saved-search pill a combined-list entry matched (#769). `inline-block`,
-   not `inline-flex` like the tag pill: with no glyph inside, `text-overflow`
-   applies directly. Capped by the kicker row's `max-inline-size: 50%` (#821). */
-.saved-search-pill {
-  display: inline-block;
-  max-inline-size: 50%;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  padding: var(--space-0) var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  font-size: var(--fs-xs);
-  line-height: 1.5;
-}

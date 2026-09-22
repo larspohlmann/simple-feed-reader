@@ -12,6 +12,7 @@ import {
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { MarkedTextComponent } from '../../shared/marked-text/marked-text.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { SavedSearchPillsComponent } from '../saved-search-pills/saved-search-pills.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDuplicatesComponent } from '../magazine/entry-duplicates.component';
 import { LanguageService } from '../../core/language.service';
@@ -30,6 +31,7 @@ import { relativeTime } from '../format';
     FaviconComponent,
     MarkedTextComponent,
     SourceTagsComponent,
+    SavedSearchPillsComponent,
     EntryActionsComponent,
     forwardRef(() => EntryDuplicatesComponent),
   ],

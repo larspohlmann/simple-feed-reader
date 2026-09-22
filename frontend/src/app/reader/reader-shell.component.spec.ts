@@ -57,6 +57,9 @@ describe('ReaderShellComponent', () => {
   };
   let ctrl: HttpTestingController;
   const qp = new BehaviorSubject(convertToParamMap({}));
+  // The reader shell owns the saved-search paths too, so it reads paramMap
+  // alongside queryParamMap; a test drives a single saved search through `pp`.
+  const pp = new BehaviorSubject(convertToParamMap({}));
   // passkeyOfferAnswered defaults to true so the #624 passkey-offer suite is
   // the only place a boot sees the flag unanswered; isPasskeySupported() is
   // false by default in jsdom regardless (stubbed in only in that describe block).
@@ -135,6 +138,7 @@ describe('ReaderShellComponent', () => {
     auth.answerPasskeyOffer.mockClear();
     auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
+    pp.next(convertToParamMap({}));
     // Provided rather than left to the real service: jsdom's matchMedia answers
     // "no" to every query, so the real one is stuck on wide and a phone-only test
     // has no way to say so. The defaults below reproduce what jsdom used to give.
@@ -146,7 +150,10 @@ describe('ReaderShellComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: API_BASE_URL, useValue: 'https://api.test' },
-        { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+        {
+          provide: ActivatedRoute,
+          useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+        },
         { provide: AuthService, useValue: auth },
         { provide: LayoutService, useValue: screen },
         { provide: EntryBodyService, useValue: bodyStore },
@@ -1691,7 +1698,7 @@ describe('ReaderShellComponent', () => {
       ctrl.expectOne('https://api.test/api/subscriptions').flush(subsBody);
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: {
             view: null,
@@ -1713,7 +1720,7 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onSearch('angular');
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: { q: 'angular', entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
@@ -1728,7 +1735,7 @@ describe('ReaderShellComponent', () => {
       f.componentInstance.onSearch('');
 
       expect(nav).toHaveBeenCalledWith(
-        [],
+        ['/'],
         expect.objectContaining({
           queryParams: { q: null, entry: null, searchOrigin: null },
           queryParamsHandling: 'merge',
@@ -2500,7 +2507,10 @@ describe('ReaderShellComponent', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
-          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+          },
           { provide: AuthService, useValue: auth },
         ],
       });
@@ -2549,7 +2559,10 @@ describe('ReaderShellComponent', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
-          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+          },
           { provide: AuthService, useValue: auth },
         ],
       });
@@ -2617,7 +2630,10 @@ describe('ReaderShellComponent', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
-          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+          },
           { provide: AuthService, useValue: auth },
         ],
       });
@@ -3054,6 +3070,7 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSavedSearches([
         {
           id: 1,
+          slug: '1-a',
           term: 'a',
           wholeWord: false,
           phrase: false,
@@ -3063,6 +3080,7 @@ describe('ReaderShellComponent', () => {
         },
         {
           id: 2,
+          slug: '2-b',
           term: 'b',
           wholeWord: false,
           phrase: false,
@@ -3073,6 +3091,50 @@ describe('ReaderShellComponent', () => {
       ]);
 
       expect(f.componentInstance.titleCount()).toEqual({ value: 5, counts: 'unread' });
+    });
+  });
+
+  describe('a single saved search addressed by its path slug (#1118)', () => {
+    const savedClimate: SavedSearchWire = {
+      id: 4,
+      slug: '4-climate',
+      term: 'climate',
+      wholeWord: true,
+      phrase: false,
+      position: 0,
+      unreadEntryIds: [100, 101, 102],
+      includeInDigest: false,
+    };
+
+    function bootSingleSavedSearch() {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.load();
+      ctrl
+        .expectOne('https://api.test/api/saved-searches')
+        .flush({ savedSearches: [savedClimate] });
+      pp.next(convertToParamMap({ savedSearch: '4-climate' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+      return f;
+    }
+
+    it('selects the single saved search by the id in its slug', () => {
+      const f = bootSingleSavedSearch();
+
+      expect(f.componentInstance.selection()).toEqual(
+        expect.objectContaining({ kind: 'saved-search', id: 4, unread: false }),
+      );
+      expect(f.componentInstance.activeSavedSearchId()).toBe(4);
+    });
+
+    it('titles the list with the saved search term and counts its unread total', () => {
+      const f = bootSingleSavedSearch();
+
+      expect(f.componentInstance.title()).toBe('climate');
+      expect(f.componentInstance.titleCount()).toEqual({ value: 3, counts: 'unread' });
     });
   });
 
@@ -3247,6 +3309,7 @@ describe('ReaderShellComponent', () => {
 
     const savedClimate: SavedSearchWire = {
       id: 4,
+      slug: '4-climate',
       term: 'climate',
       wholeWord: true,
       phrase: false,
@@ -3257,6 +3320,7 @@ describe('ReaderShellComponent', () => {
     // The sidebar view the store derives from that wire row.
     const savedClimateView: SavedSearchDto = {
       id: 4,
+      slug: '4-climate',
       term: 'climate',
       wholeWord: true,
       phrase: false,
@@ -3557,7 +3621,10 @@ describe('ReaderShellComponent', () => {
           provideHttpClientTesting(),
           provideRouter([]),
           { provide: API_BASE_URL, useValue: 'https://api.test' },
-          { provide: ActivatedRoute, useValue: { queryParamMap: qp.asObservable() } },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+          },
           { provide: AuthService, useValue: auth },
           { provide: LayoutService, useValue: screen },
           {

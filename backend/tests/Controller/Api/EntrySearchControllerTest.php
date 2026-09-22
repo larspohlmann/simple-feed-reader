@@ -9,6 +9,8 @@ use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
@@ -142,6 +144,34 @@ final class EntrySearchControllerTest extends ApiTestCase
         $first = $body['entries'][0];
         self::assertIsArray($first);
         self::assertSame(['Frontend'], $first['categories']);
+    }
+
+    public function testMatchingEntryCarriesSavedSearchMembership(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('s-saved-search@example.com');
+        $this->seedSubscribedFeedWithEntries($user, 'Angular', 1);
+        $em = $this->em();
+        $entry = $em->getRepository(Entry::class)->findOneBy(['title' => 'Angular Post 1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $search = new SavedSearch($user, 'angular', false);
+        $em->persist($search);
+        $em->flush();
+        $search->setSlug($search->getId() . '-angular');
+        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
+        $em->flush();
+
+        $client->request('GET', '/api/entries/search?q=angular', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $first['savedSearches'],
+        );
     }
 
     public function testEntryInAFeedTheCallerDoesNotSubscribeToIsAbsent(): void

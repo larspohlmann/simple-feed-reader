@@ -8,9 +8,8 @@ use App\Repository\EntryListSort;
 use App\Service\Search\SavedSearchEntriesResult;
 
 /**
- * The `{entries, nextCursor, savedSearchIds}` shape the combined saved-search
- * list returns. The cursor rule belongs to EntryPage and must exist exactly
- * once; this adds only the badge map the combined list has beyond a plain list.
+ * The `{entries, nextCursor}` shape the combined saved-search list returns.
+ * The cursor rule belongs to EntryPage and must exist exactly once.
  */
 final readonly class SavedSearchPage
 {
@@ -19,14 +18,10 @@ final readonly class SavedSearchPage
     }
 
     /**
-     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null, savedSearchIds: \stdClass}
+     * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
     public static function of(SavedSearchEntriesResult $result, int $limit): array
     {
-        return [
-            ...EntryPage::of($result->rows, $limit, EntryListSort::PublishedDate),
-            // Cast, not a bare array: an empty map must encode as `{}`, not `[]`.
-            'savedSearchIds' => (object) $result->savedSearchIds,
-        ];
+        return EntryPage::of($result->rows, $limit, EntryListSort::PublishedDate);
     }
 }

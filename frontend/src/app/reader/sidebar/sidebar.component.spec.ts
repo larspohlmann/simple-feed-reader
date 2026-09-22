@@ -617,6 +617,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -626,6 +627,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -648,6 +650,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -657,6 +660,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -688,6 +692,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -711,6 +716,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -739,6 +745,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -758,6 +765,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -787,6 +795,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -809,6 +818,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: false,
             phrase: false,
@@ -835,6 +845,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -844,6 +855,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -871,6 +883,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate-change',
             term: 'climate change',
             wholeWord: false,
             phrase: true,
@@ -900,6 +913,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -909,6 +923,7 @@ describe('SidebarComponent', () => {
           },
           {
             id: 2,
+            slug: '2-space',
             term: 'space',
             wholeWord: false,
             phrase: false,
@@ -933,6 +948,7 @@ describe('SidebarComponent', () => {
         savedSearches: [
           {
             id: 1,
+            slug: '1-climate',
             term: 'climate',
             wholeWord: true,
             phrase: false,
@@ -948,17 +964,14 @@ describe('SidebarComponent', () => {
       expect(f.nativeElement.querySelector('.savedsearch-item.active')).toBeNull();
     });
 
-    // RouterLink re-resolves an href whenever its queryParams object changes
-    // identity, and savedSearchParams cannot use selectionQueryParams' cache
-    // (an unbounded `q` must not grow it). Resolving the params once per list
-    // change is what keeps a zone-based change-detection pass off that path.
-    it('keeps each row link params object stable across change detection', () => {
+    it('links a saved search row to its slug path', () => {
       const f = mount({
         savedSearches: [
           {
-            id: 1,
+            id: 42,
+            slug: '42-climate',
             term: 'climate',
-            wholeWord: true,
+            wholeWord: false,
             phrase: false,
             position: 0,
             unreadCount: 0,
@@ -969,11 +982,27 @@ describe('SidebarComponent', () => {
       f.componentInstance.toggleSavedSearches();
       f.detectChanges();
 
-      const before = f.componentInstance['savedSearchLinks']()[0].params;
-      f.detectChanges();
-      f.detectChanges();
+      const row: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-item');
+      expect(row.getAttribute('href')).toContain('/searches/saved/42-climate');
+    });
 
-      expect(f.componentInstance['savedSearchLinks']()[0].params).toBe(before);
+    it('links the saved-searches header to the combined path', () => {
+      const f = mount({
+        savedSearches: [
+          {
+            id: 1,
+            slug: '1-climate',
+            term: 'climate',
+            wholeWord: false,
+            phrase: false,
+            position: 0,
+            unreadCount: 0,
+            includeInDigest: false,
+          },
+        ],
+      });
+      const head: HTMLAnchorElement = f.nativeElement.querySelector('.savedsearch-toggle');
+      expect(head.getAttribute('href')).toContain('/searches/saved/all');
     });
 
     const openSaved = (f: ReturnType<typeof mount>) => {
@@ -986,6 +1015,7 @@ describe('SidebarComponent', () => {
       );
     const saved = (id: number, term: string, unreadCount: number): SavedSearchDto => ({
       id,
+      slug: `${id}-saved`,
       term,
       wholeWord: false,
       phrase: false,
@@ -1145,6 +1175,7 @@ describe('SidebarComponent', () => {
   describe('per-search digest toggle', () => {
     const climate: SavedSearchDto = {
       id: 1,
+      slug: '1-climate',
       term: 'climate',
       wholeWord: false,
       phrase: false,
@@ -1154,6 +1185,7 @@ describe('SidebarComponent', () => {
     };
     const space: SavedSearchDto = {
       id: 2,
+      slug: '2-space',
       term: 'space',
       wholeWord: false,
       phrase: false,
@@ -1211,11 +1243,8 @@ describe('SidebarComponent', () => {
       button.dispatchEvent(clickEvent);
       f.detectChanges();
 
-      // The row comes off `savedSearchLinks()`, which spreads in a resolved
-      // `params` object alongside the DTO fields — assert on identity of the
-      // underlying search, not a strict shape match against the raw input.
       expect(emitted).toHaveLength(1);
-      expect(emitted[0]).toMatchObject(climate);
+      expect(emitted[0]).toEqual(climate);
       expect(stopSpy).toHaveBeenCalled();
       expect(preventSpy).toHaveBeenCalled();
     });

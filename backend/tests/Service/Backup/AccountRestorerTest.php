@@ -21,6 +21,7 @@ use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Search\SavedSearchSlug;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;
@@ -409,6 +410,35 @@ final class AccountRestorerTest extends DbTestCase
         );
 
         self::assertSame($before, $this->subscriptionShapes($userId));
+    }
+
+    /**
+     * `slug` is deliberately NOT_BACKED_UP (restore reassigns ids, so a
+     * carried-over slug would be stale) — but that makes it the restore
+     * path's own job to set it. A restored search with a null slug breaks
+     * every saved-search sidebar link and reader route, silently, so this
+     * proves the regeneration directly rather than trusting the schema
+     * declaration to imply it (#1118).
+     */
+    public function testRestoreRegeneratesTheSavedSearchSlug(): void
+    {
+        $user = $this->seededUser('slug-restore@example.com');
+        $userId = (int) $user->getId();
+        $gzip = $this->backupOf($user);
+
+        $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+
+        $this->em->clear();
+        $restored = $this->em->getRepository(SavedSearch::class)
+            ->findOneBy(['user' => $userId, 'term' => 'rust lang']);
+        self::assertInstanceOf(SavedSearch::class, $restored);
+
+        $slugger = self::getContainer()->get(SavedSearchSlug::class);
+        self::assertInstanceOf(SavedSearchSlug::class, $slugger);
+        self::assertSame(
+            $slugger->build((int) $restored->getId(), $restored->getTerm()),
+            $restored->getSlug(),
+        );
     }
 
     /**

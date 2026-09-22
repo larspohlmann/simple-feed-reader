@@ -3,7 +3,7 @@
     <app-favicon [url]="entry().faviconUrl" [size]="faviconSize()" />
     <a
       class="source"
-      [routerLink]="[]"
+      [routerLink]="['/']"
       [queryParams]="selectionQueryParams({ subscription: entry().subscriptionId })"
       queryParamsHandling="merge"
       (click)="$event.stopPropagation()"
@@ -16,8 +16,5 @@
     <span class="when-narrow">{{ whenNarrow() }}</span>
   </span>
   <span class="dot" [class.on]="!entry().isHidden" aria-hidden="true"></span>
-  @if (entry().savedSearchTerm; as term) {
-    <span class="saved-search-pill" [attr.title]="term">{{ term }}</span>
-  }
   <ng-content />
 </p>

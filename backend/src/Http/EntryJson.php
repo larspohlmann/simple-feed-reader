@@ -25,6 +25,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>
      * }
      */
@@ -47,6 +48,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>,
      *   duplicates: list<array<string, mixed>>
      * }
      */
@@ -66,6 +68,7 @@ final class EntryJson
      *   publishedAt: string|null,
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
+     *   savedSearches: list<array{id: int, slug: string, term: string}>,
      * }
      */
     private static function commonFields(EntryListRow $row): array
@@ -94,6 +97,7 @@ final class EntryJson
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,
             'isViewed' => $row->isViewed,
+            'savedSearches' => $row->savedSearches,
         ];
     }
 }

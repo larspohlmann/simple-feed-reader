@@ -24,6 +24,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { SavedSearchPillsComponent } from '../saved-search-pills/saved-search-pills.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
@@ -120,6 +121,7 @@ function slugify(text: string): string {
     SpinnerComponent,
     LoadingOverlayComponent,
     SourceTagsComponent,
+    SavedSearchPillsComponent,
     ToTopButtonComponent,
     RouterLink,
     TranslocoPipe,

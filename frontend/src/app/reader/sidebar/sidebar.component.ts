@@ -32,7 +32,7 @@ import { SidebarFootComponent } from './sidebar-foot.component';
 import { DismissOnOutsideDirective } from '../../shared/dismiss-on-outside.directive';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
 import { TagNode } from '../subscriptions.store';
-import { Selection, savedSearchParams, selectionQueryParams } from '../query';
+import { Selection, selectionQueryParams } from '../query';
 import { SavedSearchDto, SubscriptionDto, TagDto, isSubscriptionDrag } from '../models';
 import { RefreshService } from '../refresh.service';
 import { RecommendationsService } from '../recommendations.service';
@@ -200,19 +200,6 @@ export class SidebarComponent {
 
   /** Whether the "Saved searches" group is expanded. In-memory only, default
    *  collapsed — mirrors the tags' expand behaviour (state resets on reload). */
-  /** The saved-search rows with their link params resolved once per list
-   *  change. `savedSearchParams` is the one `selectionQueryParams` call site
-   *  that cannot use its identity cache — an unbounded `q` must not be allowed
-   *  to grow it — so calling it from the template would build a fresh object
-   *  per row on every change-detection pass and re-run RouterLink's href for
-   *  each one. */
-  protected readonly savedSearchLinks = computed(() =>
-    this.savedSearches().map((saved) => ({
-      ...saved,
-      params: savedSearchParams(saved.term, saved.wholeWord, saved.phrase),
-    })),
-  );
-
   readonly savedSearchesExpanded = signal(false);
 
   /** The frozen display order (saved-search ids). Recomputed only when the
@@ -238,7 +225,7 @@ export class SidebarComponent {
 
   /** The saved searches in frozen order, each with live params and count. */
   protected readonly orderedSavedSearches = computed(() => {
-    const byId = new Map(this.savedSearchLinks().map((row) => [row.id, row]));
+    const byId = new Map(this.savedSearches().map((row) => [row.id, row]));
     return this.frozenSavedSearchOrder()
       .map((id) => byId.get(id))
       .filter((row): row is NonNullable<typeof row> => row !== undefined);

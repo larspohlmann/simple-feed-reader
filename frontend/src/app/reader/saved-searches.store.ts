@@ -32,6 +32,7 @@ export class SavedSearchesStore {
     const read = this.readSinceLoad();
     return this.loaded().map((wire) => ({
       id: wire.id,
+      slug: wire.slug,
       term: wire.term,
       wholeWord: wire.wholeWord,
       phrase: wire.phrase,

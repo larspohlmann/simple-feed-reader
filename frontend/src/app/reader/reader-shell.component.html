@@ -73,7 +73,7 @@
       [keptCount]="subs.keptCount()"
       [viewedCount]="subs.viewedCount()"
       [savedSearches]="savedSearchesStore.savedSearches()"
-      [activeSavedSearchId]="currentSavedSearch()?.id ?? null"
+      [activeSavedSearchId]="activeSavedSearchId()"
       [mailEnabled]="auth.user()?.mail?.enabled ?? false"
       [digestEnabled]="digest.enabled()"
       [selection]="selection()"

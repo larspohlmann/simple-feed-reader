@@ -1,8 +1,9 @@
 import { Route } from '@angular/router';
 import { hasTranslation } from '../testing/translation-keys';
 import { routes } from './app.routes';
-import { guestGuard } from './core/auth.guard';
+import { authGuard, guestGuard } from './core/auth.guard';
 import { DYNAMIC_TITLE } from './core/translated-title.strategy';
+import { readerMatcher } from './reader/reader-matcher';
 import { setupRedirectGuard } from './setup/setup.guard';
 
 describe('routes', () => {
@@ -16,10 +17,10 @@ describe('routes', () => {
       'reset-password-request',
       'reset-password',
       'auth/callback',
-      '',
     ]) {
       expect(paths).toContain(p);
     }
+    expect(routes.find((r) => r.path === '**')?.redirectTo).toBe('');
   });
 
   it('lazy-loads the settings area as child routes', () => {
@@ -57,7 +58,10 @@ describe('routes', () => {
   });
 
   it('leaves the reader to title itself after the article or list on screen', () => {
-    expect(routes.find((r) => r.path === '')?.title).toBe(DYNAMIC_TITLE);
+    const reader = routes.find((r) => r.matcher === readerMatcher);
+    expect(reader?.title).toBe(DYNAMIC_TITLE);
+    expect(reader?.canActivate).toEqual([authGuard]);
+    expect(reader?.loadComponent).toBeDefined();
   });
 });
 

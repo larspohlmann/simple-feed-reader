@@ -18,7 +18,7 @@ final class SavedSearchPageTest extends TestCase
 {
     public function testAFullPageAdvancesTheCursorPastItsLastRow(): void
     {
-        $result = new SavedSearchEntriesResult([$this->row(4)], [4 => 1]);
+        $result = new SavedSearchEntriesResult([$this->row(4)]);
 
         $page = SavedSearchPage::of($result, 1);
 
@@ -30,28 +30,19 @@ final class SavedSearchPageTest extends TestCase
 
     public function testAShortPageEndsTheList(): void
     {
-        $result = new SavedSearchEntriesResult([$this->row(4)], [4 => 1]);
+        $result = new SavedSearchEntriesResult([$this->row(4)]);
 
         self::assertNull(SavedSearchPage::of($result, 50)['nextCursor']);
     }
 
-    public function testAnEmptyBadgeMapEncodesAsAnObject(): void
+    public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
     {
-        $result = new SavedSearchEntriesResult([], []);
+        $row = $this->row(7)->withSavedSearches([['id' => 3, 'slug' => 'climate', 'term' => 'climate']]);
+        $result = new SavedSearchEntriesResult([$row]);
 
         $page = SavedSearchPage::of($result, 50);
 
-        self::assertEquals(new \stdClass(), $page['savedSearchIds']);
-    }
-
-    public function testTheBadgeMapIsCarriedThrough(): void
-    {
-        $row = $this->row(7);
-        $result = new SavedSearchEntriesResult([$row], [7 => 3]);
-
-        $page = SavedSearchPage::of($result, 50);
-
-        self::assertEquals((object) [7 => 3], $page['savedSearchIds']);
+        self::assertSame([['id' => 3, 'slug' => 'climate', 'term' => 'climate']], $page['entries'][0]['savedSearches']);
     }
 
     private function row(int $id): EntryListRow

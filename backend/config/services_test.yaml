@@ -616,3 +616,12 @@ services:
     test.cache.refresh_run:
         alias: refresh.run.cache
         public: true
+
+    # Public only so SavedSearchMembershipLoaderTest can fetch it from the test
+    # container and drive loadInto() against the real repository/entity-manager
+    # graph; production wires it privately. Same `autowire` caveat as the entries
+    # above: naming a class here replaces the definition rather than amending it,
+    # and this file has no `_defaults`.
+    App\Repository\SavedSearchMembershipLoader:
+        autowire: true
+        public: true

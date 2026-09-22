@@ -10,6 +10,7 @@ use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryListRow;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
+use App\Repository\SavedSearchMembershipLoader;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -26,6 +27,7 @@ final readonly class ForYouFeedResponder
         private RecommendationFeedPager $pager,
         private RecommendationSettingsResolver $settings,
         private EntryCategoryLoader $categoryLoader,
+        private SavedSearchMembershipLoader $savedSearchLoader,
     ) {
     }
 
@@ -39,7 +41,9 @@ final readonly class ForYouFeedResponder
             showExplanation: $this->settings->forUser($query->user)->showReasons,
         );
 
-        return RecommendationFeedJson::page($this->withCategories($page->rows), $page->nextCursor, $visibility);
+        $rows = $this->enrichedRows($page->rows, $query->userId());
+
+        return RecommendationFeedJson::page($rows, $page->nextCursor, $visibility);
     }
 
     /**
@@ -47,10 +51,13 @@ final readonly class ForYouFeedResponder
      *
      * @return list<RecommendationFeedRow>
      */
-    private function withCategories(array $rows): array
+    private function enrichedRows(array $rows, int $userId): array
     {
-        $entryRows = $this->categoryLoader->loadInto(
-            array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
+        $entryRows = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto(
+                array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
+            ),
+            $userId,
         );
 
         return array_map(

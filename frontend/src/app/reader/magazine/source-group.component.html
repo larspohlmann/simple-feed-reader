@@ -3,7 +3,7 @@
     <p class="gname">
       <app-favicon [url]="entries()[0]?.faviconUrl ?? null" [size]="14" /><a
         class="gsource"
-        [routerLink]="[]"
+        [routerLink]="['/']"
         [queryParams]="selectionQueryParams({ subscription: subscriptionId() })"
         queryParamsHandling="merge"
         >{{ source() }}</a

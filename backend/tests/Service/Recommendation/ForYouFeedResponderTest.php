@@ -10,11 +10,14 @@ use App\Entity\EntryCategory;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryCategoryLoader;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
+use App\Repository\SavedSearchMembershipLoader;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\RecommendationFeedPager;
@@ -110,6 +113,25 @@ final class ForYouFeedResponderTest extends DbTestCase
         self::assertSame(['World'], $first['categories']);
     }
 
+    public function testEntrySavedSearchesAreEnrichedOnTheForYouFeed(): void
+    {
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['title' => 'Title g1']);
+        self::assertInstanceOf(Entry::class, $entry);
+        $search = new SavedSearch($this->user, 'title', false);
+        $this->em->persist($search);
+        $this->em->flush();
+        $search->setSlug($search->getId() . '-title');
+        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-08-07T09:00:00Z')));
+        $this->em->flush();
+
+        $first = $this->firstEntry();
+
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $first['savedSearches'],
+        );
+    }
+
     /** `assertIsArray()` narrows to a plain array, not to a keyed shape, so
      *  this says what the assertion actually proves.
      *
@@ -136,6 +158,14 @@ final class ForYouFeedResponderTest extends DbTestCase
         $categoryLoader = self::getContainer()->get(EntryCategoryLoader::class);
         self::assertInstanceOf(EntryCategoryLoader::class, $categoryLoader);
 
-        return new ForYouFeedResponder(new RecommendationFeedPager($repository), $settings, $categoryLoader);
+        $savedSearchLoader = self::getContainer()->get(SavedSearchMembershipLoader::class);
+        self::assertInstanceOf(SavedSearchMembershipLoader::class, $savedSearchLoader);
+
+        return new ForYouFeedResponder(
+            new RecommendationFeedPager($repository),
+            $settings,
+            $categoryLoader,
+            $savedSearchLoader,
+        );
     }
 }

@@ -129,42 +129,43 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entry id => the first of the given searches (in the order given — the
-     * sidebar's) that it is a member of. Entries in none are absent.
+     * Entry id => every owned saved search it is a member of, newest-saved first
+     * (search id DESC), each as {id, slug, term} — the pills a card shows. One
+     * query for a page; entries in no search are absent.
      *
      * @param list<int> $entryIds
-     * @param list<int> $savedSearchIdsInSidebarOrder
      *
-     * @return array<int, int>
+     * @return array<int, list<array{id: int, slug: string, term: string}>>
      */
-    public function firstMatchingSavedSearchIds(array $entryIds, array $savedSearchIdsInSidebarOrder): array
+    public function savedSearchesByEntry(array $entryIds, int $userId): array
     {
-        if ($entryIds === [] || $savedSearchIdsInSidebarOrder === []) {
+        if ($entryIds === []) {
             return [];
         }
 
-        /** @var list<array{entryId: int, searchId: int}> $rows */
+        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
         $rows = $this->getEntityManager()->createQueryBuilder()
-            ->select('IDENTITY(sse.entry) AS entryId', 'IDENTITY(sse.savedSearch) AS searchId')
+            ->select('IDENTITY(sse.entry) AS entryId', 'ss.id AS id', 'ss.slug AS slug', 'ss.term AS term')
             ->from(SavedSearchEntry::class, 'sse')
+            ->join('sse.savedSearch', 'ss')
             ->andWhere('sse.entry IN (:entryIds)')
-            ->andWhere('sse.savedSearch IN (:searchIds)')
+            ->andWhere('ss.user = :user')
             ->setParameter('entryIds', $entryIds)
-            ->setParameter('searchIds', $savedSearchIdsInSidebarOrder)
+            ->setParameter('user', $userId)
+            ->orderBy('ss.id', 'DESC')
             ->getQuery()
             ->getScalarResult();
 
-        $rank = array_flip($savedSearchIdsInSidebarOrder);
-        $first = [];
+        $byEntry = [];
         foreach ($rows as $row) {
-            $entryId = (int) $row['entryId'];
-            $searchId = (int) $row['searchId'];
-            if (!isset($first[$entryId]) || $rank[$searchId] < $rank[$first[$entryId]]) {
-                $first[$entryId] = $searchId;
-            }
+            $byEntry[(int) $row['entryId']][] = [
+                'id' => (int) $row['id'],
+                'slug' => (string) $row['slug'],
+                'term' => (string) $row['term'],
+            ];
         }
 
-        return $first;
+        return $byEntry;
     }
 
     /**

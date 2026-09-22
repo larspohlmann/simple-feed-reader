@@ -13,6 +13,7 @@ final class SavedSearchJson
      *
      * @return array{
      *     id: int|null,
+     *     slug: string|null,
      *     term: string,
      *     wholeWord: bool,
      *     phrase: bool,
@@ -25,6 +26,7 @@ final class SavedSearchJson
     {
         return [
             'id' => $savedSearch->getId(),
+            'slug' => $savedSearch->getSlug(),
             'term' => $savedSearch->getTerm(),
             'wholeWord' => $savedSearch->isWholeWord(),
             'phrase' => $savedSearch->isPhrase(),

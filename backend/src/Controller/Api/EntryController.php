@@ -19,6 +19,7 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
+use App\Repository\SavedSearchMembershipLoader;
 use App\Service\Reader\EntryStateUpdater;
 use App\Service\Reader\MarkEntriesReadService;
 use App\Service\Reader\MarkReadService;
@@ -38,6 +39,7 @@ final readonly class EntryController
     public function __construct(
         private EntryListRepository $entryList,
         private EntryCategoryLoader $categoryLoader,
+        private SavedSearchMembershipLoader $savedSearchLoader,
         private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
@@ -91,11 +93,12 @@ final readonly class EntryController
             limit: $limit,
         );
 
-        return new JsonResponse(EntryPage::of(
+        $rows = $this->savedSearchLoader->loadInto(
             $this->categoryLoader->loadInto($this->entryList->listForUser($query)),
-            $query->limit,
-            EntryListSort::forView($view),
-        ));
+            (int) $user->getId(),
+        );
+
+        return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($view)));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]
@@ -105,7 +108,10 @@ final readonly class EntryController
     ): JsonResponse {
         $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
             ?? throw new NotFoundHttpException('No such entry.');
-        $row = $this->categoryLoader->loadInto([$row])[0];
+        $row = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto([$row]),
+            (int) $user->getId(),
+        )[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);
     }

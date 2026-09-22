@@ -105,7 +105,7 @@
       <p class="meta">
         <app-favicon [url]="e.faviconUrl" [size]="16" /><a
           class="source-link"
-          [routerLink]="[]"
+          [routerLink]="['/']"
           [queryParams]="selectionQueryParams({ subscription: e.subscriptionId })"
           queryParamsHandling="merge"
           >{{ e.source }}</a
@@ -125,6 +125,7 @@
         }
       </p>
       <app-source-tags class="tags" [tags]="tags()" />
+      <app-saved-search-pills [memberships]="entry()?.savedSearches ?? []" />
       <!-- One language for all three: a fixed glyph, muted while off and accent
            while on. Labels are static, so `aria-pressed` alone carries the state
            now that the read button no longer swaps its glyph. -->

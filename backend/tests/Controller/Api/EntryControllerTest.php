@@ -9,6 +9,8 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Entity\SavedSearch;
+use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
@@ -122,6 +124,21 @@ final class EntryControllerTest extends WebTestCase
         (new RecommendationRunFixtures($em, $cipher))->showReasonsEnabledSettings($user);
     }
 
+    private function seedSavedSearchMembership(User $user, string $term, Entry $entry): SavedSearch
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+
+        $search = new SavedSearch($user, $term, false);
+        $em->persist($search);
+        $em->flush();
+        $search->setSlug($search->getId() . '-' . $term);
+        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
+        $em->flush();
+
+        return $search;
+    }
+
     public function testAnonymousIsRejected(): void
     {
         $client = self::createClient();
@@ -150,6 +167,30 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('https://icon.example.com/f.png', $first['faviconUrl']);
         self::assertArrayHasKey('nextCursor', $body);
         self::assertNull($body['nextCursor']);
+    }
+
+    public function testEntryListCarriesSavedSearchMembership(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-list-saved-search@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $search = $this->seedSavedSearchMembership($user, 'post', $entry);
+
+        $client->request('GET', '/api/entries', server: $headers);
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entries']);
+        $first = $body['entries'][0];
+        self::assertIsArray($first);
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $first['savedSearches'],
+        );
     }
 
     public function testListEntriesCarryAnExcerptButNoContentHtml(): void
@@ -1030,6 +1071,29 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('Post 1', $body['entry']['title']);
         self::assertSame('Seeded', $body['entry']['source']);
         self::assertFalse($body['entry']['isHidden']);
+    }
+
+    public function testGetReturnsSavedSearchMembership(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-saved-search@example.com');
+        $sub = $this->seedFeedWithEntries($user, 1);
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        self::assertInstanceOf(Entry::class, $entry);
+        $search = $this->seedSavedSearchMembership($user, 'post', $entry);
+
+        $client->request('GET', "/api/entries/{$entry->getId()}", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertSame(
+            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            $body['entry']['savedSearches'],
+        );
     }
 
     public function testGetReturnsContentHtmlOnTheDetailShape(): void

@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
 import { OverlayContainer } from '@angular/cdk/overlay';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 import { EntryRowComponent } from './entry-row.component';
@@ -61,7 +62,10 @@ function pressSpace(target: HTMLElement): void {
 
 describe('EntryRowComponent', () => {
   beforeEach(() =>
-    TestBed.configureTestingModule({ imports: [EntryRowComponent, provideTranslocoTesting()] }),
+    TestBed.configureTestingModule({
+      imports: [EntryRowComponent, provideTranslocoTesting()],
+      providers: [provideRouter([])],
+    }),
   );
 
   it('renders title, source, snippet and the https thumbnail', () => {
@@ -134,15 +138,17 @@ describe('EntryRowComponent', () => {
     expect(out).toEqual({ favorite: 1, open: 0 });
   });
 
-  it('names the saved search the entry came from (#769)', () => {
-    const el = mount(entry({ savedSearchTerm: 'climate' })).nativeElement as HTMLElement;
-    const pill = el.querySelector('.saved-search-pill')!;
+  it('renders a pill for each saved search the entry belongs to (#1118)', () => {
+    const el = mount(entry({ savedSearches: [{ id: 1, slug: '1-climate', term: 'climate' }] }))
+      .nativeElement as HTMLElement;
+    const pill = el.querySelector('app-saved-search-pills a.pill')!;
     expect(pill.textContent).toContain('climate');
-    expect(pill.getAttribute('title')).toBe('climate');
+    expect(pill.getAttribute('href')).toContain('/searches/saved/1-climate');
   });
 
-  it('renders no pill outside the combined saved-search list (#769)', () => {
+  it('renders no saved-search pill when the entry matches none (#1118)', () => {
     const el = mount(entry()).nativeElement as HTMLElement;
+    expect(el.querySelector('app-saved-search-pills a.pill')).toBeNull();
     expect(el.querySelector('.saved-search-pill')).toBeNull();
   });
 

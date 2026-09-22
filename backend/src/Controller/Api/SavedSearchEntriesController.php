@@ -11,6 +11,7 @@ use App\Http\SavedSearchPage;
 use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchListQuery;
+use App\Repository\SavedSearchMembershipLoader;
 use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
@@ -18,6 +19,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -33,6 +35,7 @@ final readonly class SavedSearchEntriesController
         private SavedSearchRepository $savedSearches,
         private SavedSearchEntries $entries,
         private EntryCategoryLoader $categoryLoader,
+        private SavedSearchMembershipLoader $savedSearchLoader,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -53,11 +56,40 @@ final readonly class SavedSearchEntriesController
             limit: $limit,
         );
         $result = $this->entries->list($query);
+        $rows = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto($result->rows),
+            $userId,
+        );
 
-        return new JsonResponse(SavedSearchPage::of(
-            $result->withRows($this->categoryLoader->loadInto($result->rows)),
-            $query->limit,
-        ));
+        return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
+    }
+
+    #[Route('/{id}', name: 'api_entries_saved_search_one', methods: ['GET'], requirements: ['id' => '\d+'])]
+    public function one(
+        int $id,
+        #[CurrentUser] User $user,
+        #[MapQueryParameter] ?string $cursor = null,
+        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
+        #[MapQueryParameter] bool $unread = false,
+    ): JsonResponse {
+        $userId = (int) $user->getId();
+        $this->savedSearches->findOneOwnedBy($id, $userId)
+            ?? throw new NotFoundHttpException('No such saved search.');
+
+        $query = new SavedSearchListQuery(
+            userId: $userId,
+            savedSearchIds: [$id],
+            onlyUnread: $unread,
+            cursor: EntryCursor::fromRequestValue($cursor),
+            limit: $limit,
+        );
+        $result = $this->entries->list($query);
+        $rows = $this->savedSearchLoader->loadInto(
+            $this->categoryLoader->loadInto($result->rows),
+            $userId,
+        );
+
+        return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
 
     #[Route('/mark-read', name: 'api_entries_saved_searches_mark_read', methods: ['POST'])]

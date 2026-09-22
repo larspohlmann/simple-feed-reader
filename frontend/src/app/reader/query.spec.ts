@@ -16,6 +16,7 @@ import {
   selectionQueryParams,
   visibleSearchTerm,
 } from './query';
+import { selectionFromRoute } from './reader-matcher';
 
 const pm = (o: Record<string, string>) => convertToParamMap(o);
 
@@ -294,6 +295,19 @@ describe('queryFromSelection', () => {
     expect(queryFromSelection({ kind: 'search', id: null, unread: false, term: 'punk ' })).toEqual({
       view: 'all',
       q: 'punk ',
+    });
+  });
+  it('routes a single saved-search selection to its id', () => {
+    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: false })).toEqual({
+      view: 'all',
+      savedSearchId: 42,
+    });
+  });
+  it('carries unread on a single saved-search selection', () => {
+    expect(queryFromSelection({ kind: 'saved-search', id: 42, unread: true })).toEqual({
+      view: 'all',
+      savedSearchId: 42,
+      unread: true,
     });
   });
 });
@@ -577,5 +591,66 @@ describe('the combined saved-searches view', () => {
     );
 
     expect(selection.kind).toBe('search');
+  });
+});
+
+describe('selectionFromRoute', () => {
+  const noQuery = convertToParamMap({});
+
+  it('maps the "all" path segment to the combined saved-searches selection', () => {
+    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: 'all' }), noQuery);
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
+  });
+
+  it('maps a slug to a single saved-search selection by its leading id', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      noQuery,
+    );
+    expect(selection).toEqual({ kind: 'saved-search', id: 42, unread: false });
+  });
+
+  it('falls back to the combined view for a slug with no leading id', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: 'climate' }),
+      convertToParamMap({ unread: '1' }),
+    );
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: true });
+  });
+
+  it('falls back to the combined view for a slug whose leading digits are not anchored (#1118)', () => {
+    // "42x" is not a valid leading id: entryIdFromParam's anchored regex
+    // requires the digits to end the slug or be followed by a hyphen.
+    const { selection } = selectionFromRoute(convertToParamMap({ savedSearch: '42x' }), noQuery);
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
+  });
+
+  it('carries unread=1 from the query params onto a path selection', () => {
+    const { selection } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      convertToParamMap({ unread: '1' }),
+    );
+    expect(selection.unread).toBe(true);
+  });
+
+  it('falls back to query-param selection when no saved-search segment is present', () => {
+    const { selection } = selectionFromRoute(noQuery, convertToParamMap({ tag: '7' }));
+    expect(selection).toEqual({ kind: 'tag', id: 7, unread: false });
+  });
+
+  it('carries the entry overlay onto a single saved-search path', () => {
+    const { entryId } = selectionFromRoute(
+      convertToParamMap({ savedSearch: '42-climate' }),
+      convertToParamMap({ entry: '99' }),
+    );
+    expect(entryId).toBe(99);
+  });
+
+  it('carries the entry overlay onto the combined saved-search path', () => {
+    const { entryId } = selectionFromRoute(
+      convertToParamMap({ savedSearch: 'all' }),
+      convertToParamMap({ entry: '99' }),
+    );
+    expect(entryId).toBe(99);
   });
 });
