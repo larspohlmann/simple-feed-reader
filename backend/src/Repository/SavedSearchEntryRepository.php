@@ -168,6 +168,46 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
+     * Entry id => every owned saved search it is a member of, in sidebar order
+     * (search id DESC), each as {id, slug, term} — the pills a card shows. One
+     * query for a page; entries in no search are absent.
+     *
+     * @param list<int> $entryIds
+     *
+     * @return array<int, list<array{id: int, slug: string, term: string}>>
+     */
+    public function savedSearchesByEntry(array $entryIds, int $userId): array
+    {
+        if ($entryIds === []) {
+            return [];
+        }
+
+        /** @var list<array{entryId: int, id: int, slug: string, term: string}> $rows */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('IDENTITY(sse.entry) AS entryId', 'ss.id AS id', 'ss.slug AS slug', 'ss.term AS term')
+            ->from(SavedSearchEntry::class, 'sse')
+            ->join('sse.savedSearch', 'ss')
+            ->andWhere('sse.entry IN (:entryIds)')
+            ->andWhere('ss.user = :user')
+            ->setParameter('entryIds', $entryIds)
+            ->setParameter('user', $userId)
+            ->orderBy('ss.id', 'DESC')
+            ->getQuery()
+            ->getScalarResult();
+
+        $byEntry = [];
+        foreach ($rows as $row) {
+            $byEntry[(int) $row['entryId']][] = [
+                'id' => (int) $row['id'],
+                'slug' => (string) $row['slug'],
+                'term' => (string) $row['term'],
+            ];
+        }
+
+        return $byEntry;
+    }
+
+    /**
      * Keeps only members of the given searches, on the primary alias and inside
      * the collapse subquery alike — the two scopes must agree, or a collapsed
      * copy punches a hole in the page (see DuplicateCollapseDql).
