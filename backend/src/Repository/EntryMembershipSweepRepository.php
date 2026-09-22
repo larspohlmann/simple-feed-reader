@@ -22,10 +22,8 @@ final class EntryMembershipSweepRepository extends ServiceEntityRepository
     }
 
     /**
-     * The highest entry id created no later than $createdNoLaterThan, so
-     * entries an engine may not have indexed yet wait for the next run.
-     * Read backwards along the primary key rather than as MAX(): no index
-     * leads on created_at, and the settled rows are all but the newest few.
+     * The highest entry id created no later than $createdNoLaterThan. Read backwards
+     * along the primary key, not as MAX(): no index leads on created_at.
      */
     public function settledCeilingId(\DateTimeImmutable $createdNoLaterThan): int
     {

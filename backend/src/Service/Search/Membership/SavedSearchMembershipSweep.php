@@ -6,7 +6,6 @@ namespace App\Service\Search\Membership;
 
 use App\Entity\SavedSearch;
 use App\Repository\EntryMembershipSweepRepository;
-use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\SavedSearchTerms;
@@ -29,7 +28,7 @@ final readonly class SavedSearchMembershipSweep
     public function __construct(
         private SavedSearchRepository $searches,
         private EntryMembershipSweepRepository $entries,
-        private SavedSearchEntryMembershipRepository $memberships,
+        private SavedSearchMembershipWriter $memberships,
         private SavedSearchMatcher $matcher,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
@@ -41,15 +40,15 @@ final readonly class SavedSearchMembershipSweep
     {
         $ceiling = $this->ceiling();
 
-        return $this->walkGroups($this->searches->findBelowMark($ceiling), $ceiling, $budget);
+        return $this->walkGroups(self::groupedByMark($this->searches->findBelowMark($ceiling)), $ceiling, $budget);
     }
 
     public function sweepOne(SavedSearch $search, SweepBudget $budget): SavedSearchMembershipSweepReport
     {
         $ceiling = $this->ceiling();
-        $due = $search->matchedUpToEntryId() < $ceiling ? [$search] : [];
+        $mark = $search->matchedUpToEntryId();
 
-        return $this->walkGroups($due, $ceiling, $budget);
+        return $this->walkGroups($mark < $ceiling ? [$mark => [$search]] : [], $ceiling, $budget);
     }
 
     private function ceiling(): int
@@ -61,14 +60,39 @@ final readonly class SavedSearchMembershipSweep
 
     /**
      * @param list<SavedSearch> $due
+     *
+     * @return array<int, non-empty-list<SavedSearch>> mark => the searches at it, ascending
      */
-    private function walkGroups(array $due, int $ceiling, SweepBudget $budget): SavedSearchMembershipSweepReport
+    private static function groupedByMark(array $due): array
     {
+        $groups = [];
+        foreach ($due as $search) {
+            $groups[$search->matchedUpToEntryId()][] = $search;
+        }
+        ksort($groups);
+
+        return $groups;
+    }
+
+    /**
+     * Lowest mark first. A group walks only up to the next group's mark, then
+     * joins it, so every chunk is matched once and a backfill never starves.
+     *
+     * @param array<int, non-empty-list<SavedSearch>> $groupsByMark
+     */
+    private function walkGroups(
+        array $groupsByMark,
+        int $ceiling,
+        SweepBudget $budget,
+    ): SavedSearchMembershipSweepReport {
         $tally = new SweepTally();
         $deadline = $budget->deadlineFrom($this->clock->now());
-        foreach (self::groupedByMark($due) as $group) {
-            $tally->searchesSwept += \count($group);
-            if (!$this->walkGroup($group, $ceiling, $deadline, $tally)) {
+        $marks = array_keys($groupsByMark);
+        $walking = [];
+        foreach ($marks as $index => $mark) {
+            $walking = [...$walking, ...$groupsByMark[$mark]];
+            $tally->searchesSwept += \count($groupsByMark[$mark]);
+            if (!$this->walkGroup($walking, $mark, $marks[$index + 1] ?? $ceiling, $deadline, $tally)) {
                 return $tally->stoppedShort();
             }
         }
@@ -77,40 +101,25 @@ final readonly class SavedSearchMembershipSweep
     }
 
     /**
-     * Searches at the same mark walk together, so once caught up a run is one
-     * matcher call per chunk for all of them.
-     *
-     * @param list<SavedSearch> $due already ordered by mark, then id
-     *
-     * @return list<non-empty-list<SavedSearch>>
-     */
-    private static function groupedByMark(array $due): array
-    {
-        $groups = [];
-        foreach ($due as $search) {
-            $groups[$search->matchedUpToEntryId()][] = $search;
-        }
-
-        return array_values($groups);
-    }
-
-    /**
-     * Walks one mark group to the ceiling; false when the budget or the
-     * engine stopped it short.
+     * Walks one group from $mark to $stopAt; false when the budget or a
+     * failure stopped it short.
      *
      * @param non-empty-list<SavedSearch> $group
      */
-    private function walkGroup(array $group, int $ceiling, \DateTimeImmutable $deadline, SweepTally $tally): bool
-    {
-        $mark = $group[0]->matchedUpToEntryId();
-        while ($mark < $ceiling) {
+    private function walkGroup(
+        array $group,
+        int $mark,
+        int $stopAt,
+        \DateTimeImmutable $deadline,
+        SweepTally $tally,
+    ): bool {
+        while ($mark < $stopAt) {
             if ($this->clock->now() >= $deadline) {
                 return false;
             }
-            $chunk = $this->entries->idsBetween($mark, $ceiling, self::CHUNK);
+            $chunk = $this->entries->idsBetween($mark, $stopAt, self::CHUNK);
             if ($chunk === []) {
-                $this->advance($group, $ceiling);
-                $this->em->flush();
+                $this->searches->advanceMarks(self::idsOf($group), $stopAt);
 
                 return true;
             }
@@ -131,32 +140,54 @@ final readonly class SavedSearchMembershipSweep
     {
         try {
             $matches = $this->matcher->matchingIds(array_map(SavedSearchTerms::termOf(...), $group), $chunk);
+            $tally->matchesInserted += $this->store($group, $chunk, $matches);
         } catch (SearchEngineUnavailableException $e) {
             $this->logger->warning('Search engine unavailable; the membership sweep stops here and retries next run.', [
                 'exception' => $e,
             ]);
 
             return false;
-        }
+        } catch (\Throwable $e) {
+            $this->logger->error('The membership sweep failed on a chunk; it stops here and retries next run.', [
+                'exception' => $e,
+            ]);
 
-        $now = $this->clock->now();
-        $lastId = $chunk[array_key_last($chunk)];
-        // Insert and mark advance share one transaction: a run that dies here
-        // leaves neither half-inserted rows nor a skipped chunk.
-        $this->em->wrapInTransaction(function () use ($group, $matches, $now, $lastId, $tally): void {
-            $tally->matchesInserted += $this->memberships->insertMissing($matches, $now);
-            $this->advance($group, $lastId);
-        });
+            return false;
+        }
         $tally->entriesScanned += \count($chunk);
 
         return true;
     }
 
-    /** @param non-empty-list<SavedSearch> $group */
-    private function advance(array $group, int $entryId): void
+    /**
+     * @param non-empty-list<SavedSearch> $group
+     * @param non-empty-list<int>         $chunk
+     * @param array<int, list<int>>       $matches
+     *
+     * @return int the pairs added
+     */
+    private function store(array $group, array $chunk, array $matches): int
     {
-        foreach ($group as $search) {
-            $search->advanceMatchedUpTo($entryId);
-        }
+        $now = $this->clock->now();
+        $lastId = $chunk[array_key_last($chunk)];
+
+        // Insert and mark advance share one transaction: a run that dies here
+        // leaves neither half-inserted rows nor a skipped chunk.
+        return $this->em->wrapInTransaction(function () use ($group, $matches, $now, $lastId): int {
+            $inserted = $this->memberships->insertMissing($matches, $now);
+            $this->searches->advanceMarks(self::idsOf($group), $lastId);
+
+            return $inserted;
+        });
+    }
+
+    /**
+     * @param non-empty-list<SavedSearch> $group
+     *
+     * @return non-empty-list<int>
+     */
+    private static function idsOf(array $group): array
+    {
+        return array_map(static fn (SavedSearch $search): int => (int) $search->getId(), $group);
     }
 }

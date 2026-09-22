@@ -20,6 +20,14 @@ final readonly class SweepBudget
         return new self($seconds);
     }
 
+    /** The smaller of $cap and what is left until $deadline — nothing, once it has passed. */
+    public static function remainingUntil(\DateTimeImmutable $deadline, \DateTimeImmutable $now, int $cap): self
+    {
+        $remaining = $deadline->getTimestamp() - $now->getTimestamp();
+
+        return self::seconds(max(0, min($cap, $remaining)));
+    }
+
     public function deadlineFrom(\DateTimeImmutable $start): \DateTimeImmutable
     {
         return $start->modify(\sprintf('+%d seconds', $this->seconds));

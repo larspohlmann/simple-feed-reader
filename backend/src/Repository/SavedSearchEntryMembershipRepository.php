@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\SavedSearchEntry;
+use App\Service\Search\Membership\SavedSearchMembershipWriter;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -14,7 +16,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<SavedSearchEntry>
  */
-class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
+final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository implements SavedSearchMembershipWriter
 {
     /** Rows per INSERT: 3 placeholders each, kept under SQLite's historical 999. */
     private const int INSERT_ROWS = 300;
@@ -25,81 +27,54 @@ class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
     }
 
     /**
-     * Inserts the (search, entry) pairs that do not exist yet — one existence
-     * read and one INSERT for the whole map — and answers how many it added,
-     * so a re-run over the same chunk adds nothing and the sweep's per-chunk
-     * transaction is restartable.
-     *
-     * @param array<int, list<int>> $entryIdsBySavedSearchId
+     * The database itself skips pairs already stored (INSERT IGNORE / OR IGNORE,
+     * as EntryStateRepository::ensureRow), so two runs over one chunk cannot
+     * collide on the key, and the affected-row count is the pairs added.
      */
     public function insertMissing(array $entryIdsBySavedSearchId, \DateTimeImmutable $matchedAt): int
     {
-        $wanted = self::pairs($entryIdsBySavedSearchId);
-        if ($wanted === []) {
-            return 0;
+        $inserted = 0;
+        foreach (array_chunk(self::pairs($entryIdsBySavedSearchId), self::INSERT_ROWS) as $rows) {
+            $inserted += $this->insertIgnoringStored($rows, $matchedAt);
         }
 
-        $missing = array_values(array_diff_key($wanted, $this->existingPairs($wanted)));
-        foreach (array_chunk($missing, self::INSERT_ROWS) as $rows) {
-            $this->insertRows($rows, $matchedAt);
-        }
-
-        return \count($missing);
+        return $inserted;
     }
 
     /**
      * @param array<int, list<int>> $entryIdsBySavedSearchId
      *
-     * @return array<string, array{int, int}> "search:entry" => [savedSearchId, entryId]
+     * @return list<array{int, int}> [savedSearchId, entryId]
      */
     private static function pairs(array $entryIdsBySavedSearchId): array
     {
         $pairs = [];
         foreach ($entryIdsBySavedSearchId as $savedSearchId => $entryIds) {
             foreach ($entryIds as $entryId) {
-                $pairs[$savedSearchId . ':' . $entryId] = [$savedSearchId, $entryId];
+                $pairs[] = [$savedSearchId, $entryId];
             }
         }
 
         return $pairs;
     }
 
-    /**
-     * @param non-empty-array<string, array{int, int}> $wanted
-     *
-     * @return array<string, true> the "search:entry" keys already stored
-     */
-    private function existingPairs(array $wanted): array
+    /** @param non-empty-list<array{int, int}> $pairs */
+    private function insertIgnoringStored(array $pairs, \DateTimeImmutable $matchedAt): int
     {
-        /** @var list<array{searchId: int|string, entryId: int|string}> $rows */
-        $rows = $this->createQueryBuilder('sse')
-            ->select('IDENTITY(sse.savedSearch) AS searchId', 'IDENTITY(sse.entry) AS entryId')
-            ->andWhere('sse.savedSearch IN (:searchIds)')
-            ->andWhere('sse.entry IN (:entryIds)')
-            ->setParameter('searchIds', array_values(array_unique(array_column($wanted, 0))))
-            ->setParameter('entryIds', array_values(array_unique(array_column($wanted, 1))))
-            ->getQuery()
-            ->getScalarResult();
+        $connection = $this->getEntityManager()->getConnection();
+        $conflictClause = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? 'IGNORE' : 'OR IGNORE';
 
-        $existing = [];
-        foreach ($rows as $row) {
-            $existing[(int) $row['searchId'] . ':' . (int) $row['entryId']] = true;
-        }
-
-        return $existing;
-    }
-
-    /** @param list<array{int, int}> $pairs */
-    private function insertRows(array $pairs, \DateTimeImmutable $matchedAt): void
-    {
         $parameters = [];
         foreach ($pairs as [$savedSearchId, $entryId]) {
             array_push($parameters, $savedSearchId, $entryId, $matchedAt->format('Y-m-d H:i:s'));
         }
 
-        $this->getEntityManager()->getConnection()->executeStatement(
-            'INSERT INTO saved_search_entry (saved_search_id, entry_id, matched_at) VALUES '
-            . implode(', ', array_fill(0, \count($pairs), '(?, ?, ?)')),
+        return (int) $connection->executeStatement(
+            \sprintf(
+                'INSERT %s INTO saved_search_entry (saved_search_id, entry_id, matched_at) VALUES %s',
+                $conflictClause,
+                implode(', ', array_fill(0, \count($pairs), '(?, ?, ?)')),
+            ),
             $parameters,
         );
     }

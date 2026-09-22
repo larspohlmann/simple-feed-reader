@@ -3410,3 +3410,29 @@ restartability.
   dead `SavedSearchTerms::forUser()` and its repository dependency are gone.
 - Tests: `MembershipSweepFactory` builds the sweep for the three tests that
   assembled it by hand.
+
+## Recorded at review (`/code-review` after the cleanup)
+
+- `insertMissing()` is `INSERT IGNORE` / `INSERT OR IGNORE` (the
+  `EntryStateRepository::ensureRow()` shape): two runs over one chunk — the
+  create-time `sweepOne` racing the worker or the cron tick — cannot collide
+  on the key. The affected-row count is the pairs added.
+- Marks advance through `SavedSearchRepository::advanceMarks()`, a DQL
+  `UPDATE … WHERE mark < :entryId`, so a slower overlapping run never moves a
+  mark backwards; `findBelowMark()` reads with `HINT_REFRESH` for the same
+  reason. The entities are not mutated by the sweep.
+- `applyChunk()` catches `\Throwable` around the chunk transaction, logs an
+  error and reports `caughtUp: false`, so the tick's "no half throws"
+  invariant holds and log shipping always runs.
+- `app:search:reindex` resets every mark when it finishes, and the new
+  `app:saved-search:rematch` resets them on demand — the rebuild path the
+  spec promised.
+- `MaintenanceTick` derives the membership budget from what is left of a 25 s
+  tick window (`SweepBudget::remainingUntil()`), so the new half cannot push a
+  Strato tick past its request window.
+- A group walks only to the next group's mark, then joins it: every chunk is
+  matched once even during a backfill.
+- `SavedSearchMembershipWriter` is the sweep's write interface; the repository
+  is `final` again and the atomicity test wraps the real writer instead of
+  subclassing it. `SEARCHES_PER_STATEMENT` is 20, which is what the 999 bound
+  actually allows with 500 candidates.

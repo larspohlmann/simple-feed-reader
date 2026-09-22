@@ -12,6 +12,7 @@ use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Repository\SavedSearchRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StoredMark;
 
 final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
 {
@@ -75,6 +76,31 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
             [$fresh->getId(), $behind->getId()],
             array_map(static fn (SavedSearch $s): ?int => $s->getId(), $due),
         );
+    }
+
+    public function testAdvanceMarksMovesForwardOnlyAndOnlyTheGivenSearches(): void
+    {
+        $moved = $this->search('climate');
+        $untouched = $this->search('rocket');
+        $this->em->flush();
+
+        $this->searches()->advanceMarks([(int) $moved->getId()], 500);
+        $this->searches()->advanceMarks([(int) $moved->getId()], 120);
+
+        self::assertSame(500, $this->markOf($moved));
+        self::assertSame(0, $this->markOf($untouched));
+    }
+
+    public function testResetAllMarksStartsEverySearchOverAndCountsThem(): void
+    {
+        $one = $this->search('climate');
+        $two = $this->search('rocket');
+        $this->em->flush();
+        $this->searches()->advanceMarks([(int) $one->getId(), (int) $two->getId()], 500);
+
+        self::assertSame(2, $this->searches()->resetAllMarks());
+        self::assertSame(0, $this->markOf($one));
+        self::assertSame(0, $this->markOf($two));
     }
 
     public function testInsertMissingAddsOnlyTheAbsentPairsAndReportsHowMany(): void
@@ -149,6 +175,11 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $this->em->persist($search);
 
         return $search;
+    }
+
+    private function markOf(SavedSearch $search): int
+    {
+        return StoredMark::of($this->em, $search);
     }
 
     private function sweepEntries(): EntryMembershipSweepRepository

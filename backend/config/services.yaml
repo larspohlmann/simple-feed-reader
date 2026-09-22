@@ -148,6 +148,7 @@ services:
     App\Service\Search\Index\SearchIndexReader: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Search\Index\SearchIndexWriter: '@App\Service\Search\Index\MeilisearchIndex'
     App\Service\Search\Membership\SavedSearchMatcher: '@App\Service\Search\Membership\EngineOrDatabaseSavedSearchMatcher'
+    App\Service\Search\Membership\SavedSearchMembershipWriter: '@App\Repository\SavedSearchEntryMembershipRepository'
     App\Service\Version\ReleaseVersionReader: '@App\Service\Version\FileReleaseVersionReader'
     App\Service\Version\LatestReleaseReader: '@App\Service\Version\GitHubLatestReleaseReader'
     App\Service\Logging\TraceContext: '@App\Service\Logging\OtelTraceContext'

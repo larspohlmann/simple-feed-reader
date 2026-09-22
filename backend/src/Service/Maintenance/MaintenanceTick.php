@@ -15,6 +15,7 @@ use App\Service\Refresh\RefreshRunner;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
 use App\Service\Search\Membership\SweepBudget;
+use Psr\Clock\ClockInterface;
 
 /**
  * One maintenance tick (#346): refresh all due feeds, then start due
@@ -50,7 +51,13 @@ final readonly class MaintenanceTick
 {
     public const int REFRESH_BUDGET_SECONDS = 20;
 
-    /** Inside the 20 s tick, after the refresh: enough for ~50 chunks on Strato. */
+    /**
+     * The request window a worker-less install's cron tick must fit. The halves
+     * before the membership sweep carry fixed budgets, so it takes what is left.
+     */
+    private const int TICK_WINDOW_SECONDS = 25;
+
+    /** The membership sweep's own cap inside that window: enough for ~50 chunks on Strato. */
     private const int MEMBERSHIP_BUDGET_SECONDS = 10;
 
     private const string ABORTED_REASON = 'refresh aborted: the shared EntityManager is unusable this tick';
@@ -62,11 +69,13 @@ final readonly class MaintenanceTick
         private ImageVerificationSweep $imageVerificationSweep,
         private SavedSearchMembershipSweep $membershipSweep,
         private LokiSpoolShipper $logSpoolShipper,
+        private ClockInterface $clock,
     ) {
     }
 
     public function run(): MaintenanceTickReport
     {
+        $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', self::TICK_WINDOW_SECONDS));
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
         if ($refresh->isAborted()) {
             $recommendations = self::skipped(['startedRuns' => 0, 'advancedRuns' => 0, 'activeRuns' => 0]);
@@ -77,7 +86,7 @@ final readonly class MaintenanceTick
             $recommendations = $this->forYouSweep->sweepOnce()->toArray();
             $digests = $this->sendDueDigests->run()->toArray();
             $imageVerification = $this->imageVerificationSweep->verifyDue()->toArray();
-            $budget = SweepBudget::seconds(self::MEMBERSHIP_BUDGET_SECONDS);
+            $budget = SweepBudget::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
             $memberships = $this->membershipSweep->sweep($budget)->toArray();
         }
         $logShipping = $this->logSpoolShipper->ship()->toArray();

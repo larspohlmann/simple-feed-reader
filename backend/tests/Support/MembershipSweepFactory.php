@@ -6,6 +6,7 @@ namespace App\Tests\Support;
 
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
+use App\Service\Search\Membership\SavedSearchMembershipWriter;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Membership\SavedSearchMatcher;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
@@ -28,7 +29,7 @@ final class MembershipSweepFactory
         SavedSearchMatcher $matcher,
         ClockInterface $clock,
         ?LoggerInterface $logger = null,
-        ?SavedSearchEntryMembershipRepository $memberships = null,
+        ?SavedSearchMembershipWriter $memberships = null,
     ): SavedSearchMembershipSweep {
         return new SavedSearchMembershipSweep(
             self::service($container, SavedSearchRepository::class),

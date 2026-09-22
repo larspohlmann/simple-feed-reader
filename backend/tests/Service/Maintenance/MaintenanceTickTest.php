@@ -239,6 +239,7 @@ final class MaintenanceTickTest extends DbTestCase
             $imageVerificationSweep,
             $membershipSweep,
             $logSpoolShipper,
+            $clock,
         );
 
         $report = $tick->run()->toArray();

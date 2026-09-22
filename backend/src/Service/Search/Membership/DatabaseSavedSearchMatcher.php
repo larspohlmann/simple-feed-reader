@@ -18,10 +18,11 @@ use Doctrine\ORM\QueryBuilder;
 final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
 {
     /**
-     * Each search binds up to four parameters per term twice (the WHERE and
-     * its CASE), so this keeps one statement under SQLite's historical 999.
+     * A search binds up to 24 parameters (six terms, two each, in the WHERE and
+     * its CASE); with the 500 candidate ids, 20 keep one statement under
+     * SQLite's historical 999.
      */
-    private const int SEARCHES_PER_STATEMENT = 25;
+    private const int SEARCHES_PER_STATEMENT = 20;
 
     public function __construct(
         private EntityManagerInterface $em,

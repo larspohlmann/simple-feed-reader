@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\SavedSearch;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
@@ -97,8 +98,8 @@ class SavedSearchRepository extends ServiceEntityRepository
 
     /**
      * Every search that has not yet checked every entry up to $ceiling, the
-     * furthest-behind first so a new search's backfill is served before
-     * steady-state work (#1116).
+     * furthest-behind first (#1116). Refreshed from the database: advanceMarks()
+     * writes marks with DQL, which an already-loaded entity would not reflect.
      *
      * @return list<SavedSearch>
      */
@@ -111,8 +112,39 @@ class SavedSearchRepository extends ServiceEntityRepository
             ->orderBy('s.matchedUpToEntryId', 'ASC')
             ->addOrderBy('s.id', 'ASC')
             ->getQuery()
+            ->setHint(Query::HINT_REFRESH, true)
             ->getResult();
 
         return $searches;
+    }
+
+    /**
+     * Moves the given searches' marks up to $entryId — never back: a slower
+     * run that commits after a faster one must not undo its progress (#1116).
+     *
+     * @param non-empty-list<int> $savedSearchIds
+     */
+    public function advanceMarks(array $savedSearchIds, int $entryId): void
+    {
+        $this->getEntityManager()->createQuery(
+            'UPDATE ' . SavedSearch::class . ' s SET s.matchedUpToEntryId = :entryId'
+            . ' WHERE s.id IN (:ids) AND s.matchedUpToEntryId < :entryId',
+        )
+            ->setParameter('entryId', $entryId)
+            ->setParameter('ids', $savedSearchIds)
+            ->execute();
+    }
+
+    /** Every search starts over at mark 0; the sweep re-matches the whole history. Answers how many. */
+    public function resetAllMarks(): int
+    {
+        $reset = $this->getEntityManager()
+            ->createQuery('UPDATE ' . SavedSearch::class . ' s SET s.matchedUpToEntryId = 0')
+            ->execute();
+        if (!\is_int($reset)) {
+            throw new \LogicException('A DQL UPDATE answers the affected row count.');
+        }
+
+        return $reset;
     }
 }

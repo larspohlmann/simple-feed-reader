@@ -21,10 +21,8 @@ use App\Service\Search\SearchTerms;
 final readonly class IndexSearch
 {
     /**
-     * @param list<int>|null $feedIds  the feeds the caller may see, or null for
-     *                                 every feed (a membership probe). Never
-     *                                 empty: a caller with no feeds answers
-     *                                 empty itself instead of asking the engine
+     * @param list<int>|null $feedIds  the feeds the caller may see; null for every feed.
+     *                                 Never empty: a caller with no feeds answers empty itself
      * @param list<int>|null $entryIds when set, only these entries are candidates
      */
     public function __construct(
@@ -40,9 +38,8 @@ final readonly class IndexSearch
     }
 
     /**
-     * A membership probe (#1116): which of exactly these entries match, on
-     * every feed — the sweep matches globally and gates by subscription at
-     * read time. The limit is the candidate count, so no member is dropped.
+     * A membership probe (#1116): which of exactly these entries match, on every
+     * feed. The limit is the candidate count, so no member is dropped.
      *
      * @param non-empty-list<int> $entryIds
      */

@@ -19,6 +19,19 @@ final class SweepBudgetTest extends TestCase
         );
     }
 
+    public function testTheRemainingBudgetIsCappedAndNeverNegative(): void
+    {
+        $now = new \DateTimeImmutable('2026-09-22T10:00:00');
+
+        $plenty = SweepBudget::remainingUntil($now->modify('+25 seconds'), $now, 10);
+        $little = SweepBudget::remainingUntil($now->modify('+4 seconds'), $now, 10);
+        $spent = SweepBudget::remainingUntil($now->modify('-3 seconds'), $now, 10);
+
+        self::assertEquals($now->modify('+10 seconds'), $plenty->deadlineFrom($now));
+        self::assertEquals($now->modify('+4 seconds'), $little->deadlineFrom($now));
+        self::assertEquals($now, $spent->deadlineFrom($now));
+    }
+
     public function testANegativeBudgetIsRefused(): void
     {
         $this->expectException(\InvalidArgumentException::class);

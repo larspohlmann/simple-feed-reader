@@ -11,14 +11,15 @@ use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Membership\SavedSearchMatcher;
+use App\Service\Search\Membership\SavedSearchMembershipWriter;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
 use App\Tests\DbTestCase;
+use App\Tests\Support\StoredMark;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RecordingSavedSearchMatcher;
 use App\Tests\Support\TickingClock;
-use Doctrine\Persistence\ManagerRegistry;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
@@ -54,7 +55,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
             $report->toArray(),
         );
         self::assertSame([[$hit->getId(), $miss->getId()]], array_column($matcher->calls, 'candidates'));
-        self::assertSame($miss->getId(), $this->reload($search)->matchedUpToEntryId());
+        self::assertSame($miss->getId(), $this->markOf($search));
         self::assertSame([$hit->getId()], $this->memberEntryIds($search));
     }
 
@@ -68,8 +69,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
 
         self::assertSame([[$settled->getId()]], array_column($matcher->calls, 'candidates'));
-        self::assertSame($settled->getId(), $this->reload($search)->matchedUpToEntryId());
-        self::assertLessThan($young->getId(), $this->reload($search)->matchedUpToEntryId());
+        self::assertSame($settled->getId(), $this->markOf($search));
+        self::assertLessThan($young->getId(), $this->markOf($search));
     }
 
     public function testSearchesAtTheSameMarkAreAskedTogetherInOneCall(): void
@@ -85,21 +86,25 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertSame([$first->getId(), $second->getId()], $matcher->calls[0]['searchIds']);
     }
 
-    public function testTheFurthestBehindGroupIsServedFirst(): void
+    public function testAGroupWalksToTheNextMarkThenJoinsThatGroup(): void
     {
         $behind = $this->search('climate');
         $ahead = $this->search('rocket');
-        $this->entry('a');
-        $last = $this->entry('b');
-        $ahead->advanceMatchedUpTo((int) $last->getId() - 1);
+        $first = $this->entry('a');
+        $second = $this->entry('b');
+        $third = $this->entry('c');
+        $ahead->advanceMatchedUpTo((int) $second->getId());
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
 
-        self::assertSame([$behind->getId()], $matcher->calls[0]['searchIds']);
-        self::assertSame([$ahead->getId()], $matcher->calls[1]['searchIds']);
-        self::assertSame(2, $report->searchesSwept);
+        self::assertSame([
+            ['searchIds' => [$behind->getId()], 'candidates' => [$first->getId(), $second->getId()]],
+            ['searchIds' => [$behind->getId(), $ahead->getId()], 'candidates' => [$third->getId()]],
+        ], $matcher->calls);
+        self::assertSame($third->getId(), $this->markOf($behind));
+        self::assertSame($third->getId(), $this->markOf($ahead));
     }
 
     public function testASpentBudgetStopsBetweenChunksAndTheNextRunResumesAtTheMark(): void
@@ -118,13 +123,13 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
         self::assertFalse($first->caughtUp);
         self::assertSame(SavedSearchMembershipSweep::CHUNK, $first->entriesScanned);
-        self::assertSame($ids[SavedSearchMembershipSweep::CHUNK - 1], $this->reload($search)->matchedUpToEntryId());
+        self::assertSame($ids[SavedSearchMembershipSweep::CHUNK - 1], $this->markOf($search));
 
         $second = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
 
         self::assertTrue($second->caughtUp);
         self::assertSame(1, $second->entriesScanned);
-        self::assertSame(end($ids), $this->reload($search)->matchedUpToEntryId());
+        self::assertSame(end($ids), $this->markOf($search));
     }
 
     public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void
@@ -175,7 +180,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertFalse($report->caughtUp);
         self::assertSame([], $matcher->calls);
         self::assertSame(0, $report->entriesScanned);
-        self::assertSame(0, $this->reload($search)->matchedUpToEntryId());
+        self::assertSame(0, $this->markOf($search));
     }
 
     public function testAnUnavailableEngineLeavesTheMarkAloneInsertsNothingAndWarnsOnce(): void
@@ -189,45 +194,57 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
         self::assertFalse($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
-        self::assertSame(0, $this->reload($search)->matchedUpToEntryId());
+        self::assertSame(0, $this->markOf($search));
         self::assertSame([], $this->memberEntryIds($search));
         self::assertCount(1, $logger->records);
         self::assertSame('warning', $logger->records[0]['level']);
     }
 
-    public function testAMatcherFailureAfterTheInsertLeavesNoRowAndNoMovedMark(): void
+    public function testAFailureAfterTheInsertRollsBackTheRowsKeepsTheMarkAndStopsTheRun(): void
     {
         $search = $this->search('climate');
         $hit = $this->entry('a');
-        $matcher = new class ((int) $search->getId(), (int) $hit->getId()) implements SavedSearchMatcher {
-            public function __construct(private readonly int $searchId, private readonly int $hitId)
+        $matcher = new RecordingSavedSearchMatcher([(int) $search->getId() => [(int) $hit->getId()]]);
+        $realWriter = self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
+        self::assertInstanceOf(SavedSearchMembershipWriter::class, $realWriter);
+        $failingAfterInsert = new class ($realWriter) implements SavedSearchMembershipWriter {
+            public function __construct(private readonly SavedSearchMembershipWriter $inner)
             {
             }
 
-            public function matchingIds(array $searches, array $candidateEntryIds): array
-            {
-                return [$this->searchId => [$this->hitId]];
-            }
-        };
-        /** @var ManagerRegistry $registry */
-        $registry = self::getContainer()->get(ManagerRegistry::class);
-        $memberships = new class ($registry) extends SavedSearchEntryMembershipRepository {
             public function insertMissing(array $entryIdsBySavedSearchId, \DateTimeImmutable $matchedAt): int
             {
-                parent::insertMissing($entryIdsBySavedSearchId, $matchedAt);
+                $this->inner->insertMissing($entryIdsBySavedSearchId, $matchedAt);
 
                 throw new \RuntimeException('simulated failure after the insert');
             }
         };
+        $logger = new RecordingLogger();
 
-        try {
-            $this->sweep($matcher, memberships: $memberships)->sweep(SweepBudget::seconds(10));
-            self::fail('The failure must propagate.');
-        } catch (\RuntimeException) {
-        }
+        $report = $this->sweep($matcher, memberships: $failingAfterInsert, logger: $logger)
+            ->sweep(SweepBudget::seconds(10));
 
-        self::assertSame(0, $this->reload($search)->matchedUpToEntryId());
+        self::assertFalse($report->caughtUp);
+        self::assertSame(0, $report->matchesInserted);
+        self::assertSame(0, $this->markOf($search));
         self::assertSame([], $this->memberEntryIds($search));
+        self::assertCount(1, $logger->records);
+        self::assertSame('error', $logger->records[0]['level']);
+    }
+
+    public function testASecondRunOverTheSameChunkInsertsNothingAndDoesNotFail(): void
+    {
+        $search = $this->search('climate');
+        $hit = $this->entry('a');
+        $matcher = new RecordingSavedSearchMatcher([(int) $search->getId() => [(int) $hit->getId()]]);
+        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->em->getConnection()->executeStatement('UPDATE saved_search SET matched_up_to_entry_id = 0');
+
+        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+
+        self::assertTrue($report->caughtUp);
+        self::assertSame(0, $report->matchesInserted);
+        self::assertSame([$hit->getId()], $this->memberEntryIds($search));
     }
 
     public function testSweepOneWalksOnlyThatSearch(): void
@@ -241,7 +258,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
         self::assertSame(1, $report->searchesSwept);
         self::assertSame([[$only->getId()]], array_column($matcher->calls, 'searchIds'));
-        self::assertSame(0, $this->reload($other)->matchedUpToEntryId());
+        self::assertSame(0, $this->markOf($other));
     }
 
     public function testSweepOneAlreadyAtTheCeilingDoesNothing(): void
@@ -257,7 +274,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertSame(0, $report->searchesSwept);
         self::assertSame([], $matcher->calls);
         self::assertTrue($report->caughtUp);
-        self::assertSame($entry->getId(), $this->reload($search)->matchedUpToEntryId());
+        self::assertSame($entry->getId(), $this->markOf($search));
     }
 
     public function testNothingToDoIsOneQueryAndACaughtUpReport(): void
@@ -273,7 +290,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     private function sweep(
         SavedSearchMatcher $matcher,
         ?ClockInterface $clock = null,
-        ?SavedSearchEntryMembershipRepository $memberships = null,
+        ?SavedSearchMembershipWriter $memberships = null,
         ?RecordingLogger $logger = null,
     ): SavedSearchMembershipSweep {
         return MembershipSweepFactory::fromContainer(
@@ -311,13 +328,9 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         return $entry;
     }
 
-    private function reload(SavedSearch $search): SavedSearch
+    private function markOf(SavedSearch $search): int
     {
-        $this->em->clear();
-        $reloaded = $this->em->find(SavedSearch::class, $search->getId());
-        self::assertInstanceOf(SavedSearch::class, $reloaded);
-
-        return $reloaded;
+        return StoredMark::of($this->em, $search);
     }
 
     /** @return list<int> */
