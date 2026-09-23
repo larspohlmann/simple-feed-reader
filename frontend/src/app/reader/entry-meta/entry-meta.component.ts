@@ -1,6 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { SavedSearchPillsComponent } from '../saved-search-pills/saved-search-pills.component';
+import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
 
@@ -12,7 +11,7 @@ import { EntryDto, SubscriptionTagDto } from '../models';
  */
 @Component({
   selector: 'app-entry-meta',
-  imports: [SourceTagsComponent, SavedSearchPillsComponent, EntryActionsComponent],
+  imports: [EntryPillsComponent, EntryActionsComponent],
   templateUrl: './entry-meta.component.html',
   styleUrl: './entry-meta.component.scss',
 })

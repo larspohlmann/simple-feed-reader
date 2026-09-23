@@ -23,8 +23,7 @@ import {
   BACK_TO_TOP_AFTER_PX,
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
-import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { SavedSearchPillsComponent } from '../saved-search-pills/saved-search-pills.component';
+import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
@@ -120,8 +119,7 @@ function slugify(text: string): string {
     FaviconComponent,
     SpinnerComponent,
     LoadingOverlayComponent,
-    SourceTagsComponent,
-    SavedSearchPillsComponent,
+    EntryPillsComponent,
     ToTopButtonComponent,
     RouterLink,
     TranslocoPipe,

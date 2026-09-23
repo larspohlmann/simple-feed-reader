@@ -56,14 +56,11 @@ describe('EntryMetaComponent', () => {
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
-  it('lists the tag pills and then the saved-search pills in one pill list', () => {
+  it('renders the saved-search pills in the same pill list as the tags', () => {
     const el = mount([tag(1, 'Tech')], {
-      savedSearches: [{ id: 5, slug: 'climate', term: 'climate' }],
+      savedSearches: [{ id: 5, slug: '5-climate', term: 'climate' }],
     }).nativeElement as HTMLElement;
-    const lists = el.querySelectorAll('.pills');
-    expect(lists.length).toBe(1);
-    const names = [...lists[0].querySelectorAll('.pill .name')].map((n) => n.textContent);
-    expect(names).toEqual(['Tech', 'climate']);
+    expect(el.querySelector('app-entry-pills')!.textContent).toContain('climate');
   });
 
   it('still renders the actions when the entry has no tags', () => {

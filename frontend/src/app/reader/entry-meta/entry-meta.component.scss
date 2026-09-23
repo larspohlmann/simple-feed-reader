@@ -13,16 +13,7 @@
 /* The pills are the row's only elastic item; the actions never shrink. The
    min-width:0 chain into the pill list is what stops an unbreakable tag name
    from widening the card. */
-.pills {
-  display: flex;
+app-entry-pills {
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  gap: var(--space-1);
   min-width: 0;
-}
-
-/* Both pill kinds flow as one wrapping list, tags first. */
-app-source-tags,
-app-saved-search-pills {
-  display: contents;
 }
