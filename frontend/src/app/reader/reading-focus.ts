@@ -13,17 +13,23 @@ export interface FocusCurve {
   plateau: number;
   /** Opacity of a block sitting a half-viewport or more from the centre. */
   min: number;
+  /**
+   * Exponent on the fade. 1 is linear; below 1 the fade drops fast just past
+   * the plateau and levels out toward `min`.
+   */
+  falloff: number;
 }
 
 /** The entry list's curve: a fade off the centre line, down to a strong dim. */
-export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2 };
+export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2, falloff: 1 };
 
 /**
  * The article's curve. A band around the centre holds full opacity so a
  * paragraph doesn't start dimming the instant it leaves dead middle; the floor
  * is higher too — the effect should point the eye, not push the page away (#435).
+ * The steep falloff sets the neighbouring paragraphs clearly apart from it.
  */
-export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28 };
+export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28, falloff: 0.5 };
 
 /** Generic containers we descend through to reach the real reading blocks. */
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
@@ -108,7 +114,8 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
  * screen instead of dimming on its off-screen centre (#213). Fades linearly to
  * `curve.min` a half-viewport from the near edge; a short block collapses to a
  * plain distance-from-centre fade. `curve.plateau` widens the opaque middle and
- * compresses the fade into what's left of the half-viewport.
+ * compresses the fade into what's left of the half-viewport; `curve.falloff`
+ * bends it.
  */
 export function focusOpacityForSpan(
   blockTop: number,
@@ -123,5 +130,5 @@ export function focusOpacityForSpan(
   const fadeSpan = center - plateau;
   if (distanceFromCenter <= plateau || fadeSpan <= 0) return 1;
   const ratio = Math.min((distanceFromCenter - plateau) / fadeSpan, 1);
-  return +(1 - ratio * (1 - curve.min)).toFixed(3);
+  return +(1 - ratio ** curve.falloff * (1 - curve.min)).toFixed(3);
 }

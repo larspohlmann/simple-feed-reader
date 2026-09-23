@@ -148,8 +148,13 @@ describe('the article focus curve', () => {
   });
 
   it('fades over what is left of the half-viewport, not over all of it', () => {
-    expect(focusOpacityForSpan(850, 850, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.51, 3);
-    expect(focusOpacityForSpan(150, 150, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.51, 3);
+    expect(focusOpacityForSpan(850, 850, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.406, 3);
+    expect(focusOpacityForSpan(150, 150, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.406, 3);
+  });
+
+  it('sets a neighbour just past the plateau clearly apart from the centre', () => {
+    expect(focusOpacityForSpan(580, 580, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.765, 3);
+    expect(focusOpacityForSpan(420, 420, 1000, ARTICLE_FOCUS_CURVE)).toBeCloseTo(0.765, 3);
   });
 
   it('reaches its floor a half-viewport away, and never goes below it', () => {
@@ -161,16 +166,8 @@ describe('the article focus curve', () => {
     );
   });
 
-  it('is gentler than the list curve everywhere off the centre', () => {
-    for (const top of [700, 800, 900, 1000]) {
-      expect(focusOpacityForSpan(top, top, 1000, ARTICLE_FOCUS_CURVE)).toBeGreaterThan(
-        focusOpacityForSpan(top, top, 1000, LIST_FOCUS_CURVE),
-      );
-    }
-  });
-
   it('leaves everything opaque when a plateau swallows the half-viewport', () => {
-    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.5, min: 0.2 })).toBe(1);
-    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.9, min: 0.2 })).toBe(1);
+    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.5, min: 0.2, falloff: 1 })).toBe(1);
+    expect(focusOpacityForSpan(0, 0, 1000, { plateau: 0.9, min: 0.2, falloff: 1 })).toBe(1);
   });
 });
