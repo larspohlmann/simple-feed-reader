@@ -37,13 +37,13 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-function mount(tags: SubscriptionTagDto[]) {
+function mount(tags: SubscriptionTagDto[], over: Partial<EntryDto> = {}) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [provideRouter([])],
   });
   const f = TestBed.createComponent(EntryMetaComponent);
-  f.componentRef.setInput('entry', entry());
+  f.componentRef.setInput('entry', entry(over));
   f.componentRef.setInput('tags', tags);
   f.detectChanges();
   return f;
@@ -56,9 +56,19 @@ describe('EntryMetaComponent', () => {
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
+  it('lists the tag pills and then the saved-search pills in one pill list', () => {
+    const el = mount([tag(1, 'Tech')], {
+      savedSearches: [{ id: 5, slug: 'climate', term: 'climate' }],
+    }).nativeElement as HTMLElement;
+    const lists = el.querySelectorAll('.pills');
+    expect(lists.length).toBe(1);
+    const names = [...lists[0].querySelectorAll('.pill .name')].map((n) => n.textContent);
+    expect(names).toEqual(['Tech', 'climate']);
+  });
+
   it('still renders the actions when the entry has no tags', () => {
     const el = mount([]).nativeElement as HTMLElement;
-    expect(el.querySelector('app-source-tags .pills')).toBeNull();
+    expect(el.querySelector('.pill')).toBeNull();
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 

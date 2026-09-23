@@ -1,15 +1,11 @@
-@if (memberships().length) {
-  <span class="pills">
-    @for (m of memberships(); track m.id) {
-      <a
-        class="pill"
-        [routerLink]="['/searches/saved', m.slug]"
-        [attr.title]="m.term"
-        (click)="$event.stopPropagation()"
-      >
-        <app-icon name="saved_search" size="xs" />
-        <span class="name">{{ m.term }}</span>
-      </a>
-    }
-  </span>
+@for (m of memberships(); track m.id) {
+  <a
+    class="pill"
+    [routerLink]="['/searches/saved', m.slug]"
+    [attr.title]="m.term"
+    (click)="$event.stopPropagation()"
+  >
+    <app-icon name="saved_search" size="xs" />
+    <span class="name">{{ m.term }}</span>
+  </a>
 }

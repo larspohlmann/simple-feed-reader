@@ -1,9 +1,4 @@
 :host {
-  display: block;
-  min-width: 0;
-}
-
-.pills {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);

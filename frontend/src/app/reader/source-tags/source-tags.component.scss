@@ -2,11 +2,6 @@
    chain from here down to .name it widened the card and pushed the magazine
    list scroller sideways. Every link in that chain is load-bearing. */
 :host {
-  display: block;
-  min-width: 0;
-}
-
-.pills {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);

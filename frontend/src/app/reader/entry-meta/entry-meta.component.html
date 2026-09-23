@@ -1,5 +1,7 @@
-<app-source-tags [tags]="tags()" />
-<app-saved-search-pills [memberships]="entry().savedSearches ?? []" />
+<div class="pills">
+  <app-source-tags [tags]="tags()" />
+  <app-saved-search-pills [memberships]="entry().savedSearches ?? []" />
+</div>
 <app-entry-actions
   [entry]="entry()"
   (favorite)="favorite.emit($event)"
