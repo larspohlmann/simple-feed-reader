@@ -181,8 +181,11 @@ test('the time takes its narrow form exactly when the kicker line is narrow', as
     wide.length,
     'no kicker line above the threshold — the case proves nothing',
   ).toBeGreaterThan(0);
-  expect(narrow.every(({ wideShown, narrowShown }) => !wideShown && narrowShown)).toBe(true);
-  expect(wide.every(({ wideShown, narrowShown }) => wideShown && !narrowShown)).toBe(true);
+  const wrongForm = forms.filter(
+    ({ width, wideShown, narrowShown }) =>
+      narrowShown !== width < KICKER_NARROW_PX || wideShown === narrowShown,
+  );
+  expect(wrongForm, 'kicker lines showing the wrong time form for their width').toEqual([]);
 });
 
 /**
