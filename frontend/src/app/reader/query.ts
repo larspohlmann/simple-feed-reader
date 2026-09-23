@@ -133,16 +133,20 @@ export function visibleSearchTerm(term: string): string {
   return phraseWithin(term) ?? term.trimEnd();
 }
 
-/** Whether the list offers the "All posts / only unread" switch. A direct
- *  search is temporary, but a saved search is a standing list and takes the
- *  same refinement as the combined saved-search view (#710, #769, #971). */
+/** Whether the list offers the "All posts / only unread" switch. Favorites,
+ *  kept and viewed are already filters on entry state, so they do not. */
 export function hasUnreadFilter(s: Selection): boolean {
   return (
     canScopedRefresh(s) ||
     s.kind === 'for-you' ||
     s.kind === 'saved-searches' ||
-    s.kind === 'saved-search'
+    s.kind === 'saved-search' ||
+    s.kind === 'search'
   );
+}
+
+export function withUnreadPreference(selection: Selection, unreadOnly: boolean): Selection {
+  return hasUnreadFilter(selection) ? { ...selection, unread: unreadOnly } : selection;
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -292,8 +296,6 @@ export function queryFromSelection(s: Selection): EntryQuery {
         ? { view: 'all', savedSearchId: s.id ?? undefined, unread: true }
         : { view: 'all', savedSearchId: s.id ?? undefined };
     case 'search':
-      // Only a saved-search result ever carries unread (selectionFromParams
-      // forces a direct search to false), so the flag alone decides here.
       return s.unread ? { view: 'all', q: s.term, unread: true } : { view: 'all', q: s.term };
   }
 }

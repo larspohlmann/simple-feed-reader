@@ -15,6 +15,8 @@ import {
   selectionFromParams,
   selectionQueryParams,
   visibleSearchTerm,
+  withUnreadPreference,
+  type Selection,
 } from './query';
 import { selectionFromRoute } from './reader-matcher';
 
@@ -352,12 +354,37 @@ describe('hasUnreadFilter', () => {
     expect(hasUnreadFilter({ kind: 'subscription', id: 7, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'for-you', id: null, unread: true })).toBe(true);
     expect(hasUnreadFilter({ kind: 'saved-search', id: 42, unread: false })).toBe(true);
+    expect(hasUnreadFilter({ kind: 'search', id: null, unread: false, term: 'x' })).toBe(true);
   });
-  it('leaves the saved views and a search alone — each is already a filter', () => {
+  it('leaves the saved views alone — each is already a filter', () => {
     expect(hasUnreadFilter({ kind: 'favorites', id: null, unread: false })).toBe(false);
     expect(hasUnreadFilter({ kind: 'kept', id: null, unread: false })).toBe(false);
     expect(hasUnreadFilter({ kind: 'viewed', id: null, unread: false })).toBe(false);
-    expect(hasUnreadFilter({ kind: 'search', id: null, unread: false, term: 'x' })).toBe(false);
+  });
+});
+
+describe('withUnreadPreference (#1126)', () => {
+  it('refines every list that offers the switch', () => {
+    const lists: Selection[] = [
+      { kind: 'all', id: null, unread: false },
+      { kind: 'tag', id: 3, unread: false },
+      { kind: 'subscription', id: 7, unread: false },
+      { kind: 'for-you', id: null, unread: false },
+      { kind: 'saved-searches', id: null, unread: false },
+      { kind: 'saved-search', id: 42, unread: false },
+      { kind: 'search', id: null, unread: false, term: 'angular' },
+    ];
+    for (const list of lists) {
+      expect(withUnreadPreference(list, true)).toEqual({ ...list, unread: true });
+      expect(withUnreadPreference(list, false)).toEqual({ ...list, unread: false });
+    }
+  });
+
+  it('leaves the state views showing everything', () => {
+    for (const kind of ['favorites', 'kept', 'viewed'] as const) {
+      const list: Selection = { kind, id: null, unread: false };
+      expect(withUnreadPreference(list, true)).toEqual(list);
+    }
   });
 });
 
