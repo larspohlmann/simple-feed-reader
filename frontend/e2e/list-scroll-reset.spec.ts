@@ -265,6 +265,58 @@ test.describe('list scroll position on a list switch', () => {
 });
 
 /**
+ * The unread filter lives in localStorage, not the URL (#1126), so the list on
+ * screen — and the place it remembers — is the URL's list with the filter
+ * applied. Flipping the filter asks for a different list, so it starts at the top.
+ */
+test.describe('list scroll position with the unread filter on', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem('sfr.unread-only', '1'));
+  });
+
+  function unreadSwitch(page: Page) {
+    return page.locator('app-entry-list .unread-switch').first();
+  }
+
+  test('a clicked list starts at the top', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    await showsRowsOf(page, ALL_LIST);
+    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await scrollListTo(page, SCROLLED_TO);
+    await openList(page, TAG_LIST);
+
+    await openList(page, ALL_LIST);
+    await expect.poll(() => scrollTop(page)).toBe(0);
+  });
+
+  test('flipping the filter starts the list at the top', async ({ page }) => {
+    const signedIn = await signInAsAdmin(page);
+    test.skip(
+      !signedIn,
+      'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
+    );
+
+    // Give the unread list a remembered place, so flipping back to it cannot
+    // land at the top merely because it had never been scrolled.
+    await showsRowsOf(page, ALL_LIST);
+    await scrollListTo(page, SCROLLED_TO);
+    await unreadSwitch(page).click();
+    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'false');
+    await expect.poll(() => scrollTop(page)).toBe(0);
+
+    await unreadSwitch(page).click();
+    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await showsRowsOf(page, ALL_LIST);
+    await expect.poll(() => scrollTop(page)).toBe(0);
+  });
+});
+
+/**
  * A search is a list the user asks for by typing, and closing it is a return to
  * the list it was started from — not a click on a new one (#579). On a phone the
  * search bar covers the header, so this is where the loss was seen.

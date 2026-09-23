@@ -1,8 +1,16 @@
 import { Injectable, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
+import { distinctUntilChanged, skip, startWith } from 'rxjs';
 import { ListScrollMemory } from './list-scroll-memory';
-import { Selection, listSelectionFrom, sameSelection, selectionFromParams } from './query';
+import {
+  Selection,
+  listSelectionFrom,
+  sameSelection,
+  selectionFromParams,
+  withUnreadPreference,
+} from './query';
+import { UnreadFilterService } from './unread-filter.service';
 
 /** How the router says a navigation began. Taken from the event rather than
  *  spelled out, so a trigger Angular adds later cannot drift out of sync. */
@@ -57,16 +65,21 @@ export function forgetsPosition(
  * the load, #254) intact.
  *
  * `NavigationStart` is the hook: it alone carries `navigationTrigger`, and fires
- * before route parameters update, so the erase always lands first. Root-provided
- * and deliberately not shell-scoped — a shell destroyed by a trip to settings
- * would forget which list the user left, so the next click would restore instead
- * of reset; `providedIn: 'root'` costs nothing up front since only the reader's
- * lazy chunk imports it.
+ * before route parameters update, so the erase always lands first. Flipping the
+ * unread filter is no navigation but asks for a different list all the same, so
+ * it drops that list's offset too — from a root effect, which runs before the
+ * entry list's own effects see the new selection.
+ *
+ * Root-provided and deliberately not shell-scoped — a shell destroyed by a trip
+ * to settings would forget which list the user left, so the next click would
+ * restore instead of reset; `providedIn: 'root'` costs nothing up front since
+ * only the reader's lazy chunk imports it.
  */
 @Injectable({ providedIn: 'root' })
 export class ListScrollReset {
   private readonly router = inject(Router);
   private readonly memory = inject(ListScrollMemory);
+  private readonly unreadFilter = inject(UnreadFilterService);
 
   /** Where the user was last, or null before the first list is seen. */
   private previous: ReaderPlace | null = null;
@@ -75,6 +88,10 @@ export class ListScrollReset {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) this.onNavigationStart(event);
     });
+    const unreadOnly = this.unreadFilter.unreadOnly;
+    toObservable(unreadOnly)
+      .pipe(startWith(unreadOnly()), distinctUntilChanged(), skip(1), takeUntilDestroyed())
+      .subscribe(() => this.onUnreadFilterFlip());
   }
 
   private onNavigationStart(event: NavigationStart): void {
@@ -83,9 +100,20 @@ export class ListScrollReset {
     // left behind may be disturbed by passing through them.
     if (incoming === null) return;
     if (forgetsPosition(this.previous, incoming, event.navigationTrigger)) {
-      this.memory.forget(incoming.shown);
+      this.forgetShownList(incoming);
     }
     this.previous = incoming;
+  }
+
+  private onUnreadFilterFlip(): void {
+    const current = this.readerPlaceFrom(this.router.url);
+    if (current !== null) this.forgetShownList(current);
+  }
+
+  /** The URL never carries the unread filter (#1126), so the key gets it here. A
+   *  place holding it would make an article opened after a flip read as a new list. */
+  private forgetShownList(place: ReaderPlace): void {
+    this.memory.forget(withUnreadPreference(place.shown, this.unreadFilter.unreadOnly()));
   }
 
   /** Where a URL puts the user, or null when the URL is not the reader. The
