@@ -83,7 +83,7 @@ async function stubReaderData(page: Page): Promise<void> {
     },
   );
   await page.route(
-    (url) => url.pathname === '/api/entries/saved-searches',
+    (url) => /^\/api\/entries\/saved-searches(\/\d+)?$/.test(url.pathname),
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       const unread = new URL(route.request().url()).searchParams.get('unread') === '1';
@@ -95,6 +95,7 @@ async function stubReaderData(page: Page): Promise<void> {
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   await stubReaderData(page);
+  await page.addInitScript(() => localStorage.removeItem('sfr.unread-only'));
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
@@ -129,17 +130,24 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
   await expect(rows.nth(1).locator('app-saved-search-pills .pill .name')).toHaveText('space');
 });
 
-test('the unread switch narrows the combined list', async ({ page }) => {
+test('the unread switch narrows the list and stays on into a saved search', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
-  await page.goto('/searches/saved/all');
-  await expect(page.locator('.rows article')).toHaveCount(2);
-
-  await page.getByRole('switch', { name: 'only unread' }).click();
-
-  await expect(page).toHaveURL(/unread=1/);
+  await page.locator('a.savedsearch-toggle', { hasText: 'Saved searches' }).click();
   const rows = page.locator('.rows article');
+  await expect(rows).toHaveCount(2);
+
+  const unreadSwitch = page.getByRole('switch', { name: 'only unread' });
+  await unreadSwitch.click();
+
   await expect(rows).toHaveCount(1);
+  await expect(page).not.toHaveURL(/unread=/);
   await expect(rows.first().locator('app-saved-search-pills .pill .name')).toHaveText('climate');
+
+  await rows.first().locator('app-saved-search-pills .pill').click();
+
+  await expect(page).toHaveURL(/\/searches\/saved\/501-climate/);
+  await expect(unreadSwitch).toHaveAttribute('aria-checked', 'true');
+  await expect(rows).toHaveCount(1);
 });

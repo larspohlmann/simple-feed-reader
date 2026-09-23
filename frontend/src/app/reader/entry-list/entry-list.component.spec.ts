@@ -979,17 +979,15 @@ describe('EntryListComponent', () => {
       expect(sw.querySelector('.txt')?.textContent?.trim()).toBe('All posts');
     });
 
-    it('shows the switch only for the browsable lists, not search or saved views', () => {
-      // For you joins the three (#710): its unread filter is a flag on the
-      // ranked view rather than a view of its own, but the switch is the same.
-      for (const kind of ['all', 'tag', 'subscription', 'for-you'] as const) {
-        const el = mount({ selection: { kind, id: null, unread: true } })
+    it('shows the switch for every browsable list and a search, not the state views', () => {
+      for (const kind of ['all', 'tag', 'subscription', 'for-you', 'search'] as const) {
+        const el = mount({ selection: { kind, id: null, unread: true, term: 'x' } })
           .nativeElement as HTMLElement;
         expect(el.querySelector('.unread-switch')).not.toBeNull();
       }
-      for (const kind of ['search', 'favorites', 'kept'] as const) {
+      for (const kind of ['favorites', 'kept', 'viewed'] as const) {
         const el = mount({
-          selection: { kind, id: null, unread: false, term: 'x' },
+          selection: { kind, id: null, unread: false },
           canMarkAllRead: false,
         }).nativeElement as HTMLElement;
         expect(el.querySelector('.unread-switch')).toBeNull();
@@ -1004,17 +1002,16 @@ describe('EntryListComponent', () => {
       expect(el.querySelector('.unread-switch')).not.toBeNull();
     });
 
-    // The href is where the queryParams ternary shows up. Filtered to unread,
-    // the switch turns the filter OFF — it drops the param (default all), so no
-    // unread=1. Showing all, it turns the filter ON with an explicit unread=1.
-    it('drops the param to reach all when on, and sets unread=1 to reach unread when off', () => {
-      const on = mount({ selection: { kind: 'all', id: null, unread: true } })
-        .nativeElement as HTMLElement;
-      expect(on.querySelector('.unread-switch')!.getAttribute('href')).not.toContain('unread=1');
+    it('asks for the opposite state when clicked', () => {
+      for (const unread of [true, false]) {
+        const f = mount({ selection: { kind: 'all', id: null, unread } });
+        const asked: boolean[] = [];
+        f.componentInstance.unreadOnlyChange.subscribe((value) => asked.push(value));
 
-      const off = mount({ selection: { kind: 'all', id: null, unread: false } })
-        .nativeElement as HTMLElement;
-      expect(off.querySelector('.unread-switch')!.getAttribute('href')).toContain('unread=1');
+        (f.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
+
+        expect(asked).toEqual([!unread]);
+      }
     });
   });
 

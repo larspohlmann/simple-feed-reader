@@ -7,12 +7,12 @@ import { ReaderLocationService } from '../core/reader-location.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
+import { UnreadFilterService } from './unread-filter.service';
 
-// A bare list URL (`/`, `/?tag=5`) parses to unread:false now that "all" is the
-// default filter, so the constants the router-driven cases key the memory with
-// must match that.
 const ALL: Selection = { kind: 'all', id: null, unread: false };
 const TAG: Selection = { kind: 'tag', id: 5, unread: false };
+const UNREAD_ALL: Selection = { ...ALL, unread: true };
+const UNREAD_TAG: Selection = { ...TAG, unread: true };
 const SEARCH: Selection = { kind: 'search', id: null, unread: false, term: 'angular' };
 
 /** A plain list: what is shown is the list itself. */
@@ -33,10 +33,6 @@ describe('forgetsPosition', () => {
 
   it('forgets the position when a click names a different list', () => {
     expect(forgetsPosition(at(TAG), at(ALL), 'imperative')).toBe(true);
-  });
-
-  it('forgets the position when a click only changes the unread filter', () => {
-    expect(forgetsPosition(at(TAG), at({ ...TAG, unread: true }), 'imperative')).toBe(true);
   });
 
   it('keeps the position when a click names the list already open', () => {
@@ -75,18 +71,29 @@ describe('ListScrollReset', () => {
   let memory: { forget: jest.Mock };
   const serializer = new DefaultUrlSerializer();
 
+  let currentUrl = '/';
+
   const navigate = (url: string, trigger: 'imperative' | 'popstate' = 'imperative'): void => {
     events.next(new NavigationStart(1, url, trigger));
+    currentUrl = url;
   };
 
   beforeEach(() => {
+    localStorage.clear();
+    currentUrl = '/';
     events = new Subject<unknown>();
     memory = { forget: jest.fn() };
     TestBed.configureTestingModule({
       providers: [
         {
           provide: Router,
-          useValue: { events, parseUrl: (url: string) => serializer.parse(url) },
+          useValue: {
+            events,
+            parseUrl: (url: string) => serializer.parse(url),
+            get url() {
+              return currentUrl;
+            },
+          },
         },
         { provide: ListScrollMemory, useValue: memory },
       ],
@@ -140,6 +147,62 @@ describe('ListScrollReset', () => {
     expect(memory.forget).toHaveBeenCalledWith(ALL);
   });
 
+  it('forgets the unread list a click opens while the unread filter is on (#1126)', () => {
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+    navigate('/?tag=5');
+    navigate('/');
+
+    expect(memory.forget).toHaveBeenCalledWith(UNREAD_ALL);
+    expect(memory.forget).not.toHaveBeenCalledWith(ALL);
+  });
+
+  it('forgets the list a flip of the unread filter shows', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledWith(UNREAD_TAG);
+  });
+
+  it('forgets the flipped list even before it has seen a navigation, as the shell starts it late', () => {
+    currentUrl = '/?tag=5';
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledWith(UNREAD_TAG);
+  });
+
+  it('ignores a flip outside the reader', () => {
+    currentUrl = '/settings';
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).not.toHaveBeenCalled();
+  });
+
+  it('does not read the starting value of the unread filter as a flip', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    expect(memory.forget).not.toHaveBeenCalled();
+  });
+
+  it('leaves the list open when an article opens after a flip', () => {
+    navigate('/?tag=5');
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+    memory.forget.mockClear();
+
+    navigate('/?tag=5&entry=12-some-title');
+
+    expect(memory.forget).not.toHaveBeenCalled();
+  });
+
   it('stops listening once the injector is destroyed', () => {
     navigate('/?tag=5');
     TestBed.resetTestingModule();
@@ -159,6 +222,7 @@ describe('ListScrollReset, driven by the real router', () => {
 
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideRouter([
@@ -234,6 +298,33 @@ describe('ListScrollReset, driven by the real router', () => {
     router.navigateByUrl(readerLocation.savedReaderUrl());
     tick();
 
+    expect(memory.read(TAG)).toBe(300);
+  }));
+
+  it('drops the offset of the unread list the user clicks while the filter is on (#1126)', fakeAsync(() => {
+    TestBed.inject(UnreadFilterService).set(true);
+    router.navigateByUrl('/');
+    tick();
+    memory.save(UNREAD_ALL, 3000);
+    router.navigateByUrl('/?tag=5');
+    tick();
+
+    router.navigateByUrl('/');
+    tick();
+
+    expect(memory.read(UNREAD_ALL)).toBe(0);
+  }));
+
+  it('starts the list at the top when the unread filter flips', fakeAsync(() => {
+    router.navigateByUrl('/?tag=5');
+    tick();
+    memory.save(TAG, 300);
+    memory.save(UNREAD_TAG, 300);
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.read(UNREAD_TAG)).toBe(0);
     expect(memory.read(TAG)).toBe(300);
   }));
 
