@@ -192,6 +192,20 @@ lint failure. The variable is the only way through.
 Stylelint's media-feature rules do not walk `@container`, so a literal there
 lints clean but is exactly the drift the rule exists to prevent.
 
+**The list header's compact form is container-driven (#1127).** `.list-header` is
+the `list-header` inline-size container; its compact form keys to
+`bp.$container-list-header-compact`, so a narrow split column gets the same icon
+form as a phone. A rule for a list-header action goes in that `@container`, not
+in a viewport `@media`. Every `appListAction` switches form together — all
+labelled in the wide form, all icon-only in the compact form, no per-action
+short label or opt-out (the global rule lives in
+`frontend/src/styles/_list-action.scss`); the reader-view nav is not covered and
+keeps its per-action `mobile-icon-only` modifier and a viewport `@media`. Dart
+Sass does not resolve a variable inside an `@container` prelude — interpolate
+it: `@container list-header (width <= #{bp.$container-list-header-compact})`. A
+bare `bp.$…` compiles to an invalid condition that silently never matches (see
+#1132 for the kicker line, which has this defect).
+
 **The reader drawer's 720px boundary is class-driven, not media-driven.**
 `LayoutService.NARROW_QUERY` is its single declaration; the shell binds
 `.is-narrow` from that signal and `reader-shell.component.scss` keys the drawer
