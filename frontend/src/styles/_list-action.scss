@@ -37,10 +37,9 @@
   }
 }
 
-// On a phone the list header's controls lose their text, so give them the
-// sidebar chevron treatment: a full tap target around a smaller bordered
-// glyph box. Explicit modifier, since some actions keep a short label (#679).
-@media (width <= bp.$bp-sm) {
+// Icon-only actions get the sidebar chevron treatment: a full tap target around
+// a smaller bordered glyph box. Explicit modifier, since some keep a short label (#679).
+@mixin icon-only-box {
   .list-action.mobile-icon-only {
     justify-content: center;
     width: var(--tap-target);
@@ -53,6 +52,16 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
   }
+}
+
+// The list header keys to its own width; the reader view's nav has no such
+// container and keeps the viewport rule.
+@container list-header (width <= #{bp.$container-list-header-compact}) {
+  @include icon-only-box;
+}
+
+@media (width <= bp.$bp-sm) {
+  @include icon-only-box;
 }
 
 @media (prefers-reduced-motion: reduce) {

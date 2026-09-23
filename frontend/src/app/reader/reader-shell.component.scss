@@ -211,11 +211,11 @@ app-reader-header.hidden {
   display: none;
 }
 
-/* Below this breakpoint buttons drop labels and stand on the icon alone
+/* In a narrow list header buttons drop labels and stand on the icon alone
    (aria-label named), like the header's other tools. A direct search keeps the
    short Save/Remove label from #581; a saved-search result joins the standing
    lists and uses only its icon (#971). */
-@media (width <= bp.$bp-sm) {
+@container list-header (width <= #{bp.$container-list-header-compact}) {
   .for-you-run .label,
   .save-search .txt {
     display: none;
@@ -337,10 +337,9 @@ app-reader-header.hidden {
    (#617), the rest of the header's tools, not the <app-button> family. Only
    the label-visibility rule below is specific to it. */
 
-/* Below this width the label drops, as Mark all read/Refresh do in the list
-   header, so a long title keeps the row; aria-label/title still names the
-   icon. Keyed to the same `bp.$bp-sm` those use. */
-@media (width <= bp.$bp-sm) {
+/* In a narrow list header the label drops, as Mark all read/Refresh do, so a
+   long title keeps the row; aria-label/title still names the icon. */
+@container list-header (width <= #{bp.$container-list-header-compact}) {
   .list-edit .txt {
     display: none;
   }
