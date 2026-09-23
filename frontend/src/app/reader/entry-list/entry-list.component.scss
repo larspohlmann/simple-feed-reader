@@ -5,6 +5,7 @@
    app bar + list header + gap. Was 4 independent copies of this calc
    (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+$title-floor: 6rem;
 
 :host {
   display: flex;
@@ -37,6 +38,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
@@ -47,9 +49,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
      reintroduces the row jump (#87) this fix removes. It snaps instead. */
 }
 
+/* The basis is the title's floor: past it the tools wrap to a second row
+   (the ResizeObserver re-reserves the taller bar) instead of crushing the title. */
 .heading {
   display: flex;
   flex-direction: column;
+  flex: 1 1 $title-floor;
   min-width: 0; /* let the title truncate instead of shoving the tools away */
 }
 
@@ -227,6 +232,7 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   align-items: center;
   gap: var(--space-3);
   flex: none;
+  margin-left: auto;
 }
 
 /* Switch/Mark-all/Refresh share their look with the shell's Edit and
