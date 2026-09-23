@@ -3229,11 +3229,12 @@ describe('ReaderShellComponent', () => {
       const f = boot();
       const nav = jest.spyOn(TestBed.inject(Router), 'navigate');
 
-      f.componentInstance.unreadFilter.set(true);
+      (f.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
       f.detectChanges();
 
       const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
       expect(req.request.params.get('view')).toBe('unread');
+      expect(localStorage.getItem('sfr.unread-only')).toBe('1');
       req.flush({ entries: [], nextCursor: null });
       expect(nav).not.toHaveBeenCalled();
     });
