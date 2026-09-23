@@ -240,7 +240,7 @@
   @if (selectedSubscription(); as sub) {
     <button
       appListAction
-      class="list-edit mobile-icon-only"
+      class="list-edit"
       type="button"
       [attr.aria-label]="'reader.editFeed' | transloco"
       [attr.title]="'reader.editFeed' | transloco"
@@ -254,7 +254,7 @@
   } @else if (selectedTag(); as tag) {
     <button
       appListAction
-      class="list-edit mobile-icon-only"
+      class="list-edit"
       type="button"
       [attr.aria-label]="'reader.editTag' | transloco"
       [attr.title]="'reader.editTag' | transloco"
@@ -308,7 +308,6 @@
     <button
       appListAction
       class="save-search"
-      [class.mobile-icon-only]="viewingSavedSearch()"
       type="button"
       [attr.aria-label]="savedSearchActionLabel() | transloco"
       [attr.title]="savedSearchActionLabel() | transloco"
@@ -316,7 +315,6 @@
     >
       <app-icon [name]="currentSavedSearch() ? 'bookmark_remove' : 'bookmark_add'" size="sm" />
       <span class="txt">{{ savedSearchActionLabel() | transloco }}</span>
-      <span class="txt-short">{{ savedSearchActionShortLabel() | transloco }}</span>
     </button>
   }
   @if (selection().kind === 'for-you' && ai.ready()) {
@@ -357,14 +355,14 @@
              in for — the sparkle glyph and accessible name tell the two apart. -->
         <button
           appListAction
-          class="for-you-run mobile-icon-only"
+          class="for-you-run"
           type="button"
           [attr.aria-label]="'reader.forYouRunLabel' | transloco"
           [attr.title]="'reader.forYouRunLabel' | transloco"
           (click)="startRecommendations()"
         >
           <app-icon name="auto_awesome" size="sm" />
-          <span class="label">{{ 'reader.forYouRun' | transloco }}</span>
+          <span class="txt">{{ 'reader.forYouRun' | transloco }}</span>
         </button>
       }
     </div>

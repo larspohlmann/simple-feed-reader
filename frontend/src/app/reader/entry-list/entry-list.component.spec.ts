@@ -384,7 +384,7 @@ describe('EntryListComponent', () => {
       }).nativeElement as HTMLElement;
 
       const heading = el.querySelector('.list-header h2')!;
-      expect(heading.querySelector('.results-prefix + .mobile-search-title-break')).not.toBeNull();
+      expect(heading.querySelector('.results-prefix + .compact-search-title-break')).not.toBeNull();
     });
 
     it('renders a trailing + on the count pill when another page is still out there', () => {
@@ -1013,31 +1013,6 @@ describe('EntryListComponent', () => {
         expect(asked).toEqual([!unread]);
       }
     });
-  });
-
-  // The mobile short label sits beside the full one at every width — the
-  // media query below picks which shows (#581 follow-up); jsdom renders no
-  // layout, so this only proves the short span is in the DOM at all.
-  it('renders a mobile short-label span beside the full label on mark-all and refresh', () => {
-    const el = mount({ hasMore: false }).nativeElement as HTMLElement;
-    expect(el.querySelector('.mark-all .txt-short')?.textContent).toBe('Mark read');
-    expect(el.querySelector('.refresh .txt-short')?.textContent).toBe('Refresh');
-  });
-
-  it('marks saved-search result actions as icon-only on mobile', () => {
-    const el = mount({
-      selection: { kind: 'saved-search', id: 7, unread: false },
-    }).nativeElement as HTMLElement;
-
-    expect(el.querySelector('.mark-all')?.classList.contains('mobile-icon-only')).toBe(true);
-  });
-
-  it('keeps the short Mark read label for a direct search on mobile', () => {
-    const el = mount({
-      selection: { kind: 'search', id: null, unread: false, term: 'climate' },
-    }).nativeElement as HTMLElement;
-
-    expect(el.querySelector('.mark-all')?.classList.contains('mobile-icon-only')).toBe(false);
   });
 
   it('emits refresh when the scoped refresh button is clicked', () => {

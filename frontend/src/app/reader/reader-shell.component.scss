@@ -200,32 +200,9 @@ app-reader-header.hidden {
   gap: var(--space-2);
 }
 
-/* Save/unsave the search. Its look comes from `app-list-action` (#617); only
-   label-visibility below is specific. Carries its own instance rather than
-   entry-list's, since it's projected through the `headerActions` outlet. */
-
-/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
-   the desktop button, which keeps its full `.txt`; the mobile media query
-   below swaps the two. */
-.save-search .txt-short {
-  display: none;
-}
-
-/* Below this breakpoint buttons drop labels and stand on the icon alone
-   (aria-label named), like the header's other tools. A direct search keeps the
-   short Save/Remove label from #581; a saved-search result joins the standing
-   lists and uses only its icon (#971). */
-@media (width <= bp.$bp-sm) {
-  .for-you-run .label,
-  .save-search .txt {
-    display: none;
-  }
-
-  .save-search .txt-short {
-    display: inline-flex;
-  }
-
-  .save-search.mobile-icon-only .txt-short {
+/* The For You Stop button is an app-button, not a list action, so it drops its label here. */
+@container list-header (width <= #{bp.$container-list-header-compact}) {
+  .for-you-run .label {
     display: none;
   }
 }
@@ -331,17 +308,4 @@ app-reader-header.hidden {
   inset: var(--bar-h) 0 0;
   z-index: 15;
   background: rgb(0 0 0 / 40%);
-}
-
-/* The list header's leading edit action. Its look comes from `app-list-action`
-   (#617), the rest of the header's tools, not the <app-button> family. Only
-   the label-visibility rule below is specific to it. */
-
-/* Below this width the label drops, as Mark all read/Refresh do in the list
-   header, so a long title keeps the row; aria-label/title still names the
-   icon. Keyed to the same `bp.$bp-sm` those use. */
-@media (width <= bp.$bp-sm) {
-  .list-edit .txt {
-    display: none;
-  }
 }

@@ -39,7 +39,7 @@
                prominent (#581). The `{{ ' ' }}` between them is load-bearing, not
                decoration: Angular drops a whitespace-only text node between elements. -->
           <span class="results-prefix">{{ searchTitlePrefix() }}</span
-          ><br class="mobile-search-title-break" />{{ ' '
+          ><br class="compact-search-title-break" />{{ ' '
           }}<span class="results-term">{{ searchTitleTerm() }}</span>
           @if (searchCountLabel(); as count) {
             <span class="results-count count-pill">{{ count }}</span>
@@ -112,7 +112,7 @@
     @if (canRefresh()) {
       <button
         appListAction
-        class="refresh mobile-icon-only"
+        class="refresh"
         type="button"
         [class.spinning]="refreshing()"
         [disabled]="refreshing()"
@@ -122,7 +122,6 @@
       >
         <app-icon name="refresh" size="sm" />
         <span class="txt">{{ 'reader.refresh' | transloco }}</span>
-        <span class="txt-short">{{ 'reader.refresh' | transloco }}</span>
       </button>
     }
     @if (headerActions(); as actions) {
@@ -133,7 +132,7 @@
            hollow means all, matching the "filled means unread" row convention (#602). -->
       <button
         appListAction
-        class="unread-switch mobile-icon-only"
+        class="unread-switch"
         type="button"
         role="switch"
         [attr.aria-checked]="selection().unread"
@@ -157,7 +156,6 @@
       <button
         appListAction
         class="mark-all"
-        [class.mobile-icon-only]="!directSearch()"
         type="button"
         (click)="markAllRead.emit()"
         [attr.aria-label]="'reader.markAllRead' | transloco"
@@ -165,7 +163,6 @@
       >
         <app-icon name="done_all" size="sm" />
         <span class="txt">{{ 'reader.markAllRead' | transloco }}</span>
-        <span class="txt-short">{{ 'reader.markAllReadShort' | transloco }}</span>
       </button>
     }
   </div>

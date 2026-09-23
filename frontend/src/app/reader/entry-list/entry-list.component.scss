@@ -5,6 +5,7 @@
    app bar + list header + gap. Was 4 independent copies of this calc
    (.rows, .rows.magazine, empty state, .list-error) — one variable now (#321). */
 $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--bar-gap));
+$title-floor: 6rem;
 
 :host {
   display: flex;
@@ -37,18 +38,23 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border);
+  container: list-header / inline-size;
 
   /* Deliberately NOT animated: the scroller measures this bar's height for its
      reservation, and an animating box reports every intermediate value, which
      reintroduces the row jump (#87) this fix removes. It snaps instead. */
 }
 
+/* The basis is the title's floor: past it the tools wrap to a second row
+   (the ResizeObserver re-reserves the taller bar) instead of crushing the title. */
 .heading {
   display: flex;
   flex-direction: column;
+  flex: 1 1 $title-floor;
   min-width: 0; /* let the title truncate instead of shoving the tools away */
 }
 
@@ -144,12 +150,12 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   font-size: var(--fs-sm);
 }
 
-.mobile-search-title-break {
+.compact-search-title-break {
   display: none;
 }
 
-@media (width <= bp.$bp-sm) {
-  .mobile-search-title-break {
+@container list-header (width <= #{bp.$container-list-header-compact}) {
+  .compact-search-title-break {
     display: block;
   }
 }
@@ -226,22 +232,16 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   align-items: center;
   gap: var(--space-3);
   flex: none;
+  margin-left: auto;
 }
 
 /* Switch/Mark-all/Refresh share their look with the shell's Edit and
    Save-search via `app-list-action` (#617). The switch (#602) is a filled
    circle when unread-filtered; app-icon's `fill` input carries the state. */
 
-/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
-   the desktop button, which keeps its full `.txt`; the mobile media query
-   below swaps the two. */
-.txt-short {
-  display: none;
-}
-
 /* The Refresh button's in-flight spin lives in the global `_list-action.scss`:
-   it must turn the glyph, not the `app-icon` box that wears the mobile border,
-   and only a global rule reaches the projected glyph (#698). */
+   it must turn the glyph, not the `app-icon` box that wears the compact-form
+   border, and only a global rule reaches the projected glyph (#698). */
 
 /* Pull-to-refresh reveal tray: parked one --refresh-reveal above the bars,
    drawn down by inline translateY. Offset is measured from the bars, not the
@@ -287,27 +287,10 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
   border-color: var(--accent);
 }
 
-/* Compact controls: below this width the labels are dropped so a long feed or
-         tag title (worse with German strings) stays readable. The icons, backed
-         by aria-label/title tooltips, carry the meaning on one row. */
-@media (width <= bp.$bp-sm) {
-  /* The actions collapse to bordered icon buttons here, so they sit tighter
-     than the text links do on the wide header. */
+/* Bordered icon buttons sit tighter than the text links of the wide header. */
+@container list-header (width <= #{bp.$container-list-header-compact}) {
   .tools {
     gap: var(--space-1);
-  }
-
-  .unread-switch .txt,
-  .mark-all .txt,
-  .refresh .txt {
-    display: none;
-  }
-
-  /* Only a direct search keeps a label on mobile. A saved-search result is a
-     standing list, so its Mark all read action uses the same icon-only form as
-     the other lists (#971). Refresh never appears in a search list. */
-  .list-header.is-search .mark-all:not(.mobile-icon-only) .txt-short {
-    display: inline-flex;
   }
 }
 

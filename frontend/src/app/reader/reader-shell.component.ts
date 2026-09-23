@@ -1152,12 +1152,6 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
   );
 
-  /** The mobile short label beside the save-search button's icon (#581
-   *  follow-up) — same state, a shorter word for the narrow header. */
-  protected readonly savedSearchActionShortLabel = computed(() =>
-    this.currentSavedSearch() ? 'reader.removeSavedSearchShort' : 'reader.saveSearchShort',
-  );
-
   /** Save the search being looked at, or drop it when already saved -- one
    *  command, because the header offers one button whose label/icon flip on
    *  this state. Saving toasts on real HTTP success; removing confirms first (#581). */

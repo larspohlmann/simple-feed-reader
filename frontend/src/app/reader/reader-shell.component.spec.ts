@@ -3425,19 +3425,6 @@ describe('ReaderShellComponent', () => {
       return f;
     }
 
-    function bootWithSingleSavedSearchSelected(saved: SavedSearchWire) {
-      const f = boot();
-      f.componentInstance.savedSearchesStore.load();
-      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [saved] });
-      pp.next(convertToParamMap({ savedSearch: saved.slug }));
-      f.detectChanges();
-      ctrl
-        .expectOne((r) => r.url === `https://api.test/api/entries/saved-searches/${saved.id}`)
-        .flush({ entries: [], nextCursor: null });
-      f.detectChanges();
-      return f;
-    }
-
     const savedClimate: SavedSearchWire = {
       id: 4,
       slug: '4-climate',
@@ -3569,36 +3556,6 @@ describe('ReaderShellComponent', () => {
       const f = bootWithSearchSelected([savedClimate], 'climate\u00a0');
 
       expect(f.componentInstance.currentSavedSearch()).toEqual(savedClimateView);
-    });
-
-    // The mobile short label sits beside the full one at every width \u2014 the
-    // stylesheet's media query picks which shows (#581 follow-up); jsdom
-    // renders no layout, so this only proves the short span is in the DOM and
-    // flips with the same saved/unsaved state the full label already does.
-    it('renders "Save" as the mobile short label when the search is not yet saved', () => {
-      const f = bootWithSearchSelected([]);
-      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
-      expect(button.querySelector('.txt-short')?.textContent).toBe('Save');
-    });
-
-    it('renders "Remove" as the mobile short label when the search is already saved', () => {
-      const f = bootWithSearchSelected([savedClimate]);
-      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
-      expect(button.querySelector('.txt-short')?.textContent).toBe('Remove');
-    });
-
-    it('marks the single saved-search action as icon-only on mobile', () => {
-      const f = bootWithSingleSavedSearchSelected(savedClimate);
-      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
-
-      expect(button.classList.contains('mobile-icon-only')).toBe(true);
-    });
-
-    it('keeps the short action label for a direct search on mobile', () => {
-      const f = bootWithSearchSelected([savedClimate]);
-      const button = (f.nativeElement as HTMLElement).querySelector('.save-search')!;
-
-      expect(button.classList.contains('mobile-icon-only')).toBe(false);
     });
   });
 
