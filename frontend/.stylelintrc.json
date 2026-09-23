@@ -1,7 +1,9 @@
 {
   "extends": ["stylelint-config-standard-scss"],
+  "plugins": ["./stylelint/no-bare-variable-in-container-prelude.mjs"],
   "rules": {
     "color-no-hex": true,
+    "local/no-bare-variable-in-container-prelude": true,
     "scss/dollar-variable-pattern": null,
     "selector-class-pattern": null,
     "no-empty-source": null,
