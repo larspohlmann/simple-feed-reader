@@ -59,7 +59,7 @@
   display: none;
 }
 
-@container (width < bp.$container-kicker-narrow) {
+@container (width < #{bp.$container-kicker-narrow}) {
   .when-wide {
     display: none;
   }

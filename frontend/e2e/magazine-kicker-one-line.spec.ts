@@ -61,18 +61,18 @@ const ENTRIES = [
  * Matched on the pathname so `/api/entries/{id}` and `/api/entries/{id}/state`
  * still reach the real backend.
  */
-async function stubEntries(page: Page): Promise<void> {
+async function stubEntries(page: Page, entries = ENTRIES): Promise<void> {
   await page.route(
     (url) => url.pathname === '/api/entries',
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
-      await route.fulfill({ status: 200, json: { entries: ENTRIES, nextCursor: null } });
+      await route.fulfill({ status: 200, json: { entries, nextCursor: null } });
     },
   );
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await stubEntries(page);
+async function signInAsAdmin(page: Page, entries = ENTRIES): Promise<boolean> {
+  await stubEntries(page, entries);
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
@@ -137,6 +137,52 @@ test('the kicker line never wraps, at any viewport', async ({ page }) => {
 
     expect(overflowing, `kicker lines wrapped at ${viewport.width}x${viewport.height}`).toBe(0);
   }
+});
+
+/** A 300–399px-wide image fits `split` but not `wide`/`hero`, so these render as
+ *  split and thumb cards — the blocks whose text column crosses the threshold. */
+const SPLIT_IMAGE =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+const SPLIT_ENTRIES = ENTRIES.map((each) => ({
+  ...each,
+  imageUrl: SPLIT_IMAGE,
+  imageWidth: 320,
+  imageHeight: 200,
+}));
+
+/** 17rem, `$container-kicker-narrow` in `theme/_breakpoints.scss`. */
+const KICKER_NARROW_PX = 17 * 16;
+
+test('the time takes its narrow form exactly when the kicker line is narrow', async ({ page }) => {
+  const signedIn = await signInAsAdmin(page, SPLIT_ENTRIES);
+  test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
+
+  // 768 puts a split card below the threshold and a thumb card above it on one page.
+  await resizeTo(page, { width: 768, height: 1024 });
+  const lines = page.locator('app-entry-kicker-line');
+  await expect(lines.first()).toBeVisible();
+
+  const forms = await lines.evaluateAll((rows) =>
+    rows.map((row) => ({
+      width: row.getBoundingClientRect().width,
+      wideShown: getComputedStyle(row.querySelector('.when-wide')!).display !== 'none',
+      narrowShown: getComputedStyle(row.querySelector('.when-narrow')!).display !== 'none',
+    })),
+  );
+
+  const narrow = forms.filter(({ width }) => width < KICKER_NARROW_PX);
+  const wide = forms.filter(({ width }) => width >= KICKER_NARROW_PX);
+  expect(
+    narrow.length,
+    'no kicker line below the threshold — the case proves nothing',
+  ).toBeGreaterThan(0);
+  expect(
+    wide.length,
+    'no kicker line above the threshold — the case proves nothing',
+  ).toBeGreaterThan(0);
+  expect(narrow.every(({ wideShown, narrowShown }) => !wideShown && narrowShown)).toBe(true);
+  expect(wide.every(({ wideShown, narrowShown }) => wideShown && !narrowShown)).toBe(true);
 });
 
 /**

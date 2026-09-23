@@ -203,8 +203,8 @@ short label or opt-out (the global rule lives in
 keeps its per-action `mobile-icon-only` modifier and a viewport `@media`. Dart
 Sass does not resolve a variable inside an `@container` prelude — interpolate
 it: `@container list-header (width <= #{bp.$container-list-header-compact})`. A
-bare `bp.$…` compiles to an invalid condition that silently never matches (see
-#1132 for the kicker line, which has this defect).
+bare `bp.$…` compiles to an invalid condition that silently never matches
+(#1132).
 
 **The reader drawer's 720px boundary is class-driven, not media-driven.**
 `LayoutService.NARROW_QUERY` is its single declaration; the shell binds
