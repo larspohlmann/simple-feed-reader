@@ -144,7 +144,7 @@ describe('EntryCompactComponent', () => {
     f.componentRef.setInput('showSource', false);
     f.detectChanges();
     const el = f.nativeElement as HTMLElement;
-    expect(el.querySelector('app-source-tags .pill')).toBeNull();
+    expect(el.querySelector('app-entry-pills .pill')).toBeNull();
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 

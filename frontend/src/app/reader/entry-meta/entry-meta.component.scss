@@ -13,7 +13,6 @@
 /* The pills are the row's only elastic item; the actions never shrink. The
    min-width:0 chain into the pill list is what stops an unbreakable tag name
    from widening the card. */
-app-source-tags {
+app-entry-pills {
   flex: 1 1 auto;
-  min-width: 0;
 }

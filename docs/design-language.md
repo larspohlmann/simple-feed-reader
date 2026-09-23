@@ -1105,7 +1105,7 @@ behaves.
 
 ### `<app-entry-meta>`
 
-The line a magazine card ends on: `app-source-tags` on the left,
+The line a magazine card ends on: `app-entry-pills` on the left,
 `app-entry-actions` right-aligned against them. Six of the seven magazine
 blocks use it — hero, wide, split, thumb, kicker, quote.
 

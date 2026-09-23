@@ -28,8 +28,7 @@
       }
     </p>
     <div class="tagline">
-      <app-source-tags [tags]="tags()" />
-      <app-saved-search-pills [memberships]="entry().savedSearches ?? []" />
+      <app-entry-pills [tags]="tags()" [savedSearches]="entry().savedSearches ?? []" />
       <app-entry-actions
         [entry]="entry()"
         size="md"

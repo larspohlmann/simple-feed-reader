@@ -58,7 +58,7 @@ describe('EntryMetaComponent', () => {
 
   it('still renders the actions when the entry has no tags', () => {
     const el = mount([]).nativeElement as HTMLElement;
-    expect(el.querySelector('app-source-tags .pills')).toBeNull();
+    expect(el.querySelector('.pill')).toBeNull();
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
   });
 
