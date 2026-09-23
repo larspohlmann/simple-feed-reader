@@ -45,7 +45,9 @@ No page reload.
    error) to an API request whose token differs from the current token is
    discarded; the observable completes without a value.
 3. **`onIdentityChange` stays, for side effects only:** stopping loops, timers
-   and audio, closing toasts, clearing browser storage.
+   and audio, closing toasts, clearing browser storage — and clearing a mutable
+   collection (`Map`, `Set`) that holds per-account entries, since a signal
+   wrapping a mutated collection would not notify.
 4. **The sign-in return URL is bound to the account** through the JWT
    `username` claim.
 5. **A Jest guard** fails when a root service holds a plain `signal(` and is not
@@ -107,7 +109,9 @@ Leaking today:
   `error`, `loadedAt`, `matchedWords`, `query`, `failedOperation` become
   `accountSignal`s. `loadSeq` stays (it orders overlapping loads within one
   account, #158); the stale-identity drop covers the sign-out case.
-  `inFlightPatches` is cleared by an `onIdentityChange` side effect.
+  `inFlightPatches` is cleared by `onIdentityChange` (rule 3's collection case):
+  entry ids are shared across accounts, so a patch left by account A would
+  otherwise be laid over account B's copy of the same entry.
 - **`TagsStore`** — `tags`, `loading`, `error`.
 - **`SavedSearchesStore`** — `loaded`, `readSinceLoad`, `lastLoadedAt`.
   `inFlight` is released by `onIdentityChange` (the dropped response never
@@ -135,7 +139,7 @@ Already resetting, moved to the new form:
   (`CatalogStore.invalidate()` is also called after a subscribe).
 - **`EntryBodyService`** — `generation` is deleted (the interceptor drop
   replaces it). The cache is a `Map` of signals, so it stays cleared by
-  `onIdentityChange` — the one recorded exception to rule 1.
+  `onIdentityChange` (rule 3's collection case).
 - **`PasskeyService.lastUserHandle`** — `accountSignal`.
 - **`AuthService.logout()`** — loses the `preferences/magazineStyle/digest/ai`
   reset calls; keeps `tokens.clear()`, `clearSignInReturnUrl()` and the
