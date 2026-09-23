@@ -5,16 +5,15 @@ import { test, expect, Page } from '@playwright/test';
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
 
-/** Two saved searches, in the sidebar's own order — the pill on a row must name
- *  the FIRST of these that matched, not whichever the fixture lists last. Both
- *  carry no unread matches of their own (`unreadEntryIds: []`), so the sidebar
- *  toggle's accessible name stays the bare "Saved searches" with no trailing
- *  count appended — the substring collision #723 warns about (a child row
- *  sharing the toggle's name prefix) is avoided by giving the child rows
- *  entirely different terms instead. */
+/** Two saved searches. Both carry no unread matches of their own
+ *  (`unreadEntryIds: []`), so the sidebar toggle's accessible name stays the
+ *  bare "Saved searches" with no trailing count appended — the substring
+ *  collision #723 warns about (a child row sharing the toggle's name prefix) is
+ *  avoided by giving the child rows entirely different terms instead. */
 const SAVED_SEARCHES = [
   {
     id: 501,
+    slug: '501-climate',
     term: 'climate',
     wholeWord: false,
     phrase: false,
@@ -24,6 +23,7 @@ const SAVED_SEARCHES = [
   },
   {
     id: 502,
+    slug: '502-space',
     term: 'space',
     wholeWord: false,
     phrase: false,
@@ -33,7 +33,7 @@ const SAVED_SEARCHES = [
   },
 ];
 
-function entry(id: number, title: string) {
+function entry(id: number, title: string, savedSearch: (typeof SAVED_SEARCHES)[number]) {
   return {
     id,
     title,
@@ -52,17 +52,13 @@ function entry(id: number, title: string) {
     isHidden: false,
     isFavorite: false,
     isKept: false,
+    savedSearches: [{ id: savedSearch.id, slug: savedSearch.slug, term: savedSearch.term }],
   };
 }
 
-/** Entry 1 matches "climate" (501), entry 2 matches "space" (502) — deliberately
- *  out of numeric order in the map below so the test can't pass by accident on
- *  key ordering. `savedSearchIds` keys arrive as strings on the wire. */
-const ALL_ENTRIES = [entry(1, 'Fixture entry 1'), entry(2, 'Fixture entry 2')];
-const ALL_SAVED_SEARCH_IDS = { '2': 502, '1': 501 };
-
-const UNREAD_ENTRIES = [entry(1, 'Fixture entry 1')];
-const UNREAD_SAVED_SEARCH_IDS = { '1': 501 };
+const [CLIMATE, SPACE] = SAVED_SEARCHES;
+const ALL_ENTRIES = [entry(1, 'Fixture entry 1', CLIMATE), entry(2, 'Fixture entry 2', SPACE)];
+const UNREAD_ENTRIES = [entry(1, 'Fixture entry 1', CLIMATE)];
 
 /**
  * Stub every route the combined saved-search view depends on, so the spec owns
@@ -91,10 +87,8 @@ async function stubReaderData(page: Page): Promise<void> {
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       const unread = new URL(route.request().url()).searchParams.get('unread') === '1';
-      const json = unread
-        ? { entries: UNREAD_ENTRIES, nextCursor: null, savedSearchIds: UNREAD_SAVED_SEARCH_IDS }
-        : { entries: ALL_ENTRIES, nextCursor: null, savedSearchIds: ALL_SAVED_SEARCH_IDS };
-      await route.fulfill({ status: 200, json });
+      const entries = unread ? UNREAD_ENTRIES : ALL_ENTRIES;
+      await route.fulfill({ status: 200, json: { entries, nextCursor: null } });
     },
   );
 }
@@ -121,7 +115,7 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
   // prefix (#723), and clicking that instead would silently mis-navigate.
   await page.locator('a.savedsearch-toggle', { hasText: 'Saved searches' }).click();
 
-  await expect(page).toHaveURL(/view=saved-searches/);
+  await expect(page).toHaveURL(/\/searches\/saved\/all$/);
   await expect(page.getByRole('heading', { name: 'Saved searches' })).toBeVisible();
   // The label navigates INSTEAD of expanding the child list now — only the
   // chevron does that. The fixture seeds two saved searches, so an empty
@@ -131,17 +125,15 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
   const rows = page.locator('.rows article');
   await expect(rows).toHaveCount(2);
 
-  // Each row names the saved search it came from — the FIRST match, in the
-  // sidebar's order (entry 1 => "climate", entry 2 => "space").
-  await expect(rows.nth(0).locator('.saved-search-pill')).toHaveText('climate');
-  await expect(rows.nth(1).locator('.saved-search-pill')).toHaveText('space');
+  await expect(rows.nth(0).locator('app-saved-search-pills .pill .name')).toHaveText('climate');
+  await expect(rows.nth(1).locator('app-saved-search-pills .pill .name')).toHaveText('space');
 });
 
 test('the unread switch narrows the combined list', async ({ page }) => {
   const signedIn = await signInAsAdmin(page);
   test.skip(!signedIn, 'seeded admin login unavailable (run app:e2e:seed-admin against the stack)');
 
-  await page.goto('/reader?view=saved-searches');
+  await page.goto('/searches/saved/all');
   await expect(page.locator('.rows article')).toHaveCount(2);
 
   await page.getByRole('switch', { name: 'only unread' }).click();
@@ -149,5 +141,5 @@ test('the unread switch narrows the combined list', async ({ page }) => {
   await expect(page).toHaveURL(/unread=1/);
   const rows = page.locator('.rows article');
   await expect(rows).toHaveCount(1);
-  await expect(rows.first().locator('.saved-search-pill')).toHaveText('climate');
+  await expect(rows.first().locator('app-saved-search-pills .pill .name')).toHaveText('climate');
 });
