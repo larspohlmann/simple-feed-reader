@@ -94,17 +94,15 @@ test.describe('list-header actions on a phone', () => {
     }
   });
 
-  test('actions with a visible mobile label keep the borderless link treatment', async ({
-    page,
-  }) => {
+  test('a direct search uses the same icon-only form as every other list', async ({ page }) => {
     await openReader(page, 'q=design');
 
-    const labelledActions = page.locator('.list-header :is(.mark-all, .save-search)');
-    await expect(labelledActions).toHaveCount(2);
+    const actions = page.locator('.list-header .list-action');
+    await expect(actions).toHaveCount(3);
 
-    for (const action of await labelledActions.all()) {
-      await expect(action.locator('.txt-short')).toBeVisible();
-      await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '0px');
+    for (const action of await actions.all()) {
+      await expect(action.locator('.txt')).toBeHidden();
+      await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '1px');
     }
   });
 
@@ -120,7 +118,6 @@ test.describe('list-header actions on a phone', () => {
 
     for (const action of await actions.all()) {
       await expect(action.locator('.txt')).toBeHidden();
-      await expect(action.locator('.txt-short')).toBeHidden();
       await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '1px');
     }
   });

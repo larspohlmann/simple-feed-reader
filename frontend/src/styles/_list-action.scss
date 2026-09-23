@@ -25,8 +25,8 @@
 }
 
 // Refresh spins its icon while a run is in flight. Spins the glyph, NOT the
-// `app-icon` box: on a phone that box wears the `mobile-icon-only` border,
-// which would spin the square with it (#698). Needs this global sheet to reach it.
+// `app-icon` box: in the compact form that box wears a border, which would
+// spin the square with it (#698). Needs this global sheet to reach it.
 .list-action.spinning app-icon .material-symbols-outlined {
   animation: list-action-spin 0.9s linear infinite;
 }
@@ -38,15 +38,15 @@
 }
 
 // Icon-only actions get the sidebar chevron treatment: a full tap target around
-// a smaller bordered glyph box. Explicit modifier, since some keep a short label (#679).
-@mixin icon-only-box {
-  .list-action.mobile-icon-only {
+// a smaller bordered glyph box.
+@mixin icon-only-box($action) {
+  #{$action} {
     justify-content: center;
     width: var(--tap-target);
     height: var(--tap-target);
   }
 
-  .list-action.mobile-icon-only app-icon {
+  #{$action} app-icon {
     display: inline-flex;
     padding: var(--space-2);
     border: 1px solid var(--border);
@@ -54,14 +54,18 @@
   }
 }
 
-// The list header keys to its own width; the reader view's nav has no such
-// container and keeps the viewport rule.
+// Every list-header action switches form together, with no per-action exception (#1127).
 @container list-header (width <= #{bp.$container-list-header-compact}) {
-  @include icon-only-box;
+  @include icon-only-box('.list-header .list-action');
+
+  .list-header .list-action .txt {
+    display: none;
+  }
 }
 
+// The reader view's nav has no list-header container and opts in per action.
 @media (width <= bp.$bp-sm) {
-  @include icon-only-box;
+  @include icon-only-box('.list-action.mobile-icon-only');
 }
 
 @media (prefers-reduced-motion: reduce) {

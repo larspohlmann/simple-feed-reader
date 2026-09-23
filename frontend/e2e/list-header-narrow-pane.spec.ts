@@ -70,6 +70,19 @@ async function headerGeometry(page: Page): Promise<HeaderGeometry> {
   });
 }
 
+async function expectEveryAction(page: Page, form: { labelled: boolean }): Promise<void> {
+  const actions = page.locator('.list-header .list-action');
+  expect(await actions.count()).toBeGreaterThan(1);
+  for (const action of await actions.all()) {
+    const label = action.locator('.txt');
+    await (form.labelled ? expect(label).toBeVisible() : expect(label).toBeHidden());
+    await expect(action.locator('app-icon')).toHaveCSS(
+      'border-top-width',
+      form.labelled ? '0px' : '1px',
+    );
+  }
+}
+
 async function openSplit(page: Page, list: SplitList, paneSplit: string): Promise<void> {
   await stubAuthToken(page);
   await page.addInitScript(
@@ -97,34 +110,17 @@ async function openSplit(page: Page, list: SplitList, paneSplit: string): Promis
 test.describe('list header in a narrow split column (#1127)', () => {
   test.use({ viewport: DESKTOP });
 
-  test('a column at or below the compact threshold drops the action labels', async ({ page }) => {
-    await openSplit(page, FEED, '45');
+  for (const list of [ALL_ITEMS, FEED, DIRECT_SEARCH]) {
+    test(`every action of ${list.name} is icon-only in the compact form`, async ({ page }) => {
+      await openSplit(page, list, '45');
+      await expectEveryAction(page, { labelled: false });
+    });
 
-    await expect(page.locator('.list-header .mark-all .txt')).toBeHidden();
-    await expect(page.locator('.list-header .refresh app-icon')).toHaveCSS(
-      'border-top-width',
-      '1px',
-    );
-  });
-
-  test('a column above the compact threshold keeps the labelled links', async ({ page }) => {
-    await openSplit(page, FEED, '60');
-
-    await expect(page.locator('.list-header .mark-all .txt')).toBeVisible();
-    await expect(page.locator('.list-header .refresh app-icon')).toHaveCSS(
-      'border-top-width',
-      '0px',
-    );
-  });
-
-  test('a direct search keeps its short labels in the compact form', async ({ page }) => {
-    await openSplit(page, DIRECT_SEARCH, '45');
-
-    for (const action of await page.locator('.list-header :is(.mark-all, .save-search)').all()) {
-      await expect(action.locator('.txt')).toBeHidden();
-      await expect(action.locator('.txt-short')).toBeVisible();
-    }
-  });
+    test(`every action of ${list.name} is labelled in the wide form`, async ({ page }) => {
+      await openSplit(page, list, '60');
+      await expectEveryAction(page, { labelled: true });
+    });
+  }
 
   for (const list of [ALL_ITEMS, FEED, DIRECT_SEARCH]) {
     for (const paneSplit of ['25.6', '35', '45', '60']) {

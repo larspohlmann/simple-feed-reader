@@ -239,12 +239,6 @@ $title-floor: 6rem;
    Save-search via `app-list-action` (#617). The switch (#602) is a filled
    circle when unread-filtered; app-icon's `fill` input carries the state. */
 
-/* The short label beside the icon (#581 follow-up); the compact container
-   query below swaps it in. */
-.txt-short {
-  display: none;
-}
-
 /* The Refresh button's in-flight spin lives in the global `_list-action.scss`:
    it must turn the glyph, not the `app-icon` box that wears the mobile border,
    and only a global rule reaches the projected glyph (#698). */
@@ -293,24 +287,10 @@ $title-floor: 6rem;
   border-color: var(--accent);
 }
 
-/* Compact controls: in a narrow header the labels drop so a long feed or tag
-   title stays readable. The icons, named by aria-label/title, carry the meaning. */
+/* Bordered icon buttons sit tighter than the text links of the wide header. */
 @container list-header (width <= #{bp.$container-list-header-compact}) {
-  /* Bordered icon buttons sit tighter than the text links of the wide header. */
   .tools {
     gap: var(--space-1);
-  }
-
-  .unread-switch .txt,
-  .mark-all .txt,
-  .refresh .txt {
-    display: none;
-  }
-
-  /* Only a direct search keeps a label here. A saved-search result is a
-     standing list, so its Mark all read action uses the icon-only form (#971). */
-  .list-header.is-search .mark-all:not(.mobile-icon-only) .txt-short {
-    display: inline-flex;
   }
 }
 
