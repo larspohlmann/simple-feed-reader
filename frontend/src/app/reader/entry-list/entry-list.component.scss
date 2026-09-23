@@ -233,7 +233,8 @@ $header-clear: calc(var(--app-bar-h, var(--bar-h)) + var(--list-bar-h) + var(--b
    Save-search via `app-list-action` (#617). The switch (#602) is a filled
    circle when unread-filtered; app-icon's `fill` input carries the state. */
 
-/* The short label beside the icon (#581 follow-up); the compact container query below swaps it in. */
+/* The short label beside the icon (#581 follow-up); the compact container
+   query below swaps it in. */
 .txt-short {
   display: none;
 }

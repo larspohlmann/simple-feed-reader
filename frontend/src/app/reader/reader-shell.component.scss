@@ -204,9 +204,8 @@ app-reader-header.hidden {
    label-visibility below is specific. Carries its own instance rather than
    entry-list's, since it's projected through the `headerActions` outlet. */
 
-/* The mobile short label beside the icon (Part A, #581 follow-up). Hidden on
-   the desktop button, which keeps its full `.txt`; the mobile media query
-   below swaps the two. */
+/* The short label beside the icon (#581 follow-up); the compact container
+   query below swaps it in. */
 .save-search .txt-short {
   display: none;
 }
