@@ -1,5 +1,5 @@
 // src/app/core/session-identity.ts
-import { effect, inject, untracked } from '@angular/core';
+import { WritableSignal, effect, inject, signal, untracked } from '@angular/core';
 import { TokenStore } from './token.store';
 
 /**
@@ -30,4 +30,12 @@ export function onIdentityChange(onChange: () => void): void {
     identity = next;
     untracked(onChange);
   });
+}
+
+/** A signal holding per-account state: it returns to `initial` whenever the
+ *  signed-in identity changes, with the same trigger as `onIdentityChange`. */
+export function accountSignal<T>(initial: T): WritableSignal<T> {
+  const state = signal(initial);
+  onIdentityChange(() => state.set(initial));
+  return state;
 }
