@@ -130,20 +130,16 @@
     }
     @if (hasUnreadFilter()) {
       <!-- One switch, not a two-option toggle: filled circle means unread-only,
-           hollow means all, matching the "filled means unread" row convention
-           (#602). keydown.space gives the anchor the Space-to-toggle a switch needs. -->
-      <a
-        #unreadSwitch
+           hollow means all, matching the "filled means unread" row convention (#602). -->
+      <button
         appListAction
         class="unread-switch mobile-icon-only"
+        type="button"
         role="switch"
         [attr.aria-checked]="selection().unread"
-        [routerLink]="[]"
-        [queryParams]="{ unread: selection().unread ? null : '1' }"
-        queryParamsHandling="merge"
         [attr.aria-label]="'reader.unread' | transloco"
         [attr.title]="'reader.unread' | transloco"
-        (keydown.space)="$event.preventDefault(); unreadSwitch.click()"
+        (click)="unreadOnlyChange.emit(!selection().unread)"
       >
         <!-- One `circle` glyph for both positions, its FILL axis carrying the state
              (#602): solid while filtered to unread, hollow (FILL 0, the font
@@ -155,7 +151,7 @@
         <span class="txt" aria-hidden="true">{{
           (selection().unread ? 'reader.unread' : 'reader.all') | transloco
         }}</span>
-      </a>
+      </button>
     }
     @if (canMarkAllRead()) {
       <button

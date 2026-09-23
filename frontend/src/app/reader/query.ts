@@ -167,7 +167,6 @@ export function isSingleStreamView(s: Selection): boolean {
  *  priority, so a leftover `q` the caller forgot to null strands the user (#408). */
 const SELECTION_PARAM_NAMES = ['view', 'tag', 'subscription', 'entry', 'q'] as const;
 
-// Unread refines the selected list, so navigation does not clear it.
 type SelectionParamName = (typeof SELECTION_PARAM_NAMES)[number];
 
 /** The only way `selectionFromParams` may pull a selection-identity value
@@ -217,10 +216,6 @@ export function selectionFromParams(p: ParamMap): {
   const view = selectionParam(p, 'view');
   const tag = posInt(selectionParam(p, 'tag'));
   const subscription = posInt(selectionParam(p, 'subscription'));
-  // unread refines the current list rather than choosing it, so it is not part
-  // of the selection vocabulary above and is read directly. Default is "all":
-  // only an explicit `unread=1` narrows, so a bare URL shows everything.
-  const unread = p.get('unread') === '1';
   // The entry param is an id or an id-prefixed slug ("514-some-title").
   const entryId = entryIdFromParam(selectionParam(p, 'entry'));
 
@@ -230,9 +225,7 @@ export function selectionFromParams(p: ParamMap): {
   const term = normalizeSearchInput(selectionParam(p, 'q') ?? '');
   if (isSearchableTerm(term)) {
     // A `?q=` search is its own view over every subscription, so a tag or feed
-    // parameter left in the URL by hand is ignored rather than combined. It is
-    // always a direct, unsaved search: a saved search is reached by its slug
-    // path instead, so it never carries the unread refinement here.
+    // parameter left in the URL by hand is ignored rather than combined.
     return { selection: { kind: 'search', id: null, unread: false, term }, entryId };
   }
 
@@ -242,19 +235,15 @@ export function selectionFromParams(p: ParamMap): {
     // contradiction: "kept, but only unread" is not a list this reader offers.
     selection = { kind: view, id: null, unread: false };
   } else if (view === 'for-you') {
-    // For you is not a state filter — it is a ranking of the same posts — so it
-    // takes the refinement like any browsable list (#710).
-    selection = { kind: 'for-you', id: null, unread };
+    selection = { kind: 'for-you', id: null, unread: false };
   } else if (view === 'saved-searches') {
-    // Every saved search's matches in one list — a content filter, but a
-    // standing one, so it takes the unread refinement (#769).
-    selection = { kind: 'saved-searches', id: null, unread };
+    selection = { kind: 'saved-searches', id: null, unread: false };
   } else if (subscription != null) {
-    selection = { kind: 'subscription', id: subscription, unread };
+    selection = { kind: 'subscription', id: subscription, unread: false };
   } else if (tag != null) {
-    selection = { kind: 'tag', id: tag, unread };
+    selection = { kind: 'tag', id: tag, unread: false };
   } else {
-    selection = { kind: 'all', id: null, unread };
+    selection = { kind: 'all', id: null, unread: false };
   }
   return { selection, entryId };
 }

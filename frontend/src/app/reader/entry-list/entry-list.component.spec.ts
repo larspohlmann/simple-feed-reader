@@ -1002,17 +1002,16 @@ describe('EntryListComponent', () => {
       expect(el.querySelector('.unread-switch')).not.toBeNull();
     });
 
-    // The href is where the queryParams ternary shows up. Filtered to unread,
-    // the switch turns the filter OFF — it drops the param (default all), so no
-    // unread=1. Showing all, it turns the filter ON with an explicit unread=1.
-    it('drops the param to reach all when on, and sets unread=1 to reach unread when off', () => {
-      const on = mount({ selection: { kind: 'all', id: null, unread: true } })
-        .nativeElement as HTMLElement;
-      expect(on.querySelector('.unread-switch')!.getAttribute('href')).not.toContain('unread=1');
+    it('asks for the opposite state when clicked', () => {
+      for (const unread of [true, false]) {
+        const f = mount({ selection: { kind: 'all', id: null, unread } });
+        const asked: boolean[] = [];
+        f.componentInstance.unreadOnlyChange.subscribe((value) => asked.push(value));
 
-      const off = mount({ selection: { kind: 'all', id: null, unread: false } })
-        .nativeElement as HTMLElement;
-      expect(off.querySelector('.unread-switch')!.getAttribute('href')).toContain('unread=1');
+        (f.nativeElement.querySelector('.unread-switch') as HTMLButtonElement).click();
+
+        expect(asked).toEqual([!unread]);
+      }
     });
   });
 

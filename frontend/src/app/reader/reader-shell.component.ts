@@ -48,8 +48,10 @@ import {
   sameSelection,
   selectionQueryParams,
   visibleSearchTerm,
+  withUnreadPreference,
 } from './query';
 import { selectionFromRoute } from './reader-matcher';
+import { UnreadFilterService } from './unread-filter.service';
 import { ListScrollReset } from './list-scroll-reset';
 import { entryParam } from './slug';
 import {
@@ -270,6 +272,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     return failure ? refreshFailureKey(failure) : null;
   });
 
+  readonly unreadFilter = inject(UnreadFilterService);
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
   });
@@ -281,9 +284,10 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   // selection reference -- delegates to `sameSelection` rather than
   // re-listing fields here, which once fell out of step when `term` was
   // added, silently freezing the list on every second search (#408 follow-up).
-  readonly selection = computed(() => this.parsed().selection, {
-    equal: sameSelection,
-  });
+  readonly selection = computed(
+    () => withUnreadPreference(this.parsed().selection, this.unreadFilter.unreadOnly()),
+    { equal: sameSelection },
+  );
   readonly viewingSavedSearch = computed(() => this.selection().kind === 'saved-search');
   /** Whether the header offers its Save/Remove control: a direct search can be
    *  saved, a saved search removed. Named so a third search-like kind can't slip

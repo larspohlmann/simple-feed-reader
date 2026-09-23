@@ -34,6 +34,7 @@ import { EntriesStore } from './entries.store';
 import { ReaderApi } from './reader-api';
 import { EntryBodyService } from './entry-body.service';
 import { Selection } from './query';
+import { UnreadFilterService } from './unread-filter.service';
 import { ReaderHeaderComponent } from './header/reader-header.component';
 import { RefreshService } from './refresh.service';
 import { LayoutService } from './layout.service';
@@ -3145,6 +3146,30 @@ describe('ReaderShellComponent', () => {
       return f;
     }
 
+    it('keeps the unread filter on when a tag list moves to a saved search (#1126)', () => {
+      localStorage.setItem('sfr.unread-only', '1');
+      const f = boot();
+      f.componentInstance.savedSearchesStore.load();
+      ctrl
+        .expectOne('https://api.test/api/saved-searches')
+        .flush({ savedSearches: [savedClimate] });
+      qp.next(convertToParamMap({ tag: '3' }));
+      f.detectChanges();
+      const tagList = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(tagList.request.params.get('view')).toBe('unread');
+      tagList.flush({ entries: [], nextCursor: null });
+
+      qp.next(convertToParamMap({}));
+      pp.next(convertToParamMap({ savedSearch: '4-climate' }));
+      f.detectChanges();
+
+      const saved = ctrl.expectOne(
+        (r) => r.url === 'https://api.test/api/entries/saved-searches/4',
+      );
+      expect(saved.request.params.get('unread')).toBe('1');
+      expect(f.componentInstance.selection().unread).toBe(true);
+    });
+
     it('selects the single saved search by the id in its slug', () => {
       const f = bootSingleSavedSearch();
 
@@ -3199,6 +3224,41 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('the unread filter lives in localStorage (#1126)', () => {
+    it('reloads the list when the switch flips, without navigating', () => {
+      const f = boot();
+      const nav = jest.spyOn(TestBed.inject(Router), 'navigate');
+
+      f.componentInstance.unreadFilter.set(true);
+      f.detectChanges();
+
+      const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(req.request.params.get('view')).toBe('unread');
+      req.flush({ entries: [], nextCursor: null });
+      expect(nav).not.toHaveBeenCalled();
+    });
+
+    it('filters a direct search to unread', () => {
+      localStorage.setItem('sfr.unread-only', '1');
+      const f = boot();
+      qp.next(convertToParamMap({ q: 'angular' }));
+      f.detectChanges();
+
+      const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries/search');
+      expect(req.request.params.get('unread')).toBe('1');
+      req.flush({ entries: [], nextCursor: null, matchedWords: [] });
+    });
+
+    it('ignores an unread parameter in the URL', () => {
+      const f = boot();
+      qp.next(convertToParamMap({ unread: '1' }));
+      f.detectChanges();
+
+      expect(f.componentInstance.selection().unread).toBe(false);
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+    });
+  });
+
   describe('mark all read for the combined saved-searches view (#769)', () => {
     function bootWithSavedSearchesSelected() {
       const f = boot();
@@ -3244,7 +3304,7 @@ describe('ReaderShellComponent', () => {
   describe('marking everything above the fold as read (#1080)', () => {
     function bootUnreadView() {
       const f = boot();
-      qp.next(convertToParamMap({ unread: '1' }));
+      TestBed.inject(UnreadFilterService).set(true);
       f.detectChanges();
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries')

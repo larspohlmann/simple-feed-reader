@@ -28,9 +28,9 @@ describe('selectionFromParams', () => {
     expect(selection).toEqual({ kind: 'all', id: null, unread: false });
     expect(entryId).toBeNull();
   });
-  it('reads unread=1 as unread-only, and anything else as show-all', () => {
-    expect(selectionFromParams(pm({ unread: '1' })).selection.unread).toBe(true);
-    expect(selectionFromParams(pm({ unread: '0' })).selection.unread).toBe(false);
+  it('ignores an unread parameter — the filter lives in localStorage (#1126)', () => {
+    expect(selectionFromParams(pm({ unread: '1' })).selection.unread).toBe(false);
+    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' })).selection.unread).toBe(false);
   });
   it('reads a subscription selection and open entry', () => {
     const { selection, entryId } = selectionFromParams(pm({ subscription: '7', entry: '42' }));
@@ -44,32 +44,22 @@ describe('selectionFromParams', () => {
       unread: false,
     });
   });
-  it('reads favorites/kept and ignores the unread toggle there', () => {
-    expect(selectionFromParams(pm({ view: 'favorites', unread: '0' })).selection).toEqual({
+  it('reads favorites/kept', () => {
+    expect(selectionFromParams(pm({ view: 'favorites' })).selection).toEqual({
       kind: 'favorites',
       id: null,
       unread: false,
     });
     expect(selectionFromParams(pm({ view: 'kept' })).selection.kind).toBe('kept');
   });
-  it('reads for-you, and keeps its unread refinement (#710)', () => {
-    expect(selectionFromParams(pm({ view: 'for-you', unread: '0' })).selection).toEqual({
+  it('reads for-you', () => {
+    expect(selectionFromParams(pm({ view: 'for-you' })).selection).toEqual({
       kind: 'for-you',
       id: null,
       unread: false,
     });
-    expect(selectionFromParams(pm({ view: 'for-you', unread: '1' })).selection).toEqual({
-      kind: 'for-you',
-      id: null,
-      unread: true,
-    });
   });
 
-  it('still ignores the unread toggle on the saved views, which already filter by state', () => {
-    for (const view of ['favorites', 'kept', 'viewed'] as const) {
-      expect(selectionFromParams(pm({ view, unread: '1' })).selection.unread).toBe(false);
-    }
-  });
   it('rejects non-positive/garbage ids', () => {
     expect(selectionFromParams(pm({ subscription: '0' })).selection.kind).toBe('all');
     expect(selectionFromParams(pm({ tag: 'x' })).selection.kind).toBe('all');
@@ -128,14 +118,6 @@ describe('listSelectionFrom (#579)', () => {
       kind: 'tag',
       id: 5,
       unread: false,
-    });
-  });
-
-  it('keeps the unread refinement the search hid', () => {
-    expect(listSelectionFrom({ tag: '5', unread: '1', q: 'angular' })).toEqual({
-      kind: 'tag',
-      id: 5,
-      unread: true,
     });
   });
 
@@ -581,12 +563,12 @@ describe('the combined saved-searches view', () => {
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
 
-  it('takes the unread refinement like every browsable list', () => {
+  it('ignores an unread parameter (#1126)', () => {
     const { selection } = selectionFromParams(
       convertToParamMap({ view: 'saved-searches', unread: '1' }),
     );
 
-    expect(selection.unread).toBe(true);
+    expect(selection.unread).toBe(false);
   });
 
   it('offers the unread switch', () => {
@@ -641,9 +623,9 @@ describe('selectionFromRoute', () => {
   it('falls back to the combined view for a slug with no leading id', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: 'climate' }),
-      convertToParamMap({ unread: '1' }),
+      noQuery,
     );
-    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: true });
+    expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
 
   it('falls back to the combined view for a slug whose leading digits are not anchored (#1118)', () => {
@@ -653,12 +635,12 @@ describe('selectionFromRoute', () => {
     expect(selection).toEqual({ kind: 'saved-searches', id: null, unread: false });
   });
 
-  it('carries unread=1 from the query params onto a path selection', () => {
+  it('ignores an unread parameter on a path selection (#1126)', () => {
     const { selection } = selectionFromRoute(
       convertToParamMap({ savedSearch: '42-climate' }),
       convertToParamMap({ unread: '1' }),
     );
-    expect(selection.unread).toBe(true);
+    expect(selection.unread).toBe(false);
   });
 
   it('falls back to query-param selection when no saved-search segment is present', () => {

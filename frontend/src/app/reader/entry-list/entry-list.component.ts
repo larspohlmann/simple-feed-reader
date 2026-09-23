@@ -232,6 +232,7 @@ export class EntryListComponent implements OnDestroy {
   /** The error banner's dismiss: clears the banner without a request. */
   readonly dismiss = output<void>();
   readonly markAllRead = output<void>();
+  readonly unreadOnlyChange = output<boolean>();
   /** The above-fold ids captured at click — a snapshot, so scrolling or a
    *  background refresh while the confirm dialog is open cannot change the set. */
   readonly markAboveRead = output<number[]>();
