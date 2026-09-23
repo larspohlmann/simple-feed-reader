@@ -6,6 +6,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { API_BASE_URL } from '../core/api';
+import { TokenStore } from '../core/token.store';
 import { EntriesStore } from './entries.store';
 import { EntryDto } from './models';
 import { markTerms } from './search-marks';
@@ -38,7 +39,9 @@ const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
 describe('EntriesStore', () => {
   let store: EntriesStore;
   let ctrl: HttpTestingController;
+  let tokens: TokenStore;
   beforeEach(() => {
+    localStorage.clear();
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(),
@@ -46,6 +49,8 @@ describe('EntriesStore', () => {
         { provide: API_BASE_URL, useValue: 'https://api.test' },
       ],
     });
+    tokens = TestBed.inject(TokenStore);
+    tokens.set('account-a.jwt');
     store = TestBed.inject(EntriesStore);
     ctrl = TestBed.inject(HttpTestingController);
   });
@@ -517,6 +522,80 @@ describe('EntriesStore', () => {
 
       store.retry();
       ctrl.expectNone(() => true);
+    });
+  });
+
+  describe('when the signed-in identity changes (#1135)', () => {
+    const entriesRequest = (r: { url: string }): boolean =>
+      r.url === 'https://api.test/api/entries';
+
+    const loadAsAccountA = (): void => {
+      store.load({ view: 'all' });
+      ctrl
+        .expectOne(entriesRequest)
+        .flush({ entries: [entry(1), entry(2)], nextCursor: 'C1', matchedWords: ['rust'] });
+    };
+
+    const signInAsAccountB = (): void => {
+      tokens.clear();
+      TestBed.tick();
+      tokens.set('account-b.jwt');
+      TestBed.tick();
+    };
+
+    it('shows the next account a loading list, never the previous rows', () => {
+      loadAsAccountA();
+
+      signInAsAccountB();
+      store.load({ view: 'all' });
+
+      expect(store.entries()).toEqual([]);
+      expect(store.loading()).toBe(true);
+      ctrl.expectOne(entriesRequest).flush({ entries: [entry(9)], nextCursor: null });
+      expect(store.entries().map((e) => e.id)).toEqual([9]);
+    });
+
+    it('drops the cursor, the matched words and a pending retry', () => {
+      loadAsAccountA();
+      store.loadMore();
+      ctrl
+        .expectOne(entriesRequest)
+        .flush({ type: 'x', title: 't', status: 500 }, { status: 500, statusText: 'err' });
+
+      tokens.clear();
+      TestBed.tick();
+      store.retry();
+      store.loadMore();
+
+      expect(store.nextCursor()).toBeNull();
+      expect(store.matchedWords()).toEqual([]);
+      expect(store.error()).toBeNull();
+      ctrl.expectNone(entriesRequest);
+    });
+
+    it('ignores a list response that lands after the previous account signed out', () => {
+      store.load({ view: 'all' });
+      const late = ctrl.expectOne(entriesRequest);
+
+      tokens.clear();
+      TestBed.tick();
+      late.flush({ entries: [entry(1)], nextCursor: 'C1' });
+
+      expect(store.entries()).toEqual([]);
+      expect(store.loading()).toBe(false);
+    });
+
+    it("does not lay the previous account's in-flight patch over the next account's row", () => {
+      loadAsAccountA();
+      store.setState(1, { isFavorite: true });
+      const patch = ctrl.expectOne('https://api.test/api/entries/1/state');
+
+      signInAsAccountB();
+      store.load({ view: 'all' });
+      ctrl.expectOne(entriesRequest).flush({ entries: [entry(1)], nextCursor: null });
+
+      expect(store.entries()[0].isFavorite).toBe(false);
+      patch.flush({});
     });
   });
 });

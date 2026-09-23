@@ -1,7 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Observable, finalize } from 'rxjs';
 import { Problem, parseProblem } from '../core/problem';
+import { accountSignal, onIdentityChange } from '../core/session-identity';
 import { ReaderApi } from './reader-api';
 import { EntryDto, EntryQuery, EntryStatePatch } from './models';
 
@@ -31,32 +32,39 @@ interface InFlightPatch {
 export class EntriesStore {
   private readonly api = inject(ReaderApi);
 
-  private readonly rawEntries = signal<EntryDto[]>([]);
+  private readonly rawEntries = accountSignal<EntryDto[]>([]);
   private readonly inFlightPatches = new Set<InFlightPatch>();
   readonly entries = this.rawEntries.asReadonly();
-  readonly nextCursor = signal<string | null>(null);
-  readonly loading = signal(false);
-  readonly loadingMore = signal(false);
-  readonly error = signal<Problem | null>(null);
-  readonly loadedAt = signal<string>('');
+  readonly nextCursor = accountSignal<string | null>(null);
+  readonly loading = accountSignal(false);
+  readonly loadingMore = accountSignal(false);
+  readonly error = accountSignal<Problem | null>(null);
+  readonly loadedAt = accountSignal<string>('');
   /** Words the current search engine actually matched (empty outside a search, or
    *  when the LIKE fallback answered it). `load()` REPLACES this (new result set);
    *  `loadMore()` UNIONS into it (earlier pages' matched words must stay marked). */
-  readonly matchedWords = signal<string[]>([]);
+  readonly matchedWords = accountSignal<string[]>([]);
 
-  private query: EntryQuery | null = null;
+  private readonly query = accountSignal<EntryQuery | null>(null);
   /** Replays whichever request last failed, so the error banner's retry resumes
    *  exactly that operation — a first-page load, a pagination page, or a row
    *  state PATCH. Cleared when any fresh operation starts, so a stale failure
    *  never lingers behind a later success (#996). */
-  private failedOperation: (() => void) | null = null;
+  private readonly failedOperation = accountSignal<(() => void) | null>(null);
   /** Monotonic token stamped on every load/loadMore request; a stale response is
    *  dropped so it can't clobber a fresher result — refresh fires overlapping
    *  reloads that can arrive out of order (#158). Mirrors the shell's id-guard. */
   private loadSeq = 0;
 
+  constructor() {
+    onIdentityChange(() => {
+      this.loadSeq++;
+      this.inFlightPatches.clear();
+    });
+  }
+
   load(query: EntryQuery): void {
-    this.query = query;
+    this.query.set(query);
     const seq = ++this.loadSeq;
     // The outgoing list stays rendered until the response lands (#254) — a
     // blank pane made every view switch feel like the full round trip. Only
@@ -66,7 +74,7 @@ export class EntriesStore {
     // A fresh top-of-list load abandons any pagination still on the wire.
     this.loadingMore.set(false);
     this.error.set(null);
-    this.failedOperation = null;
+    this.failedOperation.set(null);
     this.loadedAt.set(new Date().toISOString());
     this.api.entries(query).subscribe({
       next: (page) => {
@@ -83,7 +91,7 @@ export class EntriesStore {
         this.rawEntries.set([]);
         this.matchedWords.set([]);
         this.error.set(parseProblem(e));
-        this.failedOperation = () => this.load(query);
+        this.failedOperation.set(() => this.load(query));
         this.loading.set(false);
       },
     });
@@ -99,11 +107,12 @@ export class EntriesStore {
 
   loadMore(): void {
     const cursor = this.nextCursor();
-    if (!cursor || !this.query || this.loading() || this.loadingMore()) return;
+    const query = this.query();
+    if (!cursor || !query || this.loading() || this.loadingMore()) return;
     const seq = this.loadSeq;
     this.loadingMore.set(true);
-    this.failedOperation = null;
-    this.api.entries(this.query, cursor).subscribe({
+    this.failedOperation.set(null);
+    this.api.entries(query, cursor).subscribe({
       next: (page) => {
         if (seq !== this.loadSeq) return; // a load() has since replaced the list
         this.rawEntries.update((cur) => [...cur, ...this.withInFlightPatches(page.entries)]);
@@ -119,7 +128,7 @@ export class EntriesStore {
       error: (e: HttpErrorResponse) => {
         if (seq !== this.loadSeq) return;
         this.error.set(parseProblem(e));
-        this.failedOperation = () => this.loadMore();
+        this.failedOperation.set(() => this.loadMore());
         this.loadingMore.set(false);
       },
     });
@@ -144,7 +153,7 @@ export class EntriesStore {
     const before = this.rawEntries().find((e) => e.id === entryId);
     if (!before) return;
     this.error.set(null);
-    this.failedOperation = null;
+    this.failedOperation.set(null);
     const inFlight: InFlightPatch = { entryId, patch: localStatePatch(patch) };
     this.inFlightPatches.add(inFlight);
     this.rawEntries.update((cur) =>
@@ -157,7 +166,7 @@ export class EntriesStore {
         error: (err: HttpErrorResponse) => {
           this.rawEntries.update((cur) => cur.map((e) => (e.id === entryId ? before : e)));
           this.error.set(parseProblem(err));
-          this.failedOperation = () => this.setState(entryId, patch, onError);
+          this.failedOperation.set(() => this.setState(entryId, patch, onError));
           onError?.();
         },
       });
@@ -178,13 +187,13 @@ export class EntriesStore {
    *  `retry` resubmits exactly that mutation. */
   reportMutationFailure(error: HttpErrorResponse, retry: () => void): void {
     this.error.set(parseProblem(error));
-    this.failedOperation = retry;
+    this.failedOperation.set(retry);
   }
 
   /** Replays the request that set the current error, clearing the banner first
    *  so a fresh attempt reads as progress. A no-op when nothing has failed. */
   retry(): void {
-    const operation = this.failedOperation;
+    const operation = this.failedOperation();
     if (!operation) return;
     this.error.set(null);
     operation();
@@ -193,7 +202,7 @@ export class EntriesStore {
   /** Clears the error banner and abandons its pending retry. */
   dismissError(): void {
     this.error.set(null);
-    this.failedOperation = null;
+    this.failedOperation.set(null);
   }
 }
 
