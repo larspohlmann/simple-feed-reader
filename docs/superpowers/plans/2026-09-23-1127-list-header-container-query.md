@@ -425,3 +425,171 @@ Expected: ESLint, Prettier, Stylelint, typecheck and Jest all pass. Fix Prettier
 git add docs/design-language.md
 git commit -m "docs(#1127): record the list header container in the design language"
 ```
+
+---
+
+### Task 4: Every list-header action switches form together
+
+Added 2026-09-23 on Lars's instruction: "the visual behaviour of all action links in the headers should always be unified". In the compact form a direct search kept short labels on Save search/Remove and Mark all read (#581, #679) while the unread switch beside it went icon-only. From now on every `appListAction` in a list header is labelled in the wide form and icon-only in the compact form — no exceptions. **Scope: the list headers only.** The reader-view nav keeps its `mobile-icon-only` modifier, its `@media` rule and its labelled Reader view/Original toggle. This task overrides the Global Constraint "No template, TypeScript or backend change" for the files listed below.
+
+**Files:**
+- Modify: `frontend/src/styles/_list-action.scss` (the `icon-only-box` mixin and its two call sites)
+- Modify: `frontend/src/app/reader/entry-list/entry-list.component.html` (refresh, unread switch, mark all read)
+- Modify: `frontend/src/app/reader/entry-list/entry-list.component.scss` (`.txt-short` rule, compact container block)
+- Modify: `frontend/src/app/reader/reader-shell.component.html` (`#listEditAction`, `#headerActions`)
+- Modify: `frontend/src/app/reader/reader-shell.component.scss` (save-search / for-you / list-edit label rules)
+- Modify: `frontend/src/app/reader/reader-shell.component.ts` (delete `savedSearchActionShortLabel`)
+- Modify: `frontend/public/i18n/en.json`, `frontend/public/i18n/de.json` (delete `saveSearchShort`, `removeSavedSearchShort`, `markAllReadShort`)
+- Modify: `frontend/src/app/reader/entry-list/entry-list.component.spec.ts`, `frontend/src/app/reader/reader-shell.component.spec.ts` (delete the short-label / modifier tests)
+- Modify: `frontend/e2e/list-header-narrow-pane.spec.ts`, `frontend/e2e/list-header-actions-mobile.spec.ts`
+
+- [ ] **Step 1: Write the failing e2e expectations**
+
+In `frontend/e2e/list-header-narrow-pane.spec.ts`, replace the test `'a direct search keeps its short labels in the compact form'` with:
+
+```ts
+  for (const list of [ALL_ITEMS, FEED, DIRECT_SEARCH]) {
+    test(`every action of ${list.name} is icon-only in the compact form`, async ({ page }) => {
+      await openSplit(page, list, '45');
+      await expectEveryAction(page, { labelled: false });
+    });
+
+    test(`every action of ${list.name} is labelled in the wide form`, async ({ page }) => {
+      await openSplit(page, list, '60');
+      await expectEveryAction(page, { labelled: true });
+    });
+  }
+```
+
+and add this helper above `test.describe`:
+
+```ts
+async function expectEveryAction(page: Page, form: { labelled: boolean }): Promise<void> {
+  const actions = page.locator('.list-header .list-action');
+  expect(await actions.count()).toBeGreaterThan(1);
+  for (const action of await actions.all()) {
+    const label = action.locator('.txt');
+    await (form.labelled ? expect(label).toBeVisible() : expect(label).toBeHidden());
+    await expect(action.locator('app-icon')).toHaveCSS(
+      'border-top-width',
+      form.labelled ? '0px' : '1px',
+    );
+  }
+}
+```
+
+In `frontend/e2e/list-header-actions-mobile.spec.ts`, replace the test `'actions with a visible mobile label keep the borderless link treatment'` with:
+
+```ts
+  test('a direct search uses the same icon-only form as every other list', async ({ page }) => {
+    await openReader(page, 'q=design');
+
+    const actions = page.locator('.list-header .list-action');
+    await expect(actions).toHaveCount(3);
+
+    for (const action of await actions.all()) {
+      await expect(action.locator('.txt')).toBeHidden();
+      await expect(action.locator('app-icon')).toHaveCSS('border-top-width', '1px');
+    }
+  });
+```
+
+In the third test of that file (`'an individual saved-search result …'`), delete the line `await expect(action.locator('.txt-short')).toBeHidden();`.
+
+- [ ] **Step 2: Run them and see them fail**
+
+Run (from `frontend/`): `npx playwright test e2e/list-header-narrow-pane.spec.ts e2e/list-header-actions-mobile.spec.ts --reporter=line`
+Expected: the direct-search compact cases FAIL (Save search / Mark all read keep a borderless icon); everything else PASSES.
+
+- [ ] **Step 3: One compact rule for every header action**
+
+In `frontend/src/styles/_list-action.scss`, replace the mixin and its two call sites with:
+
+```scss
+// Icon-only actions get the sidebar chevron treatment: a full tap target around
+// a smaller bordered glyph box.
+@mixin icon-only-box($action) {
+  #{$action} {
+    justify-content: center;
+    width: var(--tap-target);
+    height: var(--tap-target);
+  }
+
+  #{$action} app-icon {
+    display: inline-flex;
+    padding: var(--space-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+}
+
+// Every list-header action switches form together, with no per-action exception (#1127).
+@container list-header (width <= #{bp.$container-list-header-compact}) {
+  @include icon-only-box('.list-header .list-action');
+
+  .list-header .list-action .txt {
+    display: none;
+  }
+}
+
+// The reader view's nav has no list-header container and opts in per action.
+@media (width <= bp.$bp-sm) {
+  @include icon-only-box('.list-action.mobile-icon-only');
+}
+```
+
+Also fix the spin comment above it (`on a phone that box wears the mobile-icon-only border`) to `in the compact form that box wears a border`.
+
+- [ ] **Step 4: Delete the per-action exceptions in the templates**
+
+`entry-list.component.html`:
+- Refresh: `class="refresh mobile-icon-only"` → `class="refresh"`; delete `<span class="txt-short">{{ 'reader.refresh' | transloco }}</span>`.
+- Unread switch: `class="unread-switch mobile-icon-only"` → `class="unread-switch"`. Its label span keeps `class="txt"`.
+- Mark all read: delete `[class.mobile-icon-only]="!directSearch()"`; delete `<span class="txt-short">{{ 'reader.markAllReadShort' | transloco }}</span>`.
+
+`reader-shell.component.html`:
+- Both `class="list-edit mobile-icon-only"` → `class="list-edit"`.
+- Save search: delete `[class.mobile-icon-only]="viewingSavedSearch()"` and the `<span class="txt-short">…</span>` line.
+- For You Start (`appListAction`): `class="for-you-run mobile-icon-only"` → `class="for-you-run"`, and its `<span class="label">` → `<span class="txt">`. The Stop `app-button` keeps `<span class="label">` (it is not a list action).
+
+Keep `directSearch` in `entry-list.component.ts`: `effectiveLayout` still reads it. If `viewingSavedSearch` in the shell has no other reader after this edit, delete it too (check with grep).
+
+- [ ] **Step 5: Delete the per-component label rules**
+
+`entry-list.component.scss`: delete the `.txt-short { display: none; }` rule with its comment. In the compact container block keep only the `.tools` gap rule; delete the `.unread-switch .txt, .mark-all .txt, .refresh .txt` rule and the `.list-header.is-search … .txt-short` rule with its comment. Update the block comment so it does not claim labels are dropped here (the global sheet does it): e.g. `/* Bordered icon buttons sit tighter than the text links of the wide header. */` directly above the block, and drop the inner duplicate.
+
+`reader-shell.component.scss`: delete both `.save-search .txt-short` rules, the `.save-search .txt`/`.save-search.mobile-icon-only .txt-short` rules and the `.list-edit .txt` container block with its comment. What remains in a compact container block is only the Stop button:
+
+```scss
+/* The For You Stop button is an app-button, not a list action, so it drops its label here. */
+@container list-header (width <= #{bp.$container-list-header-compact}) {
+  .for-you-run .label {
+    display: none;
+  }
+}
+```
+
+Delete the now-empty explanatory comments above them (`/* Save/unsave the search … */`, `/* The list header's leading edit action … */`) if nothing follows them any more.
+
+- [ ] **Step 6: Delete the dead short labels**
+
+- `reader-shell.component.ts`: delete `savedSearchActionShortLabel` and its docblock.
+- `public/i18n/en.json` and `de.json`: delete `saveSearchShort`, `removeSavedSearchShort`, `markAllReadShort` (grep `src` first to prove no other reader).
+- `entry-list.component.spec.ts`: delete the tests `'renders a mobile short-label span beside the full label on mark-all and refresh'`, `'marks saved-search result actions as icon-only on mobile'`, `'keeps the short Mark read label for a direct search on mobile'` and the comment above the first.
+- `reader-shell.component.spec.ts`: delete the four tests from `'renders "Save" as the mobile short label …'` to `'keeps the short action label for a direct search on mobile'` and the comment above them.
+
+- [ ] **Step 7: Run the specs**
+
+Run (from `frontend/`): `npx playwright test e2e/list-header-narrow-pane.spec.ts e2e/list-header-actions-mobile.spec.ts e2e/saved-search-layout.spec.ts e2e/desktop-search-split.spec.ts --reporter=line`
+Expected: all PASS. Then `docker compose exec -T frontend npx jest src/app/reader/entry-list/entry-list.component.spec.ts src/app/reader/reader-shell.component.spec.ts` (one jest run at a time). Expected: PASS.
+
+- [ ] **Step 8: Look at the real render**
+
+Screenshot a direct search at 1280 px split 45 and at a 375 px phone, and a feed at split 60 (throwaway spec, not committed). Every action in a row has the same form.
+
+- [ ] **Step 9: Commit**
+
+```bash
+git add frontend/src/styles/_list-action.scss frontend/src/app/reader/entry-list/entry-list.component.html frontend/src/app/reader/entry-list/entry-list.component.scss frontend/src/app/reader/entry-list/entry-list.component.spec.ts frontend/src/app/reader/reader-shell.component.html frontend/src/app/reader/reader-shell.component.scss frontend/src/app/reader/reader-shell.component.ts frontend/src/app/reader/reader-shell.component.spec.ts frontend/public/i18n/en.json frontend/public/i18n/de.json frontend/e2e/list-header-narrow-pane.spec.ts frontend/e2e/list-header-actions-mobile.spec.ts
+git commit -m "fix(#1127): switch every list-header action to the compact form together"
+```
