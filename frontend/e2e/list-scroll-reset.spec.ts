@@ -275,7 +275,7 @@ test.describe('list scroll position with the unread filter on', () => {
   });
 
   function unreadSwitch(page: Page) {
-    return page.locator('app-entry-list .unread-switch').first();
+    return page.getByRole('switch', { name: 'only unread' });
   }
 
   test('a clicked list starts at the top', async ({ page }) => {

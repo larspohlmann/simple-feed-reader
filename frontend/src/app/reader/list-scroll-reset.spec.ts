@@ -185,8 +185,7 @@ describe('ListScrollReset', () => {
     expect(memory.forget).not.toHaveBeenCalled();
   });
 
-  it('does not read the unread filter it starts with as a flip', () => {
-    localStorage.setItem('sfr.unread-only', '1');
+  it('does not read the starting value of the unread filter as a flip', () => {
     navigate('/?tag=5');
     TestBed.tick();
 

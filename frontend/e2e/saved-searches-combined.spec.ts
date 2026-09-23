@@ -83,16 +83,7 @@ async function stubReaderData(page: Page): Promise<void> {
     },
   );
   await page.route(
-    (url) => url.pathname === '/api/entries/saved-searches',
-    async (route) => {
-      if (route.request().method() !== 'GET') return route.fallback();
-      const unread = new URL(route.request().url()).searchParams.get('unread') === '1';
-      const entries = unread ? UNREAD_ENTRIES : ALL_ENTRIES;
-      await route.fulfill({ status: 200, json: { entries, nextCursor: null } });
-    },
-  );
-  await page.route(
-    (url) => /^\/api\/entries\/saved-searches\/\d+$/.test(url.pathname),
+    (url) => /^\/api\/entries\/saved-searches(\/\d+)?$/.test(url.pathname),
     async (route) => {
       if (route.request().method() !== 'GET') return route.fallback();
       const unread = new URL(route.request().url()).searchParams.get('unread') === '1';

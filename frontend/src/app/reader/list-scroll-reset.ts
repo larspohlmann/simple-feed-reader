@@ -65,10 +65,7 @@ export function forgetsPosition(
  * the load, #254) intact.
  *
  * `NavigationStart` is the hook: it alone carries `navigationTrigger`, and fires
- * before route parameters update, so the erase always lands first. Flipping the
- * unread filter is no navigation but asks for a different list all the same, so
- * it drops that list's offset too — from a root effect, which runs before the
- * entry list's own effects see the new selection.
+ * before route parameters update, so the erase always lands first.
  *
  * Root-provided and deliberately not shell-scoped — a shell destroyed by a trip
  * to settings would forget which list the user left, so the next click would
@@ -88,6 +85,7 @@ export class ListScrollReset {
     this.router.events.pipe(takeUntilDestroyed()).subscribe((event) => {
       if (event instanceof NavigationStart) this.onNavigationStart(event);
     });
+    // A flip is no navigation; as a root effect this erases before the entry list reads the key.
     const unreadOnly = this.unreadFilter.unreadOnly;
     toObservable(unreadOnly)
       .pipe(startWith(unreadOnly()), distinctUntilChanged(), skip(1), takeUntilDestroyed())
