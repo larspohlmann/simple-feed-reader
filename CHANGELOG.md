@@ -10,6 +10,25 @@ lives in the git log and the merged pull requests.
 
 ## [Unreleased]
 
+## [v1.0.16] - 2026-09-23
+
+## What's Changed
+* feat(#1109): recover card images via https-upgrade and background verify by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1110
+* fix(#1112): name the web server's reply when it is not problem+json by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1113
+* Recess an expanded tag's feeds and saved searches onto a sunken surface by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1115
+* Persist saved-search membership in a table, filled by an incremental sweep by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1117
+* Saved-search slug routing and membership pill (#1118) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1120
+* fix(#1119): guard sidebar hover styles behind (hover: hover) by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1121
+* fix(#1122): restore saved-search list header actions by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1123
+* test(#1124): fix the combined saved-search e2e after #1118 by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1125
+* feat(#1126): keep the unread filter in localStorage instead of the URL by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1128
+* feat(#1129): one pill list for tags and saved searches by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1130
+* fix(#1127): list header adapts to its own width by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1133
+* fix(#1132): interpolate the kicker-line container threshold by @larspohlmann in https://github.com/larspohlmann/simple-feed-reader/pull/1134
+
+
+**Full Changelog**: https://github.com/larspohlmann/simple-feed-reader/compare/v1.0.15...v1.0.16
+
 ## [v1.0.15] - 2026-09-20
 
 ## What's Changed
