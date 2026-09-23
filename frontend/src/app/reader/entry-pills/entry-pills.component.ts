@@ -1,16 +1,24 @@
 import { Component, input } from '@angular/core';
-import { SourceTagsComponent } from '../source-tags/source-tags.component';
-import { SavedSearchPillsComponent } from '../saved-search-pills/saved-search-pills.component';
+import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
+import { IconComponent } from '../../shared/icon/icon.component';
+import { TagGlyphComponent } from '../../shared/tag-glyph/tag-glyph.component';
 import { SavedSearchMembershipDto, SubscriptionTagDto } from '../models';
+import { selectionQueryParams } from '../query';
 
-/** An entry's tag pills, then its saved-search pills, as one wrapping list. */
+/**
+ * Tag pills, then saved-search pills, as one wrapping list. Clicks stop
+ * propagating so a pill inside a clickable card follows its link instead.
+ */
 @Component({
   selector: 'app-entry-pills',
-  imports: [SourceTagsComponent, SavedSearchPillsComponent],
+  imports: [RouterLink, TranslocoPipe, IconComponent, TagGlyphComponent],
   templateUrl: './entry-pills.component.html',
   styleUrl: './entry-pills.component.scss',
 })
 export class EntryPillsComponent {
+  protected readonly selectionQueryParams = selectionQueryParams;
+
   readonly tags = input.required<SubscriptionTagDto[]>();
-  readonly savedSearches = input.required<SavedSearchMembershipDto[]>();
+  readonly savedSearches = input<SavedSearchMembershipDto[]>([]);
 }

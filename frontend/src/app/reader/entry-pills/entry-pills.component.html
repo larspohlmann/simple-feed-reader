@@ -1,2 +1,24 @@
-<app-source-tags [tags]="tags()" />
-<app-saved-search-pills [memberships]="savedSearches()" />
+@for (t of tags(); track t.id) {
+  <a
+    class="pill"
+    [routerLink]="['/']"
+    [queryParams]="selectionQueryParams({ tag: t.id })"
+    queryParamsHandling="merge"
+    [attr.title]="'reader.filterByTag' | transloco: { name: t.name }"
+    (click)="$event.stopPropagation()"
+  >
+    <app-tag-glyph [name]="t.icon" [color]="t.color" size="xs" />
+    <span class="name">{{ t.name }}</span>
+  </a>
+}
+@for (m of savedSearches(); track m.id) {
+  <a
+    class="pill saved-search"
+    [routerLink]="['/searches/saved', m.slug]"
+    [attr.title]="m.term"
+    (click)="$event.stopPropagation()"
+  >
+    <app-icon name="saved_search" size="xs" />
+    <span class="name">{{ m.term }}</span>
+  </a>
+}

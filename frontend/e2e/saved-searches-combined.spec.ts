@@ -126,8 +126,10 @@ test('the Saved searches row opens one combined list', async ({ page }) => {
   const rows = page.locator('.rows article');
   await expect(rows).toHaveCount(2);
 
-  await expect(rows.nth(0).locator('app-saved-search-pills .pill .name')).toHaveText('climate');
-  await expect(rows.nth(1).locator('app-saved-search-pills .pill .name')).toHaveText('space');
+  await expect(rows.nth(0).locator('app-entry-pills .pill.saved-search .name')).toHaveText(
+    'climate',
+  );
+  await expect(rows.nth(1).locator('app-entry-pills .pill.saved-search .name')).toHaveText('space');
 });
 
 test('the unread switch narrows the list and stays on into a saved search', async ({ page }) => {
@@ -143,9 +145,11 @@ test('the unread switch narrows the list and stays on into a saved search', asyn
 
   await expect(rows).toHaveCount(1);
   await expect(page).not.toHaveURL(/unread=/);
-  await expect(rows.first().locator('app-saved-search-pills .pill .name')).toHaveText('climate');
+  await expect(rows.first().locator('app-entry-pills .pill.saved-search .name')).toHaveText(
+    'climate',
+  );
 
-  await rows.first().locator('app-saved-search-pills .pill').click();
+  await rows.first().locator('app-entry-pills .pill.saved-search').click();
 
   await expect(page).toHaveURL(/\/searches\/saved\/501-climate/);
   await expect(unreadSwitch).toHaveAttribute('aria-checked', 'true');

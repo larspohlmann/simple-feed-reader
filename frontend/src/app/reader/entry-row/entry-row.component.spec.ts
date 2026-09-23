@@ -141,14 +141,14 @@ describe('EntryRowComponent', () => {
   it('renders a pill for each saved search the entry belongs to (#1118)', () => {
     const el = mount(entry({ savedSearches: [{ id: 1, slug: '1-climate', term: 'climate' }] }))
       .nativeElement as HTMLElement;
-    const pill = el.querySelector('app-saved-search-pills a.pill')!;
+    const pill = el.querySelector('a.pill.saved-search')!;
     expect(pill.textContent).toContain('climate');
     expect(pill.getAttribute('href')).toContain('/searches/saved/1-climate');
   });
 
   it('renders no saved-search pill when the entry matches none (#1118)', () => {
     const el = mount(entry()).nativeElement as HTMLElement;
-    expect(el.querySelector('app-saved-search-pills a.pill')).toBeNull();
+    expect(el.querySelector('a.pill.saved-search')).toBeNull();
     expect(el.querySelector('.saved-search-pill')).toBeNull();
   });
 

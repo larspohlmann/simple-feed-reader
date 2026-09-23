@@ -37,13 +37,13 @@ const tag = (id: number, name: string): SubscriptionTagDto => ({
   position: 0,
 });
 
-function mount(tags: SubscriptionTagDto[], over: Partial<EntryDto> = {}) {
+function mount(tags: SubscriptionTagDto[]) {
   TestBed.configureTestingModule({
     imports: [EntryMetaComponent, provideTranslocoTesting()],
     providers: [provideRouter([])],
   });
   const f = TestBed.createComponent(EntryMetaComponent);
-  f.componentRef.setInput('entry', entry(over));
+  f.componentRef.setInput('entry', entry());
   f.componentRef.setInput('tags', tags);
   f.detectChanges();
   return f;
@@ -54,13 +54,6 @@ describe('EntryMetaComponent', () => {
     const el = mount([tag(1, 'Tech')]).nativeElement as HTMLElement;
     expect(el.textContent).toContain('Tech');
     expect(el.querySelectorAll('app-entry-actions button').length).toBe(3);
-  });
-
-  it('renders the saved-search pills in the same pill list as the tags', () => {
-    const el = mount([tag(1, 'Tech')], {
-      savedSearches: [{ id: 5, slug: '5-climate', term: 'climate' }],
-    }).nativeElement as HTMLElement;
-    expect(el.querySelector('app-entry-pills')!.textContent).toContain('climate');
   });
 
   it('still renders the actions when the entry has no tags', () => {

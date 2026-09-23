@@ -4,7 +4,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { EntryCompactComponent } from './entry-compact.component';
-import { SourceTagsComponent } from '../source-tags/source-tags.component';
+import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { EntryDto, SubscriptionTagDto } from '../models';
 import { selectionQueryParams } from '../query';
 
@@ -16,7 +16,7 @@ import { selectionQueryParams } from '../query';
     FaviconComponent,
     IconComponent,
     EntryCompactComponent,
-    SourceTagsComponent,
+    EntryPillsComponent,
     TranslocoPipe,
   ],
   templateUrl: './source-group.component.html',

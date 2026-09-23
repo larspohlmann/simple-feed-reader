@@ -4,7 +4,7 @@ import { EntryActionsComponent } from '../entry-actions/entry-actions.component'
 import { EntryDto, SubscriptionTagDto } from '../models';
 
 /**
- * The line a magazine card ends on: the feed's tag pills, with the entry's own
+ * The line a magazine card ends on: the entry's pills, with its own
  * actions right-aligned against them. One component, not a row assembled per
  * block, so the wrap/spare-height geometry has one definition everywhere. A
  * grouped compact entry has no pills, so its actions live on the kicker line.
