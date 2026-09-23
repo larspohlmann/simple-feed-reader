@@ -1,35 +1,8 @@
 import { expect, Page, test } from '@playwright/test';
-import { stubAuthToken } from './support/auth';
-import { savedSearchesJson } from './support/reader';
+import { stubOneFeedReader } from './support/reader';
 
 // The sidebar column plus a split main area: `sfr.paneSplit` sets the list column's share.
 const DESKTOP = { width: 1280, height: 800 };
-
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 1,
-      feedId: 1,
-      title: 'Design feeds with a rather long title',
-      faviconUrl: null,
-      imageUrl: null,
-      description: null,
-      customTitle: null,
-      feedUrl: 'https://fixtures.invalid/feed.xml',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-08-28T00:00:00+00:00',
-      lastFetchedAt: '2026-08-28T00:00:00+00:00',
-      position: 0,
-      tags: [],
-      unreadCount: 1,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-  viewedCount: 0,
-};
 
 interface SplitList {
   name: string;
@@ -84,7 +57,7 @@ async function expectEveryAction(page: Page, form: { labelled: boolean }): Promi
 }
 
 async function openSplit(page: Page, list: SplitList, paneSplit: string): Promise<void> {
-  await stubAuthToken(page);
+  await stubOneFeedReader(page, 'Design feeds with a rather long title');
   await page.addInitScript(
     ([layout, split]) => {
       localStorage.setItem('sfr.layout', layout);
@@ -92,16 +65,6 @@ async function openSplit(page: Page, list: SplitList, paneSplit: string): Promis
     },
     [list.layout, paneSplit],
   );
-  const json = (body: unknown) => (route: { fulfill: (response: { json: unknown }) => unknown }) =>
-    route.fulfill({ json: body });
-
-  await page.route('**/api/subscriptions**', json(SUBSCRIPTIONS));
-  await page.route('**/api/tags**', json({ tags: [] }));
-  await page.route('**/api/entries**', json({ entries: [], nextCursor: null }));
-  await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
-  await page.route('**/api/version**', json({ version: 'dev' }));
-  await page.route('**/api/recommendations/**', json({ run: null }));
-  await page.route('**/api/saved-searches**', json(savedSearchesJson()));
 
   await page.goto(list.url);
   await expect(page.locator('.list-header')).toBeVisible();

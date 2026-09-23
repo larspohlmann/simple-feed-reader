@@ -1,35 +1,8 @@
 import { expect, Page, test } from '@playwright/test';
-import { stubAuthToken } from './support/auth';
-import { savedSearchesJson, savedSearchWire } from './support/reader';
+import { savedSearchWire, stubOneFeedReader } from './support/reader';
 import { SavedSearchWire } from '../src/app/reader/models';
 
 const PHONE = { width: 375, height: 667 };
-
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 1,
-      feedId: 1,
-      title: 'Design feeds',
-      faviconUrl: null,
-      imageUrl: null,
-      description: null,
-      customTitle: null,
-      feedUrl: 'https://fixtures.invalid/feed.xml',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-08-28T00:00:00+00:00',
-      lastFetchedAt: '2026-08-28T00:00:00+00:00',
-      position: 0,
-      tags: [],
-      unreadCount: 1,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-  viewedCount: 0,
-};
 
 async function openReader(page: Page, query: string): Promise<void> {
   await openReaderAt(page, `/?${query}`);
@@ -40,17 +13,7 @@ async function openReaderAt(
   url: string,
   savedSearches: SavedSearchWire[] = [],
 ): Promise<void> {
-  await stubAuthToken(page);
-  const json = (body: unknown) => (route: { fulfill: (response: { json: unknown }) => unknown }) =>
-    route.fulfill({ json: body });
-
-  await page.route('**/api/subscriptions**', json(SUBSCRIPTIONS));
-  await page.route('**/api/tags**', json({ tags: [] }));
-  await page.route('**/api/entries**', json({ entries: [], nextCursor: null }));
-  await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
-  await page.route('**/api/version**', json({ version: 'dev' }));
-  await page.route('**/api/recommendations/**', json({ run: null }));
-  await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
+  await stubOneFeedReader(page, 'Design feeds', savedSearches);
 
   await page.goto(url);
   await expect(page.locator('.list-header')).toBeVisible();

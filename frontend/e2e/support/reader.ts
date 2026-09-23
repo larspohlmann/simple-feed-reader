@@ -1,5 +1,7 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
+import type { Page } from '@playwright/test';
 import type { SavedSearchWire } from '../../src/app/reader/models';
+import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
 type ReaderFailureReason = 'no_url' | 'fetch' | 'unextractable' | 'empty';
@@ -50,4 +52,52 @@ export function savedSearchWire(overrides: Partial<SavedSearchWire> = {}): Saved
     ...overrides,
   };
   return { ...merged, slug: overrides.slug ?? `${merged.id}-${merged.term}` };
+}
+
+/** A signed-in account with one feed and empty lists: every API read the reader
+ *  shell boots with, stubbed, so a list-header spec needs no Docker data. */
+export async function stubOneFeedReader(
+  page: Page,
+  feedTitle: string,
+  savedSearches: SavedSearchWire[] = [],
+): Promise<void> {
+  await stubAuthToken(page);
+  const json = (body: unknown) => (route: { fulfill: (response: { json: unknown }) => unknown }) =>
+    route.fulfill({ json: body });
+
+  await page.route('**/api/subscriptions**', json(oneFeedJson(feedTitle)));
+  await page.route('**/api/tags**', json({ tags: [] }));
+  await page.route('**/api/entries**', json({ entries: [], nextCursor: null }));
+  await page.route('**/api/me**', json({ id: 1, email: '', roles: [], preferences: {} }));
+  await page.route('**/api/version**', json({ version: 'dev' }));
+  await page.route('**/api/recommendations/**', json({ run: null }));
+  await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
+}
+
+function oneFeedJson(title: string) {
+  return {
+    subscriptions: [
+      {
+        id: 1,
+        feedId: 1,
+        title,
+        faviconUrl: null,
+        imageUrl: null,
+        description: null,
+        customTitle: null,
+        feedUrl: 'https://fixtures.invalid/feed.xml',
+        siteUrl: null,
+        status: 'active',
+        sourceFormat: 'xml',
+        createdAt: '2026-08-28T00:00:00+00:00',
+        lastFetchedAt: '2026-08-28T00:00:00+00:00',
+        position: 0,
+        tags: [],
+        unreadCount: 1,
+      },
+    ],
+    favoritesCount: 0,
+    keptCount: 0,
+    viewedCount: 0,
+  };
 }
