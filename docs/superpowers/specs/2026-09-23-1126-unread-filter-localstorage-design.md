@@ -21,7 +21,10 @@ list that offers the switch.
   on the next list that offers the switch.
 - Not synced to the account and not cleared on logout — it is a per-device view
   setting, like the reading layout.
-- The backend API parameter `unread` on `/api/entries*` is unchanged.
+- The backend `unread` parameter stays on `/api/entries`,
+  `/api/entries/saved-searches` and `/api/entries/saved-searches/{id}`. It is
+  **removed from `/api/entries/search`**: after this change no client sends it
+  (see "Backend dead code removed").
 
 ## Design
 
@@ -74,6 +77,33 @@ Everything that existed only because the filter lived in the URL:
 - Specs asserting URL-level unread (`query.spec.ts`, `reader-matcher` specs,
   `reader-shell.component.spec.ts` driving `unread: '1'` through `queryParamMap`,
   the entry-list switch's `queryParams` assertion, the e2e `toHaveURL(/unread=1/)`).
+
+### Backend dead code removed
+
+The unread refinement on `GET /api/entries/search` existed only for the old
+saved-search-as-`?q=` path. Remove it end to end:
+
+- `EntrySearchRequestFactory`: `'unread'` leaves `ALLOWED_PARAMETERS`, and the
+  private `unread()` reader goes. A request that still sends `unread` now gets
+  the endpoint's standard 422 `Unknown parameter "unread"` — the factory's
+  existing contract for anything it does not understand.
+- `EntrySearchQuery`: the `$unread` property goes.
+- `EntryScopePredicates::applySearch`: the unread branch goes.
+- `IndexedEntrySearch`: `unreadOnly()` and the unread paragraph of the class
+  docblock go; `rows` is the hydrated candidates.
+- `EntrySearchResult::$continuationRow` goes. Its only purpose was to resume past
+  read rows the unread filter dropped; without the filter the last candidate IS
+  the last row. `EntryPage::withMatchCount()` loses the `$continuationRow`
+  parameter and its docblock paragraph; `SearchPage` stops passing it.
+  `$matchCount` stays — ghost ids dropped by hydration still need it.
+- Tests: the unread cases in `EntrySearchRequestFactoryTest` (replaced by one
+  that asserts `unread` is rejected as unknown), `IndexedEntrySearchTest`,
+  `LikeEntrySearchTest`, `EntrySearchWithFallbackTest`,
+  `EntrySearchControllerTest`, plus any `EntryPage` test of `$continuationRow`.
+
+Not touched: `SearchMarkReadService` / `unreadMatchingEntryIdsForUser` (mark-read
+of a search, independent of the list filter) and the saved-search endpoints'
+`onlyUnread`.
 
 ## Testing
 
