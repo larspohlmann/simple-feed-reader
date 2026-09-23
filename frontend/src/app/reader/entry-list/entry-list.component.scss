@@ -150,12 +150,12 @@ $title-floor: 6rem;
   font-size: var(--fs-sm);
 }
 
-.mobile-search-title-break {
+.compact-search-title-break {
   display: none;
 }
 
 @container list-header (width <= #{bp.$container-list-header-compact}) {
-  .mobile-search-title-break {
+  .compact-search-title-break {
     display: block;
   }
 }
@@ -240,8 +240,8 @@ $title-floor: 6rem;
    circle when unread-filtered; app-icon's `fill` input carries the state. */
 
 /* The Refresh button's in-flight spin lives in the global `_list-action.scss`:
-   it must turn the glyph, not the `app-icon` box that wears the mobile border,
-   and only a global rule reaches the projected glyph (#698). */
+   it must turn the glyph, not the `app-icon` box that wears the compact-form
+   border, and only a global rule reaches the projected glyph (#698). */
 
 /* Pull-to-refresh reveal tray: parked one --refresh-reveal above the bars,
    drawn down by inline translateY. Offset is measured from the bars, not the

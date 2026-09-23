@@ -384,7 +384,7 @@ describe('EntryListComponent', () => {
       }).nativeElement as HTMLElement;
 
       const heading = el.querySelector('.list-header h2')!;
-      expect(heading.querySelector('.results-prefix + .mobile-search-title-break')).not.toBeNull();
+      expect(heading.querySelector('.results-prefix + .compact-search-title-break')).not.toBeNull();
     });
 
     it('renders a trailing + on the count pill when another page is still out there', () => {
