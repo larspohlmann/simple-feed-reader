@@ -22,6 +22,7 @@ reset itself. This is the third leak of the class (#263, #727, #1135). Today:
 | `TagsStore` | Tag names (Discover, Manage, add-feed dialog) |
 | `SavedSearchesStore` | Saved-search terms and counts |
 | `RecommendationsService` | Run report; ticker and poll timer keep running and poll with the next token |
+| `RefreshService` | Run state; a busy-backoff timer fires a refresh with the next token and the previous shell's callback |
 | `MailHealthStore` | Admin mail-failure log, including recipient addresses |
 | `BackupRestoreRun` | Restore progress (reset only by an explicit call) |
 | `AuthService.user`, `PreferencesService`, `DigestService` | Reset by `logout()` only, not on the 401 path |
@@ -40,7 +41,10 @@ No page reload.
 
 1. **`accountSignal(initial)`** — a writable signal that returns to `initial` on
    identity change. Every per-account value, signal or plain field today, is
-   declared with it.
+   declared with it — including request bookkeeping such as an in-flight
+   handle: a dropped response completes without `next` or `error`, so a marker
+   cleared only there would stay set for the next account. A plain field that
+   the next run or load always overwrites before reading it stays plain.
 2. **The interceptor drops stale-identity responses.** A response (success or
    error) to an API request whose token differs from the current token is
    discarded; the observable completes without a value.
@@ -121,9 +125,13 @@ Leaking today:
   ticker and cancels a pending poll timer (`stepLater` keeps its handle).
   `completedStamp` stays a plain signal: it is a monotonic event counter, not
   account data.
+- **`RefreshService`** — `running`, `report`, `failure`. The busy-backoff timer
+  keeps its handle; an `onIdentityChange` side effect cancels it. `slice` and
+  `previousRemaining` are per-run and reset by `run()`.
 - **`MailHealthStore`** — `failures`.
-- **`BackupRestoreRun`** — `progress`, `canContinue`, `archive`, `nextIndex`,
-  `counts`; `reset()` is deleted if no caller needs it outside sign-out.
+- **`BackupRestoreRun`** — `reset()` has callers in the backup section, so it
+  stays and is wired to `onIdentityChange`; it already clears every field,
+  including the account's open archive.
 - **`AuthService.user`** — `accountSignal<CurrentUser | null>(null)`.
 - **`PreferencesService`, `DigestService`, `AiAvailabilityService`** — their
   signals become `accountSignal`s; `reset()` is deleted.
@@ -134,9 +142,11 @@ Leaking today:
 
 Already resetting, moved to the new form:
 
-- **`SubscriptionsStore`**, **`CatalogStore`** — signals become
-  `accountSignal`s; `invalidate()` keeps only what the rest of the store needs
-  (`CatalogStore.invalidate()` is also called after a subscribe).
+- **`SubscriptionsStore`** — signals, `lastLoadedAt` and `inFlight` become
+  `accountSignal`s; the private `invalidate()` and the constructor hook are
+  deleted. `latestLoad` and `localEdits` stay (same-account ordering).
+- **`CatalogStore`** — signals become `accountSignal`s; the constructor hook is
+  deleted. The public `invalidate()` stays for the after-subscribe refetch.
 - **`EntryBodyService`** — `generation` is deleted (the interceptor drop
   replaces it). The cache is a `Map` of signals, so it stays cleared by
   `onIdentityChange` (rule 3's collection case).
@@ -155,12 +165,16 @@ sidebar visibility and collapse — belong to the device, not the account.
   effect removes its sessionStorage key.
 - The return URL is stored with the account identifier: `{ url, account }` in
   sessionStorage. The interceptor's 401 branch passes the `username` claim of
-  the failed request's token.
+  the failed request's token, and records it before it clears the token. A
+  token it cannot decode records no return URL.
+- The auth guard's path (a signed-out visitor opens a reader deep link) stores
+  `account: null`: the visitor chose that URL, so whoever signs in next uses it.
+- Behaviour change against #969: logout no longer keeps the saved reader URL
+  for the settings back link — it is the previous account's location. #969's
+  acceptance criteria do not require it; the test that asserted it flips.
 - `consumeSignInReturnUrl()` compares the stored `account` with the `username`
   claim of the current token. Equal → the URL; otherwise `/`. The stored value
   is deleted in both cases.
-- A token without a `username` claim, or one the client cannot decode, gives no
-  binding: the URL is not used.
 - The payload is decoded only to compare two values; the signature is not
   verified and nothing is authorised by it — the server checks every request.
 - A small pure helper, `accountOf(token): string | null` in `core/`, decodes the
