@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+  <channel>
+    <title>Comments on: Hello World</title>
+    <link>https://blog.example.org/2026/09/hello-world/</link>
+    <description>A blog</description>
+    <item>
+      <title>By: Alice</title>
+      <link>https://blog.example.org/2026/09/hello-world/#comment-12</link>
+      <dc:creator><![CDATA[Alice]]></dc:creator>
+      <pubDate>Wed, 23 Sep 2026 10:00:00 +0000</pubDate>
+      <guid isPermaLink="false">https://blog.example.org/?p=7#comment-12</guid>
+      <content:encoded><![CDATA[<p>Great post.</p>]]></content:encoded>
+    </item>
+    <item>
+      <title>By: Bob</title>
+      <link>https://blog.example.org/2026/09/hello-world/#comment-13</link>
+      <dc:creator><![CDATA[Bob]]></dc:creator>
+      <pubDate>Wed, 23 Sep 2026 11:00:00 +0000</pubDate>
+      <guid isPermaLink="false">https://blog.example.org/?p=7#comment-13</guid>
+      <content:encoded><![CDATA[<p>Agreed.</p><script>alert(1)</script>]]></content:encoded>
+    </item>
+  </channel>
+</rss>

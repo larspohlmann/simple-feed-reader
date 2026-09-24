@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Comments\EntryComment;
 use App\Service\Discussion\Discussion;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -23,17 +24,30 @@ final class CommentsLoaderTest extends KernelTestCase
 {
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
+    private const string WORDPRESS_POST = 'https://blog.example.org/2026/09/hello-world/';
 
     private StubFeedFetcher $fetcher;
     private HostThrottle $throttle;
-    private MockClock $clock;
 
     protected function setUp(): void
     {
         self::bootKernel();
         $this->fetcher = new StubFeedFetcher();
-        $this->clock = new MockClock('2026-09-24 12:00:00');
-        $this->throttle = new HostThrottle(new ArrayAdapter(), $this->clock);
+        $this->throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+    }
+
+    /** @return list<EntryComment> */
+    private function loadWordPressComments(): array
+    {
+        $feed = self::WORDPRESS_POST . 'feed/';
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/wordpress/post-comments.rss');
+        $this->fetcher->willReturn($feed, FetchResponse::fetched($feed, false, $xml, null, null));
+        $entry = self::entry();
+        $entry->setDiscussion(
+            Discussion::withCommentsFeed(self::WORDPRESS_POST . '#comments', $feed, CommentsLoad::Manual),
+        );
+
+        return $this->loader()->load($entry)->comments;
     }
 
     private function loader(): CommentsLoader
@@ -74,8 +88,25 @@ final class CommentsLoaderTest extends KernelTestCase
         self::assertNotSame([], $result->comments);
         foreach ($result->comments as $comment) {
             self::assertNotSame(self::THREAD, $comment->url);
-            self::assertStringNotContainsString('<script', $comment->html);
         }
+    }
+
+    public function testKeepsEveryWordPressCommentWhoseLinkOnlyDiffersByFragment(): void
+    {
+        $comments = $this->loadWordPressComments();
+
+        self::assertSame(
+            [self::WORDPRESS_POST . '#comment-12', self::WORDPRESS_POST . '#comment-13'],
+            array_map(static fn (EntryComment $comment) => $comment->url, $comments),
+        );
+    }
+
+    public function testStripsScriptsFromCommentBodies(): void
+    {
+        $bodies = array_map(static fn (EntryComment $comment) => $comment->html, $this->loadWordPressComments());
+
+        self::assertStringContainsString('Agreed.', $bodies[1]);
+        self::assertStringNotContainsString('<script', $bodies[1]);
     }
 
     public function testMarksTheEntryAuthorsComments(): void

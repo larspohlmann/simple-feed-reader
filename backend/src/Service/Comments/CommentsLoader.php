@@ -14,7 +14,6 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Url\UrlNormalizer;
 
 final readonly class CommentsLoader
 {
@@ -22,7 +21,6 @@ final readonly class CommentsLoader
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
         private EntrySanitizer $sanitizer,
-        private UrlNormalizer $urlNormalizer,
         private HostThrottle $hostThrottle,
     ) {
     }
@@ -60,10 +58,10 @@ final readonly class CommentsLoader
      */
     private function comments(Entry $entry, array $parsed): array
     {
-        $postHash = $this->urlNormalizer->hash($entry->getDiscussion()->url);
+        $postUrl = $entry->getDiscussion()->url;
         $comments = [];
         foreach ($parsed as $item) {
-            if ($postHash !== null && $this->urlNormalizer->hash($item->url) === $postHash) {
+            if (self::isThePost($item, $postUrl)) {
                 continue;
             }
             $comments[] = new EntryComment(
@@ -77,5 +75,11 @@ final readonly class CommentsLoader
         }
 
         return $comments;
+    }
+
+    // Compared with the fragment: WordPress comments link `post/#comment-N` under a `post/#comments` discussion.
+    private static function isThePost(ParsedEntry $item, ?string $postUrl): bool
+    {
+        return $postUrl !== null && trim((string) $item->url) === trim($postUrl);
     }
 }
