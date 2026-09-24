@@ -414,7 +414,6 @@ Then the tests. The seeding order is deliberate: ids never agree with dates, so 
 
     public function testViewedViewOldestFirstListsTheEarliestOpenedFirst(): void
     {
-        // Published early→late, but opened late→early: only a view-time sort gives late, early.
         $early = $this->entryAt('early', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
         $late = $this->entryAt('late', '2026-07-01T00:00:00Z', '2026-07-20T00:00:00Z');
         $earlyState = new EntryState($this->user, $early);
@@ -482,6 +481,20 @@ In `backend/tests/Controller/Api/EntryControllerTest.php`, after `testRejectsUnk
         $client->request('GET', '/api/entries?view=for-you&order=asc', server: $headers);
 
         self::assertResponseIsSuccessful();
+    }
+
+    public function testAnUnknownOrderIsRejectedOnTheForYouViewToo(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order-for-you-bad@example.com');
+
+        $client->request('GET', '/api/entries?view=for-you&order=up', server: $headers);
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $body['errors']);
     }
 ```
 
@@ -585,7 +598,9 @@ Expected: PASS, including every pre-existing `EntryListTest` case (newest first 
 
 - [ ] **Step 9: Prove each new test can fail** (see "Every task"). At minimum:
   - swap the two `sqlDirection()` arms
-  - make `orderedBy` use a fixed `'ASC'` for the id tiebreak
+  - make `orderedBy` use a fixed `'DESC'` for the id tiebreak (not `'ASC'` — with
+    NewestFirst's own direction already `'DESC'`, an `'ASC'` mutation cannot turn
+    any new test red; `'DESC'` does, via `testOldestFirstReversesTheListIdTieBreakIncluded`)
   - swap the `strictlyAfter()` arms
   - pass `$query->order` as `NewestFirst` in `ordering()`
 
