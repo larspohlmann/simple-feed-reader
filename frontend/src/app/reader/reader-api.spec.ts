@@ -209,6 +209,24 @@ describe('ReaderApi', () => {
     req.flush({ entries: [], nextCursor: null });
   });
 
+  it('asks every list endpoint for oldest first only when the query says so', () => {
+    api.entries({ view: 'all', order: 'oldest' }).subscribe();
+    api.entries({ view: 'all', q: 'testing', order: 'oldest' }).subscribe();
+    api.entries({ view: 'saved-searches', order: 'oldest' }).subscribe();
+    api.entries({ view: 'all', savedSearchId: 42, order: 'oldest' }).subscribe();
+    api.entries({ view: 'all', order: 'newest' }).subscribe();
+
+    const requests = ctrl.match((r) => r.url.startsWith('https://api.test/api/entries'));
+    expect(requests.map((r) => r.request.params.get('order'))).toEqual([
+      'asc',
+      'asc',
+      'asc',
+      'asc',
+      null,
+    ]);
+    for (const request of requests) request.flush({ entries: [], nextCursor: null });
+  });
+
   it('marks the combined saved-search list read with only a watermark', () => {
     api.markSavedSearchesRead('2026-09-01T10:00:00.000Z').subscribe();
     const req = ctrl.expectOne((r) => r.url.endsWith('/api/entries/saved-searches/mark-read'));

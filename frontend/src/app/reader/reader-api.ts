@@ -72,58 +72,34 @@ export class ReaderApi {
   }
 
   entries(query: EntryQuery, cursor?: string | null): Observable<EntriesPage> {
+    const params = this.pageParams(query, cursor);
     if (query.savedSearchId != null) {
-      return this.singleSavedSearchEntries(query.savedSearchId, query.unread, cursor);
+      return this.http.get<EntriesPage>(
+        `${this.base}/api/entries/saved-searches/${query.savedSearchId}`,
+        { params },
+      );
     }
-    if (query.q) return this.searchEntries(query.q, query.unread, cursor);
-    if (query.view === 'saved-searches') return this.savedSearchEntries(query.unread, cursor);
-    let params = new HttpParams().set('view', query.view).set('limit', PAGE_SIZE);
-    if (query.subscription != null) params = params.set('subscription', query.subscription);
-    if (query.tag != null) params = params.set('tag', query.tag);
+    if (query.q) {
+      return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, {
+        params: params.set('q', query.q),
+      });
+    }
+    if (query.view === 'saved-searches') {
+      return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, { params });
+    }
+    let listParams = params.set('view', query.view);
+    if (query.subscription != null) listParams = listParams.set('subscription', query.subscription);
+    if (query.tag != null) listParams = listParams.set('tag', query.tag);
+    return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams });
+  }
+
+  /** What every list endpoint takes alike: the page, the unread refinement and the order. */
+  private pageParams(query: EntryQuery, cursor?: string | null): HttpParams {
+    let params = new HttpParams().set('limit', PAGE_SIZE);
     if (query.unread) params = params.set('unread', '1');
+    if (query.order === 'oldest') params = params.set('order', 'asc');
     if (cursor) params = params.set('cursor', cursor);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params });
-  }
-
-  /** Search is its own view over every subscription. It never forwards `view`,
-   *  `tag` or `subscription`; a saved-search result can add only `unread`. */
-  private searchEntries(
-    term: string,
-    unread: boolean | undefined,
-    cursor?: string | null,
-  ): Observable<EntriesPage> {
-    let params = new HttpParams().set('q', term).set('limit', PAGE_SIZE);
-    if (unread) params = params.set('unread', '1');
-    if (cursor) params = params.set('cursor', cursor);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries/search`, { params });
-  }
-
-  /** The combined saved-search list carries none of the entry list's filters —
-   *  it is its own view over every subscription — so it forwards only the page
-   *  and the unread refinement. */
-  private savedSearchEntries(
-    unread: boolean | undefined,
-    cursor?: string | null,
-  ): Observable<EntriesPage> {
-    let params = new HttpParams().set('limit', PAGE_SIZE);
-    if (unread) params = params.set('unread', '1');
-    if (cursor) params = params.set('cursor', cursor);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches`, { params });
-  }
-
-  /** One saved search's members, from the membership table, by id. Carries only
-   *  the page and the unread refinement, exactly like the combined list. */
-  private singleSavedSearchEntries(
-    id: number,
-    unread: boolean | undefined,
-    cursor?: string | null,
-  ): Observable<EntriesPage> {
-    let params = new HttpParams().set('limit', PAGE_SIZE);
-    if (unread) params = params.set('unread', '1');
-    if (cursor) params = params.set('cursor', cursor);
-    return this.http.get<EntriesPage>(`${this.base}/api/entries/saved-searches/${id}`, {
-      params,
-    });
+    return params;
   }
 
   updateState(id: number, patch: EntryStatePatch): Observable<{ state: EntryStateDto }> {
