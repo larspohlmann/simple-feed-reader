@@ -2595,6 +2595,14 @@ git add e2e/list-order.spec.ts e2e/list-header-count-one-line.spec.ts e2e/saved-
 git commit -m "test(#1143): e2e for the list order toggle and oldest-first mark-above"
 ```
 
+**Amendment (implementation) — waits that tell the orders apart.** Entry 1 and entry 40 are on screen in
+both orders, so a visibility wait passes either way and races the reload. Each list load is awaited with
+`page.waitForRequest` on its exact `tag`/`order` params (armed before the triggering action), then the
+first row's `data-entry-id` is polled (`40` newest first, `1` oldest first). The subscription stub mirrors
+`oneFeedJson` (incl. `viewedCount`). Step 3 as written fails earlier, on the first-row wait; with that wait
+also removed it fails on `toContain(1)` — both are the discrimination the step asks for. No `afterEach`:
+the order key lives in `localStorage` of a per-test browser context, and no server data is written.
+
 ---
 
 ### Task 14: Whole-branch verification
