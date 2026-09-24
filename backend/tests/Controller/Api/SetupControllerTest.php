@@ -11,6 +11,7 @@ use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -190,11 +191,18 @@ final class SetupControllerTest extends WebTestCase
         $this->post($client, 'root@example.com', 'a-strong-password-123', self::SECRET);
 
         self::assertResponseStatusCodeSame(201);
-        self::assertArrayHasKey('token', $this->body($client));
+        $token = $this->body($client)['token'];
+        self::assertIsString($token);
 
         $users = $client->getContainer()->get(UserRepository::class);
         self::assertInstanceOf(UserRepository::class, $users);
         self::assertTrue($users->hasAnyAdmin());
+
+        $admin = $users->findOneByEmail('root@example.com');
+        self::assertNotNull($admin);
+        /** @var JWTTokenManagerInterface $tokens */
+        $tokens = $client->getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertSame($admin->getId(), $tokens->parse($token)['userId'] ?? null);
     }
 
     public function testWrongSecretIsForbidden(): void
