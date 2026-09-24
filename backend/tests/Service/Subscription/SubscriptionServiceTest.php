@@ -25,6 +25,7 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\FeedScheduler;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
@@ -113,6 +114,7 @@ final class SubscriptionServiceTest extends DbTestCase
                         new CategoryNormalizer(),
                     ),
                     new NaiveUtcClock($clock),
+                    new PlatformEntryRules([]),
                 ),
                 new FeedScheduler($clock),
                 $this->em,

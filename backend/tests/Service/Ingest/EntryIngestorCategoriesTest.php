@@ -13,6 +13,7 @@ use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedCategory;
 use App\Service\Parser\ParsedEntry;
@@ -41,6 +42,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
             new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            new PlatformEntryRules([]),
         );
 
         $this->feed = new Feed('https://example.com/feed');

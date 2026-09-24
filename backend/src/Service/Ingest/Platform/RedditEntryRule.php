@@ -1,0 +1,68 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Ingest\Platform;
+
+use App\Enum\CommentsLoad;
+use App\Service\Discussion\Discussion;
+use App\Service\Parser\ParsedEntry;
+
+final readonly class RedditEntryRule implements PlatformEntryRule
+{
+    private const string REDDIT_HOST = '#(^|\.)(reddit\.com|redd\.it)$#i';
+    private const string THREAD_PATH = '#/comments/[a-z0-9]+(/|$)#i';
+    private const string LINK_TARGET = "#<a\\s+href\\s*=\\s*\x22([^\x22]+)\x22>\\[link]</a>#";
+    private const string FOOTER = '#(?:\s|&\#32;)*submitted by.*?\[comments\]</a>\s*</span>#s';
+
+    public function supports(ParsedEntry $entry): bool
+    {
+        return $entry->url !== null
+            && self::isRedditHosted($entry->url)
+            && preg_match(self::THREAD_PATH, (string) parse_url($entry->url, \PHP_URL_PATH)) === 1;
+    }
+
+    public function apply(ParsedEntry $entry): ParsedEntry
+    {
+        $thread = self::withoutQuery((string) $entry->url);
+
+        return new ParsedEntry(
+            guid: $entry->guid,
+            url: self::externalArticle($entry->contentHtml),
+            title: $entry->title,
+            author: $entry->author,
+            summary: $entry->summary,
+            contentHtml: self::withoutFooter($entry->contentHtml),
+            publishedAt: $entry->publishedAt,
+            media: $entry->media,
+            categories: $entry->categories,
+            discussion: Discussion::withCommentsFeed($thread, rtrim($thread, '/') . '/.rss', CommentsLoad::Auto),
+            authorUrl: $entry->authorUrl,
+        );
+    }
+
+    private static function externalArticle(?string $contentHtml): ?string
+    {
+        if ($contentHtml === null || preg_match(self::LINK_TARGET, $contentHtml, $match) !== 1) {
+            return null;
+        }
+        $target = html_entity_decode($match[1], \ENT_QUOTES | \ENT_HTML5);
+
+        return self::isRedditHosted($target) ? null : $target;
+    }
+
+    private static function withoutFooter(?string $contentHtml): ?string
+    {
+        return $contentHtml === null ? null : (string) preg_replace(self::FOOTER, '', $contentHtml);
+    }
+
+    private static function isRedditHosted(string $url): bool
+    {
+        return preg_match(self::REDDIT_HOST, (string) parse_url($url, \PHP_URL_HOST)) === 1;
+    }
+
+    private static function withoutQuery(string $url): string
+    {
+        return strtok($url, '?#') ?: $url;
+    }
+}

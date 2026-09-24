@@ -22,6 +22,7 @@ use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
@@ -172,6 +173,7 @@ final class MaintenanceTickTest extends DbTestCase
                     new CategoryNormalizer(),
                 ),
                 new NaiveUtcClock($clock),
+                new PlatformEntryRules([]),
             ),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock),

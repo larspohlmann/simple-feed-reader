@@ -13,6 +13,7 @@ use App\Service\Discovery\DiscoveredFeed;
 use App\Service\FeedScheduler;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Sanitize\EntrySanitizer;
@@ -47,6 +48,7 @@ final class FirstFetchRecorderTest extends DbTestCase
                     new CategoryNormalizer(),
                 ),
                 new NaiveUtcClock($clock),
+                new PlatformEntryRules([]),
             ),
             new FeedScheduler($clock),
             $this->em,

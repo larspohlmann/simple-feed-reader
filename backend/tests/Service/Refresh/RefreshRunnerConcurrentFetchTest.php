@@ -26,6 +26,7 @@ use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
@@ -144,6 +145,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
                     new CategoryNormalizer(),
                 ),
                 new NaiveUtcClock($this->clock),
+                new PlatformEntryRules([]),
             ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock),

@@ -23,6 +23,8 @@ use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\VisualMediaKind;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discussion\Discussion;
+use App\Service\Ingest\Platform\PlatformEntryRules;
+use App\Service\Ingest\Platform\RedditEntryRule;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use App\Enum\CommentsLoad;
@@ -47,6 +49,7 @@ final class EntryIngestorTest extends DbTestCase
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
             new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            new PlatformEntryRules([]),
         );
     }
 
@@ -290,6 +293,45 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertSame('https://blog.example/post/feed/', $entry->getDiscussion()->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $entry->getDiscussion()->commentsLoad);
+    }
+
+    public function testAppliesPlatformRulesBeforePersisting(): void
+    {
+        /** @var EntryRepository $entryRepository */
+        $entryRepository = $this->em->getRepository(Entry::class);
+        /** @var CategoryRepository $categoryRepository */
+        $categoryRepository = $this->em->getRepository(Category::class);
+        $ingestor = new EntryIngestor(
+            $this->em,
+            $entryRepository,
+            new EntrySanitizer(),
+            new UrlNormalizer(),
+            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            new PlatformEntryRules([new RedditEntryRule()]),
+        );
+        $footer = ' &#32; submitted by &#32; <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
+            . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
+            . ' <span><a href="https://www.reddit.com/r/PHP/comments/1abc/t/">[comments]</a></span>';
+        $parsed = new ParsedEntry(
+            guid: 't3_1abc',
+            url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $footer,
+            publishedAt: null,
+        );
+        $feed = $this->feed();
+
+        $ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        self::assertSame('https://example.com/a', $entry->getUrl());
+        self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
     }
 
     private function ingestOne(ParsedEntry $parsedEntry): Entry
