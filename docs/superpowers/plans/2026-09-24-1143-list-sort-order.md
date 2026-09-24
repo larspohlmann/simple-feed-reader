@@ -2370,17 +2370,28 @@ If `before` has no Burst group with these values (the run qualification also dep
 - [ ] **Step 3: Implement** — replace `activeSourceCount` and its docblock:
 
 ```ts
-/** Distinct sources active within ACTIVE_WINDOW_MS of the first entry. Anchored on
- *  the first entry, not the newest or the wall clock, so it is prefix-stable in either
- *  list order: an appended page can only ADD a source, never remove one. */
+/** Distinct sources active within ACTIVE_WINDOW_MS of the first entry in display
+ *  order whose date parses — an unparseable first entry is skipped rather than
+ *  disabling collapse for the whole list. Zero when no entry has a usable date. */
 function activeSourceCount(entries: EntryDto[]): number {
-  if (entries.length === 0) return 0;
-  const anchor = effectiveTime(entries[0]);
+  const anchorEntry = entries.find((entry) => !Number.isNaN(effectiveTime(entry)));
+  if (!anchorEntry) return 0;
+  const anchor = effectiveTime(anchorEntry);
   return distinctSources(
     entries.filter((entry) => Math.abs(effectiveTime(entry) - anchor) <= ACTIVE_WINDOW_MS),
   );
 }
 ```
+
+The anchor is the first entry in display order whose `effectiveTime` is a
+number, not literally `entries[0]` — an unparseable first entry must not
+disable collapse for the whole list (the old max-based code never picked a
+NaN entry as newest; naively anchoring on `entries[0]` regresses that
+robustness). Also add a test with an unparseable-date first entry followed by
+a same-source burst of 8+, asserting collapse still fires, and assert
+prefix-stability in the Step-1 test by comparing `kinds(after).slice(0,
+before.length)` to `kinds(before)`, not just that a Burst group exists in
+both.
 
 In the docblocks listed under Files, change "newest" to "first" where it means position in the list: "The first entries of a collapsing run…", "…when the first entries have none", "…when the first are image-less", "If the first entry has no usable image…", "The run's first entries, laid out…".
 
