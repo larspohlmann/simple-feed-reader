@@ -1146,6 +1146,15 @@ final class AdminUserControllerTest extends WebTestCase
         $factory = $this->factory();
         $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
         $deputy = $factory->create('deputy@example.com', roles: ['ROLE_ADMIN']);
+        // Minted before the deletion below: this is the token the deputy
+        // already holds when it gets revoked from under them. Doctrine
+        // resets a removed entity's identifier on the SAME object once it is
+        // flushed (UnitOfWork::executeDeletions()), and Symfony's functional
+        // test kernel resets rather than rebuilds the EntityManager between
+        // requests — so minting AFTER the delete would hand $deputy's own
+        // now-id-less object to the token manager instead of proving the
+        // stale-token scenario this test is named for.
+        $deputyToken = $this->tokenFor($deputy);
 
         $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
             'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($soleAdmin),
@@ -1153,7 +1162,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(204);
 
         $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($deputy),
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $deputyToken,
         ]);
         self::assertResponseStatusCodeSame(401);
 

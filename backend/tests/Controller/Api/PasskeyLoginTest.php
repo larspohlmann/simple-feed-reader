@@ -108,7 +108,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $client = static::createClient();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
         $this->serveFrom($client, self::ORIGIN);
-        $this->factory()->create('claims@example.test');
+        $user = $this->factory()->create('claims@example.test');
         $fixture = $this->enrol($client, 'claims@example.test');
         $handle = $this->issueLoginChallenge($fixture->challenge);
 
@@ -133,6 +133,7 @@ final class PasskeyLoginTest extends ApiTestCase
         self::assertIsString($passkeyToken);
 
         self::assertSame($this->claimsExcludingTiming($passwordToken), $this->claimsExcludingTiming($passkeyToken));
+        self::assertSame($user->getId(), $this->claimsExcludingTiming($passkeyToken)['userId'] ?? null);
     }
 
     public function testAReplayedHandleIsRejected(): void
