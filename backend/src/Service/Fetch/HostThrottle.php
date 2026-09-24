@@ -10,6 +10,10 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class HostThrottle
 {
+    /** The bounds every recorded wait is clamped to, shared by every caller. */
+    public const int MINIMUM_WAIT_SECONDS = 60;
+    public const int MAXIMUM_WAIT_SECONDS = 86400;
+
     public function __construct(
         #[Autowire(service: 'host_throttle.cache')]
         private CacheItemPoolInterface $cache,
@@ -17,12 +21,22 @@ final readonly class HostThrottle
     ) {
     }
 
-    public function record(string $url, int $seconds): void
+    /**
+     * Clamps the requested wait to [{@see self::MINIMUM_WAIT_SECONDS},
+     * {@see self::MAXIMUM_WAIT_SECONDS}] and returns the wait actually
+     * recorded, so a site naming 0 still rations and one naming years does
+     * not strand the host indefinitely.
+     */
+    public function record(string $url, int $seconds): int
     {
+        $wait = max(self::MINIMUM_WAIT_SECONDS, min(self::MAXIMUM_WAIT_SECONDS, $seconds));
+
         $item = $this->cache->getItem(self::key($url));
-        $item->set($this->clock->now()->getTimestamp() + $seconds);
-        $item->expiresAfter($seconds);
+        $item->set($this->clock->now()->getTimestamp() + $wait);
+        $item->expiresAfter($wait);
         $this->cache->save($item);
+
+        return $wait;
     }
 
     public function remainingSeconds(string $url): int

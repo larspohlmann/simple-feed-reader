@@ -18,8 +18,6 @@ use App\Service\Url\UrlNormalizer;
 
 final readonly class CommentsLoader
 {
-    private const int UNSTATED_WAIT_SECONDS = 60;
-
     public function __construct(
         private FeedFetcherInterface $fetcher,
         private FeedParser $parser,
@@ -44,8 +42,10 @@ final readonly class CommentsLoader
 
             return CommentsResult::ok($this->comments($entry, $this->parser->parse($body)->entries));
         } catch (FeedThrottledException $e) {
-            $wait = $e->retryAfterSeconds ?? self::UNSTATED_WAIT_SECONDS;
-            $this->hostThrottle->record($feedUrl, $wait);
+            $wait = $this->hostThrottle->record(
+                $feedUrl,
+                $e->retryAfterSeconds ?? HostThrottle::MINIMUM_WAIT_SECONDS,
+            );
 
             return CommentsResult::throttled($wait);
         } catch (FetchException | FeedParseException) {

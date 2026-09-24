@@ -120,7 +120,7 @@ final class EntryCommentsControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('comments-throttled@example.com');
         $fetcher = $this->installFetcher();
-        $fetcher->willThrow(self::FEED, new FeedThrottledException('429', 30));
+        $fetcher->willThrow(self::FEED, new FeedThrottledException('429', 90));
         $entry = $this->seedEntry($user, true);
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
@@ -129,7 +129,7 @@ final class EntryCommentsControllerTest extends WebTestCase
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($body);
         self::assertSame('throttled', $body['status']);
-        self::assertSame(30, $body['retryAfter']);
+        self::assertSame(90, $body['retryAfter']);
     }
 
     public function testEntryWithoutCommentsFeedIs404(): void

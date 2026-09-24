@@ -47,7 +47,7 @@ final class CommentsLoaderTest extends KernelTestCase
         return $loader;
     }
 
-    private static function entry(string $author = '/u/Background_Lie11'): Entry
+    private static function entry(?string $author = '/u/Background_Lie11', ?string $discussionUrl = self::THREAD): Entry
     {
         $entry = new Entry(
             new Feed('https://www.reddit.com/r/PHP/.rss'),
@@ -58,7 +58,7 @@ final class CommentsLoaderTest extends KernelTestCase
             new \DateTimeImmutable(),
         );
         $entry->setAuthor($author);
-        $entry->setDiscussion(Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto));
+        $entry->setDiscussion(Discussion::withCommentsFeed($discussionUrl, self::FEED, CommentsLoad::Auto));
 
         return $entry;
     }
@@ -89,6 +89,44 @@ final class CommentsLoaderTest extends KernelTestCase
         self::assertNotSame([], $byAuthor);
     }
 
+    public function testLeavesOtherCommentersUnmarked(): void
+    {
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
+        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+
+        $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
+
+        $byOtherCommenter = array_filter(
+            $result->comments,
+            static fn ($c): bool => $c->author === '/u/WesamMikhail',
+        );
+        self::assertNotSame([], $byOtherCommenter);
+        foreach ($byOtherCommenter as $comment) {
+            self::assertFalse($comment->byEntryAuthor);
+        }
+    }
+
+    public function testAnEntryWithNoAuthorMarksNoComment(): void
+    {
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
+        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+
+        $result = $this->loader()->load(self::entry(null));
+
+        $byAuthor = array_filter($result->comments, static fn ($c): bool => $c->byEntryAuthor);
+        self::assertSame([], $byAuthor);
+    }
+
+    public function testNoDiscussionUrlKeepsEveryParsedItem(): void
+    {
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
+        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+
+        $result = $this->loader()->load(self::entry(discussionUrl: null));
+
+        self::assertContains(self::THREAD, array_map(static fn ($c) => $c->url, $result->comments));
+    }
+
     public function testA429IsThrottledAndRemembered(): void
     {
         $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', null));
@@ -103,14 +141,34 @@ final class CommentsLoaderTest extends KernelTestCase
         self::assertCount(1, $this->fetcher->fetchedUrls);
     }
 
-    public function testAKnownThrottleSkipsTheRequest(): void
+    public function testAZeroRetryAfterIsClampedToTheFloor(): void
     {
-        $this->throttle->record('https://www.reddit.com/r/PHP/.rss', 40);
+        $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', 0));
 
         $result = $this->loader()->load(self::entry());
 
         self::assertSame('throttled', $result->status);
-        self::assertSame(40, $result->retryAfter);
+        self::assertSame(60, $result->retryAfter);
+    }
+
+    public function testAHugeRetryAfterIsClampedToTheCeiling(): void
+    {
+        $this->fetcher->willThrow(self::FEED, new FeedThrottledException('429', 99_999_999));
+
+        $result = $this->loader()->load(self::entry());
+
+        self::assertSame('throttled', $result->status);
+        self::assertSame(86_400, $result->retryAfter);
+    }
+
+    public function testAKnownThrottleSkipsTheRequest(): void
+    {
+        $this->throttle->record('https://www.reddit.com/r/PHP/.rss', 90);
+
+        $result = $this->loader()->load(self::entry());
+
+        self::assertSame('throttled', $result->status);
+        self::assertSame(90, $result->retryAfter);
         self::assertSame([], $this->fetcher->fetchedUrls);
     }
 

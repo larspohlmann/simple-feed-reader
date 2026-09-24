@@ -22,10 +22,6 @@ final class FeedScheduler
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
     private const int ERROR_MESSAGE_MAX = 1000;
-
-    /** The bounds on a wait a rationing site may ask for. */
-    private const int THROTTLE_FLOOR_SECONDS = 60;
-    private const int THROTTLE_CEILING_SECONDS = 86400;
     private const int SECONDS_PER_MINUTE = 60;
 
     public function __construct(
@@ -83,16 +79,14 @@ final class FeedScheduler
         // A site that named no delay is asked again no sooner than it would
         // have been anyway. Polling a host that just said "less" every quarter
         // hour, when its own cadence had grown to daily, is asking for more.
-        $wait = min(
-            self::THROTTLE_CEILING_SECONDS,
-            max(
-                self::THROTTLE_FLOOR_SECONDS,
-                $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
-            ),
+        // HostThrottle::record() clamps the requested wait to its own bounds
+        // and hands back what it actually recorded.
+        $wait = $this->hostThrottle->record(
+            $feed->getUrl(),
+            $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
         );
 
         $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
-        $this->hostThrottle->record($feed->getUrl(), $wait);
     }
 
     /**

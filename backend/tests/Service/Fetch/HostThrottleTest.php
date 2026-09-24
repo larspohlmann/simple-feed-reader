@@ -48,4 +48,24 @@ final class HostThrottleTest extends TestCase
 
         self::assertSame(0, $throttle->remainingSeconds('https://example.com/feed'));
     }
+
+    public function testAZeroWaitIsClampedToTheFloorSoNothingIsForgotten(): void
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+
+        $recorded = $throttle->record('https://www.reddit.com/', 0);
+
+        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $recorded);
+        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $throttle->remainingSeconds('https://www.reddit.com/'));
+    }
+
+    public function testAHugeWaitIsClampedToTheCeiling(): void
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+
+        $recorded = $throttle->record('https://www.reddit.com/', 99_999_999);
+
+        self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $recorded);
+        self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $throttle->remainingSeconds('https://www.reddit.com/'));
+    }
 }
