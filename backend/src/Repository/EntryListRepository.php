@@ -79,10 +79,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entries whose title or summary contains EVERY search term, newest first,
-     * keyset-paginated exactly like the entry list. The predicate is an AND of
-     * unindexable LIKEs, so the database reads every entry the caller
-     * subscribes to; that cost is accepted for now and measured in #408.
+     * Entries whose title or summary contains EVERY search term, in the
+     * query's order, keyset-paginated exactly like the entry list. The
+     * predicate is an AND of unindexable LIKEs, so the database reads every
+     * entry the caller subscribes to; that cost is accepted for now and
+     * measured in #408.
      *
      * @return list<EntryListRow>
      */
@@ -91,13 +92,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
             $this->scope->applySearch($qb, $aliases, $query);
         };
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $query->ordering())
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $applyScope, $query->userId);
-        // Search ranks by publish instant like the default list, never by view
-        // time, so its cursor predicate is the effectiveDate one.
-        $this->applyCursor($qb, $query->cursor, new EntryListOrdering(EntryListSort::PublishedDate));
+        $this->applyCursor($qb, $query->cursor, $query->ordering());
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

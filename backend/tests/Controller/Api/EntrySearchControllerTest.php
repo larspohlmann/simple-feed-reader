@@ -263,6 +263,23 @@ final class EntrySearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    public function testSearchesOldestFirstWhenAsked(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('s-oldest@example.com');
+        $this->seedSubscribedFeedWithEntries($user, 'Angular', 3);
+
+        $client->request('GET', '/api/entries/search?q=angular&order=asc', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($client);
+        self::assertIsArray($body['entries']);
+        self::assertSame(
+            ['Angular Post 1', 'Angular Post 2', 'Angular Post 3'],
+            array_column($body['entries'], 'title'),
+        );
+    }
+
     public function testAFullPagePaginatesWithoutSkippingOrRepeating(): void
     {
         $client = self::createClient();

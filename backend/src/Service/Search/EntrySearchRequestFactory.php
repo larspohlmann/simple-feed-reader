@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Repository\EntryQuery;
@@ -19,7 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final readonly class EntrySearchRequestFactory
 {
-    public const array ALLOWED_PARAMETERS = ['q', 'cursor', 'limit', 'unread'];
+    public const array ALLOWED_PARAMETERS = ['q', 'cursor', 'limit', 'unread', 'order'];
 
     public function fromRequest(Request $request, User $user): EntrySearchQuery
     {
@@ -31,6 +32,7 @@ final readonly class EntrySearchRequestFactory
             cursor: EntryCursor::fromRequestValue($this->singleValue($request, 'cursor')),
             limit: $this->limit($request),
             unread: $this->unread($request),
+            order: ListOrder::fromRequestValue($this->singleValue($request, 'order')),
         );
     }
 

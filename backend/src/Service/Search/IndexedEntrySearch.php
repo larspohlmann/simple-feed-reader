@@ -54,9 +54,12 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
             feedIds: $feedIds,
             cursor: $query->cursor,
             limit: $query->limit,
+            order: $query->order,
         ));
 
-        $candidates = $this->entries->rowsByIdsForUser($matches->entryIds, $query->userId);
+        $candidates = $query->order->arrange(
+            $this->entries->rowsByIdsForUser($matches->entryIds, $query->userId),
+        );
 
         return new EntrySearchResult(
             rows: $query->unread ? $this->unreadOnly($candidates) : $candidates,

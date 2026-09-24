@@ -202,9 +202,8 @@ Confirmed facts:
 }
 ```
 
-- **`sort`** matches the order `EntryRepository` uses everywhere else
-  (newest first, ties broken by id), so a page hydrated from the returned
-  ids lines up with what the caller already expects.
+- **`sort`** matches the order the caller asked for — `effectiveDate:desc,
+  id:desc` by default, both `:asc` for an oldest-first search (#1143).
 - **`matchingStrategy: "all"`** was verified against Meilisearch's default
   (`"last"`): with `"all"`, every query term must match somewhere in the
   document, so a two-word query with one unmatched term returns zero hits.
@@ -213,13 +212,14 @@ Confirmed facts:
   matches everything — confirmed by probe, and a worse answer than
   reporting no results.
 - **`filter`** is the compound keyset-pagination expression: everything
-  strictly before the cursor's `effectiveDate`, plus same-date rows with a
-  smaller `id`. It was confirmed accepted verbatim as a plain filter
-  string (not an array-of-arrays), with every attribute it references
-  present in `filterableAttributes`. A malformed expression or a filter on
-  a non-filterable attribute both come back `400` with code
-  `invalid_search_filter` and a human-readable `message` pinpointing the
-  problem — the two cases are not distinguishable by code alone.
+  strictly past the cursor in the requested order (`<` newest first, `>`
+  oldest first), plus same-date rows past its `id`. It was confirmed
+  accepted verbatim as a plain filter string (not an array-of-arrays), with
+  every attribute it references present in `filterableAttributes`. A
+  malformed expression or a filter on a non-filterable attribute both come
+  back `400` with code `invalid_search_filter` and a human-readable
+  `message` pinpointing the problem — the two cases are not distinguishable
+  by code alone.
 
 ## Index settings the adapter applies
 

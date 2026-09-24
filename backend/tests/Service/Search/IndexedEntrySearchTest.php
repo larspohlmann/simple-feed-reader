@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
@@ -290,6 +291,25 @@ final class IndexedEntrySearchTest extends DbTestCase
             'A fully-read page must still name where to resume, or the list ends early.',
         );
         self::assertSame('read', $result->continuationRow->entry->getGuid());
+    }
+
+    public function testAnOldestFirstPageIsHydratedOldestFirstAndResumesAfterItsNewestRow(): void
+    {
+        $newer = $this->entry('newer', '2026-07-12T00:00:00Z');
+        $older = $this->entry('older', '2026-07-10T00:00:00Z');
+        $reader = new FakeSearchIndexReader(entryIds: [$older->getId() ?? 0, $newer->getId() ?? 0]);
+
+        $result = $this->search($reader, new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        ));
+
+        self::assertNotNull($reader->received);
+        self::assertSame(ListOrder::OldestFirst, $reader->received->order);
+        self::assertSame(['older', 'newer'], array_map(static fn ($row) => $row->entry->getGuid(), $result->rows));
+        self::assertSame('newer', $result->continuationRow?->entry->getGuid());
     }
 
     public function testAUserWithNoSubscriptionsReturnsEmptyWithoutAskingTheEngine(): void

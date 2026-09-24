@@ -162,10 +162,7 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
         return [
             'q' => $this->queryStringFor($search->terms),
             'filter' => $this->filterFor($search),
-            // Newest first, ties broken by id — the same order EntryRepository
-            // uses for every other list, so a page hydrated from these ids
-            // (IndexedEntrySearch) matches what the caller already expects.
-            'sort' => ['effectiveDate:desc', 'id:desc'],
+            'sort' => ['effectiveDate:' . $search->order->value, 'id:' . $search->order->value],
             // Every term must match somewhere in the document. The default ("last")
             // silently drops trailing terms until something matches, which turns a
             // two-word search that matches nothing into a one-word search that
@@ -237,14 +234,11 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
             $clauses[] = sprintf('id IN [%s]', implode(',', $search->entryIds));
         }
         if ($search->cursor !== null) {
-            // Keyset pagination on (effectiveDate, id) descending: everything
-            // strictly before the cursor's date, plus same-date rows with a
-            // smaller id — the compound predicate the probe confirmed Meilisearch
-            // accepts verbatim as a plain filter string.
             $clauses[] = sprintf(
-                '(effectiveDate < %1$d OR (effectiveDate = %1$d AND id < %2$d))',
+                '(effectiveDate %3$s %1$d OR (effectiveDate = %1$d AND id %3$s %2$d))',
                 $search->cursor->sortInstant->getTimestamp(),
                 $search->cursor->id,
+                $search->order->strictlyAfter(),
             );
         }
 
