@@ -1,18 +1,20 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AccountIdentity } from '../core/account-identity';
+import { AuthService } from '../core/auth.service';
 import { ListOrderService } from './list-order.service';
 import { ListPreferences } from './list-preferences.service';
 import { UnreadFilterService } from './unread-filter.service';
 
 describe('ListPreferences', () => {
-  let userId: WritableSignal<number | null>;
+  let user: WritableSignal<{ id: number } | null>;
+  let accountLoadFailed: WritableSignal<boolean>;
 
   beforeEach(() => {
     localStorage.clear();
-    userId = signal<number | null>(2);
+    user = signal<{ id: number } | null>({ id: 2 });
+    accountLoadFailed = signal(false);
     TestBed.configureTestingModule({
-      providers: [{ provide: AccountIdentity, useValue: { userId } }],
+      providers: [{ provide: AuthService, useValue: { user, accountLoadFailed } }],
     });
   });
 
@@ -32,7 +34,21 @@ describe('ListPreferences', () => {
   it('is ready only once the account is known', () => {
     const preferences = TestBed.inject(ListPreferences);
     expect(preferences.ready()).toBe(true);
-    userId.set(null);
+    user.set(null);
     expect(preferences.ready()).toBe(false);
+  });
+
+  it('is ready with the defaults when the account never loads', () => {
+    user.set(null);
+    accountLoadFailed.set(true);
+
+    const preferences = TestBed.inject(ListPreferences);
+
+    expect(preferences.ready()).toBe(true);
+    expect(preferences.appliedTo({ kind: 'tag', id: 9, unread: false })).toEqual({
+      kind: 'tag',
+      id: 9,
+      unread: false,
+    });
   });
 });

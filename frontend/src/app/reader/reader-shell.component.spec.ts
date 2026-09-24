@@ -18,7 +18,7 @@ import {
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
-import { WritableSignal, signal } from '@angular/core';
+import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
@@ -66,6 +66,7 @@ describe('ReaderShellComponent', () => {
   // false by default in jsdom regardless (stubbed in only in that describe block).
   const auth = {
     user: signal({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
+    accountLoadFailed: signal(false),
     loadMe: () => of({}),
     logout: jest.fn(),
     isAdmin: jest.fn().mockReturnValue(false),
@@ -138,6 +139,7 @@ describe('ReaderShellComponent', () => {
     // to false and calls the two marking methods, and neither must leak into
     // an unrelated test later in this file.
     auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.accountLoadFailed.set(false);
     auth.answerPasskeyOffer.mockClear();
     auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
@@ -146,6 +148,11 @@ describe('ReaderShellComponent', () => {
     // "no" to every query, so the real one is stuck on wide and a phone-only test
     // has no way to say so. The defaults below reproduce what jsdom used to give.
     screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
+    configureShell([{ provide: AuthService, useValue: auth }]);
+    ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  function configureShell(authProviders: Provider[]) {
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
@@ -157,7 +164,7 @@ describe('ReaderShellComponent', () => {
           provide: ActivatedRoute,
           useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
         },
-        { provide: AuthService, useValue: auth },
+        ...authProviders,
         { provide: LayoutService, useValue: screen },
         { provide: EntryBodyService, useValue: bodyStore },
         // Defaults to "available", matching every test in this file written before
@@ -169,8 +176,7 @@ describe('ReaderShellComponent', () => {
         },
       ],
     });
-    ctrl = TestBed.inject(HttpTestingController);
-  });
+  }
 
   function boot(entryOverride: Partial<typeof entry> = {}) {
     const f = TestBed.createComponent(ReaderShellComponent);
@@ -3273,6 +3279,7 @@ describe('ReaderShellComponent', () => {
       f.detectChanges();
       const flipped = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
       expect(flipped.request.params.get('order')).toBe('asc');
+      expect(flipped.request.params.get('cursor')).toBeNull();
       flipped.flush({ entries: [], nextCursor: null });
       expect(JSON.parse(localStorage.getItem('sfr.user.1.oldest-first-views')!)).toEqual(['all']);
 
@@ -3294,6 +3301,25 @@ describe('ReaderShellComponent', () => {
       ctrl
         .expectOne((r) => r.url === 'https://api.test/api/entries')
         .flush({ entries: [], nextCursor: null });
+    });
+
+    it('loads the list with the defaults when the account never loads', () => {
+      TestBed.resetTestingModule();
+      configureShell([]);
+      ctrl = TestBed.inject(HttpTestingController);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+
+      ctrl
+        .expectOne('https://api.test/api/me')
+        .flush('boom', { status: 500, statusText: 'Server Error' });
+      f.detectChanges();
+
+      const list = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(list.request.params.get('order')).toBeNull();
+      expect(list.request.params.get('view')).toBe('all');
+      list.flush({ entries: [], nextCursor: null });
     });
   });
 

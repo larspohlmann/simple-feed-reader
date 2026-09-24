@@ -29,13 +29,17 @@ export class ListOrderService {
 }
 
 function parseViewKeys(stored: string | null): ReadonlySet<string> {
-  if (stored === null) return new Set();
+  const parsed = parsedJson(stored);
+  if (!Array.isArray(parsed)) return new Set();
+  return new Set(parsed.filter((key): key is string => typeof key === 'string'));
+}
+
+function parsedJson(stored: string | null): unknown {
+  if (stored === null) return null;
   try {
-    const parsed = JSON.parse(stored) as unknown;
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((key): key is string => typeof key === 'string'));
+    return JSON.parse(stored) as unknown;
   } catch {
-    return new Set();
+    return null;
   }
 }
 

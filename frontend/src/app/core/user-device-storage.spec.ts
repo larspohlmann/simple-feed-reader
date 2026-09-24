@@ -36,12 +36,11 @@ describe('UserDeviceStorage', () => {
     expect(localStorage.getItem('sfr.user.7.unread-only')).toBeNull();
   });
 
-  it('neither reads nor writes before the account is known, and says so', () => {
+  it('neither reads nor writes before the account is known', () => {
     userId.set(null);
     storage.write('unread-only', '1');
     expect(localStorage.length).toBe(0);
     expect(storage.read('unread-only')).toBeNull();
-    expect(storage.ready()).toBe(false);
   });
 
   it('notifies a computed that read it when a value is written', () => {

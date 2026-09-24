@@ -125,7 +125,6 @@ export class ListScrollReset {
   }
 }
 
-/** Every change of a preference after the value it starts with. */
 function flipsOf<T>(preference: Signal<T>): Observable<T> {
   return toObservable(preference).pipe(startWith(preference()), distinctUntilChanged(), skip(1));
 }

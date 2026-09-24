@@ -12,6 +12,9 @@ export class AccountIdentity {
   readonly userId = computed(
     () => userIdClaim(this.tokens.token()) ?? this.auth.user()?.id ?? null,
   );
+
+  /** Whether `userId` is final: known, or unknowable because the account failed to load. */
+  readonly settled = computed(() => this.userId() !== null || this.auth.accountLoadFailed());
 }
 
 export function userIdClaim(token: string | null): number | null {

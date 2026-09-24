@@ -37,10 +37,20 @@ describe('userIdClaim', () => {
 describe('AccountIdentity', () => {
   function setup(user: { id: number } | null) {
     localStorage.clear();
+    const accountLoadFailed = signal(false);
     TestBed.configureTestingModule({
-      providers: [{ provide: AuthService, useValue: { user: signal(user) } }],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: { user: signal(user), accountLoadFailed },
+        },
+      ],
     });
-    return { identity: TestBed.inject(AccountIdentity), tokens: TestBed.inject(TokenStore) };
+    return {
+      identity: TestBed.inject(AccountIdentity),
+      tokens: TestBed.inject(TokenStore),
+      accountLoadFailed,
+    };
   }
 
   it("prefers the stored token's claim over the loaded account", () => {
@@ -57,5 +67,20 @@ describe('AccountIdentity', () => {
 
   it('knows no account before either answers', () => {
     expect(setup(null).identity.userId()).toBeNull();
+  });
+
+  it('is settled once the account is known', () => {
+    expect(setup({ id: 12 }).identity.settled()).toBe(true);
+  });
+
+  it('is unsettled while the account is unknown and still loading', () => {
+    expect(setup(null).identity.settled()).toBe(false);
+  });
+
+  it('is settled when loading the account failed, though no account is known', () => {
+    const { identity, accountLoadFailed } = setup(null);
+    accountLoadFailed.set(true);
+    expect(identity.userId()).toBeNull();
+    expect(identity.settled()).toBe(true);
   });
 });

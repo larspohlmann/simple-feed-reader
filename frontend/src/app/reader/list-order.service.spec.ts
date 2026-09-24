@@ -59,6 +59,11 @@ describe('ListOrderService', () => {
     expect(service().orderFor(tag3)).toBe('newest');
   });
 
+  it('reads a stored value that is no list as no oldest-first list', () => {
+    localStorage.setItem('sfr.user.5.oldest-first-views', '"tag:3"');
+    expect(service().orderFor(tag3)).toBe('newest');
+  });
+
   it('ignores stored entries that are not keys', () => {
     localStorage.setItem('sfr.user.5.oldest-first-views', '[3, "tag:3"]');
     expect(service().orderFor(tag3)).toBe('oldest');

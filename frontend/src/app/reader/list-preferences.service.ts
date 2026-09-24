@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { UserDeviceStorage } from '../core/user-device-storage';
+import { AccountIdentity } from '../core/account-identity';
 import { ListOrderService } from './list-order.service';
 import { Selection, withListOrder, withUnreadPreference } from './query';
 import { UnreadFilterService } from './unread-filter.service';
@@ -11,7 +11,7 @@ export class ListPreferences {
   private readonly unreadFilter = inject(UnreadFilterService);
   private readonly listOrder = inject(ListOrderService);
 
-  readonly ready = inject(UserDeviceStorage).ready;
+  readonly ready = inject(AccountIdentity).settled;
 
   appliedTo(selection: Selection): Selection {
     return withListOrder(

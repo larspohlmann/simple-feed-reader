@@ -118,6 +118,29 @@ describe('AuthService', () => {
     ctrl.expectNone({ method: 'PATCH', url: 'https://api.test/api/me' });
   });
 
+  it('loadMe records a failed account load, and a later success clears it', () => {
+    svc.loadMe().subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    expect(svc.accountLoadFailed()).toBe(true);
+
+    svc.loadMe().subscribe();
+    ctrl.expectOne('https://api.test/api/me').flush(meFixture({ passkeyOfferAnswered: true }));
+    expect(svc.accountLoadFailed()).toBe(false);
+  });
+
+  it('logout forgets a failed account load', () => {
+    svc.loadMe().subscribe({ error: () => undefined });
+    ctrl
+      .expectOne('https://api.test/api/me')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+
+    svc.logout();
+
+    expect(svc.accountLoadFailed()).toBe(false);
+  });
+
   it('logout clears token and user and routes to /login', () => {
     tokens.set('jwt');
     svc.logout();

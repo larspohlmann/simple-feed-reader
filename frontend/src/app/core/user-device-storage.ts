@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { AccountIdentity } from './account-identity';
 
 /** Per-account values that stay on this device: `sfr.user.<id>.<name>` in localStorage. */
@@ -6,8 +6,6 @@ import { AccountIdentity } from './account-identity';
 export class UserDeviceStorage {
   private readonly identity = inject(AccountIdentity);
   private readonly revision = signal(0);
-
-  readonly ready = computed(() => this.identity.userId() !== null);
 
   read(name: string): string | null {
     this.revision();
