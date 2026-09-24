@@ -63,6 +63,27 @@ final class RedditEntryRuleTest extends TestCase
         self::assertSame(self::THREAD, $result->discussion->url);
     }
 
+    public function testAnEarlierSubmittedByInTheBodySurvivesTheFooterStrip(): void
+    {
+        $body = '<div class="md"><p>This patch was submitted by my colleague.</p>'
+            . '<p>Second paragraph.</p></div>';
+
+        $result = (new RedditEntryRule())->apply(self::entry(self::THREAD, $body . self::footer(self::THREAD)));
+
+        self::assertSame($body, $result->contentHtml);
+        self::assertNull($result->url);
+    }
+
+    public function testALinkAnchorInTheBodyIsNotMistakenForTheFooterArticle(): void
+    {
+        $body = '<div class="md"><p>See <a href="https://example.org/other">[link]</a> for context.</p></div>';
+
+        $result = (new RedditEntryRule())->apply(self::entry(self::THREAD, $body . self::footer(self::THREAD)));
+
+        self::assertNull($result->url);
+        self::assertStringContainsString('https://example.org/other', (string) $result->contentHtml);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function redditHostedTargets(): iterable
     {

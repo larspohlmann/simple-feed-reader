@@ -626,14 +626,8 @@ services:
         autowire: true
         public: true
 
-    # PlatformEntryRulesWiringTest fetches this to prove the
-    # app.platform_entry_rule tagged iterator actually collects the Reddit
-    # rule — an empty iterator builds fine and every entry would then pass
-    # through unchanged, which looks exactly like a working deployment until
-    # a Reddit thread stops separating from its linked article. EntryIngestor
-    # is its only injection point, so without this entry the compiler would
-    # inline it away and the test container could not fetch it. Same
-    # `autowire` caveat as the entries above.
+    # PlatformEntryRulesWiringTest fetches this to prove the tagged iterator
+    # actually collects the Reddit rule. Same `autowire` caveat as above.
     App\Service\Ingest\Platform\PlatformEntryRules:
         autowire: true
         public: true

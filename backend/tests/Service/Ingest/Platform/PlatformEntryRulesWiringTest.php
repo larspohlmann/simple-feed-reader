@@ -8,12 +8,6 @@ use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * PlatformEntryRulesWiringTest builds nothing by hand: it drives the real
- * container so that a missing 'app.platform_entry_rule' tag fails loudly
- * instead of silently collecting an empty iterator (the same failure mode
- * FeedParserWiringTest guards for the parser tag).
- */
 final class PlatformEntryRulesWiringTest extends KernelTestCase
 {
     public function testTheTaggedRedditRuleResolvesThroughTheContainer(): void

@@ -334,6 +334,51 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
     }
 
+    public function testTwoRedditThreadsLinkingTheSameArticleDedupeToOneEntry(): void
+    {
+        /** @var EntryRepository $entryRepository */
+        $entryRepository = $this->em->getRepository(Entry::class);
+        /** @var CategoryRepository $categoryRepository */
+        $categoryRepository = $this->em->getRepository(Category::class);
+        $ingestor = new EntryIngestor(
+            $this->em,
+            $entryRepository,
+            new EntrySanitizer(),
+            new UrlNormalizer(),
+            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
+            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            new PlatformEntryRules([new RedditEntryRule()]),
+        );
+        $threadFooter = static fn (string $thread): string => ' &#32; submitted by &#32;'
+            . ' <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
+            . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
+            . " <span><a href=\"{$thread}\">[comments]</a></span>";
+        $first = new ParsedEntry(
+            guid: 't3_1abc',
+            url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
+            title: 'First crosspost',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/PHP/comments/1abc/t/'),
+            publishedAt: null,
+        );
+        $second = new ParsedEntry(
+            guid: 't3_2def',
+            url: 'https://www.reddit.com/r/programming/comments/2def/t/',
+            title: 'Second crosspost',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/programming/comments/2def/t/'),
+            publishedAt: null,
+        );
+        $feed = $this->feed();
+
+        $ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$first, $second]), self::context());
+        $this->em->flush();
+
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
     private function ingestOne(ParsedEntry $parsedEntry): Entry
     {
         $feed = $this->feed();
