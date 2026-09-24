@@ -136,7 +136,9 @@ app-reader-header.hidden {
    divider; 42% is only the fallback before its effect writes the saved value. */
 .main.split .list {
   flex: 0 0 var(--list-width, 42%);
-  min-width: 0;
+
+  /* A feed's five compact header actions (5 × 44px + gaps) plus the header's padding (#1143). */
+  min-width: 17.5rem;
 }
 
 .main.split .reader {

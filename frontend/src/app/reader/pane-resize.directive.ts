@@ -28,6 +28,7 @@ export class PaneResizeDirective {
    *  change mid-drag, so re-reading them per frame would only force a layout. */
   private dragLeft = 0;
   private dragWidth = 1;
+  private floor = MIN_LIST_PERCENT;
 
   private readonly onPointerDown = (event: PointerEvent): void => {
     if (event.button !== 0) return;
@@ -39,6 +40,7 @@ export class PaneResizeDirective {
     const rect = this.container().getBoundingClientRect();
     this.dragLeft = rect.left;
     this.dragWidth = rect.width;
+    this.measureFloor();
     // Outside the zone: the move handler writes the CSS var directly and never a
     // signal, so a fast drag must not tick change detection on every frame. Only
     // the released width re-enters the zone, through `commit`.
@@ -76,8 +78,9 @@ export class PaneResizeDirective {
 
   private readonly onKeydown = (event: KeyboardEvent): void => {
     const current = this.split.width();
-    if (event.key === 'ArrowLeft') this.commit(clampListPercent(current - STEP));
-    else if (event.key === 'ArrowRight') this.commit(clampListPercent(current + STEP));
+    this.measureFloor();
+    if (event.key === 'ArrowLeft') this.commit(this.clamped(current - STEP));
+    else if (event.key === 'ArrowRight') this.commit(this.clamped(current + STEP));
     else if (event.key === 'Home') this.split.reset();
     else return;
     event.preventDefault();
@@ -107,7 +110,22 @@ export class PaneResizeDirective {
   }
 
   private percentFromClientX(clientX: number): number {
-    return clampListPercent(((clientX - this.dragLeft) / this.dragWidth) * 100);
+    return this.clamped(((clientX - this.dragLeft) / this.dragWidth) * 100);
+  }
+
+  private clamped(percent: number): number {
+    return Math.max(this.floor, clampListPercent(percent));
+  }
+
+  /** Re-reads the list column's CSS length floor as a share of the container: below
+   *  it the column stops following the handle, so neither a drag nor a key may go there. */
+  private measureFloor(): void {
+    const list = this.container().querySelector<HTMLElement>(':scope > .list');
+    const length = list ? parseFloat(getComputedStyle(list).minWidth) : Number.NaN;
+    const width = this.container().getBoundingClientRect().width;
+    const percent = Number.isFinite(length) && width > 0 ? (length / width) * 100 : 0;
+    this.floor = Math.max(MIN_LIST_PERCENT, percent);
+    this.host.setAttribute('aria-valuemin', String(Math.round(this.floor)));
   }
 
   private commit(percent: number): void {

@@ -100,3 +100,23 @@ test.describe('list header in a narrow split column (#1127)', () => {
     }
   }
 });
+
+// Split mode starts at 900px, where the percent floor alone leaves the column too narrow
+// for a feed's five compact actions; the column's own length floor must hold them (#1143).
+for (const width of [900, 1024]) {
+  test.describe(`list header at the split floor in a ${width}px window`, () => {
+    test.use({ viewport: { width, height: 800 } });
+
+    for (const list of [ALL_ITEMS, FEED]) {
+      test(`${list.name} keeps the title readable and the tools inside the column`, async ({
+        page,
+      }) => {
+        await openSplit(page, list, String(MIN_LIST_PERCENT));
+
+        const geometry = await headerGeometry(page);
+        expect(geometry.headingWidth).toBeGreaterThanOrEqual(TITLE_FLOOR_PX);
+        expect(geometry.toolsRight).toBeCloseTo(geometry.contentRight, 0);
+      });
+    }
+  });
+}
