@@ -18,10 +18,12 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
@@ -51,6 +53,7 @@ use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\Lock\LockFactory;
@@ -172,9 +175,10 @@ final class MaintenanceTickTest extends DbTestCase
                     new CategoryNormalizer(),
                 ),
                 new NaiveUtcClock($clock),
+                new PlatformEntryRules([]),
             ),
             new FaviconResolver($fetcher, new NullLogger()),
-            new FeedScheduler($clock),
+            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
             new EntryPruner($this->em, $clock, $indexer),
             new OrphanedFeedReclaimer($this->em),
             $indexer,

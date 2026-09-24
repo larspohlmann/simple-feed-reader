@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
+use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -21,14 +22,12 @@ final class FeedScheduler
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
     private const int ERROR_MESSAGE_MAX = 1000;
-
-    /** The bounds on a wait a rationing site may ask for. */
-    private const int THROTTLE_FLOOR_SECONDS = 60;
-    private const int THROTTLE_CEILING_SECONDS = 86400;
     private const int SECONDS_PER_MINUTE = 60;
 
-    public function __construct(private readonly ClockInterface $clock)
-    {
+    public function __construct(
+        private readonly ClockInterface $clock,
+        private readonly HostThrottle $hostThrottle,
+    ) {
     }
 
     /**
@@ -77,18 +76,16 @@ final class FeedScheduler
      */
     public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
     {
-        // A site that named no delay is asked again no sooner than it would
-        // have been anyway. Polling a host that just said "less" every quarter
-        // hour, when its own cadence had grown to daily, is asking for more.
-        $wait = min(
-            self::THROTTLE_CEILING_SECONDS,
-            max(
-                self::THROTTLE_FLOOR_SECONDS,
-                $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
-            ),
-        );
+        $hostWait = $this->hostThrottle->record($feed->getUrl(), $retryAfterSeconds);
+        // Reddit resets in seconds, so only this feed, not the whole host, waits out its own cadence.
+        $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
 
         $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
+    }
+
+    private function cadenceSeconds(Feed $feed): int
+    {
+        return min(HostThrottle::MAXIMUM_WAIT_SECONDS, $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE);
     }
 
     /**

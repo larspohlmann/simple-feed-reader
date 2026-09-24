@@ -25,6 +25,8 @@ import {
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
+import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
+import { READER_SCROLLER } from '../reader-scroller';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import {
@@ -126,6 +128,13 @@ function slugify(text: string): string {
     PaywallNoticeComponent,
     WarningBoxComponent,
     ErrorBannerComponent,
+    EntryCommentsComponent,
+  ],
+  providers: [
+    {
+      provide: READER_SCROLLER,
+      useFactory: () => inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
+    },
   ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
@@ -382,6 +391,12 @@ export class ReaderViewComponent {
       // Arm a scroll restore for this entry if we remember a position for it.
       const savedTop = this.scroll.readEntry(e.id);
       this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
+      if (!e.url) {
+        this.loadSub?.unsubscribe();
+        this.state.set({ status: 'idle' });
+        this.readerMode.setOriginalOnly();
+        return;
+      }
       this.runLoad(this.reader.load(e.id));
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());

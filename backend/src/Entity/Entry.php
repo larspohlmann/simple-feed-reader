@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\EntryRepository;
+use App\Service\Discussion\Discussion;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -33,17 +34,8 @@ class Entry
     #[ORM\Column(length: 64)]
     private string $guidHash;
 
-    /**
-     * sha256 of the normalized article URL, the stable identity a feed keeps
-     * across a volatile GUID (BBC's revision counter). Null when the item has
-     * no URL — those still dedupe on guidHash — and on every row created before
-     * #484 added the column; the ingest dedup treats a null as "no URL match".
-     */
-    #[ORM\Column(length: 64, nullable: true)]
-    private ?string $urlHash;
-
-    #[ORM\Column(length: 2048, nullable: true)]
-    private ?string $url;
+    #[ORM\Embedded(class: EntryLocation::class, columnPrefix: false)]
+    private EntryLocation $location;
 
     #[ORM\Column(length: 1024)]
     private string $title;
@@ -62,6 +54,9 @@ class Entry
 
     #[ORM\Embedded(class: EntryMedia::class, columnPrefix: false)]
     private EntryMedia $mediaSet;
+
+    #[ORM\Embedded(class: EntryDiscussion::class, columnPrefix: false)]
+    private EntryDiscussion $discussion;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
@@ -94,13 +89,14 @@ class Entry
         $this->feed = $feed;
         $this->guid = $guid;
         $this->guidHash = hash('sha256', $guid);
-        $this->urlHash = $urlHash;
-        $this->url = $url;
+        $this->location = new EntryLocation();
+        $this->location->store($url, $urlHash);
         $this->title = $title;
         $this->createdAt = $createdAt;
         $this->effectiveDate = $effectiveDate;
         $this->image = new EntryImage();
         $this->mediaSet = new EntryMedia();
+        $this->discussion = new EntryDiscussion();
     }
 
     public function getId(): ?int
@@ -125,12 +121,12 @@ class Entry
 
     public function getUrlHash(): ?string
     {
-        return $this->urlHash;
+        return $this->location->getUrlHash();
     }
 
     public function getUrl(): ?string
     {
-        return $this->url;
+        return $this->location->getUrl();
     }
 
     public function getTitle(): string
@@ -166,6 +162,11 @@ class Entry
     public function getContentHtml(): ?string
     {
         return $this->contentHtml;
+    }
+
+    public function getArticleContentHtml(): ?string
+    {
+        return $this->getDiscussion()->bodyIsOpeningPost ? null : $this->contentHtml;
     }
 
     public function setContentHtml(?string $contentHtml): void
@@ -232,6 +233,16 @@ class Entry
     public function setPublishedAt(?\DateTimeImmutable $publishedAt): void
     {
         $this->publishedAt = $publishedAt;
+    }
+
+    public function getDiscussion(): Discussion
+    {
+        return $this->discussion->read();
+    }
+
+    public function setDiscussion(Discussion $discussion): void
+    {
+        $this->discussion->store($discussion);
     }
 
     public function getEffectiveDate(): \DateTimeImmutable

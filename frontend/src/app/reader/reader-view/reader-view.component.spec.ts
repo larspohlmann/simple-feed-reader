@@ -13,6 +13,7 @@ import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models
 import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
+import { CommentsService, CommentsState } from '../comments.service';
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
  *  covers caching/dedup/eviction; this file only needs to drive what the view renders. */
@@ -109,6 +110,8 @@ const entry = (over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  discussionUrl: null,
+  comments: null,
   ...over,
 });
 
@@ -720,7 +723,7 @@ describe('ReaderViewComponent', () => {
       const f = mount(entry());
       const el = f.nativeElement as HTMLElement;
 
-      (el.querySelector('.reader-note-link') as HTMLButtonElement).click();
+      (el.querySelector('.note-link') as HTMLButtonElement).click();
       f.detectChanges();
       expect(reloadMock).toHaveBeenCalledWith(1);
       expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();
@@ -924,6 +927,71 @@ describe('ReaderViewComponent', () => {
     loadMock.mockReturnValue(of<ReaderContent>(okContent()));
 
     expect(hero(mount(entry()))).toBeNull();
+  });
+
+  describe('entry with no article URL (#1140)', () => {
+    it('does not ask for an extraction when the entry has no article URL', () => {
+      const el = mount(
+        entry({ url: null, discussionUrl: 'https://www.reddit.com/r/x/comments/1/t/' }),
+      ).nativeElement as HTMLElement;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(el.querySelector('.reader-fallback')).toBeNull();
+      expect(el.querySelector('.mode')).toBeNull();
+    });
+
+    it('treats an empty article URL as no article URL', () => {
+      const el = mount(entry({ url: '' })).nativeElement as HTMLElement;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(el.querySelector('.mode')).toBeNull();
+    });
+  });
+
+  describe('discussion link (#1140)', () => {
+    it('links the discussion page when there is one', () => {
+      const el = mount(entry({ discussionUrl: 'https://news.ycombinator.com/item?id=1' }))
+        .nativeElement as HTMLElement;
+
+      const link = el.querySelector('a.discussion-link');
+      expect(link?.getAttribute('href')).toBe('https://news.ycombinator.com/item?id=1');
+    });
+
+    it('shows no discussion link when the entry has none', () => {
+      const el = mount(entry({ discussionUrl: null })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('a.discussion-link')).toBeNull();
+    });
+  });
+
+  describe('comments section (#1140)', () => {
+    beforeEach(() => {
+      TestBed.overrideProvider(CommentsService, {
+        useValue: {
+          state: () => signal<CommentsState>({ status: 'idle' }),
+          load: jest.fn(),
+          reload: jest.fn(),
+        },
+      });
+    });
+
+    function commentsSection(f: { nativeElement: HTMLElement }): Element | null {
+      return f.nativeElement.querySelector('article app-entry-comments');
+    }
+
+    it('follows the article when the entry has a comments feed', () => {
+      expect(commentsSection(mount(entry({ comments: 'auto' })))).not.toBeNull();
+    });
+
+    it('is absent without a comments feed', () => {
+      expect(commentsSection(mount(entry({ comments: null })))).toBeNull();
+    });
+
+    it('waits for the article to finish loading', () => {
+      loadMock.mockReturnValue(new Subject<ReaderContent>());
+
+      expect(commentsSection(mount(entry({ comments: 'manual' })))).toBeNull();
+    });
   });
 
   it('falls back to the feed summary when contentHtml is null on failure', () => {

@@ -59,9 +59,9 @@ class EntryRepository extends ServiceEntityRepository
 
         /** @var list<string> $existing */
         $existing = $this->createQueryBuilder('e')
-            ->select('e.urlHash')
+            ->select('e.location.urlHash')
             ->andWhere('e.feed = :feed')
-            ->andWhere('e.urlHash IN (:hashes)')
+            ->andWhere('e.location.urlHash IN (:hashes)')
             ->setParameter('feed', $feed)
             ->setParameter('hashes', $urlHashes)
             ->getQuery()

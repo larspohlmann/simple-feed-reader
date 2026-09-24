@@ -16,6 +16,8 @@ use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Dto\Entry\MarkEntriesReadRequest;
+use App\Enum\CommentsLoad;
+use App\Service\Discussion\Discussion;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -102,6 +104,25 @@ final class EntryControllerTest extends WebTestCase
         $em->flush();
 
         return $entry;
+    }
+
+    private function seedEntryWithDiscussion(User $user, Discussion $discussion): int
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/discussion-feed.xml');
+        $feed->setTitle('Seeded');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entry = new Entry($feed, 'discussion-1', 'https://example.com/1', 'Post', $july1, $july1);
+        $entry->setDiscussion($discussion);
+        $em->persist($entry);
+        $em->flush();
+        $entryId = $entry->getId();
+        self::assertNotNull($entryId);
+
+        return $entryId;
     }
 
     private function seedDebugEnabledSettings(User $user): void
@@ -1123,6 +1144,43 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entry']);
         self::assertSame('<p>The full body of the article.</p>', $body['entry']['contentHtml']);
         self::assertSame('The full body of the article.', $body['entry']['excerpt']);
+    }
+
+    public function testGetReturnsTheDiscussionUrlAndCommentsLoad(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-discussion@example.com');
+        $entryId = $this->seedEntryWithDiscussion(
+            $user,
+            Discussion::withCommentsFeed('https://t.example/1', 'https://t.example/1/.rss', CommentsLoad::Auto),
+        );
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertSame('https://t.example/1', $body['entry']['discussionUrl']);
+        self::assertSame('auto', $body['entry']['comments']);
+    }
+
+    public function testGetReturnsNullDiscussionFieldsWhenAbsent(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-get-no-discussion@example.com');
+        $entryId = $this->seedEntryWithDiscussion($user, Discussion::none());
+
+        $client->request('GET', "/api/entries/$entryId", server: $headers);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['entry']);
+        self::assertArrayHasKey('discussionUrl', $body['entry']);
+        self::assertNull($body['entry']['discussionUrl']);
+        self::assertArrayHasKey('comments', $body['entry']);
+        self::assertNull($body['entry']['comments']);
     }
 
     public function testGetUnsubscribedEntryIs404(): void

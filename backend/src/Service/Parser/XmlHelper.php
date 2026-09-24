@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Url\AbsoluteHttpUrl;
+
 final class XmlHelper
 {
     /**
@@ -53,13 +55,25 @@ final class XmlHelper
         return null;
     }
 
+    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            $text = trim($child->textContent);
+            if (AbsoluteHttpUrl::matches($text)) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Every direct child element with this local name. A null $namespaceUri
      * matches any namespace — the one place that rule is written down.
      *
      * @return iterable<\DOMElement>
      */
-    private static function childElements(
+    public static function childElements(
         \DOMElement $parent,
         string $localName,
         ?string $namespaceUri,

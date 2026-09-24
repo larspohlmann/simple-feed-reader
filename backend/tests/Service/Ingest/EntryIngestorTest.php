@@ -22,8 +22,12 @@ use App\Service\Parser\ParsedMedium;
 use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\VisualMediaKind;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Discussion\Discussion;
+use App\Service\Ingest\Platform\PlatformEntryRules;
+use App\Service\Ingest\Platform\RedditEntryRule;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
+use App\Enum\CommentsLoad;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -34,17 +38,24 @@ final class EntryIngestorTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->ingestor = $this->ingestorWith(new PlatformEntryRules([]));
+    }
+
+    private function ingestorWith(PlatformEntryRules $rules): EntryIngestor
+    {
         /** @var EntryRepository $entryRepository */
         $entryRepository = $this->em->getRepository(Entry::class);
         /** @var CategoryRepository $categoryRepository */
         $categoryRepository = $this->em->getRepository(Category::class);
-        $this->ingestor = new EntryIngestor(
+
+        return new EntryIngestor(
             $this->em,
             $entryRepository,
             new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
             new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
+            $rules,
         );
     }
 
@@ -265,6 +276,102 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertCount(0, $created);
         self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testStoresTheParsedDiscussion(): void
+    {
+        $parsed = new ParsedEntry(
+            guid: 'g-1',
+            url: 'https://blog.example/post',
+            title: 'Post',
+            author: null,
+            summary: null,
+            contentHtml: '<p>Body</p>',
+            publishedAt: null,
+            discussion: Discussion::withCommentsFeed(
+                'https://blog.example/post#c',
+                'https://blog.example/post/feed/',
+                CommentsLoad::Manual,
+            ),
+        );
+
+        $entry = $this->ingestOne($parsed);
+
+        self::assertSame('https://blog.example/post/feed/', $entry->getDiscussion()->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $entry->getDiscussion()->commentsLoad);
+    }
+
+    public function testAppliesPlatformRulesBeforePersisting(): void
+    {
+        $ingestor = $this->ingestorWith(new PlatformEntryRules([new RedditEntryRule()]));
+        $footer = ' &#32; submitted by &#32; <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
+            . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
+            . ' <span><a href="https://www.reddit.com/r/PHP/comments/1abc/t/">[comments]</a></span>';
+        $parsed = new ParsedEntry(
+            guid: 't3_1abc',
+            url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
+            title: 'Title',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $footer,
+            publishedAt: null,
+        );
+        $feed = $this->feed();
+
+        $ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$parsed]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        self::assertSame('https://example.com/a', $entry->getUrl());
+        self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
+    }
+
+    public function testTwoRedditThreadsLinkingTheSameArticleDedupeToOneEntry(): void
+    {
+        $ingestor = $this->ingestorWith(new PlatformEntryRules([new RedditEntryRule()]));
+        $threadFooter = static fn (string $thread): string => ' &#32; submitted by &#32;'
+            . ' <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
+            . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
+            . " <span><a href=\"{$thread}\">[comments]</a></span>";
+        $first = new ParsedEntry(
+            guid: 't3_1abc',
+            url: 'https://www.reddit.com/r/PHP/comments/1abc/t/',
+            title: 'First crosspost',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/PHP/comments/1abc/t/'),
+            publishedAt: null,
+        );
+        $second = new ParsedEntry(
+            guid: 't3_2def',
+            url: 'https://www.reddit.com/r/programming/comments/2def/t/',
+            title: 'Second crosspost',
+            author: null,
+            summary: null,
+            contentHtml: '<p>body</p>' . $threadFooter('https://www.reddit.com/r/programming/comments/2def/t/'),
+            publishedAt: null,
+        );
+        $feed = $this->feed();
+
+        $ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$first, $second]), self::context());
+        $this->em->flush();
+
+        self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    private function ingestOne(ParsedEntry $parsedEntry): Entry
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$parsedEntry]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        return $entry;
     }
 
     private function feed(): Feed

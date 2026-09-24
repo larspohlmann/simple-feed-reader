@@ -21,7 +21,7 @@ final class EntryPlanHintWalkerTest extends DbTestCase
 {
     private const string COLLAPSE_DQL =
         'SELECT e FROM %s e WHERE NOT EXISTS ('
-        . 'SELECT 1 FROM %s e2 WHERE e2.urlHash = e.urlHash AND e2.id < e.id)';
+        . 'SELECT 1 FROM %s e2 WHERE e2.location.urlHash = e.location.urlHash AND e2.id < e.id)';
 
     /**
      * @return iterable<string, array{EntryPlanHint}>

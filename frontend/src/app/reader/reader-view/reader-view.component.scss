@@ -457,41 +457,12 @@ article {
   font-size: var(--fs-sm);
 }
 
-.reader-fallback-icon {
-  flex: none;
-  color: var(--warning);
-  font-size: var(--fs-base);
-  line-height: 1;
-}
-
-.reader-fallback-body {
-  color: var(--text-primary);
-}
-
 .reader-note {
   margin: 0;
 }
 
 .body-error {
   margin: 0 0 var(--space-3);
-}
-
-/* A text link, not a button: the retry sits inside the note and must read as
-   part of the sentence, so it borrows the note's size and drops all button
-   chrome. Amber to match the warning box it lives in. */
-.reader-note-link {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  color: var(--warning);
-  font-weight: 600;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.reader-note-link:hover {
-  text-decoration: none;
 }
 
 .reader-error {

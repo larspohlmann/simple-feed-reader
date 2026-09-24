@@ -96,6 +96,11 @@ services:
         # tag to collect the per-library recognizers.
         App\Service\Reader\Slideshow\SlideshowRecognizerInterface:
             tags: ['app.slideshow_recognizer']
+        # Same reason as the blocks above: a plain application interface is not
+        # auto-tagged, so PlatformEntryRules' #[AutowireIterator] needs this tag
+        # to collect the per-platform rules.
+        App\Service\Ingest\Platform\PlatformEntryRule:
+            tags: ['app.platform_entry_rule']
         # Same reason as the blocks above: Symfony's mailer wires its transport
         # chain from a `mailer.transport_factory`-tagged iterator, and it only
         # auto-tags the bridge factories it ships — never a plain implementation

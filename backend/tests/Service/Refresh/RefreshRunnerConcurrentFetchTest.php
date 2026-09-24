@@ -20,12 +20,14 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchRetryPolicy;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
@@ -47,6 +49,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -144,9 +147,10 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
                     new CategoryNormalizer(),
                 ),
                 new NaiveUtcClock($this->clock),
+                new PlatformEntryRules([]),
             ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
-            new FeedScheduler($this->clock),
+            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
             new EntryPruner($this->em, $this->clock, $this->indexer()),
             new OrphanedFeedReclaimer($this->em),
             $this->indexer(),

@@ -31,6 +31,10 @@ final readonly class EntryLine
         public array $media = [],
         /** @var list<array<string, mixed>> */
         public array $attachments = [],
+        public ?string $discussionUrl = null,
+        public ?string $commentsFeedUrl = null,
+        public ?string $commentsLoad = null,
+        public bool $bodyIsOpeningPost = false,
     ) {
     }
 
@@ -56,6 +60,10 @@ final readonly class EntryLine
             effectiveDate: LineField::date($line, 'effectiveDate'),
             media: LineField::objectListOrEmpty($line, 'media'),
             attachments: LineField::objectListOrEmpty($line, 'attachments'),
+            discussionUrl: LineField::stringOrNull($line, 'discussionUrl'),
+            commentsFeedUrl: LineField::stringOrNull($line, 'commentsFeedUrl'),
+            commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
+            bodyIsOpeningPost: LineFieldWithDefault::bool($line, 'bodyIsOpeningPost', false),
         );
     }
 }

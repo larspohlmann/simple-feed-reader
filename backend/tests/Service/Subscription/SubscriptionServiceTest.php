@@ -23,8 +23,10 @@ use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\FeedScheduler;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
@@ -39,6 +41,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -113,8 +116,9 @@ final class SubscriptionServiceTest extends DbTestCase
                         new CategoryNormalizer(),
                     ),
                     new NaiveUtcClock($clock),
+                    new PlatformEntryRules([]),
                 ),
-                new FeedScheduler($clock),
+                new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
                 $this->em,
                 $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),

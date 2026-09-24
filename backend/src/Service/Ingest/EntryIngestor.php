@@ -7,6 +7,7 @@ namespace App\Service\Ingest;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
+use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedMediaBundle;
@@ -47,6 +48,7 @@ final class EntryIngestor
         private readonly UrlNormalizer $urlNormalizer,
         private readonly EntryCategoryWriter $categoryWriter,
         private readonly NaiveUtcClock $clock,
+        private readonly PlatformEntryRules $platformRules,
     ) {
     }
 
@@ -66,17 +68,19 @@ final class EntryIngestor
             return [];
         }
 
+        $entries = array_map($this->platformRules->apply(...), $parsed->entries);
+
         $deduplicator = new EntryDeduplicator(
             $this->entryRepository->existingGuidHashesForFeed(
                 (int) $feed->getId(),
-                $this->guidHashesOf($parsed->entries),
+                $this->guidHashesOf($entries),
             ),
-            $this->entryRepository->findExistingUrlHashes($feed, $this->urlHashesOf($parsed->entries)),
+            $this->entryRepository->findExistingUrlHashes($feed, $this->urlHashesOf($entries)),
         );
 
         $created = [];
         $newPairs = [];
-        foreach ($parsed->entries as $parsedEntry) {
+        foreach ($entries as $parsedEntry) {
             $guidHash = self::guidHash($parsedEntry->guid);
             $urlHash = $this->urlHash($parsedEntry->url);
             if ($deduplicator->isDuplicate($guidHash, $urlHash)) {
@@ -99,6 +103,7 @@ final class EntryIngestor
             $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
+            $entry->setDiscussion($parsedEntry->discussion);
             $this->applyImage($entry, $parsedEntry->media->image);
             $this->applyMedia($entry, $parsedEntry);
 

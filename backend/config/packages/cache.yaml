@@ -87,3 +87,10 @@ framework:
             grafana.settings.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 300
+
+            # Hosts that asked us to ration requests (#1140). Each entry expires
+            # when the wait it recorded ends, so this lifetime is only a
+            # backstop for one whose explicit expiry was somehow lost.
+            host_throttle.cache:
+                adapter: cache.adapter.filesystem
+                default_lifetime: 86400

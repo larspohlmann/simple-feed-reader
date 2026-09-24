@@ -34,6 +34,8 @@ const e = (id: number): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  discussionUrl: null,
+  comments: null,
 });
 
 describe('SourceGroupComponent', () => {

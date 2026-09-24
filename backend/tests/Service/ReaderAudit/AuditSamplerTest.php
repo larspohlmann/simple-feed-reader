@@ -8,6 +8,8 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CommentsLoad;
+use App\Service\Discussion\Discussion;
 use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
 use App\Service\ReaderAudit\SampledEntry;
@@ -180,6 +182,29 @@ final class AuditSamplerTest extends DbTestCase
         $picked = $this->sampler()->pick([$wanted], $this->userId());
 
         self::assertSame([$wanted], $this->entryIdsOf($picked));
+    }
+
+    public function testAnOpeningPostBodyIsNotHandedToTheCoverageGateAsTheArticle(): void
+    {
+        $feed = $this->feedWithEntries('thread', 0);
+        $moment = new \DateTimeImmutable(self::MOMENT);
+        $article = new Entry($feed, 'article', 'https://thread.example.com/a', 'T', $moment, $moment);
+        $article->setContentHtml('<p>The article.</p>');
+        $thread = new Entry($feed, 'thread', 'https://thread.example.com/t', 'T', $moment, $moment);
+        $thread->setContentHtml('<p>My take.</p>');
+        $thread->setDiscussion(
+            Discussion::of('https://reddit.example/t', null, CommentsLoad::Auto)->withOpeningPostBody(),
+        );
+        $this->em->persist($article);
+        $this->em->persist($thread);
+        $this->em->flush();
+
+        $picked = $this->sampler()->pick([(int) $article->getId(), (int) $thread->getId()], $this->userId());
+
+        self::assertSame(['<p>The article.</p>', null], array_map(
+            static fn (SampledEntry $sampled): ?string => $sampled->feedContentHtml,
+            $picked,
+        ));
     }
 
     /** @return list<SampledEntry> */

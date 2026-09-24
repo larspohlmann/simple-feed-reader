@@ -164,6 +164,22 @@ export interface EntryAttachmentDto {
   title?: string;
 }
 
+export type CommentsLoad = 'auto' | 'manual';
+
+export interface EntryCommentDto {
+  author: string | null;
+  authorUrl: string | null;
+  url: string | null;
+  publishedAt: string | null;
+  html: string;
+  byEntryAuthor: boolean;
+}
+
+export type CommentsResponse =
+  | { status: 'ok'; comments: EntryCommentDto[] }
+  | { status: 'throttled'; retryAfter: number }
+  | { status: 'failed' };
+
 export interface EntryDto {
   id: number;
   title: string;
@@ -199,6 +215,10 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** The entry's discussion page — Reddit thread, HN item — or null. */
+  discussionUrl: string | null;
+  /** Whether the entry has a comments feed, and whether it loads without a click. */
+  comments: CommentsLoad | null;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
   /** The model's 0-1000 score for this entry (0-100 before #403); present on

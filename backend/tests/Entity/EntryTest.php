@@ -7,6 +7,8 @@ namespace App\Tests\Entity;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Enum\CommentsLoad;
+use App\Service\Discussion\Discussion;
 use PHPUnit\Framework\TestCase;
 
 final class EntryTest extends TestCase
@@ -39,6 +41,24 @@ final class EntryTest extends TestCase
         $entry->dropImage(new \DateTimeImmutable('2026-09-21 12:00:00'));
 
         self::assertCount(1, $entry->getMedia());
+    }
+
+    public function testTheFeedBodyIsTheArticleContentByDefault(): void
+    {
+        $entry = $this->entry();
+        $entry->setContentHtml('<p>The article.</p>');
+
+        self::assertSame('<p>The article.</p>', $entry->getArticleContentHtml());
+    }
+
+    public function testAnOpeningPostBodyIsNoArticleContent(): void
+    {
+        $entry = $this->entry();
+        $entry->setContentHtml('<p>My take on the linked article.</p>');
+        $entry->setDiscussion(Discussion::of('https://t.example/1', null, CommentsLoad::Auto)->withOpeningPostBody());
+
+        self::assertNull($entry->getArticleContentHtml());
+        self::assertSame('<p>My take on the linked article.</p>', $entry->getContentHtml());
     }
 
     private function entry(): Entry

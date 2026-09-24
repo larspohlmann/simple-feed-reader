@@ -264,7 +264,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
                 . 'sits under.',
         ],
         Entry::class => [
-            'urlHash' => 'Derived: sha256 of UrlNormalizer::normalize(url), which the file '
+            'location.urlHash' => 'Derived: sha256 of UrlNormalizer::normalize(url), which the file '
                 . 'already carries. EntryBatchInserter recomputes it on restore, so it is '
                 . 'never stale and never has to be dropped from the format later.',
             'image.checkedAt' => 'The time at which this instance judged the image (#1109). A '

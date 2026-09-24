@@ -123,6 +123,16 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
+        @if (e.discussionUrl) {
+          ·
+          <a
+            class="discussion-link"
+            [href]="e.discussionUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
+          /></a>
+        }
       </p>
       <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
       <!-- One language for all three: a fixed glyph, muted while off and accent
@@ -194,11 +204,11 @@
         }
         @if (failed() && mode() === 'original') {
           <app-warning-box class="reader-fallback">
-            <span class="reader-fallback-icon" aria-hidden="true">⚠</span>
-            <div class="reader-fallback-body">
+            <span class="warning-glyph" aria-hidden="true">⚠</span>
+            <div class="warning-text">
               <p class="reader-note">
                 {{ 'reader.readerFallback' | transloco }}
-                <button type="button" class="reader-note-link" (click)="refreshArticle()">
+                <button type="button" class="note-link" (click)="refreshArticle()">
                   {{ 'reader.retry' | transloco }}
                 </button>
               </p>
@@ -239,6 +249,9 @@
       }
       @if (e.categories?.length) {
         <p class="categories">{{ e.categories.join(', ') }}</p>
+      }
+      @if (!loading() && e.comments) {
+        <app-entry-comments [entry]="e" />
       }
     </article>
     <!-- Laid over the whole pane while an article loads or refetches, in place

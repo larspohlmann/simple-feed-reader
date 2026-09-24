@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Enum\CommentsLoad;
+use App\Service\Discussion\Discussion;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Text\PlainText;
 
@@ -11,6 +13,7 @@ final class Rss2Parser implements FeedFormatParserInterface
 {
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
+    private const string WFW_NS = 'http://wellformedweb.org/CommentAPI/';
 
     public function supports(\DOMElement $root): bool
     {
@@ -67,6 +70,16 @@ final class Rss2Parser implements FeedFormatParserInterface
             ),
             media: new ParsedEntryMedia($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
+            discussion: self::discussion($item),
+        );
+    }
+
+    private static function discussion(\DOMElement $item): Discussion
+    {
+        return Discussion::of(
+            XmlHelper::childHttpUrl($item, 'comments'),
+            XmlHelper::childHttpUrl($item, 'commentRss', self::WFW_NS),
+            CommentsLoad::Manual,
         );
     }
 }

@@ -24,9 +24,10 @@
   padding: var(--panel-inset-y) var(--panel-inset-x);
 }
 
-/* The "whole words only" search marker: the header badge and sidebar's
-   compact "W" glyph are the same pill (#581), extracted here so a palette
-   change isn't made twice. Layout belonging to the surrounding row stays local. */
+/* The accent pill: the "whole words only" search marker (#581) and the comments'
+   OP marker, extracted here so a palette change isn't made twice. Layout
+   belonging to the surrounding row stays local. */
+.accent-pill,
 .whole-word-badge,
 .phrase-badge {
   padding: 0 var(--space-2);
@@ -48,4 +49,42 @@
   font-size: var(--fs-xs);
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+/* The glyph and prose of a note projected into an `app-warning-box`. */
+.warning-glyph {
+  flex: none;
+  color: var(--warning);
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+
+.warning-text {
+  color: var(--text-primary);
+}
+
+/* A retry or link that reads as part of a note's sentence. Qualified by element
+   so the anchor outweighs the reset's `a[href]`, which loads after this file. */
+button.note-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+a[href].note-link,
+button.note-link {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+button.note-link:hover {
+  text-decoration: none;
+}
+
+app-warning-box a[href].note-link,
+app-warning-box button.note-link {
+  color: var(--warning);
 }
