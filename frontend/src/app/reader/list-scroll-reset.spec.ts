@@ -6,6 +6,7 @@ import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@a
 import { Subject } from 'rxjs';
 import { AccountIdentity } from '../core/account-identity';
 import { ReaderLocationService } from '../core/reader-location.service';
+import { ListOrderService } from './list-order.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
@@ -168,6 +169,31 @@ describe('ListScrollReset', () => {
     TestBed.tick();
 
     expect(memory.forget).toHaveBeenCalledWith(UNREAD_TAG);
+  });
+
+  it('forgets the list a flip of its order shows', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(ListOrderService).set({ kind: 'tag', id: 5, unread: false }, 'oldest');
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledWith({
+      kind: 'tag',
+      id: 5,
+      unread: false,
+      order: 'oldest',
+    });
+  });
+
+  it('reads a flip of the unread filter as one flip, not also as one of the order', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledTimes(1);
   });
 
   it('forgets the flipped list even before it has seen a navigation, as the shell starts it late', () => {

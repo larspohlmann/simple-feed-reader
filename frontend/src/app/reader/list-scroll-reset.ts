@@ -1,15 +1,11 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Signal, inject } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
-import { distinctUntilChanged, skip, startWith } from 'rxjs';
+import { Observable, distinctUntilChanged, merge, skip, startWith } from 'rxjs';
+import { ListOrderService } from './list-order.service';
+import { ListPreferences } from './list-preferences.service';
 import { ListScrollMemory } from './list-scroll-memory';
-import {
-  Selection,
-  listSelectionFrom,
-  sameSelection,
-  selectionFromParams,
-  withUnreadPreference,
-} from './query';
+import { Selection, listSelectionFrom, sameSelection, selectionFromParams } from './query';
 import { UnreadFilterService } from './unread-filter.service';
 
 /** How the router says a navigation began. Taken from the event rather than
@@ -77,6 +73,8 @@ export class ListScrollReset {
   private readonly router = inject(Router);
   private readonly memory = inject(ListScrollMemory);
   private readonly unreadFilter = inject(UnreadFilterService);
+  private readonly listOrder = inject(ListOrderService);
+  private readonly listPreferences = inject(ListPreferences);
 
   /** Where the user was last, or null before the first list is seen. */
   private previous: ReaderPlace | null = null;
@@ -86,10 +84,9 @@ export class ListScrollReset {
       if (event instanceof NavigationStart) this.onNavigationStart(event);
     });
     // A flip is no navigation; as a root effect this erases before the entry list reads the key.
-    const unreadOnly = this.unreadFilter.unreadOnly;
-    toObservable(unreadOnly)
-      .pipe(startWith(unreadOnly()), distinctUntilChanged(), skip(1), takeUntilDestroyed())
-      .subscribe(() => this.onUnreadFilterFlip());
+    merge(flipsOf(this.unreadFilter.unreadOnly), flipsOf(this.listOrder.oldestFirstViews))
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.onListPreferenceFlip());
   }
 
   private onNavigationStart(event: NavigationStart): void {
@@ -103,15 +100,15 @@ export class ListScrollReset {
     this.previous = incoming;
   }
 
-  private onUnreadFilterFlip(): void {
+  private onListPreferenceFlip(): void {
     const current = this.readerPlaceFrom(this.router.url);
     if (current !== null) this.forgetShownList(current);
   }
 
-  /** The URL never carries the unread filter (#1126), so the key gets it here. A
-   *  place holding it would make an article opened after a flip read as a new list. */
+  /** The URL carries neither the unread filter nor the order, so the key gets them here.
+   *  A place holding them would make an article opened after a flip read as a new list. */
   private forgetShownList(place: ReaderPlace): void {
-    this.memory.forget(withUnreadPreference(place.shown, this.unreadFilter.unreadOnly()));
+    this.memory.forget(this.listPreferences.appliedTo(place.shown));
   }
 
   /** Where a URL puts the user, or null when the URL is not the reader. The
@@ -126,4 +123,9 @@ export class ListScrollReset {
       shown: selectionFromParams(convertToParamMap(tree.queryParams)).selection,
     };
   }
+}
+
+/** Every change of a preference after the value it starts with. */
+function flipsOf<T>(preference: Signal<T>): Observable<T> {
+  return toObservable(preference).pipe(startWith(preference()), distinctUntilChanged(), skip(1));
 }

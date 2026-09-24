@@ -3265,6 +3265,38 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('list order (#1143)', () => {
+    it('reloads a flipped list oldest first and remembers it for that list only', () => {
+      const f = boot();
+
+      (f.nativeElement.querySelector('.list-order') as HTMLButtonElement).click();
+      f.detectChanges();
+      const flipped = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(flipped.request.params.get('order')).toBe('asc');
+      flipped.flush({ entries: [], nextCursor: null });
+      expect(JSON.parse(localStorage.getItem('sfr.user.1.oldest-first-views')!)).toEqual(['all']);
+
+      qp.next(convertToParamMap({ tag: '9' }));
+      f.detectChanges();
+      const other = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(other.request.params.get('order')).toBeNull();
+      other.flush({ entries: [], nextCursor: null });
+    });
+
+    it('holds the first list load until the account is known', () => {
+      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } } as never);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+    });
+  });
+
   describe('mark all read for the combined saved-searches view (#769)', () => {
     function bootWithSavedSearchesSelected() {
       const f = boot();
