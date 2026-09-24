@@ -40,4 +40,55 @@ final class EntryDiscussionTest extends TestCase
     {
         self::assertEquals(Discussion::none(), (new EntryDiscussion())->read());
     }
+
+    public function testAUrlOverTheColumnLimitIsDroppedNotTruncated(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::page(str_repeat('a', 2049)));
+
+        self::assertNull($stored->read()->url);
+    }
+
+    public function testAUrlAtTheColumnLimitIsKept(): void
+    {
+        $url = str_repeat('a', 2048);
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::page($url));
+
+        self::assertSame($url, $stored->read()->url);
+    }
+
+    public function testAnOverlongCommentsFeedUrlIsDroppedAndNullsTheLoad(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::withCommentsFeed(
+            'https://t.example/1',
+            str_repeat('a', 2049),
+            CommentsLoad::Auto,
+        ));
+
+        $read = $stored->read();
+
+        self::assertFalse($read->hasCommentsFeed());
+        self::assertNull($read->commentsFeedUrl);
+        self::assertNull($read->commentsLoad);
+        self::assertSame('https://t.example/1', $read->url);
+
+        // read() can never surface this — its guard already requires a
+        // non-null commentsFeedUrl — but the stored row must not carry a
+        // load strategy for a comments feed it does not have.
+        self::assertNull((new \ReflectionProperty(EntryDiscussion::class, 'commentsLoad'))->getValue($stored));
+    }
+
+    public function testACommentsFeedUrlAtTheColumnLimitIsKept(): void
+    {
+        $commentsFeedUrl = str_repeat('a', 2048);
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::withCommentsFeed('https://t.example/1', $commentsFeedUrl, CommentsLoad::Manual));
+
+        $read = $stored->read();
+
+        self::assertSame($commentsFeedUrl, $read->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $read->commentsLoad);
+    }
 }
