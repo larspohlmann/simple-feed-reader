@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
 use App\Repository\EntryCategoryLoader;
@@ -46,6 +47,7 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] ?string $cursor = null,
         #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
         #[MapQueryParameter] bool $unread = false,
+        #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
         $userId = (int) $user->getId();
         $query = new SavedSearchListQuery(
@@ -54,6 +56,7 @@ final readonly class SavedSearchEntriesController
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
+            order: ListOrder::fromRequestValue($order),
         );
         $result = $this->entries->list($query);
         $rows = $this->savedSearchLoader->loadInto(
@@ -71,6 +74,7 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] ?string $cursor = null,
         #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
         #[MapQueryParameter] bool $unread = false,
+        #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
         $userId = (int) $user->getId();
         $this->savedSearches->findOneOwnedBy($id, $userId)
@@ -82,6 +86,7 @@ final readonly class SavedSearchEntriesController
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
+            order: ListOrder::fromRequestValue($order),
         );
         $result = $this->entries->list($query);
         $rows = $this->savedSearchLoader->loadInto(

@@ -65,6 +65,24 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         $this->em()->flush();
     }
 
+    /**
+     * A climate search with a later and an earlier member, seeded newer-first so
+     * the earlier entry's lower id cannot fake an oldest-first order.
+     */
+    private function seedTwoClimateMembers(User $user): SavedSearch
+    {
+        $feed = $this->seedSubscribedFeed($user);
+        $later = $this->seedEntry($feed, 'Climate later', new \DateTimeImmutable('2026-07-05T00:00:00Z'));
+        $earlier = $this->seedEntry($feed, 'Climate earlier', new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+        $search = new SavedSearch($user, 'climate', false);
+        $this->em()->persist($search);
+        $this->em()->flush();
+        $this->member($search, $later);
+        $this->member($search, $earlier);
+
+        return $search;
+    }
+
     public function testListsMatchesOfEverySavedSearch(): void
     {
         $client = self::createClient();
@@ -385,5 +403,55 @@ final class SavedSearchEntriesControllerTest extends ApiTestCase
         );
 
         self::assertResponseStatusCodeSame(404);
+    }
+
+    public function testListsOldestFirstWhenAsked(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-oldest@example.com');
+        $headers = $this->authHeaderFor($user);
+        $search = $this->seedTwoClimateMembers($user);
+
+        foreach (['/api/entries/saved-searches', '/api/entries/saved-searches/' . $search->getId()] as $path) {
+            $client->request('GET', $path . '?order=asc', server: $headers);
+            self::assertResponseIsSuccessful();
+            $body = $this->payload($client);
+            self::assertIsArray($body['entries']);
+            self::assertSame(['Climate earlier', 'Climate later'], array_column($body['entries'], 'title'), $path);
+        }
+    }
+
+    public function testPagesOldestFirst(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-oldest-pages@example.com');
+        $headers = $this->authHeaderFor($user);
+        $this->seedTwoClimateMembers($user);
+
+        $client->request('GET', '/api/entries/saved-searches?order=asc&limit=1', server: $headers);
+        $page1 = $this->payload($client);
+        self::assertIsArray($page1['entries']);
+        self::assertSame(['Climate earlier'], array_column($page1['entries'], 'title'));
+        self::assertIsString($page1['nextCursor']);
+
+        $client->request(
+            'GET',
+            '/api/entries/saved-searches?order=asc&limit=1&cursor=' . urlencode($page1['nextCursor']),
+            server: $headers,
+        );
+        $page2 = $this->payload($client);
+        self::assertIsArray($page2['entries']);
+        self::assertSame(['Climate later'], array_column($page2['entries'], 'title'));
+    }
+
+    public function testRejectsAnUnknownOrder(): void
+    {
+        $client = self::createClient();
+        $user = $this->factory()->create('saved-bad-order@example.com');
+
+        $client->request('GET', '/api/entries/saved-searches?order=sideways', server: $this->authHeaderFor($user));
+
+        self::assertResponseStatusCodeSame(422);
+        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $this->payload($client)['errors']);
     }
 }
