@@ -7,7 +7,7 @@ import { articleOverflowsViewport } from './reading-progress';
 export interface FocusCurve {
   /** Fraction of the viewport height, each side of the centre, held fully opaque. */
   plateau: number;
-  /** Opacity lost at once as a block leaves the plateau; 0 fades straight from 1. */
+  /** Opacity lost at once as a block leaves the plateau, never below `min`; 0 fades from 1. */
   falloff: number;
   /** Exponent on the fade after the step: 1 is linear, below 1 drops early. */
   curvature: number;
@@ -18,11 +18,7 @@ export interface FocusCurve {
 /** The entry list's curve: a fade off the centre line, down to a strong dim. */
 export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, falloff: 0, curvature: 1, min: 0.2 };
 
-/**
- * The article's curve: a band around the centre at full opacity, then a step down
- * that sets the paragraph in focus apart from its neighbours (#1138). Tuned by
- * eye — no spec pins these values.
- */
+/** The article's curve (#1138). Tuned by eye — no spec pins these values. */
 export const ARTICLE_FOCUS_CURVE: FocusCurve = {
   plateau: 0.05,
   falloff: 0.35,
@@ -106,15 +102,8 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
 }
 
 /**
- * Opacity for a reading block spanning `blockTop`..`blockBottom` px in a
- * `viewportHeight`-tall scroll viewport. Fade is measured from the block's
- * nearest edge, not its centre: a block spanning the centre line stays fully
- * opaque however tall, and a long source group stays bright while filling the
- * screen instead of dimming on its off-screen centre (#213). Fades linearly to
- * `curve.min` a half-viewport from the near edge; a short block collapses to a
- * plain distance-from-centre fade. `curve.plateau` widens the opaque middle; past
- * it the opacity steps down by `curve.falloff` and fades on to `curve.min`, bent
- * by `curve.curvature`.
+ * Opacity by the distance of the block's nearest edge from the viewport centre, so a
+ * block spanning the centre stays opaque however tall (#213). `curve` shapes the fade.
  */
 export function focusOpacityForSpan(
   blockTop: number,
@@ -129,6 +118,6 @@ export function focusOpacityForSpan(
   const fadeSpan = center - plateau;
   if (distanceFromCenter <= plateau || fadeSpan <= 0) return 1;
   const ratio = Math.min((distanceFromCenter - plateau) / fadeSpan, 1);
-  const edge = 1 - curve.falloff;
+  const edge = Math.max(1 - curve.falloff, curve.min);
   return +(edge - ratio ** curve.curvature * (edge - curve.min)).toFixed(3);
 }

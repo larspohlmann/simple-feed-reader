@@ -176,6 +176,12 @@ describe('a curve with a plateau and a step', () => {
     expect(focusOpacityForSpan(800, 800, 1000, smooth)).toBe(0.6); // 1 - 0.5 * 0.8
   });
 
+  it('never steps below the floor, however large the falloff', () => {
+    const harsh = { ...stepped, falloff: 0.9 };
+    expect(focusOpacityForSpan(601, 601, 1000, harsh)).toBe(0.2);
+    expect(focusOpacityForSpan(800, 800, 1000, harsh)).toBe(0.2);
+  });
+
   it('leaves everything opaque when a plateau swallows the half-viewport', () => {
     expect(focusOpacityForSpan(0, 0, 1000, { ...stepped, plateau: 0.5 })).toBe(1);
     expect(focusOpacityForSpan(0, 0, 1000, { ...stepped, plateau: 0.9 })).toBe(1);

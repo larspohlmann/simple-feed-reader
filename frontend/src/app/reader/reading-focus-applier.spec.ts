@@ -1,5 +1,5 @@
 import { ReadingFocusApplier } from './reading-focus-applier';
-import { ARTICLE_FOCUS_CURVE, LIST_FOCUS_CURVE } from './reading-focus';
+import { LIST_FOCUS_CURVE } from './reading-focus';
 import { SENTENCE_CLASS, sectionedUnits } from './reading-sections';
 
 class MockResizeObserver {
@@ -210,7 +210,7 @@ describe('splitting a tall block into sections', () => {
     return new ReadingFocusApplier({
       scroller,
       blocks,
-      curve: ARTICLE_FOCUS_CURVE,
+      curve: LIST_FOCUS_CURVE,
       isActive: () => true,
       units: sectionedUnits(() => 'en'),
     });
