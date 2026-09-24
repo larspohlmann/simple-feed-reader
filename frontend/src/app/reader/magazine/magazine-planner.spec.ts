@@ -482,6 +482,21 @@ describe('planMagazine', () => {
 
     expect(burstGroup(before)).toBeDefined();
     expect(burstGroup(after)).toBeDefined();
+    expect(kinds(after).slice(0, before.length)).toEqual(kinds(before));
+  });
+
+  it('skips an unparseable-date first entry when anchoring the collapse window', () => {
+    // The old max-based anchor never picked a NaN entry as "newest", so an
+    // undated first entry only excluded itself. Anchoring on entries[0] naively
+    // would instead make the whole window comparison NaN, reading as zero
+    // active sources and disabling collapse for the entire list.
+    const entries = [
+      big(0, { subscriptionId: 5, source: 'Undated', publishedAt: 'not-a-date' }),
+      ...many(12, (i) => big(i, { subscriptionId: (i % 3) + 2, publishedAt: at(10) })),
+      ...many(8, (i) => big(100 + i, { subscriptionId: 1, source: 'Burst', publishedAt: at(8) })),
+    ];
+    const blocks = planMagazine({ entries, grouping: true, complete: true });
+    expect(blocks.some((b) => b.kind === 'group')).toBe(true);
   });
 
   it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {

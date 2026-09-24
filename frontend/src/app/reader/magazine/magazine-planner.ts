@@ -152,12 +152,13 @@ function effectiveTime(entry: EntryDto): number {
   return Date.parse(entry.publishedAt ?? entry.createdAt);
 }
 
-/** Distinct sources active within ACTIVE_WINDOW_MS of the first entry. Anchored on
- *  the first entry, not the newest or the wall clock, so it is prefix-stable in either
- *  list order: an appended page can only ADD a source, never remove one. */
+/** Distinct sources active within ACTIVE_WINDOW_MS of the first entry in display
+ *  order whose date parses — an unparseable first entry is skipped rather than
+ *  disabling collapse for the whole list. Zero when no entry has a usable date. */
 function activeSourceCount(entries: EntryDto[]): number {
-  if (entries.length === 0) return 0;
-  const anchor = effectiveTime(entries[0]);
+  const anchorEntry = entries.find((entry) => !Number.isNaN(effectiveTime(entry)));
+  if (!anchorEntry) return 0;
+  const anchor = effectiveTime(anchorEntry);
   return distinctSources(
     entries.filter((entry) => Math.abs(effectiveTime(entry) - anchor) <= ACTIVE_WINDOW_MS),
   );
