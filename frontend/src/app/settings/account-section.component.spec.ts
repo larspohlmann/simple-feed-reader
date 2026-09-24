@@ -113,6 +113,17 @@ describe('AccountSectionComponent', () => {
     expect(logoutSpy).toHaveBeenCalled();
   });
 
+  it("forgets this account's device settings once the delete succeeds", () => {
+    const f = mount(user);
+    localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
+    dialogStub.open.mockReturnValue({ closed: of(true) });
+
+    f.componentInstance.confirmThenDelete();
+    httpMock.expectOne(`${base}/api/me`).flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBeNull();
+  });
+
   it('does nothing when the dialog is dismissed', () => {
     const f = mount(user);
     dialogStub.open.mockReturnValue({ closed: of(false) });
@@ -139,6 +150,7 @@ describe('AccountSectionComponent', () => {
 
   it('shows the problem detail in an error banner when the delete request fails', () => {
     const f = mount(user);
+    localStorage.setItem(`sfr.user.${user.id}.unread-only`, '1');
     dialogStub.open.mockReturnValue({ closed: of(true) });
 
     f.componentInstance.confirmThenDelete();
@@ -161,6 +173,7 @@ describe('AccountSectionComponent', () => {
     expect((f.nativeElement as HTMLElement).textContent).toContain(
       'This is the only administrator account. Promote another account first.',
     );
+    expect(localStorage.getItem(`sfr.user.${user.id}.unread-only`)).toBe('1');
   });
 
   it('falls back to the problem title when the response has no detail', () => {
