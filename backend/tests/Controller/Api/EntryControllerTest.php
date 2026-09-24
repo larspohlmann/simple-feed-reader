@@ -400,6 +400,68 @@ final class EntryControllerTest extends WebTestCase
         );
     }
 
+    public function testListsOldestFirstWhenAskedAndPagesOnward(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-oldest@example.com');
+        $this->seedFeedWithEntries($user, 3);
+
+        $client->request('GET', '/api/entries?order=asc&limit=2', server: $headers);
+        $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page1);
+        self::assertIsArray($page1['entries']);
+        self::assertSame(['Post 1', 'Post 2'], array_column($page1['entries'], 'title'));
+        self::assertIsString($page1['nextCursor']);
+
+        $client->request(
+            'GET',
+            '/api/entries?order=asc&limit=2&cursor=' . urlencode($page1['nextCursor']),
+            server: $headers,
+        );
+        $page2 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page2);
+        self::assertIsArray($page2['entries']);
+        self::assertSame(['Post 3'], array_column($page2['entries'], 'title'));
+    }
+
+    public function testRejectsAnUnknownOrder(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order@example.com');
+
+        $client->request('GET', '/api/entries?order=up', server: $headers);
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $body['errors']);
+    }
+
+    public function testTheForYouViewAcceptsAnOrderItDoesNotApply(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order-for-you@example.com');
+
+        $client->request('GET', '/api/entries?view=for-you&order=asc', server: $headers);
+
+        self::assertResponseIsSuccessful();
+    }
+
+    public function testAnUnknownOrderIsRejectedOnTheForYouViewToo(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order-for-you-bad@example.com');
+
+        $client->request('GET', '/api/entries?view=for-you&order=up', server: $headers);
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $body['errors']);
+    }
+
     public function testEveryNamedViewIsAccepted(): void
     {
         $client = self::createClient();

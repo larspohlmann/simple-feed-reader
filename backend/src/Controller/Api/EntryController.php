@@ -9,6 +9,7 @@ use App\Dto\Entry\MarkForYouReadRequest;
 use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Http\EntryJson;
@@ -57,6 +58,7 @@ final readonly class EntryController
         #[MapQueryParameter] ?string $cursor = null,
         #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
         #[MapQueryParameter] bool $unread = false,
+        #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
         // Validate `view` in-controller (not via a MapQueryParameter regexp) so a
         // bad value reports the SAME `validation_error` problem type as every other
@@ -73,6 +75,7 @@ final readonly class EntryController
                 ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             ),
         };
+        $listOrder = ListOrder::fromRequestValue($order);
 
         // The for-you feed is score-ranked, not (effectiveDate, id)-ranked, so
         // it needs its own cursor and never reaches EntryQuery's applyView.
@@ -91,6 +94,7 @@ final readonly class EntryController
             tagId: $tag,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
+            order: $listOrder,
         );
 
         $rows = $this->savedSearchLoader->loadInto(

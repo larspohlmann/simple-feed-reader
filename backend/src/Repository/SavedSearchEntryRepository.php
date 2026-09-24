@@ -44,7 +44,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
         }
 
-        $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
+        $this->applyCursor($qb, $query->cursor, new EntryListOrdering(EntryListSort::PublishedDate));
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
