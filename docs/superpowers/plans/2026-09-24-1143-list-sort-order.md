@@ -66,7 +66,7 @@
 | `frontend/e2e/list-scroll-reset.spec.ts`, `saved-searches-combined.spec.ts` | Stop seeding/clearing the legacy device-wide key | 8 |
 | `frontend/src/app/reader/models.ts`, `query.ts`, `reader-api.ts`, `list-scroll-memory.ts` | `ListOrder`, `Selection.order`, the `order` param, the scroll key | 9 |
 | `frontend/src/app/reader/entry-list/entry-list.component.{ts,html}`, `public/i18n/{en,de}.json` | The header toggle | 10 |
-| `frontend/src/app/reader/list-order.service.ts` (new), `list-preferences.service.ts` (new), `reader-shell.component.{ts,html}`, `list-scroll-reset.ts` | Remembering the order, applying preferences, the load gate | 11 |
+| `frontend/src/app/reader/list-order.service.ts` (new), `list-preferences.service.ts` (new), `reader-shell.component.{ts,html}`, `list-scroll-reset.ts`, `core/auth.service.ts`, `core/account-identity.ts`, `core/user-device-storage.ts` | Remembering the order, applying preferences, the load gate (opens on a failed `/api/me` too) | 11 |
 | `frontend/src/app/reader/magazine/magazine-planner.ts` | Collapse window anchored on the first entry | 12 |
 | `frontend/e2e/list-order.spec.ts` (new) + two stub fixes | End-to-end proof, mark-above included | 13 |
 
@@ -1962,10 +1962,28 @@ git commit -m "feat(#1143): newest/oldest-first toggle in the list header"
 - Modify: `frontend/src/app/reader/reader-shell.component.ts` (the `selection` computed ~line 287, the load effect ~line 612, injections)
 - Modify: `frontend/src/app/reader/reader-shell.component.html` (both `<app-entry-list>` elements, ~lines 136 and 202: add `(orderChange)`)
 - Modify: `frontend/src/app/reader/list-scroll-reset.ts` (use `ListPreferences`; treat an order flip like an unread flip)
-- Tests: `reader-shell.component.spec.ts`, `list-scroll-reset.spec.ts`
+- Modify (review round 1): `frontend/src/app/core/auth.service.ts` (`accountLoadFailed`), `core/account-identity.ts` (`settled`), `core/user-device-storage.ts` (drop the now-unused `ready`)
+- Tests: `reader-shell.component.spec.ts`, `list-scroll-reset.spec.ts`, `core/auth.service.spec.ts`, `core/account-identity.spec.ts`, `core/user-device-storage.spec.ts`
+
+**Amendment (review round 1) — the gate never hangs.** A pre-deploy token has no `userId` claim, so the id
+arrives with `/api/me`; if that call fails (network, 5xx) the id never arrives. The first-load gate opens
+when the id is known **or** the `/api/me` attempt has failed; the list then loads with the defaults (all
+posts, newest first), as before this task.
+- `AuthService.accountLoadFailed: WritableSignal<boolean>` — `loadMe` sets it on error, clears it on
+  success; `logout` clears it.
+- `AccountIdentity.settled = computed(() => this.userId() !== null || this.auth.accountLoadFailed())`.
+- `ListPreferences.ready = inject(AccountIdentity).settled`. `UserDeviceStorage.ready` (Task 7) is
+  deleted, having no reader left.
+- Tests: `AuthService` records/clears the failure and forgets it on logout; `AccountIdentity` is settled
+  on an id, unsettled while loading, settled on a failure with no id; `ListPreferences` is ready with the
+  defaults when the account never loads; the shell, with the real `AuthService` (reset + reconfigure via
+  a `configureShell(authProviders)` helper), flushes `/api/me` with a 500 and expects `/api/entries` with
+  no `order` and `view=all`. `ListOrderService` reads a non-array stored value (`'"tag:3"'`) as newest;
+  `parseViewKeys` keeps `try` around `JSON.parse` only, so that branch is no longer shadowed by the catch.
+  The flipped-list shell test also asserts the reload has no `cursor`.
 
 **Interfaces:**
-- Consumes: `UserDeviceStorage`, `UnreadFilterService`, `withUnreadPreference`, `withListOrder`, `listOrderKey`.
+- Consumes: `AccountIdentity`, `UserDeviceStorage`, `UnreadFilterService`, `withUnreadPreference`, `withListOrder`, `listOrderKey`.
 - Produces:
   - `ListOrderService.orderFor(Selection): ListOrder`
   - `ListOrderService.set(Selection, ListOrder): void`
@@ -2191,13 +2209,17 @@ export class ListOrderService {
 }
 
 function parseViewKeys(stored: string | null): ReadonlySet<string> {
-  if (stored === null) return new Set();
+  const parsed = parsedJson(stored);
+  if (!Array.isArray(parsed)) return new Set();
+  return new Set(parsed.filter((key): key is string => typeof key === 'string'));
+}
+
+function parsedJson(stored: string | null): unknown {
+  if (stored === null) return null;
   try {
-    const parsed = JSON.parse(stored) as unknown;
-    if (!Array.isArray(parsed)) return new Set();
-    return new Set(parsed.filter((key): key is string => typeof key === 'string'));
+    return JSON.parse(stored) as unknown;
   } catch {
-    return new Set();
+    return null;
   }
 }
 
@@ -2210,7 +2232,7 @@ function sameViewKeys(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 
 ```ts
 import { Injectable, inject } from '@angular/core';
-import { UserDeviceStorage } from '../core/user-device-storage';
+import { AccountIdentity } from '../core/account-identity';
 import { ListOrderService } from './list-order.service';
 import { Selection, withListOrder, withUnreadPreference } from './query';
 import { UnreadFilterService } from './unread-filter.service';
@@ -2222,7 +2244,7 @@ export class ListPreferences {
   private readonly unreadFilter = inject(UnreadFilterService);
   private readonly listOrder = inject(ListOrderService);
 
-  readonly ready = inject(UserDeviceStorage).ready;
+  readonly ready = inject(AccountIdentity).settled;
 
   appliedTo(selection: Selection): Selection {
     return withListOrder(
@@ -2261,7 +2283,6 @@ export class ListPreferences {
 - Add the module-level helper (import `Signal` from `@angular/core`, and `merge` and `Observable` from `rxjs`):
 
 ```ts
-/** Every change of a preference after the value it starts with. */
 function flipsOf<T>(preference: Signal<T>): Observable<T> {
   return toObservable(preference).pipe(startWith(preference()), distinctUntilChanged(), skip(1));
 }
