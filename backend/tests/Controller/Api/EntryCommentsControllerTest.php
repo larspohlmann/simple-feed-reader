@@ -136,6 +136,26 @@ final class EntryCommentsControllerTest extends ApiTestCase
         self::assertSame(['status' => 'failed'], $this->payload($client));
     }
 
+    public function testTheThirtyFirstRequestInFiveMinutesIsRateLimitedBeforeAnyFetch(): void
+    {
+        $client = self::createClient();
+        $client->disableReboot();
+        [$headers, $user] = $this->auth('comments-limited@example.com');
+        $fetcher = $this->installFetcher();
+        $fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
+        $entry = $this->seedEntry($user, self::redditThread());
+        $url = '/api/entries/' . $entry->getId() . '/comments';
+
+        for ($request = 0; $request < 30; ++$request) {
+            $client->request('GET', $url, server: $headers);
+            self::assertResponseIsSuccessful();
+        }
+        $client->request('GET', $url, server: $headers);
+
+        self::assertResponseStatusCodeSame(429);
+        self::assertCount(30, $fetcher->fetchedUrls);
+    }
+
     public function testEntryWithoutCommentsFeedIs404(): void
     {
         $client = self::createClient();

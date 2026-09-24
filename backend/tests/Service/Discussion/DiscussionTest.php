@@ -54,4 +54,27 @@ final class DiscussionTest extends TestCase
         self::assertSame('https://blog.example/post/feed/', $discussion->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $discussion->commentsLoad);
     }
+
+    public function testNoFactoryMarksTheBodyAsTheOpeningPost(): void
+    {
+        self::assertFalse(Discussion::none()->bodyIsOpeningPost);
+        self::assertFalse(Discussion::of('https://t.example/1', null, CommentsLoad::Auto)->bodyIsOpeningPost);
+        self::assertFalse(
+            Discussion::withCommentsFeed(null, 'https://t.example/1.rss', CommentsLoad::Auto)->bodyIsOpeningPost,
+        );
+    }
+
+    public function testWithOpeningPostBodyMarksTheBodyAndKeepsTheThread(): void
+    {
+        $discussion = Discussion::withCommentsFeed(
+            'https://t.example/1',
+            'https://t.example/1/.rss',
+            CommentsLoad::Auto,
+        )->withOpeningPostBody();
+
+        self::assertTrue($discussion->bodyIsOpeningPost);
+        self::assertSame('https://t.example/1', $discussion->url);
+        self::assertSame('https://t.example/1/.rss', $discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Auto, $discussion->commentsLoad);
+    }
 }

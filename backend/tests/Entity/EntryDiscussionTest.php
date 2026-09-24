@@ -85,4 +85,28 @@ final class EntryDiscussionTest extends TestCase
         self::assertSame($commentsFeedUrl, $read->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $read->commentsLoad);
     }
+
+    public function testRoundTripsAnOpeningPostBody(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::withCommentsFeed(
+            'https://t.example/1',
+            'https://t.example/1/.rss',
+            CommentsLoad::Auto,
+        )->withOpeningPostBody());
+
+        $read = $stored->read();
+
+        self::assertTrue($read->bodyIsOpeningPost);
+        self::assertSame('https://t.example/1/.rss', $read->commentsFeedUrl);
+    }
+
+    public function testABodyNotMarkedAsTheOpeningPostStaysUnmarked(): void
+    {
+        $stored = new EntryDiscussion();
+        $stored->store(Discussion::of('https://t.example/1', null, CommentsLoad::Manual)->withOpeningPostBody());
+        $stored->store(Discussion::of('https://t.example/1', null, CommentsLoad::Manual));
+
+        self::assertFalse($stored->read()->bodyIsOpeningPost);
+    }
 }

@@ -38,7 +38,8 @@ final readonly class RedditEntryRule implements PlatformEntryRule
         return $entry->withPlatformRewrite(
             self::externalArticle($footer),
             self::withoutFooter($entry->contentHtml, $footer),
-            Discussion::withCommentsFeed($thread, rtrim($thread, '/') . '/.rss', CommentsLoad::Auto),
+            Discussion::withCommentsFeed($thread, rtrim($thread, '/') . '/.rss', CommentsLoad::Auto)
+                ->withOpeningPostBody(),
         );
     }
 

@@ -63,6 +63,15 @@ final class RedditEntryRuleTest extends TestCase
         self::assertSame(self::THREAD, $result->discussion->url);
     }
 
+    public function testTheLinkPostBodyIsMarkedAsTheOpeningPostNotTheArticle(): void
+    {
+        $result = (new RedditEntryRule())->apply(
+            self::entry(self::THREAD, '<div class="md"><p>My take.</p></div>' . self::footer('https://news.example/a')),
+        );
+
+        self::assertTrue($result->discussion->bodyIsOpeningPost);
+    }
+
     public function testAnEarlierSubmittedByInTheBodySurvivesTheFooterStrip(): void
     {
         $body = '<div class="md"><p>This patch was submitted by my colleague.</p>'
@@ -142,6 +151,16 @@ final class RedditEntryRuleTest extends TestCase
         self::assertStringContainsString('</td></tr></table>', (string) $result->contentHtml);
     }
 
+    public function testAQueryOrFragmentOnTheThreadUrlStaysOutOfTheDiscussionAndCommentsFeed(): void
+    {
+        $result = (new RedditEntryRule())->apply(
+            self::entry(self::THREAD . '?utm_source=share#top', self::footer(self::THREAD)),
+        );
+
+        self::assertSame(self::THREAD, $result->discussion->url);
+        self::assertSame(self::THREAD . '.rss', $result->discussion->commentsFeedUrl);
+    }
+
     public function testKeepsEveryOtherField(): void
     {
         $original = self::entry(self::THREAD, self::footer(self::THREAD));
@@ -171,6 +190,7 @@ final class RedditEntryRuleTest extends TestCase
 
             self::assertStringNotContainsString('submitted by', (string) $result->contentHtml);
             self::assertStringEndsWith('/.rss', (string) $result->discussion->commentsFeedUrl);
+            self::assertTrue($result->discussion->bodyIsOpeningPost);
             $articles[$result->guid] = $result->url;
         }
 

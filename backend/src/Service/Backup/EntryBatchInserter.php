@@ -35,7 +35,7 @@ final readonly class EntryBatchInserter
         'summary', 'content_html', 'image_url', 'image_width', 'image_height',
         'media', 'attachments',
         'published_at', 'created_at', 'effective_date',
-        'discussion_url', 'comments_feed_url', 'comments_load',
+        'discussion_url', 'comments_feed_url', 'comments_load', 'body_is_opening_post',
     ];
 
     public function __construct(
@@ -83,6 +83,7 @@ final readonly class EntryBatchInserter
             self::storageDate($line->effectiveDate),
             $line->discussionUrl, $line->commentsFeedUrl,
             CommentsLoad::tryFrom((string) $line->commentsLoad)?->value,
+            (int) $line->bodyIsOpeningPost,
         ];
     }
 

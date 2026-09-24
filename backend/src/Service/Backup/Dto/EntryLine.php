@@ -34,6 +34,7 @@ final readonly class EntryLine
         public ?string $discussionUrl = null,
         public ?string $commentsFeedUrl = null,
         public ?string $commentsLoad = null,
+        public bool $bodyIsOpeningPost = false,
     ) {
     }
 
@@ -62,6 +63,7 @@ final readonly class EntryLine
             discussionUrl: LineField::stringOrNull($line, 'discussionUrl'),
             commentsFeedUrl: LineField::stringOrNull($line, 'commentsFeedUrl'),
             commentsLoad: LineField::stringOrNull($line, 'commentsLoad'),
+            bodyIsOpeningPost: LineFieldWithDefault::bool($line, 'bodyIsOpeningPost', false),
         );
     }
 }

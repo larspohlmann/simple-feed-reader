@@ -87,6 +87,7 @@ final class BackupFieldDeclarations
             'discussion.url' => 'discussionUrl',
             'discussion.commentsFeedUrl' => 'commentsFeedUrl',
             'discussion.commentsLoad' => 'commentsLoad',
+            'discussion.bodyIsOpeningPost' => 'bodyIsOpeningPost',
         ],
         EntryState::class => [
             // Both halves, because both are load-bearing: guidHash picks the

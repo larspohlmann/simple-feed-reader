@@ -509,6 +509,7 @@ final class AccountRestorerTest extends DbTestCase
             [
                 'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url',
                 'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
+                'discussion.bodyIsOpeningPost',
             ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());

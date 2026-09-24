@@ -173,7 +173,7 @@ file.
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
 | `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
-| `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`). |
+| `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`, `bodyIsOpeningPost`). |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
 

@@ -20,6 +20,9 @@ class EntryDiscussion
     #[ORM\Column(name: 'comments_load', length: 8, nullable: true, enumType: CommentsLoad::class)]
     private ?CommentsLoad $commentsLoad = null;
 
+    #[ORM\Column(name: 'body_is_opening_post', options: ['default' => false])]
+    private bool $bodyIsOpeningPost = false;
+
     public function store(Discussion $discussion): void
     {
         $bounded = Discussion::of(
@@ -30,11 +33,14 @@ class EntryDiscussion
         $this->url = $bounded->url;
         $this->commentsFeedUrl = $bounded->commentsFeedUrl;
         $this->commentsLoad = $bounded->commentsLoad;
+        $this->bodyIsOpeningPost = $discussion->bodyIsOpeningPost;
     }
 
     public function read(): Discussion
     {
-        return Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
+        $discussion = Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
+
+        return $this->bodyIsOpeningPost ? $discussion->withOpeningPostBody() : $discussion;
     }
 
     private static function bounded(?string $url): ?string

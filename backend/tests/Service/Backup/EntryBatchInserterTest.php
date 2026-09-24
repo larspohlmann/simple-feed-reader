@@ -105,6 +105,20 @@ final class EntryBatchInserterTest extends DbTestCase
         self::assertSame('2026-08-01 10:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-02 00:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-08-01 10:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
+        self::assertFalse($entry->getDiscussion()->bodyIsOpeningPost);
+    }
+
+    public function testAnUnmarkedBodyIsStoredAsTheZeroAStrictMysqlColumnAccepts(): void
+    {
+        $feedId = $this->createFeed('https://batch.example/feed.xml');
+
+        $this->inserter()->insert($feedId, [$this->entryLine('zero-guid')]);
+
+        $stored = $this->em->getConnection()->fetchOne(
+            'SELECT body_is_opening_post FROM entry WHERE guid_hash = ?',
+            [hash('sha256', 'zero-guid')],
+        );
+        self::assertContains($stored, [0, '0']);
     }
 
     public function testAnEmptyListDoesNothing(): void

@@ -64,7 +64,7 @@ final readonly class EntryReaderController
 
         // A confident-but-wrong extraction (page furniture instead of the article)
         // is failed here so the client falls back to the feed body (#654).
-        $result = $this->coverageGate->verify($result, $entry->getContentHtml());
+        $result = $this->coverageGate->verify($result, $entry->getArticleContentHtml());
 
         $originalHero = $this->originalHero->resolve($entry);
 

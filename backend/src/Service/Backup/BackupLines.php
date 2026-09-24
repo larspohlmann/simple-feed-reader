@@ -140,6 +140,7 @@ final readonly class BackupLines
             'discussionUrl' => $discussion->url,
             'commentsFeedUrl' => $discussion->commentsFeedUrl,
             'commentsLoad' => $discussion->commentsLoad?->value,
+            'bodyIsOpeningPost' => $discussion->bodyIsOpeningPost,
             'title' => $entry->getTitle(),
             'author' => $entry->getAuthor(),
             'summary' => $entry->getSummary(),
