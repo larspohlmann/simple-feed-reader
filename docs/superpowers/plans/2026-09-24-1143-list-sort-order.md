@@ -2041,6 +2041,16 @@ describe('ListOrderService', () => {
     expect(service().orderFor(tag3)).toBe('oldest');
     expect(service().oldestFirstViews().size).toBe(1);
   });
+
+  // Guards `sameViewKeys`: every storage write re-reads this computed (import UnreadFilterService).
+  it('keeps the same views when another preference of the account is written', () => {
+    service().set(tag3, 'oldest');
+    const before = service().oldestFirstViews();
+
+    TestBed.inject(UnreadFilterService).set(true);
+
+    expect(service().oldestFirstViews()).toBe(before);
+  });
 });
 ```
 
@@ -2131,6 +2141,16 @@ The second test leaves the other boot requests (subscriptions, tags, saved searc
 
     expect(memory.forget).toHaveBeenCalledWith({ kind: 'tag', id: 5, unread: false, order: 'oldest' });
   });
+
+  it('reads a flip of the unread filter as one flip, not also as one of the order', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledTimes(1);
+  });
 ```
 
 - [ ] **Step 2: Run them and watch them fail** — `docker compose exec -T frontend npm test -- src/app/reader/list-order.service.spec.ts src/app/reader/list-preferences.service.spec.ts src/app/reader/reader-shell.component.spec.ts src/app/reader/list-scroll-reset.spec.ts`. Expected: FAIL.
@@ -2147,7 +2167,6 @@ import { Selection, listOrderKey } from './query';
 
 const NAME = 'oldest-first-views';
 
-/** Which lists this account reads oldest first, on this device. */
 @Injectable({ providedIn: 'root' })
 export class ListOrderService {
   private readonly storage = inject(UserDeviceStorage);
@@ -2277,6 +2296,7 @@ Expected: PASS / exit 0.
   - Drop `withListOrder` from `appliedTo`.
   - Remove the `flipsOf(this.listOrder…)` stream.
   - Use `equal` identity instead of `sameViewKeys`. Does any test notice? If none does, say so; a spurious flip would forget the scroll memory.
+    (Amended in Task 11: without the two equality-guard tests above, none did. With them, both fail.)
 
   Restore after each.
 
