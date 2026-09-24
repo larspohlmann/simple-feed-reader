@@ -164,6 +164,25 @@ export interface EntryAttachmentDto {
   title?: string;
 }
 
+export type CommentsLoad = 'auto' | 'manual';
+
+/** One comment on an entry's discussion page, as GET .../comments returns it. */
+export interface EntryCommentDto {
+  author: string | null;
+  authorUrl: string | null;
+  url: string | null;
+  publishedAt: string | null;
+  html: string;
+  byEntryAuthor: boolean;
+}
+
+/** GET /api/entries/{id}/comments: the discussion's comments, or why there
+ *  are none right now — throttled by the source, or the fetch failed. */
+export type CommentsResponse =
+  | { status: 'ok'; discussionUrl: string | null; comments: EntryCommentDto[] }
+  | { status: 'throttled'; discussionUrl: string | null; retryAfter: number }
+  | { status: 'failed'; discussionUrl: string | null };
+
 export interface EntryDto {
   id: number;
   title: string;
@@ -199,6 +218,10 @@ export interface EntryDto {
   isKept: boolean;
   /** One-way: the user actively opened this entry at least once (#307). */
   isViewed: boolean;
+  /** The entry's discussion page — Reddit thread, HN item — or null. */
+  discussionUrl: string | null;
+  /** Whether the entry has a comments feed, and whether it loads without a click. */
+  comments: CommentsLoad | null;
   /** Why the recommender picked this entry; set only on for-you results. */
   recommendationReason?: string | null;
   /** The model's 0-1000 score for this entry (0-100 before #403); present on

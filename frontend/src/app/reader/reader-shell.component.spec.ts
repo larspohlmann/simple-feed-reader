@@ -115,6 +115,8 @@ describe('ReaderShellComponent', () => {
     isFavorite: false,
     isKept: false,
     isViewed: false,
+    discussionUrl: null,
+    comments: null,
   };
 
   // A jest.fn() double, not the real HTTP-backed service: this suite asserts

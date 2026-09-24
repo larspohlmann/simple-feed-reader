@@ -34,6 +34,8 @@ const e = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   isFavorite: false,
   isKept: false,
   isViewed: false,
+  discussionUrl: null,
+  comments: null,
   ...over,
 });
 const big = (id: number, over: Partial<EntryDto> = {}): EntryDto =>

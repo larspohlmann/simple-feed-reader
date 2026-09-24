@@ -6,6 +6,7 @@ import { PAGE_SIZE } from './paging';
 import { RefreshScope } from './query';
 import {
   BulkSubscriptionUpdate,
+  CommentsResponse,
   DebugLogDetail,
   DebugLogPayload,
   EntriesPage,
@@ -165,6 +166,10 @@ export class ReaderApi {
 
   readerContent(entryId: number): Observable<ReaderContent> {
     return this.http.get<ReaderContent>(`${this.base}/api/entries/${entryId}/reader`);
+  }
+
+  comments(entryId: number): Observable<CommentsResponse> {
+    return this.http.get<CommentsResponse>(`${this.base}/api/entries/${entryId}/comments`);
   }
 
   /** Omit the scope (or pass an empty one) to refresh all the caller's due

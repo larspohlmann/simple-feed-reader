@@ -359,6 +359,17 @@ describe('ReaderApi', () => {
     expect(received?.status).toBe('failed');
   });
 
+  it('GETs comments for an entry', () => {
+    let received: unknown;
+    api.comments(7).subscribe((c) => (received = c));
+
+    const req = ctrl.expectOne('https://api.test/api/entries/7/comments');
+    expect(req.request.method).toBe('GET');
+    req.flush({ status: 'failed', discussionUrl: null });
+
+    expect(received).toEqual({ status: 'failed', discussionUrl: null });
+  });
+
   it('POSTs a feed preview request', () => {
     api.previewFeed('https://f').subscribe();
     const req = ctrl.expectOne('https://api.test/api/feeds/preview');
