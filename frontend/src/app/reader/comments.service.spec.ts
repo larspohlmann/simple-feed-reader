@@ -70,19 +70,36 @@ describe('CommentsService', () => {
     });
   });
 
-  it('never retries a failed load on its own', () => {
+  it('does not retry a failed load within the minute', () => {
     api.comments.mockReturnValue(of({ status: 'failed' }));
     service.load(1);
+    jest.setSystemTime(new Date('2026-09-24T12:00:59Z'));
     service.load(1);
     expect(api.comments).toHaveBeenCalledTimes(1);
   });
 
-  it('never retries a throttled load on its own, even once the wait is over', () => {
+  it('loads a failed entry again once a minute has passed', () => {
+    api.comments.mockReturnValue(of({ status: 'failed' }));
+    service.load(1);
+    jest.setSystemTime(new Date('2026-09-24T12:01:00Z'));
+    service.load(1);
+    expect(api.comments).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry a throttled load before its wait is over', () => {
     api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
     service.load(1);
-    jest.setSystemTime(new Date('2026-09-24T12:05:00Z'));
+    jest.setSystemTime(new Date('2026-09-24T12:00:39Z'));
     service.load(1);
     expect(api.comments).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads a throttled entry again once its wait is over', () => {
+    api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
+    service.load(1);
+    jest.setSystemTime(new Date('2026-09-24T12:00:40Z'));
+    service.load(1);
+    expect(api.comments).toHaveBeenCalledTimes(2);
   });
 
   it('retries a failed or throttled load when asked to', () => {
@@ -98,7 +115,10 @@ describe('CommentsService', () => {
   it('maps a transport error to failed', () => {
     api.comments.mockReturnValue(throwError(() => new Error('offline')));
     service.load(1);
-    expect(service.state(1)()).toEqual({ status: 'failed' });
+    expect(service.state(1)()).toEqual({
+      status: 'failed',
+      failedAt: Date.parse('2026-09-24T12:00:00Z'),
+    });
   });
 
   it('ignores a second load while one is in flight', () => {

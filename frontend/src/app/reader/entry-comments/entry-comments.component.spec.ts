@@ -123,7 +123,7 @@ describe('EntryCommentsComponent', () => {
     expect(el.querySelector('section')?.getAttribute('aria-busy')).toBe('true');
   });
 
-  it('renders comments with the OP pill and the count', () => {
+  it('renders comments with the OP pill and no count', () => {
     show('auto');
     const el = settle({
       status: 'ok',
@@ -150,7 +150,7 @@ describe('EntryCommentsComponent', () => {
     const rows = el.querySelectorAll('.comment');
     expect(rows.length).toBe(2);
     expect(el.querySelectorAll('.op').length).toBe(1);
-    expect(el.querySelector('.count')?.textContent?.trim()).toBe('2');
+    expect(el.querySelector('.count')).toBeNull();
     expect(rows[0].querySelector('a.author')?.getAttribute('href')).toBe(
       'https://www.reddit.com/user/op',
     );
@@ -226,7 +226,7 @@ describe('EntryCommentsComponent', () => {
 
   it('shows a quiet failure with a retry', () => {
     show('auto');
-    const el = settle({ status: 'failed' });
+    const el = settle({ status: 'failed', failedAt: Date.now() });
     const failed = el.querySelector('.failed')!;
     expect(failed.textContent).toContain('Comments could not be loaded.');
     expect(failed.querySelector('a')?.getAttribute('href')).toBe(DISCUSSION);

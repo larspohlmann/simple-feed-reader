@@ -6,13 +6,14 @@ import { ReaderApi } from './reader-api';
 
 const CACHE_CAP = 50;
 const FRESH_MS = 60 * 60 * 1000;
+const FAILED_RETRY_MS = 60 * 1000;
 
 export type CommentsState =
   | { status: 'idle' }
   | { status: 'loading' }
   | { status: 'ok'; comments: EntryCommentDto[]; loadedAt: number }
   | { status: 'throttled'; retryAt: number }
-  | { status: 'failed' };
+  | { status: 'failed'; failedAt: number };
 
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
@@ -66,8 +67,18 @@ export class CommentsService {
 }
 
 function isStale(state: CommentsState): boolean {
-  if (state.status === 'idle') return true;
-  return state.status === 'ok' && Date.now() - state.loadedAt >= FRESH_MS;
+  switch (state.status) {
+    case 'idle':
+      return true;
+    case 'ok':
+      return Date.now() - state.loadedAt >= FRESH_MS;
+    case 'throttled':
+      return Date.now() >= state.retryAt;
+    case 'failed':
+      return Date.now() - state.failedAt >= FAILED_RETRY_MS;
+    default:
+      return false;
+  }
 }
 
 function settled(response: CommentsResponse): CommentsState {
@@ -77,6 +88,6 @@ function settled(response: CommentsResponse): CommentsState {
     case 'throttled':
       return { status: 'throttled', retryAt: Date.now() + response.retryAfter * 1000 };
     default:
-      return { status: 'failed' };
+      return { status: 'failed', failedAt: Date.now() };
   }
 }

@@ -58,7 +58,10 @@ export class EntryCommentsComponent {
     if (state.status !== 'throttled') return 0;
     return Math.max(0, Math.ceil((state.retryAt - this.now()) / 1000));
   });
-  private readonly countingDown = computed(() => this.retryInSeconds() > 0);
+  private readonly throttledUntil = computed(() => {
+    const state = this.state();
+    return state.status === 'throttled' ? state.retryAt : null;
+  });
 
   constructor() {
     effect((onCleanup) => {
@@ -66,8 +69,8 @@ export class EntryCommentsComponent {
       onCleanup(this.loadOnSight(this.entryId()));
     });
     effect((onCleanup) => {
-      if (!this.countingDown()) return;
-      onCleanup(this.tickEverySecond());
+      const until = this.throttledUntil();
+      if (until !== null) onCleanup(this.countDownTo(until));
     });
   }
 
@@ -96,10 +99,13 @@ export class EntryCommentsComponent {
   }
 
   // Outside the zone: an in-zone interval never lets whenStable() settle.
-  private tickEverySecond(): () => void {
+  private countDownTo(until: number): () => void {
     this.now.set(Date.now());
     const ticker = this.zone.runOutsideAngular(() =>
-      setInterval(() => this.now.set(Date.now()), 1000),
+      setInterval(() => {
+        this.now.set(Date.now());
+        if (Date.now() >= until) clearInterval(ticker);
+      }, 1000),
     );
     return () => clearInterval(ticker);
   }
