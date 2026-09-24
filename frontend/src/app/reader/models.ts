@@ -335,6 +335,8 @@ export type SubscribeResult =
 export type EntryView =
   'all' | 'unread' | 'favorites' | 'kept' | 'viewed' | 'for-you' | 'saved-searches';
 
+export type ListOrder = 'newest' | 'oldest';
+
 /** A resolved selection the entry list turns into query params. */
 export interface EntryQuery {
   view: EntryView;
@@ -347,6 +349,8 @@ export interface EntryQuery {
   q?: string;
   /** Set only for a single saved search: fetch its members from the membership table. */
   savedSearchId?: number;
+  /** Absent means newest first, the API's own default. */
+  order?: ListOrder;
 }
 
 /** The scopes `POST /api/entries/mark-read` accepts, each identified by an

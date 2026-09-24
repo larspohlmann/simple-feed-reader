@@ -30,6 +30,11 @@ describe('scrollKey', () => {
     const react = scrollKey(sel({ kind: 'search', term: 'react' }));
     expect(angular).not.toBe(react);
   });
+
+  it('is distinct per list order', () => {
+    const tag = sel({ kind: 'tag', id: 3 });
+    expect(scrollKey(tag)).not.toBe(scrollKey({ ...tag, order: 'oldest' }));
+  });
 });
 
 describe('ListScrollMemory', () => {

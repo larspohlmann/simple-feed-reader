@@ -1146,6 +1146,10 @@ final class AdminUserControllerTest extends WebTestCase
         $factory = $this->factory();
         $soleAdmin = $factory->create('sole-admin@example.com', roles: ['ROLE_ADMIN']);
         $deputy = $factory->create('deputy@example.com', roles: ['ROLE_ADMIN']);
+        // Minted before the delete: Doctrine nulls a removed entity's id on
+        // this SAME object across the test kernel's reset (not rebuilt)
+        // EntityManager, so minting after would token a now-id-less $deputy.
+        $deputyToken = $this->tokenFor($deputy);
 
         $this->client->request('DELETE', self::LIST . '/' . $deputy->getId(), server: [
             'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($soleAdmin),
@@ -1153,7 +1157,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(204);
 
         $this->client->request('DELETE', self::LIST . '/' . $soleAdmin->getId(), server: [
-            'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($deputy),
+            'HTTP_AUTHORIZATION' => 'Bearer ' . $deputyToken,
         ]);
         self::assertResponseStatusCodeSame(401);
 

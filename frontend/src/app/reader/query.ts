@@ -1,5 +1,5 @@
 import { ParamMap, Params, convertToParamMap } from '@angular/router';
-import { EntryQuery, MarkReadScope } from './models';
+import { EntryQuery, ListOrder, MarkReadScope } from './models';
 import { entryIdFromParam } from './slug';
 
 export interface Selection {
@@ -19,6 +19,8 @@ export interface Selection {
   /** Only a search carries one. Part of the list's identity, so it belongs to
    *  the selection rather than to a service beside it. */
   term?: string;
+  /** Absent means newest first; only a list `hasListOrder` accepts ever carries one. */
+  order?: ListOrder;
 }
 
 /** The shortest term the backend will accept. A shorter one is not an error
@@ -115,7 +117,13 @@ export interface RefreshScope {
 /** Whether two selections name the same list. Selections are rebuilt from the
  *  route on every navigation, so they are never reference-equal. */
 export function sameSelection(a: Selection, b: Selection): boolean {
-  return a.kind === b.kind && a.id === b.id && a.unread === b.unread && a.term === b.term;
+  return (
+    a.kind === b.kind &&
+    a.id === b.id &&
+    a.unread === b.unread &&
+    a.term === b.term &&
+    listOrderOf(a) === listOrderOf(b)
+  );
 }
 
 export function isDirectSearch(selection: Selection): boolean {
@@ -147,6 +155,29 @@ export function hasUnreadFilter(s: Selection): boolean {
 
 export function withUnreadPreference(selection: Selection, unreadOnly: boolean): Selection {
   return hasUnreadFilter(selection) ? { ...selection, unread: unreadOnly } : selection;
+}
+
+/** Whether the list offers the newest/oldest-first toggle; the ranked for-you
+ *  feed has no date order to reverse. */
+export function hasListOrder(s: Selection): boolean {
+  return s.kind !== 'for-you';
+}
+
+export function listOrderOf(s: Selection): ListOrder {
+  return s.order ?? 'newest';
+}
+
+/** Applies an order to a selection parsed from the URL, which never carries one. */
+export function withListOrder(selection: Selection, order: ListOrder): Selection {
+  return hasListOrder(selection) && order === 'oldest' ? { ...selection, order } : selection;
+}
+
+/** Where a list's order is remembered: per feed, tag, saved search and view, and
+ *  once for every direct search, whose terms are throwaway. */
+export function listOrderKey(s: Selection): string | null {
+  if (!hasListOrder(s)) return null;
+  if (s.kind === 'search') return 'search';
+  return s.id === null ? s.kind : `${s.kind}:${s.id}`;
 }
 
 /** Whether the current selection supports a scoped refresh — the cross-feed
@@ -257,6 +288,11 @@ export function listSelectionFrom(params: Params): Selection {
 }
 
 export function queryFromSelection(s: Selection): EntryQuery {
+  const query = viewQuery(s);
+  return listOrderOf(s) === 'oldest' ? { ...query, order: 'oldest' } : query;
+}
+
+function viewQuery(s: Selection): EntryQuery {
   switch (s.kind) {
     case 'favorites':
       return { view: 'favorites' };

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Index;
 
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Service\Search\SearchTerms;
 
@@ -31,6 +32,7 @@ final readonly class IndexSearch
         public ?EntryCursor $cursor,
         public int $limit,
         public ?array $entryIds = null,
+        public ListOrder $order = ListOrder::NewestFirst,
     ) {
         if ($feedIds === []) {
             throw new \InvalidArgumentException('A search over no feeds must not reach the engine.');

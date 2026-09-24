@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search;
 
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Exception\ValidationException;
 use App\Http\EntryCursor;
 use App\Repository\EntryQuery;
@@ -172,6 +173,30 @@ final class EntrySearchRequestFactoryTest extends TestCase
         $query = $this->factory->fromRequest($request, $this->buildUser());
 
         self::assertSame(1, $query->limit);
+    }
+
+    public function testReadsTheOrderAndDefaultsToNewestFirst(): void
+    {
+        $askedRequest = Request::create('/api/entries/search?q=angular&order=asc');
+        $absentRequest = Request::create('/api/entries/search?q=angular');
+
+        $asked = $this->factory->fromRequest($askedRequest, $this->buildUser());
+        $absent = $this->factory->fromRequest($absentRequest, $this->buildUser());
+
+        self::assertSame(ListOrder::OldestFirst, $asked->order);
+        self::assertSame(ListOrder::NewestFirst, $absent->order);
+    }
+
+    public function testRejectsAnUnknownOrder(): void
+    {
+        $request = Request::create('/api/entries/search?q=angular&order=up');
+
+        try {
+            $this->factory->fromRequest($request, $this->buildUser());
+            self::fail('An unknown order must be rejected.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['Unknown order. Use one of: desc, asc.'], $exception->errors['order'] ?? null);
+        }
     }
 
     public function testRejectsAMissingQ(): void

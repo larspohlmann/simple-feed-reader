@@ -9,8 +9,10 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\EntrySearchResult;
@@ -69,6 +71,12 @@ final class IndexedEntrySearchTest extends DbTestCase
         $state->setIsHidden(true);
         $this->em->persist($state);
         $this->em->flush();
+    }
+
+    /** @return list<string> */
+    private function guids(EntrySearchResult $result): array
+    {
+        return array_map(static fn (EntryListRow $row): string => $row->entry->getGuid(), $result->rows);
     }
 
     private function search(FakeSearchIndexReader $reader, EntrySearchQuery $query): EntrySearchResult
@@ -229,10 +237,7 @@ final class IndexedEntrySearchTest extends DbTestCase
             unread: true,
         ));
 
-        self::assertSame(['unread'], array_map(
-            static fn ($row): string => $row->entry->getGuid(),
-            $result->rows,
-        ));
+        self::assertSame(['unread'], $this->guids($result));
         self::assertSame(3, $result->matchCount, 'The engine match count survives the unread filter.');
         self::assertNotNull($result->continuationRow);
         self::assertSame(
@@ -258,10 +263,7 @@ final class IndexedEntrySearchTest extends DbTestCase
             terms: SearchTerms::fromInput('angular'),
         ));
 
-        self::assertSame(['read', 'unread'], array_map(
-            static fn ($row): string => $row->entry->getGuid(),
-            $result->rows,
-        ));
+        self::assertSame(['read', 'unread'], $this->guids($result));
     }
 
     /**
@@ -290,6 +292,30 @@ final class IndexedEntrySearchTest extends DbTestCase
             'A fully-read page must still name where to resume, or the list ends early.',
         );
         self::assertSame('read', $result->continuationRow->entry->getGuid());
+    }
+
+    public function testAnOldestFirstPageIsHydratedOldestFirstAndResumesAfterItsNewestRow(): void
+    {
+        $newer = $this->entry('newer', '2026-07-12T00:00:00Z');
+        $olderLowerId = $this->entry('older-lower-id', '2026-07-10T00:00:00Z');
+        $olderHigherId = $this->entry('older-higher-id', '2026-07-10T00:00:00Z');
+        $reader = new FakeSearchIndexReader(entryIds: [
+            $olderHigherId->getId() ?? 0,
+            $olderLowerId->getId() ?? 0,
+            $newer->getId() ?? 0,
+        ]);
+
+        $result = $this->search($reader, new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput('angular'),
+            limit: 3,
+            order: ListOrder::OldestFirst,
+        ));
+
+        self::assertNotNull($reader->received);
+        self::assertSame(ListOrder::OldestFirst, $reader->received->order);
+        self::assertSame(['older-lower-id', 'older-higher-id', 'newer'], $this->guids($result));
+        self::assertSame('newer', $result->continuationRow?->entry->getGuid());
     }
 
     public function testAUserWithNoSubscriptionsReturnsEmptyWithoutAskingTheEngine(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Service\Search\SearchTerms;
 
@@ -23,7 +24,13 @@ final readonly class EntrySearchQuery
         public ?EntryCursor $cursor = null,
         int $limit = EntryQuery::DEFAULT_LIMIT,
         public bool $unread = false,
+        public ListOrder $order = ListOrder::NewestFirst,
     ) {
         $this->limit = EntryQuery::clampLimit($limit);
+    }
+
+    public function ordering(): EntryListOrdering
+    {
+        return EntryListOrdering::byPublishedDate($this->order);
     }
 }

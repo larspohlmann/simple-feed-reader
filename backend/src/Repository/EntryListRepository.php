@@ -37,7 +37,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entries in feeds the caller subscribes to, sorted newest first and
+     * Entries in feeds the caller subscribes to, in the query's order and
      * keyset-paginated on (sortInstant, id) — the sort instant is the entry's
      * effectiveDate for every view but "viewed", which is a reading history and
      * orders by EntryState.viewedAt instead (see EntryListSort). LEFT JOINs the
@@ -49,24 +49,25 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     #[WithSpan]
     public function listForUser(EntryQuery $query): array
     {
-        $sort = EntryListSort::forView($query->view);
+        $ordering = $query->ordering();
         $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
             $this->scope->applyList($qb, $aliases, $query);
         };
 
-        $pageQuery = function () use ($query, $sort, $applyScope): QueryBuilder {
-            $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $sort)
+        $pageQuery = function () use ($query, $ordering, $applyScope): QueryBuilder {
+            $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
                 ->setMaxResults($query->limit);
             $applyScope($qb, EntryAliases::primary());
             $this->collapse->apply($qb, $applyScope, $query->userId);
-            $this->applyCursor($qb, $query->cursor, $sort);
+            $this->applyCursor($qb, $query->cursor, $ordering);
 
             return $qb;
         };
         $windowProbe = function () use ($query): QueryBuilder {
             $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
-            $qb = $this->orderedBy($probe, EntryListSort::PublishedDate);
-            $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
+            $probeOrdering = EntryListOrdering::byPublishedDate($query->order);
+            $qb = $this->orderedBy($probe, $probeOrdering);
+            $this->applyCursor($qb, $query->cursor, $probeOrdering);
 
             return $qb;
         };
@@ -78,10 +79,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Entries whose title or summary contains EVERY search term, newest first,
-     * keyset-paginated exactly like the entry list. The predicate is an AND of
-     * unindexable LIKEs, so the database reads every entry the caller
-     * subscribes to; that cost is accepted for now and measured in #408.
+     * Entries whose title or summary contains EVERY search term, in the
+     * query's order, keyset-paginated exactly like the entry list. The
+     * predicate is an AND of unindexable LIKEs, so the database reads every
+     * entry the caller subscribes to; that cost is accepted for now and
+     * measured in #408.
      *
      * @return list<EntryListRow>
      */
@@ -90,13 +92,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
             $this->scope->applySearch($qb, $aliases, $query);
         };
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))
+        $ordering = $query->ordering();
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $applyScope, $query->userId);
-        // Search ranks by publish instant like the default list, never by view
-        // time, so its cursor predicate is the effectiveDate one.
-        $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
+        $this->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

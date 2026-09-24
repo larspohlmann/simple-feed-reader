@@ -32,18 +32,18 @@ const IMAGE_POOR_SHARE = 0.15;
 /** A same-source run collapses once it reaches this many entries in a row.
  *  Single foreign posts embedded in the run are bridged — see `detectRun`. */
 const RUN_MIN = 8;
-/** The newest entries of a collapsing run kept as full magazine blocks, so the
+/** The first entries of a collapsing run kept as full magazine blocks, so the
  *  source still gets a visual moment before the rest folds into the widget. */
 const FEATURED_LEAD = 3;
 /** How many rows the collapsed widget previews before "Show more". */
 const WIDGET_PREVIEW = 4;
-/** The diversity window: collapse is judged over sources ACTIVE in the last day
- *  of content, not a fixed count of leading entries — two high-frequency sources
- *  bursting back-to-back could monopolize and disable collapse (#168). */
+/** The diversity window: collapse is judged over sources active within this span
+ *  of the first entry, not a fixed count of leading entries — two high-frequency
+ *  sources bursting back-to-back could monopolize and disable collapse (#168). */
 const ACTIVE_WINDOW_MS = 24 * 60 * 60 * 1000;
 /** The largest slot may reach this far ahead for an entry that fits it. */
 const LOOK_AHEAD = 2;
-/** How far back the opener may reach for an image to lead with when the newest
+/** How far back the opener may reach for an image to lead with when the first
  *  entries have none. */
 const LEAD_IMAGE_REACH = 6;
 /** Per-page height ceiling, in BLOCK_HEIGHT units — about one and a half phone
@@ -71,7 +71,7 @@ export function planMagazine(input: MagazinePlanInput): MagazineBlock[] {
   const useTextFamily = isImagePoor(sample) || (!isImageRich(sample) && isTextRich(sample));
   const templates = useTextFamily ? TEXT_TEMPLATES : IMAGE_TEMPLATES;
   // Land the reader on a picture: the image family pulls the nearest image entry
-  // to the front when the newest are image-less. The text family opens on a
+  // to the front when the first are image-less. The text family opens on a
   // headline by design, so it keeps strict order.
   const ordered = useTextFamily ? entries : leadWithImage(entries);
 
@@ -152,17 +152,16 @@ function effectiveTime(entry: EntryDto): number {
   return Date.parse(entry.publishedAt ?? entry.createdAt);
 }
 
-/** Distinct sources active within ACTIVE_WINDOW_MS of the newest entry. Measured
- *  from the newest entry, not the wall clock, so it's prefix-stable as older
- *  pages load — an older entry can only ADD a source, never remove one. */
+/** Distinct sources active within ACTIVE_WINDOW_MS of the first entry in display
+ *  order whose date parses — an unparseable first entry is skipped rather than
+ *  disabling collapse for the whole list. Zero when no entry has a usable date. */
 function activeSourceCount(entries: EntryDto[]): number {
-  let newest = -Infinity;
-  for (const entry of entries) {
-    const time = effectiveTime(entry);
-    if (time > newest) newest = time;
-  }
-  const cutoff = newest - ACTIVE_WINDOW_MS;
-  return distinctSources(entries.filter((entry) => effectiveTime(entry) >= cutoff));
+  const anchorEntry = entries.find((entry) => !Number.isNaN(effectiveTime(entry)));
+  if (!anchorEntry) return 0;
+  const anchor = effectiveTime(anchorEntry);
+  return distinctSources(
+    entries.filter((entry) => Math.abs(effectiveTime(entry) - anchor) <= ACTIVE_WINDOW_MS),
+  );
 }
 
 /** Whether a new, collapsible same-source run begins exactly at `start`, so an
@@ -217,7 +216,7 @@ function isImagePoor(entries: EntryDto[]): boolean {
   return withImage / entries.length < IMAGE_POOR_SHARE;
 }
 
-/** If the newest entry has no usable image but one sits within LEAD_IMAGE_REACH
+/** If the first entry has no usable image but one sits within LEAD_IMAGE_REACH
  *  behind it, move it to the front so the opener leads on a picture — a single
  *  bounded move, tail order kept. `split` is the trust bar the opener's slot
  *  needs to render as an image rather than a headline. */
@@ -264,7 +263,7 @@ function layOutPage(template: readonly Slot[], slice: EntryDto[], page: number):
   return assigned.map((kind, position) => toBlock(kind, slice[position], page, position));
 }
 
-/** The run's newest entries, laid out as ordinary magazine blocks. */
+/** The run's first entries, laid out as ordinary magazine blocks. */
 function emitFeaturedLead(
   blocks: MagazineBlock[],
   sourceEntries: EntryDto[],

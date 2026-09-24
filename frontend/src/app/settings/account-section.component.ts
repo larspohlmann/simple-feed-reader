@@ -6,6 +6,7 @@ import { Problem, parseProblem } from '../core/problem';
 import { UserAvatarComponent } from '../shared/user-avatar/user-avatar.component';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
+import { UserDeviceStorage } from '../core/user-device-storage';
 import { formatLongDate } from '../reader/format';
 import { ButtonComponent } from '../shared/button/button.component';
 import {
@@ -38,6 +39,7 @@ export class AccountSectionComponent {
   private readonly dialog = inject(Dialog);
   private readonly i18n = inject(TranslocoService);
   private readonly language = inject(LanguageService);
+  private readonly deviceStorage = inject(UserDeviceStorage);
 
   readonly deleteError = signal<Problem | null>(null);
 
@@ -73,7 +75,10 @@ export class AccountSectionComponent {
       // /login. The token is stateless and the user row is gone, so it
       // authenticates nobody either way -- clearing it is what stops the app
       // from rendering a signed-in shell for an account that no longer exists.
-      next: () => this.auth.logout(),
+      next: () => {
+        this.deviceStorage.forgetCurrentUser();
+        this.auth.logout();
+      },
       error: (failure: HttpErrorResponse) => this.deleteError.set(parseProblem(failure)),
     });
   }

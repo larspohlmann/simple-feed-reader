@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 
 final readonly class EntryQuery
@@ -49,8 +50,14 @@ final readonly class EntryQuery
         public ?int $tagId = null,
         public ?EntryCursor $cursor = null,
         int $limit = self::DEFAULT_LIMIT,
+        public ListOrder $order = ListOrder::NewestFirst,
     ) {
         $this->limit = self::clampLimit($limit);
+    }
+
+    public function ordering(): EntryListOrdering
+    {
+        return new EntryListOrdering(EntryListSort::forView($this->view), $this->order);
     }
 
     public function hidesExcludedFeeds(): bool

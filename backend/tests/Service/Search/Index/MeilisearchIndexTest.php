@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search\Index;
 
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\IndexedEntry;
@@ -214,6 +215,32 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(['effectiveDate:desc', 'id:desc'], $this->capturedJsonObject()['sort']);
     }
 
+    public function testAnOldestFirstSearchSortsBothKeysAscending(): void
+    {
+        $search = new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20, order: ListOrder::OldestFirst);
+        $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($search);
+
+        self::assertSame(['effectiveDate:asc', 'id:asc'], $this->capturedJsonObject()['sort']);
+    }
+
+    public function testAnOldestFirstCursorAddsTheMirroredPredicate(): void
+    {
+        $cursor = new EntryCursor(new \DateTimeImmutable('@100'), 5);
+        $search = new IndexSearch(
+            SearchTerms::fromInput('widgets'),
+            [1, 2],
+            $cursor,
+            20,
+            order: ListOrder::OldestFirst,
+        );
+        $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($search);
+
+        self::assertSame(
+            'feedId IN [1,2] AND (effectiveDate > 100 OR (effectiveDate = 100 AND id > 5))',
+            $this->capturedJsonObject()['filter'],
+        );
+    }
+
     public function testFindRetrievesOnlyIdAndHighlightsTitleAndSummary(): void
     {
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($this->search());
@@ -400,15 +427,13 @@ final class MeilisearchIndexTest extends TestCase
         self::assertSame(self::BASE_URL . '/indexes/entries/settings', $this->capturedRequest['url']);
 
         $decoded = $this->capturedJsonObject();
-        // Order is a behavioural contract, not cosmetic: Meilisearch's
-        // attribute ranking rule ranks a hit by which attribute in this list
-        // it matched, in the order declared here — title outranks summary
-        // outranks content outranks feedTitle. A reordering silently changes
-        // relevance without changing which entries are found, so this test
-        // pins the sequence, not just the membership.
         self::assertSame(['title', 'summary', 'content', 'feedTitle'], $decoded['searchableAttributes']);
         self::assertSame(['feedId', 'effectiveDate', 'id'], $decoded['filterableAttributes']);
         self::assertSame(['effectiveDate', 'id'], $decoded['sortableAttributes']);
+        self::assertSame(
+            ['sort', 'words', 'typo', 'proximity', 'attribute', 'exactness'],
+            $decoded['rankingRules'],
+        );
     }
 
     public function testUpsertPostsTheDocumentsWithEffectiveDateAsAUnixTimestamp(): void

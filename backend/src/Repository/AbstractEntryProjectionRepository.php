@@ -21,28 +21,19 @@ use Doctrine\ORM\QueryBuilder;
  */
 abstract class AbstractEntryProjectionRepository extends ServiceEntityRepository
 {
-    /**
-     * The publish-date order every list but the "viewed" history shares. Kept
-     * as its own name because search, the by-ids hydrator and the single-row
-     * lookup never reorder — only listForUser does, through orderedBy().
-     */
     protected function newestFirst(QueryBuilder $qb): QueryBuilder
     {
-        return $this->orderedBy($qb, EntryListSort::PublishedDate);
+        return $this->orderedBy($qb, EntryListOrdering::byPublishedDate());
     }
 
-    /**
-     * The sort's instant column DESC, then id DESC as the tiebreaker a whole
-     * refresh run's worth of tied instants needs. This is the tiebreak the
-     * keyset cursor in applyCursor() depends on — the two read the same
-     * EntryListSort, so the ORDER BY and the cursor predicate cannot name
-     * different columns and desync a caller's pagination from its own cursor.
-     */
-    protected function orderedBy(QueryBuilder $qb, EntryListSort $sort): QueryBuilder
+    /** The sort's instant column, then id for the ties a refresh run leaves, both in the ordering's direction. */
+    protected function orderedBy(QueryBuilder $qb, EntryListOrdering $ordering): QueryBuilder
     {
+        $direction = $ordering->order->sqlDirection();
+
         return $qb
-            ->orderBy($sort->orderColumn(), 'DESC')
-            ->addOrderBy('e.id', 'DESC');
+            ->orderBy($ordering->sort->orderColumn(), $direction)
+            ->addOrderBy('e.id', $direction);
     }
 
     /**
@@ -86,20 +77,17 @@ abstract class AbstractEntryProjectionRepository extends ServiceEntityRepository
             ->setParameter('user', $userId);
     }
 
-    protected function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor, EntryListSort $sort): void
+    protected function applyCursor(QueryBuilder $qb, ?EntryCursor $cursor, EntryListOrdering $ordering): void
     {
         if ($cursor === null) {
             return;
         }
 
-        // Keyset "before" predicate for (sortInstant, id) DESC: strictly
-        // earlier instants, or the same instant with a strictly smaller id.
-        // The instant column is the one the ORDER BY uses, taken from the same
-        // EntryListSort, so the two can never disagree.
-        $column = $sort->orderColumn();
-        $qb->andWhere(
-            \sprintf('(%1$s < :curInstant OR (%1$s = :curInstant AND e.id < :curId))', $column),
-        )
+        $qb->andWhere(\sprintf(
+            '(%1$s %2$s :curInstant OR (%1$s = :curInstant AND e.id %2$s :curId))',
+            $ordering->sort->orderColumn(),
+            $ordering->order->strictlyAfter(),
+        ))
             ->setParameter('curInstant', $cursor->sortInstant, Types::DATETIME_IMMUTABLE)
             ->setParameter('curId', $cursor->id);
     }

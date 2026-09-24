@@ -9,6 +9,7 @@ import { PaneSplitService } from './pane-split.service';
   imports: [PaneResizeDirective],
   template: `
     <div class="main" #main>
+      <section class="list"></section>
       <div class="handle" [appPaneResize]="main"></div>
     </div>
   `,
@@ -62,10 +63,10 @@ describe('PaneResizeDirective', () => {
   });
 
   it('commits and persists the dragged percent on pointerup', () => {
-    handle.dispatchEvent(pointer('pointerdown', 250));
-    handle.dispatchEvent(pointer('pointerup', 250));
-    expect(split.width()).toBe(25);
-    expect(localStorage.getItem('sfr.paneSplit')).toBe('25');
+    handle.dispatchEvent(pointer('pointerdown', 300));
+    handle.dispatchEvent(pointer('pointerup', 300));
+    expect(split.width()).toBe(30);
+    expect(localStorage.getItem('sfr.paneSplit')).toBe('30');
   });
 
   it('clamps a drag past the band to the minimum so neither pane collapses', () => {
@@ -101,6 +102,29 @@ describe('PaneResizeDirective', () => {
     handle.dispatchEvent(pointer('pointercancel', 700));
     expect(split.width()).toBe(70);
     expect(localStorage.getItem('sfr.paneSplit')).toBe('70');
+  });
+
+  describe("with the list column's length floor wider than the percent band's", () => {
+    // 320px of the 1000px container: the column stops following the handle below 32%.
+    beforeEach(() => {
+      (container.querySelector('.list') as HTMLElement).style.minWidth = '320px';
+    });
+
+    it('stops a drag at the floor and says so', () => {
+      handle.dispatchEvent(pointer('pointerdown', 500));
+      handle.dispatchEvent(pointer('pointerup', 100));
+
+      expect(split.width()).toBe(32);
+      expect(handle.getAttribute('aria-valuemin')).toBe('32');
+    });
+
+    it('stops ArrowLeft at the floor', () => {
+      split.set(34);
+      handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+      handle.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+
+      expect(split.width()).toBe(32);
+    });
   });
 
   it('updates aria-valuenow after a commit', () => {

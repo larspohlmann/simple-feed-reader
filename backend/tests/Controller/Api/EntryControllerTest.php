@@ -22,6 +22,7 @@ use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -398,6 +399,62 @@ final class EntryControllerTest extends WebTestCase
             ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             $body['errors'],
         );
+    }
+
+    public function testListsOldestFirstWhenAskedAndPagesOnward(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('e-oldest@example.com');
+        $this->seedFeedWithEntries($user, 3);
+
+        $client->request('GET', '/api/entries?order=asc&limit=2', server: $headers);
+        $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page1);
+        self::assertIsArray($page1['entries']);
+        self::assertSame(['Post 1', 'Post 2'], array_column($page1['entries'], 'title'));
+        self::assertIsString($page1['nextCursor']);
+
+        $client->request(
+            'GET',
+            '/api/entries?order=asc&limit=2&cursor=' . urlencode($page1['nextCursor']),
+            server: $headers,
+        );
+        $page2 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($page2);
+        self::assertIsArray($page2['entries']);
+        self::assertSame(['Post 3'], array_column($page2['entries'], 'title'));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function unknownOrderUrlProvider(): iterable
+    {
+        yield 'a date-ordered view' => ['/api/entries?order=up'];
+        yield 'the for-you view, which ignores a valid order' => ['/api/entries?view=for-you&order=up'];
+    }
+
+    #[DataProvider('unknownOrderUrlProvider')]
+    public function testRejectsAnUnknownOrder(string $url): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order@example.com');
+
+        $client->request('GET', $url, server: $headers);
+
+        self::assertResponseStatusCodeSame(422);
+        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertSame('validation_error', $body['type']);
+        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $body['errors']);
+    }
+
+    public function testTheForYouViewAcceptsAnOrderItDoesNotApply(): void
+    {
+        $client = self::createClient();
+        [$headers] = $this->auth('e-order-for-you@example.com');
+
+        $client->request('GET', '/api/entries?view=for-you&order=asc', server: $headers);
+
+        self::assertResponseIsSuccessful();
     }
 
     public function testEveryNamedViewIsAccepted(): void

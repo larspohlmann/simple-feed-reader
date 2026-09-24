@@ -1,9 +1,7 @@
 // e2e/list-scroll-reset.spec.ts
 import { test, expect, Page } from '@playwright/test';
-
-// The seeded e2e admin, as in `reader-smoke.spec.ts`.
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
+import { entryWire, oneFeedJson } from './support/reader';
 
 /** How far down the list the spec scrolls before switching lists. */
 const SCROLLED_TO = 900;
@@ -32,25 +30,7 @@ const PHONE = { width: 375, height: 667 };
 const RESTS_AT = SCROLLED_TO - 200;
 
 function entry(id: number, title: string) {
-  return {
-    id,
-    title,
-    url: `https://fixtures.invalid/${id}`,
-    author: null,
-    summary: 'A fixture summary, long enough to give the row some height.',
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
-    publishedAt: '2026-08-01T12:50:34+00:00',
-    createdAt: '2026-08-01T12:50:34+00:00',
-    subscriptionId: 7002,
-    source: 'Scroll fixture feed',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  return entryWire({ id, title, subscriptionId: 7002, source: 'Scroll fixture feed' });
 }
 
 /** Long enough that both lists scroll well past SCROLLED_TO. */
@@ -58,26 +38,12 @@ function entriesFor(list: { rowPrefix: string }) {
   return Array.from({ length: 60 }, (_, i) => entry(i + 1, `${list.rowPrefix} ${i + 1}`));
 }
 
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 7002,
-      feedId: 7003,
-      title: 'Scroll fixture feed',
-      customTitle: null,
-      lastFetchedAt: '2026-08-01T10:00:00+00:00',
-      feedUrl: 'https://fixtures.invalid/feed.xml',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-08-01T10:00:00+00:00',
-      tags: [TAG],
-      unreadCount: 60,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-};
+const SUBSCRIPTIONS = oneFeedJson('Scroll fixture feed', {
+  id: 7002,
+  feedId: 7003,
+  tags: [TAG],
+  unreadCount: 60,
+});
 
 async function stubGet(page: Page, pathname: string, json: unknown): Promise<void> {
   await page.route(
@@ -116,17 +82,9 @@ async function stubReaderData(page: Page): Promise<void> {
   await stubGet(page, '/api/tags', { tags: [TAG] });
 }
 
-async function signInAsAdmin(page: Page): Promise<boolean> {
+async function signInWithReaderData(page: Page): Promise<boolean> {
   await stubReaderData(page);
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  const loginError = page.getByRole('alert');
-  await expect(sidebar.or(loginError)).toBeVisible();
-  return sidebar.isVisible();
+  return signInAsAdmin(page);
 }
 
 /** The list's own scroller — the shell locks the page and scrolls this instead. */
@@ -191,7 +149,7 @@ test.describe('list scroll position on a list switch', () => {
   test('a clicked list starts at the top, and going back restores the place left behind', async ({
     page,
   }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -220,7 +178,7 @@ test.describe('list scroll position on a list switch', () => {
    * the user had left, and the next click would restore instead of reset.
    */
   test('a click still starts at the top after a trip through settings', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -248,7 +206,7 @@ test.describe('list scroll position on a list switch', () => {
   });
 
   test('a reload lands where the list was left, as a resume-reload must', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -270,23 +228,25 @@ test.describe('list scroll position on a list switch', () => {
  * applied. Flipping the filter asks for a different list, so it starts at the top.
  */
 test.describe('list scroll position with the unread filter on', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('sfr.unread-only', '1'));
-  });
-
   function unreadSwitch(page: Page) {
     return page.getByRole('switch', { name: 'only unread' });
   }
 
+  /** Turns the filter on through the UI after signing in. */
+  async function turnUnreadOn(page: Page): Promise<void> {
+    await showsRowsOf(page, ALL_LIST);
+    await unreadSwitch(page).click();
+    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+  }
+
   test('a clicked list starts at the top', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
-    await showsRowsOf(page, ALL_LIST);
-    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await turnUnreadOn(page);
     await scrollListTo(page, SCROLLED_TO);
     await openList(page, TAG_LIST);
 
@@ -295,7 +255,7 @@ test.describe('list scroll position with the unread filter on', () => {
   });
 
   test('flipping the filter starts the list at the top', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
@@ -303,7 +263,7 @@ test.describe('list scroll position with the unread filter on', () => {
 
     // Give the unread list a remembered place, so flipping back to it cannot
     // land at the top merely because it had never been scrolled.
-    await showsRowsOf(page, ALL_LIST);
+    await turnUnreadOn(page);
     await scrollListTo(page, SCROLLED_TO);
     await unreadSwitch(page).click();
     await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'false');
@@ -325,7 +285,7 @@ test.describe('list scroll position around a search', () => {
   test.use({ viewport: PHONE, isMobile: true, hasTouch: true });
 
   test('closing the search lands back where the list was left', async ({ page }) => {
-    const signedIn = await signInAsAdmin(page);
+    const signedIn = await signInWithReaderData(page);
     test.skip(
       !signedIn,
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',

@@ -95,7 +95,6 @@ async function stubReaderData(page: Page): Promise<void> {
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   await stubReaderData(page);
-  await page.addInitScript(() => localStorage.removeItem('sfr.unread-only'));
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);

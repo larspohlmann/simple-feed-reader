@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
@@ -73,31 +74,46 @@ final class EntrySearchTest extends DbTestCase
         return $repo;
     }
 
+    /** @return list<string> the guids a search query returned, in order */
+    private function guidsOf(EntrySearchQuery $query): array
+    {
+        $rows = $this->repo()->searchForUser($query);
+
+        return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
+    }
+
     /** @return list<string> the guids the search returned, in order */
     private function search(string $input, ?EntryCursor $cursor = null, int $limit = 50): array
     {
-        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+        return $this->guidsOf(new EntrySearchQuery(
             userId: $this->user->getId() ?? 0,
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             limit: $limit,
         ));
-
-        return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
     }
 
     /** @return list<string> the unread guids the search returned, in order */
     private function unreadSearch(string $input, ?EntryCursor $cursor = null, int $limit = 50): array
     {
-        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+        return $this->guidsOf(new EntrySearchQuery(
             userId: $this->user->getId() ?? 0,
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             limit: $limit,
             unread: true,
         ));
+    }
 
-        return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
+    /** @return list<string> the guids an oldest-first search returned, in order */
+    private function oldestFirstSearch(string $input, ?EntryCursor $cursor = null): array
+    {
+        return $this->guidsOf(new EntrySearchQuery(
+            userId: $this->user->getId() ?? 0,
+            terms: SearchTerms::fromInput($input),
+            cursor: $cursor,
+            order: ListOrder::OldestFirst,
+        ));
     }
 
     public function testMatchesTheTitle(): void
@@ -185,6 +201,33 @@ final class EntrySearchTest extends DbTestCase
         $cursor = new EntryCursor($newer->getEffectiveDate(), $newer->getId() ?? 0);
 
         self::assertSame(['older'], $this->search('angular', $cursor));
+    }
+
+    public function testReturnsOldestFirstWhenAsked(): void
+    {
+        $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
+        $this->entry('older-lower-id', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('older-higher-id', 'Angular one', null, '2026-07-10T00:00:00Z');
+
+        self::assertSame(
+            ['older-lower-id', 'older-higher-id', 'newer'],
+            $this->oldestFirstSearch('angular'),
+        );
+    }
+
+    public function testPagesOldestFirstWithTheKeysetCursor(): void
+    {
+        $older = $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('older-tied-a', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('older-tied-b', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
+
+        $cursor = new EntryCursor($older->getEffectiveDate(), $older->getId() ?? 0);
+
+        self::assertSame(
+            ['older-tied-a', 'older-tied-b', 'newer'],
+            $this->oldestFirstSearch('angular', $cursor),
+        );
     }
 
     public function testUnreadSearchAppliesKeysetPaginationAfterFilteringReadMatches(): void

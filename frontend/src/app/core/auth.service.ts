@@ -61,6 +61,7 @@ export class AuthService {
   private readonly readerLocation = inject(ReaderLocationService);
 
   readonly user = signal<CurrentUser | null>(null);
+  readonly accountLoadFailed = signal(false);
 
   login(email: string, password: string): Observable<{ token: string }> {
     return this.http
@@ -74,13 +75,17 @@ export class AuthService {
    *  directly any more. */
   loadMe(): Observable<CurrentUser> {
     return this.http.get<CurrentUser>(`${this.base}/api/me`).pipe(
-      tap((u) => {
-        this.user.set(u);
-        this.language.adopt(u.locale);
-        this.preferences.adopt(u);
-        this.magazineStyle.adopt(u);
-        this.digest.adopt(u);
-        this.ai.adopt(u);
+      tap({
+        next: (u) => {
+          this.accountLoadFailed.set(false);
+          this.user.set(u);
+          this.language.adopt(u.locale);
+          this.preferences.adopt(u);
+          this.magazineStyle.adopt(u);
+          this.digest.adopt(u);
+          this.ai.adopt(u);
+        },
+        error: () => this.accountLoadFailed.set(true),
       }),
     );
   }
@@ -97,6 +102,7 @@ export class AuthService {
   logout(): void {
     this.tokens.clear();
     this.user.set(null);
+    this.accountLoadFailed.set(false);
     // Per-account, unlike locale: leaving it set would let the next signed-in
     // account see the previous one's toggle state until (or unless) its own
     // loadMe() resolves.

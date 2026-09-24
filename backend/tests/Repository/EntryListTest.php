@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Repository\DateOrderedPage;
 use App\Repository\DuplicateCollapseDql;
@@ -191,12 +192,85 @@ final class EntryListTest extends DbTestCase
         ));
     }
 
+    /**
+     * @param list<EntryListRow> $rows
+     *
+     * @return list<string>
+     */
+    private function guids(array $rows): array
+    {
+        return array_map(static fn (EntryListRow $row): string => $row->entry->getGuid(), $rows);
+    }
+
+    private function cursorAfter(EntryListRow $row): EntryCursor
+    {
+        return new EntryCursor(
+            $row->entry->getEffectiveDate(),
+            $row->entry->getId() ?? throw new \LogicException('A persisted entry must have an id.'),
+        );
+    }
+
     public function testTheChronologicalFanInViewsCarryTheJoinOrderHint(): void
     {
         $userId = $this->user->getId() ?? 0;
 
         self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'all')));
         self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'unread')));
+    }
+
+    public function testOldestFirstReversesTheListIdTieBreakIncluded(): void
+    {
+        $tied = '2026-07-12T00:00:00Z';
+        $this->entryAt('newest', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
+        $this->entryAt('tied-first', $tied, $tied);
+        $this->entryAt('tied-second', $tied, $tied);
+        $this->entryAt('older', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
+
+        $rows = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, order: ListOrder::OldestFirst),
+        );
+
+        self::assertSame(['older', 'tied-first', 'tied-second', 'newest'], $this->guids($rows));
+    }
+
+    public function testOldestFirstKeysetPaginatesAcrossATiedEffectiveDate(): void
+    {
+        $tied = '2026-07-12T00:00:00Z';
+        $this->entryAt('later', '2026-07-20T00:00:00Z', '2026-07-20T00:00:00Z');
+        $this->entryAt('e1', $tied, $tied);
+        $this->entryAt('e2', $tied, $tied);
+        $this->entryAt('e3', $tied, $tied);
+        $userId = $this->user->getId() ?? 0;
+
+        $page1 = $this->repo()->listForUser(new EntryQuery($userId, limit: 2, order: ListOrder::OldestFirst));
+        self::assertSame(['e1', 'e2'], $this->guids($page1));
+
+        $page2 = $this->repo()->listForUser(new EntryQuery(
+            $userId,
+            cursor: $this->cursorAfter($page1[1]),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        ));
+        self::assertSame(['e3', 'later'], $this->guids($page2));
+    }
+
+    public function testViewedViewOldestFirstListsTheEarliestOpenedFirst(): void
+    {
+        $early = $this->entryAt('early', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
+        $late = $this->entryAt('late', '2026-07-01T00:00:00Z', '2026-07-20T00:00:00Z');
+        $earlyState = new EntryState($this->user, $early);
+        $earlyState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
+        $lateState = new EntryState($this->user, $late);
+        $lateState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
+        $this->em->persist($earlyState);
+        $this->em->persist($lateState);
+        $this->em->flush();
+
+        $rows = $this->repo()->listForUser(
+            new EntryQuery($this->user->getId() ?? 0, view: 'viewed', order: ListOrder::OldestFirst),
+        );
+
+        self::assertSame(['late', 'early'], $this->guids($rows));
     }
 
     public function testAScopedOrStateDrivenViewDropsTheJoinOrderHint(): void
@@ -828,6 +902,51 @@ final class EntryListTest extends DbTestCase
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
+    }
+
+    public function testOldestFirstDenseTagWindowedAttemptEqualsThePlainQuerysPage(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
+        $this->entryIn($feed, 't1', '2026-07-09T00:00:00Z');
+        $this->entryIn($feed, 't2', '2026-07-10T00:00:00Z');
+        $this->entryIn($feed, 't3', '2026-07-11T00:00:00Z');
+
+        $query = new EntryQuery(
+            $this->user->getId() ?? 0,
+            tagId: $tag->getId(),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        );
+        $recorded = $this->recordedList($this->repoWithWindow(2), $query);
+
+        self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
+        self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
+    }
+
+    public function testOldestFirstCursorContinuesAWindowedPageWithoutGapOrOverlap(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        foreach (['t1' => 10, 't2' => 11, 't3' => 12, 't4' => 13, 't5' => 14] as $guid => $day) {
+            $this->entryIn($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', $day));
+        }
+        $repo = $this->repoWithWindow(2);
+        $userId = $this->user->getId() ?? 0;
+
+        $page1 = $repo->listForUser(
+            new EntryQuery($userId, tagId: $tag->getId(), limit: 2, order: ListOrder::OldestFirst),
+        );
+        self::assertSame(['t1', 't2'], $this->guids($page1));
+
+        $recorded = $this->recordedList($repo, new EntryQuery(
+            $userId,
+            tagId: $tag->getId(),
+            cursor: $this->cursorAfter($page1[1]),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        ));
+        self::assertCount(2, $recorded['queries'], 'the cursor must keep this page windowed, not fall back');
+        self::assertSame(['t3', 't4'], $this->guids($recorded['rows']));
     }
 
     public function testCursorContinuesAFallbackPageWithoutGapOrOverlap(): void

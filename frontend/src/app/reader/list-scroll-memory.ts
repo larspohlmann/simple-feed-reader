@@ -1,12 +1,12 @@
 import { Injectable } from '@angular/core';
-import { Selection } from './query';
+import { Selection, listOrderOf } from './query';
 
 /**
- * Storage key for a selection's scroll offset. Distinguishes feed / tag / view and
- * unread-vs-all so every list remembers its own place independently.
+ * Storage key for a selection's scroll offset. Distinguishes feed / tag / view,
+ * unread-vs-all and the list order so every list remembers its own place independently.
  */
 export function scrollKey(s: Selection): string {
-  return `feed-reader:list-scroll:${s.kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}:${s.term ?? ''}`;
+  return `feed-reader:list-scroll:${s.kind}:${s.id ?? ''}:${s.unread ? 'u' : 'a'}:${s.term ?? ''}:${listOrderOf(s)}`;
 }
 
 /** Storage key for an open article's own scroll offset, keyed by entry id. */

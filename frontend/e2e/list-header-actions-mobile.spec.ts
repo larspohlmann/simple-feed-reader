@@ -61,7 +61,7 @@ test.describe('list-header actions on a phone', () => {
     await openReader(page, 'q=design');
 
     const actions = page.locator('.list-header .list-action');
-    await expect(actions).toHaveCount(3);
+    await expect(actions).toHaveCount(4);
 
     for (const action of await actions.all()) {
       await expect(action.locator('.txt')).toBeHidden();

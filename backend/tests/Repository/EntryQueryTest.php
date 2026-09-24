@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Enum\ListOrder;
+use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use PHPUnit\Framework\TestCase;
 
@@ -57,5 +59,16 @@ final class EntryQueryTest extends TestCase
         foreach (['favorites', 'kept', 'viewed', 'for-you'] as $view) {
             self::assertFalse((new EntryQuery(1, $view))->isDateOrderedFanIn(), $view);
         }
+    }
+
+    public function testTheOrderingPairsTheViewsSortWithTheRequestedOrder(): void
+    {
+        $viewed = (new EntryQuery(1, 'viewed', order: ListOrder::OldestFirst))->ordering();
+        self::assertSame(EntryListSort::ViewedAt, $viewed->sort);
+        self::assertSame(ListOrder::OldestFirst, $viewed->order);
+
+        $all = (new EntryQuery(1, 'all'))->ordering();
+        self::assertSame(EntryListSort::PublishedDate, $all->sort);
+        self::assertSame(ListOrder::NewestFirst, $all->order);
     }
 }

@@ -25,9 +25,10 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * Every member of any of the caller's searches, newest first, keyset-paged,
-     * the unread test in the same statement as the LIMIT. EXISTS rather than a
-     * join, so an entry in several searches is one row without a DISTINCT.
+     * Every member of any of the caller's searches, in the query's order,
+     * keyset-paged, the unread test in the same statement as the LIMIT. EXISTS
+     * rather than a join, so an entry in several searches is one row without a
+     * DISTINCT.
      *
      * @return list<EntryListRow>
      */
@@ -37,14 +38,16 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $qb = $this->newestFirst($this->rowQueryBuilder($query->userId))->setMaxResults($query->limit);
+        $ordering = $query->ordering();
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
+            ->setMaxResults($query->limit);
         $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
         if ($query->onlyUnread) {
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
         }
 
-        $this->applyCursor($qb, $query->cursor, EntryListSort::PublishedDate);
+        $this->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

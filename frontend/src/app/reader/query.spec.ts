@@ -1,10 +1,13 @@
 import { convertToParamMap } from '@angular/router';
 import {
   canScopedRefresh,
+  hasListOrder,
   isSearchableTerm,
   isTooShortToSearch,
   isWholeWordTerm,
   isPhraseTerm,
+  listOrderKey,
+  listOrderOf,
   listSelectionFrom,
   hasUnreadFilter,
   markReadTarget,
@@ -15,6 +18,7 @@ import {
   selectionFromParams,
   selectionQueryParams,
   visibleSearchTerm,
+  withListOrder,
   withUnreadPreference,
   type Selection,
 } from './query';
@@ -417,6 +421,53 @@ describe('sameSelection', () => {
         { kind: 'search', id: null, unread: false, term: 'react' },
       ),
     ).toBe(false);
+  });
+});
+
+describe('list order', () => {
+  const tag: Selection = { kind: 'tag', id: 3, unread: false };
+
+  it('reads an unordered selection as newest first', () => {
+    expect(listOrderOf(tag)).toBe('newest');
+    expect(listOrderOf(withListOrder(tag, 'oldest'))).toBe('oldest');
+  });
+
+  it('never orders the ranked for-you feed', () => {
+    const forYou: Selection = { kind: 'for-you', id: null, unread: false };
+    expect(hasListOrder(forYou)).toBe(false);
+    expect(withListOrder(forYou, 'oldest')).toBe(forYou);
+    expect(listOrderKey(forYou)).toBeNull();
+  });
+
+  it('keys each feed, tag, saved search and view apart, and every search term together', () => {
+    const key = (s: Selection) => listOrderKey(s);
+    expect(key({ kind: 'all', id: null, unread: true })).toBe('all');
+    expect(key({ kind: 'viewed', id: null, unread: false })).toBe('viewed');
+    expect(key({ kind: 'saved-searches', id: null, unread: false })).toBe('saved-searches');
+    expect(key(tag)).toBe('tag:3');
+    expect(key({ kind: 'subscription', id: 12, unread: false })).toBe('subscription:12');
+    expect(key({ kind: 'saved-search', id: 7, unread: false })).toBe('saved-search:7');
+    expect(key({ kind: 'search', id: null, unread: false, term: 'angular' })).toBe('search');
+    expect(key({ kind: 'search', id: null, unread: false, term: 'react' })).toBe('search');
+  });
+
+  it('tells a list and its reversed self apart', () => {
+    expect(sameSelection(tag, withListOrder(tag, 'oldest'))).toBe(false);
+    expect(sameSelection(tag, withListOrder(tag, 'newest'))).toBe(true);
+  });
+
+  it('asks for oldest first only when the selection is ordered so', () => {
+    expect(queryFromSelection(withListOrder(tag, 'oldest'))).toEqual({
+      view: 'all',
+      tag: 3,
+      order: 'oldest',
+    });
+    expect(queryFromSelection(tag)).toEqual({ view: 'all', tag: 3 });
+    expect(
+      queryFromSelection(
+        withListOrder({ kind: 'search', id: null, unread: true, term: 'x y' }, 'oldest'),
+      ),
+    ).toEqual({ view: 'all', q: 'x y', unread: true, order: 'oldest' });
   });
 });
 

@@ -37,6 +37,11 @@ describe('PaneSplitService', () => {
     expect(new PaneSplitService().width()).toBe(DEFAULT_LIST_PERCENT);
   });
 
+  it('clamps a saved value below the floor up to the floor on load', () => {
+    localStorage.setItem('sfr.paneSplit', String(MIN_LIST_PERCENT - 3));
+    expect(new PaneSplitService().width()).toBe(MIN_LIST_PERCENT);
+  });
+
   it('clamps out-of-band input on set', () => {
     const service = new PaneSplitService();
     service.set(MIN_LIST_PERCENT - 10);

@@ -4,10 +4,12 @@ import { provideLocationMocks } from '@angular/common/testing';
 import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
 import { ReaderLocationService } from '../core/reader-location.service';
+import { ListOrderService } from './list-order.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
 import { Selection } from './query';
 import { UnreadFilterService } from './unread-filter.service';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 const ALL: Selection = { kind: 'all', id: null, unread: false };
 const TAG: Selection = { kind: 'tag', id: 5, unread: false };
@@ -96,6 +98,7 @@ describe('ListScrollReset', () => {
           },
         },
         { provide: ListScrollMemory, useValue: memory },
+        provideAccountIdentity(),
       ],
     });
     TestBed.inject(ListScrollReset);
@@ -167,6 +170,31 @@ describe('ListScrollReset', () => {
     expect(memory.forget).toHaveBeenCalledWith(UNREAD_TAG);
   });
 
+  it('forgets the list a flip of its order shows', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(ListOrderService).set({ kind: 'tag', id: 5, unread: false }, 'oldest');
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledWith({
+      kind: 'tag',
+      id: 5,
+      unread: false,
+      order: 'oldest',
+    });
+  });
+
+  it('reads a flip of the unread filter as one flip, not also as one of the order', () => {
+    navigate('/?tag=5');
+    TestBed.tick();
+
+    TestBed.inject(UnreadFilterService).set(true);
+    TestBed.tick();
+
+    expect(memory.forget).toHaveBeenCalledTimes(1);
+  });
+
   it('forgets the flipped list even before it has seen a navigation, as the shell starts it late', () => {
     currentUrl = '/?tag=5';
 
@@ -203,6 +231,36 @@ describe('ListScrollReset', () => {
     expect(memory.forget).not.toHaveBeenCalled();
   });
 
+  describe('on a saved-search path', () => {
+    const SAVED: Selection = { kind: 'saved-search', id: 7, unread: false };
+
+    it('forgets the saved search a click opens', () => {
+      navigate('/?tag=5');
+      navigate('/searches/saved/7-climate');
+
+      expect(memory.forget).toHaveBeenCalledWith(SAVED);
+    });
+
+    it('forgets the saved search a flip of its order shows', () => {
+      navigate('/searches/saved/7-climate');
+      TestBed.tick();
+
+      TestBed.inject(ListOrderService).set(SAVED, 'oldest');
+      TestBed.tick();
+
+      expect(memory.forget).toHaveBeenCalledWith({ ...SAVED, order: 'oldest' });
+    });
+
+    it('still ignores a path the reader does not own', () => {
+      currentUrl = '/searches/saved';
+
+      TestBed.inject(UnreadFilterService).set(true);
+      TestBed.tick();
+
+      expect(memory.forget).not.toHaveBeenCalled();
+    });
+  });
+
   it('stops listening once the injector is destroyed', () => {
     navigate('/?tag=5');
     TestBed.resetTestingModule();
@@ -230,6 +288,7 @@ describe('ListScrollReset, driven by the real router', () => {
           { path: 'settings', children: [{ path: 'preferences', children: [] }] },
         ]),
         provideLocationMocks(),
+        provideAccountIdentity(),
       ],
     });
     router = TestBed.inject(Router);

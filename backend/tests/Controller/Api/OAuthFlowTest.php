@@ -9,11 +9,13 @@ use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
+use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserRepository;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
@@ -106,7 +108,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testTheHappyPathTakesAnActiveUserFromRedirectToJwt(): void
     {
-        $this->persistUser('bob@example.com', UserStatus::Active);
+        $bob = $this->persistUser('bob@example.com', UserStatus::Active);
         $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
         // 1. Start: we redirect to the provider, carrying a state we minted.
@@ -145,6 +147,10 @@ final class OAuthFlowTest extends WebTestCase
         $token = $this->payload()['token'] ?? null;
         self::assertIsString($token);
         self::assertCount(3, explode('.', $token), 'a JWT has three dot-separated parts');
+
+        /** @var JWTTokenManagerInterface $tokens */
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertSame($bob->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
 
         // 4. The token actually works, on the same route the password login's
         // token is proved against.

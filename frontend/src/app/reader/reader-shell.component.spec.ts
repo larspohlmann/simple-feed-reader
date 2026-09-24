@@ -18,7 +18,7 @@ import {
 } from '@angular/router';
 import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
-import { WritableSignal, signal } from '@angular/core';
+import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
@@ -49,6 +49,7 @@ import { SetupService } from '../setup/setup.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../testing/refresh-report';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -65,7 +66,8 @@ describe('ReaderShellComponent', () => {
   // the only place a boot sees the flag unanswered; isPasskeySupported() is
   // false by default in jsdom regardless (stubbed in only in that describe block).
   const auth = {
-    user: signal({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
+    user: signal({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
+    accountLoadFailed: signal(false),
     loadMe: () => of({}),
     logout: jest.fn(),
     isAdmin: jest.fn().mockReturnValue(false),
@@ -137,7 +139,8 @@ describe('ReaderShellComponent', () => {
     // Reset the #624 offer state too: a test below sets passkeyOfferAnswered
     // to false and calls the two marking methods, and neither must leak into
     // an unrelated test later in this file.
-    auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.accountLoadFailed.set(false);
     auth.answerPasskeyOffer.mockClear();
     auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
@@ -146,6 +149,11 @@ describe('ReaderShellComponent', () => {
     // "no" to every query, so the real one is stuck on wide and a phone-only test
     // has no way to say so. The defaults below reproduce what jsdom used to give.
     screen = { isNarrow: signal(false), isWide: signal(false), isCoarse: signal(false) };
+    configureShell([{ provide: AuthService, useValue: auth }]);
+    ctrl = TestBed.inject(HttpTestingController);
+  });
+
+  function configureShell(authProviders: Provider[]) {
     TestBed.configureTestingModule({
       imports: [ReaderShellComponent, provideTranslocoTesting()],
       providers: [
@@ -157,7 +165,7 @@ describe('ReaderShellComponent', () => {
           provide: ActivatedRoute,
           useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
         },
-        { provide: AuthService, useValue: auth },
+        ...authProviders,
         { provide: LayoutService, useValue: screen },
         { provide: EntryBodyService, useValue: bodyStore },
         // Defaults to "available", matching every test in this file written before
@@ -169,8 +177,15 @@ describe('ReaderShellComponent', () => {
         },
       ],
     });
+  }
+
+  /** A fresh module: the outer `beforeEach` already injected `HttpTestingController`,
+   *  which Angular refuses to override past. */
+  function reconfigureShell(authProviders: Provider[]): void {
+    TestBed.resetTestingModule();
+    configureShell(authProviders);
     ctrl = TestBed.inject(HttpTestingController);
-  });
+  }
 
   function boot(entryOverride: Partial<typeof entry> = {}) {
     const f = TestBed.createComponent(ReaderShellComponent);
@@ -2527,6 +2542,42 @@ describe('ReaderShellComponent', () => {
     });
   });
 
+  describe('loading state while the account gate is closed', () => {
+    it('renders the skeleton, not the empty state, with a claimless token and no account yet', () => {
+      reconfigureShell([
+        { provide: AuthService, useValue: { ...auth, user: signal(undefined) } },
+        provideAccountIdentity(signal(null)),
+      ]);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      ctrl.expectOne('https://api.test/api/version').flush({
+        version: 'dev',
+        commit: 'local',
+        builtAt: '',
+        latest: null,
+        updateAvailable: false,
+      });
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/subscriptions');
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+      f.detectChanges();
+
+      const root = f.nativeElement as HTMLElement;
+      expect(root.querySelector('.skeleton')).toBeTruthy();
+      expect(root.querySelector('.empty')).toBeFalsy();
+    });
+  });
+
   describe('drawer breakpoint driven by class, not media query', () => {
     beforeEach(() => {
       TestBed.resetTestingModule();
@@ -3152,7 +3203,7 @@ describe('ReaderShellComponent', () => {
     }
 
     it('keeps the unread filter on when a tag list moves to a saved search (#1126)', () => {
-      localStorage.setItem('sfr.unread-only', '1');
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = boot();
       f.componentInstance.savedSearchesStore.load();
       ctrl
@@ -3239,13 +3290,13 @@ describe('ReaderShellComponent', () => {
 
       const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
       expect(req.request.params.get('view')).toBe('unread');
-      expect(localStorage.getItem('sfr.unread-only')).toBe('1');
+      expect(localStorage.getItem('sfr.user.1.unread-only')).toBe('1');
       req.flush({ entries: [], nextCursor: null });
       expect(nav).not.toHaveBeenCalled();
     });
 
     it('filters a direct search to unread', () => {
-      localStorage.setItem('sfr.unread-only', '1');
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
       f.detectChanges();
@@ -3262,6 +3313,56 @@ describe('ReaderShellComponent', () => {
 
       expect(f.componentInstance.selection().unread).toBe(false);
       ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+    });
+  });
+
+  describe('list order (#1143)', () => {
+    it('reloads a flipped list oldest first and remembers it for that list only', () => {
+      const f = boot();
+
+      (f.nativeElement.querySelector('.list-order') as HTMLButtonElement).click();
+      f.detectChanges();
+      const flipped = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(flipped.request.params.get('order')).toBe('asc');
+      expect(flipped.request.params.get('cursor')).toBeNull();
+      flipped.flush({ entries: [], nextCursor: null });
+      expect(JSON.parse(localStorage.getItem('sfr.user.1.oldest-first-views')!)).toEqual(['all']);
+
+      qp.next(convertToParamMap({ tag: '9' }));
+      f.detectChanges();
+      const other = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(other.request.params.get('order')).toBeNull();
+      other.flush({ entries: [], nextCursor: null });
+    });
+
+    it('holds the first list load until the account is known', () => {
+      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } } as never);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries')
+        .flush({ entries: [], nextCursor: null });
+    });
+
+    it('loads the list with the defaults when the account never loads', () => {
+      reconfigureShell([]);
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);
+
+      ctrl
+        .expectOne('https://api.test/api/me')
+        .flush('boom', { status: 500, statusText: 'Server Error' });
+      f.detectChanges();
+
+      const list = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
+      expect(list.request.params.get('order')).toBeNull();
+      expect(list.request.params.get('view')).toBe('all');
+      list.flush({ entries: [], nextCursor: null });
     });
   });
 
@@ -3656,7 +3757,7 @@ describe('ReaderShellComponent', () => {
     }
 
     beforeEach(() => {
-      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
     });
 
     afterEach(() => {
@@ -3679,7 +3780,7 @@ describe('ReaderShellComponent', () => {
 
     it('does not show the offer once the account has already answered it', () => {
       supportPasskeys();
-      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);
