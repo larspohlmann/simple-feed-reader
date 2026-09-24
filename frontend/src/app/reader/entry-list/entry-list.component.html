@@ -128,16 +128,14 @@
       <ng-container [ngTemplateOutlet]="actions" />
     }
     @if (hasListOrder()) {
+      @let orderHint =
+        (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco;
       <button
         appListAction
         class="list-order"
         type="button"
-        [attr.aria-label]="
-          (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco
-        "
-        [attr.title]="
-          (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco
-        "
+        [attr.aria-label]="orderHint"
+        [attr.title]="orderHint"
         (click)="orderChange.emit(oldestFirst() ? 'newest' : 'oldest')"
       >
         <app-icon [name]="oldestFirst() ? 'arrow_upward' : 'arrow_downward'" size="sm" />

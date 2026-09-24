@@ -15,5 +15,8 @@ export async function stubAuthToken(page: Page): Promise<void> {
       json: { needsSetup: false, mailEnabled: true, passkeySignInAvailable: false },
     });
   });
-  await page.addInitScript(() => localStorage.setItem('sfr.jwt', 'stub-token-for-the-guard'));
+  // Carries a `userId` claim: without one, the reader holds its first list load for `/api/me`.
+  await page.addInitScript(() =>
+    localStorage.setItem('sfr.jwt', 'eyJhbGciOiJub25lIn0.eyJ1c2VySWQiOjF9.stub-signature'),
+  );
 }

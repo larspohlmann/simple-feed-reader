@@ -276,7 +276,7 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   readonly unreadFilter = inject(UnreadFilterService);
   readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
-  readonly listReady = this.listPreferences.ready;
+  readonly listLoading = computed(() => this.entries.loading() || !this.listPreferences.ready());
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: convertToParamMap({}),
   });

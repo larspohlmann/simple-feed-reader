@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import { AccountIdentity } from '../core/account-identity';
 import { ListOrderService } from './list-order.service';
 import { Selection, withListOrder, withUnreadPreference } from './query';
@@ -12,6 +12,12 @@ export class ListPreferences {
   private readonly listOrder = inject(ListOrderService);
 
   readonly ready = inject(AccountIdentity).settled;
+
+  /** Both preferences as one value, so a flip watcher never keeps its own list of them. */
+  readonly values = computed(
+    () => [this.unreadFilter.unreadOnly(), this.listOrder.oldestFirstViews()] as const,
+    { equal: (a, b) => a[0] === b[0] && a[1] === b[1] },
+  );
 
   appliedTo(selection: Selection): Selection {
     return withListOrder(

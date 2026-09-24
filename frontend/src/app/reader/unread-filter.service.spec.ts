@@ -1,7 +1,7 @@
 import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AccountIdentity } from '../core/account-identity';
 import { UnreadFilterService } from './unread-filter.service';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 describe('UnreadFilterService', () => {
   let userId: WritableSignal<number | null>;
@@ -11,7 +11,7 @@ describe('UnreadFilterService', () => {
     localStorage.clear();
     userId = signal<number | null>(3);
     TestBed.configureTestingModule({
-      providers: [{ provide: AccountIdentity, useValue: { userId } }],
+      providers: [provideAccountIdentity(userId)],
     });
   });
 

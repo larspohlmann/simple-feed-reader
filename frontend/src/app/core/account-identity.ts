@@ -21,8 +21,10 @@ export function userIdClaim(token: string | null): number | null {
   const payload = token?.split('.')[1];
   if (!payload) return null;
   try {
-    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as unknown;
-    const userId = (claims as { userId?: unknown } | null)?.userId;
+    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
+      userId?: unknown;
+    } | null;
+    const userId = claims?.userId;
     return typeof userId === 'number' && Number.isInteger(userId) ? userId : null;
   } catch {
     return null;

@@ -20,7 +20,6 @@ import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
-import { AccountIdentity } from '../core/account-identity';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { TokenStore } from '../core/token.store';
@@ -50,6 +49,7 @@ import { SetupService } from '../setup/setup.service';
 import { CONFIRMATION_DURATION_MS, ToastService } from '../shared/toast/toast.service';
 import { PasskeyOfferDialogComponent } from './passkey-offer-dialog.component';
 import { refreshReport } from '../../testing/refresh-report';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 describe('ReaderShellComponent', () => {
   let screen: {
@@ -177,6 +177,14 @@ describe('ReaderShellComponent', () => {
         },
       ],
     });
+  }
+
+  /** A fresh module: the outer `beforeEach` already injected `HttpTestingController`,
+   *  which Angular refuses to override past. */
+  function reconfigureShell(authProviders: Provider[]): void {
+    TestBed.resetTestingModule();
+    configureShell(authProviders);
+    ctrl = TestBed.inject(HttpTestingController);
   }
 
   function boot(entryOverride: Partial<typeof entry> = {}) {
@@ -2534,38 +2542,12 @@ describe('ReaderShellComponent', () => {
     });
   });
 
-  describe('loading state while the account gate is closed (#1143 final review)', () => {
-    // A fresh testing module, not `overrideProvider` -- the outer `beforeEach`
-    // already injected `HttpTestingController`, which Angular refuses to override
-    // past. Mirrors "drawer breakpoint driven by class" further down.
-    function configureUnsettled(): void {
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        imports: [ReaderShellComponent, provideTranslocoTesting()],
-        providers: [
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          provideRouter([]),
-          { provide: API_BASE_URL, useValue: 'https://api.test' },
-          {
-            provide: ActivatedRoute,
-            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
-          },
-          { provide: AuthService, useValue: { ...auth, user: signal(undefined) } },
-          { provide: AccountIdentity, useValue: { userId: signal(null), settled: signal(false) } },
-          { provide: LayoutService, useValue: screen },
-          { provide: EntryBodyService, useValue: bodyStore },
-          {
-            provide: SetupService,
-            useValue: { ensureLoaded: () => of(true), passkeySignInAvailable: signal(true) },
-          },
-        ],
-      });
-      ctrl = TestBed.inject(HttpTestingController);
-    }
-
+  describe('loading state while the account gate is closed', () => {
     it('renders the skeleton, not the empty state, with a claimless token and no account yet', () => {
-      configureUnsettled();
+      reconfigureShell([
+        { provide: AuthService, useValue: { ...auth, user: signal(undefined) } },
+        provideAccountIdentity(signal(null)),
+      ]);
       const f = TestBed.createComponent(ReaderShellComponent);
       f.detectChanges();
       ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
@@ -3367,9 +3349,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('loads the list with the defaults when the account never loads', () => {
-      TestBed.resetTestingModule();
-      configureShell([]);
-      ctrl = TestBed.inject(HttpTestingController);
+      reconfigureShell([]);
       const f = TestBed.createComponent(ReaderShellComponent);
       f.detectChanges();
       expect(ctrl.match((r) => r.url === 'https://api.test/api/entries')).toHaveLength(0);

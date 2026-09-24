@@ -253,8 +253,6 @@ export class EntryListComponent implements OnDestroy {
    *  question when it builds the list query. */
   readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
 
-  /** Whether this list offers the newest/oldest-first toggle, and which way it
-   *  currently points. The vocabulary owns both questions; this header only asks. */
   readonly hasListOrder = computed(() => hasListOrder(this.selection()));
   readonly oldestFirst = computed(() => listOrderOf(this.selection()) === 'oldest');
 

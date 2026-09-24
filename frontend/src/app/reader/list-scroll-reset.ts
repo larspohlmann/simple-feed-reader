@@ -1,12 +1,10 @@
-import { Injectable, Signal, inject } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
-import { Observable, distinctUntilChanged, merge, skip, startWith } from 'rxjs';
-import { ListOrderService } from './list-order.service';
+import { distinctUntilChanged, skip, startWith } from 'rxjs';
 import { ListPreferences } from './list-preferences.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { Selection, listSelectionFrom, sameSelection, selectionFromParams } from './query';
-import { UnreadFilterService } from './unread-filter.service';
 
 /** How the router says a navigation began. Taken from the event rather than
  *  spelled out, so a trigger Angular adds later cannot drift out of sync. */
@@ -72,8 +70,6 @@ export function forgetsPosition(
 export class ListScrollReset {
   private readonly router = inject(Router);
   private readonly memory = inject(ListScrollMemory);
-  private readonly unreadFilter = inject(UnreadFilterService);
-  private readonly listOrder = inject(ListOrderService);
   private readonly listPreferences = inject(ListPreferences);
 
   /** Where the user was last, or null before the first list is seen. */
@@ -84,8 +80,9 @@ export class ListScrollReset {
       if (event instanceof NavigationStart) this.onNavigationStart(event);
     });
     // A flip is no navigation; as a root effect this erases before the entry list reads the key.
-    merge(flipsOf(this.unreadFilter.unreadOnly), flipsOf(this.listOrder.oldestFirstViews))
-      .pipe(takeUntilDestroyed())
+    const preferences = this.listPreferences.values;
+    toObservable(preferences)
+      .pipe(startWith(preferences()), distinctUntilChanged(), skip(1), takeUntilDestroyed())
       .subscribe(() => this.onListPreferenceFlip());
   }
 
@@ -123,8 +120,4 @@ export class ListScrollReset {
       shown: selectionFromParams(convertToParamMap(tree.queryParams)).selection,
     };
   }
-}
-
-function flipsOf<T>(preference: Signal<T>): Observable<T> {
-  return toObservable(preference).pipe(startWith(preference()), distinctUntilChanged(), skip(1));
 }

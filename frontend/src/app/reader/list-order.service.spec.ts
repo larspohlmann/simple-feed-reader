@@ -1,9 +1,9 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AccountIdentity } from '../core/account-identity';
 import { ListOrderService } from './list-order.service';
 import { Selection } from './query';
 import { UnreadFilterService } from './unread-filter.service';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 describe('ListOrderService', () => {
   const tag3: Selection = { kind: 'tag', id: 3, unread: false };
@@ -14,7 +14,7 @@ describe('ListOrderService', () => {
   beforeEach(() => {
     localStorage.clear();
     TestBed.configureTestingModule({
-      providers: [{ provide: AccountIdentity, useValue: { userId: signal(5) } }],
+      providers: [provideAccountIdentity(signal(5))],
     });
   });
 

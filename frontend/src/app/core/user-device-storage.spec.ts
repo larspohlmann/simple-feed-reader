@@ -1,7 +1,7 @@
 import { WritableSignal, computed, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { AccountIdentity } from './account-identity';
 import { UserDeviceStorage } from './user-device-storage';
+import { provideAccountIdentity } from '../../testing/account-identity-testing';
 
 describe('UserDeviceStorage', () => {
   let userId: WritableSignal<number | null>;
@@ -11,7 +11,7 @@ describe('UserDeviceStorage', () => {
     localStorage.clear();
     userId = signal<number | null>(7);
     TestBed.configureTestingModule({
-      providers: [{ provide: AccountIdentity, useValue: { userId } }],
+      providers: [provideAccountIdentity(userId)],
     });
     storage = TestBed.inject(UserDeviceStorage);
   });

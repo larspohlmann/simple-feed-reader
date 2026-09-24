@@ -93,7 +93,6 @@ export class ReaderApi {
     return this.http.get<EntriesPage>(`${this.base}/api/entries`, { params: listParams });
   }
 
-  /** What every list endpoint takes alike: the page, the unread refinement and the order. */
   private pageParams(query: EntryQuery, cursor?: string | null): HttpParams {
     let params = new HttpParams().set('limit', PAGE_SIZE);
     if (query.unread) params = params.set('unread', '1');
