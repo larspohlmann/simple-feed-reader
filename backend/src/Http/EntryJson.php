@@ -26,7 +26,8 @@ final class EntryJson
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
-     *   duplicates: list<array<string, mixed>>
+     *   duplicates: list<array<string, mixed>>,
+     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
      */
     public static function listRow(EntryListRow $row): array
@@ -49,7 +50,8 @@ final class EntryJson
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
-     *   duplicates: list<array<string, mixed>>
+     *   duplicates: list<array<string, mixed>>,
+     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
      */
     public static function detail(EntryListRow $row): array
@@ -69,6 +71,7 @@ final class EntryJson
      *   createdAt: string, subscriptionId: int, source: string, faviconUrl: string|null,
      *   isHidden: bool, isFavorite: bool, isKept: bool, isViewed: bool,
      *   savedSearches: list<array{id: int, slug: string, term: string}>,
+     *   discussionUrl: string|null, comments: 'auto'|'manual'|null,
      * }
      */
     private static function commonFields(EntryListRow $row): array
@@ -79,6 +82,8 @@ final class EntryJson
             'id' => $e->getId(),
             'title' => $e->getTitle(),
             'url' => $e->getUrl(),
+            'discussionUrl' => $e->getDiscussion()->url,
+            'comments' => $e->getDiscussion()->commentsLoad?->value,
             'author' => $e->getAuthor(),
             'summary' => $e->getSummary(),
             'imageUrl' => $e->getImageUrl(),

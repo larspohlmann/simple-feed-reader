@@ -506,11 +506,16 @@ final class AccountRestorerTest extends DbTestCase
             Entry::class,
             $sourceRows['entry'],
             $targetRows['entry'],
-            ['feed', 'mediaSet.media', 'mediaSet.attachments'],
+            [
+                'feed', 'mediaSet.media', 'mediaSet.attachments', 'location.url',
+                'discussion.url', 'discussion.commentsFeedUrl', 'discussion.commentsLoad',
+            ],
         );
         self::assertSame($sourceRows['feed']->getUrl(), $targetRows['entry']->getFeed()->getUrl());
         self::assertEquals($sourceRows['entry']->getMedia(), $targetRows['entry']->getMedia());
         self::assertEquals($sourceRows['entry']->getAttachments(), $targetRows['entry']->getAttachments());
+        self::assertSame($sourceRows['entry']->getUrl(), $targetRows['entry']->getUrl());
+        self::assertEquals($sourceRows['entry']->getDiscussion(), $targetRows['entry']->getDiscussion());
 
         $this->assertFieldsRoundTripped(
             EntryState::class,

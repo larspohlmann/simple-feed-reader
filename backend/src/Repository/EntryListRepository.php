@@ -194,7 +194,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     {
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $this->rowQueryBuilder($userId)
-            ->andWhere('e.urlHash = :hash')
+            ->andWhere('e.location.urlHash = :hash')
             ->andWhere('e.id <> :self')
             ->setParameter('hash', $urlHash)
             ->setParameter('self', $excludeEntryId)
@@ -258,7 +258,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
         $qb = $this->rowQueryBuilder($userId);
         $applyScope($qb, EntryAliases::primary());
-        $qb->andWhere('e.urlHash IN (:dupHashes)')
+        $qb->andWhere('e.location.urlHash IN (:dupHashes)')
             ->andWhere('e.id NOT IN (:survivorIds)')
             ->setParameter('dupHashes', array_keys($hashes))
             ->setParameter('survivorIds', $survivorIds);

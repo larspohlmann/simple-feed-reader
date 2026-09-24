@@ -76,7 +76,7 @@ final class BackupFieldDeclarations
         ],
         Entry::class => [
             'feed' => 'feedUrl',
-            'guid' => 'guid', 'guidHash' => 'guidHash', 'url' => 'url',
+            'guid' => 'guid', 'guidHash' => 'guidHash', 'location.url' => 'url',
             'title' => 'title', 'author' => 'author', 'summary' => 'summary',
             'contentHtml' => 'contentHtml',
             'image.url' => 'imageUrl', 'image.width' => 'imageWidth',
@@ -84,6 +84,9 @@ final class BackupFieldDeclarations
             'mediaSet.media' => 'media', 'mediaSet.attachments' => 'attachments',
             'publishedAt' => 'publishedAt', 'createdAt' => 'createdAt',
             'effectiveDate' => 'effectiveDate',
+            'discussion.url' => 'discussionUrl',
+            'discussion.commentsFeedUrl' => 'commentsFeedUrl',
+            'discussion.commentsLoad' => 'commentsLoad',
         ],
         EntryState::class => [
             // Both halves, because both are load-bearing: guidHash picks the

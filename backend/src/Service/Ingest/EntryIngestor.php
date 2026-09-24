@@ -99,6 +99,7 @@ final class EntryIngestor
             $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
+            $entry->setDiscussion($parsedEntry->discussion);
             $this->applyImage($entry, $parsedEntry->media->image);
             $this->applyMedia($entry, $parsedEntry);
 

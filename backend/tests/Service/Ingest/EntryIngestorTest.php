@@ -22,8 +22,10 @@ use App\Service\Parser\ParsedMedium;
 use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\VisualMediaKind;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Discussion\Discussion;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
+use App\Enum\CommentsLoad;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -265,6 +267,42 @@ final class EntryIngestorTest extends DbTestCase
 
         self::assertCount(0, $created);
         self::assertCount(1, $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]));
+    }
+
+    public function testStoresTheParsedDiscussion(): void
+    {
+        $parsed = new ParsedEntry(
+            guid: 'g-1',
+            url: 'https://blog.example/post',
+            title: 'Post',
+            author: null,
+            summary: null,
+            contentHtml: '<p>Body</p>',
+            publishedAt: null,
+            discussion: Discussion::withCommentsFeed(
+                'https://blog.example/post#c',
+                'https://blog.example/post/feed/',
+                CommentsLoad::Manual,
+            ),
+        );
+
+        $entry = $this->ingestOne($parsed);
+
+        self::assertSame('https://blog.example/post/feed/', $entry->getDiscussion()->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $entry->getDiscussion()->commentsLoad);
+    }
+
+    private function ingestOne(ParsedEntry $parsedEntry): Entry
+    {
+        $feed = $this->feed();
+        $this->ingestor->ingest($feed, new ParsedFeed('Feed', null, null, null, [$parsedEntry]), self::context());
+        $this->em->flush();
+        $this->em->clear();
+
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+
+        return $entry;
     }
 
     private function feed(): Feed

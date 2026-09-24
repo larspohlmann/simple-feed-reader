@@ -13,7 +13,9 @@ use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\CommentsLoad;
 use App\Enum\SourceFormat;
+use App\Service\Discussion\Discussion;
 use App\Service\Reader\MagazineStyle;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -136,6 +138,11 @@ final readonly class FullyPopulatedAccount
             [new EntryAttachment('https://populated.example/episode.mp3', 'audio/mpeg', 3723, 4200000, 'Episode one')],
         );
         $entry->setPublishedAt(new \DateTimeImmutable('2026-08-01T10:00:00Z'));
+        $entry->setDiscussion(Discussion::withCommentsFeed(
+            'https://populated.example/article#comments',
+            'https://populated.example/article/comments.rss',
+            CommentsLoad::Auto,
+        ));
 
         return $entry;
     }

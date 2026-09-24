@@ -33,11 +33,11 @@ final readonly class DuplicateCollapseDql
             ->from(Entry::class, 'e2')
             ->join(Subscription::class, 's2', 'ON', 's2.feed = e2.feed AND s2.user = :user')
             ->leftJoin(EntryState::class, 'es2', 'ON', 'es2.entry = e2 AND es2.user = :user')
-            ->andWhere('e2.urlHash = e.urlHash')
+            ->andWhere('e2.location.urlHash = e.location.urlHash')
             ->andWhere('e2.id < e.id');
         $applyScope($inner, EntryAliases::collapse());
 
-        $qb->andWhere('e.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
+        $qb->andWhere('e.location.urlHash IS NULL OR NOT EXISTS (' . $inner->getDQL() . ')')
             ->setParameter('user', $userId);
     }
 }
