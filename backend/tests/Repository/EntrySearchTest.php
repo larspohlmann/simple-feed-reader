@@ -206,19 +206,34 @@ final class EntrySearchTest extends DbTestCase
     public function testReturnsOldestFirstWhenAsked(): void
     {
         $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
-        $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
+        // Two entries share the older effectiveDate, so this also pins the
+        // id-ascending tiebreak: $olderLowerId is persisted first and so
+        // receives the smaller id, and must come out ahead of $olderHigherId.
+        $this->entry('older-lower-id', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('older-higher-id', 'Angular one', null, '2026-07-10T00:00:00Z');
 
-        self::assertSame(['older', 'newer'], $this->oldestFirstSearch('angular'));
+        self::assertSame(
+            ['older-lower-id', 'older-higher-id', 'newer'],
+            $this->oldestFirstSearch('angular'),
+        );
     }
 
     public function testPagesOldestFirstWithTheKeysetCursor(): void
     {
-        $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
         $older = $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
+        // Two entries share the cursor's effectiveDate and both sort after it
+        // (higher id than the cursor), which pins the id-ascending tiebreak in
+        // the page that follows the cursor, not just the cursor predicate itself.
+        $this->entry('older-tied-a', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('older-tied-b', 'Angular one', null, '2026-07-10T00:00:00Z');
+        $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
 
         $cursor = new EntryCursor($older->getEffectiveDate(), $older->getId() ?? 0);
 
-        self::assertSame(['newer'], $this->oldestFirstSearch('angular', $cursor));
+        self::assertSame(
+            ['older-tied-a', 'older-tied-b', 'newer'],
+            $this->oldestFirstSearch('angular', $cursor),
+        );
     }
 
     public function testUnreadSearchAppliesKeysetPaginationAfterFilteringReadMatches(): void

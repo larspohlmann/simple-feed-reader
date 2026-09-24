@@ -296,19 +296,30 @@ final class IndexedEntrySearchTest extends DbTestCase
     public function testAnOldestFirstPageIsHydratedOldestFirstAndResumesAfterItsNewestRow(): void
     {
         $newer = $this->entry('newer', '2026-07-12T00:00:00Z');
-        $older = $this->entry('older', '2026-07-10T00:00:00Z');
-        $reader = new FakeSearchIndexReader(entryIds: [$older->getId() ?? 0, $newer->getId() ?? 0]);
+        // Two entries share the older effectiveDate, so this also pins the
+        // id-ascending tiebreak: $olderLowerId is persisted first and so
+        // receives the smaller id, and must come out ahead of $olderHigherId.
+        $olderLowerId = $this->entry('older-lower-id', '2026-07-10T00:00:00Z');
+        $olderHigherId = $this->entry('older-higher-id', '2026-07-10T00:00:00Z');
+        $reader = new FakeSearchIndexReader(entryIds: [
+            $olderHigherId->getId() ?? 0,
+            $olderLowerId->getId() ?? 0,
+            $newer->getId() ?? 0,
+        ]);
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->getId() ?? 0,
             terms: SearchTerms::fromInput('angular'),
-            limit: 2,
+            limit: 3,
             order: ListOrder::OldestFirst,
         ));
 
         self::assertNotNull($reader->received);
         self::assertSame(ListOrder::OldestFirst, $reader->received->order);
-        self::assertSame(['older', 'newer'], array_map(static fn ($row) => $row->entry->getGuid(), $result->rows));
+        self::assertSame(
+            ['older-lower-id', 'older-higher-id', 'newer'],
+            array_map(static fn ($row) => $row->entry->getGuid(), $result->rows),
+        );
         self::assertSame('newer', $result->continuationRow?->entry->getGuid());
     }
 
