@@ -231,15 +231,18 @@ exist:
 {
   "searchableAttributes": ["title", "summary", "content", "feedTitle"],
   "filterableAttributes": ["feedId", "effectiveDate", "id"],
-  "sortableAttributes": ["effectiveDate", "id"]
+  "sortableAttributes": ["effectiveDate", "id"],
+  "rankingRules": ["sort", "words", "typo", "proximity", "attribute", "exactness"]
 }
 ```
 
-`searchableAttributes`' order is a behavioural contract, not cosmetic:
-Meilisearch's attribute-ranking rule ranks a hit by which attribute in this
-list it matched, in the order declared here. Title before summary before
-content before feed title means a match in the headline outranks the same
-word buried in the body or riding in on the feed's own name.
+`rankingRules` puts `sort` first (#1143). The adapter pages with a keyset cursor
+on `(effectiveDate, id)`, so every page must be the next rows in that order.
+With Meilisearch's default rules (`words, typo, proximity, attribute, sort,
+exactness`), relevance chose each page and the cursor, resuming past the oldest
+row of page one, skipped every newer match that ranked lower — measured on
+2026-09-24 as 705 of 812 matches for "climate change". The reader shows every
+page in date order anyway, so nothing visible was lost by demoting relevance.
 
 ## Other confirmed behaviour
 

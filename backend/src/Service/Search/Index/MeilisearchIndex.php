@@ -62,11 +62,9 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
      * full-content-matching goal: a word appearing only in an article body
      * must find something.
      *
-     * The ORDER of that list is a behavioural contract: Meilisearch's
-     * attribute ranking rule ranks a hit by which attribute matched, in this
-     * declared order. Title before summary before content before feed title
-     * is deliberate — a headline match should outrank the same word buried
-     * in the body or riding in on the feed's own name.
+     * `sort` leads `rankingRules`: the keyset cursor pages by (effectiveDate, id), so a
+     * page must be the next rows in that order. A relevance rule ahead of it lets an
+     * old title match onto page one, and the cursor then skips every newer match.
      *
      * filterable/sortable list precisely the fields IndexSearch's cursor and
      * feed scoping use.
@@ -75,12 +73,14 @@ final readonly class MeilisearchIndex implements SearchIndexReader, SearchIndexW
      *     searchableAttributes: list<string>,
      *     filterableAttributes: list<string>,
      *     sortableAttributes: list<string>,
+     *     rankingRules: list<string>,
      * }
      */
     private const array SETTINGS = [
         'searchableAttributes' => ['title', 'summary', 'content', 'feedTitle'],
         'filterableAttributes' => ['feedId', 'effectiveDate', 'id'],
         'sortableAttributes' => ['effectiveDate', 'id'],
+        'rankingRules' => ['sort', 'words', 'typo', 'proximity', 'attribute', 'exactness'],
     ];
 
     public function __construct(
