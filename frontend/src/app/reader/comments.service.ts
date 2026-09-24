@@ -18,8 +18,6 @@ interface Slot {
   loadedAt: number | null;
 }
 
-/** An hour-fresh LRU of each entry's comments, keyed by entry id and capped at
- *  {@link CACHE_CAP} slots so an unbounded reading session stays bounded. */
 @Injectable({ providedIn: 'root' })
 export class CommentsService {
   private readonly api = inject(ReaderApi);
@@ -36,8 +34,7 @@ export class CommentsService {
 
   load(id: number): void {
     const slot = this.slotFor(id);
-    if (slot.state().status === 'loading' || this.isFresh(slot)) return;
-    this.fetch(id, slot);
+    if (this.isStale(slot)) this.fetch(id, slot);
   }
 
   reload(id: number): void {
@@ -46,8 +43,10 @@ export class CommentsService {
     this.fetch(id, slot);
   }
 
-  private isFresh(slot: Slot): boolean {
-    return slot.loadedAt !== null && Date.now() - slot.loadedAt < FRESH_MS;
+  private isStale(slot: Slot): boolean {
+    const status = slot.state().status;
+    if (status === 'idle') return true;
+    return status === 'ok' && slot.loadedAt !== null && Date.now() - slot.loadedAt >= FRESH_MS;
   }
 
   private slotFor(id: number): Slot {
