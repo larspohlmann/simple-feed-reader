@@ -904,6 +904,51 @@ final class EntryListTest extends DbTestCase
         ));
     }
 
+    public function testOldestFirstDenseTagWindowedAttemptEqualsThePlainQuerysPage(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
+        $this->entryIn($feed, 't1', '2026-07-09T00:00:00Z');
+        $this->entryIn($feed, 't2', '2026-07-10T00:00:00Z');
+        $this->entryIn($feed, 't3', '2026-07-11T00:00:00Z');
+
+        $query = new EntryQuery(
+            $this->user->getId() ?? 0,
+            tagId: $tag->getId(),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        );
+        $recorded = $this->recordedList($this->repoWithWindow(2), $query);
+
+        self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
+        self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
+    }
+
+    public function testOldestFirstCursorContinuesAWindowedPageWithoutGapOrOverlap(): void
+    {
+        [$feed, $tag] = $this->taggedFeedAndSubscription();
+        foreach (['t1' => 10, 't2' => 11, 't3' => 12, 't4' => 13, 't5' => 14] as $guid => $day) {
+            $this->entryIn($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', $day));
+        }
+        $repo = $this->repoWithWindow(2);
+        $userId = $this->user->getId() ?? 0;
+
+        $page1 = $repo->listForUser(
+            new EntryQuery($userId, tagId: $tag->getId(), limit: 2, order: ListOrder::OldestFirst),
+        );
+        self::assertSame(['t1', 't2'], $this->guids($page1));
+
+        $recorded = $this->recordedList($repo, new EntryQuery(
+            $userId,
+            tagId: $tag->getId(),
+            cursor: $this->cursorAfter($page1[1]),
+            limit: 2,
+            order: ListOrder::OldestFirst,
+        ));
+        self::assertCount(2, $recorded['queries'], 'the cursor must keep this page windowed, not fall back');
+        self::assertSame(['t3', 't4'], $this->guids($recorded['rows']));
+    }
+
     public function testCursorContinuesAFallbackPageWithoutGapOrOverlap(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();

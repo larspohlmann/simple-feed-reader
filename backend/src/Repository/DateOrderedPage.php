@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
+use App\Enum\ListOrder;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -27,7 +28,8 @@ final readonly class DateOrderedPage
      *        query (ordered, scoped, collapsed, cursored, limited); called up
      *        to twice
      * @param callable(): QueryBuilder $windowProbe a fresh Entry-only query
-     *        selecting e.effectiveDate, carrying the page's own cursor
+     *        selecting e.effectiveDate in the page's order, carrying the
+     *        page's own cursor
      *
      * @return list<array<array-key, mixed>>
      */
@@ -51,12 +53,12 @@ final readonly class DateOrderedPage
      */
     private function tagScopedRows(EntryQuery $query, callable $pageQuery, callable $windowProbe): array
     {
-        $windowStart = $this->windowStart($windowProbe);
-        if ($windowStart === null) {
+        $windowEdge = $this->windowEdge($windowProbe);
+        if ($windowEdge === null) {
             return $this->hintedResult($pageQuery());
         }
 
-        $windowed = $this->hintedResult($this->windowed($pageQuery(), $windowStart));
+        $windowed = $this->hintedResult($this->windowed($pageQuery(), $windowEdge, $query->order));
         if (\count($windowed) === $query->limit) {
             return $windowed;
         }
@@ -65,12 +67,12 @@ final readonly class DateOrderedPage
     }
 
     /**
-     * The K-th newest effectiveDate beyond the cursor, or null when fewer
-     * than K rows lie beyond it.
+     * The K-th effectiveDate beyond the cursor in the page's own order, or
+     * null when fewer than K rows lie beyond it.
      *
      * @param callable(): QueryBuilder $windowProbe
      */
-    private function windowStart(callable $windowProbe): ?\DateTimeImmutable
+    private function windowEdge(callable $windowProbe): ?\DateTimeImmutable
     {
         /** @var array{effectiveDate: \DateTimeImmutable}|null $pivot */
         $pivot = $windowProbe()
@@ -82,11 +84,11 @@ final readonly class DateOrderedPage
         return $pivot === null ? null : $pivot['effectiveDate'];
     }
 
-    private function windowed(QueryBuilder $pageQuery, \DateTimeImmutable $windowStart): QueryBuilder
+    private function windowed(QueryBuilder $pageQuery, \DateTimeImmutable $windowEdge, ListOrder $order): QueryBuilder
     {
         return $pageQuery
-            ->andWhere('e.effectiveDate >= :windowStart')
-            ->setParameter('windowStart', $windowStart, Types::DATETIME_IMMUTABLE);
+            ->andWhere(\sprintf('e.effectiveDate %s :windowEdge', $order->atOrBefore()))
+            ->setParameter('windowEdge', $windowEdge, Types::DATETIME_IMMUTABLE);
     }
 
     /**
