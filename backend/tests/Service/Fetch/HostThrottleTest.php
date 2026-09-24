@@ -90,4 +90,18 @@ final class HostThrottleTest extends TestCase
         self::assertSame(600, $recorded);
         self::assertSame(600, $throttle->remainingSeconds('https://www.reddit.com/'));
     }
+
+    public function testTheCacheEntryExpiresWithTheWait(): void
+    {
+        // CacheItem::expiresAfter() reads the real time, so the mock clock must start there.
+        $clock = new MockClock();
+        $cache = new ArrayAdapter(clock: $clock);
+        (new HostThrottle($cache, $clock))->record('https://www.reddit.com/', 60);
+        $key = (string) array_key_first($cache->getValues());
+
+        $clock->sleep(59);
+        self::assertTrue($cache->hasItem($key));
+        $clock->sleep(2);
+        self::assertFalse($cache->hasItem($key));
+    }
 }

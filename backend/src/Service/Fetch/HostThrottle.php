@@ -24,16 +24,14 @@ final readonly class HostThrottle
     /** Returns the wait now in force: a shorter request never cuts a longer recorded one short. */
     public function record(string $url, int $seconds): int
     {
-        $now = $this->clock->now()->getTimestamp();
-        $item = $this->cache->getItem(self::key($url));
-        $recordedUntil = $item->get();
-        $until = max(\is_int($recordedUntil) ? $recordedUntil : 0, $now + self::clamped($seconds));
+        $wait = max($this->remainingSeconds($url), self::clamped($seconds));
 
-        $item->set($until);
-        $item->expiresAfter($until - $now);
+        $item = $this->cache->getItem(self::key($url));
+        $item->set($this->clock->now()->getTimestamp() + $wait);
+        $item->expiresAfter($wait);
         $this->cache->save($item);
 
-        return $until - $now;
+        return $wait;
     }
 
     public function remainingSeconds(string $url): int

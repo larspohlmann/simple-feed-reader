@@ -353,6 +353,20 @@ final class Rss2ParserTest extends TestCase
         self::assertFalse($entry->discussion->hasCommentsFeed());
     }
 
+    public function testAWhitespacePaddedCommentsPageIsTrimmed(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Post</title>
+              <comments>
+                https://blog.example/post/#comments
+              </comments>
+            </item>
+            XML);
+
+        self::assertSame('https://blog.example/post/#comments', $entry->discussion->url);
+    }
+
     public function testSlashCommentsCountIsNeverTakenForAUrl(): void
     {
         $entry = $this->parseSingleItem(<<<'XML'

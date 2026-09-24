@@ -84,6 +84,15 @@ final class RedditEntryRuleTest extends TestCase
         self::assertStringContainsString('https://example.org/other', (string) $result->contentHtml);
     }
 
+    public function testTheArticleUrlIsEntityDecoded(): void
+    {
+        $result = (new RedditEntryRule())->apply(
+            self::entry(self::THREAD, self::footer('https://example.org/a?b=1&amp;c=it&#039;s')),
+        );
+
+        self::assertSame("https://example.org/a?b=1&c=it's", $result->url);
+    }
+
     /** @return iterable<string, array{string}> */
     public static function nonAbsoluteTargets(): iterable
     {

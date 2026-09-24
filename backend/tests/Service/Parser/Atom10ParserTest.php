@@ -391,6 +391,18 @@ final class Atom10ParserTest extends TestCase
         self::assertFalse($entry->discussion->hasCommentsFeed());
     }
 
+    public function testAWhitespacePaddedRepliesLinkIsStillRead(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link rel="replies" type="application/atom+xml" href=" https://blog.example/post/comments.xml "/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+    }
+
     public function testAuthorUriIsCarried(): void
     {
         $entry = $this->parseSingleEntry(<<<'XML'

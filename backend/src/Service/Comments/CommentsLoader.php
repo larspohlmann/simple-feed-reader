@@ -80,6 +80,6 @@ final readonly class CommentsLoader
     // Compared with the fragment: WordPress comments link `post/#comment-N` under a `post/#comments` discussion.
     private static function isThePost(ParsedEntry $item, ?string $postUrl): bool
     {
-        return $postUrl !== null && trim((string) $item->url) === trim($postUrl);
+        return $postUrl !== null && $item->url === $postUrl;
     }
 }
