@@ -25,6 +25,7 @@ import {
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
+import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import {
@@ -126,6 +127,7 @@ function slugify(text: string): string {
     PaywallNoticeComponent,
     WarningBoxComponent,
     ErrorBannerComponent,
+    EntryCommentsComponent,
   ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],

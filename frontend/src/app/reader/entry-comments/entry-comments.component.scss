@@ -1,0 +1,156 @@
+:host {
+  display: block;
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--border-strong);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  line-height: var(--lh-tight);
+}
+
+.reload {
+  margin-left: auto;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.comment {
+  padding: var(--row-pad-comfy-y) 0;
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.byline {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+.author {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.when {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+a.author:hover,
+a.when:hover {
+  text-decoration: underline;
+}
+
+.op {
+  margin-left: var(--space-1);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-tight);
+}
+
+/* The body is [innerHTML]-injected, so its rhythm needs ::ng-deep, scoped under .body. */
+.body {
+  margin-top: var(--space-1);
+  font-size: var(--fs-read);
+  line-height: var(--lh-normal);
+  color: var(--text-primary);
+}
+
+.body ::ng-deep :is(p, ul, ol, blockquote, pre) {
+  margin: 0 0 var(--space-2);
+}
+
+.body ::ng-deep > :last-child {
+  margin-bottom: 0;
+}
+
+.body ::ng-deep blockquote {
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.body ::ng-deep pre {
+  overflow-x: auto;
+}
+
+.body ::ng-deep img {
+  max-width: 100%;
+  height: auto;
+}
+
+.body ::ng-deep a[href] {
+  color: var(--accent);
+}
+
+.all {
+  display: inline-block;
+  margin-top: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--accent);
+}
+
+.empty,
+.failed {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.throttled {
+  font-size: var(--fs-sm);
+}
+
+.throttled-icon {
+  flex: none;
+  color: var(--warning);
+  font-size: var(--fs-base);
+  line-height: 1;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.retry,
+.discussion {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.retry:hover,
+.discussion:hover {
+  text-decoration: none;
+}
+
+.throttled :is(.retry, .discussion) {
+  color: var(--warning);
+}

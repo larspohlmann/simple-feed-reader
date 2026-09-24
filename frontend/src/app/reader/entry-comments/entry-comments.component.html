@@ -1,0 +1,112 @@
+@let s = state();
+<section class="comments" [attr.aria-busy]="s.status === 'loading' ? 'true' : null">
+  <header class="head">
+    <h2 class="title">{{ 'reader.comments.heading' | transloco }}</h2>
+    @if (s.status === 'ok') {
+      <span class="count count-pill">{{ s.comments.length }}</span>
+      <button
+        appIconButton
+        type="button"
+        class="reload"
+        [attr.aria-label]="'reader.comments.reload' | transloco"
+        [title]="'reader.comments.reload' | transloco"
+        (click)="reload()"
+      >
+        <app-icon name="refresh" size="sm" />
+      </button>
+    }
+  </header>
+
+  @switch (s.status) {
+    @case ('idle') {
+      @if (entry().comments === 'manual') {
+        <button appListAction type="button" class="load" (click)="load()">
+          <app-icon name="forum" size="sm" />
+          <span class="txt">{{ 'reader.comments.load' | transloco }}</span>
+        </button>
+      }
+    }
+    @case ('loading') {
+      <app-skeleton [label]="'reader.comments.loading' | transloco" [rows]="3" />
+    }
+    @case ('ok') {
+      @if (s.comments.length === 0) {
+        <p class="empty">{{ 'reader.comments.empty' | transloco }}</p>
+      } @else {
+        <ol class="list">
+          @for (c of s.comments; track $index) {
+            <li class="comment">
+              <p class="byline">
+                @if (c.authorUrl) {
+                  <a
+                    class="author"
+                    [href]="c.authorUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >{{ c.author }}</a
+                  >
+                } @else {
+                  <span class="author">{{ c.author }}</span>
+                }
+                @if (c.byEntryAuthor) {
+                  <span class="op">{{ 'reader.comments.op' | transloco }}</span>
+                }
+                @if (c.publishedAt; as publishedAt) {
+                  ·
+                  @if (c.url) {
+                    <a class="when" [href]="c.url" target="_blank" rel="noopener noreferrer">{{
+                      when(publishedAt)
+                    }}</a>
+                  } @else {
+                    <span class="when">{{ when(publishedAt) }}</span>
+                  }
+                }
+              </p>
+              <div class="body" [innerHTML]="c.html"></div>
+            </li>
+          }
+        </ol>
+      }
+      @if (entry().discussionUrl; as url) {
+        <a class="all" [href]="url" target="_blank" rel="noopener noreferrer"
+          >{{ 'reader.comments.all' | transloco }} <app-icon name="open_in_new" size="text"
+        /></a>
+      }
+    }
+    @case ('throttled') {
+      <app-warning-box class="throttled">
+        <span class="throttled-icon" aria-hidden="true">⚠</span>
+        <p class="note">
+          @if (retryInSeconds() > 0) {
+            {{ 'reader.comments.throttled' | transloco: { seconds: retryInSeconds() } }}
+          } @else {
+            {{ 'reader.comments.throttledNow' | transloco }}
+          }
+          <button type="button" class="retry" (click)="reload()">
+            {{ 'reader.comments.retry' | transloco }}
+          </button>
+          @if (entry().discussionUrl; as url) {
+            ·
+            <a class="discussion" [href]="url" target="_blank" rel="noopener noreferrer">{{
+              'reader.comments.openDiscussion' | transloco
+            }}</a>
+          }
+        </p>
+      </app-warning-box>
+    }
+    @case ('failed') {
+      <p class="failed">
+        {{ 'reader.comments.failed' | transloco }}
+        <button type="button" class="retry" (click)="reload()">
+          {{ 'reader.comments.retry' | transloco }}
+        </button>
+        @if (entry().discussionUrl; as url) {
+          ·
+          <a class="discussion" [href]="url" target="_blank" rel="noopener noreferrer">{{
+            'reader.comments.openDiscussion' | transloco
+          }}</a>
+        }
+      </p>
+    }
+  }
+</section>

@@ -13,6 +13,7 @@ import { EntryDto, ReaderArticle, ReaderContent, ReaderFailure } from '../models
 import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
+import { CommentsService, CommentsState } from '../comments.service';
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
  *  covers caching/dedup/eviction; this file only needs to drive what the view renders. */
@@ -953,6 +954,36 @@ describe('ReaderViewComponent', () => {
       const el = mount(entry({ discussionUrl: null })).nativeElement as HTMLElement;
 
       expect(el.querySelector('a.discussion-link')).toBeNull();
+    });
+  });
+
+  describe('comments section (#1140)', () => {
+    beforeEach(() => {
+      TestBed.overrideProvider(CommentsService, {
+        useValue: {
+          state: () => signal<CommentsState>({ status: 'idle' }),
+          load: jest.fn(),
+          reload: jest.fn(),
+        },
+      });
+    });
+
+    function commentsSection(f: { nativeElement: HTMLElement }): Element | null {
+      return f.nativeElement.querySelector('article app-entry-comments');
+    }
+
+    it('follows the article when the entry has a comments feed', () => {
+      expect(commentsSection(mount(entry({ comments: 'auto' })))).not.toBeNull();
+    });
+
+    it('is absent without a comments feed', () => {
+      expect(commentsSection(mount(entry({ comments: null })))).toBeNull();
+    });
+
+    it('waits for the article to finish loading', () => {
+      loadMock.mockReturnValue(new Subject<ReaderContent>());
+
+      expect(commentsSection(mount(entry({ comments: 'manual' })))).toBeNull();
     });
   });
 
