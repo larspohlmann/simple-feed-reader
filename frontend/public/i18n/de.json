@@ -1056,7 +1056,6 @@
       "op": "OP",
       "all": "Alle Kommentare",
       "openDiscussion": "Diskussion öffnen",
-      "retry": "Erneut versuchen",
       "throttled": "Die Seite drosselt Anfragen. Erneut versuchen in {{ seconds }} s.",
       "throttledNow": "Die Seite drosselt Anfragen. Jetzt erneut versuchen.",
       "failed": "Kommentare konnten nicht geladen werden."

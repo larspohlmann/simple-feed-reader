@@ -3,6 +3,8 @@ import { WritableSignal, signal } from '@angular/core';
 import { EntryCommentsComponent } from './entry-comments.component';
 import { CommentsService, CommentsState } from '../comments.service';
 import { CommentsLoad } from '../models';
+import { prefetchMargin } from '../paging';
+import { READER_SCROLLER } from '../reader-scroller';
 import { provideTranslocoTesting } from '../../../testing/transloco-testing';
 
 const DISCUSSION = 'https://www.reddit.com/r/x/comments/1/t/';
@@ -13,6 +15,7 @@ describe('EntryCommentsComponent', () => {
   let service: { state: jest.Mock; load: jest.Mock; reload: jest.Mock };
   let observers: { init: IntersectionObserverInit | undefined; disconnect: jest.Mock }[];
   let trigger: ((visible: boolean) => void) | undefined;
+  let scroller: HTMLElement;
   const realIntersectionObserver = globalThis.IntersectionObserver;
 
   beforeEach(() => {
@@ -24,6 +27,8 @@ describe('EntryCommentsComponent', () => {
     };
     observers = [];
     trigger = undefined;
+    scroller = document.createElement('div');
+    Object.defineProperty(scroller, 'clientHeight', { value: 900 });
     globalThis.IntersectionObserver = jest.fn(
       (callback: IntersectionObserverCallback, init?: IntersectionObserverInit) => {
         const observer = { observe: jest.fn(), disconnect: jest.fn() };
@@ -38,7 +43,10 @@ describe('EntryCommentsComponent', () => {
     ) as unknown as typeof IntersectionObserver;
     TestBed.configureTestingModule({
       imports: [EntryCommentsComponent, provideTranslocoTesting()],
-      providers: [{ provide: CommentsService, useValue: service }],
+      providers: [
+        { provide: CommentsService, useValue: service },
+        { provide: READER_SCROLLER, useValue: scroller },
+      ],
     });
     fixture = TestBed.createComponent(EntryCommentsComponent);
   });
@@ -75,9 +83,9 @@ describe('EntryCommentsComponent', () => {
     expect(service.load).toHaveBeenCalledWith(5);
   });
 
-  it('looks ahead of the viewport', () => {
+  it('looks ahead within the reader scroller', () => {
     show('auto');
-    expect(observers[0].init?.rootMargin).toBe('400px 0px');
+    expect(observers[0].init).toEqual({ root: scroller, rootMargin: prefetchMargin(900) });
   });
 
   it('watches afresh for the next entry, loading it only once it is seen', () => {
@@ -119,6 +127,7 @@ describe('EntryCommentsComponent', () => {
     show('auto');
     const el = settle({
       status: 'ok',
+      loadedAt: Date.now(),
       comments: [
         {
           author: '/u/op',
@@ -155,19 +164,19 @@ describe('EntryCommentsComponent', () => {
 
   it('shows the empty line for zero comments', () => {
     show('auto');
-    const el = settle({ status: 'ok', comments: [] });
+    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
     expect(el.querySelector('.empty')?.textContent?.trim()).toBe('No comments yet.');
   });
 
   it('drops the closing link without a discussion URL', () => {
     show('manual', 5, null);
-    const el = settle({ status: 'ok', comments: [] });
+    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
     expect(el.querySelector('a.all')).toBeNull();
   });
 
   it('reload calls the service', () => {
     show('auto');
-    const el = settle({ status: 'ok', comments: [] });
+    const el = settle({ status: 'ok', comments: [], loadedAt: Date.now() });
     const reload = el.querySelector<HTMLButtonElement>('button.reload')!;
     expect(reload.getAttribute('aria-label')).toBe('Reload comments');
     reload.click();
@@ -195,6 +204,23 @@ describe('EntryCommentsComponent', () => {
 
       box.querySelector<HTMLButtonElement>('button.retry')!.click();
       expect(service.reload).toHaveBeenCalledWith(5);
+    });
+
+    it('stops ticking once the countdown reaches zero', () => {
+      const start = jest.spyOn(globalThis, 'setInterval');
+      const stop = jest.spyOn(globalThis, 'clearInterval');
+      show('auto');
+      settle({ status: 'throttled', retryAt: Date.now() + 2_000 });
+      expect(start).toHaveBeenCalledTimes(1);
+      const ticker = start.mock.results[0].value;
+
+      jest.advanceTimersByTime(1_000);
+      fixture.detectChanges();
+      expect(stop).not.toHaveBeenCalledWith(ticker);
+
+      jest.advanceTimersByTime(1_000);
+      fixture.detectChanges();
+      expect(stop).toHaveBeenCalledWith(ticker);
     });
   });
 

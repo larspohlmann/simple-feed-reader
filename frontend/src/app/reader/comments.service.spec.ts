@@ -10,7 +10,6 @@ describe('CommentsService', () => {
 
   const ok: CommentsResponse = {
     status: 'ok',
-    discussionUrl: 'https://t.example/1',
     comments: [
       {
         author: '/u/a',
@@ -42,7 +41,11 @@ describe('CommentsService', () => {
     service.load(1);
     service.load(1);
     expect(api.comments).toHaveBeenCalledTimes(1);
-    expect(service.state(1)()).toEqual({ status: 'ok', comments: ok.comments });
+    expect(service.state(1)()).toEqual({
+      status: 'ok',
+      comments: ok.comments,
+      loadedAt: Date.parse('2026-09-24T12:00:00Z'),
+    });
   });
 
   it('refetches once the hour has passed', () => {
@@ -59,7 +62,7 @@ describe('CommentsService', () => {
   });
 
   it('maps throttled to a retry instant', () => {
-    api.comments.mockReturnValue(of({ status: 'throttled', discussionUrl: null, retryAfter: 40 }));
+    api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
     service.load(1);
     expect(service.state(1)()).toEqual({
       status: 'throttled',
@@ -68,14 +71,14 @@ describe('CommentsService', () => {
   });
 
   it('never retries a failed load on its own', () => {
-    api.comments.mockReturnValue(of({ status: 'failed', discussionUrl: null }));
+    api.comments.mockReturnValue(of({ status: 'failed' }));
     service.load(1);
     service.load(1);
     expect(api.comments).toHaveBeenCalledTimes(1);
   });
 
   it('never retries a throttled load on its own, even once the wait is over', () => {
-    api.comments.mockReturnValue(of({ status: 'throttled', discussionUrl: null, retryAfter: 40 }));
+    api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
     service.load(1);
     jest.setSystemTime(new Date('2026-09-24T12:05:00Z'));
     service.load(1);
@@ -83,10 +86,10 @@ describe('CommentsService', () => {
   });
 
   it('retries a failed or throttled load when asked to', () => {
-    api.comments.mockReturnValue(of({ status: 'failed', discussionUrl: null }));
+    api.comments.mockReturnValue(of({ status: 'failed' }));
     service.load(1);
     service.reload(1);
-    api.comments.mockReturnValue(of({ status: 'throttled', discussionUrl: null, retryAfter: 40 }));
+    api.comments.mockReturnValue(of({ status: 'throttled', retryAfter: 40 }));
     service.load(2);
     service.reload(2);
     expect(api.comments).toHaveBeenCalledTimes(4);

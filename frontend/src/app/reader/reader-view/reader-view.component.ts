@@ -26,6 +26,7 @@ import {
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
+import { READER_SCROLLER } from '../reader-scroller';
 import { WarningBoxComponent } from '../../shared/warning-box/warning-box.component';
 import { ErrorBannerComponent } from '../../shared/error-banner/error-banner.component';
 import {
@@ -129,6 +130,12 @@ function slugify(text: string): string {
     ErrorBannerComponent,
     EntryCommentsComponent,
   ],
+  providers: [
+    {
+      provide: READER_SCROLLER,
+      useFactory: () => inject<ElementRef<HTMLElement>>(ElementRef).nativeElement,
+    },
+  ],
   templateUrl: './reader-view.component.html',
   styleUrls: ['./reader-view.component.scss', './reader-view.component.content.scss'],
 })
@@ -230,7 +237,7 @@ export class ReaderViewComponent {
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
   private readonly state = signal<
-    | { status: 'idle' | 'loading' | 'feed-only' }
+    | { status: 'idle' | 'loading' }
     | { status: 'ok'; article: ReaderArticle }
     | { status: 'failed'; failure: ReaderFailure | null; error: unknown }
   >({ status: 'idle' });
@@ -388,7 +395,7 @@ export class ReaderViewComponent {
       // body only, with no reader/original toggle.
       if (!e.url) {
         this.loadSub?.unsubscribe();
-        this.state.set({ status: 'feed-only' });
+        this.state.set({ status: 'idle' });
         this.readerMode.setOriginalOnly();
         return;
       }

@@ -622,17 +622,20 @@ the layout or wording inside.
 
 ```html
 <app-warning-box class="paywall-note">
-  <span class="icon" aria-hidden="true">⚠</span>
-  <span class="body">…</span>
+  <span class="warning-glyph" aria-hidden="true">⚠</span>
+  <span class="warning-text">… <a class="note-link" [href]="url">…</a></span>
 </app-warning-box>
 ```
 
 The host is a `display: flex` row: a leading marker (the paywall glyph) sits in
 a gutter with the body hanging indented beside it, while a lone child (the
-unhealthy-feed row's mono error) just fills the box. Spacing to its neighbours,
-the accent colour of the projected glyph and any text, and the wording all
-belong to the consumer — the box holds no i18n. Used by `app-paywall-notice`
-(#785, #855) and the unhealthy-feed error box (#847).
+unhealthy-feed row's mono error) just fills the box. The projected glyph, prose
+and in-sentence link or retry button take the global `.warning-glyph`,
+`.warning-text` and `.note-link` classes (`theme/_utilities.scss`); a
+`.note-link` is amber inside the box and accent outside it. Spacing to its
+neighbours and the wording belong to the consumer — the box holds no i18n. Used
+by `app-paywall-notice` (#785, #855), the reader's fallback note, the throttled
+comments note (#1140) and the unhealthy-feed error box (#847).
 
 **Not for:** a danger message with an action — that is `error-banner`. The
 amber ring reads as "heads up", not "this failed".

@@ -365,9 +365,9 @@ describe('ReaderApi', () => {
 
     const req = ctrl.expectOne('https://api.test/api/entries/7/comments');
     expect(req.request.method).toBe('GET');
-    req.flush({ status: 'failed', discussionUrl: null });
+    req.flush({ status: 'failed' });
 
-    expect(received).toEqual({ status: 'failed', discussionUrl: null });
+    expect(received).toEqual({ status: 'failed' });
   });
 
   it('POSTs a feed preview request', () => {

@@ -9,6 +9,7 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { IconButtonDirective } from '../../shared/icon-button/icon-button.directive';
@@ -19,15 +20,15 @@ import { LanguageService } from '../../core/language.service';
 import { CommentsService } from '../comments.service';
 import { relativeTime } from '../format';
 import { EntryDto } from '../models';
-import { nearestScroller } from '../nearest-scroller';
+import { prefetchMargin } from '../paging';
+import { READER_SCROLLER } from '../reader-scroller';
 
 type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
-
-const LOOKAHEAD = '400px 0px';
 
 @Component({
   selector: 'app-entry-comments',
   imports: [
+    NgTemplateOutlet,
     TranslocoPipe,
     IconComponent,
     IconButtonDirective,
@@ -45,6 +46,7 @@ export class EntryCommentsComponent {
   private readonly service = inject(CommentsService);
   private readonly language = inject(LanguageService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly scroller = inject(READER_SCROLLER);
   private readonly zone = inject(NgZone);
   private readonly now = signal(Date.now());
   private readonly entryId = computed(() => this.entry().id);
@@ -56,6 +58,7 @@ export class EntryCommentsComponent {
     if (state.status !== 'throttled') return 0;
     return Math.max(0, Math.ceil((state.retryAt - this.now()) / 1000));
   });
+  private readonly countingDown = computed(() => this.retryInSeconds() > 0);
 
   constructor() {
     effect((onCleanup) => {
@@ -63,7 +66,7 @@ export class EntryCommentsComponent {
       onCleanup(this.loadOnSight(this.entryId()));
     });
     effect((onCleanup) => {
-      if (this.state().status !== 'throttled') return;
+      if (!this.countingDown()) return;
       onCleanup(this.tickEverySecond());
     });
   }
@@ -86,7 +89,7 @@ export class EntryCommentsComponent {
       ([sighting]) => {
         if (sighting?.isIntersecting) this.service.load(id);
       },
-      { root: nearestScroller(host), rootMargin: LOOKAHEAD },
+      { root: this.scroller, rootMargin: prefetchMargin(this.scroller.clientHeight) },
     );
     observer.observe(host);
     return () => observer.disconnect();

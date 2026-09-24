@@ -176,9 +176,9 @@ export interface EntryCommentDto {
 }
 
 export type CommentsResponse =
-  | { status: 'ok'; discussionUrl: string | null; comments: EntryCommentDto[] }
-  | { status: 'throttled'; discussionUrl: string | null; retryAfter: number }
-  | { status: 'failed'; discussionUrl: string | null };
+  | { status: 'ok'; comments: EntryCommentDto[] }
+  | { status: 'throttled'; retryAfter: number }
+  | { status: 'failed' };
 
 export interface EntryDto {
   id: number;

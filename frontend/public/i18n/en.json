@@ -1056,7 +1056,6 @@
       "op": "OP",
       "all": "All comments",
       "openDiscussion": "Open discussion",
-      "retry": "Try again",
       "throttled": "The site is rate-limiting. Try again in {{ seconds }} s.",
       "throttledNow": "The site is rate-limiting. Try again now.",
       "failed": "Comments could not be loaded."

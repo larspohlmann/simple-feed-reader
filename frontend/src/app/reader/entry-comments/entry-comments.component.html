@@ -49,7 +49,7 @@
                   <span class="author">{{ c.author }}</span>
                 }
                 @if (c.byEntryAuthor) {
-                  <span class="op">{{ 'reader.comments.op' | transloco }}</span>
+                  <span class="op accent-pill">{{ 'reader.comments.op' | transloco }}</span>
                 }
                 @if (c.publishedAt; as publishedAt) {
                   ·
@@ -75,38 +75,34 @@
     }
     @case ('throttled') {
       <app-warning-box class="throttled">
-        <span class="throttled-icon" aria-hidden="true">⚠</span>
-        <p class="note">
+        <span class="warning-glyph" aria-hidden="true">⚠</span>
+        <p class="note warning-text">
           @if (retryInSeconds() > 0) {
             {{ 'reader.comments.throttled' | transloco: { seconds: retryInSeconds() } }}
           } @else {
             {{ 'reader.comments.throttledNow' | transloco }}
           }
-          <button type="button" class="retry" (click)="reload()">
-            {{ 'reader.comments.retry' | transloco }}
-          </button>
-          @if (entry().discussionUrl; as url) {
-            ·
-            <a class="discussion" [href]="url" target="_blank" rel="noopener noreferrer">{{
-              'reader.comments.openDiscussion' | transloco
-            }}</a>
-          }
+          <ng-container *ngTemplateOutlet="recovery" />
         </p>
       </app-warning-box>
     }
     @case ('failed') {
       <p class="failed">
         {{ 'reader.comments.failed' | transloco }}
-        <button type="button" class="retry" (click)="reload()">
-          {{ 'reader.comments.retry' | transloco }}
-        </button>
-        @if (entry().discussionUrl; as url) {
-          ·
-          <a class="discussion" [href]="url" target="_blank" rel="noopener noreferrer">{{
-            'reader.comments.openDiscussion' | transloco
-          }}</a>
-        }
+        <ng-container *ngTemplateOutlet="recovery" />
       </p>
     }
   }
 </section>
+
+<ng-template #recovery>
+  <button type="button" class="retry note-link" (click)="reload()">
+    {{ 'reader.retry' | transloco }}
+  </button>
+  @if (entry().discussionUrl; as url) {
+    ·
+    <a class="discussion note-link" [href]="url" target="_blank" rel="noopener noreferrer">{{
+      'reader.comments.openDiscussion' | transloco
+    }}</a>
+  }
+</ng-template>

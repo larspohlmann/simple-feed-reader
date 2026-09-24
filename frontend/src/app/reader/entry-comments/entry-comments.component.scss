@@ -61,12 +61,6 @@ a.when:hover {
 
 .op {
   margin-left: var(--space-1);
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-pill);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: var(--fs-xs);
-  line-height: var(--lh-tight);
 }
 
 .body {
@@ -121,35 +115,6 @@ a.when:hover {
   font-size: var(--fs-sm);
 }
 
-.throttled-icon {
-  flex: none;
-  color: var(--warning);
-  font-size: var(--fs-base);
-  line-height: 1;
-}
-
 .note {
   margin: 0;
-  color: var(--text-primary);
-}
-
-.retry,
-.discussion {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-weight: 600;
-  color: var(--accent);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.retry:hover,
-.discussion:hover {
-  text-decoration: none;
-}
-
-.throttled :is(.retry, .discussion) {
-  color: var(--warning);
 }

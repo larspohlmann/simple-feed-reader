@@ -723,7 +723,7 @@ describe('ReaderViewComponent', () => {
       const f = mount(entry());
       const el = f.nativeElement as HTMLElement;
 
-      (el.querySelector('.reader-note-link') as HTMLButtonElement).click();
+      (el.querySelector('.note-link') as HTMLButtonElement).click();
       f.detectChanges();
       expect(reloadMock).toHaveBeenCalledWith(1);
       expect(el.querySelector('app-loading-overlay.shown')).not.toBeNull();

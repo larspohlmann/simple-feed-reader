@@ -24,7 +24,7 @@ describe('PaywallNoticeComponent', () => {
   it('states the body is the free preview of a paywalled article', async () => {
     const el: HTMLElement = (await mount()).nativeElement;
     expect(el.textContent).toContain('free preview of a paywalled article');
-    expect(el.querySelector('.icon')?.getAttribute('aria-hidden')).toBe('true');
+    expect(el.querySelector('.warning-glyph')?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('renders the publisher link when a url is given', async () => {

@@ -1,9 +1,9 @@
 <app-warning-box>
-  <span class="icon" aria-hidden="true">⚠</span>
-  <span class="body">
+  <span class="warning-glyph" aria-hidden="true">⚠</span>
+  <span class="warning-text">
     {{ 'reader.paywalled' | transloco }}
     @if (url(); as href) {
-      <a [href]="href" target="_blank" rel="noopener noreferrer">{{
+      <a class="note-link" [href]="href" target="_blank" rel="noopener noreferrer">{{
         'reader.paywalledLink' | transloco
       }}</a>
     }
