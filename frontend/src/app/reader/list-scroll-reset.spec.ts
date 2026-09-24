@@ -1,8 +1,10 @@
+import { signal } from '@angular/core';
 import { TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { Location } from '@angular/common';
 import { provideLocationMocks } from '@angular/common/testing';
 import { DefaultUrlSerializer, NavigationStart, Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
+import { AccountIdentity } from '../core/account-identity';
 import { ReaderLocationService } from '../core/reader-location.service';
 import { ListScrollMemory } from './list-scroll-memory';
 import { ListScrollReset, ReaderPlace, forgetsPosition } from './list-scroll-reset';
@@ -96,6 +98,7 @@ describe('ListScrollReset', () => {
           },
         },
         { provide: ListScrollMemory, useValue: memory },
+        { provide: AccountIdentity, useValue: { userId: signal(1) } },
       ],
     });
     TestBed.inject(ListScrollReset);
@@ -230,6 +233,7 @@ describe('ListScrollReset, driven by the real router', () => {
           { path: 'settings', children: [{ path: 'preferences', children: [] }] },
         ]),
         provideLocationMocks(),
+        { provide: AccountIdentity, useValue: { userId: signal(1) } },
       ],
     });
     router = TestBed.inject(Router);

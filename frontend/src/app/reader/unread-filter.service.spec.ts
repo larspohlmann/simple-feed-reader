@@ -1,35 +1,54 @@
+import { WritableSignal, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { AccountIdentity } from '../core/account-identity';
 import { UnreadFilterService } from './unread-filter.service';
 
 describe('UnreadFilterService', () => {
+  let userId: WritableSignal<number | null>;
+  const filter = () => TestBed.inject(UnreadFilterService);
+
   beforeEach(() => {
     localStorage.clear();
-    TestBed.configureTestingModule({});
+    userId = signal<number | null>(3);
+    TestBed.configureTestingModule({
+      providers: [{ provide: AccountIdentity, useValue: { userId } }],
+    });
   });
 
   it('shows everything when nothing is stored', () => {
-    expect(new UnreadFilterService().unreadOnly()).toBe(false);
+    expect(filter().unreadOnly()).toBe(false);
   });
 
-  it('reads a stored unread-only choice back', () => {
+  it("reads the account's stored unread-only choice back", () => {
+    localStorage.setItem('sfr.user.3.unread-only', '1');
+    expect(filter().unreadOnly()).toBe(true);
+  });
+
+  it('stores unread-only under the account and forgets it again for all posts', () => {
+    const service = filter();
+    service.set(true);
+    expect(localStorage.getItem('sfr.user.3.unread-only')).toBe('1');
+    expect(service.unreadOnly()).toBe(true);
+
+    service.set(false);
+    expect(localStorage.getItem('sfr.user.3.unread-only')).toBeNull();
+    expect(service.unreadOnly()).toBe(false);
+  });
+
+  it("keeps one account's choice from the next", () => {
+    filter().set(true);
+    userId.set(4);
+    expect(filter().unreadOnly()).toBe(false);
+  });
+
+  it('drops the old device-wide value instead of adopting it', () => {
     localStorage.setItem('sfr.unread-only', '1');
-    expect(new UnreadFilterService().unreadOnly()).toBe(true);
-  });
-
-  it('persists and applies each state', () => {
-    const svc = new UnreadFilterService();
-
-    svc.set(true);
-    expect(localStorage.getItem('sfr.unread-only')).toBe('1');
-    expect(svc.unreadOnly()).toBe(true);
-
-    svc.set(false);
-    expect(localStorage.getItem('sfr.unread-only')).toBe('0');
-    expect(svc.unreadOnly()).toBe(false);
+    expect(filter().unreadOnly()).toBe(false);
+    expect(localStorage.getItem('sfr.unread-only')).toBeNull();
   });
 
   it('reads a garbage stored value as show-all', () => {
-    localStorage.setItem('sfr.unread-only', 'yes');
-    expect(new UnreadFilterService().unreadOnly()).toBe(false);
+    localStorage.setItem('sfr.user.3.unread-only', 'yes');
+    expect(filter().unreadOnly()).toBe(false);
   });
 });

@@ -63,6 +63,7 @@
 | `frontend/src/app/core/user-device-storage.ts` (new) | Per-user `localStorage` namespace | 7 |
 | `frontend/src/app/settings/account-section.component.ts` | Forget the namespace on account delete | 7 |
 | `frontend/src/app/reader/unread-filter.service.ts` | Unread filter on the per-user namespace | 8 |
+| `frontend/e2e/list-scroll-reset.spec.ts`, `saved-searches-combined.spec.ts` | Stop seeding/clearing the legacy device-wide key | 8 |
 | `frontend/src/app/reader/models.ts`, `query.ts`, `reader-api.ts`, `list-scroll-memory.ts` | `ListOrder`, `Selection.order`, the `order` param, the scroll key | 9 |
 | `frontend/src/app/reader/entry-list/entry-list.component.{ts,html}`, `public/i18n/{en,de}.json` | The header toggle | 10 |
 | `frontend/src/app/reader/list-order.service.ts` (new), `list-preferences.service.ts` (new), `reader-shell.component.{ts,html}`, `list-scroll-reset.ts` | Remembering the order, applying preferences, the load gate | 11 |
@@ -1499,6 +1500,18 @@ git commit -m "feat(#1143): keep per-account device values under the account id"
 - Modify: `frontend/src/app/reader/reader-shell.component.spec.ts`:
   - The fake `auth.user` gains `id: 1` everywhere it is set: the initial `signal(…)` at ~line 68, and the `auth.user.set(…)` calls at ~140, ~3659, ~3682.
   - Every `'sfr.unread-only'` literal becomes `'sfr.user.1.unread-only'`. Find them with `grep -n "sfr.unread-only"`.
+- Modify: `frontend/e2e/list-scroll-reset.spec.ts`. Two e2e specs still used the legacy
+  device-wide key (pre-flight conflict P10) and would have broken once it is never
+  read. `list-scroll-reset.spec.ts`'s `beforeEach` seeded unread mode with
+  `localStorage.setItem('sfr.unread-only', '1')` in an init script; that is replaced
+  with turning unread mode on through the UI switch after sign-in (the spec already
+  has an `unreadSwitch(page)` helper), and the switch is turned back off in a
+  `test.afterEach`, since the per-user value now persists for the admin account
+  across runs.
+- Modify: `frontend/e2e/saved-searches-combined.spec.ts`. `signInAsAdmin` removed
+  the legacy key; that removal is now dead and is replaced with an init script that
+  removes any `sfr.user.*.unread-only` keys, so the spec still starts at "All"
+  regardless of what an earlier run left behind.
 
 **Interfaces:**
 - Consumes: `UserDeviceStorage`.

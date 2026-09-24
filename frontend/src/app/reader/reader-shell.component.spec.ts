@@ -65,7 +65,7 @@ describe('ReaderShellComponent', () => {
   // the only place a boot sees the flag unanswered; isPasskeySupported() is
   // false by default in jsdom regardless (stubbed in only in that describe block).
   const auth = {
-    user: signal({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
+    user: signal({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } }),
     loadMe: () => of({}),
     logout: jest.fn(),
     isAdmin: jest.fn().mockReturnValue(false),
@@ -137,7 +137,7 @@ describe('ReaderShellComponent', () => {
     // Reset the #624 offer state too: a test below sets passkeyOfferAnswered
     // to false and calls the two marking methods, and neither must leak into
     // an unrelated test later in this file.
-    auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+    auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
     auth.answerPasskeyOffer.mockClear();
     auth.markPasskeyOfferAnswered.mockClear();
     qp.next(convertToParamMap({}));
@@ -3152,7 +3152,7 @@ describe('ReaderShellComponent', () => {
     }
 
     it('keeps the unread filter on when a tag list moves to a saved search (#1126)', () => {
-      localStorage.setItem('sfr.unread-only', '1');
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = boot();
       f.componentInstance.savedSearchesStore.load();
       ctrl
@@ -3239,13 +3239,13 @@ describe('ReaderShellComponent', () => {
 
       const req = ctrl.expectOne((r) => r.url === 'https://api.test/api/entries');
       expect(req.request.params.get('view')).toBe('unread');
-      expect(localStorage.getItem('sfr.unread-only')).toBe('1');
+      expect(localStorage.getItem('sfr.user.1.unread-only')).toBe('1');
       req.flush({ entries: [], nextCursor: null });
       expect(nav).not.toHaveBeenCalled();
     });
 
     it('filters a direct search to unread', () => {
-      localStorage.setItem('sfr.unread-only', '1');
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = boot();
       qp.next(convertToParamMap({ q: 'angular' }));
       f.detectChanges();
@@ -3656,7 +3656,7 @@ describe('ReaderShellComponent', () => {
     }
 
     beforeEach(() => {
-      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: false } });
     });
 
     afterEach(() => {
@@ -3679,7 +3679,7 @@ describe('ReaderShellComponent', () => {
 
     it('does not show the offer once the account has already answered it', () => {
       supportPasskeys();
-      auth.user.set({ email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
+      auth.user.set({ id: 1, email: 'a@b.c', preferences: { passkeyOfferAnswered: true } });
       const open = jest
         .spyOn(TestBed.inject(Dialog), 'open')
         .mockReturnValue({ closed: new Subject() } as never);

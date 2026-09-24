@@ -95,7 +95,13 @@ async function stubReaderData(page: Page): Promise<void> {
 
 async function signInAsAdmin(page: Page): Promise<boolean> {
   await stubReaderData(page);
-  await page.addInitScript(() => localStorage.removeItem('sfr.unread-only'));
+  // The unread filter is per-account storage (#1143); clear whatever an
+  // earlier run left for any account so this spec always starts at "All".
+  await page.addInitScript(() => {
+    for (const key of Object.keys(localStorage)) {
+      if (/^sfr\.user\.\d+\.unread-only$/.test(key)) localStorage.removeItem(key);
+    }
+  });
   await page.goto('/login');
   await page.locator('input[type=email]').fill(ADMIN_EMAIL);
   await page.locator('input[type=password]').fill(ADMIN_PASSWORD);

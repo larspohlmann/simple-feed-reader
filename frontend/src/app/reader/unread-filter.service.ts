@@ -1,13 +1,20 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
+import { UserDeviceStorage } from '../core/user-device-storage';
 
-const KEY = 'sfr.unread-only';
+const NAME = 'unread-only';
+const LEGACY_DEVICE_KEY = 'sfr.unread-only';
 
 @Injectable({ providedIn: 'root' })
 export class UnreadFilterService {
-  readonly unreadOnly = signal<boolean>(localStorage.getItem(KEY) === '1');
+  private readonly storage = inject(UserDeviceStorage);
+
+  readonly unreadOnly = computed(() => this.storage.read(NAME) === '1');
+
+  constructor() {
+    localStorage.removeItem(LEGACY_DEVICE_KEY);
+  }
 
   set(unreadOnly: boolean): void {
-    localStorage.setItem(KEY, unreadOnly ? '1' : '0');
-    this.unreadOnly.set(unreadOnly);
+    this.storage.write(NAME, unreadOnly ? '1' : null);
   }
 }

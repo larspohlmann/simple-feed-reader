@@ -270,13 +270,26 @@ test.describe('list scroll position on a list switch', () => {
  * applied. Flipping the filter asks for a different list, so it starts at the top.
  */
 test.describe('list scroll position with the unread filter on', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.addInitScript(() => localStorage.setItem('sfr.unread-only', '1'));
-  });
-
   function unreadSwitch(page: Page) {
     return page.getByRole('switch', { name: 'only unread' });
   }
+
+  /** The filter is per-account storage now, so a test turns it on through the
+   *  UI after signing in rather than seeding a device-wide key. */
+  async function turnUnreadOn(page: Page): Promise<void> {
+    await showsRowsOf(page, ALL_LIST);
+    await unreadSwitch(page).click();
+    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+  }
+
+  // The admin account persists this value across runs (#1143), so leave the
+  // switch as this describe block found it: off.
+  test.afterEach(async ({ page }) => {
+    if (!(await unreadSwitch(page).isVisible())) return;
+    if ((await unreadSwitch(page).getAttribute('aria-checked')) === 'true') {
+      await unreadSwitch(page).click();
+    }
+  });
 
   test('a clicked list starts at the top', async ({ page }) => {
     const signedIn = await signInAsAdmin(page);
@@ -285,8 +298,7 @@ test.describe('list scroll position with the unread filter on', () => {
       'seeded admin login unavailable (run app:e2e:seed-admin against the stack)',
     );
 
-    await showsRowsOf(page, ALL_LIST);
-    await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
+    await turnUnreadOn(page);
     await scrollListTo(page, SCROLLED_TO);
     await openList(page, TAG_LIST);
 
@@ -303,7 +315,7 @@ test.describe('list scroll position with the unread filter on', () => {
 
     // Give the unread list a remembered place, so flipping back to it cannot
     // land at the top merely because it had never been scrolled.
-    await showsRowsOf(page, ALL_LIST);
+    await turnUnreadOn(page);
     await scrollListTo(page, SCROLLED_TO);
     await unreadSwitch(page).click();
     await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'false');
