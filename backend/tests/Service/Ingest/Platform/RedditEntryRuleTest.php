@@ -85,6 +85,22 @@ final class RedditEntryRuleTest extends TestCase
     }
 
     /** @return iterable<string, array{string}> */
+    public static function nonAbsoluteTargets(): iterable
+    {
+        yield 'site-relative path' => ['/r/PHP/wiki/index'];
+        yield 'protocol-relative' => ['//example.org/article'];
+        yield 'foreign scheme' => ['javascript:alert(1)'];
+    }
+
+    #[DataProvider('nonAbsoluteTargets')]
+    public function testOnlyAnAbsoluteHttpTargetBecomesTheArticle(string $target): void
+    {
+        $result = (new RedditEntryRule())->apply(self::entry(self::THREAD, self::footer($target)));
+
+        self::assertNull($result->url);
+    }
+
+    /** @return iterable<string, array{string}> */
     public static function redditHostedTargets(): iterable
     {
         yield 'image' => ['https://i.redd.it/abc123.jpeg'];
@@ -138,6 +154,7 @@ final class RedditEntryRuleTest extends TestCase
 
         self::assertNotSame([], $feed->entries);
 
+        $articles = [];
         foreach ($feed->entries as $entry) {
             self::assertTrue($rule->supports($entry));
 
@@ -145,6 +162,12 @@ final class RedditEntryRuleTest extends TestCase
 
             self::assertStringNotContainsString('submitted by', (string) $result->contentHtml);
             self::assertStringEndsWith('/.rss', (string) $result->discussion->commentsFeedUrl);
+            $articles[$result->guid] = $result->url;
         }
+
+        self::assertSame(
+            ['t3_1wm4cvh' => null, 't3_1wobnjy' => 'http://nativephp.com/blog/nativephp-mobile-450'],
+            $articles,
+        );
     }
 }

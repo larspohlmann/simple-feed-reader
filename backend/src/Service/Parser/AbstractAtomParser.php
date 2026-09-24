@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Text\PlainText;
+use App\Service\Url\AbsoluteHttpUrl;
 
 /**
  * Shared parsing for the Atom dialects. Everything but the namespace and a
@@ -84,7 +85,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         // and carry the article permalink only in <id>. Fall back to it, but only
         // when it is an absolute http(s) URL: a urn:/tag: id is not fetchable and
         // must never become the article URL.
-        $link = $this->alternateLink($entry, $ns) ?? self::httpUrlOrNull($id);
+        $link = $this->alternateLink($entry, $ns) ?? AbsoluteHttpUrl::orNull($id);
         if ($title === null && $link === null) {
             return null;
         }
@@ -116,7 +117,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
     {
         $author = XmlHelper::childElement($entry, 'author', $ns);
 
-        return $author === null ? null : self::httpUrlOrNull(XmlHelper::childText($author, 'uri', $ns));
+        return $author === null ? null : AbsoluteHttpUrl::orNull(XmlHelper::childText($author, 'uri', $ns));
     }
 
     /** The first present entry date, in this dialect's preference order. */
@@ -161,12 +162,6 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         return $fallback;
-    }
-
-    /** The value when it is an absolute http(s) URL, otherwise null. */
-    private static function httpUrlOrNull(?string $value): ?string
-    {
-        return $value !== null && preg_match('#^https?://#i', $value) === 1 ? $value : null;
     }
 
     private function authorName(\DOMElement $entry, string $ns): ?string

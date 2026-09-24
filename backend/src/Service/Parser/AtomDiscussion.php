@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Enum\CommentsLoad;
 use App\Service\Discussion\Discussion;
+use App\Service\Url\AbsoluteHttpUrl;
 
 /** Reads an Atom entry's rel="replies" links into a Discussion. */
 final class AtomDiscussion
@@ -44,7 +45,7 @@ final class AtomDiscussion
                 && $child->localName === 'link'
                 && $child->namespaceURI === $ns
                 && $child->getAttribute('rel') === 'replies'
-                && preg_match('#^https?://#i', trim($child->getAttribute('href'))) === 1
+                && AbsoluteHttpUrl::matches(trim($child->getAttribute('href')))
             ) {
                 yield $child;
             }

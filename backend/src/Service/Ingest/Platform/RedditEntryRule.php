@@ -7,6 +7,7 @@ namespace App\Service\Ingest\Platform;
 use App\Enum\CommentsLoad;
 use App\Service\Discussion\Discussion;
 use App\Service\Parser\ParsedEntry;
+use App\Service\Url\AbsoluteHttpUrl;
 
 final readonly class RedditEntryRule implements PlatformEntryRule
 {
@@ -64,9 +65,9 @@ final readonly class RedditEntryRule implements PlatformEntryRule
         if ($footer === null || preg_match(self::LINK_TARGET, $footer, $match) !== 1) {
             return null;
         }
-        $target = html_entity_decode($match[1], \ENT_QUOTES | \ENT_HTML5);
+        $target = AbsoluteHttpUrl::orNull(html_entity_decode($match[1], \ENT_QUOTES | \ENT_HTML5));
 
-        return self::isRedditHosted($target) ? null : $target;
+        return $target === null || self::isRedditHosted($target) ? null : $target;
     }
 
     private static function withoutFooter(?string $contentHtml, ?string $footer): ?string
