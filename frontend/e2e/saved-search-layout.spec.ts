@@ -39,7 +39,7 @@ async function stubReader(page: Page): Promise<void> {
       return json({ needsSetup: false, mailEnabled: false, passkeySignInAvailable: false });
     }
     if (path.endsWith('/me'))
-      return json({ email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
+      return json({ id: 1, email: 'fixture@example.invalid', roles: ['ROLE_USER'] });
     if (path.endsWith('/subscriptions')) {
       return json({
         subscriptions: [
