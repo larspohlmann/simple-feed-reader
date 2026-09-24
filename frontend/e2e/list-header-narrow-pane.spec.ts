@@ -1,4 +1,5 @@
 import { expect, Page, test } from '@playwright/test';
+import { MIN_LIST_PERCENT } from '../src/app/reader/pane-split';
 import { stubOneFeedReader } from './support/reader';
 
 // The sidebar column plus a split main area: `sfr.paneSplit` sets the list column's share.
@@ -86,7 +87,7 @@ test.describe('list header in a narrow split column (#1127)', () => {
   }
 
   for (const list of [ALL_ITEMS, FEED, DIRECT_SEARCH]) {
-    for (const paneSplit of ['25.6', '35', '45', '60']) {
+    for (const paneSplit of [String(MIN_LIST_PERCENT), '35', '45', '60']) {
       test(`${list.name} at split ${paneSplit} keeps the title readable and the tools inside the column`, async ({
         page,
       }) => {

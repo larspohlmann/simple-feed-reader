@@ -1952,6 +1952,10 @@ git add src/app/reader/entry-list/entry-list.component.* public/i18n/en.json pub
 git commit -m "feat(#1143): newest/oldest-first toggle in the list header"
 ```
 
+**Amendment (Task 13 finding, Lars's ruling) — the split floor rises to 28.** The toggle gives a feed a fifth
+compact action (5 x 44px + gaps = 236px); at the old `MIN_LIST_PERCENT = 25` a 1280px desktop's list column
+is too narrow and the tools overflow. `pane-split.ts` `MIN_LIST_PERCENT` becomes 28, see Task 13.
+
 ---
 
 ### Task 11: Remember the order, apply both preferences, gate the first load
@@ -2602,6 +2606,13 @@ first row's `data-entry-id` is polled (`40` newest first, `1` oldest first). The
 `oneFeedJson` (incl. `viewedCount`). Step 3 as written fails earlier, on the first-row wait; with that wait
 also removed it fails on `toContain(1)` — both are the discrimination the step asks for. No `afterEach`:
 the order key lives in `localStorage` of a per-test browser context, and no server data is written.
+
+**Amendment (review) — raise the pane split floor.** `list-header-narrow-pane` "a feed at split 25.6" failed:
+five compact actions need 236px; the list column at 1280x800 is p x 991.95px with 16px padding each side,
+so the floor is p >= 268 / 991.95 = 27.02% -> `MIN_LIST_PERCENT = 28` in `pane-split.ts` (the only
+declaration; CSS has no min). Measured: at 27 the tools overflow by 0.17px, at 28 they sit flush. The stored
+`sfr.paneSplit` is clamped on load (new `PaneSplitService` test); the narrow-pane spec imports the constant.
+Commit: `fix(#1143): raise the pane split floor so five header actions fit`.
 
 ---
 

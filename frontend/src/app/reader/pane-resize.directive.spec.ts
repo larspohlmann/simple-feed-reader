@@ -62,10 +62,10 @@ describe('PaneResizeDirective', () => {
   });
 
   it('commits and persists the dragged percent on pointerup', () => {
-    handle.dispatchEvent(pointer('pointerdown', 250));
-    handle.dispatchEvent(pointer('pointerup', 250));
-    expect(split.width()).toBe(25);
-    expect(localStorage.getItem('sfr.paneSplit')).toBe('25');
+    handle.dispatchEvent(pointer('pointerdown', 300));
+    handle.dispatchEvent(pointer('pointerup', 300));
+    expect(split.width()).toBe(30);
+    expect(localStorage.getItem('sfr.paneSplit')).toBe('30');
   });
 
   it('clamps a drag past the band to the minimum so neither pane collapses', () => {
