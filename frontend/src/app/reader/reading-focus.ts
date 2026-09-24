@@ -5,31 +5,30 @@ import { articleOverflowsViewport } from './reading-progress';
 
 /** How steeply a surface's reading focus falls away from the reading centre. */
 export interface FocusCurve {
-  /**
-   * Fraction of the viewport height, on each side of the centre, that stays
-   * fully opaque before the fade starts. Zero fades straight off the centre
-   * line.
-   */
+  /** Fraction of the viewport height, each side of the centre, held fully opaque. */
   plateau: number;
+  /** Opacity lost at once as a block leaves the plateau; 0 fades straight from 1. */
+  falloff: number;
+  /** Exponent on the fade after the step: 1 is linear, below 1 drops early. */
+  curvature: number;
   /** Opacity of a block sitting a half-viewport or more from the centre. */
   min: number;
-  /**
-   * Exponent on the fade. 1 is linear; below 1 the fade drops fast just past
-   * the plateau and levels out toward `min`.
-   */
-  falloff: number;
 }
 
 /** The entry list's curve: a fade off the centre line, down to a strong dim. */
-export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, min: 0.2, falloff: 1 };
+export const LIST_FOCUS_CURVE: FocusCurve = { plateau: 0, falloff: 0, curvature: 1, min: 0.2 };
 
 /**
- * The article's curve. A band around the centre holds full opacity so a
- * paragraph doesn't start dimming the instant it leaves dead middle; the floor
- * is higher too — the effect should point the eye, not push the page away (#435).
- * The steep falloff sets the neighbouring paragraphs clearly apart from it.
+ * The article's curve: a band around the centre at full opacity, then a step down
+ * that sets the paragraph in focus apart from its neighbours (#1138). Tuned by
+ * eye — no spec pins these values.
  */
-export const ARTICLE_FOCUS_CURVE: FocusCurve = { plateau: 0.03, min: 0.28, falloff: 0.5 };
+export const ARTICLE_FOCUS_CURVE: FocusCurve = {
+  plateau: 0.05,
+  falloff: 0.35,
+  curvature: 1,
+  min: 0.28,
+};
 
 /** Generic containers we descend through to reach the real reading blocks. */
 const WRAPPER_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'MAIN', 'ASIDE', 'HEADER', 'FOOTER']);
@@ -113,9 +112,9 @@ export function needsReadingTail(contentBottom: number, viewportHeight: number):
  * opaque however tall, and a long source group stays bright while filling the
  * screen instead of dimming on its off-screen centre (#213). Fades linearly to
  * `curve.min` a half-viewport from the near edge; a short block collapses to a
- * plain distance-from-centre fade. `curve.plateau` widens the opaque middle and
- * compresses the fade into what's left of the half-viewport; `curve.falloff`
- * bends it.
+ * plain distance-from-centre fade. `curve.plateau` widens the opaque middle; past
+ * it the opacity steps down by `curve.falloff` and fades on to `curve.min`, bent
+ * by `curve.curvature`.
  */
 export function focusOpacityForSpan(
   blockTop: number,
@@ -130,5 +129,6 @@ export function focusOpacityForSpan(
   const fadeSpan = center - plateau;
   if (distanceFromCenter <= plateau || fadeSpan <= 0) return 1;
   const ratio = Math.min((distanceFromCenter - plateau) / fadeSpan, 1);
-  return +(1 - ratio ** curve.falloff * (1 - curve.min)).toFixed(3);
+  const edge = 1 - curve.falloff;
+  return +(edge - ratio ** curve.curvature * (edge - curve.min)).toFixed(3);
 }
