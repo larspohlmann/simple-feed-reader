@@ -625,9 +625,3 @@ services:
     App\Repository\SavedSearchMembershipLoader:
         autowire: true
         public: true
-
-    # PlatformEntryRulesWiringTest fetches this to prove the tagged iterator
-    # actually collects the Reddit rule. Same `autowire` caveat as above.
-    App\Service\Ingest\Platform\PlatformEntryRules:
-        autowire: true
-        public: true

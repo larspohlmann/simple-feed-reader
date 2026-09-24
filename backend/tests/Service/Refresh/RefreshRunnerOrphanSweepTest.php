@@ -109,7 +109,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
                 new PlatformEntryRules([]),
             ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
-            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(), $this->clock)),
+            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
             new EntryPruner($this->em, $this->clock, $this->indexer()),
             new OrphanedFeedReclaimer($this->em),
             $this->indexer(),

@@ -35,18 +35,10 @@ final readonly class RedditEntryRule implements PlatformEntryRule
         $thread = self::withoutQuery((string) $entry->url);
         $footer = self::footerOf($entry->contentHtml);
 
-        return new ParsedEntry(
-            guid: $entry->guid,
-            url: self::externalArticle($footer),
-            title: $entry->title,
-            author: $entry->author,
-            summary: $entry->summary,
-            contentHtml: self::withoutFooter($entry->contentHtml, $footer),
-            publishedAt: $entry->publishedAt,
-            media: $entry->media,
-            categories: $entry->categories,
-            discussion: Discussion::withCommentsFeed($thread, rtrim($thread, '/') . '/.rss', CommentsLoad::Auto),
-            authorUrl: $entry->authorUrl,
+        return $entry->withPlatformRewrite(
+            self::externalArticle($footer),
+            self::withoutFooter($entry->contentHtml, $footer),
+            Discussion::withCommentsFeed($thread, rtrim($thread, '/') . '/.rss', CommentsLoad::Auto),
         );
     }
 

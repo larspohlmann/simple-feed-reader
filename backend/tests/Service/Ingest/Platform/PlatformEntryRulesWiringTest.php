@@ -4,18 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest\Platform;
 
-use App\Service\Ingest\Platform\PlatformEntryRules;
+use App\Entity\Entry;
+use App\Entity\Feed;
+use App\Enum\CommentsLoad;
+use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedEntry;
-use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
+use App\Service\Parser\ParsedFeed;
+use App\Tests\DbTestCase;
 
-final class PlatformEntryRulesWiringTest extends KernelTestCase
+final class PlatformEntryRulesWiringTest extends DbTestCase
 {
-    public function testTheTaggedRedditRuleResolvesThroughTheContainer(): void
+    public function testTheContainersIngestorAppliesTheTaggedRedditRule(): void
     {
-        self::bootKernel();
-        $rules = self::getContainer()->get(PlatformEntryRules::class);
-        self::assertInstanceOf(PlatformEntryRules::class, $rules);
-
+        $ingestor = self::getContainer()->get(EntryIngestor::class);
+        self::assertInstanceOf(EntryIngestor::class, $ingestor);
+        $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
+        $this->em->persist($feed);
         $thread = new ParsedEntry(
             't3_1abc',
             'https://www.reddit.com/r/PHP/comments/1abc/t/',
@@ -26,8 +31,16 @@ final class PlatformEntryRulesWiringTest extends KernelTestCase
             null,
         );
 
-        $result = $rules->apply($thread);
+        $ingestor->ingest(
+            $feed,
+            new ParsedFeed('Feed', null, null, null, [$thread]),
+            new FeedIngestContext(new \DateTimeImmutable('2026-09-24T12:00:00Z'), null),
+        );
+        $this->em->flush();
 
-        self::assertNull($result->url);
+        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        self::assertInstanceOf(Entry::class, $entry);
+        self::assertNull($entry->getUrl());
+        self::assertSame(CommentsLoad::Auto, $entry->getDiscussion()->commentsLoad);
     }
 }

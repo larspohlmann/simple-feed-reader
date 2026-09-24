@@ -377,6 +377,22 @@ final class Atom10ParserTest extends TestCase
         self::assertSame(CommentsLoad::Manual, $entry->discussion->commentsLoad);
     }
 
+    public function testTheFirstRepliesLinkOfEachKindWinsWhateverTheTypesCase(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link rel="replies" type="APPLICATION/ATOM+XML" href="https://blog.example/post/comments.xml"/>
+              <link rel="replies" type="application/rss+xml" href="https://blog.example/post/other.xml"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#comments"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#later"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post#comments', $entry->discussion->url);
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+    }
+
     public function testRepliesLinkWithoutATypeIsADiscussionPage(): void
     {
         $entry = $this->parseSingleEntry(<<<'XML'
@@ -388,7 +404,7 @@ final class Atom10ParserTest extends TestCase
             XML);
 
         self::assertSame('https://forum.example/t/1', $entry->discussion->url);
-        self::assertFalse($entry->discussion->hasCommentsFeed());
+        self::assertNull($entry->discussion->commentsFeedUrl);
     }
 
     public function testAWhitespacePaddedRepliesLinkIsStillRead(): void

@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsLoader;
+use App\Service\Comments\CommentsStatus;
 use App\Service\Comments\EntryComment;
 use App\Service\Discussion\Discussion;
 use App\Service\Fetch\Exception\FeedThrottledException;
@@ -24,6 +25,7 @@ final class CommentsLoaderTest extends KernelTestCase
 {
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
+    private const string THREAD_GUID = 't3_1woq4he';
     private const string WORDPRESS_POST = 'https://blog.example.org/2026/09/hello-world/';
 
     private StubFeedFetcher $fetcher;
@@ -33,7 +35,8 @@ final class CommentsLoaderTest extends KernelTestCase
     {
         self::bootKernel();
         $this->fetcher = new StubFeedFetcher();
-        $this->throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+        $clock = new MockClock('2026-09-24 12:00:00');
+        $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
     /** @return list<EntryComment> */
@@ -42,7 +45,7 @@ final class CommentsLoaderTest extends KernelTestCase
         $feed = self::WORDPRESS_POST . 'feed/';
         $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/wordpress/post-comments.rss');
         $this->fetcher->willReturn($feed, FetchResponse::fetched($feed, false, $xml, null, null));
-        $entry = self::entry();
+        $entry = self::entry(guid: 'https://blog.example.org/?p=7');
         $entry->setDiscussion(
             Discussion::withCommentsFeed(self::WORDPRESS_POST . '#comments', $feed, CommentsLoad::Manual),
         );
@@ -61,37 +64,43 @@ final class CommentsLoaderTest extends KernelTestCase
         return $loader;
     }
 
-    private static function entry(?string $author = '/u/Background_Lie11', ?string $discussionUrl = self::THREAD): Entry
+    private function serveRedditThread(): void
+    {
+        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
+        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+    }
+
+    private static function entry(?string $author = '/u/Background_Lie11', string $guid = self::THREAD_GUID): Entry
     {
         $entry = new Entry(
             new Feed('https://www.reddit.com/r/PHP/.rss'),
-            't3_1woq4he',
+            $guid,
             null,
             'Stack',
             new \DateTimeImmutable(),
             new \DateTimeImmutable(),
         );
         $entry->setAuthor($author);
-        $entry->setDiscussion(Discussion::withCommentsFeed($discussionUrl, self::FEED, CommentsLoad::Auto));
+        $entry->setDiscussion(Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto));
 
         return $entry;
     }
 
     public function testParsesCommentsAndDropsThePostItself(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread();
 
         $result = $this->loader()->load(self::entry());
 
-        self::assertSame('ok', $result->status);
+        self::assertSame(CommentsStatus::Ok, $result->status);
         self::assertNotSame([], $result->comments);
-        foreach ($result->comments as $comment) {
-            self::assertNotSame(self::THREAD, $comment->url);
-        }
+        self::assertNotContains(
+            self::THREAD,
+            array_map(static fn (EntryComment $comment) => $comment->url, $result->comments),
+        );
     }
 
-    public function testKeepsEveryWordPressCommentWhoseLinkOnlyDiffersByFragment(): void
+    public function testKeepsEveryWordPressComment(): void
     {
         $comments = $this->loadWordPressComments();
 
@@ -111,8 +120,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
     public function testMarksTheEntryAuthorsComments(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread();
 
         $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
 
@@ -122,8 +130,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
     public function testLeavesOtherCommentersUnmarked(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread();
 
         $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
 
@@ -139,8 +146,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
     public function testAnEntryWithNoAuthorMarksNoComment(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread();
 
         $result = $this->loader()->load(self::entry(null));
 
@@ -148,12 +154,11 @@ final class CommentsLoaderTest extends KernelTestCase
         self::assertSame([], $byAuthor);
     }
 
-    public function testNoDiscussionUrlKeepsEveryParsedItem(): void
+    public function testAnotherEntrysThreadKeepsEveryParsedItem(): void
     {
-        $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->serveRedditThread();
 
-        $result = $this->loader()->load(self::entry(discussionUrl: null));
+        $result = $this->loader()->load(self::entry(guid: 't3_another'));
 
         self::assertContains(self::THREAD, array_map(static fn ($c) => $c->url, $result->comments));
     }
@@ -166,9 +171,9 @@ final class CommentsLoaderTest extends KernelTestCase
         $first = $loader->load(self::entry());
         $second = $loader->load(self::entry());
 
-        self::assertSame('throttled', $first->status);
+        self::assertSame(CommentsStatus::Throttled, $first->status);
         self::assertSame(60, $first->retryAfter);
-        self::assertSame('throttled', $second->status);
+        self::assertSame(CommentsStatus::Throttled, $second->status);
         self::assertCount(1, $this->fetcher->fetchedUrls);
     }
 
@@ -178,7 +183,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry());
 
-        self::assertSame('throttled', $result->status);
+        self::assertSame(CommentsStatus::Throttled, $result->status);
         self::assertSame(60, $result->retryAfter);
     }
 
@@ -188,7 +193,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry());
 
-        self::assertSame('throttled', $result->status);
+        self::assertSame(CommentsStatus::Throttled, $result->status);
         self::assertSame(86_400, $result->retryAfter);
     }
 
@@ -198,7 +203,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry());
 
-        self::assertSame('throttled', $result->status);
+        self::assertSame(CommentsStatus::Throttled, $result->status);
         self::assertSame(90, $result->retryAfter);
         self::assertSame([], $this->fetcher->fetchedUrls);
     }
@@ -207,7 +212,7 @@ final class CommentsLoaderTest extends KernelTestCase
     {
         $this->fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
 
-        self::assertSame('failed', $this->loader()->load(self::entry())->status);
+        self::assertSame(CommentsStatus::Failed, $this->loader()->load(self::entry())->status);
     }
 
     public function testUnparseableBodyIsFailed(): void
@@ -217,6 +222,6 @@ final class CommentsLoaderTest extends KernelTestCase
             FetchResponse::fetched(self::FEED, false, /** @lang TEXT */ '<html>nope', null, null),
         );
 
-        self::assertSame('failed', $this->loader()->load(self::entry())->status);
+        self::assertSame(CommentsStatus::Failed, $this->loader()->load(self::entry())->status);
     }
 }

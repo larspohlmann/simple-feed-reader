@@ -178,7 +178,7 @@ final class MaintenanceTickTest extends DbTestCase
                 new PlatformEntryRules([]),
             ),
             new FaviconResolver($fetcher, new NullLogger()),
-            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(), $clock)),
+            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
             new EntryPruner($this->em, $clock, $indexer),
             new OrphanedFeedReclaimer($this->em),
             $indexer,

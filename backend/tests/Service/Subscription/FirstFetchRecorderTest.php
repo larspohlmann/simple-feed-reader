@@ -52,7 +52,7 @@ final class FirstFetchRecorderTest extends DbTestCase
                 new NaiveUtcClock($clock),
                 new PlatformEntryRules([]),
             ),
-            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(), $clock)),
+            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
             $this->em,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),

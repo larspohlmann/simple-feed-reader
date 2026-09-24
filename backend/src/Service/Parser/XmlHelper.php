@@ -55,7 +55,6 @@ final class XmlHelper
         return null;
     }
 
-    /** The first matching direct child whose text is an absolute http(s) URL. */
     public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
     {
         foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
@@ -74,7 +73,7 @@ final class XmlHelper
      *
      * @return iterable<\DOMElement>
      */
-    private static function childElements(
+    public static function childElements(
         \DOMElement $parent,
         string $localName,
         ?string $namespaceUri,

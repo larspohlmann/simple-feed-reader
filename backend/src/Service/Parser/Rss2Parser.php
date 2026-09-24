@@ -76,12 +76,10 @@ final class Rss2Parser implements FeedFormatParserInterface
 
     private static function discussion(\DOMElement $item): Discussion
     {
-        $page = XmlHelper::childHttpUrl($item, 'comments');
-        $commentsFeed = XmlHelper::childHttpUrl($item, 'commentRss', self::WFW_NS);
-        if ($commentsFeed !== null) {
-            return Discussion::withCommentsFeed($page, $commentsFeed, CommentsLoad::Manual);
-        }
-
-        return $page === null ? Discussion::none() : Discussion::page($page);
+        return Discussion::of(
+            XmlHelper::childHttpUrl($item, 'comments'),
+            XmlHelper::childHttpUrl($item, 'commentRss', self::WFW_NS),
+            CommentsLoad::Manual,
+        );
     }
 }

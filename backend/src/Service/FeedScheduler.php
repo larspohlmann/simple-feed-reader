@@ -76,10 +76,7 @@ final class FeedScheduler
      */
     public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
     {
-        $hostWait = $this->hostThrottle->record(
-            $feed->getUrl(),
-            $retryAfterSeconds ?? HostThrottle::MINIMUM_WAIT_SECONDS,
-        );
+        $hostWait = $this->hostThrottle->record($feed->getUrl(), $retryAfterSeconds);
         // Reddit resets in seconds, so only this feed, not the whole host, waits out its own cadence.
         $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
 

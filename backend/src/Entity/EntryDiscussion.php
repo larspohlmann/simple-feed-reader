@@ -22,18 +22,19 @@ class EntryDiscussion
 
     public function store(Discussion $discussion): void
     {
-        $this->url = self::bounded($discussion->url);
-        $this->commentsFeedUrl = self::bounded($discussion->commentsFeedUrl);
-        $this->commentsLoad = $this->commentsFeedUrl === null ? null : $discussion->commentsLoad;
+        $bounded = Discussion::of(
+            self::bounded($discussion->url),
+            self::bounded($discussion->commentsFeedUrl),
+            $discussion->commentsLoad ?? CommentsLoad::Manual,
+        );
+        $this->url = $bounded->url;
+        $this->commentsFeedUrl = $bounded->commentsFeedUrl;
+        $this->commentsLoad = $bounded->commentsLoad;
     }
 
     public function read(): Discussion
     {
-        if ($this->commentsFeedUrl !== null && $this->commentsLoad !== null) {
-            return Discussion::withCommentsFeed($this->url, $this->commentsFeedUrl, $this->commentsLoad);
-        }
-
-        return $this->url === null ? Discussion::none() : Discussion::page($this->url);
+        return Discussion::of($this->url, $this->commentsFeedUrl, $this->commentsLoad ?? CommentsLoad::Manual);
     }
 
     private static function bounded(?string $url): ?string

@@ -20,18 +20,13 @@ final readonly class Discussion
         return new self(null, null, null);
     }
 
-    public static function page(string $url): self
-    {
-        return new self($url, null, null);
-    }
-
     public static function withCommentsFeed(?string $pageUrl, string $commentsFeedUrl, CommentsLoad $load): self
     {
         return new self($pageUrl, $commentsFeedUrl, $load);
     }
 
-    public function hasCommentsFeed(): bool
+    public static function of(?string $pageUrl, ?string $commentsFeedUrl, CommentsLoad $load): self
     {
-        return $this->commentsFeedUrl !== null;
+        return new self($pageUrl, $commentsFeedUrl, $commentsFeedUrl === null ? null : $load);
     }
 }

@@ -30,9 +30,9 @@ final class EntryDiscussionTest extends TestCase
     public function testRoundTripsAPageOnly(): void
     {
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::page('https://t.example/1'));
+        $stored->store(Discussion::of('https://t.example/1', null, CommentsLoad::Manual));
 
-        self::assertFalse($stored->read()->hasCommentsFeed());
+        self::assertNull($stored->read()->commentsFeedUrl);
         self::assertSame('https://t.example/1', $stored->read()->url);
     }
 
@@ -44,7 +44,7 @@ final class EntryDiscussionTest extends TestCase
     public function testAUrlOverTheColumnLimitIsDroppedNotTruncated(): void
     {
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::page(str_repeat('a', 2049)));
+        $stored->store(Discussion::of(str_repeat('a', 2049), null, CommentsLoad::Manual));
 
         self::assertNull($stored->read()->url);
     }
@@ -53,7 +53,7 @@ final class EntryDiscussionTest extends TestCase
     {
         $url = str_repeat('a', 2048);
         $stored = new EntryDiscussion();
-        $stored->store(Discussion::page($url));
+        $stored->store(Discussion::of($url, null, CommentsLoad::Manual));
 
         self::assertSame($url, $stored->read()->url);
     }
@@ -69,15 +69,9 @@ final class EntryDiscussionTest extends TestCase
 
         $read = $stored->read();
 
-        self::assertFalse($read->hasCommentsFeed());
         self::assertNull($read->commentsFeedUrl);
         self::assertNull($read->commentsLoad);
         self::assertSame('https://t.example/1', $read->url);
-
-        // read() can never surface this — its guard already requires a
-        // non-null commentsFeedUrl — but the stored row must not carry a
-        // load strategy for a comments feed it does not have.
-        self::assertNull((new \ReflectionProperty(EntryDiscussion::class, 'commentsLoad'))->getValue($stored));
     }
 
     public function testACommentsFeedUrlAtTheColumnLimitIsKept(): void

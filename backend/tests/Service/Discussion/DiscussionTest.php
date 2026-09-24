@@ -17,15 +17,33 @@ final class DiscussionTest extends TestCase
         self::assertNull($discussion->url);
         self::assertNull($discussion->commentsFeedUrl);
         self::assertNull($discussion->commentsLoad);
-        self::assertFalse($discussion->hasCommentsFeed());
     }
 
-    public function testPageHasNoCommentsFeed(): void
+    public function testAPageWithoutACommentsFeedDropsTheLoadMode(): void
     {
-        $discussion = Discussion::page('https://news.example/item?id=1');
+        $discussion = Discussion::of('https://news.example/item?id=1', null, CommentsLoad::Auto);
 
         self::assertSame('https://news.example/item?id=1', $discussion->url);
-        self::assertFalse($discussion->hasCommentsFeed());
+        self::assertNull($discussion->commentsFeedUrl);
+        self::assertNull($discussion->commentsLoad);
+    }
+
+    public function testNothingAtAllIsNone(): void
+    {
+        self::assertEquals(Discussion::none(), Discussion::of(null, null, CommentsLoad::Manual));
+    }
+
+    public function testACommentsFeedKeepsItsLoadMode(): void
+    {
+        $discussion = Discussion::of(
+            'https://blog.example/post/',
+            'https://blog.example/post/feed/',
+            CommentsLoad::Auto,
+        );
+
+        self::assertSame('https://blog.example/post/', $discussion->url);
+        self::assertSame('https://blog.example/post/feed/', $discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Auto, $discussion->commentsLoad);
     }
 
     public function testCommentsFeedCarriesItsLoadMode(): void
@@ -35,6 +53,5 @@ final class DiscussionTest extends TestCase
         self::assertNull($discussion->url);
         self::assertSame('https://blog.example/post/feed/', $discussion->commentsFeedUrl);
         self::assertSame(CommentsLoad::Manual, $discussion->commentsLoad);
-        self::assertTrue($discussion->hasCommentsFeed());
     }
 }

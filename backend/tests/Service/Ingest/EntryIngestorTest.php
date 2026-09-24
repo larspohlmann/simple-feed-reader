@@ -38,18 +38,24 @@ final class EntryIngestorTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->ingestor = $this->ingestorWith(new PlatformEntryRules([]));
+    }
+
+    private function ingestorWith(PlatformEntryRules $rules): EntryIngestor
+    {
         /** @var EntryRepository $entryRepository */
         $entryRepository = $this->em->getRepository(Entry::class);
         /** @var CategoryRepository $categoryRepository */
         $categoryRepository = $this->em->getRepository(Category::class);
-        $this->ingestor = new EntryIngestor(
+
+        return new EntryIngestor(
             $this->em,
             $entryRepository,
             new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
             new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
-            new PlatformEntryRules([]),
+            $rules,
         );
     }
 
@@ -297,19 +303,7 @@ final class EntryIngestorTest extends DbTestCase
 
     public function testAppliesPlatformRulesBeforePersisting(): void
     {
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-        /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $this->em->getRepository(Category::class);
-        $ingestor = new EntryIngestor(
-            $this->em,
-            $entryRepository,
-            new EntrySanitizer(),
-            new UrlNormalizer(),
-            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
-            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
-            new PlatformEntryRules([new RedditEntryRule()]),
-        );
+        $ingestor = $this->ingestorWith(new PlatformEntryRules([new RedditEntryRule()]));
         $footer = ' &#32; submitted by &#32; <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
             . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'
             . ' <span><a href="https://www.reddit.com/r/PHP/comments/1abc/t/">[comments]</a></span>';
@@ -336,19 +330,7 @@ final class EntryIngestorTest extends DbTestCase
 
     public function testTwoRedditThreadsLinkingTheSameArticleDedupeToOneEntry(): void
     {
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-        /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $this->em->getRepository(Category::class);
-        $ingestor = new EntryIngestor(
-            $this->em,
-            $entryRepository,
-            new EntrySanitizer(),
-            new UrlNormalizer(),
-            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
-            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
-            new PlatformEntryRules([new RedditEntryRule()]),
-        );
+        $ingestor = $this->ingestorWith(new PlatformEntryRules([new RedditEntryRule()]));
         $threadFooter = static fn (string $thread): string => ' &#32; submitted by &#32;'
             . ' <a href="https://www.reddit.com/user/someone"> /u/someone </a> <br/>'
             . ' <span><a href="https://example.com/a">[link]</a></span> &#32;'

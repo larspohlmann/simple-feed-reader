@@ -22,7 +22,7 @@ final class FeedSchedulerTest extends TestCase
     protected function setUp(): void
     {
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
-        $this->hostThrottle = new HostThrottle(new ArrayAdapter(), $this->clock);
+        $this->hostThrottle = new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock);
         $this->scheduler = new FeedScheduler($this->clock, $this->hostThrottle);
     }
 

@@ -40,10 +40,7 @@ final readonly class CommentsLoader
 
             return CommentsResult::ok($this->comments($entry, $this->parser->parse($body)->entries));
         } catch (FeedThrottledException $e) {
-            $wait = $this->hostThrottle->record(
-                $feedUrl,
-                $e->retryAfterSeconds ?? HostThrottle::MINIMUM_WAIT_SECONDS,
-            );
+            $wait = $this->hostThrottle->record($feedUrl, $e->retryAfterSeconds);
 
             return CommentsResult::throttled($wait);
         } catch (FetchException | FeedParseException) {
@@ -58,10 +55,9 @@ final readonly class CommentsLoader
      */
     private function comments(Entry $entry, array $parsed): array
     {
-        $postUrl = $entry->getDiscussion()->url;
         $comments = [];
         foreach ($parsed as $item) {
-            if (self::isThePost($item, $postUrl)) {
+            if ($item->guid === $entry->getGuid()) {
                 continue;
             }
             $comments[] = new EntryComment(
@@ -75,11 +71,5 @@ final readonly class CommentsLoader
         }
 
         return $comments;
-    }
-
-    // Compared with the fragment: WordPress comments link `post/#comment-N` under a `post/#comments` discussion.
-    private static function isThePost(ParsedEntry $item, ?string $postUrl): bool
-    {
-        return $postUrl !== null && $item->url === $postUrl;
     }
 }

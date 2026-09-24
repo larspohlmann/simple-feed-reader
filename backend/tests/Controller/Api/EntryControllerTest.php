@@ -106,6 +106,25 @@ final class EntryControllerTest extends WebTestCase
         return $entry;
     }
 
+    private function seedEntryWithDiscussion(User $user, Discussion $discussion): int
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $feed = new Feed('https://example.com/discussion-feed.xml');
+        $feed->setTitle('Seeded');
+        $em->persist($feed);
+        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $entry = new Entry($feed, 'discussion-1', 'https://example.com/1', 'Post', $july1, $july1);
+        $entry->setDiscussion($discussion);
+        $em->persist($entry);
+        $em->flush();
+        $entryId = $entry->getId();
+        self::assertNotNull($entryId);
+
+        return $entryId;
+    }
+
     private function seedDebugEnabledSettings(User $user): void
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -1131,24 +1150,10 @@ final class EntryControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-discussion@example.com');
-
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feed = new Feed('https://example.com/discussion-feed.xml');
-        $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $entry = new Entry($feed, 'discussion-1', 'https://example.com/1', 'Post', $july1, $july1);
-        $entry->setDiscussion(Discussion::withCommentsFeed(
-            'https://t.example/1',
-            'https://t.example/1/.rss',
-            CommentsLoad::Auto,
-        ));
-        $em->persist($entry);
-        $em->flush();
-        $entryId = $entry->getId();
-        self::assertNotNull($entryId);
+        $entryId = $this->seedEntryWithDiscussion(
+            $user,
+            Discussion::withCommentsFeed('https://t.example/1', 'https://t.example/1/.rss', CommentsLoad::Auto),
+        );
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
@@ -1164,19 +1169,7 @@ final class EntryControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-no-discussion@example.com');
-
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $feed = new Feed('https://example.com/no-discussion-feed.xml');
-        $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $entry = new Entry($feed, 'no-discussion-1', 'https://example.com/1', 'Post', $july1, $july1);
-        $em->persist($entry);
-        $em->flush();
-        $entryId = $entry->getId();
-        self::assertNotNull($entryId);
+        $entryId = $this->seedEntryWithDiscussion($user, Discussion::none());
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 

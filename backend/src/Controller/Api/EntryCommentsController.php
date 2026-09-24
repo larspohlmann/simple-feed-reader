@@ -41,6 +41,6 @@ final readonly class EntryCommentsController
             throw new NotFoundHttpException($e->getMessage(), $e);
         }
 
-        return new JsonResponse(CommentsJson::one($result, $entry->getDiscussion()->url));
+        return new JsonResponse(CommentsJson::one($result));
     }
 }

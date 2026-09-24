@@ -77,13 +77,14 @@ final class EntryJson
     private static function commonFields(EntryListRow $row): array
     {
         $e = $row->entry;
+        $discussion = $e->getDiscussion();
 
         return [
             'id' => $e->getId(),
             'title' => $e->getTitle(),
             'url' => $e->getUrl(),
-            'discussionUrl' => $e->getDiscussion()->url,
-            'comments' => $e->getDiscussion()->commentsLoad?->value,
+            'discussionUrl' => $discussion->url,
+            'comments' => $discussion->commentsLoad?->value,
             'author' => $e->getAuthor(),
             'summary' => $e->getSummary(),
             'imageUrl' => $e->getImageUrl(),

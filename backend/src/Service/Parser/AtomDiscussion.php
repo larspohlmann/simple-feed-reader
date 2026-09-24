@@ -8,7 +8,6 @@ use App\Enum\CommentsLoad;
 use App\Service\Discussion\Discussion;
 use App\Service\Url\AbsoluteHttpUrl;
 
-/** Reads an Atom entry's rel="replies" links into a Discussion. */
 final class AtomDiscussion
 {
     public static function from(\DOMElement $entry, string $ns): Discussion
@@ -17,6 +16,9 @@ final class AtomDiscussion
         $commentsFeed = null;
         foreach (self::repliesLinks($entry, $ns) as $link) {
             $href = trim($link->getAttribute('href'));
+            if (!AbsoluteHttpUrl::matches($href)) {
+                continue;
+            }
             if (self::isFeedType($link->getAttribute('type'))) {
                 $commentsFeed ??= $href;
                 continue;
@@ -24,11 +26,7 @@ final class AtomDiscussion
             $page ??= $href;
         }
 
-        if ($commentsFeed !== null) {
-            return Discussion::withCommentsFeed($page, $commentsFeed, CommentsLoad::Manual);
-        }
-
-        return $page === null ? Discussion::none() : Discussion::page($page);
+        return Discussion::of($page, $commentsFeed, CommentsLoad::Manual);
     }
 
     private static function isFeedType(string $type): bool
@@ -37,17 +35,11 @@ final class AtomDiscussion
     }
 
     /** @return iterable<\DOMElement> */
-    private static function repliesLinks(\DOMElement $parent, string $ns): iterable
+    private static function repliesLinks(\DOMElement $entry, string $ns): iterable
     {
-        foreach ($parent->childNodes as $child) {
-            if (
-                $child instanceof \DOMElement
-                && $child->localName === 'link'
-                && $child->namespaceURI === $ns
-                && $child->getAttribute('rel') === 'replies'
-                && AbsoluteHttpUrl::matches(trim($child->getAttribute('href')))
-            ) {
-                yield $child;
+        foreach (XmlHelper::childElements($entry, 'link', $ns) as $link) {
+            if ($link->getAttribute('rel') === 'replies') {
+                yield $link;
             }
         }
     }

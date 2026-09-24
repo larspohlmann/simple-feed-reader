@@ -350,7 +350,7 @@ final class Rss2ParserTest extends TestCase
             XML);
 
         self::assertSame('https://news.ycombinator.com/item?id=1', $entry->discussion->url);
-        self::assertFalse($entry->discussion->hasCommentsFeed());
+        self::assertNull($entry->discussion->commentsFeedUrl);
     }
 
     public function testAWhitespacePaddedCommentsPageIsTrimmed(): void

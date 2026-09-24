@@ -6,10 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Discussion\Discussion;
 
-/**
- * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier;
- * downstream tasks reconstruct it field-for-field (docs/superpowers/plans/2026-09-24-1140-entry-comments.md).
- */
+/** @SuppressWarnings("PHPMD.ExcessiveParameterList") a pure data carrier: one parameter per parsed field. */
 final readonly class ParsedEntry
 {
     public Discussion $discussion;
@@ -29,5 +26,22 @@ final readonly class ParsedEntry
         public ?string $authorUrl = null,
     ) {
         $this->discussion = $discussion ?? Discussion::none();
+    }
+
+    public function withPlatformRewrite(?string $url, ?string $contentHtml, Discussion $discussion): self
+    {
+        return new self(
+            guid: $this->guid,
+            url: $url,
+            title: $this->title,
+            author: $this->author,
+            summary: $this->summary,
+            contentHtml: $contentHtml,
+            publishedAt: $this->publishedAt,
+            media: $this->media,
+            categories: $this->categories,
+            discussion: $discussion,
+            authorUrl: $this->authorUrl,
+        );
     }
 }

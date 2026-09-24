@@ -5,25 +5,18 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Comments\CommentsResult;
+use App\Service\Comments\CommentsStatus;
 use App\Service\Comments\EntryComment;
 
 final class CommentsJson
 {
     /** @return array<string, mixed> */
-    public static function one(CommentsResult $result, ?string $discussionUrl): array
+    public static function one(CommentsResult $result): array
     {
-        return match ($result->status) {
-            'ok' => [
-                'status' => 'ok',
-                'discussionUrl' => $discussionUrl,
-                'comments' => array_map(self::comment(...), $result->comments),
-            ],
-            'throttled' => [
-                'status' => 'throttled',
-                'discussionUrl' => $discussionUrl,
-                'retryAfter' => $result->retryAfter,
-            ],
-            default => ['status' => 'failed', 'discussionUrl' => $discussionUrl],
+        return ['status' => $result->status->value] + match ($result->status) {
+            CommentsStatus::Ok => ['comments' => array_map(self::comment(...), $result->comments)],
+            CommentsStatus::Throttled => ['retryAfter' => $result->retryAfter],
+            CommentsStatus::Failed => [],
         };
     }
 

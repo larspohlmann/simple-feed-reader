@@ -10,7 +10,6 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 final readonly class HostThrottle
 {
-    /** The bounds every recorded wait is clamped to, shared by every caller. */
     public const int MINIMUM_WAIT_SECONDS = 60;
     public const int MAXIMUM_WAIT_SECONDS = 86400;
 
@@ -22,13 +21,15 @@ final readonly class HostThrottle
     }
 
     /** Returns the wait now in force: a shorter request never cuts a longer recorded one short. */
-    public function record(string $url, int $seconds): int
+    public function record(string $url, ?int $seconds): int
     {
-        $wait = max($this->remainingSeconds($url), self::clamped($seconds));
+        $wait = max($this->remainingSeconds($url), self::clamped($seconds ?? self::MINIMUM_WAIT_SECONDS));
+        $now = $this->clock->now();
+        $until = $now->setTimestamp($now->getTimestamp() + $wait);
 
         $item = $this->cache->getItem(self::key($url));
-        $item->set($this->clock->now()->getTimestamp() + $wait);
-        $item->expiresAfter($wait);
+        $item->set($until->getTimestamp());
+        $item->expiresAt($until);
         $this->cache->save($item);
 
         return $wait;

@@ -118,7 +118,7 @@ final class SubscriptionServiceTest extends DbTestCase
                     new NaiveUtcClock($clock),
                     new PlatformEntryRules([]),
                 ),
-                new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(), $clock)),
+                new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
                 $this->em,
                 $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),

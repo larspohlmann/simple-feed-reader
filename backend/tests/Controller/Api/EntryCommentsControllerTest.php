@@ -11,17 +11,15 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Service\Discussion\Discussion;
 use App\Service\Fetch\Exception\FeedThrottledException;
+use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
+use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
-use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-final class EntryCommentsControllerTest extends WebTestCase
+final class EntryCommentsControllerTest extends ApiTestCase
 {
     private const string THREAD = 'https://www.reddit.com/r/PHP/comments/1woq4he/what_is_your_php_stack_2026/';
     private const string FEED = self::THREAD . '.rss';
@@ -41,27 +39,19 @@ final class EntryCommentsControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
-
+        $user = $this->factory()->create($email);
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
-    private function seedEntry(User $user, bool $withCommentsFeed): Entry
+    private function seedEntry(User $user, Discussion $discussion): Entry
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->em()->persist($feed);
+        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -72,13 +62,16 @@ final class EntryCommentsControllerTest extends WebTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $entry->setAuthor('/u/Background_Lie11');
-        if ($withCommentsFeed) {
-            $entry->setDiscussion(Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto));
-        }
-        $em->persist($entry);
-        $em->flush();
+        $entry->setDiscussion($discussion);
+        $this->em()->persist($entry);
+        $this->em()->flush();
 
         return $entry;
+    }
+
+    private static function redditThread(): Discussion
+    {
+        return Discussion::withCommentsFeed(self::THREAD, self::FEED, CommentsLoad::Auto);
     }
 
     private function installFetcher(): StubFeedFetcher
@@ -96,15 +89,14 @@ final class EntryCommentsControllerTest extends WebTestCase
         $fetcher = $this->installFetcher();
         $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
         $fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
-        $entry = $this->seedEntry($user, true);
+        $entry = $this->seedEntry($user, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
+        $body = $this->payload($client);
+        self::assertSame(['status', 'comments'], array_keys($body));
         self::assertSame('ok', $body['status']);
-        self::assertSame(self::THREAD, $body['discussionUrl']);
         self::assertIsArray($body['comments']);
         self::assertNotSame([], $body['comments']);
         $firstComment = $body['comments'][0];
@@ -113,6 +105,7 @@ final class EntryCommentsControllerTest extends WebTestCase
             ['author', 'authorUrl', 'url', 'publishedAt', 'html', 'byEntryAuthor'],
             array_keys($firstComment),
         );
+        self::assertIsString($firstComment['publishedAt']);
     }
 
     public function testThrottledCarriesRetryAfter(): void
@@ -121,15 +114,26 @@ final class EntryCommentsControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('comments-throttled@example.com');
         $fetcher = $this->installFetcher();
         $fetcher->willThrow(self::FEED, new FeedThrottledException('429', 90));
-        $entry = $this->seedEntry($user, true);
+        $entry = $this->seedEntry($user, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
         self::assertResponseIsSuccessful();
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertSame('throttled', $body['status']);
-        self::assertSame(90, $body['retryAfter']);
+        self::assertSame(['status' => 'throttled', 'retryAfter' => 90], $this->payload($client));
+    }
+
+    public function testAFetchFailureIsFailed(): void
+    {
+        $client = self::createClient();
+        [$headers, $user] = $this->auth('comments-failed@example.com');
+        $fetcher = $this->installFetcher();
+        $fetcher->willThrow(self::FEED, new FeedUnreachableException('HTTP 500', statusCode: 500));
+        $entry = $this->seedEntry($user, self::redditThread());
+
+        $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(['status' => 'failed'], $this->payload($client));
     }
 
     public function testEntryWithoutCommentsFeedIs404(): void
@@ -137,12 +141,11 @@ final class EntryCommentsControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('comments-nofeed@example.com');
         $this->installFetcher();
-        $entry = $this->seedEntry($user, false);
+        $entry = $this->seedEntry($user, Discussion::of(self::THREAD, null, CommentsLoad::Auto));
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
-        self::assertResponseStatusCodeSame(404);
-        self::assertSame('application/problem+json', $client->getResponse()->headers->get('Content-Type'));
+        $this->assertRejected($client, 404);
     }
 
     public function testSomeoneElsesEntryIs404(): void
@@ -151,11 +154,11 @@ final class EntryCommentsControllerTest extends WebTestCase
         [$headers] = $this->auth('comments-idor@example.com');
         [, $stranger] = $this->auth('comments-owner@example.com');
         $this->installFetcher();
-        $entry = $this->seedEntry($stranger, true);
+        $entry = $this->seedEntry($stranger, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);
 
-        self::assertResponseStatusCodeSame(404);
+        $this->assertRejected($client, 404);
     }
 
     public function testUnauthenticatedIs401(): void

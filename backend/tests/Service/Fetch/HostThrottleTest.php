@@ -11,97 +11,108 @@ use Symfony\Component\Clock\MockClock;
 
 final class HostThrottleTest extends TestCase
 {
+    private const string REDDIT = 'https://www.reddit.com/';
+
+    private MockClock $clock;
+    private ArrayAdapter $cache;
+    private HostThrottle $throttle;
+
+    protected function setUp(): void
+    {
+        $this->clock = new MockClock('2026-09-24 12:00:00');
+        $this->cache = new ArrayAdapter(clock: $this->clock);
+        $this->throttle = new HostThrottle($this->cache, $this->clock);
+    }
+
     public function testAFreshHostIsFree(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
-
-        self::assertSame(0, $throttle->remainingSeconds('https://www.reddit.com/r/PHP/.rss'));
+        self::assertSame(0, $this->throttle->remainingSeconds('https://www.reddit.com/r/PHP/.rss'));
     }
 
     public function testARecordedWaitCountsDownAcrossTheWholeHost(): void
     {
-        $clock = new MockClock('2026-09-24 12:00:00');
-        $throttle = new HostThrottle(new ArrayAdapter(), $clock);
+        $this->throttle->record('https://www.reddit.com/r/PHP/.rss', 60);
+        $this->clock->sleep(15);
 
-        $throttle->record('https://www.reddit.com/r/PHP/.rss', 60);
-        $clock->sleep(15);
-
-        self::assertSame(45, $throttle->remainingSeconds('https://reddit.com/r/PHP/comments/1/x/.rss'));
+        self::assertSame(45, $this->throttle->remainingSeconds('https://reddit.com/r/PHP/comments/1/x/.rss'));
     }
 
     public function testTheWaitExpires(): void
     {
-        $clock = new MockClock('2026-09-24 12:00:00');
-        $throttle = new HostThrottle(new ArrayAdapter(), $clock);
+        $this->throttle->record(self::REDDIT, 60);
+        $this->clock->sleep(61);
 
-        $throttle->record('https://www.reddit.com/', 60);
-        $clock->sleep(61);
+        self::assertSame(0, $this->throttle->remainingSeconds(self::REDDIT));
+    }
 
-        self::assertSame(0, $throttle->remainingSeconds('https://www.reddit.com/'));
+    public function testAnEntryTheCacheHasNotYetEvictedReadsAsFree(): void
+    {
+        $lateCache = new ArrayAdapter(clock: new MockClock('2026-09-24 12:00:00'));
+        $throttle = new HostThrottle($lateCache, $this->clock);
+
+        $throttle->record(self::REDDIT, 60);
+        $this->clock->sleep(61);
+
+        self::assertSame(0, $throttle->remainingSeconds(self::REDDIT));
     }
 
     public function testOtherHostsAreUnaffected(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+        $this->throttle->record(self::REDDIT, 60);
 
-        $throttle->record('https://www.reddit.com/', 60);
-
-        self::assertSame(0, $throttle->remainingSeconds('https://example.com/feed'));
+        self::assertSame(0, $this->throttle->remainingSeconds('https://example.com/feed'));
     }
 
     public function testAZeroWaitIsClampedToTheFloorSoNothingIsForgotten(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
-
-        $recorded = $throttle->record('https://www.reddit.com/', 0);
+        $recorded = $this->throttle->record(self::REDDIT, 0);
 
         self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $recorded);
-        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $throttle->remainingSeconds('https://www.reddit.com/'));
+        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $this->throttle->remainingSeconds(self::REDDIT));
+    }
+
+    public function testAnUnnamedWaitIsTheFloor(): void
+    {
+        $recorded = $this->throttle->record(self::REDDIT, null);
+
+        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $recorded);
+        self::assertSame(HostThrottle::MINIMUM_WAIT_SECONDS, $this->throttle->remainingSeconds(self::REDDIT));
     }
 
     public function testAHugeWaitIsClampedToTheCeiling(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
-
-        $recorded = $throttle->record('https://www.reddit.com/', 99_999_999);
+        $recorded = $this->throttle->record(self::REDDIT, 99_999_999);
 
         self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $recorded);
-        self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $throttle->remainingSeconds('https://www.reddit.com/'));
+        self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $this->throttle->remainingSeconds(self::REDDIT));
     }
 
     public function testAShorterWaitNeverCutsALongerOneShort(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
-
-        $throttle->record('https://www.reddit.com/', 600);
-        $recorded = $throttle->record('https://www.reddit.com/r/PHP/.rss', 60);
+        $this->throttle->record(self::REDDIT, 600);
+        $recorded = $this->throttle->record('https://www.reddit.com/r/PHP/.rss', 60);
 
         self::assertSame(600, $recorded);
-        self::assertSame(600, $throttle->remainingSeconds('https://www.reddit.com/'));
+        self::assertSame(600, $this->throttle->remainingSeconds(self::REDDIT));
     }
 
     public function testALongerWaitExtendsAShorterOne(): void
     {
-        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
-
-        $throttle->record('https://www.reddit.com/', 60);
-        $recorded = $throttle->record('https://www.reddit.com/', 600);
+        $this->throttle->record(self::REDDIT, 60);
+        $recorded = $this->throttle->record(self::REDDIT, 600);
 
         self::assertSame(600, $recorded);
-        self::assertSame(600, $throttle->remainingSeconds('https://www.reddit.com/'));
+        self::assertSame(600, $this->throttle->remainingSeconds(self::REDDIT));
     }
 
     public function testTheCacheEntryExpiresWithTheWait(): void
     {
-        // CacheItem::expiresAfter() reads the real time, so the mock clock must start there.
-        $clock = new MockClock();
-        $cache = new ArrayAdapter(clock: $clock);
-        (new HostThrottle($cache, $clock))->record('https://www.reddit.com/', 60);
-        $key = (string) array_key_first($cache->getValues());
+        $this->throttle->record(self::REDDIT, 60);
+        $key = (string) array_key_first($this->cache->getValues());
 
-        $clock->sleep(59);
-        self::assertTrue($cache->hasItem($key));
-        $clock->sleep(2);
-        self::assertFalse($cache->hasItem($key));
+        $this->clock->sleep(59);
+        self::assertTrue($this->cache->hasItem($key));
+        $this->clock->sleep(2);
+        self::assertFalse($this->cache->hasItem($key));
     }
 }

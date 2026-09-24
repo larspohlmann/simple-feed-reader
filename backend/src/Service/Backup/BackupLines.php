@@ -129,15 +129,17 @@ final readonly class BackupLines
 
     public function entryLine(Entry $entry, string $feedUrl): string
     {
+        $discussion = $entry->getDiscussion();
+
         return $this->encode([
             'kind' => BackupSchema::KIND_ENTRY,
             'feedUrl' => $feedUrl,
             'guid' => $entry->getGuid(),
             'guidHash' => $entry->getGuidHash(),
             'url' => $entry->getUrl(),
-            'discussionUrl' => $entry->getDiscussion()->url,
-            'commentsFeedUrl' => $entry->getDiscussion()->commentsFeedUrl,
-            'commentsLoad' => $entry->getDiscussion()->commentsLoad?->value,
+            'discussionUrl' => $discussion->url,
+            'commentsFeedUrl' => $discussion->commentsFeedUrl,
+            'commentsLoad' => $discussion->commentsLoad?->value,
             'title' => $entry->getTitle(),
             'author' => $entry->getAuthor(),
             'summary' => $entry->getSummary(),
