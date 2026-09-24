@@ -23,4 +23,15 @@ final class AddUserIdClaimOnTokenIssueTest extends DbTestCase
 
         self::assertSame($second->getId(), $claims['userId'] ?? null);
     }
+
+    public function testATokenForAnUnsavedAccountIsRefused(): void
+    {
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+        self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('A signed-in user must have an id.');
+
+        $tokens->create(new User('unsaved@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+    }
 }
