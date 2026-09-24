@@ -21,6 +21,7 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Platform\PlatformEntryRules;
@@ -51,6 +52,7 @@ use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Store\InMemoryStore;
@@ -118,7 +120,7 @@ final class RefreshRunnerTest extends DbTestCase
                 new PlatformEntryRules([]),
             ),
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
-            new FeedScheduler($this->clock),
+            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(), $this->clock)),
             new EntryPruner($this->em, $this->clock, $this->indexer()),
             new OrphanedFeedReclaimer($this->em),
             $this->indexer(),

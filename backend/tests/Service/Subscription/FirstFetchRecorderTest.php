@@ -11,6 +11,7 @@ use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\FeedScheduler;
+use App\Service\Fetch\HostThrottle;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Platform\PlatformEntryRules;
@@ -23,6 +24,7 @@ use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Psr\Log\NullLogger;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class FirstFetchRecorderTest extends DbTestCase
@@ -50,7 +52,7 @@ final class FirstFetchRecorderTest extends DbTestCase
                 new NaiveUtcClock($clock),
                 new PlatformEntryRules([]),
             ),
-            new FeedScheduler($clock),
+            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(), $clock)),
             $this->em,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),

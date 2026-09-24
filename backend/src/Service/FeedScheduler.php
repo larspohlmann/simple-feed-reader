@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
+use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -27,8 +28,10 @@ final class FeedScheduler
     private const int THROTTLE_CEILING_SECONDS = 86400;
     private const int SECONDS_PER_MINUTE = 60;
 
-    public function __construct(private readonly ClockInterface $clock)
-    {
+    public function __construct(
+        private readonly ClockInterface $clock,
+        private readonly HostThrottle $hostThrottle,
+    ) {
     }
 
     /**
@@ -89,6 +92,7 @@ final class FeedScheduler
         );
 
         $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
+        $this->hostThrottle->record($feed->getUrl(), $wait);
     }
 
     /**

@@ -6,20 +6,24 @@ namespace App\Tests\Service;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
+use App\Service\Fetch\HostThrottle;
 use App\Service\FeedScheduler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class FeedSchedulerTest extends TestCase
 {
     private MockClock $clock;
+    private HostThrottle $hostThrottle;
     private FeedScheduler $scheduler;
 
     protected function setUp(): void
     {
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
-        $this->scheduler = new FeedScheduler($this->clock);
+        $this->hostThrottle = new HostThrottle(new ArrayAdapter(), $this->clock);
+        $this->scheduler = new FeedScheduler($this->clock, $this->hostThrottle);
     }
 
     public function testSuccessWithNewEntriesResetsIntervalToFloor(): void
@@ -113,6 +117,16 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
 
         self::assertSame($expectedNextFetch, $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testThrottlingRecordsAHostThrottleForTheWholeHost(): void
+    {
+        $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
+        $feed->setFetchIntervalMinutes(60);
+
+        $this->scheduler->recordThrottled($feed, 90);
+
+        self::assertSame(90, $this->hostThrottle->remainingSeconds('https://www.reddit.com/r/x/comments/1/.rss'));
     }
 
     public function testQuietSuccessGrowsIntervalUpToCeiling(): void
