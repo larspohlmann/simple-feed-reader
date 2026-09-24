@@ -11,16 +11,7 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The claim asserted through the REAL password-login path, never by calling
- * the listener directly — same rule LastLoginStampTest holds its sibling
- * listener to. AddUserIdClaimOnTokenIssueTest already proves the dispatcher
- * reaches the listener; this proves the wired-up json_login handler actually
- * carries the claim into the token a client receives. The OAuth and passkey
- * paths are covered where their own flows already run end to end:
- * OAuthFlowTest::testTheHappyPathTakesAnActiveUserFromRedirectToJwt and
- * PasskeyLoginTest::testTheTokenClaimsMatchPasswordLoginForTheSameUser.
- */
+/** The claim asserted through the REAL password-login path, not by calling the listener directly. */
 final class UserIdClaimTest extends WebTestCase
 {
     private KernelBrowser $client;

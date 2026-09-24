@@ -274,22 +274,12 @@ test.describe('list scroll position with the unread filter on', () => {
     return page.getByRole('switch', { name: 'only unread' });
   }
 
-  /** The filter is per-account storage now, so a test turns it on through the
-   *  UI after signing in rather than seeding a device-wide key. */
+  /** Turns the filter on through the UI after signing in. */
   async function turnUnreadOn(page: Page): Promise<void> {
     await showsRowsOf(page, ALL_LIST);
     await unreadSwitch(page).click();
     await expect(unreadSwitch(page)).toHaveAttribute('aria-checked', 'true');
   }
-
-  // The admin account persists this value across runs (#1143), so leave the
-  // switch as this describe block found it: off.
-  test.afterEach(async ({ page }) => {
-    if (!(await unreadSwitch(page).isVisible())) return;
-    if ((await unreadSwitch(page).getAttribute('aria-checked')) === 'true') {
-      await unreadSwitch(page).click();
-    }
-  });
 
   test('a clicked list starts at the top', async ({ page }) => {
     const signedIn = await signInAsAdmin(page);

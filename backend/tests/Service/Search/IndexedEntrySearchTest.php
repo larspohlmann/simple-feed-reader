@@ -296,9 +296,6 @@ final class IndexedEntrySearchTest extends DbTestCase
     public function testAnOldestFirstPageIsHydratedOldestFirstAndResumesAfterItsNewestRow(): void
     {
         $newer = $this->entry('newer', '2026-07-12T00:00:00Z');
-        // Two entries share the older effectiveDate, so this also pins the
-        // id-ascending tiebreak: $olderLowerId is persisted first and so
-        // receives the smaller id, and must come out ahead of $olderHigherId.
         $olderLowerId = $this->entry('older-lower-id', '2026-07-10T00:00:00Z');
         $olderHigherId = $this->entry('older-higher-id', '2026-07-10T00:00:00Z');
         $reader = new FakeSearchIndexReader(entryIds: [
