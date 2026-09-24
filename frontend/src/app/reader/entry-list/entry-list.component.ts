@@ -45,15 +45,17 @@ import { MagazineBlock } from '../magazine/magazine-block';
 import { planMagazine } from '../magazine/magazine-planner';
 import { ScrollOutsideZoneDirective } from '../scroll-outside-zone.directive';
 import { ReadingLayout } from '../reading-layout.service';
-import { EntryDto, SubscriptionTagDto, TagDto } from '../models';
+import { EntryDto, ListOrder, SubscriptionTagDto, TagDto } from '../models';
 import {
   Selection,
   canScopedRefresh,
+  hasListOrder,
   hasUnreadFilter,
   isDirectSearch,
   isSingleStreamView,
   isWholeWordTerm,
   isPhraseTerm,
+  listOrderOf,
   sameSelection,
   searchWords,
   visibleSearchTerm,
@@ -233,6 +235,7 @@ export class EntryListComponent implements OnDestroy {
   readonly dismiss = output<void>();
   readonly markAllRead = output<void>();
   readonly unreadOnlyChange = output<boolean>();
+  readonly orderChange = output<ListOrder>();
   /** The above-fold ids captured at click — a snapshot, so scrolling or a
    *  background refresh while the confirm dialog is open cannot change the set. */
   readonly markAboveRead = output<number[]>();
@@ -249,6 +252,11 @@ export class EntryListComponent implements OnDestroy {
    *  the selection vocabulary's, not this header's — the shell asks the same
    *  question when it builds the list query. */
   readonly hasUnreadFilter = computed(() => hasUnreadFilter(this.selection()));
+
+  /** Whether this list offers the newest/oldest-first toggle, and which way it
+   *  currently points. The vocabulary owns both questions; this header only asks. */
+  readonly hasListOrder = computed(() => hasListOrder(this.selection()));
+  readonly oldestFirst = computed(() => listOrderOf(this.selection()) === 'oldest');
 
   /** A direct (unsaved) search is the one selection that keeps its short header
    *  labels and list layout; every other list, saved-search results included,

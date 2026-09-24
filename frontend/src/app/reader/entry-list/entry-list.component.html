@@ -127,6 +127,25 @@
     @if (headerActions(); as actions) {
       <ng-container [ngTemplateOutlet]="actions" />
     }
+    @if (hasListOrder()) {
+      <button
+        appListAction
+        class="list-order"
+        type="button"
+        [attr.aria-label]="
+          (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco
+        "
+        [attr.title]="
+          (oldestFirst() ? 'reader.sortedOldestFirst' : 'reader.sortedNewestFirst') | transloco
+        "
+        (click)="orderChange.emit(oldestFirst() ? 'newest' : 'oldest')"
+      >
+        <app-icon [name]="oldestFirst() ? 'arrow_upward' : 'arrow_downward'" size="sm" />
+        <span class="txt">{{
+          (oldestFirst() ? 'reader.oldestFirst' : 'reader.newestFirst') | transloco
+        }}</span>
+      </button>
+    }
     @if (hasUnreadFilter()) {
       <!-- One switch, not a two-option toggle: filled circle means unread-only,
            hollow means all, matching the "filled means unread" row convention (#602). -->

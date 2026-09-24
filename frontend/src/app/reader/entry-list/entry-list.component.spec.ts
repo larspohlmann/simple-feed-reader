@@ -8,7 +8,7 @@ import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
-import { EntryDto } from '../models';
+import { EntryDto, ListOrder } from '../models';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
@@ -1014,6 +1014,54 @@ describe('EntryListComponent', () => {
 
         expect(asked).toEqual([!unread]);
       }
+    });
+  });
+
+  describe('list order toggle', () => {
+    const toggle = (f: ComponentFixture<EntryListComponent>) =>
+      f.nativeElement.querySelector('.list-order') as HTMLButtonElement;
+
+    it('shows newest first and asks for oldest first', () => {
+      const f = mount({ selection: { kind: 'tag', id: 3, unread: false } });
+      const asked: ListOrder[] = [];
+      f.componentInstance.orderChange.subscribe((order) => asked.push(order));
+
+      expect(toggle(f).querySelector('.txt')?.textContent?.trim()).toBe('Newest first');
+      expect(toggle(f).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_downward');
+      toggle(f).click();
+
+      expect(asked).toEqual(['oldest']);
+    });
+
+    it('shows oldest first and asks for newest first', () => {
+      const f = mount({ selection: { kind: 'tag', id: 3, unread: false, order: 'oldest' } });
+      const asked: ListOrder[] = [];
+      f.componentInstance.orderChange.subscribe((order) => asked.push(order));
+
+      expect(toggle(f).querySelector('.txt')?.textContent?.trim()).toBe('Oldest first');
+      expect(toggle(f).querySelector('app-icon')?.textContent?.trim()).toBe('arrow_upward');
+      expect(toggle(f).getAttribute('aria-label')).toBe('Oldest first, switch to newest first');
+      toggle(f).click();
+
+      expect(asked).toEqual(['newest']);
+    });
+
+    it('offers the toggle on every list but for you', () => {
+      const kinds = ['all', 'tag', 'subscription', 'favorites', 'kept', 'viewed'] as const;
+      for (const kind of [...kinds, 'saved-searches', 'saved-search', 'search'] as const) {
+        const f = mount({
+          selection: { kind, id: 1, unread: false, term: 'x' },
+          canMarkAllRead: false,
+        });
+        expect(toggle(f)).not.toBeNull();
+      }
+      const forYou = mount({ selection: { kind: 'for-you', id: null, unread: false } });
+      expect(toggle(forYou)).toBeNull();
+    });
+
+    it('sits directly before the unread switch', () => {
+      const f = mount({ selection: { kind: 'all', id: null, unread: false } });
+      expect(toggle(f).nextElementSibling?.classList.contains('unread-switch')).toBe(true);
     });
   });
 
