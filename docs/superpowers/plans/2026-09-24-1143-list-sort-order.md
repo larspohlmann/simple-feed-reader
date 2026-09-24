@@ -1505,13 +1505,11 @@ git commit -m "feat(#1143): keep per-account device values under the account id"
   read. `list-scroll-reset.spec.ts`'s `beforeEach` seeded unread mode with
   `localStorage.setItem('sfr.unread-only', '1')` in an init script; that is replaced
   with turning unread mode on through the UI switch after sign-in (the spec already
-  has an `unreadSwitch(page)` helper), and the switch is turned back off in a
-  `test.afterEach`, since the per-user value now persists for the admin account
-  across runs.
+  has an `unreadSwitch(page)` helper). No cleanup after: `playwright.config.ts` sets
+  no `storageState`, so every test gets a fresh context with empty `localStorage` and
+  nothing persists between runs (final review, #1143).
 - Modify: `frontend/e2e/saved-searches-combined.spec.ts`. `signInAsAdmin` removed
-  the legacy key; that removal is now dead and is replaced with an init script that
-  removes any `sfr.user.*.unread-only` keys, so the spec still starts at "All"
-  regardless of what an earlier run left behind.
+  the legacy key; that removal is now dead and is simply dropped, for the same reason.
 
 **Interfaces:**
 - Consumes: `UserDeviceStorage`.
