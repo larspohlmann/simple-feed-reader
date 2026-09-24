@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser;
 
+use App\Enum\CommentsLoad;
+use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\Rss2Parser;
 use PHPUnit\Framework\TestCase;
 
@@ -15,6 +17,20 @@ final class Rss2ParserTest extends TestCase
         $document->loadXML($xml);
 
         return $document;
+    }
+
+    private function parseSingleItem(string $itemXml): ParsedEntry
+    {
+        /** @noinspection XmlUnusedNamespaceDeclaration */
+        $document = $this->document(<<<XML
+            <rss version="2.0"
+                 xmlns:wfw="http://wellformedweb.org/CommentAPI/"
+                 xmlns:slash="http://purl.org/rss/1.0/modules/slash/">
+              <channel><title>Blog</title>{$itemXml}</channel>
+            </rss>
+            XML);
+
+        return (new Rss2Parser())->parse($document)->entries[0];
     }
 
     public function testCarriesPodcastEnclosureIntoAttachments(): void
@@ -304,5 +320,49 @@ final class Rss2ParserTest extends TestCase
             XML;
 
         self::assertNull((new Rss2Parser())->parse($this->document($xml))->imageUrl);
+    }
+
+    public function testWordPressCommentFeedIsAManualCommentsFeed(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Post</title>
+              <link>https://blog.example/post/</link>
+              <comments>https://blog.example/post/#comments</comments>
+              <wfw:commentRss>https://blog.example/post/feed/</wfw:commentRss>
+              <slash:comments>3</slash:comments>
+            </item>
+            XML);
+
+        self::assertSame('https://blog.example/post/#comments', $entry->discussion->url);
+        self::assertSame('https://blog.example/post/feed/', $entry->discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $entry->discussion->commentsLoad);
+    }
+
+    public function testCommentsPageWithoutFeedIsADiscussionPageOnly(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Show HN</title>
+              <link>https://project.example/</link>
+              <comments>https://news.ycombinator.com/item?id=1</comments>
+            </item>
+            XML);
+
+        self::assertSame('https://news.ycombinator.com/item?id=1', $entry->discussion->url);
+        self::assertFalse($entry->discussion->hasCommentsFeed());
+    }
+
+    public function testSlashCommentsCountIsNeverTakenForAUrl(): void
+    {
+        $entry = $this->parseSingleItem(<<<'XML'
+            <item>
+              <title>Post</title>
+              <link>https://blog.example/post/</link>
+              <slash:comments>0</slash:comments>
+            </item>
+            XML);
+
+        self::assertNull($entry->discussion->url);
     }
 }

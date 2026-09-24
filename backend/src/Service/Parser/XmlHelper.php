@@ -53,6 +53,19 @@ final class XmlHelper
         return null;
     }
 
+    /** The first matching direct child whose text is an absolute http(s) URL. */
+    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            $text = trim($child->textContent);
+            if (preg_match('#^https?://#i', $text) === 1) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * Every direct child element with this local name. A null $namespaceUri
      * matches any namespace — the one place that rule is written down.

@@ -107,7 +107,16 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
             media: new ParsedEntryMedia($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
+            discussion: AtomDiscussion::from($entry, $ns),
+            authorUrl: $this->authorUri($entry, $ns),
         );
+    }
+
+    private function authorUri(\DOMElement $entry, string $ns): ?string
+    {
+        $author = XmlHelper::childElement($entry, 'author', $ns);
+
+        return $author === null ? null : self::httpUrlOrNull(XmlHelper::childText($author, 'uri', $ns));
     }
 
     /** The first present entry date, in this dialect's preference order. */

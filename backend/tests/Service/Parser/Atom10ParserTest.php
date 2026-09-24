@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser;
 
+use App\Enum\CommentsLoad;
 use App\Service\Parser\Atom10Parser;
+use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use PHPUnit\Framework\TestCase;
 
@@ -16,6 +18,18 @@ final class Atom10ParserTest extends TestCase
         $document->loadXML($xml);
 
         return (new Atom10Parser())->parse($document);
+    }
+
+    private function parseSingleEntry(string $entryXml): ParsedEntry
+    {
+        $feed = $this->parse(<<<XML
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>F</title>
+              {$entryXml}
+            </feed>
+            XML);
+
+        return $feed->entries[0];
     }
 
     public function testEntryImageComesFromMediaThumbnailEnclosureOrInlineImg(): void
@@ -345,5 +359,47 @@ final class Atom10ParserTest extends TestCase
             XML;
 
         self::assertSame('https://example.com/banner.png', $this->parse($xml)->imageUrl);
+    }
+
+    public function testRepliesLinkWithAFeedTypeIsAManualCommentsFeed(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link href="https://blog.example/post"/>
+              <link rel="replies" type="application/atom+xml" href="https://blog.example/post/comments.xml"/>
+              <link rel="replies" type="text/html" href="https://blog.example/post#comments"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://blog.example/post#comments', $entry->discussion->url);
+        self::assertSame('https://blog.example/post/comments.xml', $entry->discussion->commentsFeedUrl);
+        self::assertSame(CommentsLoad::Manual, $entry->discussion->commentsLoad);
+    }
+
+    public function testRepliesLinkWithoutATypeIsADiscussionPage(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <link href="https://blog.example/post"/>
+              <link rel="replies" href="https://forum.example/t/1"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://forum.example/t/1', $entry->discussion->url);
+        self::assertFalse($entry->discussion->hasCommentsFeed());
+    }
+
+    public function testAuthorUriIsCarried(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>Post</title><id>urn:1</id>
+              <author><name>/u/someone</name><uri>https://www.reddit.com/user/someone</uri></author>
+            </entry>
+            XML);
+
+        self::assertSame('https://www.reddit.com/user/someone', $entry->authorUrl);
     }
 }
