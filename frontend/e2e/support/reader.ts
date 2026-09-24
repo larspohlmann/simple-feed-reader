@@ -1,6 +1,6 @@
 // Shared reader-endpoint fixtures for the article e2e specs.
 import type { Page } from '@playwright/test';
-import type { SavedSearchWire } from '../../src/app/reader/models';
+import type { EntryDto, SavedSearchWire, SubscriptionDto } from '../../src/app/reader/models';
 import { stubAuthToken } from './auth';
 
 /** Reasons the backend reports when reader extraction produces no article. */
@@ -74,7 +74,37 @@ export async function stubOneFeedReader(
   await page.route('**/api/saved-searches**', json(savedSearchesJson(...savedSearches)));
 }
 
-function oneFeedJson(title: string) {
+/** One list entry, contract-true, with the fields a spec cares about overridable. */
+export function entryWire(overrides: Partial<EntryDto> & Pick<EntryDto, 'id'>): EntryDto {
+  return {
+    title: `Fixture entry ${overrides.id}`,
+    url: `https://fixtures.invalid/${overrides.id}`,
+    author: null,
+    summary: 'A fixture summary, long enough to give the row some height.',
+    excerpt: 'Fixture body.',
+    imageUrl: null,
+    imageWidth: null,
+    imageHeight: null,
+    media: [],
+    attachments: [],
+    categories: [],
+    publishedAt: '2026-08-01T12:50:34+00:00',
+    createdAt: '2026-08-01T12:50:34+00:00',
+    subscriptionId: 1,
+    source: 'Fixture feed',
+    faviconUrl: null,
+    isHidden: false,
+    isFavorite: false,
+    isKept: false,
+    isViewed: false,
+    discussionUrl: null,
+    comments: null,
+    ...overrides,
+  };
+}
+
+/** A `GET /api/subscriptions` body with one feed; `overrides` reshapes that feed. */
+export function oneFeedJson(title: string, overrides: Partial<SubscriptionDto> = {}) {
   return {
     subscriptions: [
       {
@@ -94,6 +124,7 @@ function oneFeedJson(title: string) {
         position: 0,
         tags: [],
         unreadCount: 1,
+        ...overrides,
       },
     ],
     favoritesCount: 0,

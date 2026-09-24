@@ -1,7 +1,6 @@
 import { expect, Page, Request, test } from '@playwright/test';
-
-const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? 'e2e-admin@example.com';
-const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD ?? 'e2e-admin-password-123';
+import { signInAsAdmin } from './support/auth';
+import { entryWire, oneFeedJson } from './support/reader';
 
 const TAG = { id: 7101, name: 'Order fixture', color: null, icon: null, position: 0 };
 const ENTRY_COUNT = 40;
@@ -9,55 +8,25 @@ const ENTRY_COUNT = 40;
 /** Entry n is published on day n, so ascending id is ascending date. */
 function entry(id: number) {
   const day = new Date(Date.UTC(2026, 6, 1) + id * 86_400_000).toISOString();
-  return {
+  return entryWire({
     id,
     title: `Order fixture entry ${id}`,
-    url: `https://fixtures.invalid/${id}`,
-    author: null,
-    summary: 'A fixture summary, long enough to give the row some height.',
-    excerpt: 'Fixture body.',
-    imageUrl: null,
-    imageWidth: null,
-    imageHeight: null,
     publishedAt: day,
     createdAt: day,
     subscriptionId: 7102,
     source: 'Order fixture feed',
-    faviconUrl: null,
-    isHidden: false,
-    isFavorite: false,
-    isKept: false,
-  };
+  });
 }
 
 const OLDEST_FIRST = Array.from({ length: ENTRY_COUNT }, (_, i) => entry(i + 1));
 const NEWEST_FIRST = [...OLDEST_FIRST].reverse();
 
-const SUBSCRIPTIONS = {
-  subscriptions: [
-    {
-      id: 7102,
-      feedId: 7103,
-      title: 'Order fixture feed',
-      faviconUrl: null,
-      imageUrl: null,
-      description: null,
-      customTitle: null,
-      feedUrl: 'https://fixtures.invalid/feed.xml',
-      siteUrl: null,
-      status: 'active',
-      sourceFormat: 'xml',
-      createdAt: '2026-08-01T10:00:00+00:00',
-      lastFetchedAt: '2026-08-01T10:00:00+00:00',
-      position: 0,
-      tags: [TAG],
-      unreadCount: ENTRY_COUNT,
-    },
-  ],
-  favoritesCount: 0,
-  keptCount: 0,
-  viewedCount: 0,
-};
+const SUBSCRIPTIONS = oneFeedJson('Order fixture feed', {
+  id: 7102,
+  feedId: 7103,
+  tags: [TAG],
+  unreadCount: ENTRY_COUNT,
+});
 
 interface Recorded {
   markedIds: number[][];
@@ -90,16 +59,6 @@ async function stubReaderData(page: Page): Promise<Recorded> {
     (route) => route.fulfill({ status: 200, json: { tags: [TAG] } }),
   );
   return recorded;
-}
-
-async function signInAsAdmin(page: Page): Promise<boolean> {
-  await page.goto('/login');
-  await page.locator('input[type=email]').fill(ADMIN_EMAIL);
-  await page.locator('input[type=password]').fill(ADMIN_PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  const sidebar = page.getByRole('navigation', { name: 'Feeds' });
-  await expect(sidebar.or(page.getByRole('alert'))).toBeVisible();
-  return sidebar.isVisible();
 }
 
 interface ListQuery {
