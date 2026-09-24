@@ -166,7 +166,6 @@ export interface EntryAttachmentDto {
 
 export type CommentsLoad = 'auto' | 'manual';
 
-/** One comment on an entry's discussion page, as GET .../comments returns it. */
 export interface EntryCommentDto {
   author: string | null;
   authorUrl: string | null;
@@ -176,8 +175,6 @@ export interface EntryCommentDto {
   byEntryAuthor: boolean;
 }
 
-/** GET /api/entries/{id}/comments: the discussion's comments, or why there
- *  are none right now — throttled by the source, or the fetch failed. */
 export type CommentsResponse =
   | { status: 'ok'; discussionUrl: string | null; comments: EntryCommentDto[] }
   | { status: 'throttled'; discussionUrl: string | null; retryAfter: number }

@@ -69,7 +69,6 @@ a.when:hover {
   line-height: var(--lh-tight);
 }
 
-/* The body is [innerHTML]-injected, so its rhythm needs ::ng-deep, scoped under .body. */
 .body {
   margin-top: var(--space-1);
   font-size: var(--fs-read);

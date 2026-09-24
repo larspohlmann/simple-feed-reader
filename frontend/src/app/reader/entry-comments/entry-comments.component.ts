@@ -25,8 +25,6 @@ type CommentsEntry = Pick<EntryDto, 'id' | 'comments' | 'discussionUrl'>;
 
 const LOOKAHEAD = '400px 0px';
 
-/** The entry's comments below the article. An auto source loads once the section
- *  nears the viewport, so an article skipped with j/k never spends a request. */
 @Component({
   selector: 'app-entry-comments',
   imports: [
