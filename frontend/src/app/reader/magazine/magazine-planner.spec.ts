@@ -458,6 +458,32 @@ describe('planMagazine', () => {
     expect(blocks.some((b) => b.kind === 'group')).toBe(true);
   });
 
+  it('judges the collapse gate from the first entry, so a newer page appended oldest first keeps it', () => {
+    const firstPage = [
+      ...many(12, (i) => big(i, { subscriptionId: (i % 3) + 2, publishedAt: at(100 - i) })),
+      ...many(8, (i) =>
+        big(100 + i, { subscriptionId: 1, source: 'Burst', publishedAt: at(88 - i) }),
+      ),
+      ...many(12, (i) => big(200 + i, { subscriptionId: (i % 3) + 2, publishedAt: at(80 - i) })),
+    ];
+    const newerPage = many(30, (i) =>
+      big(300 + i, { subscriptionId: 9, source: 'Late', publishedAt: at(30 - i) }),
+    );
+
+    const burstGroup = (blocks: MagazineBlock[]) =>
+      blocks.find((b) => b.kind === 'group' && b.entries.some((entry) => entry.source === 'Burst'));
+
+    const before = planMagazine({ entries: firstPage, grouping: true, complete: true });
+    const after = planMagazine({
+      entries: [...firstPage, ...newerPage],
+      grouping: true,
+      complete: true,
+    });
+
+    expect(burstGroup(before)).toBeDefined();
+    expect(burstGroup(after)).toBeDefined();
+  });
+
   it('keeps the dek for an image-less entry with a summary — never a bare compact (image family)', () => {
     // A dev/link blog: a quarter of posts carry a large image (which holds the
     // IMAGE family), the rest are image-less but have a summary. The image-less
