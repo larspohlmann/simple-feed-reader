@@ -20,6 +20,7 @@ import { By, Title } from '@angular/platform-browser';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { Provider, WritableSignal, signal } from '@angular/core';
 import { API_BASE_URL } from '../core/api';
+import { AccountIdentity } from '../core/account-identity';
 import { AuthService } from '../core/auth.service';
 import { LanguageService } from '../core/language.service';
 import { TokenStore } from '../core/token.store';
@@ -2530,6 +2531,68 @@ describe('ReaderShellComponent', () => {
       events.next(new NavigationStart(2, '/', 'imperative'));
 
       expect(memory.read(allItems)).toBe(0);
+    });
+  });
+
+  describe('loading state while the account gate is closed (#1143 final review)', () => {
+    // A fresh testing module, not `overrideProvider` -- the outer `beforeEach`
+    // already injected `HttpTestingController`, which Angular refuses to override
+    // past. Mirrors "drawer breakpoint driven by class" further down.
+    function configureUnsettled(): void {
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [ReaderShellComponent, provideTranslocoTesting()],
+        providers: [
+          provideHttpClient(),
+          provideHttpClientTesting(),
+          provideRouter([]),
+          { provide: API_BASE_URL, useValue: 'https://api.test' },
+          {
+            provide: ActivatedRoute,
+            useValue: { queryParamMap: qp.asObservable(), paramMap: pp.asObservable() },
+          },
+          { provide: AuthService, useValue: { ...auth, user: signal(undefined) } },
+          { provide: AccountIdentity, useValue: { userId: signal(null), settled: signal(false) } },
+          { provide: LayoutService, useValue: screen },
+          { provide: EntryBodyService, useValue: bodyStore },
+          {
+            provide: SetupService,
+            useValue: { ensureLoaded: () => of(true), passkeySignInAvailable: signal(true) },
+          },
+        ],
+      });
+      ctrl = TestBed.inject(HttpTestingController);
+    }
+
+    it('renders the skeleton, not the empty state, with a claimless token and no account yet', () => {
+      configureUnsettled();
+      const f = TestBed.createComponent(ReaderShellComponent);
+      f.detectChanges();
+      ctrl.expectOne('https://api.test/api/tags').flush({ tags: [] });
+      ctrl.expectOne('https://api.test/api/saved-searches').flush({ savedSearches: [] });
+      ctrl.expectOne('https://api.test/api/recommendations/runs/current').flush({
+        status: 'none',
+        batchesTotal: null,
+        batchesDone: 0,
+        error: null,
+        background: false,
+        streamedChars: 0,
+        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+      });
+      ctrl.expectOne('https://api.test/api/version').flush({
+        version: 'dev',
+        commit: 'local',
+        builtAt: '',
+        latest: null,
+        updateAvailable: false,
+      });
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/subscriptions');
+      ctrl.expectNone((r) => r.url === 'https://api.test/api/entries');
+      f.detectChanges();
+
+      const root = f.nativeElement as HTMLElement;
+      expect(root.querySelector('.skeleton')).toBeTruthy();
+      expect(root.querySelector('.empty')).toBeFalsy();
     });
   });
 
