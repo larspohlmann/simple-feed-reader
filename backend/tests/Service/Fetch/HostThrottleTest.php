@@ -68,4 +68,26 @@ final class HostThrottleTest extends TestCase
         self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $recorded);
         self::assertSame(HostThrottle::MAXIMUM_WAIT_SECONDS, $throttle->remainingSeconds('https://www.reddit.com/'));
     }
+
+    public function testAShorterWaitNeverCutsALongerOneShort(): void
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+
+        $throttle->record('https://www.reddit.com/', 600);
+        $recorded = $throttle->record('https://www.reddit.com/r/PHP/.rss', 60);
+
+        self::assertSame(600, $recorded);
+        self::assertSame(600, $throttle->remainingSeconds('https://www.reddit.com/'));
+    }
+
+    public function testALongerWaitExtendsAShorterOne(): void
+    {
+        $throttle = new HostThrottle(new ArrayAdapter(), new MockClock('2026-09-24 12:00:00'));
+
+        $throttle->record('https://www.reddit.com/', 60);
+        $recorded = $throttle->record('https://www.reddit.com/', 600);
+
+        self::assertSame(600, $recorded);
+        self::assertSame(600, $throttle->remainingSeconds('https://www.reddit.com/'));
+    }
 }

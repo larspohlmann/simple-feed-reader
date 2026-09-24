@@ -76,17 +76,19 @@ final class FeedScheduler
      */
     public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
     {
-        // A site that named no delay is asked again no sooner than it would
-        // have been anyway. Polling a host that just said "less" every quarter
-        // hour, when its own cadence had grown to daily, is asking for more.
-        // HostThrottle::record() clamps the requested wait to its own bounds
-        // and hands back what it actually recorded.
-        $wait = $this->hostThrottle->record(
+        $hostWait = $this->hostThrottle->record(
             $feed->getUrl(),
-            $retryAfterSeconds ?? $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE,
+            $retryAfterSeconds ?? HostThrottle::MINIMUM_WAIT_SECONDS,
         );
+        // Reddit resets in seconds, so only this feed, not the whole host, waits out its own cadence.
+        $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
 
         $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
+    }
+
+    private function cadenceSeconds(Feed $feed): int
+    {
+        return min(HostThrottle::MAXIMUM_WAIT_SECONDS, $feed->getFetchIntervalMinutes() * self::SECONDS_PER_MINUTE);
     }
 
     /**

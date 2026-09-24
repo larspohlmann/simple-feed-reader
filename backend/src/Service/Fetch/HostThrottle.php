@@ -21,22 +21,19 @@ final readonly class HostThrottle
     ) {
     }
 
-    /**
-     * Clamps the requested wait to [{@see self::MINIMUM_WAIT_SECONDS},
-     * {@see self::MAXIMUM_WAIT_SECONDS}] and returns the wait actually
-     * recorded, so a site naming 0 still rations and one naming years does
-     * not strand the host indefinitely.
-     */
+    /** Returns the wait now in force: a shorter request never cuts a longer recorded one short. */
     public function record(string $url, int $seconds): int
     {
-        $wait = max(self::MINIMUM_WAIT_SECONDS, min(self::MAXIMUM_WAIT_SECONDS, $seconds));
-
+        $now = $this->clock->now()->getTimestamp();
         $item = $this->cache->getItem(self::key($url));
-        $item->set($this->clock->now()->getTimestamp() + $wait);
-        $item->expiresAfter($wait);
+        $recordedUntil = $item->get();
+        $until = max(\is_int($recordedUntil) ? $recordedUntil : 0, $now + self::clamped($seconds));
+
+        $item->set($until);
+        $item->expiresAfter($until - $now);
         $this->cache->save($item);
 
-        return $wait;
+        return $until - $now;
     }
 
     public function remainingSeconds(string $url): int
@@ -44,6 +41,11 @@ final readonly class HostThrottle
         $until = $this->cache->getItem(self::key($url))->get();
 
         return \is_int($until) ? max(0, $until - $this->clock->now()->getTimestamp()) : 0;
+    }
+
+    private static function clamped(int $seconds): int
+    {
+        return max(self::MINIMUM_WAIT_SECONDS, min(self::MAXIMUM_WAIT_SECONDS, $seconds));
     }
 
     private static function key(string $url): string
