@@ -386,7 +386,7 @@ export class ReaderViewComponent {
       this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
       // A self post (e.g. Reddit) has no article to extract — show the feed
       // body only, with no reader/original toggle.
-      if (e.url === null) {
+      if (!e.url) {
         this.loadSub?.unsubscribe();
         this.state.set({ status: 'feed-only' });
         this.readerMode.setOriginalOnly();

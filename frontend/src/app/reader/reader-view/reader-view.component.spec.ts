@@ -939,6 +939,13 @@ describe('ReaderViewComponent', () => {
       expect(el.querySelector('.reader-fallback')).toBeNull();
       expect(el.querySelector('.mode')).toBeNull();
     });
+
+    it('treats an empty article URL as no article URL', () => {
+      const el = mount(entry({ url: '' })).nativeElement as HTMLElement;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(el.querySelector('.mode')).toBeNull();
+    });
   });
 
   describe('discussion link (#1140)', () => {
