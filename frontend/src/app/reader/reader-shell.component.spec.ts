@@ -1490,6 +1490,9 @@ describe('ReaderShellComponent', () => {
       .expectOne((r) => r.url === 'https://api.test/api/entries/514')
       .flush({ entry: { ...entry, id: 514, title: headline, contentHtml: '<p>b</p>' } });
     f.detectChanges();
+    // A second pass: PageTitleService's toObservable/toSignal pipeline settles
+    // one tick after the entry effect writes the page.
+    f.detectChanges();
 
     expect(TestBed.inject(Title).getTitle()).toBe(`${headline.slice(0, 60)}… | simple feed reader`);
   });

@@ -123,6 +123,16 @@
             >{{ 'reader.openOriginal' | transloco }} <app-icon name="open_in_new" size="text"
           /></a>
         }
+        @if (e.discussionUrl) {
+          ·
+          <a
+            class="discussion-link"
+            [href]="e.discussionUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ 'reader.discussion' | transloco }} <app-icon name="forum" size="text"
+          /></a>
+        }
       </p>
       <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
       <!-- One language for all three: a fixed glyph, muted while off and accent

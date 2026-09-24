@@ -1046,6 +1046,7 @@
     "backToTop": "Back to top",
     "contents": "Contents",
     "openOriginal": "Open original",
+    "discussion": "Discussion",
     "refreshArticle": "Reload article",
     "readingTime": "≈ {{minutes}} min",
     "readerFallback": "Couldn't load the full article — showing the feed's summary.",

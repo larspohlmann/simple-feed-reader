@@ -228,7 +228,7 @@ export class ReaderViewComponent {
   // writes go through the ReaderModeService lifecycle methods below.
   readonly mode = this.readerMode.mode;
   private readonly state = signal<
-    | { status: 'idle' | 'loading' }
+    | { status: 'idle' | 'loading' | 'feed-only' }
     | { status: 'ok'; article: ReaderArticle }
     | { status: 'failed'; failure: ReaderFailure | null; error: unknown }
   >({ status: 'idle' });
@@ -382,6 +382,14 @@ export class ReaderViewComponent {
       // Arm a scroll restore for this entry if we remember a position for it.
       const savedTop = this.scroll.readEntry(e.id);
       this.pendingRestore = savedTop > 0 ? { id: e.id, top: savedTop } : null;
+      // A self post (e.g. Reddit) has no article to extract — show the feed
+      // body only, with no reader/original toggle.
+      if (e.url === null) {
+        this.loadSub?.unsubscribe();
+        this.state.set({ status: 'feed-only' });
+        this.readerMode.setOriginalOnly();
+        return;
+      }
       this.runLoad(this.reader.load(e.id));
     });
     this.destroyRef.onDestroy(() => this.loadSub?.unsubscribe());

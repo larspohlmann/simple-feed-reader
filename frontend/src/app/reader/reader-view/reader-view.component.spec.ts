@@ -928,6 +928,34 @@ describe('ReaderViewComponent', () => {
     expect(hero(mount(entry()))).toBeNull();
   });
 
+  describe('entry with no article URL (#1140)', () => {
+    it('does not ask for an extraction when the entry has no article URL', () => {
+      const el = mount(
+        entry({ url: null, discussionUrl: 'https://www.reddit.com/r/x/comments/1/t/' }),
+      ).nativeElement as HTMLElement;
+
+      expect(loadMock).not.toHaveBeenCalled();
+      expect(el.querySelector('.reader-fallback')).toBeNull();
+      expect(el.querySelector('.mode')).toBeNull();
+    });
+  });
+
+  describe('discussion link (#1140)', () => {
+    it('links the discussion page when there is one', () => {
+      const el = mount(entry({ discussionUrl: 'https://news.ycombinator.com/item?id=1' }))
+        .nativeElement as HTMLElement;
+
+      const link = el.querySelector('a.discussion-link');
+      expect(link?.getAttribute('href')).toBe('https://news.ycombinator.com/item?id=1');
+    });
+
+    it('shows no discussion link when the entry has none', () => {
+      const el = mount(entry({ discussionUrl: null })).nativeElement as HTMLElement;
+
+      expect(el.querySelector('a.discussion-link')).toBeNull();
+    });
+  });
+
   it('falls back to the feed summary when contentHtml is null on failure', () => {
     loadMock.mockReturnValue(of<ReaderContent>(failedContent()));
     const el = mount(entryWithBody(null, { summary: 'Just a summary' }))
