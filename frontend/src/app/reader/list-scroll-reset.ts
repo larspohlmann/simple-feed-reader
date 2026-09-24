@@ -1,10 +1,18 @@
 import { Injectable, inject } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { NavigationStart, PRIMARY_OUTLET, Router, convertToParamMap } from '@angular/router';
+import {
+  NavigationStart,
+  PRIMARY_OUTLET,
+  ParamMap,
+  Router,
+  UrlMatchResult,
+  convertToParamMap,
+} from '@angular/router';
 import { distinctUntilChanged, skip, startWith } from 'rxjs';
 import { ListPreferences } from './list-preferences.service';
 import { ListScrollMemory } from './list-scroll-memory';
-import { Selection, listSelectionFrom, sameSelection, selectionFromParams } from './query';
+import { Selection, listSelectionFrom, sameSelection } from './query';
+import { readerMatcher, selectionFromRoute } from './reader-matcher';
 
 /** How the router says a navigation began. Taken from the event rather than
  *  spelled out, so a trigger Angular adds later cannot drift out of sync. */
@@ -108,16 +116,25 @@ export class ListScrollReset {
     this.memory.forget(this.listPreferences.appliedTo(place.shown));
   }
 
-  /** Where a URL puts the user, or null when the URL is not the reader. The
-   *  reader is the app's root route, so any path segment at all names something
-   *  else. */
+  /** Where a URL puts the user, or null when the URL is not the reader. The reader's
+   *  own route matcher decides, so a saved-search path counts like the root does. A
+   *  saved search's path outranks any `q`, so nothing is layered over it. */
   private readerPlaceFrom(url: string): ReaderPlace | null {
     const tree = this.router.parseUrl(url);
-    const primary = tree.root.children[PRIMARY_OUTLET];
-    if (primary && primary.segments.length > 0) return null;
-    return {
-      list: listSelectionFrom(tree.queryParams),
-      shown: selectionFromParams(convertToParamMap(tree.queryParams)).selection,
-    };
+    const match = readerMatcher(tree.root.children[PRIMARY_OUTLET]?.segments ?? []);
+    if (match === null) return null;
+    const pathParams = pathParamsOf(match);
+    const shown = selectionFromRoute(pathParams, convertToParamMap(tree.queryParams)).selection;
+    const list = pathParams.has('savedSearch') ? shown : listSelectionFrom(tree.queryParams);
+    return { list, shown };
   }
+}
+
+/** A matcher's positional params as the ParamMap its route would carry. */
+function pathParamsOf(match: UrlMatchResult): ParamMap {
+  const params = Object.entries(match.posParams ?? {}).map(([name, segment]) => [
+    name,
+    segment.path,
+  ]);
+  return convertToParamMap(Object.fromEntries(params));
 }

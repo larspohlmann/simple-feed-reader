@@ -231,6 +231,36 @@ describe('ListScrollReset', () => {
     expect(memory.forget).not.toHaveBeenCalled();
   });
 
+  describe('on a saved-search path', () => {
+    const SAVED: Selection = { kind: 'saved-search', id: 7, unread: false };
+
+    it('forgets the saved search a click opens', () => {
+      navigate('/?tag=5');
+      navigate('/searches/saved/7-climate');
+
+      expect(memory.forget).toHaveBeenCalledWith(SAVED);
+    });
+
+    it('forgets the saved search a flip of its order shows', () => {
+      navigate('/searches/saved/7-climate');
+      TestBed.tick();
+
+      TestBed.inject(ListOrderService).set(SAVED, 'oldest');
+      TestBed.tick();
+
+      expect(memory.forget).toHaveBeenCalledWith({ ...SAVED, order: 'oldest' });
+    });
+
+    it('still ignores a path the reader does not own', () => {
+      currentUrl = '/searches/saved';
+
+      TestBed.inject(UnreadFilterService).set(true);
+      TestBed.tick();
+
+      expect(memory.forget).not.toHaveBeenCalled();
+    });
+  });
+
   it('stops listening once the injector is destroyed', () => {
     navigate('/?tag=5');
     TestBed.resetTestingModule();
