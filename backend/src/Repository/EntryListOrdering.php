@@ -14,7 +14,12 @@ final readonly class EntryListOrdering
 {
     public function __construct(
         public EntryListSort $sort,
-        public ListOrder $order = ListOrder::NewestFirst,
+        public ListOrder $order,
     ) {
+    }
+
+    public static function byPublishedDate(ListOrder $order = ListOrder::NewestFirst): self
+    {
+        return new self(EntryListSort::PublishedDate, $order);
     }
 }

@@ -31,6 +31,6 @@ final readonly class EntrySearchQuery
 
     public function ordering(): EntryListOrdering
     {
-        return new EntryListOrdering(EntryListSort::PublishedDate, $this->order);
+        return EntryListOrdering::byPublishedDate($this->order);
     }
 }

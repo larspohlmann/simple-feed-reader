@@ -12,6 +12,7 @@ use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\EntrySearchResult;
@@ -70,6 +71,12 @@ final class IndexedEntrySearchTest extends DbTestCase
         $state->setIsHidden(true);
         $this->em->persist($state);
         $this->em->flush();
+    }
+
+    /** @return list<string> */
+    private function guids(EntrySearchResult $result): array
+    {
+        return array_map(static fn (EntryListRow $row): string => $row->entry->getGuid(), $result->rows);
     }
 
     private function search(FakeSearchIndexReader $reader, EntrySearchQuery $query): EntrySearchResult
@@ -230,10 +237,7 @@ final class IndexedEntrySearchTest extends DbTestCase
             unread: true,
         ));
 
-        self::assertSame(['unread'], array_map(
-            static fn ($row): string => $row->entry->getGuid(),
-            $result->rows,
-        ));
+        self::assertSame(['unread'], $this->guids($result));
         self::assertSame(3, $result->matchCount, 'The engine match count survives the unread filter.');
         self::assertNotNull($result->continuationRow);
         self::assertSame(
@@ -259,10 +263,7 @@ final class IndexedEntrySearchTest extends DbTestCase
             terms: SearchTerms::fromInput('angular'),
         ));
 
-        self::assertSame(['read', 'unread'], array_map(
-            static fn ($row): string => $row->entry->getGuid(),
-            $result->rows,
-        ));
+        self::assertSame(['read', 'unread'], $this->guids($result));
     }
 
     /**
@@ -313,10 +314,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         self::assertNotNull($reader->received);
         self::assertSame(ListOrder::OldestFirst, $reader->received->order);
-        self::assertSame(
-            ['older-lower-id', 'older-higher-id', 'newer'],
-            array_map(static fn ($row) => $row->entry->getGuid(), $result->rows),
-        );
+        self::assertSame(['older-lower-id', 'older-higher-id', 'newer'], $this->guids($result));
         self::assertSame('newer', $result->continuationRow?->entry->getGuid());
     }
 

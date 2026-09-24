@@ -22,6 +22,7 @@ use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -424,12 +425,20 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame(['Post 3'], array_column($page2['entries'], 'title'));
     }
 
-    public function testRejectsAnUnknownOrder(): void
+    /** @return iterable<string, array{string}> */
+    public static function unknownOrderUrlProvider(): iterable
+    {
+        yield 'a date-ordered view' => ['/api/entries?order=up'];
+        yield 'the for-you view, which ignores a valid order' => ['/api/entries?view=for-you&order=up'];
+    }
+
+    #[DataProvider('unknownOrderUrlProvider')]
+    public function testRejectsAnUnknownOrder(string $url): void
     {
         $client = self::createClient();
         [$headers] = $this->auth('e-order@example.com');
 
-        $client->request('GET', '/api/entries?order=up', server: $headers);
+        $client->request('GET', $url, server: $headers);
 
         self::assertResponseStatusCodeSame(422);
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -446,20 +455,6 @@ final class EntryControllerTest extends WebTestCase
         $client->request('GET', '/api/entries?view=for-you&order=asc', server: $headers);
 
         self::assertResponseIsSuccessful();
-    }
-
-    public function testAnUnknownOrderIsRejectedOnTheForYouViewToo(): void
-    {
-        $client = self::createClient();
-        [$headers] = $this->auth('e-order-for-you-bad@example.com');
-
-        $client->request('GET', '/api/entries?view=for-you&order=up', server: $headers);
-
-        self::assertResponseStatusCodeSame(422);
-        $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($body);
-        self::assertSame('validation_error', $body['type']);
-        self::assertSame(['order' => ['Unknown order. Use one of: desc, asc.']], $body['errors']);
     }
 
     public function testEveryNamedViewIsAccepted(): void

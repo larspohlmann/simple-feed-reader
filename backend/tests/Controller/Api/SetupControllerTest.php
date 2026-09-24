@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
@@ -202,7 +203,7 @@ final class SetupControllerTest extends WebTestCase
         self::assertNotNull($admin);
         /** @var JWTTokenManagerInterface $tokens */
         $tokens = $client->getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertSame($admin->getId(), $tokens->parse($token)['userId'] ?? null);
+        self::assertSame($admin->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
     }
 
     public function testWrongSecretIsForbidden(): void

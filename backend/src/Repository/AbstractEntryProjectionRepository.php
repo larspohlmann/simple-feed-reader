@@ -21,20 +21,12 @@ use Doctrine\ORM\QueryBuilder;
  */
 abstract class AbstractEntryProjectionRepository extends ServiceEntityRepository
 {
-    /**
-     * The publish-date order, newest first, for the reads that never take the
-     * caller's order: search-engine hydration and the digest.
-     */
     protected function newestFirst(QueryBuilder $qb): QueryBuilder
     {
-        return $this->orderedBy($qb, new EntryListOrdering(EntryListSort::PublishedDate));
+        return $this->orderedBy($qb, EntryListOrdering::byPublishedDate());
     }
 
-    /**
-     * The sort's instant column, then id as the tiebreaker a refresh run's tied
-     * instants need, both in the ordering's direction. applyCursor() reads the same
-     * EntryListOrdering, so the ORDER BY and the keyset predicate cannot disagree.
-     */
+    /** The sort's instant column, then id for the ties a refresh run leaves, both in the ordering's direction. */
     protected function orderedBy(QueryBuilder $qb, EntryListOrdering $ordering): QueryBuilder
     {
         $direction = $ordering->order->sqlDirection();

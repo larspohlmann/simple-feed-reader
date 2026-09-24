@@ -32,6 +32,6 @@ final readonly class SavedSearchListQuery
 
     public function ordering(): EntryListOrdering
     {
-        return new EntryListOrdering(EntryListSort::PublishedDate, $this->order);
+        return EntryListOrdering::byPublishedDate($this->order);
     }
 }

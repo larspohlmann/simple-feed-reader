@@ -6,10 +6,12 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
+use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Security\PasswordWorkEqualizer;
 use App\Tests\Support\HashCountingWork;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -81,6 +83,23 @@ final class LoginTest extends WebTestCase
         self::assertArrayHasKey('token', $payload);
         self::assertIsString($payload['token']);
         self::assertCount(3, explode('.', $payload['token']));
+    }
+
+    public function testALoginTokenCarriesTheAccountId(): void
+    {
+        $client = self::createClient();
+        $this->factory()->create('claim-user-one@example.com');
+        $second = $this->factory()->create('claim-user-two@example.com');
+
+        $this->login($client, 'claim-user-two@example.com', 'correct-horse-battery');
+
+        self::assertResponseIsSuccessful();
+        $token = $this->payload($client)['token'];
+        self::assertIsString($token);
+        /** @var JWTTokenManagerInterface $tokens */
+        $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
+
+        self::assertSame($second->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
     }
 
     /**

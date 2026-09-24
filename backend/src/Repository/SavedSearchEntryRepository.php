@@ -38,7 +38,8 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $query->ordering())
+        $ordering = $query->ordering();
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
@@ -46,7 +47,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
         }
 
-        $this->applyCursor($qb, $query->cursor, $query->ordering());
+        $this->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();

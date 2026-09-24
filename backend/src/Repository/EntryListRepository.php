@@ -65,7 +65,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         };
         $windowProbe = function () use ($query): QueryBuilder {
             $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
-            $probeOrdering = new EntryListOrdering(EntryListSort::PublishedDate, $query->order);
+            $probeOrdering = EntryListOrdering::byPublishedDate($query->order);
             $qb = $this->orderedBy($probe, $probeOrdering);
             $this->applyCursor($qb, $query->cursor, $probeOrdering);
 
@@ -92,11 +92,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($query): void {
             $this->scope->applySearch($qb, $aliases, $query);
         };
-        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $query->ordering())
+        $ordering = $query->ordering();
+        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $applyScope, $query->userId);
-        $this->applyCursor($qb, $query->cursor, $query->ordering());
+        $this->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
