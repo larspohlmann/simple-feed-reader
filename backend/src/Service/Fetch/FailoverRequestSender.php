@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -49,16 +50,15 @@ final readonly class FailoverRequestSender
     public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
     {
         $proxy = $this->resolveProxy();
-
-        if (null !== $proxy) {
-            $proxiedResponse = $this->attemptProxied($method, $url, $options, $proxy);
-            if (null !== $proxiedResponse) {
-                return $proxiedResponse;
-            }
-            // fall through to the pinned direct families
+        if (null === $proxy) {
+            return $this->sendPinnedFamilies($method, $url, $guarded, $options);
         }
 
-        return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+        try {
+            return $this->attemptProxied($method, $url, $options, $proxy);
+        } catch (ProxiedAttemptFailedException) {
+            return $this->sendPinnedFamilies($method, $url, $guarded, $options);
+        }
     }
 
     /**
@@ -86,41 +86,34 @@ final readonly class FailoverRequestSender
     /**
      * @param array<string, mixed> $options
      *
-     * @return ResponseInterface|null the proxied answer, or null to fall
-     *                                 through to a pinned direct attempt
-     *
-     * @throws TransportExceptionInterface when direct fallback is unavailable
+     * @throws ProxiedAttemptFailedException when direct fallback is on and warranted
+     * @throws TransportExceptionInterface   when direct fallback is unavailable
      */
     private function attemptProxied(
         string $method,
         string $url,
         array $options,
         ProxyConfig $proxy,
-    ): ?ResponseInterface {
+    ): ResponseInterface {
         $response = $this->httpClient->request($method, $url, [...$options, ...EgressOptions::proxied($proxy)]);
 
         try {
             $status = $response->getStatusCode();
         } catch (TransportExceptionInterface $transportError) {
             $response->cancel();
-            // No direct fallback when the admin turned it off: falling back to
-            // a pinned direct request would leak the real server IP.
+            // With fallback off, going direct would leak the real server IP the proxy hides.
             if (!$proxy->directFallback || !CrossFamilyFailover::isWarranted($transportError)) {
                 throw $transportError;
             }
 
-            return null;
+            throw new ProxiedAttemptFailedException(previous: $transportError);
         }
 
-        // A refusal status the origin tied to the proxy's egress IP — a CDN/WAF
-        // 403, typically — is not a dropped connection, so the transport branch
-        // above never sees it, yet a direct route may still be served. Route
-        // around it exactly as the pinned-family path does, but only when
-        // fallback is on: off, the refusal stays terminal and leaks no IP.
+        // A CDN/WAF refusal of the proxy's egress IP may still be served directly, but only with fallback on.
         if ($proxy->directFallback && CrossFamilyFailover::isRetryableStatus($status)) {
             $response->cancel();
 
-            return null;
+            throw new ProxiedAttemptFailedException();
         }
 
         return $response;
