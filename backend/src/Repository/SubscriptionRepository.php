@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Entity\Entry;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -171,32 +172,26 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The subset of the given feed urls this user subscribes to, keyed by url.
-     *
-     * @param list<string> $feedUrls
-     *
-     * @return array<string, int>
+     * @return array<int, int> subscription id => entries in its feed, read or not
      */
-    public function feedIdsByUrlForUser(int $userId, array $feedUrls): array
+    #[WithSpan]
+    public function entryCountsForUser(int $userId): array
     {
-        if ([] === $feedUrls) {
-            return [];
-        }
-
-        /** @var list<array{url: string, id: int}> $rows */
+        /** @var list<array{subscriptionId: int, entryCount: int}> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->select('f.url AS url', 'f.id AS id')
-            ->join('s.feed', 'f')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('f.url IN (:urls)')->setParameter('urls', $feedUrls)
+            ->select('s.id AS subscriptionId', 'COUNT(e.id) AS entryCount')
+            ->join(Entry::class, 'e', 'ON', 'e.feed = s.feed')
+            ->andWhere('s.user = :user')
+            ->groupBy('s.id')
+            ->setParameter('user', $userId)
             ->getQuery()
-            ->getResult();
+            ->getScalarResult();
 
-        $idsByUrl = [];
+        $counts = [];
         foreach ($rows as $row) {
-            $idsByUrl[$row['url']] = $row['id'];
+            $counts[$row['subscriptionId']] = (int) $row['entryCount'];
         }
 
-        return $idsByUrl;
+        return $counts;
     }
 }

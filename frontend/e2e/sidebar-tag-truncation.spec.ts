@@ -33,6 +33,7 @@ function subscription(id: number, title: string, tagId: number) {
     position: id,
     tags: [{ ...TAGS.find((t) => t.id === tagId)!, position: 0 }],
     unreadCount: 1026,
+    entryCount: 1026,
   };
 }
 

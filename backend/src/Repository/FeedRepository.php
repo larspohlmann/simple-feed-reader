@@ -147,6 +147,37 @@ class FeedRepository extends ServiceEntityRepository
         return $others > 0;
     }
 
+    /**
+     * The subset of the given urls this user subscribes to, keyed by url.
+     *
+     * @param list<string> $urls
+     *
+     * @return array<string, int>
+     */
+    public function idsByUrlsForUser(int $userId, array $urls): array
+    {
+        if ([] === $urls) {
+            return [];
+        }
+
+        /** @var list<array{url: string, id: int}> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->select('f.url AS url', 'f.id AS id')
+            ->join(Subscription::class, 's', 'ON', 's.feed = f AND s.user = :userId')
+            ->andWhere('f.url IN (:urls)')
+            ->setParameter('userId', $userId)
+            ->setParameter('urls', $urls)
+            ->getQuery()
+            ->getArrayResult();
+
+        $idsByUrl = [];
+        foreach ($rows as $row) {
+            $idsByUrl[$row['url']] = $row['id'];
+        }
+
+        return $idsByUrl;
+    }
+
     private function dueQueryBuilder(DueFeedCriteria $criteria): QueryBuilder
     {
         $qb = $this->createQueryBuilder('f');

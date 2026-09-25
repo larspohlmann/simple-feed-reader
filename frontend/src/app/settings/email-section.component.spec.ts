@@ -25,6 +25,7 @@ function search(overrides: Partial<SavedSearchDto> = {}): SavedSearchDto {
     phrase: false,
     position: 0,
     unreadCount: 0,
+    memberCount: 0,
     includeInDigest: false,
     ...overrides,
   };

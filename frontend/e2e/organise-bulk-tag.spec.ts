@@ -34,6 +34,7 @@ function feed(id: number, title: string, tagIds: number[]) {
       position: index,
     })),
     unreadCount: 0,
+    entryCount: 0,
     includeInAllItems: true,
     includeInForYou: true,
   };

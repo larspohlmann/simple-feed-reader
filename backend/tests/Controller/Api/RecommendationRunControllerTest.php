@@ -244,7 +244,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'streamedChars' => 0,
                 'firstBatchStarted' => false,
                 'etaSeconds' => null,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $payload,
         );
@@ -365,7 +365,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );
@@ -803,7 +803,7 @@ final class RecommendationRunControllerTest extends WebTestCase
                 'firstBatchStarted' => false,
                 'elapsedSeconds' => null,
                 'etaSeconds' => null,
-                'forYou' => ['itemCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
             ],
             $this->payload($client->getResponse()),
         );

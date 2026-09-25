@@ -183,6 +183,55 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         self::assertEqualsCanonicalizing($badge[(int) $climate->getId()], $this->ids($list));
     }
 
+    public function testMemberCountsCountReadAndUnreadMembersWithEveryRequestedKeyPresent(): void
+    {
+        $climate = $this->search('climate');
+        $rocket = $this->search('rocket');
+        $empty = $this->search('zebra');
+        $unread = $this->entry('a', '2026-07-10T00:00:00Z');
+        $read = $this->entry('b', '2026-07-09T00:00:00Z');
+        $this->member($climate, $unread);
+        $this->member($climate, $read);
+        $this->member($rocket, $unread);
+        $this->hide($read);
+
+        $counts = $this->repo()->memberCountsBySavedSearch(
+            (int) $this->user->getId(),
+            [(int) $climate->getId(), (int) $rocket->getId(), (int) $empty->getId()],
+        );
+
+        self::assertSame([
+            (int) $climate->getId() => 2,
+            (int) $rocket->getId() => 1,
+            (int) $empty->getId() => 0,
+        ], $counts);
+    }
+
+    public function testMemberCountsIgnoreAnotherUsersSearches(): void
+    {
+        $theirs = new SavedSearch($this->stranger, 'climate', false);
+        $this->em->persist($theirs);
+        $this->em->flush();
+        $this->member($theirs, $this->entry('a', '2026-07-10T00:00:00Z'));
+
+        $counts = $this->repo()->memberCountsBySavedSearch((int) $this->user->getId(), [(int) $theirs->getId()]);
+
+        self::assertSame([(int) $theirs->getId() => 0], $counts);
+    }
+
+    public function testMemberCountsExcludeAMemberWhoseFeedTheUserDoesNotSubscribeTo(): void
+    {
+        $climate = $this->search('climate');
+        $otherFeed = new Feed('https://elsewhere.example.com/feed.xml');
+        $this->em->persist($otherFeed);
+        $this->em->flush();
+        $this->member($climate, $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed));
+
+        $counts = $this->repo()->memberCountsBySavedSearch((int) $this->user->getId(), [(int) $climate->getId()]);
+
+        self::assertSame([(int) $climate->getId() => 0], $counts);
+    }
+
     public function testTheMarkReadSetHonoursUntil(): void
     {
         $climate = $this->search('climate');

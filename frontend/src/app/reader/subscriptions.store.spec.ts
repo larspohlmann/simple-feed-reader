@@ -7,7 +7,13 @@ import { API_BASE_URL } from '../core/api';
 import { TokenStore } from '../core/token.store';
 import { ReaderApi } from './reader-api';
 import { SIDEBAR_RELOAD_INTERVAL_MS } from './sidebar-freshness';
-import { SubscriptionsStore, buildTagTree, sumUnread, untaggedSubs } from './subscriptions.store';
+import {
+  SubscriptionsStore,
+  buildTagTree,
+  sumEntries,
+  sumUnread,
+  untaggedSubs,
+} from './subscriptions.store';
 import { SubscriptionDto } from './models';
 
 const tag = (id: number, name: string) => ({ id, name, color: null, icon: null, position: 0 });
@@ -15,6 +21,7 @@ const sub = (
   id: number,
   unread: number,
   tags = [] as ReturnType<typeof tag>[],
+  entryCount = 0,
 ): SubscriptionDto => ({
   id,
   feedId: id * 10,
@@ -37,6 +44,7 @@ const sub = (
   position: 0,
   tags,
   unreadCount: unread,
+  entryCount,
   includeInAllItems: true,
   includeInForYou: true,
 });
@@ -74,6 +82,17 @@ describe('subscription derivations', () => {
     const excluded = { ...sub(2, 8, [tag(3, 'Tech')]), includeInAllItems: false };
     const tree = buildTagTree([excluded]);
     expect(tree[0].unreadCount).toBe(8);
+  });
+
+  it("sums a tag's entry counts from its feeds, like its unread count", () => {
+    const tree = buildTagTree([sub(1, 0, [tag(7, 'News')], 30), sub(2, 0, [tag(7, 'News')], 12)]);
+    expect(tree[0].entryCount).toBe(42);
+  });
+
+  it('totals entries over the feeds included in All items only', () => {
+    expect(
+      sumEntries([sub(1, 0, [], 30), { ...sub(2, 0, [], 12), includeInAllItems: false }]),
+    ).toBe(30);
   });
 });
 
@@ -544,11 +563,16 @@ describe('SubscriptionsStore counts-only reload', () => {
   });
 
   const countsBody = (
-    subscriptions: { id: number; unreadCount: number }[],
+    subscriptions: { id: number; unreadCount: number; entryCount?: number }[],
     favorites = 0,
     kept = 0,
     viewed = 0,
-  ) => ({ subscriptions, favoritesCount: favorites, keptCount: kept, viewedCount: viewed });
+  ) => ({
+    subscriptions: subscriptions.map((s) => ({ entryCount: 0, ...s })),
+    favoritesCount: favorites,
+    keptCount: kept,
+    viewedCount: viewed,
+  });
 
   /** A settled store, one interval old, so a counts tick may fire. */
   const settleAndAge = (subscriptions: SubscriptionDto[]) => {
@@ -600,6 +624,15 @@ describe('SubscriptionsStore counts-only reload', () => {
     // Feed 1 is absent from the payload, so it has no unread entries.
     expect(store.subscriptions().find((s) => s.id === 1)?.unreadCount).toBe(0);
     expect(store.subscriptions().find((s) => s.id === 2)?.unreadCount).toBe(3);
+  });
+
+  it('patches entry counts from the counts-only tick', () => {
+    settleAndAge([sub(1, 1, [], 3)]);
+
+    store.reloadCountsIfStale();
+    ctrl.expectOne(countsUrl).flush(countsBody([{ id: 1, unreadCount: 1, entryCount: 5 }]));
+
+    expect(store.subscriptions()[0].entryCount).toBe(5);
   });
 
   it('keeps the same array identity when no count moved', () => {

@@ -49,6 +49,7 @@ const SUBSCRIPTIONS = {
       position: 0,
       tags: [],
       unreadCount: 0,
+      entryCount: 0,
     },
   ],
   favoritesCount: 0,
@@ -132,7 +133,7 @@ async function stubReaderData(page: Page): Promise<void> {
     error: null,
     background: false,
     streamedChars: 0,
-    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+    forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
   });
   await stubGet(page, '/api/version', {
     version: 'dev',

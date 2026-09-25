@@ -33,6 +33,8 @@ export interface SavedSearchDto {
   position: number;
   /** Live count of unread entries matching this search. */
   unreadCount: number;
+  /** Total entries matching this search, unread or not. */
+  memberCount: number;
   /** True when this saved search's matches are included in the email digest. */
   includeInDigest: boolean;
 }
@@ -49,6 +51,8 @@ export interface SavedSearchWire {
   position: number;
   /** The ids of every unread entry that matches this search. */
   unreadEntryIds: number[];
+  /** Total entries matching this search, unread or not. */
+  memberCount: number;
   /** True when this saved search's matches are included in the email digest. */
   includeInDigest: boolean;
 }
@@ -106,6 +110,8 @@ export interface SubscriptionDto {
   position: number;
   tags: SubscriptionTagDto[];
   unreadCount: number;
+  /** Total entries this feed holds, unread or not. */
+  entryCount: number;
   /** False excludes this feed's unread from the All-items badge and list. */
   includeInAllItems: boolean;
   /** False excludes this feed's entries from For-you recommendations. */
@@ -136,11 +142,11 @@ export interface SubscriptionsResponse {
   viewedCount: number;
 }
 
-/** The sidebar poll's cheap payload (#720): unread per feed plus the three
- *  surface totals, without the feeds, tags or descriptions the full list
- *  carries. A feed absent from `subscriptions` has no unread entries. */
+/** The sidebar poll's cheap payload (#720): unread and entry counts per feed
+ *  plus the three surface totals, without the feeds, tags or descriptions the
+ *  full list carries. A feed absent from `subscriptions` has no entries. */
 export interface SubscriptionCountsResponse {
-  subscriptions: { id: number; unreadCount: number }[];
+  subscriptions: { id: number; unreadCount: number; entryCount: number }[];
   favoritesCount: number;
   keptCount: number;
   viewedCount: number;
@@ -470,7 +476,12 @@ export interface RecommendationRunReport {
    *  time, and the generating run. `itemCount` keeps its wire name. Describes the
    *  *list* not this run — a failed run still carries the previous list's data;
    *  `newestRunId` lets the reader suppress that run's divider by identity (#348). */
-  forYou: { itemCount: number; generatedAt: string | null; newestRunId: number | null };
+  forYou: {
+    itemCount: number;
+    totalCount: number;
+    generatedAt: string | null;
+    newestRunId: number | null;
+  };
 }
 
 /** One provider call logged during a for-you run: a scored batch or the

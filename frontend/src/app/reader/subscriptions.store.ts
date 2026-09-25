@@ -18,6 +18,7 @@ export interface TagNode {
   tag: TagDto;
   subscriptions: SubscriptionDto[];
   unreadCount: number;
+  entryCount: number;
 }
 
 /**
@@ -52,6 +53,7 @@ export function buildTagTree(subs: SubscriptionDto[], orderedTags: TagDto[] = []
       tag,
       subscriptions: feeds,
       unreadCount: feeds.reduce((n, s) => n + s.unreadCount, 0),
+      entryCount: feeds.reduce((n, s) => n + s.entryCount, 0),
     };
   });
 }
@@ -80,6 +82,12 @@ export function sumUnread(subs: SubscriptionDto[]): number {
   return subs.reduce((n, s) => (s.includeInAllItems ? n + s.unreadCount : n), 0);
 }
 
+/** All-items list total: the same inclusion rule as `sumUnread`, over entry
+ *  counts instead of unread counts. */
+export function sumEntries(subs: SubscriptionDto[]): number {
+  return subs.reduce((n, s) => (s.includeInAllItems ? n + s.entryCount : n), 0);
+}
+
 type ZeroTarget = 'all' | { tag: number } | { subscription: number };
 
 @Injectable({ providedIn: 'root' })
@@ -102,6 +110,7 @@ export class SubscriptionsStore {
   readonly tagTree = computed(() => buildTagTree(this.subscriptions(), this.tags.tags()));
   readonly untagged = computed(() => untaggedSubs(this.subscriptions()));
   readonly totalUnread = computed(() => sumUnread(this.subscriptions()));
+  readonly totalEntries = computed(() => sumEntries(this.subscriptions()));
   readonly unhealthy = computed(() => unhealthyFeeds(this.subscriptions()));
   readonly unhealthyCount = computed(() => this.unhealthy().length);
 
@@ -265,17 +274,18 @@ export class SubscriptionsStore {
     this.viewedCount.set(response.viewedCount);
   }
 
-  /** Patch unread counts into the list already held, replacing the array only
-   *  when a number actually moved, so an unchanged tick keeps array identity
-   *  and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
+  /** Patch unread and entry counts into the list already held, replacing the
+   *  array only when a number actually moved, so an unchanged tick keeps
+   *  array identity and `tagTree`/`untagged`/`totalUnread` don't recompute (#720). */
   private applyCountsOnly(response: SubscriptionCountsResponse): void {
-    const unreadById = new Map(response.subscriptions.map((s) => [s.id, s.unreadCount]));
+    const countsById = new Map(response.subscriptions.map((s) => [s.id, s]));
     let moved = false;
     const next = this.subscriptions().map((sub) => {
-      const unreadCount = unreadById.get(sub.id) ?? 0;
-      if (unreadCount === sub.unreadCount) return sub;
+      const unreadCount = countsById.get(sub.id)?.unreadCount ?? 0;
+      const entryCount = countsById.get(sub.id)?.entryCount ?? 0;
+      if (unreadCount === sub.unreadCount && entryCount === sub.entryCount) return sub;
       moved = true;
-      return { ...sub, unreadCount };
+      return { ...sub, unreadCount, entryCount };
     });
     if (moved) this.subscriptions.set(next);
 

@@ -116,6 +116,7 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
         // "shared" is deduped to its newest run, so only 2 distinct entries
         // survive, not the 3 raw items across both completed runs.
         self::assertSame(2, $summary->itemCount);
+        self::assertSame(2, $summary->totalCount);
         self::assertSame(
             '2026-08-07T10:05:00+00:00',
             $summary->generatedAt?->format(\DateTimeInterface::ATOM),
@@ -130,6 +131,7 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
         $summary = $this->provider()->forUser($this->user);
 
         self::assertSame(0, $summary->itemCount);
+        self::assertSame(0, $summary->totalCount);
         self::assertNull($summary->generatedAt);
         self::assertNull($summary->newestRunId);
     }

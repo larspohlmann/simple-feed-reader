@@ -42,6 +42,7 @@ const SUBSCRIPTIONS = {
       position: 0,
       tags: [],
       unreadCount: 0,
+      entryCount: 0,
     },
   ],
   favoritesCount: 0,

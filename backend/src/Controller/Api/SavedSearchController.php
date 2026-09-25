@@ -12,8 +12,8 @@ use App\Http\SavedSearchJson;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
-use App\Service\Search\SavedSearchMatchIds;
 use App\Service\Search\SavedSearchSlug;
+use App\Service\Search\SavedSearchTallies;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,7 +29,7 @@ final readonly class SavedSearchController
 
     public function __construct(
         private SavedSearchRepository $savedSearches,
-        private SavedSearchMatchIds $matches,
+        private SavedSearchTallies $tallies,
         private SavedSearchMembershipSweep $sweep,
         private EntityManagerInterface $em,
         private SavedSearchSlug $slug,
@@ -41,11 +41,11 @@ final readonly class SavedSearchController
     {
         $userId = (int) $user->getId();
         $rows = $this->savedSearches->findForUser($userId);
-        $idsBySearch = $this->matches->forAll($rows, $userId);
+        $tallies = $this->tallies->forAll($rows, $userId);
 
         return new JsonResponse([
             'savedSearches' => array_map(
-                static fn (SavedSearch $s) => SavedSearchJson::one($s, $idsBySearch[(int) $s->getId()] ?? []),
+                static fn (SavedSearch $s) => SavedSearchJson::one($s, $tallies[(int) $s->getId()]),
                 $rows,
             ),
         ]);
@@ -77,7 +77,7 @@ final readonly class SavedSearchController
         }
 
         return new JsonResponse(
-            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->matches->forOne($savedSearch, $userId))],
+            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
             $status,
         );
     }
@@ -96,7 +96,7 @@ final readonly class SavedSearchController
         $this->em->flush();
 
         return new JsonResponse(
-            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->matches->forOne($savedSearch, $userId))],
+            ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
         );
     }
 

@@ -83,6 +83,30 @@
         // false — only key absence or an explicit null flips it. Equivalent
         // mutant; a real mutant in the same method still fails the build.
         TrueValue: { ignore: ['App\\Service\\Ingest\\EntryMediaAssembler::visualMedia'] },
+        // Cast on (int) $entity->getId() as an array key only narrows ?int for
+        // PHPStan; the id is always set, so the key is identical.
+        CastInt: {
+            ignore: [
+                'App\\Controller\\Api\\SavedSearchController::list',
+                'App\\Controller\\Api\\SubscriptionController::list',
+                'App\\Service\\Search\\SavedSearchTallies::forAll',
+                'App\\Service\\Search\\SavedSearchTallies::forOne',
+                // MySQL returns COUNT() as numeric string, so cast stays;
+                // SQLite returns int.
+                'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
+                'App\\Repository\\SubscriptionRepository::entryCountsForUser',
+            ],
+        },
+        // Doctrine turns empty IN parameter into always-false predicate,
+        // same empty result.
+        ReturnRemoval: {
+            ignore: [
+                'App\\Repository\\FeedRepository::idsByUrlsForUser',
+                'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
+            ],
+        },
+        // Guard only runs with [], so slicing changes nothing.
+        ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
     },
     phpUnit: {
         configDir: '.',

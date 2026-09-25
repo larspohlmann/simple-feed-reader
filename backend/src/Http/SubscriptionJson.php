@@ -34,10 +34,10 @@ final class SubscriptionJson
      *   consecutiveFailures: int, lastErrorMessage: string|null,
      *   position: int,
      *   tags: list<array{id: int|null, name: string, color: string|null, icon: string|null, position: int}>,
-     *   unreadCount: int, includeInAllItems: bool, includeInForYou: bool
+     *   unreadCount: int, entryCount: int, includeInAllItems: bool, includeInForYou: bool
      * }
      */
-    public static function one(Subscription $sub, int $unreadCount = 0): array
+    public static function one(Subscription $sub, int $unreadCount = 0, int $entryCount = 0): array
     {
         $feed = $sub->getFeed();
         $title = $sub->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
@@ -73,6 +73,7 @@ final class SubscriptionJson
             'position' => $sub->getPosition(),
             'tags' => $tags,
             'unreadCount' => $unreadCount,
+            'entryCount' => $entryCount,
             'includeInAllItems' => $sub->isIncludeInAllItems(),
             'includeInForYou' => $sub->isIncludeInForYou(),
         ];

@@ -12,7 +12,6 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Repository\SubscriptionRepository;
 use App\Service\Backup\BackupFitCheck;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\EntryBatchInserter;
@@ -358,8 +357,6 @@ final class EntryPartRestorerTest extends DbTestCase
     {
         /** @var BackupReader $reader */
         $reader = self::getContainer()->get(BackupReader::class);
-        /** @var SubscriptionRepository $subscriptions */
-        $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         /** @var FeedRepository $feeds */
         $feeds = self::getContainer()->get(FeedRepository::class);
         /** @var EntryRepository $entries */
@@ -369,7 +366,7 @@ final class EntryPartRestorerTest extends DbTestCase
         /** @var EntryBatchInserter $inserter */
         $inserter = self::getContainer()->get(EntryBatchInserter::class);
 
-        $inspector = new EntryPartInspector($reader, $subscriptions, $entries, $accountEntryCeiling);
+        $inspector = new EntryPartInspector($reader, $feeds, $entries, $accountEntryCeiling);
         $loaderFactory = new RestoreEntryLoaderFactory(
             $this->em,
             $entries,

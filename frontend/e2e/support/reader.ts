@@ -48,6 +48,7 @@ export function savedSearchWire(overrides: Partial<SavedSearchWire> = {}): Saved
     phrase: false,
     position: 0,
     unreadEntryIds: [1, 2, 3, 4, 5],
+    memberCount: 5,
     includeInDigest: false,
     ...overrides,
   };
@@ -124,6 +125,7 @@ export function oneFeedJson(title: string, overrides: Partial<SubscriptionDto> =
         position: 0,
         tags: [],
         unreadCount: 1,
+        entryCount: 1,
         ...overrides,
       },
     ],

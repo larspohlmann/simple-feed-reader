@@ -511,20 +511,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   });
 
-  /** How much the named list holds — the same number the sidebar row shows for
-   *  it, so row, heading and tab can never disagree (unread where the sidebar
-   *  counts unread, item count where it counts items, #709). Zero means
-   *  "nothing to say": an empty list, a search (which has its own count), or a
-   *  count that hasn't loaded yet. */
+  /** The sidebar's unread number under "Only unread", the list's total under
+   *  "All posts" (#709, #1154). Zero means "nothing to say": an empty list, a
+   *  search (which has its own count), or a count that hasn't loaded yet. */
   readonly titleCount = computed<TitleCount>(() => {
     const s = this.selection();
     switch (s.kind) {
       case 'all':
-        return unread(this.subs.totalUnread());
-      case 'tag':
-        return unread(this.subs.tagTree().find((n) => n.tag.id === s.id)?.unreadCount ?? 0);
-      case 'subscription':
-        return unread(this.subs.subscriptions().find((x) => x.id === s.id)?.unreadCount ?? 0);
+        return bySwitch(s, this.subs.totalUnread(), this.subs.totalEntries());
+      case 'tag': {
+        const node = this.subs.tagTree().find((n) => n.tag.id === s.id);
+        return bySwitch(s, node?.unreadCount ?? 0, node?.entryCount ?? 0);
+      }
+      case 'subscription': {
+        const sub = this.subs.subscriptions().find((x) => x.id === s.id);
+        return bySwitch(s, sub?.unreadCount ?? 0, sub?.entryCount ?? 0);
+      }
       case 'favorites':
         return items(this.subs.favoritesCount());
       case 'kept':
@@ -532,11 +534,13 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
       case 'viewed':
         return items(this.subs.viewedCount());
       case 'for-you':
-        return unread(this.recs.forYouCount());
+        return bySwitch(s, this.recs.forYouCount(), this.recs.forYouTotal());
       case 'saved-searches':
-        return unread(this.savedSearchesUnread());
-      case 'saved-search':
-        return unread(this.activeSavedSearch()?.unreadCount ?? 0);
+        return bySwitch(s, this.savedSearchesUnread(), this.savedSearchesTotal());
+      case 'saved-search': {
+        const saved = this.activeSavedSearch();
+        return bySwitch(s, saved?.unreadCount ?? 0, saved?.memberCount ?? 0);
+      }
       case 'search':
         return items(0);
     }
@@ -1152,6 +1156,12 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
     this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.unreadCount, 0),
   );
 
+  /** The heading and tab total across every saved search under "All posts" —
+   *  the same double-counting rule as `savedSearchesUnread` (#1154). */
+  readonly savedSearchesTotal = computed(() =>
+    this.savedSearchesStore.savedSearches().reduce((sum, saved) => sum + saved.memberCount, 0),
+  );
+
   protected readonly savedSearchActionLabel = computed(() =>
     this.currentSavedSearch() ? 'reader.removeSavedSearch' : 'reader.saveSearch',
   );
@@ -1336,17 +1346,22 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 }
 
-/** A count of unread posts — what the sidebar badge counts for All items, a
- *  tag, a feed and For you, and so what the heading and the tab count there
- *  too. */
+/** A count of unread posts — what the sidebar badge counts, and what the
+ *  heading and tab show under "Only unread" (#1154). */
 function unread(value: number): TitleCount {
   return { value, counts: 'unread' };
 }
 
 /** A count of posts, read or not — what the sidebar counts for the saved views,
- *  where "unread" is not the question the list answers. */
+ *  where "unread" is not the question the list answers, and every list's total
+ *  under "All posts" (#1154). */
 function items(value: number): TitleCount {
   return { value, counts: 'items' };
+}
+
+/** The unread count under "Only unread", every post under "All posts". */
+function bySwitch(selection: Selection, unreadCount: number, allCount: number): TitleCount {
+  return selection.unread ? unread(unreadCount) : items(allCount);
 }
 
 /** The entry flag a saved view filters on, or null for a list that shows every

@@ -31,6 +31,7 @@ final class RecommendationRunStatusJson
                 // The count of unread surviving picks (#724); the field name
                 // stays `itemCount` for wire compatibility.
                 'itemCount' => $summary->itemCount,
+                'totalCount' => $summary->totalCount,
                 'generatedAt' => $summary->generatedAt?->format(\DateTimeInterface::ATOM),
                 'newestRunId' => $summary->newestRunId,
             ],

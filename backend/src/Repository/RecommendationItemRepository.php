@@ -118,6 +118,13 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
+    public function countForYouIncludingRead(int $userId): int
+    {
+        $qb = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId);
+
+        return (int) $qb->getQuery()->getSingleScalarResult();
+    }
+
     /**
      * Two-step (select ids, then delete) rather than a DELETE with a
      * subquery: portable across both suite dialects and trivially testable,
