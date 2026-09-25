@@ -601,7 +601,7 @@ git commit -m "refactor(#1165): token consume() throws InvalidTokenException ins
 
 **Files:**
 - Create: `src/Service/OAuth/Exception/InvalidOAuthStateException.php`
-- Modify: `src/Service/OAuth/OAuthStateStore.php:122-205` and `src/Controller/Api/OAuthController.php:8, 165-183`
+- Modify: `src/Service/OAuth/OAuthStateStore.php:122-213` and `src/Controller/Api/OAuthController.php:8, 165-183`
 - Test: `tests/Service/OAuth/OAuthStateStoreTest.php`. `tests/Controller/Api/OAuthFlowTest.php` stays green unchanged: it pins the `invalid_state` redirect.
 
 ```php
@@ -648,7 +648,7 @@ final class InvalidOAuthStateException extends \RuntimeException
 - [ ] **Step 2: Run the tests.**
   Run: `php bin/phpunit tests/Service/OAuth/OAuthStateStoreTest.php`
   Expected: FAIL, because the class does not exist.
-- [ ] **Step 3: Implement `OAuthStateStore`.** Add `use App\Service\OAuth\Exception\InvalidOAuthStateException;` and replace lines 122–205 (the `consume` docblock through the end of `decodeStored`):
+- [ ] **Step 3: Implement `OAuthStateStore`.** Add `use App\Service\OAuth\Exception\InvalidOAuthStateException;` and replace lines 122–213 (the `consume` docblock through the end of `decodeStored`):
 
 ```php
     /**
@@ -953,7 +953,7 @@ Replace lines 155–198 (the docblock and `deletableIdsPastBoundary`) with:
 ```
 
 - [ ] **Step 3: Run both database legs again.** Expected: PASS. If MySQL and SQLite disagree, compare `->getQuery()->getSQL()` from before and after before you change anything else.
-- [ ] **Step 4: Break it.** Delete `->andWhere('e.createdAt < :cutoff')` from `staleIdsPastBoundary`, and watch `testKeepsAnOldArticleThatWasFetchedRecently` fail. Restore it by hand.
+- [ ] **Step 4: Cover the cutoff, then break it.** *(Amended in execution: no existing test reaches the `createdAt < :cutoff` condition, because `testKeepsAnOldArticleThatWasFetchedRecently` has no entry older than 90 days, so the age pass never visits its feed.)* Add a test in `EntryPrunerTest` with one feed that holds more than `keep` recent entries plus one stale entry beyond the boundary, and assert that only the stale entry is deleted. Then delete both `->andWhere('e.createdAt < :cutoff')` and its `setParameter('cutoff', …)` from `staleIdsPastBoundary`, watch the new test fail, and restore both by hand.
 - [ ] **Step 5: Run `composer md`.** Expected: clean.
 - [ ] **Step 6: Commit.**
 ```bash
@@ -2162,7 +2162,7 @@ After:
 | `FeedPreviewService.php:62` | `$body = $response->body ?? '';` | `$body = $response->modifiedBody();` |
 | `CommentsLoader.php:39` | `$body = (string) $this->fetcher->fetch($feedUrl)->body;` | `$body = $this->fetcher->fetch($feedUrl)->modifiedBody();` |
 
-  None of these callers sends an ETag or a Last-Modified header: `FaviconResolver` builds `new FetchTicket($origin)`, and the others call `fetch($url)`. So none of them can receive a not-modified response, and the `''` fallback only hid that impossible case. The `\LogicException` marks a programmer error, as in the house `?? throw new \LogicException(…)` idiom, and nothing catches it. `FeedParseException` stays imported in `RefreshRunner`, because its catch at line 366 still uses it.
+  None of these callers sends an ETag or a Last-Modified header: `FaviconResolver` builds `new FetchTicket($origin)`, and the others call `fetch($url)`. *(Amended in execution: that alone does not stop a not-modified response. `ResponseClassifier` turned **any** 304 into `notModified`, even for an unconditional request, and these callers then read `''`.)* So `ResponseClassifier` now builds `FetchResponse::notModified(…)` only when the ticket carried an ETag or a Last-Modified. An unconditional 304 becomes `FetchResponse::fetched(…, '', …)`: an empty body, exactly what the seven callers read today, so their wire answers stay the same. Add a `ResponseClassifierTest` case for an unconditional 304 that asserts `notModified` is false and `modifiedBody()` is `''`. A 304 is then not-modified only when it answers a conditional request, and `modifiedBody()` is never called on one. The `\LogicException` marks a programmer error, as in the house `?? throw new \LogicException(…)` idiom, and nothing catches it. `FeedParseException` stays imported in `RefreshRunner`, because its catch at line 366 still uses it.
 - [ ] **Step 4: Run the tests.**
   Run: `php bin/phpunit tests/Service/Fetch tests/Service/Refresh tests/Service/Discovery tests/Service/Preview tests/Service/Comments`
   Expected: PASS.
@@ -2280,7 +2280,7 @@ git commit -m "refactor(#1165): InvalidOpmlException requires the message it sen
 ### Finishing PR A
 
 1. Run every gate listed under Global Constraints.
-   Run: `grep -rn 'catch (\\Throwable' src/Service/Logging src/Command/CheckCatalogUrlsCommand.php`
+   Run: `grep -rn 'catch (\\Throwable' src/Service/Logging/Loki/LokiSpoolShipper.php src/Command/CheckCatalogUrlsCommand.php` *(amended: `LokiClient` and `SpoolLokiSink` keep their fail-open catch on purpose)*
    Expected: no output.
 2. Run the **SDD final whole-branch review**. It is not optional. Ask the reviewer to attack four things:
    - Can a caller now distinguish a refused token, state or code by timing, exception class or message? Every refusal path must throw the same class, with the default message.
