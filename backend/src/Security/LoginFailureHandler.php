@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Exception\AccountNotActiveException;
+use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Exception\InvalidCredentialsException;
-use App\Exception\RateLimitedException;
+use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Http\Problem\ProblemCatalog;
 use App\Http\Problem\ProblemResponseFactory;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\RateLimit;
 
 use App\Entity\User;
-use App\Exception\RateLimitedException;
+use App\Service\RateLimit\Exception\RateLimitedException;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\LimiterInterface;
@@ -60,10 +60,8 @@ final readonly class RateLimitGuard
             return;
         }
 
-        // The ApiExceptionListener turns this into 429 problem+json with a
-        // Retry-After header. max(1, ...) because a retryAfter that has just
-        // elapsed would otherwise render as "Retry-After: 0", which clients read
-        // as "now".
+        // max(1, …): a retryAfter that has just elapsed would render as "Retry-After: 0",
+        // which clients read as "now".
         throw new RateLimitedException(max(
             1,
             $limit->getRetryAfter()->getTimestamp() - $this->clock->now()->getTimestamp(),

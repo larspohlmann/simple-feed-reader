@@ -6,8 +6,8 @@ namespace App\Service\OAuth;
 
 use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
-use App\Exception\AccountNotActiveException;
-use App\Exception\InvalidTokenException;
+use App\Service\Auth\Exception\AccountNotActiveException;
+use App\Service\Auth\Exception\InvalidTokenException;
 use App\Repository\UserRepository;
 use App\Security\AccountStatusException;
 use App\Security\LoginUserChecker;

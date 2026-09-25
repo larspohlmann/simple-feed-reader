@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
-use App\Exception\AccountNotActiveException;
 use App\Exception\ApiException;
-use App\Exception\RateLimitedException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -131,24 +129,12 @@ final readonly class ProblemCatalog
 
     private static function legacy(ApiException $exception): ResolvedProblem
     {
-        $problem = new ApiProblem(
+        return new ResolvedProblem(new ApiProblem(
             $exception->type,
             $exception->title,
             $exception->status,
             $exception->detail,
             $exception->errors,
-        );
-
-        $headers = [];
-        if ($exception instanceof RateLimitedException) {
-            $headers['Retry-After'] = (string) $exception->retryAfterSeconds;
-        }
-
-        $extensions = [];
-        if ($exception instanceof AccountNotActiveException) {
-            $extensions['accountStatus'] = $exception->accountStatus;
-        }
-
-        return new ResolvedProblem($problem, $headers, $extensions);
+        ));
     }
 }
