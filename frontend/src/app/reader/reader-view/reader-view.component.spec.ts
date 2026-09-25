@@ -157,6 +157,12 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
   ...over,
 });
 
+function stubComments(state: Signal<CommentsState>): void {
+  TestBed.overrideProvider(CommentsService, {
+    useValue: { state: () => state, load: jest.fn(), reload: jest.fn() },
+  });
+}
+
 describe('ReaderViewComponent', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -290,6 +296,8 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('back-to-top button', () => {
+    afterEach(() => sessionStorage.clear());
+
     function scrollHostTo(host: HTMLElement, top: number): void {
       Object.defineProperty(host, 'scrollTop', { configurable: true, value: top });
       host.dispatchEvent(new Event('scroll'));
@@ -430,6 +438,20 @@ describe('ReaderViewComponent', () => {
       const f = mount(entry());
       const host = stubGeometry(f, 400, 800);
       expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
+    });
+
+    it('adds it when the comments carry a short post past the pane (#1150)', () => {
+      stubComments(signal<CommentsState>({ status: 'idle' }));
+      const f = mount(entry({ comments: 'manual' }));
+      const comments = (f.nativeElement as HTMLElement).querySelector(
+        'app-entry-comments',
+      ) as HTMLElement;
+      comments.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
+
+      const host = stubGeometry(f, 400, 800);
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+      expect(host.querySelector('.progress-rail, .progress')).toBeNull();
     });
   });
 
@@ -965,19 +987,31 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('comments section (#1140)', () => {
+    let commentsState: WritableSignal<CommentsState>;
+
     beforeEach(() => {
-      TestBed.overrideProvider(CommentsService, {
-        useValue: {
-          state: () => signal<CommentsState>({ status: 'idle' }),
-          load: jest.fn(),
-          reload: jest.fn(),
-        },
-      });
+      commentsState = signal<CommentsState>({ status: 'idle' });
+      stubComments(commentsState);
     });
 
     function commentsSection(f: { nativeElement: HTMLElement }): Element | null {
       return f.nativeElement.querySelector('article app-entry-comments');
     }
+
+    const loadedComments: CommentsState = {
+      status: 'ok',
+      comments: [
+        {
+          author: 'u/first',
+          authorUrl: null,
+          url: null,
+          publishedAt: null,
+          byEntryAuthor: false,
+          html: '<p>First comment</p>',
+        },
+      ],
+      loadedAt: 0,
+    };
 
     it('follows the article when the entry has a comments feed', () => {
       expect(commentsSection(mount(entry({ comments: 'auto' })))).not.toBeNull();
@@ -991,6 +1025,33 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(new Subject<ReaderContent>());
 
       expect(commentsSection(mount(entry({ comments: 'manual' })))).toBeNull();
+    });
+
+    it('falls under the reading focus with the article body (#1150)', async () => {
+      commentsState.set(loadedComments);
+      const f = mount(entry({ comments: 'manual' }));
+      await Promise.resolve();
+      f.detectChanges();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const list = commentsSection(f)!.querySelector<HTMLElement>('.list')!;
+      expect(list.style.opacity).not.toBe('');
+    });
+
+    it('re-seats the reading focus when the comments arrive late (#1150)', async () => {
+      commentsState.set({ status: 'loading' });
+      const f = mount(entry({ comments: 'manual' }));
+      await Promise.resolve();
+      f.detectChanges();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      commentsState.set(loadedComments);
+      f.detectChanges();
+      const host = commentsSection(f)!;
+      MockResizeObserver.instances.find((observer) => observer.targets.has(host))!.fire();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      expect(host.querySelector<HTMLElement>('.list')!.style.opacity).not.toBe('');
     });
   });
 
