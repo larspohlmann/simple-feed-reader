@@ -47,4 +47,18 @@ final class CheckCatalogUrlsCommandTest extends KernelTestCase
 
         self::assertSame(0, $tester->getStatusCode());
     }
+
+    public function testReportsATransportFailureAsBroken(): void
+    {
+        $client = new MockHttpClient(static fn (): MockResponse => new MockResponse(
+            '',
+            ['error' => 'Could not resolve host: rotten.example'],
+        ));
+
+        $tester = $this->tester($client);
+        $tester->execute(['--limit' => '1']);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('Could not resolve host', $tester->getDisplay());
+    }
 }
