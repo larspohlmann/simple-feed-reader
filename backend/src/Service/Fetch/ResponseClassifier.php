@@ -87,7 +87,7 @@ final readonly class ResponseClassifier
     private function notModifiedOrEmptyFetch(FetchAttempt $attempt): FetchResponse
     {
         $ticket = $attempt->ticket;
-        if (null === $ticket->etag && null === $ticket->lastModified) {
+        if (!$ticket->isConditional()) {
             return FetchResponse::fetched($attempt->url, $attempt->permanentRedirect, '', null, null);
         }
 
