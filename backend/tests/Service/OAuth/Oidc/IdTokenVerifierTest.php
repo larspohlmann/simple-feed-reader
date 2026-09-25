@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth\Oidc;
 
 use App\Dto\OAuth\OAuthIdentity;
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\Oidc\IdToken;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
 use PHPUnit\Framework\Attributes\DataProvider;

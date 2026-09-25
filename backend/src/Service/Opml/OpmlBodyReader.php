@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Opml;
 
-use App\Exception\InvalidOpmlException;
+use App\Service\Opml\Exception\InvalidOpmlException;
 
 /**
  * Turns untrusted OPML into a DOM, hardened the same way FeedParser hardens

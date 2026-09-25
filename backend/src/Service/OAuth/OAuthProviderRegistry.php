@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
-use App\Exception\OAuth\UnknownProviderException;
+use App\Service\OAuth\Exception\UnknownProviderException;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**

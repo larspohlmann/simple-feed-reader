@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Opml;
 
-use App\Exception\InvalidOpmlException;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlBodyReader;
 use PHPUnit\Framework\TestCase;
 

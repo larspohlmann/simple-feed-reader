@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth;
 
 use App\Dto\OAuth\OAuthIdentity;
-use App\Exception\OAuth\UnknownProviderException;
+use App\Http\Problem\OAuthProblems;
+use App\Service\OAuth\Exception\UnknownProviderException;
 use App\Service\OAuth\OAuthProviderInterface;
 use App\Service\OAuth\OAuthProviderRegistry;
 use PHPUnit\Framework\TestCase;
@@ -39,19 +40,8 @@ final class OAuthProviderRegistryTest extends TestCase
     }
 
     /**
-     * The invisibility property, asserted rather than assumed.
-     *
-     * "Provider is not registered at all" and "provider is registered but this
-     * deployment has no credentials for it" must be indistinguishable from
-     * outside. If they were not, an unauthenticated stranger could enumerate
-     * which integrations this deployment holds keys for by diffing the two
-     * responses — which is exactly the sort of thing that tells an attacker
-     * where to spend their time.
-     *
-     * Compared field by field rather than by class, because the problem
-     * document ApiExceptionListener renders is built from these five public
-     * properties and nothing else. Two exceptions equal across all of them
-     * serialise to byte-identical responses.
+     * An unconfigured provider must be indistinguishable from an absent one, or a stranger could diff the two
+     * responses to learn which integrations this deployment holds keys for.
      */
     public function testAnUnconfiguredProviderIsIndistinguishableFromAnAbsentOne(): void
     {
@@ -76,12 +66,7 @@ final class OAuthProviderRegistryTest extends TestCase
         self::assertInstanceOf(UnknownProviderException::class, $absent);
 
         self::assertSame($absent::class, $unconfigured::class);
-        self::assertSame($absent->type, $unconfigured->type);
-        self::assertSame($absent->status, $unconfigured->status);
-        self::assertSame($absent->title, $unconfigured->title);
-        self::assertSame($absent->detail, $unconfigured->detail);
-        self::assertSame($absent->errors, $unconfigured->errors);
-        // The message is what a naive log line or a debug handler would print.
+        self::assertEquals((new OAuthProblems())->resolve($absent), (new OAuthProblems())->resolve($unconfigured));
         self::assertSame($absent->getMessage(), $unconfigured->getMessage());
     }
 

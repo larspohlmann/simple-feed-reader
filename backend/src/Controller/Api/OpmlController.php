@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Exception\InvalidOpmlException;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlExporter;
 use App\Service\Opml\OpmlImporter;
 use Symfony\Component\HttpFoundation\JsonResponse;

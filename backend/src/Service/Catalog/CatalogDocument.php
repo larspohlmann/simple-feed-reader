@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Catalog;
 
 use App\Enum\SourceFormat;
-use App\Exception\InvalidOpmlException;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use App\Service\Opml\OpmlBodyReader;
 

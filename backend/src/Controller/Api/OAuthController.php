@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\CallbackParameters;
 use App\Service\OAuth\FlowCookie;
 use App\Service\OAuth\OAuthProviderRegistry;
