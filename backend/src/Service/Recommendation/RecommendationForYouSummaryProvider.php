@@ -28,6 +28,7 @@ final readonly class RecommendationForYouSummaryProvider
 
         return new RecommendationForYouSummary(
             $this->items->countForYou((int) $user->getId()),
+            $this->items->countForYouIncludingRead((int) $user->getId()),
             $newestCompletedRun?->getCompletedAt(),
             $newestCompletedRun?->getId(),
         );

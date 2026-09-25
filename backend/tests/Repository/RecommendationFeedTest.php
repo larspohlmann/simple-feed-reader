@@ -451,6 +451,22 @@ final class RecommendationFeedTest extends DbTestCase
         self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
     }
 
+    public function testCountForYouIncludingReadCountsReadPicksToo(): void
+    {
+        $unread = $this->entry('unread');
+        $read = $this->entry('read');
+        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $this->item($run, $unread, 1, 'reason unread');
+        $this->item($run, $read, 2, 'reason read');
+        $readState = new EntryState($this->user, $read);
+        $readState->hide(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+        $this->em->persist($readState);
+        $this->em->flush();
+
+        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
+        self::assertSame(2, $this->repo()->countForYouIncludingRead((int) $this->user->getId()));
+    }
+
     public function testCountForYouCountsUnreadPicksOnly(): void
     {
         $unread = $this->entry('unread');
