@@ -6,12 +6,15 @@ namespace App\Tests\Service\OAuth;
 
 use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use App\Service\OAuth\OAuthStateStore;
+use App\Tests\Support\AssertsRefusal;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class OAuthStateStoreTest extends TestCase
 {
+    use AssertsRefusal;
+
     private ArrayAdapter $cache;
     private MockClock $clock;
     private OAuthStateStore $store;
@@ -29,16 +32,6 @@ final class OAuthStateStoreTest extends TestCase
         $this->store = new OAuthStateStore($this->cache, $this->clock);
     }
 
-    private function assertRefused(string $state, ?string $browserToken): void
-    {
-        try {
-            $this->store->consume($state, $browserToken);
-            self::fail('The state was redeemed.');
-        } catch (InvalidOAuthStateException) {
-            $this->addToAssertionCount(1);
-        }
-    }
-
     public function testAStartedFlowCanBeConsumedOnce(): void
     {
         $started = $this->store->start('google');
@@ -50,12 +43,20 @@ final class OAuthStateStoreTest extends TestCase
 
         // Single use. A replayed callback — the browser's back button, or an
         // attacker resubmitting a captured redirect — must find nothing.
-        $this->assertRefused($started->state, $started->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, $started->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     public function testAnUnknownStateIsRejected(): void
     {
-        $this->assertRefused('never-issued', 'irrelevant');
+        $this->assertRefused(
+            fn () => $this->store->consume('never-issued', 'irrelevant'),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     public function testAnExpiredStateIsRejected(): void
@@ -63,7 +64,11 @@ final class OAuthStateStoreTest extends TestCase
         $started = $this->store->start('google');
         $this->clock->modify('+11 minutes');
 
-        $this->assertRefused($started->state, $started->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, $started->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     /**
@@ -80,14 +85,22 @@ final class OAuthStateStoreTest extends TestCase
     {
         $started = $this->store->start('google');
 
-        $this->assertRefused($started->state, null);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, null),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     public function testAFlowCannotBeConsumedWithTheWrongBrowserToken(): void
     {
         $started = $this->store->start('google');
 
-        $this->assertRefused($started->state, str_repeat('a', 64));
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, str_repeat('a', 64)),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     /**
@@ -101,7 +114,11 @@ final class OAuthStateStoreTest extends TestCase
         $a = $this->store->start('google');
         $b = $this->store->start('google');
 
-        $this->assertRefused($a->state, $b->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($a->state, $b->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     /**
@@ -116,10 +133,18 @@ final class OAuthStateStoreTest extends TestCase
     {
         $started = $this->store->start('google');
 
-        $this->assertRefused($started->state, 'wrong');
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, 'wrong'),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
 
         // Even the right token cannot recover it now.
-        $this->assertRefused($started->state, $started->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, $started->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     public function testEveryFlowGetsADistinctBrowserToken(): void
@@ -163,10 +188,18 @@ final class OAuthStateStoreTest extends TestCase
 
         $this->clock->modify('+9 minutes');
         // A miss on a different state must not act as a keep-alive for this one.
-        $this->assertRefused('some-other-state', 'irrelevant');
+        $this->assertRefused(
+            fn () => $this->store->consume('some-other-state', 'irrelevant'),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
 
         $this->clock->modify('+2 minutes');
-        $this->assertRefused($started->state, $started->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, $started->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 
     public function testTheCodeChallengeIsTheS256OfTheVerifier(): void
@@ -222,6 +255,10 @@ final class OAuthStateStoreTest extends TestCase
         $item->set(['provider' => 'google']);
         $this->cache->save($item);
 
-        $this->assertRefused($started->state, $started->browserToken);
+        $this->assertRefused(
+            fn () => $this->store->consume($started->state, $started->browserToken),
+            InvalidOAuthStateException::class,
+            'The state was redeemed.',
+        );
     }
 }

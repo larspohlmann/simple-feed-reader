@@ -6,12 +6,15 @@ namespace App\Tests\Service\OAuth;
 
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\OAuth\LoginCodeStore;
+use App\Tests\Support\AssertsRefusal;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class LoginCodeStoreTest extends TestCase
 {
+    use AssertsRefusal;
+
     /**
      * Stands in for the flow cookie the callback authenticated. Shaped like the
      * real one — 64 hex characters — so the "not stored in the clear"
@@ -40,12 +43,20 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
 
         self::assertSame(42, $this->store->consume($code, self::TOKEN));
-        $this->assertRefused($code, self::TOKEN);
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     public function testAnUnknownCodeIsRefused(): void
     {
-        $this->assertRefused('not-a-code', self::TOKEN);
+        $this->assertRefused(
+            fn () => $this->store->consume('not-a-code', self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     public function testACodeExpiresAfterThirtySeconds(): void
@@ -53,7 +64,11 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
         $this->clock->modify('+31 seconds');
 
-        $this->assertRefused($code, self::TOKEN);
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     public function testACodeIsStillValidJustInsideTheWindow(): void
@@ -89,12 +104,16 @@ final class LoginCodeStoreTest extends TestCase
         $this->clock->modify('+20 seconds');
         // A miss on an unrelated key: traffic through the store, touching
         // neither this entry nor its deadline.
-        $this->assertRefused('some-other-code', self::TOKEN);
+        $this->assertRefused(
+            fn () => $this->store->consume('some-other-code', self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
 
         $this->clock->modify('+11 seconds');
         $this->assertRefused(
-            $code,
-            self::TOKEN,
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
             'the code outlived T+30, so its deadline moved with the store rather than with its issue',
         );
     }
@@ -116,7 +135,11 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        $this->assertRefused($code, 'a-different-browsers-token');
+        $this->assertRefused(
+            fn () => $this->store->consume($code, 'a-different-browsers-token'),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -128,7 +151,11 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        $this->assertRefused($code, null);
+        $this->assertRefused(
+            fn () => $this->store->consume($code, null),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -140,10 +167,18 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        $this->assertRefused($code, '');
+        $this->assertRefused(
+            fn () => $this->store->consume($code, ''),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
 
         $emptyBound = $this->store->issue(7, '');
-        $this->assertRefused($emptyBound, self::TOKEN);
+        $this->assertRefused(
+            fn () => $this->store->consume($emptyBound, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -155,8 +190,16 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        $this->assertRefused($code, 'wrong');
-        $this->assertRefused($code, self::TOKEN, 'the code survived a failed binding check');
+        $this->assertRefused(
+            fn () => $this->store->consume($code, 'wrong'),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'the code survived a failed binding check',
+        );
     }
 
     /**
@@ -194,19 +237,10 @@ final class LoginCodeStoreTest extends TestCase
         $item->set(['user_id' => 42]);
         $this->cache->save($item);
 
-        $this->assertRefused($code, self::TOKEN);
-    }
-
-    private function assertRefused(
-        string $code,
-        ?string $browserToken,
-        string $whyItMatters = 'The code was redeemed.',
-    ): void {
-        try {
-            $this->store->consume($code, $browserToken);
-            self::fail($whyItMatters);
-        } catch (InvalidTokenException) {
-            $this->addToAssertionCount(1);
-        }
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 }

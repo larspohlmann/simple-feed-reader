@@ -10,10 +10,13 @@ use App\Enum\TokenPurpose;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AssertsRefusal;
 use Symfony\Component\Clock\MockClock;
 
 final class ActionTokenServiceTest extends DbTestCase
 {
+    use AssertsRefusal;
+
     private MockClock $clock;
     private ActionTokenService $service;
     private User $user;
@@ -65,14 +68,22 @@ final class ActionTokenServiceTest extends DbTestCase
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
         $this->service->consume($plain, TokenPurpose::VerifyEmail);
 
-        $this->assertRefused($plain, TokenPurpose::VerifyEmail);
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
     }
 
     public function testConsumeRejectsTheWrongPurpose(): void
     {
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
 
-        $this->assertRefused($plain, TokenPurpose::ResetPassword);
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::ResetPassword),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
     }
 
     public function testConsumeRejectsAnExpiredToken(): void
@@ -80,12 +91,20 @@ final class ActionTokenServiceTest extends DbTestCase
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
         $this->clock->modify('+25 hours');
 
-        $this->assertRefused($plain, TokenPurpose::VerifyEmail);
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
     }
 
     public function testConsumeRejectsGarbage(): void
     {
-        $this->assertRefused('not-a-real-token', TokenPurpose::VerifyEmail);
+        $this->assertRefused(
+            fn () => $this->service->consume('not-a-real-token', TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
     }
 
     public function testIssuingInvalidatesEarlierTokensOfTheSamePurpose(): void
@@ -95,7 +114,11 @@ final class ActionTokenServiceTest extends DbTestCase
 
         // Requesting a new reset link must retire the previous one, otherwise
         // an old link stolen from an inbox stays usable for 24 hours.
-        $this->assertRefused($first, TokenPurpose::ResetPassword);
+        $this->assertRefused(
+            fn () => $this->service->consume($first, TokenPurpose::ResetPassword),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
         self::assertSame($this->user->getId(), $this->service->consume($second, TokenPurpose::ResetPassword)->getId());
     }
 
@@ -113,7 +136,11 @@ final class ActionTokenServiceTest extends DbTestCase
         $this->em->flush();
         $this->em->clear();
 
-        $this->assertRefused($plain, TokenPurpose::VerifyEmail);
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
     }
 
     /**
@@ -129,15 +156,5 @@ final class ActionTokenServiceTest extends DbTestCase
             ActionTokenService::class,
             self::getContainer()->get(ActionTokenService::class),
         );
-    }
-
-    private function assertRefused(string $plainToken, TokenPurpose $purpose): void
-    {
-        try {
-            $this->service->consume($plainToken, $purpose);
-            self::fail('The token was redeemed.');
-        } catch (InvalidTokenException) {
-            $this->addToAssertionCount(1);
-        }
     }
 }
