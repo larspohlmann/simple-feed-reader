@@ -43,7 +43,7 @@ final readonly class AccountBackupExporter
      */
     public function parts(User $user, ?string $sourceUrl): \Generator
     {
-        $userId = $user->getId() ?? throw new \LogicException('Cannot export an unsaved account.');
+        $userId = $user->requireId();
         $provenance = $this->provenanceOf($user, $sourceUrl);
         $foundation = $this->foundationSnapshot($userId);
         $walk = new BackupPartWalk($this->em, $this->entries, $this->entryStates, $this->lines, $provenance, $userId);

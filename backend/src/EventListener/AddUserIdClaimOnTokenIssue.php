@@ -24,7 +24,7 @@ final readonly class AddUserIdClaimOnTokenIssue
 
         $event->setData([
             ...$event->getData(),
-            self::CLAIM => $user->getId() ?? throw new \LogicException('A signed-in user must have an id.'),
+            self::CLAIM => $user->requireId(),
         ]);
     }
 }

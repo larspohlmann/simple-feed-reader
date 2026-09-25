@@ -34,7 +34,7 @@ final readonly class RestorePreviewer
         $inventory = $this->inspector->inspect($gzipBytes);
         $this->fitCheck->assertFits($inventory, $user);
 
-        $userId = $user->getId() ?? 0;
+        $userId = $user->requireId();
 
         return new RestorePreview(
             header: $inventory->header,

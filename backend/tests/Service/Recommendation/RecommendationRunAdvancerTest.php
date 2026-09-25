@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
+use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -364,20 +365,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * for such a user, which only holds if the code really names the lock
      * after that fallback and not some other value.
      */
-    public function testLockNameFallsBackToZeroForAnUnsavedUser(): void
+    public function testAdvancingForAnUnsavedUserIsRefused(): void
     {
-        $lock = $this->lockFactory()->createLock('ai-recommendations-0');
-        self::assertTrue($lock->acquire());
+        $unsavedUser = new User('unsaved@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
 
-        try {
-            $unsavedUser = new User('unsaved@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->expectException(UnpersistedEntityException::class);
+        $this->expectExceptionMessage(User::class);
 
-            $report = $this->advancer()->advance($unsavedUser);
-
-            self::assertSame('busy', $report->status);
-        } finally {
-            $lock->release();
-        }
+        $this->advancer()->advance($unsavedUser);
     }
 
     /**

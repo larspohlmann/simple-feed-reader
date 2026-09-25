@@ -36,6 +36,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_recommendation_run_user_status', columns: ['user_id', 'status'])]
 class RecommendationRun
 {
+    use PersistedId;
+
     public const string STATUS_PENDING = 'pending';
     public const string STATUS_RUNNING = 'running';
     public const string STATUS_COMPLETED = 'completed';

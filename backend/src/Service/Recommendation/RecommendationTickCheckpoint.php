@@ -57,6 +57,6 @@ final readonly class RecommendationTickCheckpoint
 
     private function wasStopped(RecommendationRun $run): bool
     {
-        return RecommendationRun::STATUS_CANCELLED === $this->runs->statusOf($run->getId() ?? 0);
+        return RecommendationRun::STATUS_CANCELLED === $this->runs->statusOf($run->requireId());
     }
 }

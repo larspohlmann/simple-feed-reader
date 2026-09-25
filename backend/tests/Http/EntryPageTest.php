@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\Entry;
+use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\Feed;
 use App\Http\EntryCursor;
 use App\Http\EntryPage;
@@ -89,13 +90,13 @@ final class EntryPageTest extends TestCase
 
     public function testAnEntryWithNoIdRaisesALogicException(): void
     {
-        // getId() ?? throw is the only guard between a not-yet-persisted entry
+        // requireId() is the only guard between a not-yet-persisted entry
         // and a cursor built from a null id. rowForEntryWithoutId leaves the
         // id unset, exactly as a freshly constructed, unflushed Entry would.
         $row = $this->rowForEntryWithoutId(new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('An entry loaded from the database must have an id.');
+        $this->expectException(UnpersistedEntityException::class);
+        $this->expectExceptionMessage(Entry::class);
 
         EntryPage::of([$row], 1, EntryListSort::PublishedDate);
     }

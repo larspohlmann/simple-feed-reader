@@ -93,7 +93,7 @@ final readonly class AiProviderConfigurator
         $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
         $descriptors = $this->catalog->listModels($credentials);
 
-        $sealed = $this->cipher->seal($this->identify($user), $credentials->apiKey);
+        $sealed = $this->cipher->seal($user->requireId(), $credentials->apiKey);
         $hint = substr($credentials->apiKey, -self::HINT_LENGTH);
 
         $configuration = new AiProviderSettings(
@@ -131,7 +131,7 @@ final readonly class AiProviderConfigurator
             );
         }
 
-        $sealed = $this->cipher->seal($this->identify($user), $this->credentials($source)->apiKey);
+        $sealed = $this->cipher->seal($user->requireId(), $this->credentials($source)->apiKey);
 
         $copy = new AiProviderSettings(
             $user,
@@ -211,7 +211,7 @@ final readonly class AiProviderConfigurator
     public function credentials(AiProviderSettings $settings): ProviderCredentials
     {
         try {
-            $apiKey = $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedSecret());
+            $apiKey = $this->cipher->open($settings->getUser()->requireId(), $settings->getSealedSecret());
         } catch (SecretUnreadableException $e) {
             throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $e);
         }
@@ -282,14 +282,5 @@ final readonly class AiProviderConfigurator
         }
 
         return mb_substr('Copy of ' . $sourceName, 0, self::NAME_MAX_LENGTH);
-    }
-
-    /**
-     * The account id is bound into the sealed key, so an unsaved User cannot be
-     * sealed for: the id it would get on flush is not the one used here.
-     */
-    private function identify(User $user): int
-    {
-        return $user->getId() ?? throw new \LogicException('Cannot seal a key for an unsaved account.');
     }
 }

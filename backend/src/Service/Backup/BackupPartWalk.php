@@ -86,10 +86,13 @@ final class BackupPartWalk
      */
     private function bufferBatch(array $batch, string $feedUrl): \Generator
     {
-        $statesByEntryId = $this->entryStates->forUserByEntryIds($this->userId, array_map(self::entryId(...), $batch));
+        $statesByEntryId = $this->entryStates->forUserByEntryIds(
+            $this->userId,
+            array_map(static fn (Entry $entry): int => $entry->requireId(), $batch),
+        );
 
         foreach ($batch as $entry) {
-            yield from $this->bufferEntry($entry, $feedUrl, $statesByEntryId[self::entryId($entry)] ?? null);
+            yield from $this->bufferEntry($entry, $feedUrl, $statesByEntryId[$entry->requireId()] ?? null);
         }
     }
 
@@ -131,11 +134,6 @@ final class BackupPartWalk
     {
         $lastKey = array_key_last($batch);
 
-        return null === $lastKey ? $fallback : self::entryId($batch[$lastKey]);
-    }
-
-    private static function entryId(Entry $entry): int
-    {
-        return $entry->getId() ?? throw new \LogicException('A persisted entry has no id.');
+        return null === $lastKey ? $fallback : $batch[$lastKey]->requireId();
     }
 }

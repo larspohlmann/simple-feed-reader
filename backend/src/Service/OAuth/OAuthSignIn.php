@@ -67,10 +67,7 @@ final readonly class OAuthSignIn
         // — linking proves an address, it does not overrule an admin.
         $user = $this->linker->resolve($identity);
 
-        $userId = $user->getId();
-        \assert(null !== $userId);
-
-        return $this->loginCodes->issue($userId, $browserToken);
+        return $this->loginCodes->issue($user->requireId(), $browserToken);
     }
 
     /**
