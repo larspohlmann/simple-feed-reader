@@ -8,6 +8,7 @@
 @use './styles/base';
 @use './styles/controls';
 @use './styles/list-action';
+@use './styles/flag-toggle';
 @use './styles/icon-button';
 
 // Every dialog.open() lands on the CDK's .cdk-overlay-pane; the frame is

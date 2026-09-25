@@ -1,0 +1,14 @@
+// Every entry-state toggle, one language: muted and hollow off, accent and filled on (#1152).
+button.flag-toggle {
+  color: var(--text-muted);
+}
+
+@media (hover: hover) {
+  button.flag-toggle:not(.on):hover {
+    color: var(--text-primary);
+  }
+}
+
+button.flag-toggle.on {
+  color: var(--accent);
+}
