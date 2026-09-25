@@ -13,8 +13,9 @@
 ## Global Constraints
 
 - **The wire contract does not change.** Every `type`, `status` and `title` stays byte-identical, and so do `detail`, the `errors`/`accountStatus`/`invalidatedPasskeyCount` members and the `Retry-After` header. The only exceptions are the deliberate changes listed in Task 6. The Angular client and a future iOS client switch on `type`.
-- **The mappers are the only code that knows HTTP.** Exceptions under `src/Service`, `src/Repository`, `src/Entity` and `src/Enum` must not import `Symfony\Component\HttpFoundation\Response`, any `Symfony\Component\HttpKernel\Exception\*`, or anything under `App\Http\*`.
-- **Where exceptions live:** follow CLAUDE.md, next to their service in `Service/<Module>/Exception/`. Only three stay in `src/Exception/`, because they are cross-cutting or HTTP-layer: `ValidationException`, `InvalidSelectionException` (new) and `InvalidCredentialsException`. `TagNameTakenException` also stays in `src/Exception/` for now, because #1157 creates its service.
+- **The mappers are the only code that knows HTTP.** Exceptions under `src/Service`, `src/Repository`, `src/Entity` and `src/Enum` must not import `Symfony\Component\HttpFoundation\Response`, any `Symfony\Component\HttpKernel\Exception\*`, or anything under `App\Http\*`. No code in those four trees may throw or import a `Symfony\Component\HttpKernel\Exception\*` class. *(Preflight amendment: non-exception service code that imports `Response` or `App\Http\*` today, such as `HtmlPageFetcher`, `FlowCookie`, `MaintenanceTokenGuard` and the 21 `App\Http` presentation hits, is #1158's scope and stays.)*
+- **Where exceptions live:** follow CLAUDE.md, next to their service in `Service/<Module>/Exception/`. Only three stay in `src/Exception/`, because they are cross-cutting or HTTP-layer: `ValidationException`, `InvalidSelectionException` (new) and `InvalidCredentialsException`. `TagNameTakenException` also stays in `src/Exception/` for now, because #1157 creates its service. *(Preflight amendment: `src/Exception/FeedPreviewException.php` is the only copy, used by `FeedPreviewService`. Task 5 moves it to `Service/Preview/Exception/`.)*
+- **Same-name traps.** `Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException` and `Doctrine\ORM\EntityNotFoundException` exist next to ours. A mapper must never match either of them: a revoked JWT must stay the opaque 401, and a Doctrine proxy miss must stay the opaque 500. `ProblemCatalogTest` pins both.
 - **Keep the safety invariant of the old `ApiException` docblock.** A mapper never copies `getPrevious()` or an unexpected message into the problem document. It uses `getMessage()` as `detail` only for exceptions whose message is authored text that is safe to show a client (the table in Task 1 says which).
 - The CLAUDE.md Clean Code rules apply to every file you touch:
   - `final readonly` where possible.
@@ -97,13 +98,14 @@ The test builds an `ExceptionEvent` for `/api/x` exactly as `tests/EventListener
 | `NoActiveRecommendationRunException` (domain) | no_active_recommendation_run | 409 | No recommendation run is active | There is nothing to stop: the run already finished. |
 | `NoResumableRecommendationRunException` (domain) | no_resumable_recommendation_run | 409 | No recommendation run to resume | There is no failed run to resume; start a new one instead. |
 | `RecommendationRunActiveException` (domain) | recommendation_run_active | 409 | A recommendation run is still active | Wait for the current run to finish, then try again. |
-| `ScrapingDisabledException('m')` (domain) | scraping_disabled | 403 | Website scraping is disabled | m |
+| `ScrapingDisabledException()` (domain; no-arg ctor, fixed message) | scraping_disabled | 403 | Website scraping is disabled | Website scraping is turned off for this account. |
 | `FeedPreviewException('m')` (domain) | feed_preview_failed | 422 | Feed preview failed | m |
 | `InvalidCatalogDocumentException('m')` (domain) | request_error | 422 | Unprocessable Content | — |
 | `NoCommentsFeedException('m')` (domain) | not_found | 404 | Not Found | — |
 
 - The rows whose first column says "(domain)" are exceptions that today only reach HTTP through a controller catch-and-rethrow.
-- For those rows, mark the test `#[Group('pending-1160')]` and skip it, with `self::markTestSkipped('mapped in Task 3/4')`, until the task that maps them.
+- *(Preflight amendment: no skipped tests.)* Do **not** add the "(domain)" rows in Task 1. Tasks 3 and 4 add them red-first. In Task 1, pin the domain rows' current contract through their **twin** instead, where a twin exists (`new AiNotConfiguredApiException()` etc.). Task 3 swaps those rows to the domain exception when it deletes the twin. The 4 twin-less rows (InvalidCatalogDocument, NoCommentsFeed, and the Symfony-HTTP rethrows) are covered by the fallback rows in Step 2.
+- *(Preflight amendment: debug.)* Boot the kernel with `self::bootKernel(['debug' => false])`. The test kernel defaults to debug, and in debug the opaque 500 carries `getMessage()` as detail. The 500 row must assert **no detail** on untouched code. If it fails, the boot is wrong, not the row. Never "fix" that row by adding a detail.
 - Read each domain exception's real constructor before writing its row. Where a constructor differs from the table, the constructor wins.
 - Also check the two `ModelNotOffered…` messages that `AiSettingsController:287-293` catches. If that catch maps anything the table misses, add a row for it.
 
@@ -114,6 +116,7 @@ The test builds an `ExceptionEvent` for `/api/x` exactly as `tests/EventListener
   - `new AccessDeniedException()` (Security) → `forbidden` 403.
   - `new \LogicException('db password')` → `internal_error` 500, with **no** `detail` and without the string anywhere in the body.
   - `new TooManyRequestsHttpException(60)` → header `Retry-After: 60` is kept.
+  - *(Preflight amendment)* `new UnprocessableEntityHttpException('secret m')` → `{type:request_error,title:Unprocessable Content,status:422}`, with no detail and the message nowhere in the body. This pins what `AdminCatalogImportController` produces today.
 - [ ] **Step 3: Run it.** `php bin/phpunit tests/Http/Problem/ProblemContractTest.php`. Expected: every non-skipped row PASSES on untouched code. Any failure means the row is wrong, not the code. Fix the row.
 - [ ] **Step 4: Break it.** Change one `title` in `LastAdminException` and watch that row go red, then revert by hand. Don't use `git checkout --`.
 - [ ] **Step 5: Commit** `test(#1160): pin the problem+json wire contract`.
@@ -126,7 +129,7 @@ The test builds an `ExceptionEvent` for `/api/x` exactly as `tests/EventListener
 - Move: `src/Http/ApiProblem.php` → `src/Http/Problem/ApiProblem.php`, and `src/Http/ResolvedProblem.php` → `src/Http/Problem/ResolvedProblem.php` (update every `use`).
 - Create: `src/Http/Problem/ExceptionProblems.php`, `ProblemCatalog.php`, `ProblemResponseFactory.php`.
 - Modify: `src/EventListener/ApiExceptionListener.php`, `src/Security/LoginFailureHandler.php`, `src/EventListener/JwtFailureResponseListener.php`.
-- Test: `tests/Http/Problem/ProblemCatalogTest.php`, `tests/Http/Problem/ProblemResponseFactoryTest.php`. Move the relevant cases out of `tests/EventListener/ApiExceptionListenerTest.php` and keep that file for the path filter only.
+- Test: `tests/Http/Problem/ProblemCatalogTest.php`, `tests/Http/Problem/ProblemResponseFactoryTest.php`. Move the relevant cases out of `tests/EventListener/ApiExceptionListenerTest.php` and keep that file for the path filter only. *(Preflight amendment)* `git mv tests/Http/ApiProblemTest.php tests/Http/Problem/ApiProblemTest.php` together with the class.
 
 **Interfaces:**
 - Produces:
@@ -173,13 +176,13 @@ final readonly class ProblemResponseFactory
   - This is only safe if no mapper ever claims an `AuthenticationException` subclass. A suspended user's stolen token must keep getting the opaque 401.
   - `AccountStatusException` is an `AuthenticationException`. Assert this invariant in `ProblemCatalogTest`: resolving `new App\Security\AccountStatusException(...)` must return `unauthorized` with no `accountStatus`.
   - Then find the existing JWT test for suspended tokens (`tests/Controller/Api/JwtAccessTest.php`) and confirm it still passes.
+  - *(Preflight amendment)* Also assert in `ProblemCatalogTest` that `new \Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException()` resolves to `unauthorized` 401, and `new \Doctrine\ORM\EntityNotFoundException('Entity of type X for IDs 1')` resolves to `internal_error` 500 with no detail. Use a catalog built with `debug: false` and the real mappers. Later tasks keep these green once `AuthProblems` and the repository exceptions exist.
 - [ ] **Step 5: Switch `LoginFailureHandler`.**
   - Keep the `match` that picks the domain exception.
-  - Replace `new RateLimitedException(900)` with the lockout that Symfony reports. `LoginThrottlingListener` throws `TooManyLoginAttemptsAuthenticationException(ceil(minutes))`, so read `$exception->getMessageData()['%minutes%']`. A null threshold, which only a manual throw can produce, falls back to 60 seconds.
+  - Replace `new RateLimitedException(900)` with the lockout that Symfony reports. `LoginThrottlingListener` throws `TooManyLoginAttemptsAuthenticationException(ceil(minutes))`, so read `$exception->getMessageData()['%minutes%']` **and multiply by 60** (the value is minutes). A null threshold, which only a manual throw can produce, falls back to 60 seconds.
   - Build the response through `$this->responses->create($this->problems->resolve($domainException, $request->getPathInfo()))`.
   - Delete its hand-built payload, its `accountStatus` handling and its `Retry-After` handling. The catalog now supplies all three.
-  - Add or adjust a test that throttles a login past `max_attempts: 5`. Assert that `Retry-After` is between 1 and 900, and that it is no longer the constant 900: freeze no clock, just assert `<= 900` and `> 0`.
-  - Search `tests/` for an existing throttling test first.
+  - *(Preflight amendment: the original "no longer 900" assertion is untestable, because a fresh lockout is `ceil(14.9x) * 60 = 900`.)* Keep `tests/Controller/Api/LoginTest.php:195-212` asserting `Retry-After: 900`. Add unit tests on `LoginFailureHandler`: `new TooManyLoginAttemptsAuthenticationException(3)` → `Retry-After: 180`, and a null threshold → `60`.
 - [ ] **Step 6: Run the tests.** Run `ProblemContractTest`, the listener tests, `tests/Security`, `tests/Controller/Api/JwtAccessTest.php`, the passkey login tests and `composer stan`. Expected: all PASS.
 - [ ] **Step 7: Commit** `refactor(#1160): one problem catalog and response factory for every error path`.
 
@@ -194,7 +197,13 @@ final readonly class ProblemResponseFactory
 - Delete: `src/Exception/AiNotConfiguredApiException.php`, `AiConfigurationNotFoundApiException.php`, `TooManyAiConfigurationsApiException.php`, `AiKeyUnreadableApiException.php`, `AiProviderApiException.php`, `NoActiveRecommendationRunApiException.php`, `NoResumableRecommendationRunApiException.php`, `RecommendationRunActiveApiException.php`.
 - Modify: `src/Controller/Api/AiSettingsController.php` and `src/Controller/Api/RecommendationRunController.php`. Remove every catch that only rethrows a twin; the `try` goes with it where nothing else is caught.
 
-- [ ] **Step 1: Un-skip the AI and recommendation rows in `ProblemContractTest`.** Run them. Expected: FAIL with a 500, because nothing maps them yet.
+*(Preflight amendment: `SecretUnreadableException`.)* `App\Service\Crypto\Exception\SecretUnreadableException` is **not** AI-owned. The Mail, Proxy and Grafana ciphers, `ConcurrentFeedFetcher` and `FailoverRequestSender` throw it too. Mapping it globally would turn those failures into 422 "The stored API key can no longer be read". So:
+- Create `Service/Ai/Exception/AiKeyUnreadableException` (plain).
+- Every AI service call path that the controllers' old `catch (SecretUnreadableException)` covered catches `SecretUnreadableException` at the AI service boundary and throws `AiKeyUnreadableException` with `previous`. Find those paths by tracing what each removed catch wrapped.
+- `AiProblems` maps `AiKeyUnreadableException` → `ai_key_unreadable` with fixed text. It never maps `SecretUnreadableException`.
+- Add a `ProblemCatalogTest` row: a bare `SecretUnreadableException` resolves to the opaque 500.
+
+- [ ] **Step 1: Swap the AI and recommendation rows in `ProblemContractTest` from the twin to the domain exception** (red-first; Task 1 pinned them via the twins). Run them. Expected: FAIL with a 500, because nothing maps them yet.
 - [ ] **Step 2: Write the mappers.** The shape:
 
 ```php
@@ -228,15 +237,15 @@ final readonly class RecommendationRunProblems implements ExceptionProblems
 ### Task 4: The remaining catch-and-rethrow sites
 
 **Files:**
-- Create: `src/Http/Problem/DiscoveryProblems.php` (ScrapingDisabled, FeedPreview), `CatalogProblems.php` (InvalidCatalogDocument), `CommentsProblems.php` (NoCommentsFeed).
-- Delete: `src/Exception/ScrapingDisabledApiException.php`, `src/Exception/FeedPreviewApiException.php`. Also delete `src/Exception/FeedPreviewException.php` if it turns out to be a stray duplicate of the service one; check its users first.
+- Create: `src/Http/Problem/DiscoveryProblems.php` (ScrapingDisabled), `PreviewProblems.php` (FeedPreview), `CatalogProblems.php` (InvalidCatalogDocument), `CommentsProblems.php` (NoCommentsFeed).
+- Delete: `src/Exception/ScrapingDisabledApiException.php`, `src/Exception/FeedPreviewApiException.php`. *(Preflight amendment)* **Keep** `src/Exception/FeedPreviewException.php`. It is the only copy, thrown by `Service/Preview/FeedPreviewService`, and Task 5 moves it.
 - Modify:
   - `Controller/Api/SubscriptionController.php:96` and `FeedPreviewController.php:41-50`.
   - `Controller/Admin/AdminCatalogImportController.php:66,81`. Keep the `:43` catch: it returns `available:false`, which is a real alternative answer, not a rethrow.
   - `Controller/Api/EntryCommentsController.php:40`.
 - Leave `Controller/Api/OAuthController.php:187` alone. It logs and redirects a browser, which is the flow's contract.
 
-- [ ] **Step 1: Un-skip the rows.** Expected: FAIL.
+- [ ] **Step 1: Swap the ScrapingDisabled and FeedPreview rows from twin to domain exception, and add rows for `InvalidCatalogDocumentException` and `NoCommentsFeedException`** (red-first). Expected: FAIL.
 - [ ] **Step 2: Write the mappers.**
   - The detail rules follow the table. `InvalidCatalogDocumentException` and `NoCommentsFeedException` currently reach the client through a bare Symfony HTTP exception, which carries **no** detail. Keep it that way: `new ApiProblem('request_error', 'Unprocessable Content', 422)` and `new ApiProblem('not_found', 'Not Found', 404)`.
   - Use `Response::$statusTexts[...]` for those two titles, so they match `fromHttpException()` exactly.
@@ -257,7 +266,7 @@ Move each file with `git mv` so its history follows, and update every `use`. `co
 
 | Exceptions | Destination namespace | Mapper |
 |---|---|---|
-| The 10 `Service/Passkey/Exception/*` | stay | `PasskeyRegistrationProblems` (Attestation, Duplicate, ChallengeOwnership, UnknownChallenge, NotFound, LastSignInMethod) + `PasskeySignInProblems` (Assertion, UnknownCredential, SignInDisabled). The split keeps each `match` under PHPMD's complexity limit. |
+| The 9 `Service/Passkey/Exception/*` | stay | `PasskeyRegistrationProblems` (Attestation, Duplicate, ChallengeOwnership, UnknownChallenge, NotFound, LastSignInMethod) + `PasskeySignInProblems` (Assertion, UnknownCredential, SignInDisabled). The split follows cohesion, registration vs sign-in. *(Preflight: pdepend does not count `match` arms, so PHPMD is not the reason.)* |
 | `Service/Backup/Exception/*` (3) | stay | `BackupProblems` |
 | `Service/Mail/Settings/Exception/IncompleteMailConfigurationException` | stay | `MailProblems` |
 | `Service/Settings/Exception/RelyingPartyChangeRequiresConfirmationException` | stay | `SettingsProblems`, with extension `invalidatedPasskeyCount` |
@@ -267,11 +276,27 @@ Move each file with `git mv` so its history follows, and update every `use`. `co
 | `Exception/RateLimitedException` | `Service/RateLimit/Exception/` | `RateLimitProblems`, with header `Retry-After` |
 | `Exception/InvalidOpmlException` | `Service/Opml/Exception/` | `OpmlProblems` |
 | `Exception/OAuth/*` (OAuthException, OAuthFailedException, UnknownProviderException) | `Service/OAuth/Exception/` | `OAuthProblems` |
+| `Exception/FeedPreviewException` *(preflight addition)* | `Service/Preview/Exception/` | `PreviewProblems` (from Task 4) |
 | `Exception/InvalidCredentialsException`, `ValidationException`, `TagNameTakenException` | stay in `src/Exception/` | `RequestProblems` (Validation, with extension `errors` via `ApiProblem::$errors`), `AuthProblems` (InvalidCredentials), `TagProblems` (TagNameTaken) |
 
 - **`AccountNotActiveException`:** the status-to-message `match` becomes mapper logic. The exception keeps only `public readonly string $accountStatus`.
 - **`RateLimitedException`:** keeps `retryAfterSeconds`.
-- **`Passkey/AssertionVerifier.php`** matched the grep for `extends ApiException`. Find out why: it may type-hint or construct one. Adjust it.
+- *(Preflight amendment: this replaces the `AssertionVerifier` note, which only mentions `ApiException` in a docblock.)* **`src/Security/PasskeyAuthenticator.php:119` does `catch (ApiException $exception)`** and rethrows `AuthenticationException('Passkey assertion rejected.', previous: …)`. `LoginFailureHandler` then reads `previous` to prune on `UnknownPasskeyCredentialException` (#727). In the Passkey commit:
+  - Add a marker interface `Service/Passkey/Exception/PasskeySignInFailure`, implemented by the four exceptions `verify()` throws: `PasskeySignInDisabled`, `UnknownChallenge`, `AssertionRejected` and `UnknownPasskeyCredential`.
+  - Catch that interface instead.
+  - Add or confirm passkey-login tests for the disabled, unknown-challenge and rejected cases, so each still yields the same login-failure response as before.
+  - Update the docblocks in `AssertionVerifier.php:75` and `PasskeySignInDisabledException.php:17`.
+- **Payload fields** *(preflight amendment, completing the list above)*:
+  - `ValidationException` gains its own `public readonly array $errors`, which used to come from the base.
+  - `OAuthFailedException` keeps `public readonly string $logDetail`, read by `OAuthController:190`. Its message must **not** become the `logDetail`, and `OAuthProblems` uses fixed text only, never `getMessage()`.
+  - `SubscriptionLimitReachedException` keeps its `sprintf` message, and the mapper uses `getMessage()`. No `limit` field is needed.
+  - `BackupLoadFailedException` and `AttestationRejectedException` keep their causes only in `previous`. The mapper never reads `previous`.
+- **Tests that read HTTP off exceptions** *(preflight amendment)*. Rewrite these as mapper tests (`tests/Http/Problem/*ProblemsTest.php`) or plain-exception tests, in the module's commit:
+  - `tests/Exception/ApiExceptionTest.php`, which is deleted in Task 7, and `tests/Exception/OAuth/OAuthExceptionTest.php`.
+  - `tests/Service/Passkey/Exception/{AssertionRejected,PasskeyNotFound,PasskeySignInDisabled,UnknownPasskeyCredential}ExceptionTest.php`.
+  - `tests/Service/Settings/Exception/RelyingPartyChangeRequiresConfirmationExceptionTest.php`.
+  - `tests/Service/Admin/SelfActionGuardTest.php:22-25`, `tests/Service/OAuth/OAuthProviderRegistryTest.php:79-83` and `tests/Service/OAuth/AppleClientSecretFactoryTest.php:184-186`.
+- **Stale docblocks** *(preflight amendment)*. When a module's commit touches a file, trim every docblock that names `ApiException`/`ApiExceptionListener` or explains the twin mechanism to at most one line, or delete it (CLAUDE.md comment rules). The files are `GzipLineReader.php:69`, `RateLimitGuard.php:63`, `EntrySearchRequestFactory.php:61`, `InsecureProductionConfigGuard.php:34`, and the long exception docblocks (`BackupLoadFailed`, `OAuthFailed`, `AssertionRejected`). Sweep the ones no module touches in the last commit.
 - **The detail rules for each moved exception:** where the old `ApiException` passed a constructor argument through as `detail`, make that argument the exception's message, and have the mapper use `getMessage()`. Where the old detail was fixed text, put the text in the mapper. Where the old detail was absent or null, the mapper passes `null`. For example, `new AlreadySubscribedException()` today has no detail. Keep it that way: map `'' === $exception->getMessage() ? null : $exception->getMessage()`, and do the same for `TagNameTaken` and `InvalidOpml`.
 
 - [ ] **Step 1: Do it one module per commit**, in this order: Passkey, Backup+Mail+Settings, Account+Subscription, Auth+RateLimit, Opml+OAuth, Request+Tag.
@@ -285,15 +310,15 @@ Move each file with `git mv` so its history follows, and update every `use`. `co
 ### Task 6: No Symfony HTTP exceptions under `src/Service` or `src/Repository`
 
 **Files:**
-- Create: `src/Repository/Exception/EntityNotFoundException.php` (plain, message is authored). Create `src/Exception/InvalidSelectionException.php` (plain; "the ids you sent are not all yours / contradict each other").
+- Create: `src/Repository/Exception/RecordNotFoundException.php` (plain, message is authored). *(Preflight amendment: renamed from `EntityNotFoundException` to avoid `Doctrine\ORM\EntityNotFoundException`. Wherever this task says `EntityNotFoundException`, read `RecordNotFoundException`.)* Create `src/Exception/InvalidSelectionException.php` (plain; "the ids you sent are not all yours / contradict each other").
 - Modify:
   - `Repository/UserRepository.php:36`, `CatalogFeedRepository.php:29` and `CatalogCategoryRepository.php:29` throw `EntityNotFoundException`.
   - `Service/Reader/MarkReadService.php:117,127` throws `EntityNotFoundException`.
   - `Service/Reader/ExactSetGuard.php:31`, `Service/Subscription/BulkSubscriptionUpdater.php:72,90`, `OwnedSubscriptions.php:66` and `FeedTagMove.php:70` throw `InvalidSelectionException($message)`.
-  - `Service/Reader/MarkReadService.php:89` throws `new ValidationException(['scope' => [sprintf('Unknown scope "%s".', $scope)]])`. This is a **deliberate contract change** from 400 `request_error` to 422 `validation_error`, which makes it match the adjacent id-required checks in the same method. The frontend never sends an unknown scope; `grep -rn "request_error" ../frontend/src` came back empty.
+  - `Service/Reader/MarkReadService.php:89` throws `new ValidationException(['scope' => [sprintf('Unknown scope "%s".', $scope)]])`, which matches the adjacent id-required checks. *(Preflight amendment: HTTP cannot reach this line, because `Dto/Entry/MarkReadRequest.php:12` carries `#[Assert\Choice(['all','feed','tag'])]`. It is **not** a client-visible contract change and the PR body must not list it as one. The frontend does contain `request_error`, in `ai-failure.spec.ts:122`, but as an unrelated fixture.)*
   - Mappers: `RequestProblems` gains `EntityNotFoundException` → `not_found`, `Not Found`, 404, detail `getMessage()`. The old `NotFoundHttpException` detail was dropped, and now becomes visible. It is authored text such as "No such tag.", which is an improvement allowed here. It also gains `InvalidSelectionException` → `request_error`, `Unprocessable Content`, 422, detail `getMessage()`, which is also newly visible.
   - Drop the now-stale docblock on `UserRepository::getById`.
-- Test: update the existing tests that assert these responses; `grep -rn "No such\|must all be your\|Unknown scope" tests`. Add one contract row for each of the new exceptions.
+- Test: update the existing tests that assert these responses; `grep -rn "No such\|must all be your\|Unknown scope" tests`. Add one contract row for each of the new exceptions. *(Preflight amendment)* Also switch the `expectException(...HttpException)` service tests to the new types: `ExactSetGuardTest.php:53`, `MarkReadServiceTest.php:98,176,195`, `BulkSubscriptionUpdaterTest.php:225,243,261,278` and `OwnedSubscriptionsTest.php:74,86`. Use `grep -rn "HttpException" tests/Service tests/Repository` to find any others.
 
 - [ ] **Step 1: Write the rows and the updated assertions first.** Expected: FAIL.
 - [ ] **Step 2: Implement.** Expected: PASS.
@@ -316,7 +341,11 @@ The rule inspects `Node\Stmt\Use_` and `Node\Name` usages in files whose namespa
 
 Message: `Domain code must not know HTTP; throw a typed exception and map it in src/Http/Problem (#1160).`
 
-Before writing it, check what `src/Service` legitimately imports from `App\Http` today, with `grep -rn "use App\\\\Http" src/Service src/Repository`. #1158 exists to remove those presentation leaks. If there are hits, do not fix them here and do not add an allow-list. Instead, narrow the rule to the two Symfony namespaces, and leave a one-line note in #1158 (`gh issue comment 1158`) saying the rule should widen to `App\Http\*` once that issue lands.
+*(Preflight amendment: the narrowing is settled, not conditional.)* There are 21 `use App\Http` hits in `src/Service`/`src/Repository`, and legitimate non-exception `Response` imports in `HtmlPageFetcher`, `FlowCookie` and `MaintenanceTokenGuard`, all #1158's scope. So the rule is:
+- It forbids `Symfony\Component\HttpKernel\Exception\*` anywhere in those four trees.
+- It forbids `Symfony\Component\HttpFoundation\Response` and `App\Http\*` only in classes whose namespace contains an `\Exception` segment.
+
+No allow-list. Leave a one-line note in #1158 (`gh issue comment 1158`) saying the rule should widen to all code for `Response`/`App\Http\*` once that issue lands.
 
 - [ ] **Step 1: Write the rule test** with one fixture that violates each forbidden namespace and one clean fixture. Expected: FAIL.
 - [ ] **Step 2: Implement the rule and register it.** Run `composer stan`. Expected: clean across `src` and `tests`.
@@ -336,5 +365,5 @@ Before writing it, check what `src/Service` legitimately imports from `App\Http`
    - Can a stolen JWT for a suspended user now leak `accountStatus`?
    - Did any mapper start echoing an exception message that the old code hid? This covers the OAuth `previous` messages and backup driver errors.
 2. Run `/simplify` over the branch diff.
-3. Open the PR against `develop`, with body `Closes #1160`. The body lists the two deliberate contract changes from Task 6: `EntityNotFound`/`InvalidSelection` now carry `detail`, and an unknown mark-read scope now returns 422 `validation_error`.
+3. Open the PR against `develop`, with body `Closes #1160`. The body lists the deliberate contract change from Task 6: `RecordNotFound`/`InvalidSelection` now carry `detail`. *(Preflight amendment: the unknown-scope change is unreachable over HTTP, so the body does not list it as a contract change.)*
 4. Merge when CI is green. Arm a Monitor polling `gh pr checks`, because `--auto` merges immediately on this repository. After the merge, confirm #1160 closed.
