@@ -107,13 +107,6 @@
         },
         // Guard only runs with [], so slicing changes nothing.
         ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
-        // Unreachable from a test: php://memory and gzencode() cannot be made to fail on demand.
-        Throw_: {
-            ignore: [
-                'App\\Service\\Backup\\GzipLineReader::lines',
-                'App\\Service\\Backup\\BackupPart::gzip',
-            ],
-        },
     },
     phpUnit: {
         configDir: '.',
