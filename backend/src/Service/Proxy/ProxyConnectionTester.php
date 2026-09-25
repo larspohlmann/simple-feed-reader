@@ -36,11 +36,11 @@ final readonly class ProxyConnectionTester
         } catch (SecretUnreadableException $e) {
             // Diagnosing exactly this is what the Test button is for, so it
             // reports the unreadable secret rather than crashing on it.
-            return ProxyTestResult::failed($e->getMessage());
+            return ProxyTestResult::failed(ProxyTestFailure::SecretUnreadable, $e->getMessage());
         }
 
         if (null === $proxy) {
-            return ProxyTestResult::failed('not_configured');
+            return ProxyTestResult::failed(ProxyTestFailure::NotConfigured);
         }
 
         try {
@@ -53,11 +53,14 @@ final readonly class ProxyConnectionTester
             $status = $response->getStatusCode();
             $body = substr($response->getContent(false), 0, self::MAX_BYTES);
         } catch (ExceptionInterface $e) {
-            return ProxyTestResult::failed(ProxyHandshakeFailure::explain($e->getMessage()));
+            return ProxyTestResult::failed(
+                ProxyTestFailure::Unreachable,
+                ProxyHandshakeFailure::explain($e->getMessage()),
+            );
         }
 
         if ($status < 200 || $status >= 300) {
-            return ProxyTestResult::failed(sprintf('HTTP %d', $status));
+            return ProxyTestResult::failed(ProxyTestFailure::UnexpectedStatus, sprintf('HTTP %d', $status));
         }
 
         return ProxyTestResult::ok(trim($body));

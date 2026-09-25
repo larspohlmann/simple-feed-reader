@@ -10,6 +10,7 @@ use App\Entity\MailKind;
 use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Settings\MailTestFailure;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;
@@ -68,7 +69,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertSame('not_configured', $result->reason);
+        self::assertSame(MailTestFailure::NotConfigured, $result->failure);
     }
 
     public function testItReportsTheTransportErrorWhenTheServerIsUnreachable(): void
@@ -80,7 +81,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertNotNull($result->reason);
+        self::assertSame(MailTestFailure::NotConfigured, $result->failure);
     }
 
     public function testItReportsNoFromAddressForABlankIdentityInsteadOfThrowing(): void
@@ -100,7 +101,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertSame('no_from_address', $result->reason);
+        self::assertSame(MailTestFailure::NoFromAddress, $result->failure);
     }
 
     public function testItReportsAMalformedEnvFromAddressInsteadOfThrowing(): void
@@ -117,7 +118,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertStringContainsString('not-an-address', (string) $result->reason);
+        self::assertStringContainsString('not-an-address', (string) $result->detail);
     }
 
     /** No saved row, but an env fallback DSN configured: the tester must dial
@@ -133,7 +134,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertNotSame('not_configured', $result->reason);
+        self::assertNotSame(MailTestFailure::NotConfigured, $result->failure);
     }
 
     /** A saved row with useProxy=true must be tested through the proxy
@@ -160,7 +161,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertNotSame('not_configured', $result->reason);
+        self::assertNotSame(MailTestFailure::NotConfigured, $result->failure);
     }
 
     /** A sendmail transport piped to the 'false' binary attempts a real send
@@ -179,7 +180,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         self::assertFalse($result->ok);
         self::assertSame(
-            [['kind' => MailKind::Test, 'recipient' => 'boss@example.com', 'error' => $result->reason]],
+            [['kind' => MailKind::Test, 'recipient' => 'boss@example.com', 'error' => $result->detail]],
             $health->recordedFailures(),
         );
     }
@@ -203,7 +204,7 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->testerWithHealth($health)->test();
 
         self::assertFalse($result->ok);
-        self::assertSame('no_from_address', $result->reason);
+        self::assertSame(MailTestFailure::NoFromAddress, $result->failure);
         self::assertSame([], $health->recordedFailures());
         self::assertSame(0, $health->successCount());
     }

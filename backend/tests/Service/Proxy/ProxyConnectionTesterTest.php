@@ -11,6 +11,7 @@ use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
+use App\Service\Proxy\ProxyTestFailure;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -53,7 +54,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $result = $tester->test();
 
         self::assertFalse($result->ok);
-        self::assertNotNull($result->reason);
+        self::assertSame(ProxyTestFailure::NotConfigured, $result->failure);
     }
 
     public function testMapsTransportFailureToAReason(): void
@@ -66,7 +67,8 @@ final class ProxyConnectionTesterTest extends TestCase
         $result = $tester->test();
 
         self::assertFalse($result->ok);
-        self::assertNotNull($result->reason);
+        self::assertSame(ProxyTestFailure::Unreachable, $result->failure);
+        self::assertNotNull($result->detail);
     }
 
     public function testRequestDisablesRedirectsAndAsksForPlainText(): void
@@ -100,7 +102,8 @@ final class ProxyConnectionTesterTest extends TestCase
         $result = $tester->test();
 
         self::assertFalse($result->ok);
-        self::assertSame('HTTP 404', $result->reason);
+        self::assertSame(ProxyTestFailure::UnexpectedStatus, $result->failure);
+        self::assertSame('HTTP 404', $result->detail);
     }
 
     public function testAStatusOfExactlyThreeHundredIsAlreadyAFailure(): void
@@ -113,7 +116,8 @@ final class ProxyConnectionTesterTest extends TestCase
         $result = $tester->test();
 
         self::assertFalse($result->ok);
-        self::assertSame('HTTP 300', $result->reason);
+        self::assertSame(ProxyTestFailure::UnexpectedStatus, $result->failure);
+        self::assertSame('HTTP 300', $result->detail);
     }
 
     public function testEgressIpIsTruncatedToTheByteCapBeforeTrimming(): void
@@ -180,7 +184,8 @@ final class ProxyConnectionTesterTest extends TestCase
 
         self::assertFalse($result->ok);
         self::assertNull($result->egressIp);
-        self::assertNotNull($result->reason);
+        self::assertSame(ProxyTestFailure::SecretUnreadable, $result->failure);
+        self::assertNotNull($result->detail);
     }
 
     /**
@@ -199,8 +204,8 @@ final class ProxyConnectionTesterTest extends TestCase
         $result = $tester->test();
 
         self::assertFalse($result->ok);
-        self::assertIsString($result->reason);
-        self::assertStringContainsString('does not resolve host names', $result->reason);
+        self::assertSame(ProxyTestFailure::Unreachable, $result->failure);
+        self::assertStringContainsString('does not resolve host names', (string) $result->detail);
     }
 
     private function configuredSettings(): ProxySettings
