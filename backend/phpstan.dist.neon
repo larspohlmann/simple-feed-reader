@@ -36,3 +36,7 @@ services:
         class: App\Tests\PhpStan\EntityIdCoercionRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\QueriesLiveInRepositoriesRule
+        tags:
+            - phpstan.rules.rule
