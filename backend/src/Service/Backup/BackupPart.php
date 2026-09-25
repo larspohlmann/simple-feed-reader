@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Service\Backup\Exception\BackupCompressionException;
+
 /**
  * One gzip member of a split backup: its archive file name and the already
  * gzip-compressed NDJSON bytes it holds.
@@ -28,6 +30,6 @@ final readonly class BackupPart
     {
         $bytes = gzencode($ndjson);
 
-        return false !== $bytes ? $bytes : throw new \RuntimeException('Could not gzip-encode a backup part.');
+        return false !== $bytes ? $bytes : throw new BackupCompressionException('Could not gzip-encode a backup part.');
     }
 }

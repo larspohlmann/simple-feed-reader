@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Service\Backup\Exception\BackupCompressionException;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
@@ -36,6 +37,7 @@ final readonly class GzipLineReader
      * @return \Generator<int, string> the lines, each without its trailing newline
      *
      * @throws InvalidBackupException
+     * @throws BackupCompressionException
      */
     public static function lines(string $gzipBytes, int $maxLineBytes): \Generator
     {
@@ -45,7 +47,7 @@ final readonly class GzipLineReader
 
         $stream = fopen('php://memory', 'r+b');
         if (false === $stream) {
-            throw new \RuntimeException('Cannot open an in-memory stream.');
+            throw new BackupCompressionException('Cannot open an in-memory stream.');
         }
 
         try {
