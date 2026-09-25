@@ -72,7 +72,7 @@ final class UnreadMatchingEntryIdsForUserTest extends DbTestCase
     private function ids(string $input, string $until = '2100-01-01T00:00:00Z'): array
     {
         return $this->repo()->unreadMatchingEntryIdsForUser(
-            new EntrySearchQuery((int) $this->user->getId(), SearchTerms::fromInput($input)),
+            new EntrySearchQuery($this->user->requireId(), SearchTerms::fromInput($input)),
             new \DateTimeImmutable($until),
         );
     }

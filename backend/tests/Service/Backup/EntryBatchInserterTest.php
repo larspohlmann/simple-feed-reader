@@ -26,7 +26,7 @@ final class EntryBatchInserterTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        return (int) $feed->getId();
+        return $feed->requireId();
     }
 
     private function entryLine(

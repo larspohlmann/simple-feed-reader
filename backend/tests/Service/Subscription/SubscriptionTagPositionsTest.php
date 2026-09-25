@@ -90,7 +90,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         $user = $this->user('untagged-positions-empty@example.com');
         $this->em->flush();
 
-        self::assertSame(0, $this->positions()->nextUntaggedForUser((int) $user->getId()));
+        self::assertSame(0, $this->positions()->nextUntaggedForUser($user->requireId()));
     }
 
     /**
@@ -111,9 +111,9 @@ final class SubscriptionTagPositionsTest extends DbTestCase
 
         $positions = $this->positions();
 
-        self::assertSame(5, $positions->nextUntaggedForUser((int) $user->getId()));
-        self::assertSame(6, $positions->nextUntaggedForUser((int) $user->getId()));
-        self::assertSame(7, $positions->nextUntaggedForUser((int) $user->getId()));
+        self::assertSame(5, $positions->nextUntaggedForUser($user->requireId()));
+        self::assertSame(6, $positions->nextUntaggedForUser($user->requireId()));
+        self::assertSame(7, $positions->nextUntaggedForUser($user->requireId()));
     }
 
     /**
@@ -132,7 +132,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
 
         $positions = $this->positions();
 
-        self::assertSame(10, $positions->nextUntaggedForUser((int) $user->getId()));
+        self::assertSame(10, $positions->nextUntaggedForUser($user->requireId()));
         self::assertSame(3, $positions->nextForTag($tag));
     }
 }

@@ -68,10 +68,10 @@ final class SubscriptionCountsByUserIdTest extends DbTestCase
         $this->subscribe($second, $this->feed('https://c.example/feed.xml'));
         $this->em->flush();
 
-        $counts = $this->counts()->forUserIds([(int) $first->getId(), (int) $second->getId()]);
+        $counts = $this->counts()->forUserIds([$first->requireId(), $second->requireId()]);
 
         self::assertSame(
-            [(int) $first->getId() => 2, (int) $second->getId() => 1],
+            [$first->requireId() => 2, $second->requireId() => 1],
             $counts,
         );
     }
@@ -81,6 +81,6 @@ final class SubscriptionCountsByUserIdTest extends DbTestCase
         $user = $this->user('subscription-counts-none@example.com');
         $this->em->flush();
 
-        self::assertSame([], $this->counts()->forUserIds([(int) $user->getId()]));
+        self::assertSame([], $this->counts()->forUserIds([$user->requireId()]));
     }
 }

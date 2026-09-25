@@ -107,8 +107,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $first->getId(), (int) $second->getId()],
-            'addTagIds' => [(int) $tech->getId()],
+            'subscriptionIds' => [$first->requireId(), $second->requireId()],
+            'addTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -130,11 +130,11 @@ final class SubscriptionBulkTest extends WebTestCase
         $tech = $this->makeTag($user, 'Tech');
         $subscription = $this->makeSub($user, 'https://persist.example/feed.xml');
         $this->em()->flush();
-        $subscriptionId = (int) $subscription->getId();
+        $subscriptionId = $subscription->requireId();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$subscriptionId],
-            'addTagIds' => [(int) $tech->getId()],
+            'addTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -159,7 +159,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $subscription->getId()],
+            'subscriptionIds' => [$subscription->requireId()],
             'includeInAllItems' => false,
         ]);
 
@@ -182,13 +182,13 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->flush();
 
         $this->send($client, $mine, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $ours->getId(), (int) $foreign->getId()],
-            'addTagIds' => [(int) $tech->getId()],
+            'subscriptionIds' => [$ours->requireId(), $foreign->requireId()],
+            'addTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseStatusCodeSame(422);
         $this->em()->clear();
-        $reloaded = $this->em()->getRepository(Subscription::class)->find((int) $ours->getId());
+        $reloaded = $this->em()->getRepository(Subscription::class)->find($ours->requireId());
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(0, $reloaded->getTags(), 'A rejected bulk request must write nothing.');
     }
@@ -210,11 +210,11 @@ final class SubscriptionBulkTest extends WebTestCase
         $foreignTag = $this->makeTag($theirs, 'Theirs');
         $ours = $this->makeSub($mine, 'https://ours2.example/feed.xml');
         $this->em()->flush();
-        $ourId = (int) $ours->getId();
+        $ourId = $ours->requireId();
 
         $this->send($client, $mine, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => [$ourId],
-            'addTagIds' => [(int) $foreignTag->getId()],
+            'addTagIds' => [$foreignTag->requireId()],
             'includeInAllItems' => false,
         ]);
 
@@ -256,7 +256,7 @@ final class SubscriptionBulkTest extends WebTestCase
             $subscriptions[] = $this->makeSub($user, "https://raised-cap-$i.example/feed.xml");
         }
         $this->em()->flush();
-        $ids = array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions);
+        $ids = array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions);
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => $ids,
@@ -294,7 +294,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $recorder->reset();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions),
+            'subscriptionIds' => array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions),
             'includeInAllItems' => false,
         ]);
 
@@ -344,8 +344,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $recorder->reset();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => array_map(static fn (Subscription $s): int => (int) $s->getId(), $subscriptions),
-            'addTagIds' => [(int) $tech->getId()],
+            'subscriptionIds' => array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions),
+            'addTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -379,8 +379,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $first->getId(), (int) $second->getId(), (int) $third->getId()],
-            'addTagIds' => [(int) $tech->getId()],
+            'subscriptionIds' => [$first->requireId(), $second->requireId(), $third->requireId()],
+            'addTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -414,8 +414,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->flush();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => [(int) $first->getId(), (int) $second->getId(), (int) $third->getId()],
-            'removeTagIds' => [(int) $tech->getId()],
+            'subscriptionIds' => [$first->requireId(), $second->requireId(), $third->requireId()],
+            'removeTagIds' => [$tech->requireId()],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -437,7 +437,7 @@ final class SubscriptionBulkTest extends WebTestCase
         $subscription = $this->em()->getRepository(Subscription::class)->find((int) $subscriptionId);
         self::assertInstanceOf(Subscription::class, $subscription);
         foreach ($subscription->getSubscriptionTags() as $join) {
-            if ((int) $join->getTag()->getId() === (int) $tagId) {
+            if ($join->getTag()->requireId() === (int) $tagId) {
                 return $join->getPosition();
             }
         }
@@ -460,10 +460,12 @@ final class SubscriptionBulkTest extends WebTestCase
         $goingOne = $this->makeSub($user, 'https://going1.example/feed.xml');
         $goingTwo = $this->makeSub($user, 'https://going2.example/feed.xml');
         $this->em()->flush();
-        $keptId = (int) $kept->getId();
+        $keptId = $kept->requireId();
+        $goingOneId = $goingOne->requireId();
+        $goingTwoId = $goingTwo->requireId();
 
         $this->send($client, $user, 'POST', '/api/subscriptions/bulk-unsubscribe', [
-            'subscriptionIds' => [(int) $goingOne->getId(), (int) $goingTwo->getId()],
+            'subscriptionIds' => [$goingOneId, $goingTwoId],
         ]);
 
         self::assertResponseIsSuccessful();
@@ -471,11 +473,11 @@ final class SubscriptionBulkTest extends WebTestCase
         $this->em()->clear();
         self::assertNotNull($this->em()->getRepository(Subscription::class)->find($keptId));
         self::assertNull(
-            $this->em()->getRepository(Subscription::class)->find((int) $goingOne->getId()),
+            $this->em()->getRepository(Subscription::class)->find($goingOneId),
             'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
         );
         self::assertNull(
-            $this->em()->getRepository(Subscription::class)->find((int) $goingTwo->getId()),
+            $this->em()->getRepository(Subscription::class)->find($goingTwoId),
             'unsubscribeAll() must actually remove the listed subscription, not just report the count.',
         );
     }
@@ -488,10 +490,10 @@ final class SubscriptionBulkTest extends WebTestCase
         $ours = $this->makeSub($mine, 'https://mine.example/feed.xml');
         $foreign = $this->makeSub($theirs, 'https://theirs.example/feed.xml');
         $this->em()->flush();
-        $ourId = (int) $ours->getId();
+        $ourId = $ours->requireId();
 
         $this->send($client, $mine, 'POST', '/api/subscriptions/bulk-unsubscribe', [
-            'subscriptionIds' => [$ourId, (int) $foreign->getId()],
+            'subscriptionIds' => [$ourId, $foreign->requireId()],
         ]);
 
         self::assertResponseStatusCodeSame(422);

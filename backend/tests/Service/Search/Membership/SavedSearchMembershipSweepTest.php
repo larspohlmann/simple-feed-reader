@@ -46,7 +46,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $search = $this->search('climate');
         $hit = $this->entry('a');
         $miss = $this->entry('b');
-        $matcher = new RecordingSavedSearchMatcher([(int) $search->getId() => [(int) $hit->getId()]]);
+        $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
 
         $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
 
@@ -93,7 +93,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $first = $this->entry('a');
         $second = $this->entry('b');
         $third = $this->entry('c');
-        $ahead->advanceMatchedUpTo((int) $second->getId());
+        $ahead->advanceMatchedUpTo($second->requireId());
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
@@ -112,7 +112,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $search = $this->search('climate');
         $ids = [];
         for ($i = 0; $i < SavedSearchMembershipSweep::CHUNK + 1; $i++) {
-            $ids[] = (int) $this->entry('e' . $i)->getId();
+            $ids[] = $this->entry('e' . $i)->requireId();
         }
         // Every reading moves the clock 6 s: the deadline is read once, then
         // once per chunk, so a 10 s budget allows exactly one chunk.
@@ -155,8 +155,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $firstHitForSecond = $this->entry('b');
         $secondHitForSecond = $this->entry('c');
         $matcher = new RecordingSavedSearchMatcher([
-            (int) $first->getId() => [(int) $hitForFirst->getId()],
-            (int) $second->getId() => [(int) $firstHitForSecond->getId(), (int) $secondHitForSecond->getId()],
+            $first->requireId() => [$hitForFirst->requireId()],
+            $second->requireId() => [$firstHitForSecond->requireId(), $secondHitForSecond->requireId()],
         ]);
 
         $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
@@ -204,7 +204,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $search = $this->search('climate');
         $hit = $this->entry('a');
-        $matcher = new RecordingSavedSearchMatcher([(int) $search->getId() => [(int) $hit->getId()]]);
+        $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
         $realWriter = self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
         self::assertInstanceOf(SavedSearchMembershipWriter::class, $realWriter);
         $failingAfterInsert = new class ($realWriter) implements SavedSearchMembershipWriter {
@@ -236,7 +236,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $search = $this->search('climate');
         $hit = $this->entry('a');
-        $matcher = new RecordingSavedSearchMatcher([(int) $search->getId() => [(int) $hit->getId()]]);
+        $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
         $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
         $this->em->getConnection()->executeStatement('UPDATE saved_search SET matched_up_to_entry_id = 0');
 
@@ -265,7 +265,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $search = $this->search('climate');
         $entry = $this->entry('a');
-        $search->advanceMatchedUpTo((int) $entry->getId());
+        $search->advanceMatchedUpTo($entry->requireId());
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 

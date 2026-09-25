@@ -263,7 +263,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     private function logRows(): array
     {
-        return $this->logs()->listForRun($this->user, $this->run->getId() ?? 0);
+        return $this->logs()->listForRun($this->user, $this->run->requireId());
     }
 
     private function logs(): RecommendationRunLogRepository

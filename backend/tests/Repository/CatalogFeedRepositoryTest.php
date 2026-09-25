@@ -52,7 +52,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         self::assertInstanceOf(CatalogFeedRepository::class, $repository);
 
         $requestedIds = array_map(
-            static fn (CatalogFeed $f): int => (int) $f->getId(),
+            static fn (CatalogFeed $f): int => $f->requireId(),
             [$engadget, $wired, $deadFeed, $mitReview, $buriedFeed],
         );
         $requestedIds[] = 999_999; // an id nothing maps to

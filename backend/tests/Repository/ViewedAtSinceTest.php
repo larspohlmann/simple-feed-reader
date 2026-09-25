@@ -64,7 +64,7 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->em->flush();
 
         $opens = $this->repo()->viewedAtSince(
-            (int) $user->getId(),
+            $user->requireId(),
             new \DateTimeImmutable('2026-09-01T00:00:00Z'),
         );
 
@@ -87,7 +87,7 @@ final class ViewedAtSinceTest extends DbTestCase
 
         self::assertSame(
             [],
-            $this->repo()->viewedAtSince((int) $user->getId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
+            $this->repo()->viewedAtSince($user->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
         );
     }
 
@@ -110,7 +110,7 @@ final class ViewedAtSinceTest extends DbTestCase
 
         self::assertSame(
             [],
-            $this->repo()->viewedAtSince((int) $mine->getId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
+            $this->repo()->viewedAtSince($mine->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
         );
     }
 
@@ -131,12 +131,12 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->openedAt($user, $orphanFeed, 'orphan-1', $when);
         $this->em->flush();
 
-        $ranking = $this->repo()->readCountsByFeed((int) $user->getId(), 5);
+        $ranking = $this->repo()->readCountsByFeed($user->requireId(), 5);
 
         self::assertSame(
             [
-                ['feedId' => (int) $busy->getId(), 'readCount' => 2],
-                ['feedId' => (int) $quiet->getId(), 'readCount' => 1],
+                ['feedId' => $busy->requireId(), 'readCount' => 2],
+                ['feedId' => $quiet->requireId(), 'readCount' => 1],
             ],
             $ranking,
         );
@@ -153,6 +153,6 @@ final class ViewedAtSinceTest extends DbTestCase
         }
         $this->em->flush();
 
-        self::assertCount(2, $this->repo()->readCountsByFeed((int) $user->getId(), 2));
+        self::assertCount(2, $this->repo()->readCountsByFeed($user->requireId(), 2));
     }
 }

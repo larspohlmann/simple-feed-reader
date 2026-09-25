@@ -27,9 +27,9 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
 
         $loader = self::getContainer()->get(SavedSearchMembershipLoader::class);
         self::assertInstanceOf(SavedSearchMembershipLoader::class, $loader);
-        $enriched = $loader->loadInto([$this->row($entry)], (int) $user->getId());
+        $enriched = $loader->loadInto([$this->row($entry)], $user->requireId());
 
-        $expectedIds = [(int) $newer->getId(), (int) $older->getId()];
+        $expectedIds = [$newer->requireId(), $older->requireId()];
         self::assertSame($expectedIds, array_column($enriched[0]->savedSearches, 'id'));
     }
 
@@ -40,10 +40,10 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         $older = $this->savedSearchWithMember($user, 'climate', $entry);
         $newer = $this->savedSearchWithMember($user, 'rocket', $entry);
 
-        $byEntry = $this->repository()->savedSearchesByEntry([(int) $entry->getId()], (int) $user->getId());
+        $byEntry = $this->repository()->savedSearchesByEntry([$entry->requireId()], $user->requireId());
 
-        $pills = $byEntry[(int) $entry->getId()];
-        self::assertSame([(int) $newer->getId(), (int) $older->getId()], array_column($pills, 'id'));
+        $pills = $byEntry[$entry->requireId()];
+        self::assertSame([$newer->requireId(), $older->requireId()], array_column($pills, 'id'));
         self::assertSame($newer->getSlug(), $pills[0]['slug']);
         self::assertSame($newer->getTerm(), $pills[0]['term']);
     }
@@ -55,7 +55,7 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         $entry = $this->entry($this->feed());
         $this->savedSearchWithMember($stranger, 'climate', $entry);
 
-        $byEntry = $this->repository()->savedSearchesByEntry([(int) $entry->getId()], (int) $owner->getId());
+        $byEntry = $this->repository()->savedSearchesByEntry([$entry->requireId()], $owner->requireId());
 
         self::assertSame([], $byEntry);
     }
@@ -65,7 +65,7 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         $loader = self::getContainer()->get(SavedSearchMembershipLoader::class);
         self::assertInstanceOf(SavedSearchMembershipLoader::class, $loader);
 
-        self::assertSame([], $loader->loadInto([], (int) $this->user('empty-loader@example.com')->getId()));
+        self::assertSame([], $loader->loadInto([], $this->user('empty-loader@example.com')->requireId()));
     }
 
     public function testDuplicateRowsAreEnrichedWithTheirOwnMembership(): void
@@ -82,11 +82,11 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
 
         $loader = self::getContainer()->get(SavedSearchMembershipLoader::class);
         self::assertInstanceOf(SavedSearchMembershipLoader::class, $loader);
-        $enriched = $loader->loadInto([$primaryRow], (int) $user->getId());
+        $enriched = $loader->loadInto([$primaryRow], $user->requireId());
 
-        self::assertSame([(int) $primarySearch->getId()], array_column($enriched[0]->savedSearches, 'id'));
+        self::assertSame([$primarySearch->requireId()], array_column($enriched[0]->savedSearches, 'id'));
         self::assertSame(
-            [(int) $duplicateSearch->getId()],
+            [$duplicateSearch->requireId()],
             array_column($enriched[0]->duplicates[0]->savedSearches, 'id'),
         );
     }

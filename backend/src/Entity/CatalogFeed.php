@@ -22,6 +22,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_catalog_feed_url', columns: ['url'])]
 class CatalogFeed
 {
+    use PersistedId;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

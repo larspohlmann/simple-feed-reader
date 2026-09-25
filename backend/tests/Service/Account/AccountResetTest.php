@@ -102,8 +102,8 @@ final class AccountResetTest extends DbTestCase
     public function testWipesEverythingTheUserOwns(): void
     {
         [$user, , , $run] = $this->seedAccount('reset-wipes@example.com');
-        $userId = (int) $user->getId();
-        $runId = (int) $run->getId();
+        $userId = $user->requireId();
+        $runId = $run->requireId();
 
         $this->reset()->reset($user);
 
@@ -128,9 +128,9 @@ final class AccountResetTest extends DbTestCase
     public function testLeavesTheAccountRowAndSharedRowsAlone(): void
     {
         [$user, $feed, $entry] = $this->seedAccount('reset-keeps@example.com');
-        $userId = (int) $user->getId();
-        $feedId = (int) $feed->getId();
-        $entryId = (int) $entry->getId();
+        $userId = $user->requireId();
+        $feedId = $feed->requireId();
+        $entryId = $entry->requireId();
 
         $this->reset()->reset($user);
 
@@ -147,8 +147,8 @@ final class AccountResetTest extends DbTestCase
         [$victim] = $this->seedAccount('reset-target@example.com');
         [, , , $bystanderRun] = $this->seedAccount('reset-bystander@example.com');
         $bystander = $bystanderRun->getUser();
-        $bystanderId = (int) $bystander->getId();
-        $bystanderRunId = (int) $bystanderRun->getId();
+        $bystanderId = $bystander->requireId();
+        $bystanderRunId = $bystanderRun->requireId();
 
         $this->reset()->reset($victim);
 
@@ -178,7 +178,7 @@ final class AccountResetTest extends DbTestCase
     public function testASecondResetIsANoOp(): void
     {
         [$user] = $this->seedAccount('reset-idempotent@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $this->reset()->reset($user);
         $freshUser = $this->em->find(User::class, $userId);

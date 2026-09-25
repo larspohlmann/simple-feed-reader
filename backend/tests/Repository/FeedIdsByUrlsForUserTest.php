@@ -33,11 +33,11 @@ final class FeedIdsByUrlsForUserTest extends DbTestCase
         $this->em->flush();
 
         $result = $this->repository()->idsByUrlsForUser(
-            (int) $user->getId(),
+            $user->requireId(),
             ['https://mine.example/feed.xml', 'https://theirs.example/feed.xml', 'https://unknown.example/feed.xml'],
         );
 
-        self::assertSame(['https://mine.example/feed.xml' => (int) $mine->getId()], $result);
+        self::assertSame(['https://mine.example/feed.xml' => $mine->requireId()], $result);
     }
 
     public function testAnEmptyListAsksForNothing(): void

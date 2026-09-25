@@ -71,7 +71,7 @@ final class FeedRepositoryTest extends DbTestCase
         $untouched = $this->feed('https://b.example.com/feed', $this->now->modify('-1 hour'));
         $this->em->flush();
 
-        $criteria = (new DueFeedCriteria($this->now))->excluding([(int) $handled->getId()]);
+        $criteria = (new DueFeedCriteria($this->now))->excluding([$handled->requireId()]);
 
         self::assertSame([$untouched->getId()], $this->ids($this->repository->findDue($criteria, 10)));
         self::assertSame(1, $this->repository->countDue($criteria));

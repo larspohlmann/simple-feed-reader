@@ -79,10 +79,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $changed = $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $first->getId(), (int) $second->getId()],
-                addTagIds: [(int) $tech->getId()],
+                subscriptionIds: [$first->requireId(), $second->requireId()],
+                addTagIds: [$tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         self::assertCount(2, $changed);
@@ -100,10 +100,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
-                addTagIds: [(int) $tech->getId()],
+                subscriptionIds: [$subscription->requireId()],
+                addTagIds: [$tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         $this->em->refresh($subscription);
@@ -122,10 +122,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $first->getId()],
-                addTagIds: [(int) $tech->getId()],
+                subscriptionIds: [$first->requireId()],
+                addTagIds: [$tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         $this->em->refresh($first);
@@ -146,10 +146,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $tagged->getId()],
-                removeTagIds: [(int) $tech->getId()],
+                subscriptionIds: [$tagged->requireId()],
+                removeTagIds: [$tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         self::assertSame([], $this->tagNames($tagged));
@@ -169,10 +169,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
+                subscriptionIds: [$subscription->requireId()],
                 includeInAllItems: false,
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         self::assertFalse($subscription->isIncludeInAllItems());
@@ -198,11 +198,11 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
+                subscriptionIds: [$subscription->requireId()],
                 includeInAllItems: true,
                 includeInForYou: false,
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         self::assertTrue(
@@ -225,11 +225,11 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
-                addTagIds: [(int) $tech->getId()],
-                removeTagIds: [(int) $tech->getId()],
+                subscriptionIds: [$subscription->requireId()],
+                addTagIds: [$tech->requireId()],
+                removeTagIds: [$tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
     }
 
@@ -243,10 +243,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
-                addTagIds: [(int) $tech->getId(), (int) $tech->getId()],
+                subscriptionIds: [$subscription->requireId()],
+                addTagIds: [$tech->requireId(), $tech->requireId()],
             ),
-            (int) $user->getId(),
+            $user->requireId(),
         );
     }
 
@@ -261,10 +261,10 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
-                subscriptionIds: [(int) $subscription->getId()],
-                addTagIds: [(int) $foreignTag->getId()],
+                subscriptionIds: [$subscription->requireId()],
+                addTagIds: [$foreignTag->requireId()],
             ),
-            (int) $mine->getId(),
+            $mine->requireId(),
         );
     }
 
@@ -277,8 +277,8 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(subscriptionIds: [(int) $foreign->getId()]),
-            (int) $mine->getId(),
+            new BulkUpdateSubscriptionsRequest(subscriptionIds: [$foreign->requireId()]),
+            $mine->requireId(),
         );
     }
 }

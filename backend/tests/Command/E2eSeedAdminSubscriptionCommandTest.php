@@ -57,7 +57,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         /** @var SubscriptionRepository $subscriptions */
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
 
-        return $subscriptions->countForUser((int) $user->getId());
+        return $subscriptions->countForUser($user->requireId());
     }
 
     private function fixtureFeed(): Feed
@@ -254,7 +254,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $this->em->clear();
         /** @var EntryStateRepository $entryStates */
         $entryStates = self::getContainer()->get(EntryStateRepository::class);
-        $reloaded = $entryStates->findOneForUserEntry((int) $admin->getId(), (int) $entry->getId());
+        $reloaded = $entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
         self::assertInstanceOf(EntryState::class, $reloaded);
         self::assertFalse($reloaded->isHidden());
     }

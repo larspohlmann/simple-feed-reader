@@ -116,7 +116,7 @@ final class EntryIndexerTest extends DbTestCase
         self::assertCount(1, $writer->upserts);
         $document = $writer->upserts[0][0];
         self::assertSame($entry->getId(), $document->id);
-        self::assertSame((int) $feed->getId(), $document->feedId);
+        self::assertSame($feed->requireId(), $document->feedId);
         self::assertSame('A Title', $document->title);
         self::assertSame('A plain summary', $document->summary);
         // Reduced to plain text, exactly as PlainText::fromHtmlBlocks() would:

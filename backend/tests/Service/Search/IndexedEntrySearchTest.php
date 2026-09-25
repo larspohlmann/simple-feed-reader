@@ -95,7 +95,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader();
 
         $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular signals'),
             limit: 10,
         ));
@@ -113,7 +113,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader();
 
         $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular '),
         ));
 
@@ -126,7 +126,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader();
 
         $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 
@@ -141,7 +141,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         self::assertNotNull($feedId);
 
         $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 
@@ -155,7 +155,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $cursor = new EntryCursor(new \DateTimeImmutable('2026-07-10T00:00:00Z'), 42);
 
         $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             cursor: $cursor,
         ));
@@ -173,7 +173,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader(entryIds: [$entryId], matchedWords: ['angular']);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 
@@ -199,7 +199,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader(entryIds: [$entryId, $ghostId]);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             limit: 2,
         ));
@@ -225,13 +225,13 @@ final class IndexedEntrySearchTest extends DbTestCase
         $this->markRead($readOlder);
 
         $reader = new FakeSearchIndexReader(entryIds: [
-            $readNewer->getId() ?? 0,
-            $unread->getId() ?? 0,
-            $readOlder->getId() ?? 0,
+            $readNewer->requireId(),
+            $unread->requireId(),
+            $readOlder->requireId(),
         ]);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             limit: 3,
             unread: true,
@@ -256,10 +256,10 @@ final class IndexedEntrySearchTest extends DbTestCase
         $unread = $this->entry('unread', '2026-07-11T00:00:00Z');
         $this->markRead($read);
 
-        $reader = new FakeSearchIndexReader(entryIds: [$read->getId() ?? 0, $unread->getId() ?? 0]);
+        $reader = new FakeSearchIndexReader(entryIds: [$read->requireId(), $unread->requireId()]);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 
@@ -277,10 +277,10 @@ final class IndexedEntrySearchTest extends DbTestCase
         $read = $this->entry('read');
         $this->markRead($read);
 
-        $reader = new FakeSearchIndexReader(entryIds: [$read->getId() ?? 0]);
+        $reader = new FakeSearchIndexReader(entryIds: [$read->requireId()]);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             limit: 1,
             unread: true,
@@ -300,13 +300,13 @@ final class IndexedEntrySearchTest extends DbTestCase
         $olderLowerId = $this->entry('older-lower-id', '2026-07-10T00:00:00Z');
         $olderHigherId = $this->entry('older-higher-id', '2026-07-10T00:00:00Z');
         $reader = new FakeSearchIndexReader(entryIds: [
-            $olderHigherId->getId() ?? 0,
-            $olderLowerId->getId() ?? 0,
-            $newer->getId() ?? 0,
+            $olderHigherId->requireId(),
+            $olderLowerId->requireId(),
+            $newer->requireId(),
         ]);
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             limit: 3,
             order: ListOrder::OldestFirst,
@@ -327,7 +327,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         $reader = new FakeSearchIndexReader();
 
         $result = $this->search($reader, new EntrySearchQuery(
-            userId: $lonelyUser->getId() ?? 0,
+            userId: $lonelyUser->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 

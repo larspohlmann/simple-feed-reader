@@ -79,7 +79,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
     public function testRestoresACommittedBackupDirectory(string $directory): void
     {
         $user = $this->makeUser('golden-' . $directory . '@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $started = $this->restorer()->start(
             $user,

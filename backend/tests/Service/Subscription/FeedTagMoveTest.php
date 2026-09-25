@@ -25,7 +25,7 @@ final class FeedTagMoveTest extends DbTestCase
         $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, (int) $news->getId(), (int) $tech->getId(), 1, (int) $user->getId());
+        $this->move($moved, $news->requireId(), $tech->requireId(), 1, $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($x, $tech));
@@ -43,7 +43,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, (int) $news->getId(), (int) $tech->getId(), null, (int) $user->getId());
+        $this->move($moved, $news->requireId(), $tech->requireId(), null, $user->requireId());
         $this->em->flush();
 
         self::assertSame(2, $this->joinPosition($moved, $tech));
@@ -58,7 +58,7 @@ final class FeedTagMoveTest extends DbTestCase
         $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0], [$tech, 2]]);
 
-        $this->move($moved, (int) $news->getId(), (int) $tech->getId(), 0, (int) $user->getId());
+        $this->move($moved, $news->requireId(), $tech->requireId(), 0, $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($moved, $tech));
@@ -74,7 +74,7 @@ final class FeedTagMoveTest extends DbTestCase
         $tech = $this->tag($user, 'Tech');
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, (int) $news->getId(), (int) $tech->getId(), 0, (int) $user->getId());
+        $this->move($moved, $news->requireId(), $tech->requireId(), 0, $user->requireId());
         $this->em->flush();
 
         self::assertSame(['Tech'], $this->tagNames($moved));
@@ -88,7 +88,7 @@ final class FeedTagMoveTest extends DbTestCase
         $second = $this->untaggedSubscription($user, 'https://b.example.com/rss', 1);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, (int) $news->getId(), null, 1, (int) $user->getId());
+        $this->move($moved, $news->requireId(), null, 1, $user->requireId());
         $this->em->flush();
 
         self::assertTrue($moved->getTags()->isEmpty());
@@ -105,7 +105,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, (int) $news->getId(), (int) $tech->getId(), 99, (int) $user->getId());
+        $this->move($moved, $news->requireId(), $tech->requireId(), 99, $user->requireId());
         $this->em->flush();
 
         self::assertSame(1, $this->joinPosition($moved, $tech));
@@ -118,7 +118,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$tech, 1]]);
 
-        $this->move($moved, (int) $tech->getId(), (int) $tech->getId(), 0, (int) $user->getId());
+        $this->move($moved, $tech->requireId(), $tech->requireId(), 0, $user->requireId());
         $this->em->flush();
 
         self::assertSame(1, $this->joinPosition($moved, $tech));
@@ -133,7 +133,7 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->untaggedSubscription($user, 'https://m.example.com/rss', 0);
 
         $this->expectException(InvalidSelectionException::class);
-        $this->move($moved, null, (int) $foreignTag->getId(), 0, (int) $user->getId());
+        $this->move($moved, null, $foreignTag->requireId(), 0, $user->requireId());
     }
 
     private function move(

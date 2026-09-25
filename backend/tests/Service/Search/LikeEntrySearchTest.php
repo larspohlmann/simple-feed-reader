@@ -51,7 +51,7 @@ final class LikeEntrySearchTest extends DbTestCase
         $search = new LikeEntrySearch($repository);
 
         $result = $search->search(new EntrySearchQuery(
-            userId: $user->getId() ?? 0,
+            userId: $user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         ));
 
@@ -95,7 +95,7 @@ final class LikeEntrySearchTest extends DbTestCase
         $repository = self::getContainer()->get(EntryListRepository::class);
         self::assertInstanceOf(EntryListRepository::class, $repository);
         $result = (new LikeEntrySearch($repository))->search(new EntrySearchQuery(
-            userId: $user->getId() ?? 0,
+            userId: $user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             unread: true,
         ));

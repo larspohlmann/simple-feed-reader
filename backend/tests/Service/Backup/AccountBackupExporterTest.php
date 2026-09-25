@@ -419,7 +419,7 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         ));
         $this->em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $parts = [];
         $rewritten = false;

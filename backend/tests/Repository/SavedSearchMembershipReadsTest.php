@@ -91,7 +91,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $next = $this->repo()->listMembers($this->query(
             [$climate],
             limit: 2,
-            cursor: new EntryCursor($second->getEffectiveDate(), (int) $second->getId()),
+            cursor: new EntryCursor($second->getEffectiveDate(), $second->requireId()),
         ));
         self::assertSame([$third->getId()], $this->ids($next));
     }
@@ -117,9 +117,9 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($theirs, $entry);
 
         self::assertSame([], $this->repo()->listMembers($this->query([$theirs])));
-        self::assertSame([(int) $theirs->getId() => []], $this->repo()->unreadMemberIdsBySavedSearch(
-            (int) $this->user->getId(),
-            [(int) $theirs->getId()],
+        self::assertSame([$theirs->requireId() => []], $this->repo()->unreadMemberIdsBySavedSearch(
+            $this->user->requireId(),
+            [$theirs->requireId()],
         ));
     }
 
@@ -154,14 +154,14 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->hide($read);
 
         $ids = $this->repo()->unreadMemberIdsBySavedSearch(
-            (int) $this->user->getId(),
-            [(int) $climate->getId(), (int) $rocket->getId(), (int) $empty->getId()],
+            $this->user->requireId(),
+            [$climate->requireId(), $rocket->requireId(), $empty->requireId()],
         );
 
         self::assertSame([
-            (int) $climate->getId() => [$unread->getId()],
-            (int) $rocket->getId() => [$unread->getId()],
-            (int) $empty->getId() => [],
+            $climate->requireId() => [$unread->getId()],
+            $rocket->requireId() => [$unread->getId()],
+            $empty->requireId() => [],
         ], $ids);
     }
 
@@ -176,11 +176,11 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         }
         $this->hide($newestRead);
 
-        $badge = $this->repo()->unreadMemberIdsBySavedSearch((int) $this->user->getId(), [(int) $climate->getId()]);
+        $badge = $this->repo()->unreadMemberIdsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
         $list = $this->repo()->listMembers($this->query([$climate], onlyUnread: true));
 
-        self::assertCount(\count($badge[(int) $climate->getId()]), $list);
-        self::assertEqualsCanonicalizing($badge[(int) $climate->getId()], $this->ids($list));
+        self::assertCount(\count($badge[$climate->requireId()]), $list);
+        self::assertEqualsCanonicalizing($badge[$climate->requireId()], $this->ids($list));
     }
 
     public function testMemberCountsCountReadAndUnreadMembersWithEveryRequestedKeyPresent(): void
@@ -196,14 +196,14 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->hide($read);
 
         $counts = $this->repo()->memberCountsBySavedSearch(
-            (int) $this->user->getId(),
-            [(int) $climate->getId(), (int) $rocket->getId(), (int) $empty->getId()],
+            $this->user->requireId(),
+            [$climate->requireId(), $rocket->requireId(), $empty->requireId()],
         );
 
         self::assertSame([
-            (int) $climate->getId() => 2,
-            (int) $rocket->getId() => 1,
-            (int) $empty->getId() => 0,
+            $climate->requireId() => 2,
+            $rocket->requireId() => 1,
+            $empty->requireId() => 0,
         ], $counts);
     }
 
@@ -214,9 +214,9 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->em->flush();
         $this->member($theirs, $this->entry('a', '2026-07-10T00:00:00Z'));
 
-        $counts = $this->repo()->memberCountsBySavedSearch((int) $this->user->getId(), [(int) $theirs->getId()]);
+        $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$theirs->requireId()]);
 
-        self::assertSame([(int) $theirs->getId() => 0], $counts);
+        self::assertSame([$theirs->requireId() => 0], $counts);
     }
 
     public function testMemberCountsExcludeAMemberWhoseFeedTheUserDoesNotSubscribeTo(): void
@@ -227,9 +227,9 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->em->flush();
         $this->member($climate, $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed));
 
-        $counts = $this->repo()->memberCountsBySavedSearch((int) $this->user->getId(), [(int) $climate->getId()]);
+        $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
 
-        self::assertSame([(int) $climate->getId() => 0], $counts);
+        self::assertSame([$climate->requireId() => 0], $counts);
     }
 
     public function testTheMarkReadSetHonoursUntil(): void
@@ -241,8 +241,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($climate, $older);
 
         $ids = $this->repo()->unreadMemberIdsUpTo(
-            (int) $this->user->getId(),
-            [(int) $climate->getId()],
+            $this->user->requireId(),
+            [$climate->requireId()],
             new \DateTimeImmutable('2026-07-09T00:00:00Z'),
         );
 
@@ -262,8 +262,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->hide($readInWindow);
 
         $ids = $this->repo()->unreadMemberIdsSince(
-            (int) $climate->getId(),
-            (int) $this->user->getId(),
+            $climate->requireId(),
+            $this->user->requireId(),
             new \DateTimeImmutable('2026-07-08T00:00:00Z'),
         );
 
@@ -278,8 +278,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         ?EntryCursor $cursor = null,
     ): SavedSearchListQuery {
         return new SavedSearchListQuery(
-            userId: (int) $this->user->getId(),
-            savedSearchIds: array_map(static fn (SavedSearch $s): int => (int) $s->getId(), $searches),
+            userId: $this->user->requireId(),
+            savedSearchIds: array_map(static fn (SavedSearch $s): int => $s->requireId(), $searches),
             onlyUnread: $onlyUnread,
             cursor: $cursor,
             limit: $limit,

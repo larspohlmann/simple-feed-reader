@@ -123,7 +123,7 @@ final class AccountRestorerTest extends DbTestCase
 
     private function subscriptionCount(User $user): int
     {
-        return $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [(int) $user->getId()]);
+        return $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [$user->requireId()]);
     }
 
     /**
@@ -381,7 +381,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testRoundTripReproducesTheAccountFieldForField(): void
     {
         $user = $this->seededUser('roundtrip@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
 
@@ -423,7 +423,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testRestoreRegeneratesTheSavedSearchSlug(): void
     {
         $user = $this->seededUser('slug-restore@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
 
         $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
@@ -436,7 +436,7 @@ final class AccountRestorerTest extends DbTestCase
         $slugger = self::getContainer()->get(SavedSearchSlug::class);
         self::assertInstanceOf(SavedSearchSlug::class, $slugger);
         self::assertSame(
-            $slugger->build((int) $restored->getId(), $restored->getTerm()),
+            $slugger->build($restored->requireId(), $restored->getTerm()),
             $restored->getSlug(),
         );
     }
@@ -464,7 +464,7 @@ final class AccountRestorerTest extends DbTestCase
         $sourceRows = $this->fixtureRowsOf($source);
 
         $target = $this->users->create('drift-target@example.com');
-        $targetId = (int) $target->getId();
+        $targetId = $target->requireId();
         $this->deleteEveryFeed();
 
         $this->restorer()->start($this->reloadUser($targetId), $foundation, 'REPLACE');
@@ -542,7 +542,7 @@ final class AccountRestorerTest extends DbTestCase
      */
     private function fixtureRowsOf(User $user): array
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $subscription = $this->em->getRepository(Subscription::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(Subscription::class, $subscription);
@@ -659,7 +659,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testRestoreOntoAnEmptyInstanceRecreatesFeeds(): void
     {
         $user = $this->seededUser('empty-instance@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
         $this->deleteEveryFeed();
@@ -693,7 +693,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testAFeedRowAnotherUserReadsIsNotModified(): void
     {
         $user = $this->seededUser('shared-feed@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $feedId = $this->scalarInt('SELECT id FROM feed WHERE url = ?', [self::ONE_URL]);
         $this->em->clear();
@@ -716,7 +716,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testOneLookupReferencesTheKnownFeedAndCreatesTheMissingOne(): void
     {
         $user = $this->seededUser('mixed-feeds@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
         $this->em->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
@@ -741,7 +741,7 @@ final class AccountRestorerTest extends DbTestCase
 
         $target = $this->users->create('fit-target@example.com', maxSubscriptions: 1);
         $this->seedRichAccountForCappedTarget($target);
-        $targetId = (int) $target->getId();
+        $targetId = $target->requireId();
 
         try {
             $this->restorer()->start($this->reloadUser($targetId), $gzip, 'REPLACE');
@@ -759,7 +759,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testWithoutTheConfirmationNothingHappens(): void
     {
         $user = $this->seededUser('unconfirmed@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
 
         try {
@@ -806,7 +806,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testARestoreCanBeRerunAfterItself(): void
     {
         $user = $this->seededUser('rerun@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
         $this->deleteEveryFeed();
@@ -851,7 +851,7 @@ final class AccountRestorerTest extends DbTestCase
     {
         $user = $this->users->create('wide-batch@example.com');
         $this->seedFeedWiderThanOneBatch($user, 502);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $foundation = $this->backupOf($user);
         $entryParts = $this->entryPartsOf($user);
         $this->deleteEveryFeed();
@@ -898,7 +898,7 @@ final class AccountRestorerTest extends DbTestCase
     public function testAReferentialRefusalLeavesEveryRowInPlace(): void
     {
         $user = $this->seededUser('dangling@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->withoutTheFirstFeedLine($this->backupOf($user));
 
         try {

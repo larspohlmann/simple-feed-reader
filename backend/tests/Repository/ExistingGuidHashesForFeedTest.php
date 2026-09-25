@@ -25,7 +25,7 @@ final class ExistingGuidHashesForFeedTest extends DbTestCase
         $this->em->flush();
 
         $existing = $this->repository()->existingGuidHashesForFeed(
-            (int) $one->getId(),
+            $one->requireId(),
             [hash('sha256', 'guid-a'), hash('sha256', 'guid-never-written')],
         );
 

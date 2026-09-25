@@ -39,7 +39,7 @@ final readonly class RecommendationRunFixtures
 
     public function seedReadyAiSettings(User $user): void
     {
-        $userId = $user->getId() ?? throw new \LogicException('Cannot seed AI settings for an unsaved account.');
+        $userId = $user->requireId();
         $sealed = $this->cipher->seal($userId, 'sk-throwaway1234');
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
@@ -171,7 +171,7 @@ final readonly class RecommendationRunFixtures
      */
     public function priceRun(RecommendationRun $run, int $costNanoCredits): void
     {
-        $id = $run->getId() ?? throw new \LogicException('Cannot price a run that was never saved.');
+        $id = $run->requireId();
 
         $this->em->getConnection()->executeStatement(
             'UPDATE recommendation_run SET cost_nano_credits = :cost WHERE id = :id',

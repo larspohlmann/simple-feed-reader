@@ -210,8 +210,8 @@ final class SendDueDigestsTest extends DbTestCase
         $failingSearch = $this->givenOneMatch($failingUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $healthySearch = $this->givenOneMatch($healthyUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturnMap([
-            [(int) $failingUser->getId(), [$failingSearch]],
-            [(int) $healthyUser->getId(), [$healthySearch]],
+            [$failingUser->requireId(), [$failingSearch]],
+            [$healthyUser->requireId(), [$healthySearch]],
         ]);
         $this->preferencesRepository->method('findWithDigestEnabled')
             ->willReturn([$failingPrefs, $healthyPrefs]);

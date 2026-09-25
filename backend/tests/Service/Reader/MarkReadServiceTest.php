@@ -68,7 +68,7 @@ final class MarkReadServiceTest extends DbTestCase
         );
 
         $flipped = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+            ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden());
         self::assertNotNull($flipped->getHiddenAt());
@@ -106,7 +106,7 @@ final class MarkReadServiceTest extends DbTestCase
         $sub->addTag($tag);
         $this->em->flush();
 
-        $this->service()->mark($user, 'tag', (int) $tag->getId(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
+        $this->service()->mark($user, 'tag', $tag->requireId(), new \DateTimeImmutable('2026-07-25T00:00:00Z'));
         $this->em->clear();
 
         $reloaded = $this->em->getRepository(Subscription::class)->find($sub->getId());
@@ -133,7 +133,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->clear();
 
         $reloaded = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+            ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isHidden());
         self::assertTrue($reloaded->isFavorite(), 'favorite must survive mark-read');
@@ -153,7 +153,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->clear();
 
         $reloaded = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+            ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isHidden());
         self::assertTrue($reloaded->isViewed());
@@ -176,7 +176,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->service()->mark(
             $user,
             'tag',
-            (int) $strangerTag->getId(),
+            $strangerTag->requireId(),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
     }
@@ -260,12 +260,12 @@ final class MarkReadServiceTest extends DbTestCase
         );
 
         $flippedIncluded = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $old->getId());
+            ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($flippedIncluded);
         self::assertTrue($flippedIncluded->isHidden(), 'included feed entry must be marked read');
 
         $untouchedExcluded = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+            ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($untouchedExcluded);
         self::assertFalse($untouchedExcluded->isHidden(), 'excluded feed entry must stay unread');
     }
@@ -278,7 +278,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->service()->mark(
             $user,
             'feed',
-            (int) $excludedSub->getId(),
+            $excludedSub->requireId(),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
         $this->em->clear();
@@ -291,7 +291,7 @@ final class MarkReadServiceTest extends DbTestCase
         );
 
         $flipped = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+            ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden(), 'scope "feed" must still mark an excluded feed');
     }
@@ -305,7 +305,7 @@ final class MarkReadServiceTest extends DbTestCase
         $excludedSub->addTag($tag);
         $this->em->flush();
 
-        $this->service()->mark($user, 'tag', (int) $tag->getId(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->service()->mark($user, 'tag', $tag->requireId(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->em->clear();
 
         $reloadedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
@@ -316,7 +316,7 @@ final class MarkReadServiceTest extends DbTestCase
         );
 
         $flipped = $this->em->getRepository(EntryState::class)
-            ->findOneForUserEntry((int) $user->getId(), (int) $excludedEntry->getId());
+            ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden(), 'scope "tag" must still mark an excluded feed');
     }

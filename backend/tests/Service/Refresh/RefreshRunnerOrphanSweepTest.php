@@ -125,7 +125,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $orphan = new Feed('https://orphan.example.com/rss');
         $this->em->persist($orphan);
         $this->em->flush();
-        $orphanId = (int) $orphan->getId();
+        $orphanId = $orphan->requireId();
 
         $this->runner()->run(RefreshRequest::allDue(budgetSeconds: 30));
 
@@ -138,7 +138,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $orphan = new Feed('https://orphan-2.example.com/rss');
         $this->em->persist($orphan);
         $this->em->flush();
-        $orphanId = (int) $orphan->getId();
+        $orphanId = $orphan->requireId();
 
         $this->runner()->run(RefreshRequest::forUser(userId: 1, budgetSeconds: 30));
 

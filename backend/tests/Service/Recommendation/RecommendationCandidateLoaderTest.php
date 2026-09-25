@@ -352,7 +352,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->entry('middle', '2026-07-15T00:00:00Z');
         $newest = $this->entry('newest', '2026-07-20T00:00:00Z');
 
-        $ids = [$oldest->getId() ?? 0, $newest->getId() ?? 0];
+        $ids = [$oldest->requireId(), $newest->requireId()];
         // Only two of the three ids are passed, so the span and count reflect
         // exactly the set handed in, not the whole feed.
         $summary = $this->loader()->summarize($this->userId(), $ids);
@@ -401,7 +401,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $summary = $this->loader()->summarize(
             $this->userId(),
-            [$subscribed->getId() ?? 0, $foreign->getId() ?? 0],
+            [$subscribed->requireId(), $foreign->requireId()],
         );
 
         // The unsubscribed entry is the newest, so if the subscription gate
@@ -449,14 +449,14 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $linesById = $this->loader()->linesForIds(
             $this->userId(),
-            [$included->getId() ?? 0, $excludedEntry->getId() ?? 0],
+            [$included->requireId(), $excludedEntry->requireId()],
         );
 
         self::assertSame([$included->getId()], array_keys($linesById));
 
         $summary = $this->loader()->summarize(
             $this->userId(),
-            [$included->getId() ?? 0, $excludedEntry->getId() ?? 0],
+            [$included->requireId(), $excludedEntry->requireId()],
         );
 
         self::assertNotNull($summary);
@@ -616,7 +616,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     private function userId(): int
     {
-        return $this->user->getId() ?? 0;
+        return $this->user->requireId();
     }
 
     private function loader(): RecommendationCandidateLoader

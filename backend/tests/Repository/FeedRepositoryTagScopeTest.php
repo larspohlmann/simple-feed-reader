@@ -41,8 +41,8 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         self::assertInstanceOf(FeedRepository::class, $repo);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
-        $ownerId = (int) $owner->getId();
-        $tagId = (int) $tag->getId();
+        $ownerId = $owner->requireId();
+        $tagId = $tag->requireId();
 
         $due = $repo->findDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true), 50);
         self::assertSame([$tagged->getId()], array_map(static fn (Feed $f): ?int => $f->getId(), $due));
@@ -78,12 +78,12 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
         // The owner scoping their own tag id must not reach the stranger's feed,
         // even though the tag shares a name.
         $due = $repo->findDue(
-            new DueFeedCriteria($now, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true),
+            new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
             50,
         );
         self::assertCount(0, $due);
         self::assertSame(0, $repo->countDue(
-            new DueFeedCriteria($now, (int) $owner->getId(), tagId: (int) $ownerTag->getId(), force: true),
+            new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
         ));
     }
 }

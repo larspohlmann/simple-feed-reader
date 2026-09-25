@@ -148,7 +148,7 @@ final class AccountBackupControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-preview@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
         $client->request(
@@ -181,7 +181,7 @@ final class AccountBackupControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-no-confirm@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->seededFoundationFor($user);
 
         $client->request(
@@ -374,7 +374,7 @@ final class AccountBackupControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-corrupt-destructive@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->seedSourceAccount($user);
 
         $client->request(
@@ -401,7 +401,7 @@ final class AccountBackupControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-bad-footer@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->withAMiscountedFooter($this->seededFoundationFor($user));
 
         $client->request(
@@ -433,7 +433,7 @@ final class AccountBackupControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('restore-duplicate-feed@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->withANewFeedUrlDeclaredTwice($this->seededFoundationFor($user));
 
         $client->request(

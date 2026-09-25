@@ -69,21 +69,21 @@ final class EntryStateRepositoryTest extends DbTestCase
         $this->em->flush();
 
         $result = $this->repo()->entryIdsWithStateForUser(
-            (int) $this->user->getId(),
-            [(int) $withState->getId(), (int) $withoutState->getId()],
+            $this->user->requireId(),
+            [$withState->requireId(), $withoutState->requireId()],
         );
 
-        self::assertSame([(int) $withState->getId()], $result);
+        self::assertSame([$withState->requireId()], $result);
     }
 
     public function testEmptyEntryIdListReturnsEmptyWithoutQuerying(): void
     {
-        self::assertSame([], $this->repo()->entryIdsWithStateForUser((int) $this->user->getId(), []));
+        self::assertSame([], $this->repo()->entryIdsWithStateForUser($this->user->requireId(), []));
     }
 
     public function testForUserByEntryIdsWithEmptyListReturnsEmptyWithoutQuerying(): void
     {
-        self::assertSame([], $this->repo()->forUserByEntryIds((int) $this->user->getId(), []));
+        self::assertSame([], $this->repo()->forUserByEntryIds($this->user->requireId(), []));
     }
 
     public function testForUserByEntryIdsIsKeyedByEntryIdAndHoldsOnlyTheAskedUsersStates(): void
@@ -107,20 +107,20 @@ final class EntryStateRepositoryTest extends DbTestCase
         $this->em->flush();
 
         $result = $this->repo()->forUserByEntryIds(
-            (int) $this->user->getId(),
-            [(int) $shared->getId(), (int) $withoutState->getId()],
+            $this->user->requireId(),
+            [$shared->requireId(), $withoutState->requireId()],
         );
 
-        self::assertSame([(int) $shared->getId()], array_keys($result));
-        self::assertTrue($result[(int) $shared->getId()]->isFavorite());
-        self::assertFalse($result[(int) $shared->getId()]->isKept());
+        self::assertSame([$shared->requireId()], array_keys($result));
+        self::assertTrue($result[$shared->requireId()]->isFavorite());
+        self::assertFalse($result[$shared->requireId()]->isKept());
     }
 
     public function testEnsureRowIsIdempotentAndLeavesExactlyOneRow(): void
     {
         $entry = $this->entry('ensure-idempotent');
-        $userId = (int) $this->user->getId();
-        $entryId = (int) $entry->getId();
+        $userId = $this->user->requireId();
+        $entryId = $entry->requireId();
 
         $this->repo()->ensureRow($userId, $entryId, false, null);
         $this->repo()->ensureRow($userId, $entryId, false, null);
@@ -131,8 +131,8 @@ final class EntryStateRepositoryTest extends DbTestCase
     public function testEnsureRowDoesNotClobberAnExistingRowsFlags(): void
     {
         $entry = $this->entry('ensure-keeps-flags');
-        $userId = (int) $this->user->getId();
-        $entryId = (int) $entry->getId();
+        $userId = $this->user->requireId();
+        $entryId = $entry->requireId();
 
         $this->repo()->ensureRow($userId, $entryId, false, null);
 
@@ -152,8 +152,8 @@ final class EntryStateRepositoryTest extends DbTestCase
     public function testEnsureRowSeedsAnEffectivelyReadRowHiddenFromTheWatermark(): void
     {
         $entry = $this->entry('ensure-seed-hidden');
-        $userId = (int) $this->user->getId();
-        $entryId = (int) $entry->getId();
+        $userId = $this->user->requireId();
+        $entryId = $entry->requireId();
         $watermark = new \DateTimeImmutable('2026-07-08T09:30:00');
 
         $this->repo()->ensureRow($userId, $entryId, true, $watermark);
@@ -168,8 +168,8 @@ final class EntryStateRepositoryTest extends DbTestCase
     public function testEnsureRowLeavesTheNonReadFlagsAtTheirFalseDefault(): void
     {
         $entry = $this->entry('ensure-flag-defaults');
-        $userId = (int) $this->user->getId();
-        $entryId = (int) $entry->getId();
+        $userId = $this->user->requireId();
+        $entryId = $entry->requireId();
 
         $this->repo()->ensureRow($userId, $entryId, false, null);
 

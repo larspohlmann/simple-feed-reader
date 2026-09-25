@@ -51,8 +51,8 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->cache->findAllByIdsForUser(
-            [(int) $news->getId(), (int) $tech->getId()],
-            (int) $user->getId(),
+            [$news->requireId(), $tech->requireId()],
+            $user->requireId(),
         );
 
         self::assertCount(2, $resolved);
@@ -65,7 +65,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $foreignTag = $this->tag($theirs, 'Theirs');
         $this->em->flush();
 
-        $resolved = $this->cache->findAllByIdsForUser([(int) $foreignTag->getId()], (int) $mine->getId());
+        $resolved = $this->cache->findAllByIdsForUser([$foreignTag->requireId()], $mine->requireId());
 
         self::assertSame([], $resolved);
     }
@@ -75,7 +75,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-missing@example.com');
         $this->em->flush();
 
-        $resolved = $this->cache->findAllByIdsForUser([999_999], (int) $user->getId());
+        $resolved = $this->cache->findAllByIdsForUser([999_999], $user->requireId());
 
         self::assertSame([], $resolved);
     }
@@ -90,8 +90,8 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-repeat@example.com');
         $news = $this->tag($user, 'News');
         $this->em->flush();
-        $newsId = (int) $news->getId();
-        $userId = (int) $user->getId();
+        $newsId = $news->requireId();
+        $userId = $user->requireId();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
@@ -119,16 +119,16 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
         $this->em->flush();
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
-        $this->cache->findAllByIdsForUser([(int) $news->getId()], $userId);
+        $this->cache->findAllByIdsForUser([$news->requireId()], $userId);
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
         $resolved = $this->cache->findAllByIdsForUser(
-            [(int) $news->getId(), (int) $tech->getId()],
+            [$news->requireId(), $tech->requireId()],
             $userId,
         );
 
@@ -153,8 +153,8 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-reset@example.com');
         $news = $this->tag($user, 'News');
         $this->em->flush();
-        $newsId = (int) $news->getId();
-        $userId = (int) $user->getId();
+        $newsId = $news->requireId();
+        $userId = $user->requireId();
 
         $this->cache->findAllByIdsForUser([$newsId], $userId);
 
@@ -189,8 +189,8 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->cache->findAllByIdsForUser(
-            [(int) $news->getId(), 999_999, (int) $tech->getId()],
-            (int) $user->getId(),
+            [$news->requireId(), 999_999, $tech->requireId()],
+            $user->requireId(),
         );
 
         self::assertSame([$news, $tech], $resolved);
@@ -211,13 +211,13 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-dedup@example.com');
         $news = $this->tag($user, 'News');
         $this->em->flush();
-        $newsId = (int) $news->getId();
+        $newsId = $news->requireId();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        $this->cache->findAllByIdsForUser([$newsId, $newsId], (int) $user->getId());
+        $this->cache->findAllByIdsForUser([$newsId, $newsId], $user->requireId());
 
         $reads = $recorder->queriesMatching('from tag');
         self::assertCount(1, $reads, "a duplicated id must still cost one query, got:\n" . implode("\n", $reads));
@@ -239,10 +239,10 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $sameId = $this->tag($mine, 'Mine');
         $this->em->flush();
 
-        $this->cache->findAllByIdsForUser([(int) $sameId->getId()], (int) $mine->getId());
+        $this->cache->findAllByIdsForUser([$sameId->requireId()], $mine->requireId());
         $resolvedForStranger = $this->cache->findAllByIdsForUser(
-            [(int) $sameId->getId()],
-            (int) $theirs->getId(),
+            [$sameId->requireId()],
+            $theirs->requireId(),
         );
 
         self::assertSame([], $resolvedForStranger, "one user's cached tag must not leak into another's lookup.");

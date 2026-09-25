@@ -36,12 +36,12 @@ final class MoveFeedToTagTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $this->em()->clear();
-        $positions = $this->tagFeedPositions($client, $user, (int) $tech->getId());
-        self::assertSame(0, $positions[(int) $x->getId()]);
-        self::assertSame(1, $positions[(int) $moved->getId()]);
-        self::assertSame(2, $positions[(int) $y->getId()]);
-        $newsFeeds = $this->tagFeedPositions($client, $user, (int) $news->getId());
-        self::assertArrayNotHasKey((int) $moved->getId(), $newsFeeds);
+        $positions = $this->tagFeedPositions($client, $user, $tech->requireId());
+        self::assertSame(0, $positions[$x->requireId()]);
+        self::assertSame(1, $positions[$moved->requireId()]);
+        self::assertSame(2, $positions[$y->requireId()]);
+        $newsFeeds = $this->tagFeedPositions($client, $user, $news->requireId());
+        self::assertArrayNotHasKey($moved->requireId(), $newsFeeds);
     }
 
     public function testAForeignTargetTagIsRejectedAndNothingChanges(): void
@@ -62,8 +62,8 @@ final class MoveFeedToTagTest extends WebTestCase
         self::assertResponseStatusCodeSame(422);
 
         $this->em()->clear();
-        $positions = $this->tagFeedPositions($client, $user, (int) $news->getId());
-        self::assertArrayHasKey((int) $moved->getId(), $positions);
+        $positions = $this->tagFeedPositions($client, $user, $news->requireId());
+        self::assertArrayHasKey($moved->requireId(), $positions);
     }
 
     public function testAnUnknownSubscriptionAnswers404(): void

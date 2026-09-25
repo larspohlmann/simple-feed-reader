@@ -75,7 +75,7 @@ final class OnboardingControllerTest extends WebTestCase
             '/api/onboarding/subscribe',
             server: $headers,
             content: json_encode(
-                ['catalogFeedIds' => [(int) $verge->getId(), (int) $ars->getId()]],
+                ['catalogFeedIds' => [$verge->requireId(), $ars->requireId()]],
                 \JSON_THROW_ON_ERROR,
             ),
         );
@@ -110,7 +110,7 @@ final class OnboardingControllerTest extends WebTestCase
             'POST',
             '/api/onboarding/subscribe',
             server: $headers,
-            content: json_encode(['catalogFeedIds' => [(int) $verge->getId()]], \JSON_THROW_ON_ERROR),
+            content: json_encode(['catalogFeedIds' => [$verge->requireId()]], \JSON_THROW_ON_ERROR),
         );
 
         self::assertResponseIsSuccessful();
@@ -136,7 +136,7 @@ final class OnboardingControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('again@example.com');
         [$verge] = $this->catalog();
-        $payload = json_encode(['catalogFeedIds' => [(int) $verge->getId()]], \JSON_THROW_ON_ERROR);
+        $payload = json_encode(['catalogFeedIds' => [$verge->requireId()]], \JSON_THROW_ON_ERROR);
 
         $client->request('POST', '/api/onboarding/subscribe', server: $headers, content: $payload);
         self::assertResponseIsSuccessful();
@@ -179,7 +179,7 @@ final class OnboardingControllerTest extends WebTestCase
             '/api/onboarding/subscribe',
             server: $headers,
             content: json_encode(
-                ['catalogFeedIds' => [(int) $verge->getId(), (int) $ars->getId()]],
+                ['catalogFeedIds' => [$verge->requireId(), $ars->requireId()]],
                 \JSON_THROW_ON_ERROR,
             ),
         );

@@ -27,7 +27,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
         $this->taggedSubscription($user, 'https://b.example.com/rss', [[$news, 1]]);
 
-        $this->sync()->sync($feed, [(int) $news->getId(), (int) $tech->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$news->requireId(), $tech->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($feed, $news));
@@ -41,7 +41,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $tech = $this->tag($user, 'Tech');
         $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0], [$tech, 0]]);
 
-        $this->sync()->sync($feed, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         $tagNames = array_map(static fn (Tag $t): string => $t->getName(), $feed->getTags()->toArray());
@@ -60,7 +60,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($sibling);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [], (int) $user->getId());
+        $this->sync()->sync($feed, [], $user->requireId());
         $this->em->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());
@@ -79,7 +79,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($sibling);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [], (int) $user->getId());
+        $this->sync()->sync($feed, [], $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $feed->getPosition());
@@ -105,14 +105,14 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $news = $this->tag($user, 'News');
         $alreadyTagged = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
 
-        $this->sync()->sync($alreadyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($alreadyTagged, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         $freshlyTagged = new Subscription($user, $this->feed('https://b.example.com/rss'), $this->now());
         $this->em->persist($freshlyTagged);
         $this->em->flush();
 
-        $this->sync()->sync($freshlyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($freshlyTagged, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertSame(
@@ -131,7 +131,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [(int) $strangerTag->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$strangerTag->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());

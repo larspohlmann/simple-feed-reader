@@ -225,7 +225,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
     private function userId(): int
     {
-        return $this->user->getId() ?? 0;
+        return $this->user->requireId();
     }
 
     private function loader(): RecommendationHistoryLoader

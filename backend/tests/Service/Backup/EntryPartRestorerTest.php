@@ -72,7 +72,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testARetriedPartCreatesNothingAndFailsNothing(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $gzip = $this->entryPart([
             $this->entryLine('a'),
             $this->entryStateLine('a', isFavorite: true),
@@ -93,7 +93,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnEntryTheSchedulerAlreadyFetchedIsKeptAndStillGetsItsState(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'Scheduler Title');
         $this->em->flush();
@@ -119,7 +119,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnExistingStateRowIsLeftUntouched(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
@@ -143,7 +143,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAFeedAnotherAccountReadsGetsNoNewEntries(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $stranger = $this->users->create($this->nextEmail());
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-02 00:00:00')));
@@ -202,7 +202,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testItRefusesAPartThatWouldBreachTheAccountEntryCeiling(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
         $this->makeEntry($feed, 'existing-b', 'B');
@@ -218,7 +218,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAPartThatExactlyFillsTheAccountEntryCeilingIsAccepted(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
         $this->em->flush();
@@ -233,7 +233,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAPartReimportingAlreadyPresentEntriesFitsUnderTheCeiling(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');
@@ -249,7 +249,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testTheCeilingCountsOnlyTheGenuinelyNewEntriesOfAPart(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
         $this->em->flush();
@@ -269,7 +269,7 @@ final class EntryPartRestorerTest extends DbTestCase
     {
         $secondFeedUrl = 'https://second.example/feed.xml';
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->subscribeTo($user, $secondFeedUrl);
 
         $gzip = $this->entryPart([
@@ -286,7 +286,7 @@ final class EntryPartRestorerTest extends DbTestCase
     {
         $secondFeedUrl = 'https://second.example/feed.xml';
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->subscribeTo($user, $secondFeedUrl);
 
         $gzip = $this->entryPart([
@@ -305,7 +305,7 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnEntryStateFollowingAnAlreadyStatedOneInTheSamePartIsStillCreated(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $entryA = $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');

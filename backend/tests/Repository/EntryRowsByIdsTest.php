@@ -72,7 +72,7 @@ final class EntryRowsByIdsTest extends DbTestCase
      */
     private function rowsByIds(array $ids): array
     {
-        $rows = $this->repo()->rowsByIdsForUser($ids, $this->user->getId() ?? 0);
+        $rows = $this->repo()->rowsByIdsForUser($ids, $this->user->requireId());
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
     }
@@ -105,7 +105,7 @@ final class EntryRowsByIdsTest extends DbTestCase
         $oldest = $this->entry('oldest', '2026-07-10T00:00:00Z');
         $middle = $this->entry('middle', '2026-07-11T00:00:00Z');
         $newest = $this->entry('newest', '2026-07-12T00:00:00Z');
-        $ids = [$oldest->getId() ?? 0, $middle->getId() ?? 0, $newest->getId() ?? 0];
+        $ids = [$oldest->requireId(), $middle->requireId(), $newest->requireId()];
 
         // A limit keeps only the newest rows, still in newest-first order — the
         // tail past the limit is never hydrated.
@@ -113,11 +113,11 @@ final class EntryRowsByIdsTest extends DbTestCase
             ['newest', 'middle'],
             array_map(
                 static fn ($row) => $row->entry->getGuid(),
-                $this->repo()->rowsByIdsForUser($ids, $this->user->getId() ?? 0, 2),
+                $this->repo()->rowsByIdsForUser($ids, $this->user->requireId(), 2),
             ),
         );
         // No limit hydrates every given id.
-        self::assertCount(3, $this->repo()->rowsByIdsForUser($ids, $this->user->getId() ?? 0));
+        self::assertCount(3, $this->repo()->rowsByIdsForUser($ids, $this->user->requireId()));
     }
 
     public function testDropsAnIdInAFeedTheUserDoesNotSubscribeTo(): void
@@ -147,7 +147,7 @@ final class EntryRowsByIdsTest extends DbTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        self::assertSame([], $this->repo()->rowsByIdsForUser([], $this->user->getId() ?? 0));
+        self::assertSame([], $this->repo()->rowsByIdsForUser([], $this->user->requireId()));
         self::assertSame([], $recorder->queries());
     }
 }

@@ -154,7 +154,7 @@ final class AuditSamplerTest extends DbTestCase
 
     private function userId(): int
     {
-        return (int) $this->user->getId();
+        return $this->user->requireId();
     }
 
     public function testAnEntryStoredAfterTheCutoffIsNotDrawnSoEveryShardSeesTheSameSet(): void
@@ -199,7 +199,7 @@ final class AuditSamplerTest extends DbTestCase
         $this->em->persist($thread);
         $this->em->flush();
 
-        $picked = $this->sampler()->pick([(int) $article->getId(), (int) $thread->getId()], $this->userId());
+        $picked = $this->sampler()->pick([$article->requireId(), $thread->requireId()], $this->userId());
 
         self::assertSame(['<p>The article.</p>', null], array_map(
             static fn (SampledEntry $sampled): ?string => $sampled->feedContentHtml,

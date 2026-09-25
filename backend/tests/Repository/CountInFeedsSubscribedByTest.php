@@ -32,7 +32,7 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
         $this->entry($unsubscribed, 'c');
         $this->em->flush();
 
-        self::assertSame(2, $this->repository()->countInFeedsSubscribedBy((int) $user->getId()));
+        self::assertSame(2, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
     }
 
     public function testAUserWithNoSubscriptionsCountsZero(): void
@@ -41,7 +41,7 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
         $this->em->persist($user);
         $this->em->flush();
 
-        self::assertSame(0, $this->repository()->countInFeedsSubscribedBy((int) $user->getId()));
+        self::assertSame(0, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
     }
 
     private function feed(string $url): Feed

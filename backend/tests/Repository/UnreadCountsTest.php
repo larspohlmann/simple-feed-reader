@@ -47,8 +47,8 @@ final class UnreadCountsTest extends DbTestCase
         $this->em->flush();
 
         // Unread: b and d (a is under watermark, c is explicitly read).
-        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
-        self::assertSame(2, $counts[(int) $sub->getId()] ?? 0);
+        $counts = $this->repo()->unreadCountsForUser($user->requireId());
+        self::assertSame(2, $counts[$sub->requireId()] ?? 0);
     }
 
     public function testSubscriptionWithNoUnreadIsAbsentFromMap(): void
@@ -61,8 +61,8 @@ final class UnreadCountsTest extends DbTestCase
         $this->em->persist($sub);
         $this->em->flush();
 
-        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
-        self::assertArrayNotHasKey((int) $sub->getId(), $counts);
+        $counts = $this->repo()->unreadCountsForUser($user->requireId());
+        self::assertArrayNotHasKey($sub->requireId(), $counts);
     }
 
     public function testCrossFeedDuplicateCountsOnceAcrossSubscriptions(): void
@@ -107,9 +107,9 @@ final class UnreadCountsTest extends DbTestCase
         $this->em->persist($entryB);
         $this->em->flush();
 
-        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
-        $subAId = (int) $subA->getId();
-        $subBId = (int) $subB->getId();
+        $counts = $this->repo()->unreadCountsForUser($user->requireId());
+        $subAId = $subA->requireId();
+        $subBId = $subB->requireId();
 
         self::assertSame(1, ($counts[$subAId] ?? 0) + ($counts[$subBId] ?? 0));
         self::assertSame(1, $counts[$subAId] ?? 0);
@@ -160,9 +160,9 @@ final class UnreadCountsTest extends DbTestCase
 
         // The collapse's inner scope must exclude the read lower copy, or it
         // wrongly suppresses the still-unread higher copy too.
-        $counts = $this->repo()->unreadCountsForUser((int) $user->getId());
+        $counts = $this->repo()->unreadCountsForUser($user->requireId());
 
-        self::assertSame(1, $counts[(int) $subB->getId()] ?? 0);
-        self::assertSame(0, $counts[(int) $subA->getId()] ?? 0);
+        self::assertSame(1, $counts[$subB->requireId()] ?? 0);
+        self::assertSame(0, $counts[$subA->requireId()] ?? 0);
     }
 }

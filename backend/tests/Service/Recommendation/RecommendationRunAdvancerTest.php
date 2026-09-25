@@ -288,7 +288,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $this->em->getConnection()->update(
             'recommendation_run',
@@ -581,7 +581,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
@@ -623,7 +623,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill();
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
@@ -669,7 +669,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'from batch one']],
@@ -3027,7 +3027,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
 
-        return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
+        return $this->runLogs()->listForRun($this->user, $run->requireId());
     }
 
     /**
@@ -3103,7 +3103,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
 
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
         $this->stubChatClient()->duringNextCall(function () use ($runId): void {
             $this->em->getConnection()->update(
                 'recommendation_run',

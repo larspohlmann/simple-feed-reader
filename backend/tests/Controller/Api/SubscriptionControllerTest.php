@@ -262,8 +262,8 @@ final class SubscriptionControllerTest extends WebTestCase
         $em->persist($news);
         $em->persist($tech);
         $em->flush();
-        $newsId = (int) $news->getId();
-        $techId = (int) $tech->getId();
+        $newsId = $news->requireId();
+        $techId = $tech->requireId();
 
         $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($rss);
@@ -322,13 +322,13 @@ final class SubscriptionControllerTest extends WebTestCase
         $strangerTag = new Tag($stranger, 'Secret');
         $em->persist($strangerTag);
         $em->flush();
-        $strangerTagId = (int) $strangerTag->getId();
+        $strangerTagId = $strangerTag->requireId();
 
         $subscriber = $factory->create('tagvictim@example.com');
         $ownTag = new Tag($subscriber, 'Mine');
         $em->persist($ownTag);
         $em->flush();
-        $ownTagId = (int) $ownTag->getId();
+        $ownTagId = $ownTag->requireId();
 
         $rss = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($rss);
@@ -797,7 +797,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $em->persist($subscription);
         $em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -835,7 +835,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $em->persist($leaving);
         $em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
         $em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);

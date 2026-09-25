@@ -54,10 +54,10 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $third = $this->entry('c');
         $this->entry('d');
 
-        $ids = $this->sweepEntries()->idsBetween((int) $first->getId(), (int) $third->getId(), 1);
+        $ids = $this->sweepEntries()->idsBetween($first->requireId(), $third->requireId(), 1);
         self::assertSame([$second->getId()], $ids);
 
-        $ids = $this->sweepEntries()->idsBetween((int) $first->getId(), (int) $third->getId(), 10);
+        $ids = $this->sweepEntries()->idsBetween($first->requireId(), $third->requireId(), 10);
         self::assertSame([$second->getId(), $third->getId()], $ids);
     }
 
@@ -84,8 +84,8 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $untouched = $this->search('rocket');
         $this->em->flush();
 
-        $this->searches()->advanceMarks([(int) $moved->getId()], 500);
-        $this->searches()->advanceMarks([(int) $moved->getId()], 120);
+        $this->searches()->advanceMarks([$moved->requireId()], 500);
+        $this->searches()->advanceMarks([$moved->requireId()], 120);
 
         self::assertSame(500, $this->markOf($moved));
         self::assertSame(0, $this->markOf($untouched));
@@ -96,7 +96,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $one = $this->search('climate');
         $two = $this->search('rocket');
         $this->em->flush();
-        $this->searches()->advanceMarks([(int) $one->getId(), (int) $two->getId()], 500);
+        $this->searches()->advanceMarks([$one->requireId(), $two->requireId()], 500);
 
         self::assertSame(2, $this->searches()->resetAllMarks());
         self::assertSame(0, $this->markOf($one));
@@ -111,9 +111,9 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $this->em->flush();
         $matchedAt = new \DateTimeImmutable('2026-09-22T10:00:00');
 
-        $first = $this->memberships()->insertMissing([(int) $search->getId() => [(int) $one->getId()]], $matchedAt);
+        $first = $this->memberships()->insertMissing([$search->requireId() => [$one->requireId()]], $matchedAt);
         $second = $this->memberships()->insertMissing(
-            [(int) $search->getId() => [(int) $one->getId(), (int) $two->getId()]],
+            [$search->requireId() => [$one->requireId(), $two->requireId()]],
             $matchedAt,
         );
 
@@ -131,8 +131,8 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
 
         $inserted = $this->memberships()->insertMissing(
             [
-                (int) $climate->getId() => [(int) $entry->getId()],
-                (int) $rocket->getId() => [(int) $entry->getId()],
+                $climate->requireId() => [$entry->requireId()],
+                $rocket->requireId() => [$entry->requireId()],
             ],
             new \DateTimeImmutable('2026-09-22T10:00:00'),
         );
@@ -149,7 +149,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
 
         $now = new \DateTimeImmutable();
 
-        self::assertSame(0, $this->memberships()->insertMissing([(int) $search->getId() => []], $now));
+        self::assertSame(0, $this->memberships()->insertMissing([$search->requireId() => []], $now));
         self::assertSame(0, $this->memberships()->insertMissing([], $now));
     }
 

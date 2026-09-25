@@ -69,9 +69,9 @@ final class CatalogSubscriberTest extends DbTestCase
         $user = $this->user('picker@example.com');
 
         $result = $this->subscriber()->subscribe($user, [
-            (int) $verge->getId(),
-            (int) $ars->getId(),
-            (int) $quanta->getId(),
+            $verge->requireId(),
+            $ars->requireId(),
+            $quanta->requireId(),
         ]);
 
         self::assertSame(3, $result->imported);
@@ -88,7 +88,7 @@ final class CatalogSubscriberTest extends DbTestCase
         [$verge, , ] = $this->catalog();
         $user = $this->user('partial@example.com');
 
-        $result = $this->subscriber()->subscribe($user, [(int) $verge->getId()]);
+        $result = $this->subscriber()->subscribe($user, [$verge->requireId()]);
 
         self::assertCount(1, $result->tagsCreated);
         self::assertSame('Technology', $result->tagsCreated[0]->getName());
@@ -105,8 +105,8 @@ final class CatalogSubscriberTest extends DbTestCase
         $user = $this->user('stale@example.com');
 
         $result = $this->subscriber()->subscribe($user, [
-            (int) $verge->getId(),
-            (int) $disabled->getId(),
+            $verge->requireId(),
+            $disabled->requireId(),
             999999,
         ]);
 
@@ -118,8 +118,8 @@ final class CatalogSubscriberTest extends DbTestCase
         [$verge, , ] = $this->catalog();
         $user = $this->user('repeat@example.com');
 
-        $this->subscriber()->subscribe($user, [(int) $verge->getId()]);
-        $second = $this->subscriber()->subscribe($user, [(int) $verge->getId()]);
+        $this->subscriber()->subscribe($user, [$verge->requireId()]);
+        $second = $this->subscriber()->subscribe($user, [$verge->requireId()]);
 
         self::assertSame(0, $second->imported);
         self::assertSame(1, $second->alreadySubscribed);
@@ -139,7 +139,7 @@ final class CatalogSubscriberTest extends DbTestCase
 
         $user = $this->user('format@example.com');
 
-        $result = $this->subscriber()->subscribe($user, [(int) $scraped->getId()]);
+        $result = $this->subscriber()->subscribe($user, [$scraped->requireId()]);
         self::assertSame(1, $result->imported);
 
         $feeds = self::getContainer()->get(FeedRepository::class);

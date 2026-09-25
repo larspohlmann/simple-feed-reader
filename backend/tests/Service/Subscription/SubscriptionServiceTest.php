@@ -248,7 +248,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-06-01T00:00:00Z')));
         $this->em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $service = $this->service(
             $this->discoveryReturning($this->discovered('https://example.com/feed.xml')),
@@ -483,7 +483,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         /** @var \App\Repository\SubscriptionRepository $repo */
         $repo = $this->em->getRepository(Subscription::class);
-        self::assertSame(0, $repo->countForUser((int) $user->getId()));
+        self::assertSame(0, $repo->countForUser($user->requireId()));
     }
 
     public function testPerUserCapOverridesTheGlobalDefault(): void

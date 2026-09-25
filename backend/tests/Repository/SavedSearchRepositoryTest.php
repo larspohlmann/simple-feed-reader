@@ -34,7 +34,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->persist($strangers);
         $this->em->flush();
 
-        $rows = $this->repo()->findForUser((int) $owner->getId());
+        $rows = $this->repo()->findForUser($owner->requireId());
 
         self::assertCount(2, $rows);
         self::assertSame('rust lang', $rows[0]->getTerm()); // newest first
@@ -56,7 +56,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$second->getId(), $first->getId()],
-            $this->repo()->idsForUser((int) $owner->getId()),
+            $this->repo()->idsForUser($owner->requireId()),
         );
     }
 
@@ -68,7 +68,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->persist(new SavedSearch($user, 'punk', true));
         $this->em->flush();
 
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', false, false));
         self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', true, false));
         self::assertSame(true, $this->repo()->findOneForUserByTerm($userId, 'punk', true, false)->isWholeWord());
@@ -86,7 +86,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->persist(new SavedSearch($user, 'climate change', false, true));
         $this->em->flush();
 
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $substring = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, false);
         $phrase = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, true);
         self::assertNotNull($substring);
@@ -105,7 +105,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->persist($saved);
         $this->em->flush();
 
-        self::assertNotNull($this->repo()->findOneOwnedBy((int) $saved->getId(), (int) $owner->getId()));
-        self::assertNull($this->repo()->findOneOwnedBy((int) $saved->getId(), (int) $stranger->getId()));
+        self::assertNotNull($this->repo()->findOneOwnedBy($saved->requireId(), $owner->requireId()));
+        self::assertNull($this->repo()->findOneOwnedBy($saved->requireId(), $stranger->requireId()));
     }
 }
