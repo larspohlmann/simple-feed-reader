@@ -63,13 +63,9 @@ final readonly class GzipLineReader
     }
 
     /**
-     * Valid magic bytes are no promise that the rest of the body inflates: a
-     * partially downloaded or bit-flipped file raises "zlib: data error" as a
-     * PHP diagnostic, which Symfony's ErrorHandler turns into an
-     * ErrorException — not an ApiException, so the listener would answer 500
-     * with a stack trace instead of the 422 this refusal is. The handler is
-     * installed around the fgets call alone, never across the yield, so it
-     * cannot leak into the code consuming the generator.
+     * Valid magic bytes promise nothing about the rest: a truncated or bit-flipped body raises a zlib diagnostic,
+     * an ErrorException that would surface as an opaque 500 instead of this refusal. The handler wraps the fgets
+     * call alone, never the yield, so it cannot leak into the generator's consumer.
      *
      * @param resource $stream
      *

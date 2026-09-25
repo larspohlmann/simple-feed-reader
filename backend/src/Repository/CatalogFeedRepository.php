@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\CatalogFeed;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * @extends ServiceEntityRepository<CatalogFeed>
@@ -19,14 +19,9 @@ class CatalogFeedRepository extends ServiceEntityRepository
         parent::__construct($registry, CatalogFeed::class);
     }
 
-    /**
-     * Fetch by id or fail with a 404. Throwing the HTTP exception here keeps the
-     * lookup-or-404 guard out of every admin controller that needs it, including
-     * the reorder path that looks ids up from the request body, not the route.
-     */
     public function getById(int $id): CatalogFeed
     {
-        return $this->find($id) ?? throw new NotFoundHttpException('No such feed.');
+        return $this->find($id) ?? throw new RecordNotFoundException('No such feed.');
     }
 
     /**

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth;
 
 use App\Dto\OAuth\OAuthIdentity;
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
 use App\Service\OAuth\Oidc\TokenEndpoint;
 use Psr\Clock\ClockInterface;

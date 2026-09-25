@@ -57,7 +57,7 @@ These are **load-bearing invariants: do not regress them.**
 | Firewalls are **`stateless: true`**; `framework.session` is enabled but nothing reads or writes it, so no `SESSION` cookie is issued in practice | `security.yaml` firewalls; `OAuthStateStore` stores flow state in a filesystem cache pool, not the session | No hidden server-side session state a client must carry. |
 | **No CSRF token** is required on the JSON API | `framework.csrf_protection` is not set; `json_login` leaves `enable_csrf` off | Nothing expects a browser-supplied CSRF token. |
 | **ALTCHA is algorithmic** sha256 proof-of-work over JSON — no browser widget is required server-side | `App\Service\Auth\AltchaService`; required only on `POST /api/auth/register` and `POST /api/auth/password-reset-request` | A native client computes the proof with CryptoKit; the widget is a web convenience, not a protocol requirement. |
-| Errors are **`application/problem+json` regardless of `Accept`**; no `text/html` fallback | `App\EventListener\ApiExceptionListener`, `JwtFailureResponseListener` | A native client parses one content type for every outcome. |
+| Errors are **`application/problem+json` regardless of `Accept`**; no `text/html` fallback | `App\Http\Problem\ProblemCatalog` (one mapping for every error path), used by `App\EventListener\ApiExceptionListener`, `JwtFailureResponseListener` and `App\Security\LoginFailureHandler` | A native client parses one content type for every outcome. |
 | **No `Origin` / `Referer` / `Sec-Fetch-*` gating** on the API | none present (only doc-comments) | Requests are not rejected for lacking browser-set headers. |
 
 **The one-line rule for reviewers:** if a change moves the access token into a

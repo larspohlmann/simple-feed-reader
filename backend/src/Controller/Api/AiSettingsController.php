@@ -12,21 +12,10 @@ use App\Dto\Ai\SetMaxBatchSizeRequest;
 use App\Dto\Ai\SetReasoningRequest;
 use App\Dto\Ai\SetSlowModelRequest;
 use App\Entity\User;
-use App\Exception\AiConfigurationNotFoundApiException;
-use App\Exception\AiKeyUnreadableApiException;
-use App\Exception\AiProviderApiException;
-use App\Exception\TooManyAiConfigurationsApiException;
 use App\Http\AiSettingsJson;
 use App\Service\Ai\AiConfigurationEditor;
 use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Ai\Exception\ConfigurationNotFoundException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ModelNotOfferedException;
-use App\Service\Ai\Exception\ModelRequiredForActivationException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -37,11 +26,9 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 
 /**
- * The account's AI provider configurations. Every write that talks to the
- * provider verifies against it first, so a stored configuration is one that
- * worked — see AiProviderConfigurator. Every route that takes an `{id}` is
- * ownership-scoped through AiConfigurationForUser: another account's id
- * answers 404, not 403, so a caller cannot learn that the id exists at all.
+ * The account's AI provider configurations. A write that talks to the provider verifies against it first (see
+ * AiProviderConfigurator). Every `{id}` route resolves through AiConfigurationForUser, so another account's id
+ * answers 404, not 403, and a caller cannot learn that it exists.
  */
 #[Route('/api/me/ai')]
 final readonly class AiSettingsController
@@ -70,14 +57,7 @@ final readonly class AiSettingsController
         #[MapRequestPayload] AddConfigurationRequest $request,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-
-        try {
-            $added = $this->configurator->addConfiguration($user, $request->name, $request->baseUrl, $request->apiKey);
-        } catch (TooManyConfigurationsException $e) {
-            throw new TooManyAiConfigurationsApiException($e);
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            throw new AiProviderApiException($e->getMessage(), $e);
-        }
+        $added = $this->configurator->addConfiguration($user, $request->name, $request->baseUrl, $request->apiKey);
 
         return new JsonResponse(
             AiSettingsJson::added($added->configuration, $added->modelIds),
@@ -88,17 +68,9 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/duplicate', name: 'api_me_ai_duplicate', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function duplicate(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        try {
-            $source = $this->configuration->require($user, $id);
-            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $copy = $this->configurator->duplicateConfiguration($source);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        } catch (TooManyConfigurationsException $e) {
-            throw new TooManyAiConfigurationsApiException($e);
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableApiException($e);
-        }
+        $source = $this->configuration->require($user, $id);
+        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
+        $copy = $this->configurator->duplicateConfiguration($source);
 
         return new JsonResponse(
             AiSettingsJson::configuration($copy, $this->configurator->settingsFor($user)?->getId()),
@@ -109,19 +81,10 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/models', name: 'api_me_ai_models', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function models(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $models = $this->configurator->listModels($configuration);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableApiException($e);
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
-            throw new AiProviderApiException($e->getMessage(), $e);
-        }
+        $configuration = $this->configuration->require($user, $id);
+        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
 
-        return new JsonResponse(AiSettingsJson::models($models));
+        return new JsonResponse(AiSettingsJson::models($this->configurator->listModels($configuration)));
     }
 
     #[Route('/configs/{id}/model', name: 'api_me_ai_save_model', requirements: ['id' => '\d+'], methods: ['PUT'])]
@@ -130,17 +93,9 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SaveModelRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $this->configurator->chooseModel($configuration, $request->model);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableApiException($e);
-        } catch (ModelNotOfferedException | ProviderUnreachableException | CredentialsRejectedException $e) {
-            throw new AiProviderApiException($e->getMessage(), $e);
-        }
+        $configuration = $this->configuration->require($user, $id);
+        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
+        $this->configurator->chooseModel($configuration, $request->model);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -153,12 +108,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] RenameConfigurationRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
+        $configuration = $this->configuration->require($user, $id);
         $this->editor->rename($configuration, $request->name);
 
         return new JsonResponse(
@@ -177,12 +127,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetReasoningRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
+        $configuration = $this->configuration->require($user, $id);
         $this->editor->setSuppressReasoning($configuration, $request->suppressReasoning);
 
         return new JsonResponse(
@@ -201,12 +146,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetSlowModelRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
+        $configuration = $this->configuration->require($user, $id);
         $this->editor->setSlowModel($configuration, $request->slowModel);
 
         return new JsonResponse(
@@ -225,12 +165,7 @@ final readonly class AiSettingsController
         int $id,
         #[MapRequestPayload] SetBatchConcurrencyRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
+        $configuration = $this->configuration->require($user, $id);
         $this->editor->setBatchConcurrency($configuration, $request->batchConcurrency);
 
         return new JsonResponse(
@@ -245,14 +180,8 @@ final readonly class AiSettingsController
         methods: ['PUT'],
     )]
     /**
-     * The one payload here whose property is nullable, so the one that needs
-     * REQUIRE_ALL_PROPERTIES: without it the serializer fills a missing
-     * `maxBatchSize` with null, and a body that never mentioned the cap --
-     * `{}`, or a misspelt key, which is simply ignored -- would clear a cap
-     * the account had set and quietly raise its effective batch size again
-     * (#445). Clearing stays possible; it just has to be asked for, as an
-     * explicit `{"maxBatchSize": null}`. The neighbouring endpoints get this
-     * for free from their non-nullable properties.
+     * REQUIRE_ALL_PROPERTIES: the one nullable payload here, so a body that never mentions `maxBatchSize` must
+     * not clear the account's cap (#445). Clearing takes an explicit `{"maxBatchSize": null}`.
      */
     public function setMaxBatchSize(
         #[CurrentUser] User $user,
@@ -260,12 +189,7 @@ final readonly class AiSettingsController
         #[MapRequestPayload(serializationContext: [AbstractNormalizer::REQUIRE_ALL_PROPERTIES => true])]
         SetMaxBatchSizeRequest $request,
     ): JsonResponse {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
+        $configuration = $this->configuration->require($user, $id);
         $this->editor->setMaxBatchSize($configuration, $request->maxBatchSize);
 
         return new JsonResponse(
@@ -276,22 +200,9 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}/active', name: 'api_me_ai_activate', requirements: ['id' => '\d+'], methods: ['PUT'])]
     public function activate(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-            $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
-            $this->configurator->activate($configuration);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableApiException($e);
-        } catch (
-            ModelRequiredForActivationException
-            | ModelNotOfferedException
-            | ProviderUnreachableException
-            | CredentialsRejectedException $e
-        ) {
-            throw new AiProviderApiException($e->getMessage(), $e);
-        }
+        $configuration = $this->configuration->require($user, $id);
+        $this->rateLimitGuard->enforceForUser($this->aiProviderLimiter, $user);
+        $this->configurator->activate($configuration);
 
         return new JsonResponse(
             AiSettingsJson::configuration($configuration, $this->configurator->settingsFor($user)?->getId()),
@@ -301,13 +212,7 @@ final readonly class AiSettingsController
     #[Route('/configs/{id}', name: 'api_me_ai_delete', requirements: ['id' => '\d+'], methods: ['DELETE'])]
     public function delete(#[CurrentUser] User $user, int $id): JsonResponse
     {
-        try {
-            $configuration = $this->configuration->require($user, $id);
-        } catch (ConfigurationNotFoundException $e) {
-            throw new AiConfigurationNotFoundApiException($e);
-        }
-
-        $this->configurator->deleteConfiguration($configuration);
+        $this->configurator->deleteConfiguration($this->configuration->require($user, $id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

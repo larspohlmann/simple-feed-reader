@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 /**
  * Validates that a reorder request lists exactly the set it reorders.
@@ -28,7 +28,7 @@ final readonly class ExactSetGuard
         sort($sortedOwned);
 
         if ($sortedRequested !== $sortedOwned) {
-            throw new UnprocessableEntityHttpException($message);
+            throw new InvalidSelectionException($message);
         }
     }
 }

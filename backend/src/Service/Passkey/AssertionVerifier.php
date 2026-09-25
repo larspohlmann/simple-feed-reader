@@ -68,14 +68,8 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * $availability->guard() runs first, before the challenge is consumed: the
-     * login path has no controller action to gate — PasskeyAuthenticator calls
-     * this method from inside a lazily-invoked UserBadge loader, never through
-     * PasskeyController — so this is the one place that can refuse a disabled
-     * instance's login. PasskeySignInDisabledException extends ApiException,
-     * already caught and rewritten to AuthenticationException by
-     * PasskeyAuthenticator::verifiedUser(), so a disabled instance fails
-     * exactly like a rejected assertion: a clean 401, never a 500.
+     * The availability guard runs before the challenge is consumed: the login path has no controller action to
+     * gate, so this is the one place that can refuse a disabled instance's login.
      *
      * @param array<string, mixed> $credential
      *

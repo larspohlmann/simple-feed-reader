@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Repository\TagRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 /**
  * Applies one tag and flag change across many subscriptions in a single
@@ -69,7 +69,7 @@ final readonly class BulkSubscriptionUpdater
             return;
         }
 
-        throw new UnprocessableEntityHttpException(
+        throw new InvalidSelectionException(
             'A tag cannot be added and removed in the same request.',
         );
     }
@@ -87,7 +87,7 @@ final readonly class BulkSubscriptionUpdater
 
         $owned = $this->tags->findAllByIdsForUser($tagIds, $userId);
         if (\count($owned) !== \count($tagIds)) {
-            throw new UnprocessableEntityHttpException(
+            throw new InvalidSelectionException(
                 'addTagIds and removeTagIds must all be your tags, without duplicates.',
             );
         }

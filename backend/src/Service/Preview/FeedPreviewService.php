@@ -6,7 +6,7 @@ namespace App\Service\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Exception\FeedPreviewException;
+use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcherInterface;

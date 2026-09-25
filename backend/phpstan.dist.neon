@@ -26,3 +26,9 @@ services:
         class: App\Tests\PhpStan\ThinControllerRule
         tags:
             - phpstan.rules.rule
+    -
+        class: PhpParser\NodeFinder
+    -
+        class: App\Tests\PhpStan\DomainKnowsNoHttpRule
+        tags:
+            - phpstan.rules.rule

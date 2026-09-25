@@ -61,14 +61,8 @@ final readonly class AdminCatalogImportController
     #[Route('/import/bundled', name: 'api_admin_catalog_import_bundled', methods: ['POST'])]
     public function importBundled(#[MapRequestPayload] CatalogImportModeRequest $request): JsonResponse
     {
-        try {
-            $document = $this->bundled->document();
-        } catch (InvalidCatalogDocumentException $e) {
-            throw new UnprocessableEntityHttpException($e->getMessage(), $e);
-        }
-
         return new JsonResponse(AdminCatalogJson::importResult($this->importer->import(
-            $document,
+            $this->bundled->document(),
             $request->mode ?? throw new UnprocessableEntityHttpException('A mode is required.'),
         )));
     }
@@ -76,16 +70,8 @@ final readonly class AdminCatalogImportController
     #[Route('/import', name: 'api_admin_catalog_import', methods: ['POST'])]
     public function import(#[MapRequestPayload] CatalogImportRequest $request): JsonResponse
     {
-        try {
-            $document = $this->parser->parse($request->document);
-        } catch (InvalidCatalogDocumentException $e) {
-            // 422, not 500: the upload is the user's input, and nothing was
-            // written — validation happens entirely before the importer runs.
-            throw new UnprocessableEntityHttpException($e->getMessage(), $e);
-        }
-
         return new JsonResponse(AdminCatalogJson::importResult($this->importer->import(
-            $document,
+            $this->parser->parse($request->document),
             $request->mode ?? throw new UnprocessableEntityHttpException('A mode is required.'),
         )));
     }

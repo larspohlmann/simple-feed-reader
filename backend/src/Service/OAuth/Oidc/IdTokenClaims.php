@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\Oidc;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 
 /**
  * The decoded payload of an ID token, and the one place that knows what shape a

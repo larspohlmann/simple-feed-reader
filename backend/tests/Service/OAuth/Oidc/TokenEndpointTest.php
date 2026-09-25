@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth\Oidc;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\Oidc\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;

@@ -6,7 +6,7 @@ namespace App\Tests\Service\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Exception\FeedPreviewException;
+use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;

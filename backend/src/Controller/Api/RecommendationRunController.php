@@ -5,21 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Exception\AiKeyUnreadableApiException;
-use App\Exception\AiNotConfiguredApiException;
-use App\Exception\AiProviderApiException;
-use App\Exception\NoActiveRecommendationRunApiException;
-use App\Exception\NoResumableRecommendationRunApiException;
-use App\Exception\RecommendationRunActiveApiException;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ModelNotOfferedException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
-use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
-use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunCanceller;
 use App\Service\Recommendation\RecommendationRunPurger;
@@ -32,13 +18,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * The poll loop the client drives: start a run, tick it forward, and read its
- * current state. `current` does no work and carries no limiter — it is a
- * plain read, safe to poll as often as the client likes.
- *
- * The two writes carry separate budgets: starting a run is what commits
- * outbound spend, while ticking is the progress loop and must stay generous
- * enough that a long run never throttles itself off (#308).
+ * The poll loop the client drives. `current` is a plain read with no limiter. Starting a run commits outbound
+ * spend; ticking is the progress loop and must stay generous enough never to throttle a long run (#308).
  */
 #[Route('/api/recommendations/runs')]
 final readonly class RecommendationRunController
@@ -60,35 +41,16 @@ final readonly class RecommendationRunController
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
 
-        try {
-            $report = $this->starter->start($user);
-        } catch (AiNotConfiguredException $e) {
-            throw new AiNotConfiguredApiException($e);
-        }
-
-        return new JsonResponse($this->statusPayload->forReport($report, $user));
+        return new JsonResponse($this->statusPayload->forReport($this->starter->start($user), $user));
     }
 
-    /**
-     * Resumes the latest failed run at the batch that failed. Shares the start
-     * limiter because it commits the same outbound spend a fresh run does, and
-     * 409s when there is nothing failed to resume -- the client offers this
-     * only after it has seen a failed run, so a miss is a stale click.
-     */
+    /** Resumes the latest failed run; it shares the start limiter because it commits the same outbound spend. */
     #[Route('/resume', name: 'api_recommendations_resume', methods: ['POST'])]
     public function resume(#[CurrentUser] User $user): JsonResponse
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
 
-        try {
-            $report = $this->starter->resume($user);
-        } catch (AiNotConfiguredException $e) {
-            throw new AiNotConfiguredApiException($e);
-        } catch (NoResumableRecommendationRunException $e) {
-            throw new NoResumableRecommendationRunApiException($e);
-        }
-
-        return new JsonResponse($this->statusPayload->forReport($report, $user));
+        return new JsonResponse($this->statusPayload->forReport($this->starter->resume($user), $user));
     }
 
     #[Route('/tick', name: 'api_recommendations_tick', methods: ['POST'])]
@@ -96,17 +58,7 @@ final readonly class RecommendationRunController
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationsLimiter, $user);
 
-        try {
-            $report = $this->pollDriver->poll($user);
-        } catch (AiNotConfiguredException $e) {
-            throw new AiNotConfiguredApiException($e);
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableApiException($e);
-        } catch (ProviderUnreachableException | CredentialsRejectedException | ModelNotOfferedException $e) {
-            throw new AiProviderApiException($e->getMessage(), $e);
-        }
-
-        return new JsonResponse($this->statusPayload->forReport($report, $user));
+        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->poll($user), $user));
     }
 
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
@@ -115,19 +67,11 @@ final readonly class RecommendationRunController
         return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
     }
 
-    /**
-     * Stops the active run. Carries no limiter: it only ever reduces work, and
-     * throttling the way out of a run that is spending money is the wrong way
-     * round.
-     */
+    /** No limiter: stopping only reduces work, and throttling the way out of a spending run is backwards. */
     #[Route('/stop', name: 'api_recommendations_stop', methods: ['POST'])]
     public function stop(#[CurrentUser] User $user): JsonResponse
     {
-        try {
-            $this->canceller->cancel($user);
-        } catch (NoActiveRecommendationRunException $e) {
-            throw new NoActiveRecommendationRunApiException($e);
-        }
+        $this->canceller->cancel($user);
 
         return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
     }
@@ -135,11 +79,7 @@ final readonly class RecommendationRunController
     #[Route('', name: 'api_recommendations_purge', methods: ['DELETE'])]
     public function purge(#[CurrentUser] User $user): JsonResponse
     {
-        try {
-            $this->purger->purge($user);
-        } catch (RecommendationRunActiveException $e) {
-            throw new RecommendationRunActiveApiException($e);
-        }
+        $this->purger->purge($user);
 
         return new JsonResponse($this->statusPayload->forReport(RecommendationRunReport::none(), $user));
     }

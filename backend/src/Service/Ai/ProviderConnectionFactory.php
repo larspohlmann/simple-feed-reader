@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai;
 
 use App\Entity\AiProviderSettings;
-use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
 
 /**
  * Turns a stored configuration into the connection a completion call needs.
@@ -23,7 +23,7 @@ final readonly class ProviderConnectionFactory
     }
 
     /**
-     * @throws SecretUnreadableException
+     * @throws AiKeyUnreadableException
      */
     public function forSettings(AiProviderSettings $settings): ProviderConnection
     {

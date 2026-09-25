@@ -4,23 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Passkey\Exception;
 
-use App\Exception\ApiException;
-
 /**
- * The handle presented to PasskeyChallengeStore::consume() is not redeemable:
- * never issued, already redeemed, or past its five-minute lifetime. Collapsed
- * into a single case on purpose — telling "expired" from "already used" from
- * "never existed" apart would let a caller probe for live handles, the same
- * reasoning OAuthStateStore applies to `state`.
+ * The challenge handle is not redeemable: never issued, already redeemed, or expired. One case on purpose, so a
+ * caller cannot probe for live handles.
  */
-final class UnknownChallengeException extends ApiException
+final class UnknownChallengeException extends \RuntimeException implements PasskeySignInFailure
 {
-    public function __construct()
-    {
-        parent::__construct(
-            'unknown_passkey_challenge',
-            400,
-            'Unknown or expired passkey challenge',
-        );
-    }
 }

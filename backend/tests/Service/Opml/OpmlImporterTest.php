@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Exception\InvalidOpmlException;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlImporter;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;

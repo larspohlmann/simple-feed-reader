@@ -31,7 +31,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * request time. Warmup, migrations and console commands are untouched.
  *
  * The throw surfaces as a 500, deliberately: the operator's message goes to the
- * log (ApiExceptionListener suppresses exception messages outside debug), so
+ * log (ProblemCatalog suppresses exception messages outside debug), so
  * the client learns nothing while the log names the variable to set. Refusing
  * every route, not only /register and /password-reset-request, is intentional
  * too — a half-serving instance with a void CAPTCHA is quietly failing at what

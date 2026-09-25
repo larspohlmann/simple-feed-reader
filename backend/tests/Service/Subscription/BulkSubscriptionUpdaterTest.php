@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 final class BulkSubscriptionUpdaterTest extends KernelTestCase
 {
@@ -222,7 +222,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $subscription = $this->subscription($user, 'https://c.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
                 subscriptionIds: [(int) $subscription->getId()],
@@ -240,7 +240,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $subscription = $this->subscription($user, 'https://f.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
                 subscriptionIds: [(int) $subscription->getId()],
@@ -258,7 +258,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $subscription = $this->subscription($mine, 'https://d.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(
                 subscriptionIds: [(int) $subscription->getId()],
@@ -275,7 +275,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $foreign = $this->subscription($theirs, 'https://e.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
             new BulkUpdateSubscriptionsRequest(subscriptionIds: [(int) $foreign->getId()]),
             (int) $mine->getId(),

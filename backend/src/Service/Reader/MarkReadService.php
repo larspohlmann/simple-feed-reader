@@ -9,13 +9,12 @@ use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ValidationException;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * "Mark all read until T" for a scope. Advances each affected subscription's
@@ -86,7 +85,7 @@ final readonly class MarkReadService
             'all' => $this->includedInAllItems($this->subscriptions->findForUserWithTags($userId)),
             'feed' => [$this->requireSubscription($id, $userId)],
             'tag' => $this->subscriptions->findForUserByTagId($userId, $this->requireTag($id, $userId)),
-            default => throw new BadRequestHttpException(sprintf('Unknown scope "%s".', $scope)),
+            default => throw new ValidationException(['scope' => [sprintf('Unknown scope "%s".', $scope)]]),
         };
     }
 
@@ -114,7 +113,7 @@ final readonly class MarkReadService
         }
 
         return $this->subscriptions->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such subscription.');
+            ?? throw new RecordNotFoundException('No such subscription.');
     }
 
     private function requireTag(?int $id, int $userId): int
@@ -124,7 +123,7 @@ final readonly class MarkReadService
         }
 
         $tag = $this->tags->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such tag.');
+            ?? throw new RecordNotFoundException('No such tag.');
 
         return (int) $tag->getId();
     }

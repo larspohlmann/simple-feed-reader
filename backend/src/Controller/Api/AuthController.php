@@ -8,7 +8,7 @@ use App\Dto\Auth\PasswordResetConfirmRequest;
 use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
-use App\Exception\InvalidTokenException;
+use App\Service\Auth\Exception\InvalidTokenException;
 use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationPolicy;

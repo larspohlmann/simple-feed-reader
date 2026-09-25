@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Http\Problem\OAuthProblems;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -462,7 +463,7 @@ final class AbstractOidcProviderTest extends TestCase
                 $this->provider($response)->exchangeCode('c', 'v', self::NONCE);
                 self::fail('expected the exchange to fail');
             } catch (OAuthFailedException $e) {
-                $shapes[] = [$e->type, $e->status, $e->title, $e->detail, $e->errors];
+                $shapes[] = [$e::class, $e->getMessage(), (new OAuthProblems())->resolve($e)];
             }
         }
 

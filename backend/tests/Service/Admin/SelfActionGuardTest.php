@@ -19,7 +19,6 @@ final class SelfActionGuardTest extends TestCase
             (new SelfActionGuard())->ensureNotSelf($admin, $admin);
             $this->fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
-            $this->assertSame(422, $exception->status);
             $this->assertSame(
                 ['id' => ['You cannot change your own account status.']],
                 $exception->errors,

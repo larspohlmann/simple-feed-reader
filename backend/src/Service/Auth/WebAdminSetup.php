@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Auth;
 
-use App\Exception\InvalidSetupSecretException;
-use App\Exception\SetupUnavailableException;
+use App\Service\Auth\Exception\InvalidSetupSecretException;
+use App\Service\Auth\Exception\SetupUnavailableException;
 use App\Repository\UserRepository;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

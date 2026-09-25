@@ -523,27 +523,9 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * The trap the design brief calls out by name: the login path runs
-     * through PasskeyAuthenticator, not PasskeyController, so
-     * PasskeySignInAvailability's guard is wired into AssertionVerifier::
-     * verify() instead — caught there by the SAME `catch (ApiException)`
-     * block that already rewrites AssertionRejectedException, so a disabled
-     * instance fails a passkey login exactly like a rejected assertion: a
-     * clean 401 through LoginFailureHandler, never a 500.
-     *
-     * Re-pins the SAME relying party and origin the fixture was enrolled
-     * against, rather than using the generic `disablePasskeySignIn()` (fix
-     * round 2): that helper resets `passkeyRpId`/`publicBaseUrl` to null,
-     * which derives the relying party as `localhost` — a mismatch against
-     * `self::RELYING_PARTY_ID`/`self::ORIGIN` on its own, so the assertion
-     * would be rejected on origin/RP-id grounds regardless of the toggle.
-     * `LoginFailureHandler` collapses every passkey login failure except an
-     * unknown credential id (#727) to the same `invalid_credentials` body, so
-     * asserting the problem `type` cannot discriminate either — only a
-     * request that would otherwise SUCCEED, with the toggle as the one
-     * variable, proves the guard is what rejected it. Verified: removing
-     * `$this->availability->guard()` from `AssertionVerifier::verify()`
-     * turns this test red (see fix round 2 report for the exact failure).
+     * The login path runs through PasskeyAuthenticator, so the availability guard lives in AssertionVerifier.
+     * The relying party stays pinned, making the toggle the only variable: every other passkey failure reads as
+     * invalid_credentials, so only a request that would otherwise succeed proves the guard rejected it.
      */
     public function testADisabledInstanceRejectsLoginWith401NotA500(): void
     {

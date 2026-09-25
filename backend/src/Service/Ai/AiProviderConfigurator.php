@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -117,7 +118,7 @@ final readonly class AiProviderConfigurator
      * The model is deliberately left unset — choosing a different one is the
      * whole point — and the copy is not activated.
      *
-     * @throws SecretUnreadableException      the source key cannot be opened
+     * @throws AiKeyUnreadableException       the source key cannot be opened
      * @throws TooManyConfigurationsException the account is at the cap
      */
     public function duplicateConfiguration(AiProviderSettings $source): AiProviderSettings
@@ -172,7 +173,7 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @throws SecretUnreadableException
+     * @throws AiKeyUnreadableException
      * @throws CredentialsRejectedException
      * @throws ModelNotOfferedException
      * @throws ModelRequiredForActivationException
@@ -202,18 +203,20 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * Public so a service that must call the provider directly — a prompt
-     * runner, say — can reuse the one place that opens the sealed key, rather
-     * than duplicating the cipher call.
+     * The one place that opens the sealed key; public so every caller of the provider reuses it. An unreadable
+     * key becomes the AI module's own exception, so it can never read as another module's secret.
      *
-     * @throws SecretUnreadableException
+     * @throws AiKeyUnreadableException
      */
     public function credentials(AiProviderSettings $settings): ProviderCredentials
     {
-        return ProviderCredentials::fromStoredConfiguration(
-            $settings->getBaseUrl(),
-            $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedSecret()),
-        );
+        try {
+            $apiKey = $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedSecret());
+        } catch (SecretUnreadableException $e) {
+            throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $e);
+        }
+
+        return ProviderCredentials::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void
@@ -232,7 +235,7 @@ final readonly class AiProviderConfigurator
      * Returns the descriptor rather than stashing it on a field, so the two
      * callers stay free of shared mutable state between the call and its use.
      *
-     * @throws SecretUnreadableException
+     * @throws AiKeyUnreadableException
      * @throws CredentialsRejectedException
      * @throws ModelNotOfferedException
      * @throws ProviderUnreachableException

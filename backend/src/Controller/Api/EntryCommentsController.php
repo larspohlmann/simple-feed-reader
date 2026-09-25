@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Http\CommentsJson;
 use App\Repository\EntryListRepository;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -35,12 +34,6 @@ final readonly class EntryCommentsController
 
         $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $user);
 
-        try {
-            $result = $this->comments->load($entry);
-        } catch (NoCommentsFeedException $e) {
-            throw new NotFoundHttpException($e->getMessage(), $e);
-        }
-
-        return new JsonResponse(CommentsJson::one($result));
+        return new JsonResponse(CommentsJson::one($this->comments->load($entry)));
     }
 }

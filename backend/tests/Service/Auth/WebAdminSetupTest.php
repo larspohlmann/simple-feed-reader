@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth;
 
-use App\Exception\InvalidSetupSecretException;
-use App\Exception\SetupUnavailableException;
+use App\Service\Auth\Exception\InvalidSetupSecretException;
+use App\Service\Auth\Exception\SetupUnavailableException;
 use App\Repository\UserRepository;
 use App\Service\Auth\BootstrapAdminProvisioner;
 use App\Service\Auth\WebAdminSetup;

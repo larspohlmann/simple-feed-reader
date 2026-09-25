@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use Lcobucci\JWT\Encoding\ChainedFormatter;
 use Lcobucci\JWT\Encoding\JoseEncoder;
 use Lcobucci\JWT\Signer\Ecdsa\Sha256;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\AppleClientSecretFactory;
 use App\Tests\Support\AppleTestKey;
 use Lcobucci\JWT\Encoding\JoseEncoder;
@@ -178,12 +178,8 @@ final class AppleClientSecretFactoryTest extends TestCase
             $factory->create();
             self::fail('expected the signing failure to surface');
         } catch (OAuthFailedException $e) {
-            // Byte-identical to what a token-endpoint timeout produces. The
-            // cause survives only in $logDetail and $previous, neither of which
-            // ApiExceptionListener can reach.
-            self::assertSame('Sign-in failed', $e->title);
-            self::assertSame('Signing in with that provider did not work. Please try again.', $e->detail);
-            self::assertSame(502, $e->status);
+            self::assertSame('apple client secret could not be signed', $e->logDetail);
+            self::assertNotNull($e->getPrevious());
         }
     }
 

@@ -6,21 +6,12 @@ namespace App\Service\Subscription;
 
 use App\Entity\Subscription;
 use App\Repository\SubscriptionRepository;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 /**
- * Resolves a request's subscription ids to the caller's own subscriptions.
- *
- * Every endpoint taking a list of subscription ids needs the same refusal: an
- * id the caller does not own, an id that does not exist, and a duplicate all
- * get 422, nothing written. Three endpoints needed it (reorder, bulk update,
- * bulk unsubscribe), so the rule lives here instead of three times over.
- *
- * The count comparison catches all three at once: the repository only returns
- * rows the user owns, so a short result means an id was foreign or absent —
- * and a repeated id is short too, since `IN (...)` answers a duplicate once.
- * Comparing against the *unique* ids instead would let `[5, 5]` through,
- * which is the bug this replaces.
+ * Resolves a request's subscription ids to the caller's own subscriptions, refusing foreign, absent and repeated
+ * ids alike. A short result catches all three: `IN (...)` answers a duplicate once, so never compare against the
+ * unique ids, which would let `[5, 5]` through.
  */
 final readonly class OwnedSubscriptions
 {
@@ -63,7 +54,7 @@ final readonly class OwnedSubscriptions
     private function keyedById(array $owned, array $ids): array
     {
         if (\count($owned) !== \count($ids)) {
-            throw new UnprocessableEntityHttpException(
+            throw new InvalidSelectionException(
                 'subscriptionIds must all be your feeds, without duplicates.',
             );
         }

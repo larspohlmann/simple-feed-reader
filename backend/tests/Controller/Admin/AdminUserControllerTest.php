@@ -505,6 +505,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(404);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
         self::assertSame('not_found', $this->payload()['type']);
+        self::assertSame('User not found.', $this->payload()['detail']);
     }
 
     public function testAdminCannotSuspendThemselves(): void

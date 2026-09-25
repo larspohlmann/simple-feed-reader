@@ -4,24 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings\Exception;
 
-use App\Exception\ApiException;
-use Symfony\Component\HttpFoundation\Response;
-
-/**
- * Refuses to persist an enabled row that could not send: an authenticated
- * transport with no password on record, or no host while the env fallback is
- * null. Either would accept every message and deliver none, silently.
- */
-final class IncompleteMailConfigurationException extends ApiException
+/** Refuses to persist an enabled row that could not send: it would accept every message and deliver none. */
+final class IncompleteMailConfigurationException extends \RuntimeException
 {
-    private function __construct(string $detail)
+    private function __construct(string $message)
     {
-        parent::__construct(
-            'incomplete_mail_configuration',
-            Response::HTTP_UNPROCESSABLE_ENTITY,
-            'Incomplete mail configuration',
-            $detail,
-        );
+        parent::__construct($message);
     }
 
     public static function passwordMissing(): self

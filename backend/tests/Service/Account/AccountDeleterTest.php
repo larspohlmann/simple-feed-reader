@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Exception\LastAdminException;
+use App\Service\Account\Exception\LastAdminException;
 use App\Exception\ValidationException;
 use App\Service\Account\AccountDeleter;
 use App\Service\Ai\Crypto\ApiKeyCipher;

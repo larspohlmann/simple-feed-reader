@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\Oidc;
 
-use App\Exception\OAuth\OAuthFailedException;
+use App\Service\OAuth\Exception\OAuthFailedException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
