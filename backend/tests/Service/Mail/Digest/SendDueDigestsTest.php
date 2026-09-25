@@ -86,6 +86,29 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $prefs->getDigestLastSentAt());
     }
 
+    /**
+     * The composer must search from the last send, not from the occurrence
+     * that just became due: an entry that landed the day before, after the
+     * last digest went out, is new to the reader and must be reported even
+     * though it predates today's occurrence.
+     */
+    public function testSinceIsTheLastSendNotJustTheOccurrenceThatBecameDue(): void
+    {
+        $user = $this->user();
+        $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable('2026-08-27T08:00:00Z'));
+        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-27T20:00:00Z'));
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+
+        $this->mailer->expects(self::once())->method('send')
+            ->with($user, self::isInstanceOf(DigestModel::class));
+
+        $report = $this->sweep()->run();
+
+        self::assertSame(1, $report->sent);
+        self::assertSame(0, $report->skippedEmpty);
+    }
+
     public function testAUserAlreadySentThisPeriodIsNotDueAndIsNotSent(): void
     {
         $user = $this->user();

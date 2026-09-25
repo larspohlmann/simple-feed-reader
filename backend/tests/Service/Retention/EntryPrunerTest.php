@@ -141,12 +141,7 @@ final class EntryPrunerTest extends DbTestCase
         );
     }
 
-    /**
-     * 21 recent fillers put a second entry beyond the floor boundary besides
-     * the stale one — the floor alone would delete both. Only the
-     * `createdAt < :cutoff` condition tells them apart: the stale entry is
-     * old enough to go, the recent one beyond the boundary is not.
-     */
+    /** Only the cutoff separates the stale entry from the recent one past the floor. */
     public function testAgePassDeletesOnlyTheEntryPastTheCutoff(): void
     {
         $feed = $this->feedWithEntries(21, $this->daysAgo(1));

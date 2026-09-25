@@ -206,4 +206,22 @@ final class OAuthStateStoreTest extends TestCase
             self::assertStringNotContainsString($started->state, serialize($value));
         }
     }
+
+    /**
+     * A stored entry that is not the shape start() writes — corrupted on disk,
+     * or written by a future version this one cannot read — must refuse rather
+     * than emit a TypeError from an undefined array key.
+     */
+    public function testACorruptStoredEntryIsRefused(): void
+    {
+        $started = $this->store->start('google');
+
+        $key = array_key_first($this->cache->getValues());
+        self::assertIsString($key);
+        $item = $this->cache->getItem($key);
+        $item->set(['provider' => 'google']);
+        $this->cache->save($item);
+
+        $this->assertRefused($started->state, $started->browserToken);
+    }
 }

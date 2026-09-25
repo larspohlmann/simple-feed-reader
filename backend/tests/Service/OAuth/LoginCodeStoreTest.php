@@ -179,6 +179,24 @@ final class LoginCodeStoreTest extends TestCase
         }
     }
 
+    /**
+     * A stored entry that is not the shape issue() writes — corrupted on disk,
+     * or written by a future version this one cannot read — must refuse rather
+     * than emit a TypeError from an undefined array key.
+     */
+    public function testACorruptStoredEntryIsRefused(): void
+    {
+        $code = $this->store->issue(42, self::TOKEN);
+
+        $key = array_key_first($this->cache->getValues());
+        self::assertIsString($key);
+        $item = $this->cache->getItem($key);
+        $item->set(['user_id' => 42]);
+        $this->cache->save($item);
+
+        $this->assertRefused($code, self::TOKEN);
+    }
+
     private function assertRefused(
         string $code,
         ?string $browserToken,

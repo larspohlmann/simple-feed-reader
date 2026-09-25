@@ -292,7 +292,8 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testVerifyingWithAnUnknownTokenIsRefused(): void
     {
-        $service = $this->serviceUnderPolicy($this->policy(confirm: true, approve: false));
+        $policy = $this->policy(confirm: true, approve: false);
+        $service = $this->serviceUnderPolicy($policy, $this->createStub(AccountMailerInterface::class));
 
         $this->expectException(InvalidTokenException::class);
 
@@ -301,7 +302,8 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testResettingWithAnUnknownTokenIsRefused(): void
     {
-        $service = $this->serviceUnderPolicy($this->policy(confirm: true, approve: false));
+        $policy = $this->policy(confirm: true, approve: false);
+        $service = $this->serviceUnderPolicy($policy, $this->createStub(AccountMailerInterface::class));
 
         $this->expectException(InvalidTokenException::class);
 
