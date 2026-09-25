@@ -105,6 +105,21 @@ final class SearchMarkReadServiceTest extends DbTestCase
         self::assertTrue($state->isHidden());
     }
 
+    public function testAFlippedMatchIsStampedWithTheMarkingInstant(): void
+    {
+        $entry = $this->entry('stamp', 'Klima stamp');
+        $this->stateFor($entry, false);
+        $before = (new \DateTimeImmutable())->modify('-1 second');
+
+        $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
+
+        $after = (new \DateTimeImmutable())->modify('+1 second');
+        $hiddenAt = $this->stateOf($entry)?->getHiddenAt();
+        self::assertNotNull($hiddenAt);
+        self::assertGreaterThanOrEqual($before, $hiddenAt);
+        self::assertLessThanOrEqual($after, $hiddenAt);
+    }
+
     public function testLeavesAnAlreadyReadMatchUnchanged(): void
     {
         $entry = $this->entry('c', 'Klima old');

@@ -40,8 +40,6 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
     private const array ALLOW_LIST = [
         'App\\Controller\\Api\\HealthController',
         'App\\Service\\Backup\\EntryBatchInserter',
-        'App\\Service\\Reader\\BulkEntryReadMarker',
-        'App\\Service\\Reader\\MarkReadService',
         'App\\Service\\ReaderAudit\\AuditSampler',
         'App\\Service\\ReaderAudit\\AuditUserResolver',
         'App\\Service\\Recommendation\\RecommendationCallRecorder',
