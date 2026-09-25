@@ -1346,9 +1346,8 @@ export class ReaderShellComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 }
 
-/** A count of unread posts — what the sidebar badge counts for All items, a
- *  tag, a feed and For you, and so what the heading and the tab count there
- *  too. */
+/** A count of unread posts — what the sidebar badge counts, and what the
+ *  heading and tab show under "Only unread" (#1154). */
 function unread(value: number): TitleCount {
   return { value, counts: 'unread' };
 }
