@@ -10,6 +10,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
@@ -112,7 +113,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
             new FaviconResolver($this->faviconFetcher, new NullLogger()),
             new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
             new EntryPruner(new RetentionRepository($this->em), $this->clock, $this->indexer()),
-            new OrphanedFeedReclaimer($this->em),
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
             $this->indexer(),
             $this->lockFactory,
             $this->clock,

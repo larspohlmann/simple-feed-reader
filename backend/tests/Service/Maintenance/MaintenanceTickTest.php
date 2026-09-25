@@ -11,6 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
+use App\Repository\OrphanedFeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
 use App\Repository\RetentionRepository;
@@ -181,7 +182,7 @@ final class MaintenanceTickTest extends DbTestCase
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
             new EntryPruner(new RetentionRepository($this->em), $clock, $indexer),
-            new OrphanedFeedReclaimer($this->em),
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
             $indexer,
             new LockFactory(new InMemoryStore()),
             $clock,
