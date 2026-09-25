@@ -25,19 +25,7 @@ button {
   border: none;
   border-radius: var(--radius-sm);
   background: none;
-  color: var(--text-muted);
   cursor: pointer;
-}
-
-button:hover {
-  color: var(--text-primary);
-}
-
-/* All three toggles, one language: muted off, accent on. Read used to swap
-   glyph instead, but the reader's default view is unread (read is the
-   exception), so a third grammar cost more than the accent it saved (#435). */
-button.on {
-  color: var(--accent);
 }
 
 /* Touch density, applied locally: vertical padding reaches --tap-target then

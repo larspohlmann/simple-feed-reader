@@ -14,6 +14,7 @@ import { ReaderModeService } from '../reader-mode.service';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { AudioPlayerService } from '../audio-player.service';
 import { CommentsService, CommentsState } from '../comments.service';
+import { IconComponent } from '../../shared/icon/icon.component';
 
 /** A controllable double for the real, HTTP-backed store: `entry-body.service.spec.ts`
  *  covers caching/dedup/eviction; this file only needs to drive what the view renders. */
@@ -455,6 +456,13 @@ describe('ReaderViewComponent', () => {
     });
   });
 
+  it('renders the article’s action row through the shared entry actions', () => {
+    const el = mount(entry()).nativeElement as HTMLElement;
+    const row = el.querySelector('app-entry-actions.actions');
+    expect(row).not.toBeNull();
+    expect(row!.classList).toContain('glyph-md');
+  });
+
   it('emits favorite/keep/read/close', () => {
     const f = mount(entry());
     const c = { favorite: 0, keep: 0, read: 0, close: 0 };
@@ -640,6 +648,25 @@ describe('ReaderViewComponent', () => {
       keep.click();
       expect(favouriteEmits).toHaveBeenCalled();
       expect(keepEmits).toHaveBeenCalled();
+    });
+
+    it('draws the toolbar pair in the shared toggle look, filled only while on', () => {
+      const f = mount(entry({ isFavorite: true, isKept: false }));
+      const el = f.nativeElement as HTMLElement;
+      const favourite = el.querySelector<HTMLButtonElement>('.bar [aria-label="Favorite"]')!;
+      const keep = el.querySelector<HTMLButtonElement>('.bar [aria-label="Keep"]')!;
+      const fillOf = (button: HTMLButtonElement) =>
+        f.debugElement
+          .queryAll(By.directive(IconComponent))
+          .find((d) => button.contains(d.nativeElement))!
+          .componentInstance.fill();
+
+      expect(favourite.classList).toContain('flag-toggle');
+      expect(keep.classList).toContain('flag-toggle');
+      expect(favourite.getAttribute('aria-pressed')).toBe('true');
+      expect(keep.getAttribute('aria-pressed')).toBe('false');
+      expect(fillOf(favourite)).toBe(true);
+      expect(fillOf(keep)).toBe(false);
     });
 
     it('offers favourite and keep in the full-screen toolbar too', () => {

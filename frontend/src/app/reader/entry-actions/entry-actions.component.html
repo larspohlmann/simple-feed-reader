@@ -1,30 +1,27 @@
 <button
   type="button"
   [attr.aria-label]="'reader.favorite' | transloco"
-  [class.on]="entry().isFavorite"
-  [attr.aria-pressed]="entry().isFavorite"
+  [appFlagToggle]="entry().isFavorite"
   (click)="$event.stopPropagation(); favorite.emit(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
-  <app-icon name="star" [size]="size()" />
+  <app-icon name="star" [size]="size()" [fill]="entry().isFavorite" />
 </button>
 <button
   type="button"
   [attr.aria-label]="'reader.keep' | transloco"
-  [class.on]="entry().isKept"
-  [attr.aria-pressed]="entry().isKept"
+  [appFlagToggle]="entry().isKept"
   (click)="$event.stopPropagation(); keep.emit(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"
 >
-  <app-icon name="bookmark" [size]="size()" />
+  <app-icon name="bookmark" [size]="size()" [fill]="entry().isKept" />
 </button>
 <button
   type="button"
   [attr.aria-label]="'reader.toggleRead' | transloco"
-  [class.on]="entry().isViewed"
-  [attr.aria-pressed]="entry().isViewed"
+  [appFlagToggle]="entry().isViewed"
   (click)="$event.stopPropagation(); read.emit(entry())"
   (keydown.enter)="$event.stopPropagation()"
   (keydown.space)="$event.stopPropagation()"

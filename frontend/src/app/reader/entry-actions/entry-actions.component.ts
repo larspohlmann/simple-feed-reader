@@ -1,6 +1,7 @@
 import { Component, input, output } from '@angular/core';
 import { TranslocoPipe } from '@jsverse/transloco';
 import { IconComponent, IconSize } from '../../shared/icon/icon.component';
+import { FlagToggleDirective } from '../../shared/flag-toggle/flag-toggle.directive';
 import { EntryDto } from '../models';
 
 /**
@@ -16,7 +17,7 @@ import { EntryDto } from '../models';
  */
 @Component({
   selector: 'app-entry-actions',
-  imports: [IconComponent, TranslocoPipe],
+  imports: [IconComponent, TranslocoPipe, FlagToggleDirective],
   templateUrl: './entry-actions.component.html',
   styleUrl: './entry-actions.component.scss',
   host: { '[class.glyph-md]': "size() === 'md'" },

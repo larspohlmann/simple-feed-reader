@@ -17,6 +17,7 @@ import { RouterLink } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { ListActionDirective } from '../../shared/list-action/list-action.directive';
+import { FlagToggleDirective } from '../../shared/flag-toggle/flag-toggle.directive';
 import { FaviconComponent } from '../../shared/favicon/favicon.component';
 import { SpinnerComponent } from '../../shared/spinner/spinner.component';
 import { LoadingOverlayComponent } from '../../shared/loading-overlay/loading-overlay.component';
@@ -25,6 +26,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryPillsComponent } from '../entry-pills/entry-pills.component';
+import { EntryActionsComponent } from '../entry-actions/entry-actions.component';
 import { PaywallNoticeComponent } from '../paywall-notice/paywall-notice.component';
 import { EntryCommentsComponent } from '../entry-comments/entry-comments.component';
 import { READER_SCROLLER } from '../reader-scroller';
@@ -123,10 +125,12 @@ function slugify(text: string): string {
   imports: [
     IconComponent,
     ListActionDirective,
+    FlagToggleDirective,
     FaviconComponent,
     SpinnerComponent,
     LoadingOverlayComponent,
     EntryPillsComponent,
+    EntryActionsComponent,
     ToTopButtonComponent,
     RouterLink,
     TranslocoPipe,

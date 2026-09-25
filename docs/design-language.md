@@ -1164,13 +1164,15 @@ its kicker line instead of using this row — see the exception in
 The three per-entry actions — favorite, keep, mark read — as one control
 cluster. `app-entry-meta` renders it inline; `entry-compact` uses it directly,
 projected into the kicker line (see the exception in
-[§6](#6-deliberate-exceptions)). It renders with no wrapper element — `:host`
+[§6](#6-deliberate-exceptions)); the reader view renders it at `size="md"` as
+the article's action row. It renders with no wrapper element — `:host`
 is `inline-flex` — because a wrapper would give the HTML parser a block-level
 child to choke on where the component lands inside a `<p>`.
 
 | Input | Type | Default |
 |---|---|---|
 | `entry` | `EntryDto` (required) | — |
+| `size` | `'sm' \| 'md'` | `'sm'` |
 
 | Output | Type | Fires |
 |---|---|---|
@@ -1188,10 +1190,12 @@ child to choke on where the component lands inside a `<p>`.
 ```
 
 Clicks stop propagating: the card around the buttons is itself clickable, and
-would otherwise open the entry instead of toggling the flag. Favorite and keep
-light up in the accent colour when on; the read button instead swaps its icon,
-because most cards are already read, and accenting that state would light up
-the whole page for no reason.
+would otherwise open the entry instead of toggling the flag. Each button is a
+`button[appFlagToggle]`: muted while off, accent while on, with the look owned
+by `frontend/src/styles/_flag-toggle.scss`. Favourite and keep also fill their
+glyph while on; the tick has no hollow form. The reader view's article row is
+this component at `size="md"`, and its toolbar Keep/Favorite reuse the same
+directive, so every keep and favourite toggle in the app looks the same.
 
 On a coarse pointer the buttons grow to `--tap-target` height on negative
 margins alone, so a card never gets taller on a phone, and the gap between
