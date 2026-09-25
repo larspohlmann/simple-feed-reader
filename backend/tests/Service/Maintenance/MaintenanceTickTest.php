@@ -13,6 +13,7 @@ use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
+use App\Repository\RetentionRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
@@ -179,7 +180,7 @@ final class MaintenanceTickTest extends DbTestCase
             ),
             new FaviconResolver($fetcher, new NullLogger()),
             new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
-            new EntryPruner($this->em, $clock, $indexer),
+            new EntryPruner(new RetentionRepository($this->em), $clock, $indexer),
             new OrphanedFeedReclaimer($this->em),
             $indexer,
             new LockFactory(new InMemoryStore()),

@@ -50,7 +50,6 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
         'App\\Service\\Recommendation\\RecommendationCandidateLoader',
         'App\\Service\\Recommendation\\RecommendationHistoryLoader',
         'App\\Service\\Recommendation\\RecordedCall',
-        'App\\Service\\Retention\\EntryPruner',
         'App\\Service\\Search\\Membership\\DatabaseSavedSearchMatcher',
         'App\\Service\\Worker\\Handler\\PurgeFailedMessagesHandler',
     ];
