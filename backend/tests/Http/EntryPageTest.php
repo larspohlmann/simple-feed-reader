@@ -39,7 +39,6 @@ final class EntryPageTest extends TestCase
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         $expectedSortInstant = $olderDate->format(\DateTimeInterface::ATOM);
         self::assertSame($expectedSortInstant, $cursor->sortInstant->format(\DateTimeInterface::ATOM));
         self::assertSame(1, $cursor->id);
@@ -60,7 +59,6 @@ final class EntryPageTest extends TestCase
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(9, $cursor->id);
     }
 
@@ -121,7 +119,6 @@ final class EntryPageTest extends TestCase
             'A row dropped after a full engine match must not end pagination.',
         );
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(9, $cursor->id);
     }
 
@@ -183,7 +180,6 @@ final class EntryPageTest extends TestCase
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(4, $cursor->id, 'The cursor must resume past the continuation row, not the shown row.');
     }
 
@@ -200,7 +196,6 @@ final class EntryPageTest extends TestCase
         self::assertSame([], $page['entries']);
         self::assertNotNull($page['nextCursor'], 'A fully-filtered page must still advance the cursor.');
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(4, $cursor->id);
     }
 
@@ -216,7 +211,6 @@ final class EntryPageTest extends TestCase
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(
             $viewedAt->format(\DateTimeInterface::ATOM),
             $cursor->sortInstant->format(\DateTimeInterface::ATOM),

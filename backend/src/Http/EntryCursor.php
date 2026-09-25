@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Exception\ValidationException;
+use App\Http\Exception\MalformedCursorException;
 
 /**
  * Opaque keyset-pagination cursor for the entry list: base64url of
@@ -24,25 +25,18 @@ final readonly class EntryCursor
     ) {
     }
 
-    /**
-     * The cursor a request asked for: absent when the client sent none, and a
-     * 422 when it sent one we cannot read.
-     *
-     * `decode()` answers null for both cases, so every caller had to guard the
-     * empty string first and then decide what a null meant. Two callers did,
-     * with the same logic and the same message written twice — which put the
-     * API's malformed-cursor contract in two hands.
-     *
-     * @throws ValidationException when the cursor is present but unreadable
-     */
+    /** @throws ValidationException when the cursor is present but unreadable */
     public static function fromRequestValue(?string $raw): ?self
     {
         if ($raw === null || $raw === '') {
             return null;
         }
 
-        return self::decode($raw)
-            ?? throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
+        try {
+            return self::decode($raw);
+        } catch (MalformedCursorException) {
+            throw new ValidationException(['cursor' => ['The cursor is malformed.']]);
+        }
     }
 
     /**
@@ -63,25 +57,18 @@ final readonly class EntryCursor
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
-    public static function decode(string $cursor): ?self
+    /** @throws MalformedCursorException */
+    public static function decode(string $cursor): self
     {
-        if ($cursor === '') {
-            return null;
-        }
-
         $raw = base64_decode(strtr($cursor, '-_', '+/'), true);
-        if ($raw === false) {
-            return null;
-        }
-
-        $parts = explode('|', $raw);
+        $parts = false === $raw ? [] : explode('|', $raw);
         if (\count($parts) !== 2 || !ctype_digit($parts[1])) {
-            return null;
+            throw new MalformedCursorException();
         }
 
         $sortInstant = \DateTimeImmutable::createFromFormat(\DateTimeInterface::ATOM, $parts[0]);
-        if ($sortInstant === false) {
-            return null;
+        if (false === $sortInstant) {
+            throw new MalformedCursorException();
         }
 
         return new self($sortInstant, (int) $parts[1]);

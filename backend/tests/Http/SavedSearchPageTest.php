@@ -24,7 +24,6 @@ final class SavedSearchPageTest extends TestCase
 
         self::assertNotNull($page['nextCursor']);
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(4, $cursor->id);
     }
 
