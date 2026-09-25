@@ -199,6 +199,57 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
+    /**
+     * A feed with zero items leaves no row in entryCountsForUser()'s grouped
+     * query, so the list and counts endpoints fall back to a default — proving
+     * that default is 0, not a stray increment or decrement of it.
+     */
+    public function testAFeedWithNoEntriesReportsZeroCounts(): void
+    {
+        $client = self::createClient();
+        $headers = $this->authHeader('empty-feed@example.com');
+
+        $stub = new StubFeedFetcher();
+        $stub->willReturn(
+            'https://example.com/feed',
+            FetchResponse::fetched(
+                'https://example.com/feed.xml',
+                permanentRedirect: false,
+                body: <<<'XML'
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0">
+                      <channel>
+                        <title>Empty Feed</title>
+                        <link>https://blog.example.com/</link>
+                        <description>No posts yet</description>
+                      </channel>
+                    </rss>
+                    XML,
+                etag: null,
+                lastModified: null,
+            ),
+        );
+        $this->installFetcher($stub);
+
+        $client->request(
+            'POST',
+            '/api/subscriptions',
+            server: $headers + ['CONTENT_TYPE' => 'application/json'],
+            content: json_encode(['url' => 'https://example.com/feed'], \JSON_THROW_ON_ERROR),
+        );
+        self::assertResponseStatusCodeSame(201);
+
+        $client->request('GET', '/api/subscriptions', server: $headers);
+        self::assertResponseIsSuccessful();
+        $list = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($list);
+        self::assertIsArray($list['subscriptions']);
+        $first = $list['subscriptions'][0];
+        self::assertIsArray($first);
+        self::assertSame(0, $first['unreadCount']);
+        self::assertSame(0, $first['entryCount']);
+    }
+
     public function testSubscribeWithTagIdsCreatesAlreadyTaggedFeed(): void
     {
         $client = self::createClient();

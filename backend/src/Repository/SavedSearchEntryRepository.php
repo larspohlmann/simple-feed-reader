@@ -122,7 +122,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             ->getQuery()
             ->getScalarResult();
         foreach ($rows as $row) {
-            $countsBySearch[(int) $row['searchId']] = (int) $row['memberCount'];
+            $countsBySearch[$row['searchId']] = (int) $row['memberCount'];
         }
 
         return $countsBySearch;

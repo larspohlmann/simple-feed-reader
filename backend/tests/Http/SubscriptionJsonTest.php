@@ -291,4 +291,17 @@ final class SubscriptionJsonTest extends TestCase
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['lastNewContentAt']);
     }
+
+    /**
+     * The PATCH/move-to-tag/bulk-update endpoints call one() without counts —
+     * they never change how many entries exist, so both default to 0.
+     */
+    public function testUnreadAndEntryCountsDefaultToZero(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $shape = SubscriptionJson::one($this->subscriptionTo($feed));
+
+        self::assertSame(0, $shape['unreadCount']);
+        self::assertSame(0, $shape['entryCount']);
+    }
 }

@@ -48,6 +48,29 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         self::assertSame([], $this->repo()->entryCountsForUser((int) $user->getId()));
     }
 
+    /**
+     * A single-subscription fixture cannot tell a full map from one truncated
+     * to its first entry — this asserts both subscriptions' counts survive.
+     */
+    public function testKeepsEveryOwnedSubscriptionsCount(): void
+    {
+        $user = $this->user('reader@example.com');
+        $first = $this->feed('https://example.com/first.xml');
+        $second = $this->feed('https://example.com/second.xml');
+        $firstSub = new Subscription($user, $first, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $secondSub = new Subscription($user, $second, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($firstSub);
+        $this->em->persist($secondSub);
+        $this->entry($first, 'a', '2026-07-01');
+        $this->entry($second, 'b', '2026-07-02');
+        $this->entry($second, 'c', '2026-07-03');
+        $this->em->flush();
+
+        $counts = $this->repo()->entryCountsForUser((int) $user->getId());
+
+        self::assertSame([(int) $firstSub->getId() => 1, (int) $secondSub->getId() => 2], $counts);
+    }
+
     private function repo(): SubscriptionRepository
     {
         $repo = $this->em->getRepository(Subscription::class);

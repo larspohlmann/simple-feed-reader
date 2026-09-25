@@ -83,6 +83,51 @@
         // false — only key absence or an explicit null flips it. Equivalent
         // mutant; a real mutant in the same method still fails the build.
         TrueValue: { ignore: ['App\\Service\\Ingest\\EntryMediaAssembler::visualMedia'] },
+        // CastInt on a (int) $entity->getId() used as an array key, in four
+        // places: the cast exists only to narrow ?int to int for PHPStan, on
+        // an id that is always non-null by the time these methods run (every
+        // caller loads the entity from the repository first). Removing it
+        // leaves the exact same int value at the exact same key — measured on
+        // SavedSearchController::list and SubscriptionController::list, whose
+        // ids are always real primary keys — so no test can tell the two
+        // apart; a real mutant elsewhere in the same method still fails.
+        CastInt: {
+            ignore: [
+                'App\\Controller\\Api\\SavedSearchController::list',
+                'App\\Controller\\Api\\SubscriptionController::list',
+                'App\\Service\\Search\\SavedSearchTallies::forAll',
+                'App\\Service\\Search\\SavedSearchTallies::forOne',
+                // The remaining (int) cast on a DQL aggregate's VALUE, after
+                // the redundant cast on its numeric-string KEY was removed
+                // (PHP normalises a numeric-string array key to int on its
+                // own). The value cast is not redundant: MySQL's driver
+                // returns COUNT() as a numeric string, so dropping it would
+                // put a string where the return type promises int. SQLite,
+                // where this suite runs, already returns a native int for the
+                // same column, which is why no test here can kill the mutant
+                // — measured, not assumed.
+                'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
+                'App\\Repository\\SubscriptionRepository::entryCountsForUser',
+            ],
+        },
+        // ReturnRemoval on the $urls === [] / $savedSearchIds === [] guards:
+        // Doctrine's SqlWalker turns an empty array bound to an IN (:x)
+        // parameter into an always-false predicate rather than invalid SQL,
+        // so the query below the guard runs and yields zero rows regardless —
+        // the guard only saves the round trip, and removing its return
+        // reaches the exact same result. Measured by mutating both guards by
+        // hand and running their tests, which stayed green.
+        ReturnRemoval: {
+            ignore: [
+                'App\\Repository\\FeedRepository::idsByUrlsForUser',
+                'App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch',
+            ],
+        },
+        // ArrayOneItem on the same memberCountsBySavedSearch() guard: reached
+        // only when $savedSearchIds is [], so $countsBySearch is always []
+        // there too, and slicing it to its first item changes nothing to
+        // slice. A real mutant on the method's other return still fails.
+        ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
     },
     phpUnit: {
         configDir: '.',

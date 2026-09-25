@@ -189,7 +189,7 @@ class SubscriptionRepository extends ServiceEntityRepository
 
         $counts = [];
         foreach ($rows as $row) {
-            $counts[(int) $row['subscriptionId']] = (int) $row['entryCount'];
+            $counts[$row['subscriptionId']] = (int) $row['entryCount'];
         }
 
         return $counts;
