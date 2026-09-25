@@ -156,20 +156,16 @@ final class EntryPruner
     /** @return list<int> */
     private function idsPastBoundary(int $feedId, int $keep): array
     {
-        $query = $this->deletablePastBoundary($feedId, $keep);
-
-        return null === $query ? [] : self::idsOf($query);
+        return self::idsOf($this->deletablePastBoundary($feedId, $keep));
     }
 
     /** @return list<int> */
     private function staleIdsPastBoundary(int $feedId, \DateTimeImmutable $cutoff): array
     {
-        $query = $this->deletablePastBoundary($feedId, self::MIN_ENTRIES_PER_FEED);
-        if (null === $query) {
-            return [];
-        }
+        $query = $this->deletablePastBoundary($feedId, self::MIN_ENTRIES_PER_FEED)
+            ?->andWhere('e.createdAt < :cutoff')?->setParameter('cutoff', $cutoff);
 
-        return self::idsOf($query->andWhere('e.createdAt < :cutoff')->setParameter('cutoff', $cutoff));
+        return self::idsOf($query);
     }
 
     /** Null when the feed holds no more than `keep` entries. */
@@ -193,8 +189,12 @@ final class EntryPruner
     }
 
     /** @return list<int> */
-    private static function idsOf(QueryBuilder $query): array
+    private static function idsOf(?QueryBuilder $query): array
     {
+        if (null === $query) {
+            return [];
+        }
+
         /** @var list<int> $ids */
         $ids = $query->getQuery()->getSingleColumnResult();
 
