@@ -74,6 +74,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
     public function testItReportsTheTransportErrorWhenTheServerIsUnreachable(): void
     {
+        $this->authenticateAsAdmin();
         $this->settings()->update(
             new MailSettingsRequest(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p'),
         );
@@ -81,7 +82,8 @@ final class MailConnectionTesterTest extends KernelTestCase
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
-        self::assertSame(MailTestFailure::NotConfigured, $result->failure);
+        self::assertSame(MailTestFailure::SendRejected, $result->failure);
+        self::assertNotNull($result->detail);
     }
 
     public function testItReportsNoFromAddressForABlankIdentityInsteadOfThrowing(): void
