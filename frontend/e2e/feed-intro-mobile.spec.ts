@@ -43,6 +43,7 @@ function subscription(overrides: Record<string, unknown>) {
         position: 0,
         tags: [],
         unreadCount: 0,
+        entryCount: 0,
         ...overrides,
       },
     ],

@@ -34,6 +34,7 @@ function subscription(id: number, title: string, unreadCount: number) {
     createdAt: '2026-08-01T00:00:00Z',
     tags: [],
     unreadCount,
+    entryCount: unreadCount,
     includeInAllItems: true,
     includeInForYou: true,
   };
@@ -98,7 +99,7 @@ async function stubReader(page: Page): Promise<void> {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
       });
     }
     if (path.endsWith('/api/version')) {

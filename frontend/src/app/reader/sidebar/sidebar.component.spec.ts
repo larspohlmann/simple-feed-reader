@@ -70,6 +70,7 @@ const sub = (id: number, unread = 0): SubscriptionDto => ({
   position: 0,
   tags: [],
   unreadCount: unread,
+  entryCount: 0,
   includeInAllItems: true,
   includeInForYou: true,
 });
@@ -179,6 +180,7 @@ describe('SidebarComponent', () => {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [sub(1, 3), sub(2, 6)],
       unreadCount: 9,
+      entryCount: 0,
     };
     const f = mount({ tagTree: [node] });
     const el = f.nativeElement as HTMLElement;
@@ -195,11 +197,13 @@ describe('SidebarComponent', () => {
       tag: { id: 20, name: 'World', color: '#c08a3e', icon: 'public', position: 0 },
       subscriptions: [],
       unreadCount: 0,
+      entryCount: 0,
     };
     const withoutIcon: TagNode = {
       tag: { id: 21, name: 'Plain', color: null, icon: null, position: 1 },
       subscriptions: [],
       unreadCount: 0,
+      entryCount: 0,
     };
     const f = mount({ tagTree: [withIcon, withoutIcon] });
     const leads = (f.nativeElement as HTMLElement).querySelectorAll('.tag .lead');
@@ -219,6 +223,7 @@ describe('SidebarComponent', () => {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [],
       unreadCount: 0,
+      entryCount: 0,
     };
     const f = mount({ tagTree: [node] });
     const el = f.nativeElement as HTMLElement;
@@ -249,6 +254,7 @@ describe('SidebarComponent', () => {
           tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
           subscriptions: [],
           unreadCount: 0,
+          entryCount: 0,
         },
       ],
     });
@@ -271,11 +277,13 @@ describe('SidebarComponent', () => {
           tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
           subscriptions: [shared],
           unreadCount: 0,
+          entryCount: 0,
         },
         {
           tag: { id: 21, name: 'News', color: null, icon: null, position: 0 },
           subscriptions: [shared],
           unreadCount: 0,
+          entryCount: 0,
         },
       ],
     });
@@ -358,6 +366,7 @@ describe('SidebarComponent', () => {
       tag: { id, name: `t${id}`, color: null, icon: null, position: 0 },
       subscriptions: subs,
       unreadCount: 0,
+      entryCount: 0,
     });
 
     function reorder(
@@ -504,6 +513,7 @@ describe('SidebarComponent', () => {
       tag: { id: 20, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [s],
       unreadCount: 0,
+      entryCount: 0,
     };
     const f = mount({ tagTree: [node] });
     const el = f.nativeElement as HTMLElement;
@@ -623,6 +633,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
           {
@@ -633,6 +644,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 1,
             unreadCount: 4,
+            memberCount: 4,
             includeInDigest: false,
           },
         ],
@@ -656,6 +668,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
           {
@@ -666,6 +679,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 1,
             unreadCount: 4,
+            memberCount: 4,
             includeInDigest: false,
           },
         ],
@@ -698,6 +712,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -722,6 +737,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -751,6 +767,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -771,6 +788,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -789,6 +807,7 @@ describe('SidebarComponent', () => {
         tag: { id: 30, name: 'Tech', color: null, icon: null, position: 0 },
         subscriptions: [],
         unreadCount: 0,
+        entryCount: 0,
       };
       const f = mount({
         tagTree: [node],
@@ -801,6 +820,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -824,6 +844,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 3,
+            memberCount: 3,
             includeInDigest: false,
           },
         ],
@@ -851,6 +872,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
           {
@@ -861,6 +883,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 1,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -889,6 +912,7 @@ describe('SidebarComponent', () => {
             phrase: true,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -919,6 +943,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
           {
@@ -929,6 +954,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 1,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -954,6 +980,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -975,6 +1002,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -997,6 +1025,7 @@ describe('SidebarComponent', () => {
             phrase: false,
             position: 0,
             unreadCount: 0,
+            memberCount: 0,
             includeInDigest: false,
           },
         ],
@@ -1021,6 +1050,7 @@ describe('SidebarComponent', () => {
       phrase: false,
       position: 0,
       unreadCount,
+      memberCount: unreadCount,
       includeInDigest: false,
     });
 
@@ -1181,6 +1211,7 @@ describe('SidebarComponent', () => {
       phrase: false,
       position: 0,
       unreadCount: 3,
+      memberCount: 3,
       includeInDigest: false,
     };
     const space: SavedSearchDto = {
@@ -1191,6 +1222,7 @@ describe('SidebarComponent', () => {
       phrase: false,
       position: 1,
       unreadCount: 4,
+      memberCount: 4,
       includeInDigest: true,
     };
 
@@ -1255,6 +1287,7 @@ describe('SidebarComponent', () => {
       tag: { id: 40, name: 'Tech', color: null, icon: null, position: 0 },
       subscriptions: [sub(1, 3)],
       unreadCount: 3,
+      entryCount: 0,
     };
 
     // The collapsed state persists in localStorage, so each test starts and
@@ -1438,7 +1471,7 @@ describe('for-you row', () => {
 
 describe('organise mode', () => {
   const tag: TagDto = { id: 1, name: 'News', color: null, icon: null, position: 0 };
-  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3 }];
+  const tree: TagNode[] = [{ tag, subscriptions: [sub(5)], unreadCount: 3, entryCount: 0 }];
 
   it('offers the Organise switch on coarse pointers only', () => {
     const isCoarse = signal(false);

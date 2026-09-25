@@ -15,6 +15,7 @@ describe('SavedSearchesStore', () => {
       phrase: false,
       position: 0,
       unreadEntryIds: [10, 11, 12, 13],
+      memberCount: 9,
       includeInDigest: false,
     },
     {
@@ -25,14 +26,25 @@ describe('SavedSearchesStore', () => {
       phrase: false,
       position: 0,
       unreadEntryIds: [],
+      memberCount: 0,
       includeInDigest: false,
     },
   ];
 
   /** The sidebar view the store derives from a wire row. */
   function view(wire: SavedSearchWire, unreadCount = wire.unreadEntryIds.length): SavedSearchDto {
-    const { id, slug, term, wholeWord, phrase, position, includeInDigest } = wire;
-    return { id, slug, term, wholeWord, phrase, position, unreadCount, includeInDigest };
+    const { id, slug, term, wholeWord, phrase, position, memberCount, includeInDigest } = wire;
+    return {
+      id,
+      slug,
+      term,
+      wholeWord,
+      phrase,
+      position,
+      unreadCount,
+      memberCount,
+      includeInDigest,
+    };
   }
 
   function setup(api: Partial<ReaderApi>): SavedSearchesStore {
@@ -47,6 +59,12 @@ describe('SavedSearchesStore', () => {
     store.load();
     expect(store.savedSearches()).toEqual([view(rows[0]), view(rows[1])]);
     expect(store.savedSearches().map((s) => s.unreadCount)).toEqual([4, 0]);
+  });
+
+  it('memberCount passes through from the wire', () => {
+    const store = setup({ savedSearches: () => of({ savedSearches: rows }) });
+    store.load();
+    expect(store.savedSearches()[0].memberCount).toBe(9);
   });
 
   it('createSavedSearch() adopts the posted row without a reload', () => {

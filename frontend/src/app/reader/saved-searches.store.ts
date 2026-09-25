@@ -38,6 +38,7 @@ export class SavedSearchesStore {
       phrase: wire.phrase,
       position: wire.position,
       unreadCount: wire.unreadEntryIds.reduce((count, id) => count + (read.has(id) ? 0 : 1), 0),
+      memberCount: wire.memberCount,
       includeInDigest: wire.includeInDigest,
     }));
   });

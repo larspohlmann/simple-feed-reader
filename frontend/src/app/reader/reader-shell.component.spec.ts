@@ -951,6 +951,7 @@ describe('ReaderShellComponent', () => {
       phrase: false,
       position: 0,
       unreadEntryIds: [],
+      memberCount: 0,
       includeInDigest: false,
     };
 
@@ -1436,7 +1437,7 @@ describe('ReaderShellComponent', () => {
       background: false,
       streamedChars: 0,
       elapsedSeconds: null,
-      forYou: { itemCount: 7, generatedAt: null, newestRunId: null },
+      forYou: { itemCount: 7, totalCount: 7, generatedAt: null, newestRunId: null },
     });
     qp.next(convertToParamMap({ view: 'for-you' }));
     f.detectChanges();
@@ -1916,7 +1917,7 @@ describe('ReaderShellComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+    forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
   };
 
   const failedReport = {
@@ -1927,7 +1928,7 @@ describe('ReaderShellComponent', () => {
     background: false,
     streamedChars: 0,
     elapsedSeconds: null,
-    forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+    forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
   };
 
   function menuItem(text: string): HTMLElement {
@@ -3058,7 +3059,7 @@ describe('ReaderShellComponent', () => {
         background: false,
         streamedChars: 0,
         elapsedSeconds: null,
-        forYou: { itemCount: 5, generatedAt: null, newestRunId: null },
+        forYou: { itemCount: 5, totalCount: 5, generatedAt: null, newestRunId: null },
       });
       expect(recs.forYouCount()).toBe(5);
       const ref = { closed: of(true) };
@@ -3157,6 +3158,7 @@ describe('ReaderShellComponent', () => {
           phrase: false,
           position: 0,
           unreadEntryIds: [1, 2],
+          memberCount: 2,
           includeInDigest: false,
         },
         {
@@ -3167,6 +3169,7 @@ describe('ReaderShellComponent', () => {
           phrase: false,
           position: 1,
           unreadEntryIds: [3, 4, 5],
+          memberCount: 5,
           includeInDigest: false,
         },
       ]);
@@ -3184,6 +3187,7 @@ describe('ReaderShellComponent', () => {
       phrase: false,
       position: 0,
       unreadEntryIds: [100, 101, 102],
+      memberCount: 3,
       includeInDigest: false,
     };
 
@@ -3539,6 +3543,7 @@ describe('ReaderShellComponent', () => {
       phrase: false,
       position: 0,
       unreadEntryIds: [100, 101],
+      memberCount: 2,
       includeInDigest: false,
     };
     // The sidebar view the store derives from that wire row.
@@ -3550,6 +3555,7 @@ describe('ReaderShellComponent', () => {
       phrase: false,
       position: 0,
       unreadCount: 2,
+      memberCount: 2,
       includeInDigest: false,
     };
 

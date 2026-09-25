@@ -56,6 +56,7 @@ async function stubReader(page: Page): Promise<void> {
             createdAt: '2026-08-01T12:00:00Z',
             tags: [],
             unreadCount: 0,
+            entryCount: 0,
             includeInAllItems: true,
             includeInForYou: true,
           },
@@ -83,7 +84,7 @@ async function stubReader(page: Page): Promise<void> {
         error: null,
         background: false,
         streamedChars: 0,
-        forYou: { itemCount: 0, generatedAt: null, newestRunId: null },
+        forYou: { itemCount: 0, totalCount: 0, generatedAt: null, newestRunId: null },
       });
     }
     if (path.endsWith('/version')) {

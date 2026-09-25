@@ -19,6 +19,7 @@ const SAVED_SEARCHES = [
     phrase: false,
     position: 0,
     unreadEntryIds: [],
+    memberCount: 0,
     includeInDigest: false,
   },
   {
@@ -29,6 +30,7 @@ const SAVED_SEARCHES = [
     phrase: false,
     position: 1,
     unreadEntryIds: [],
+    memberCount: 0,
     includeInDigest: false,
   },
 ];

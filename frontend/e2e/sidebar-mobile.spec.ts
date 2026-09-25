@@ -27,6 +27,7 @@ const SUBS = {
       createdAt: 'x',
       position: 0,
       unreadCount: 3,
+      entryCount: 3,
       tags: [NEWS_TAG],
     },
     {
@@ -42,6 +43,7 @@ const SUBS = {
       createdAt: 'x',
       position: 1,
       unreadCount: 1,
+      entryCount: 1,
       tags: [],
     },
   ],

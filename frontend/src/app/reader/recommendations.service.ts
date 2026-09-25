@@ -213,6 +213,9 @@ export class RecommendationsService {
   /** The surviving for-you list's unread count, for the sidebar badge (#724).
    *  The wire field stays `itemCount` for compatibility. */
   readonly forYouCount = computed(() => this.report()?.forYou.itemCount ?? 0);
+  /** The surviving for-you list's total entries, unread or not, for the list
+   *  header's count when the switch reads "All posts" (#1154). */
+  readonly forYouTotal = computed(() => this.report()?.forYou.totalCount ?? 0);
   /** The surviving for-you list's generation time (ISO), for the list
    *  header's "Last refreshed" hint. */
   readonly generatedAt = computed(() => this.report()?.forYou.generatedAt ?? null);

@@ -27,6 +27,7 @@ export function makeSubscription(partial: Partial<SubscriptionDto> = {}): Subscr
     position: 0,
     tags: [],
     unreadCount: 0,
+    entryCount: 0,
     includeInAllItems: true,
     includeInForYou: true,
     ...partial,
