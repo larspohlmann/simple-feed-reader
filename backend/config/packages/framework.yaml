@@ -13,6 +13,10 @@ framework:
             log_level: error
         App\Exception\InvalidSelectionException:
             log_level: error
+        App\Service\Catalog\Exception\InvalidCatalogDocumentException:
+            log_level: error
+        App\Service\Comments\Exception\NoCommentsFeedException:
+            log_level: error
 
 when@test:
     framework:
