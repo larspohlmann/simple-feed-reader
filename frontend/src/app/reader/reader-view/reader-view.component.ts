@@ -266,11 +266,12 @@ export class ReaderViewComponent {
   // changes size — see measureScrollRange(). The reading tail and the progress
   // bar are both derived from it rather than measuring the DOM for themselves.
   private readonly contentBottom = signal(0);
+  private readonly readingBottom = signal(0);
   private readonly viewportHeight = signal(0);
   private readonly scrollTop = signal(0);
 
   /** Whether the article carries tail space below it. */
-  readonly hasTail = computed(() => needsReadingTail(this.contentBottom(), this.viewportHeight()));
+  readonly hasTail = computed(() => needsReadingTail(this.readingBottom(), this.viewportHeight()));
 
   /**
    * The article's length-and-position cue. On a phone it's the only one there is:
@@ -720,15 +721,21 @@ export class ReaderViewComponent {
    * feed the measurement back into itself.
    */
   private measureScrollRange(): void {
-    const host = this.host.nativeElement;
-    this.viewportHeight.set(host.clientHeight);
+    this.viewportHeight.set(this.host.nativeElement.clientHeight);
     const content = this.content()?.nativeElement;
     if (!content) {
       this.contentBottom.set(0);
+      this.readingBottom.set(0);
       return;
     }
-    this.contentBottom.set(
-      content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop,
+    this.contentBottom.set(this.bottomInScroller(content));
+    this.readingBottom.set(this.bottomInScroller(this.commentsRoot()[0] ?? content));
+  }
+
+  private bottomInScroller(element: HTMLElement): number {
+    const host = this.host.nativeElement;
+    return (
+      element.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop
     );
   }
 

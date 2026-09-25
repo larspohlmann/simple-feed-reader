@@ -433,6 +433,26 @@ describe('ReaderViewComponent', () => {
       const host = stubGeometry(f, 400, 800);
       expect(host.querySelector('.reader')!.classList).not.toContain('with-tail');
     });
+
+    it('adds it when the comments carry a short post past the pane (#1150)', () => {
+      TestBed.overrideProvider(CommentsService, {
+        useValue: {
+          state: () => signal<CommentsState>({ status: 'idle' }),
+          load: jest.fn(),
+          reload: jest.fn(),
+        },
+      });
+      const f = mount(entry({ comments: 'manual' }));
+      const comments = (f.nativeElement as HTMLElement).querySelector(
+        'app-entry-comments',
+      ) as HTMLElement;
+      comments.getBoundingClientRect = () => ({ top: 400, bottom: 2400 }) as DOMRect;
+
+      const host = stubGeometry(f, 400, 800);
+
+      expect(host.querySelector('.reader')!.classList).toContain('with-tail');
+      expect(host.querySelector('.progress-rail, .progress')).toBeNull();
+    });
   });
 
   it('emits favorite/keep/read/close', () => {
