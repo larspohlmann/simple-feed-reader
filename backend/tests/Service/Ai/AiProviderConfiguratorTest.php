@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
@@ -166,7 +166,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // the thief's id — which is not the id the key was bound to.
         $thiefSettings = $configurator->requireConfiguration($this->reload('cfg-thief@example.test'));
 
-        $this->expectException(SecretUnreadableException::class);
+        $this->expectException(AiKeyUnreadableException::class);
         $configurator->listModels($thiefSettings);
     }
 

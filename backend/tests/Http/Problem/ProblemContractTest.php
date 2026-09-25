@@ -6,10 +6,6 @@ namespace App\Tests\Http\Problem;
 
 use App\EventListener\ApiExceptionListener;
 use App\Exception\AccountNotActiveException;
-use App\Exception\AiConfigurationNotFoundApiException;
-use App\Exception\AiKeyUnreadableApiException;
-use App\Exception\AiNotConfiguredApiException;
-use App\Exception\AiProviderApiException;
 use App\Exception\AlreadySubscribedException;
 use App\Exception\FeedPreviewApiException;
 use App\Exception\InvalidCredentialsException;
@@ -17,22 +13,27 @@ use App\Exception\InvalidOpmlException;
 use App\Exception\InvalidSetupSecretException;
 use App\Exception\InvalidTokenException;
 use App\Exception\LastAdminException;
-use App\Exception\NoActiveRecommendationRunApiException;
-use App\Exception\NoResumableRecommendationRunApiException;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Exception\OAuth\UnknownProviderException;
 use App\Exception\RateLimitedException;
-use App\Exception\RecommendationRunActiveApiException;
 use App\Exception\ScrapingDisabledApiException;
 use App\Exception\SetupUnavailableException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Exception\TagNameTakenException;
-use App\Exception\TooManyAiConfigurationsApiException;
 use App\Exception\ValidationException;
 use App\Security\AccountStatusException;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Ai\Exception\ConfigurationNotFoundException;
+use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ModelNotOfferedException;
+use App\Service\Ai\Exception\ModelRequiredForActivationException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\AttestationRejectedException;
@@ -43,6 +44,9 @@ use App\Service\Passkey\Exception\PasskeyNotFoundException;
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\Exception\UnknownChallengeException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
+use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use Doctrine\ORM\EntityNotFoundException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\InvalidTokenException as RevokedJwtException;
@@ -366,7 +370,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'ai not configured' => [
-            new AiNotConfiguredApiException(),
+            new AiNotConfiguredException('This account has no active AI configuration.'),
             [
                 'type' => 'ai_not_configured',
                 'title' => 'No AI provider is configured',
@@ -375,7 +379,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'ai configuration not found' => [
-            new AiConfigurationNotFoundApiException(),
+            new ConfigurationNotFoundException('No AI configuration 7 for this account.'),
             [
                 'type' => 'ai_configuration_not_found',
                 'title' => 'AI configuration not found',
@@ -384,7 +388,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'too many ai configurations' => [
-            new TooManyAiConfigurationsApiException(),
+            new TooManyConfigurationsException('This account already holds the maximum number of AI configurations.'),
             [
                 'type' => 'ai_configuration_limit',
                 'title' => 'Too many AI configurations',
@@ -393,7 +397,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'ai key unreadable' => [
-            new AiKeyUnreadableApiException(new \RuntimeException('The stored secret failed its integrity check.')),
+            new AiKeyUnreadableException('The stored API key cannot be opened.'),
             [
                 'type' => 'ai_key_unreadable',
                 'title' => 'The stored API key could not be read',
@@ -402,23 +406,23 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'ai provider unreachable' => [
-            new AiProviderApiException('That address did not answer.'),
+            new ProviderUnreachableException('That address did not answer.'),
             self::providerRejected('That address did not answer.'),
         ];
         yield 'ai credentials rejected' => [
-            new AiProviderApiException('That provider refused the API key.'),
+            new CredentialsRejectedException('That provider refused the API key.'),
             self::providerRejected('That provider refused the API key.'),
         ];
         yield 'ai model not offered' => [
-            new AiProviderApiException('That provider does not offer "gpt-9".'),
+            new ModelNotOfferedException('That provider does not offer "gpt-9".'),
             self::providerRejected('That provider does not offer "gpt-9".'),
         ];
         yield 'ai model required for activation' => [
-            new AiProviderApiException('Choose a model before activating this configuration.'),
+            new ModelRequiredForActivationException('Choose a model before activating this configuration.'),
             self::providerRejected('Choose a model before activating this configuration.'),
         ];
         yield 'no active recommendation run' => [
-            new NoActiveRecommendationRunApiException(),
+            new NoActiveRecommendationRunException(),
             [
                 'type' => 'no_active_recommendation_run',
                 'title' => 'No recommendation run is active',
@@ -427,7 +431,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'no resumable recommendation run' => [
-            new NoResumableRecommendationRunApiException(),
+            new NoResumableRecommendationRunException('There is no failed run to resume.'),
             [
                 'type' => 'no_resumable_recommendation_run',
                 'title' => 'No recommendation run to resume',
@@ -436,7 +440,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'recommendation run active' => [
-            new RecommendationRunActiveApiException(),
+            new RecommendationRunActiveException(),
             [
                 'type' => 'recommendation_run_active',
                 'title' => 'A recommendation run is still active',
@@ -549,6 +553,9 @@ final class ProblemContractTest extends KernelTestCase
         yield 'logic error' => [new \LogicException('DB password is hunter2')];
         yield 'doctrine proxy miss' => [
             EntityNotFoundException::fromClassNameAndIdentifier('App\Entity\Tag', ['id' => '1']),
+        ];
+        yield 'unreadable secret outside ai' => [
+            new SecretUnreadableException('The stored secret failed its integrity check.'),
         ];
     }
 

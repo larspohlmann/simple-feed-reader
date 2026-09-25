@@ -6,7 +6,7 @@ namespace App\Service\Worker;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -100,22 +100,14 @@ final readonly class WorkerRunSweep
     }
 
     /**
-     * The typed AI-provider cases are handled by exception type alone — each
-     * already knows what to do, so neither needs the run passed back out.
-     * AiNotConfiguredException and SecretUnreadableException are no longer
-     * classified here: the shared tick both drivers call
-     * (RecommendationRunAdvancer::tick(), #311 fix) already failed and
-     * flushed the run before rethrowing. That failure recording used to live
-     * here too, split into "which failure" (classifyFailure) and "record it";
-     * duplicating the classification in only one driver is exactly what left
-     * a poll-only install's run stuck forever, so it now lives in the one
-     * place both drivers go through.
+     * AiNotConfiguredException and AiKeyUnreadableException were already recorded on the run by
+     * RecommendationRunAdvancer::tick(), the one place both drivers go through (#311).
      */
     private function advanceOne(RecommendationRun $run): void
     {
         try {
             $this->advancer->advance($run->getUser(), TickDriver::Worker);
-        } catch (AiNotConfiguredException | SecretUnreadableException) {
+        } catch (AiNotConfiguredException | AiKeyUnreadableException) {
             // Already failed and flushed by the shared tick; nothing to do.
         } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
             // The advancer already counted this against the run's own

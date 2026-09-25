@@ -9,7 +9,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -217,7 +217,7 @@ final class RecommendationRunAdvancer
             $this->entityManager->refresh($run);
 
             return RecommendationRunReport::fromRun($run);
-        } catch (AiNotConfiguredException | SecretUnreadableException $e) {
+        } catch (AiNotConfiguredException | AiKeyUnreadableException $e) {
             // Shared by both drivers (#311 fix): an account that loses its provider,
             // model, or readable key can never advance again, so the run fails here
             // rather than only when the worker sweep ticks it -- before this, a
@@ -263,9 +263,9 @@ final class RecommendationRunAdvancer
         $this->entityManager->flush();
     }
 
-    private static function failureMessageFor(AiNotConfiguredException | SecretUnreadableException $e): string
+    private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $e): string
     {
-        return $e instanceof SecretUnreadableException
+        return $e instanceof AiKeyUnreadableException
             ? 'The stored API key can no longer be read.'
             : 'The AI provider is no longer configured.';
     }

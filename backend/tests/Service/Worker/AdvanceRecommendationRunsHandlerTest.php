@@ -280,16 +280,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Distinguishes the SecretUnreadableException catch from the
-     * AiNotConfiguredException one above it: both fail the run, but each
-     * must carry its own message, not the sibling case's.
-     *
-     * The run's FAILED status alone no longer proves which catch clause
-     * handled it (#311 fix): RecommendationRunAdvancer::tick() now fails and
-     * flushes the run itself before rethrowing, so even the handler's
-     * generic \Throwable floor would see a FAILED run. Asserting no error was
-     * logged is what actually pins that SecretUnreadableException landed in
-     * the typed, silent catch rather than falling through to that floor.
+     * An unreadable key fails the run with its own message, not AiNotConfiguredException's. No error may be
+     * logged: that pins the typed, silent catch rather than the handler's \Throwable floor (#311).
      */
     public function testApiKeyUnreadableFailsTheRunWithItsOwnMessage(): void
     {
