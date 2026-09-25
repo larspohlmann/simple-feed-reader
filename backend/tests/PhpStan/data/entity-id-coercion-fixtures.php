@@ -22,4 +22,7 @@ function coercions(User $user, NotAnEntity $dto, array $row): void
     $fromRow = (int) $row['id'];
     $foreign = $dto->getId() ?? 0;
     $read = $user->requireId();
+    $nullsafeDefaulted = $user?->getId() ?? 0;
+    $shortTernary = $user->getId() ?: 0;
+    $foreignNullsafe = $dto?->getId() ?? 0;
 }

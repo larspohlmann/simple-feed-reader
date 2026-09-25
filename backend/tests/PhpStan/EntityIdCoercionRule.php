@@ -9,6 +9,8 @@ use PhpParser\Node;
 use PhpParser\Node\Expr\BinaryOp\Coalesce;
 use PhpParser\Node\Expr\Cast\Int_;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\NullsafeMethodCall;
+use PhpParser\Node\Expr\Ternary;
 use PhpParser\Node\Identifier;
 use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Rule;
@@ -18,7 +20,8 @@ use PHPStan\Rules\RuleErrorBuilder;
 final readonly class EntityIdCoercionRule implements Rule
 {
     public const string MESSAGE = "Read a persisted entity's id with requireId(); "
-        . 'casting or defaulting getId() hides an unsaved entity (#1165).';
+        . 'casting or defaulting getId() hides an unsaved entity (#1165); add `use PersistedId` '
+        . 'to an entity that lacks requireId().';
 
     public function getNodeType(): string
     {
@@ -30,10 +33,11 @@ final readonly class EntityIdCoercionRule implements Rule
         $coerced = match (true) {
             $node instanceof Int_ => $node->expr,
             $node instanceof Coalesce => $node->left,
+            $node instanceof Ternary && null === $node->if => $node->cond,
             default => null,
         };
 
-        if (!$coerced instanceof MethodCall || !$this->readsAnEntityId($coerced, $scope)) {
+        if (!$this->isGetIdCall($coerced) || !$this->readsAnEntityId($coerced, $scope)) {
             return [];
         }
 
@@ -44,7 +48,13 @@ final readonly class EntityIdCoercionRule implements Rule
         ];
     }
 
-    private function readsAnEntityId(MethodCall $call, Scope $scope): bool
+    /** @phpstan-assert-if-true MethodCall|NullsafeMethodCall $coerced */
+    private function isGetIdCall(?Node $coerced): bool
+    {
+        return $coerced instanceof MethodCall || $coerced instanceof NullsafeMethodCall;
+    }
+
+    private function readsAnEntityId(MethodCall|NullsafeMethodCall $call, Scope $scope): bool
     {
         if (!$call->name instanceof Identifier || 'getId' !== $call->name->toString()) {
             return false;

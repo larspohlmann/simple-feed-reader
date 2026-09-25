@@ -347,7 +347,11 @@ final class EntryPartRestorerTest extends DbTestCase
         sort($indexedIds);
 
         $this->em->clear();
-        $createdIds = [(int) $this->findEntry('a')?->getId(), (int) $this->findEntry('b')?->getId()];
+        $entryA = $this->findEntry('a');
+        $entryB = $this->findEntry('b');
+        self::assertNotNull($entryA);
+        self::assertNotNull($entryB);
+        $createdIds = [$entryA->requireId(), $entryB->requireId()];
         sort($createdIds);
 
         self::assertSame($createdIds, $indexedIds);

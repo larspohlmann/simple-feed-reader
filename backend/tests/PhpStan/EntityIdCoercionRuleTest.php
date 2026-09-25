@@ -22,6 +22,8 @@ final class EntityIdCoercionRuleTest extends RuleTestCase
             [
                 [EntityIdCoercionRule::MESSAGE, 20],
                 [EntityIdCoercionRule::MESSAGE, 21],
+                [EntityIdCoercionRule::MESSAGE, 25],
+                [EntityIdCoercionRule::MESSAGE, 26],
             ],
         );
     }

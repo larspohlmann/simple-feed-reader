@@ -86,18 +86,9 @@ final class SubscriptionTagSyncTest extends DbTestCase
     }
 
     /**
-     * currentIds must be the feed's OWN tag ids, not the Tag objects
-     * themselves — sync() strict-compares a candidate tag's (int) id against
-     * this list to decide whether it is already attached. A feed that
-     * ALREADY carries the requested tag must be a true no-op: no removeTag(),
-     * no addTag(), and — the part a same-outcome assertion on THIS feed alone
-     * cannot see — no SubscriptionTagPositions::nextForTag() call either,
-     * since addTag() is itself idempotent and would silently absorb a wrong
-     * re-add. That call is only observable through its SIDE EFFECT: the
-     * shared per-tag counter it advances. Sync a feed that already carries
-     * News (which must be a true no-op) and THEN a fresh feed newly tagged
-     * News, on the SAME SubscriptionTagSync instance — a spurious call during
-     * the first sync leaves the second feed's News position one too high.
+     * An already-attached tag must skip nextForTag() too, since addTag() is
+     * idempotent and would absorb a wrong re-add silently. That skip is only
+     * observable via the shared counter, so this syncs a second feed after.
      */
     public function testResyncingAnAlreadyTaggedFeedNeverConsumesTheTagsPositionCounter(): void
     {
