@@ -99,20 +99,7 @@ final readonly class ProblemCatalog
             );
         }
 
-        $status = $exception->getStatusCode();
-
-        return new ApiProblem(
-            match ($status) {
-                Response::HTTP_UNAUTHORIZED => 'unauthorized',
-                Response::HTTP_FORBIDDEN => 'forbidden',
-                Response::HTTP_NOT_FOUND => 'not_found',
-                Response::HTTP_METHOD_NOT_ALLOWED => 'method_not_allowed',
-                Response::HTTP_TOO_MANY_REQUESTS => 'rate_limited',
-                default => $status >= 500 ? 'internal_error' : 'request_error',
-            },
-            Response::$statusTexts[$status] ?? 'Error',
-            $status,
-        );
+        return ApiProblem::forStatus($exception->getStatusCode());
     }
 
     /** @return array<string, list<string>> */

@@ -21,18 +21,12 @@ final readonly class RequestProblems implements ExceptionProblems
                 'One or more fields are invalid.',
                 $exception->errors,
             )),
-            $exception instanceof RecordNotFoundException => new ResolvedProblem(new ApiProblem(
-                'not_found',
-                Response::$statusTexts[Response::HTTP_NOT_FOUND],
-                Response::HTTP_NOT_FOUND,
-                $exception->getMessage(),
-            )),
-            $exception instanceof InvalidSelectionException => new ResolvedProblem(new ApiProblem(
-                'request_error',
-                Response::$statusTexts[Response::HTTP_UNPROCESSABLE_ENTITY],
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-                $exception->getMessage(),
-            )),
+            $exception instanceof RecordNotFoundException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_NOT_FOUND, $exception->getMessage()),
+            ),
+            $exception instanceof InvalidSelectionException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_UNPROCESSABLE_ENTITY, $exception->getMessage()),
+            ),
             default => null,
         };
     }

@@ -12,11 +12,9 @@ final readonly class CommentsProblems implements ExceptionProblems
     public function resolve(\Throwable $exception): ?ResolvedProblem
     {
         return match (true) {
-            $exception instanceof NoCommentsFeedException => new ResolvedProblem(new ApiProblem(
-                'not_found',
-                Response::$statusTexts[Response::HTTP_NOT_FOUND],
-                Response::HTTP_NOT_FOUND,
-            )),
+            $exception instanceof NoCommentsFeedException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_NOT_FOUND),
+            ),
             default => null,
         };
     }

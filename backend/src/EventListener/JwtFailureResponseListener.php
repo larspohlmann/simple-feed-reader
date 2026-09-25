@@ -28,6 +28,7 @@ final readonly class JwtFailureResponseListener
 
     public function onJwtFailure(AuthenticationFailureEvent $event): void
     {
-        $event->setResponse($this->responses->create($this->problems->resolve($event->getException(), '/api')));
+        $path = $event->getRequest()?->getPathInfo() ?? '/api';
+        $event->setResponse($this->responses->create($this->problems->resolve($event->getException(), $path)));
     }
 }

@@ -12,11 +12,9 @@ final readonly class CatalogProblems implements ExceptionProblems
     public function resolve(\Throwable $exception): ?ResolvedProblem
     {
         return match (true) {
-            $exception instanceof InvalidCatalogDocumentException => new ResolvedProblem(new ApiProblem(
-                'request_error',
-                Response::$statusTexts[Response::HTTP_UNPROCESSABLE_ENTITY],
-                Response::HTTP_UNPROCESSABLE_ENTITY,
-            )),
+            $exception instanceof InvalidCatalogDocumentException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_UNPROCESSABLE_ENTITY),
+            ),
             default => null,
         };
     }
