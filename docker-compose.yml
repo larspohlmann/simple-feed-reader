@@ -42,6 +42,9 @@ services:
       - ./docs:/docs:ro
       - ./frontend/src/app/reader:/frontend/src/app/reader:ro
     environment:
+      # The container's own kernel cache (compiled container + cache pools), so a
+      # native run over the same bind mount never shares its rate limiters (#1173).
+      APP_CACHE_DIR: /app/var/cache-docker
       # Real env vars beat .env/.env.test file values (Symfony precedence), so
       # committed files stay untouched and the native SQLite workflow is
       # unaffected. In the test env Doctrine's dbname_suffix appends '_test',
@@ -132,6 +135,7 @@ services:
       - ./backend:/app
       - ./docker/php/worker-healthcheck.php:/usr/local/bin/worker-healthcheck.php:ro
     environment:
+      APP_CACHE_DIR: /app/var/cache-docker
       DATABASE_URL: "mysql://feedreader:feedreader@mysql:3306/feedreader?serverVersion=8.4&charset=utf8mb4"
       MAILER_DSN: "dynamic://default"
       MAILER_FALLBACK_DSN: "smtp://mailpit:1025"
