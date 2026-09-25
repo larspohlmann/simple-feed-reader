@@ -1164,7 +1164,8 @@ its kicker line instead of using this row — see the exception in
 The three per-entry actions — favorite, keep, mark read — as one control
 cluster. `app-entry-meta` renders it inline; `entry-compact` uses it directly,
 projected into the kicker line (see the exception in
-[§6](#6-deliberate-exceptions)). It renders with no wrapper element — `:host`
+[§6](#6-deliberate-exceptions)); the reader view renders it at `size="md"` as
+the article's action row. It renders with no wrapper element — `:host`
 is `inline-flex` — because a wrapper would give the HTML parser a block-level
 child to choke on where the component lands inside a `<p>`.
 
