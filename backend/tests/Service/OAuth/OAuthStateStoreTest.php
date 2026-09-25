@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use App\Service\OAuth\OAuthStateStore;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -28,24 +29,33 @@ final class OAuthStateStoreTest extends TestCase
         $this->store = new OAuthStateStore($this->cache, $this->clock);
     }
 
+    private function assertRefused(string $state, ?string $browserToken): void
+    {
+        try {
+            $this->store->consume($state, $browserToken);
+            self::fail('The state was redeemed.');
+        } catch (InvalidOAuthStateException) {
+            $this->addToAssertionCount(1);
+        }
+    }
+
     public function testAStartedFlowCanBeConsumedOnce(): void
     {
         $started = $this->store->start('google');
         $consumed = $this->store->consume($started->state, $started->browserToken);
 
-        self::assertNotNull($consumed);
         self::assertSame('google', $consumed->provider);
         self::assertSame($started->nonce, $consumed->nonce);
         self::assertSame($started->codeVerifier, $consumed->codeVerifier);
 
         // Single use. A replayed callback — the browser's back button, or an
         // attacker resubmitting a captured redirect — must find nothing.
-        self::assertNull($this->store->consume($started->state, $started->browserToken));
+        $this->assertRefused($started->state, $started->browserToken);
     }
 
     public function testAnUnknownStateIsRejected(): void
     {
-        self::assertNull($this->store->consume('never-issued', 'irrelevant'));
+        $this->assertRefused('never-issued', 'irrelevant');
     }
 
     public function testAnExpiredStateIsRejected(): void
@@ -53,7 +63,7 @@ final class OAuthStateStoreTest extends TestCase
         $started = $this->store->start('google');
         $this->clock->modify('+11 minutes');
 
-        self::assertNull($this->store->consume($started->state, $started->browserToken));
+        $this->assertRefused($started->state, $started->browserToken);
     }
 
     /**
@@ -70,14 +80,14 @@ final class OAuthStateStoreTest extends TestCase
     {
         $started = $this->store->start('google');
 
-        self::assertNull($this->store->consume($started->state, null));
+        $this->assertRefused($started->state, null);
     }
 
     public function testAFlowCannotBeConsumedWithTheWrongBrowserToken(): void
     {
         $started = $this->store->start('google');
 
-        self::assertNull($this->store->consume($started->state, str_repeat('a', 64)));
+        $this->assertRefused($started->state, str_repeat('a', 64));
     }
 
     /**
@@ -91,7 +101,7 @@ final class OAuthStateStoreTest extends TestCase
         $a = $this->store->start('google');
         $b = $this->store->start('google');
 
-        self::assertNull($this->store->consume($a->state, $b->browserToken));
+        $this->assertRefused($a->state, $b->browserToken);
     }
 
     /**
@@ -106,10 +116,10 @@ final class OAuthStateStoreTest extends TestCase
     {
         $started = $this->store->start('google');
 
-        self::assertNull($this->store->consume($started->state, 'wrong'));
+        $this->assertRefused($started->state, 'wrong');
 
         // Even the right token cannot recover it now.
-        self::assertNull($this->store->consume($started->state, $started->browserToken));
+        $this->assertRefused($started->state, $started->browserToken);
     }
 
     public function testEveryFlowGetsADistinctBrowserToken(): void
@@ -153,10 +163,10 @@ final class OAuthStateStoreTest extends TestCase
 
         $this->clock->modify('+9 minutes');
         // A miss on a different state must not act as a keep-alive for this one.
-        self::assertNull($this->store->consume('some-other-state', 'irrelevant'));
+        $this->assertRefused('some-other-state', 'irrelevant');
 
         $this->clock->modify('+2 minutes');
-        self::assertNull($this->store->consume($started->state, $started->browserToken));
+        $this->assertRefused($started->state, $started->browserToken);
     }
 
     public function testTheCodeChallengeIsTheS256OfTheVerifier(): void
