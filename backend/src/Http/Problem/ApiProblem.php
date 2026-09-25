@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Http;
+namespace App\Http\Problem;
 
 /**
  * RFC 7807 problem document. `type` is a stable machine-readable slug the

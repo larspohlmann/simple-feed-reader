@@ -4,48 +4,30 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Http\ApiProblem;
+use App\Http\Problem\ProblemCatalog;
+use App\Http\Problem\ProblemResponseFactory;
 use Lexik\Bundle\JWTAuthenticationBundle\Event\AuthenticationFailureEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
-use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Makes Lexik's JWT rejections speak problem+json like the rest of the API.
- *
- * ApiExceptionListener cannot do this. Lexik builds its own response — from
- * JWTAuthenticator::start() for a missing token, from onAuthenticationFailure()
- * for an invalid, expired or non-active one — via ExceptionEvent::setResponse(),
- * which calls stopPropagation() and ends the kernel.exception chain before
- * ApiExceptionListener runs. The onAuthenticationFailure case doesn't even
- * reach kernel.exception: the authenticator responds during kernel.request.
- * Hooking Lexik's own events sidesteps both instead of fighting priorities.
- *
- * Every branch answers the same opaque 401. In particular a suspended user's
- * otherwise-valid token must NOT report the account status: whoever presents it
- * may have stolen it and doesn't need to know why it stopped working. Account
- * status is disclosed only at login, where the password has just been verified.
+ * Lexik answers JWT failures itself and stops kernel.exception, so its own events are hooked here. Every branch
+ * is the opaque 401: whoever presents a suspended account's token may have stolen it, and learns nothing.
  */
 #[AsEventListener(event: Events::JWT_NOT_FOUND, method: 'onJwtFailure')]
 #[AsEventListener(event: Events::JWT_INVALID, method: 'onJwtFailure')]
 #[AsEventListener(event: Events::JWT_EXPIRED, method: 'onJwtFailure')]
 #[AsEventListener(event: Events::AUTHENTICATION_FAILURE, method: 'onJwtFailure')]
-final class JwtFailureResponseListener
+final readonly class JwtFailureResponseListener
 {
+    public function __construct(
+        private ProblemCatalog $problems,
+        private ProblemResponseFactory $responses,
+    ) {
+    }
+
     public function onJwtFailure(AuthenticationFailureEvent $event): void
     {
-        $problem = new ApiProblem(
-            'unauthorized',
-            'Unauthorized',
-            Response::HTTP_UNAUTHORIZED,
-            'Authentication is required to access this resource.',
-        );
-
-        $event->setResponse(new JsonResponse(
-            $problem->toArray(),
-            $problem->status,
-            ['Content-Type' => 'application/problem+json'],
-        ));
+        $event->setResponse($this->responses->create($this->problems->resolve($event->getException(), '/api')));
     }
 }

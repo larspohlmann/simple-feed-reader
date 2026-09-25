@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Http;
+namespace App\Tests\Http\Problem;
 
-use App\Http\ApiProblem;
+use App\Http\Problem\ApiProblem;
 use PHPUnit\Framework\TestCase;
 
 final class ApiProblemTest extends TestCase

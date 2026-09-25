@@ -8,7 +8,7 @@ use App\Exception\ApiException;
 use App\Exception\OAuth\OAuthException;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Exception\OAuth\UnknownProviderException;
-use App\Http\ApiProblem;
+use App\Http\Problem\ApiProblem;
 use PHPUnit\Framework\TestCase;
 
 final class OAuthExceptionTest extends TestCase

@@ -52,17 +52,8 @@ final readonly class EntrySearchRequestFactory
     }
 
     /**
-     * Reads one query parameter as a plain string rather than through
-     * `getString()`, so `q[]=x` reports the same `validation_error` — with a
-     * message naming the field — as every other invalid input to this endpoint.
-     *
-     * `getString()` would not break: it throws `BadRequestException`, converted
-     * by `HttpKernel::handle()` to `BadRequestHttpException` before
-     * `kernel.exception` fires, so `ApiExceptionListener` already answers a clean
-     * 400 `request_error` (an earlier version of this comment claimed a 500;
-     * that was measured false, see #410). The real choice is smaller: a 400 with
-     * no field detail, or a 422 naming WHICH parameter was malformed, matching
-     * the 422 this endpoint already answers for a too-short or over-long `q`.
+     * A plain string read, not getString(): `q[]=x` then gets the validation_error naming the field that every
+     * other invalid input here gets, instead of a bare request_error without field detail (#410).
      */
     private function singleValue(Request $request, string $name): string
     {
