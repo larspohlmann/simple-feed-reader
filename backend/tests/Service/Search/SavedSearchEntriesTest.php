@@ -45,8 +45,8 @@ final class SavedSearchEntriesTest extends DbTestCase
         $service = self::getContainer()->get(SavedSearchEntries::class);
         self::assertInstanceOf(SavedSearchEntries::class, $service);
         $result = $service->list(new SavedSearchListQuery(
-            (int) $user->getId(),
-            [(int) $rocket->getId(), (int) $climate->getId()],
+            $user->requireId(),
+            [$rocket->requireId(), $climate->requireId()],
         ));
 
         self::assertCount(1, $result->rows);

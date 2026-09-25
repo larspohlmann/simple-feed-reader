@@ -25,11 +25,11 @@ final class EntryIdsByGuidHashTest extends DbTestCase
         $this->em->flush();
 
         $ids = $this->repository()->entryIdsByGuidHash(
-            (int) $one->getId(),
+            $one->requireId(),
             [hash('sha256', 'guid-a'), hash('sha256', 'guid-never-written')],
         );
 
-        self::assertSame([hash('sha256', 'guid-a') => (int) $wanted->getId()], $ids);
+        self::assertSame([hash('sha256', 'guid-a') => $wanted->requireId()], $ids);
     }
 
     public function testAnEmptyListAsksForNothing(): void

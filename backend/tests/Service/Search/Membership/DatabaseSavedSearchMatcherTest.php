@@ -35,7 +35,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
 
         $matches = $this->matcher()->matchingIds(
             [$this->search(1, 'climate'), $this->search(2, 'rocket'), $this->search(3, 'zebra')],
-            [(int) $climate->getId(), (int) $rocket->getId()],
+            [$climate->requireId(), $rocket->requireId()],
         );
 
         self::assertSame([
@@ -50,7 +50,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         $inside = $this->entry('a', 'Climate report');
         $this->entry('b', 'Climate too');
 
-        $matches = $this->matcher()->matchingIds([$this->search(1, 'climate')], [(int) $inside->getId()]);
+        $matches = $this->matcher()->matchingIds([$this->search(1, 'climate')], [$inside->requireId()]);
 
         self::assertSame([1 => [$inside->getId()]], $matches);
     }
@@ -62,7 +62,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
 
         $matches = $this->matcher()->matchingIds(
             [$this->search(1, 'punk', SearchMode::WholeWord)],
-            [(int) $word->getId(), (int) $this->entry('c', 'Spunky')->getId()],
+            [$word->requireId(), $this->entry('c', 'Spunky')->requireId()],
         );
 
         self::assertSame([1 => [$word->getId()]], $matches);
@@ -84,7 +84,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
             $searches[] = $this->search($i, \sprintf('term%02d', $i));
         }
 
-        $matches = $this->matcher()->matchingIds($searches, [(int) $entry->getId()]);
+        $matches = $this->matcher()->matchingIds($searches, [$entry->requireId()]);
 
         self::assertCount(30, $matches);
         self::assertSame([$entry->getId()], $matches[7]);

@@ -143,13 +143,13 @@ final class AdminUserControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
 
         for ($i = 0; $i < $subscriptionCount; ++$i) {
-            $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', (int) $user->getId(), $i));
+            $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', $user->requireId(), $i));
             $em->persist($feed);
             $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
         }
 
         for ($i = 0; $i < $tagCount; ++$i) {
-            $em->persist(new Tag($user, sprintf('footprint-tag-%d-%d', (int) $user->getId(), $i)));
+            $em->persist(new Tag($user, sprintf('footprint-tag-%d-%d', $user->requireId(), $i)));
         }
 
         $em->flush();
@@ -199,7 +199,7 @@ final class AdminUserControllerTest extends WebTestCase
         $target = $this->factory()->create('target@example.com', status: UserStatus::PendingApproval);
         $token = $this->tokenFor($plain);
 
-        $this->call($method, sprintf($uriTemplate, (int) $target->getId()), $token);
+        $this->call($method, sprintf($uriTemplate, $target->requireId()), $token);
 
         self::assertResponseStatusCodeSame(403);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -210,7 +210,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $target = $this->factory()->create('target@example.com', status: UserStatus::PendingApproval);
 
-        $this->call($method, sprintf($uriTemplate, (int) $target->getId()));
+        $this->call($method, sprintf($uriTemplate, $target->requireId()));
 
         self::assertResponseStatusCodeSame(401);
     }
@@ -275,7 +275,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('waiting@example.com', status: UserStatus::PendingApproval);
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
@@ -298,7 +298,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('unverified@example.com', status: UserStatus::PendingVerification);
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
@@ -318,7 +318,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('already@example.com', status: UserStatus::Active);
-        $uri = self::LIST . '/' . (int) $target->getId() . '/approve';
+        $uri = self::LIST . '/' . $target->requireId() . '/approve';
 
         $this->call('POST', $uri, $this->tokenFor($admin));
 
@@ -346,7 +346,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('reconsidered@example.com', status: UserStatus::Rejected);
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
@@ -368,7 +368,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('back@example.com', status: UserStatus::Suspended);
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
@@ -398,7 +398,7 @@ final class AdminUserControllerTest extends WebTestCase
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $em->flush();
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
@@ -412,7 +412,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('waiting@example.com', status: UserStatus::PendingApproval);
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/reject', $this->tokenFor($admin));
 
@@ -426,7 +426,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('member@example.com');
-        $id = (int) $target->getId();
+        $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/suspend', $this->tokenFor($admin));
 
@@ -449,7 +449,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('GET', '/api/me', $targetToken);
         self::assertResponseIsSuccessful();
 
-        $this->call('POST', self::LIST . '/' . (int) $target->getId() . '/suspend', $this->tokenFor($admin));
+        $this->call('POST', self::LIST . '/' . $target->requireId() . '/suspend', $this->tokenFor($admin));
         self::assertResponseIsSuccessful();
 
         $this->call('GET', '/api/me', $targetToken);
@@ -464,7 +464,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
         $target = $this->factory()->create('resettable@example.com');
-        $id = (int) $target->getId();
+        $id = $target->requireId();
         $originalChangedAt = $target->getPasswordChangedAt();
 
         $this->call('POST', self::LIST . '/' . $id . '/reset-password', $this->tokenFor($admin));
@@ -489,7 +489,7 @@ final class AdminUserControllerTest extends WebTestCase
 
         $this->call(
             'POST',
-            self::LIST . '/' . (int) $target->getId() . '/reset-password',
+            self::LIST . '/' . $target->requireId() . '/reset-password',
             $this->tokenFor($plain),
         );
 
@@ -512,7 +512,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
 
-        $this->call('POST', self::LIST . '/' . (int) $admin->getId() . '/suspend', $this->tokenFor($admin));
+        $this->call('POST', self::LIST . '/' . $admin->requireId() . '/suspend', $this->tokenFor($admin));
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame('validation_error', $this->payload()['type']);
@@ -627,7 +627,7 @@ final class AdminUserControllerTest extends WebTestCase
     {
         $admin = $this->admin();
 
-        $this->call('POST', self::LIST . '/' . (int) $admin->getId() . '/reject', $this->tokenFor($admin));
+        $this->call('POST', self::LIST . '/' . $admin->requireId() . '/reject', $this->tokenFor($admin));
 
         self::assertResponseStatusCodeSame(422);
     }
@@ -1073,17 +1073,17 @@ final class AdminUserControllerTest extends WebTestCase
         $user = $this->factory()->create(sprintf('detail-%d@example.com', $count));
 
         for ($i = 0; $i < $count; ++$i) {
-            $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', (int) $user->getId(), $i));
+            $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', $user->requireId(), $i));
             $em->persist($feed);
             $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00'));
-            $tag = new Tag($user, sprintf('detail-tag-%d-%d', (int) $user->getId(), $i));
+            $tag = new Tag($user, sprintf('detail-tag-%d-%d', $user->requireId(), $i));
             $em->persist($tag);
             $subscription->addTag($tag);
             $em->persist($subscription);
         }
         $em->flush();
 
-        $this->call('GET', self::LIST . '/' . (int) $user->getId(), $token);
+        $this->call('GET', self::LIST . '/' . $user->requireId(), $token);
 
         self::assertResponseIsSuccessful();
 
@@ -1101,7 +1101,7 @@ final class AdminUserControllerTest extends WebTestCase
         $factory = $this->factory();
         $admin = $factory->create('admin-del@example.com', roles: ['ROLE_ADMIN']);
         $target = $factory->create('victim@example.com');
-        $targetId = (int) $target->getId();
+        $targetId = $target->requireId();
 
         $this->client->request('DELETE', self::LIST . '/' . $targetId, server: [
             'HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin),

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\EventListener;
 
+use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\User;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Tests\DbTestCase;
@@ -30,8 +31,8 @@ final class AddUserIdClaimOnTokenIssueTest extends DbTestCase
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
-        $this->expectException(\LogicException::class);
-        $this->expectExceptionMessage('A signed-in user must have an id.');
+        $this->expectException(UnpersistedEntityException::class);
+        $this->expectExceptionMessage(User::class);
 
         $tokens->create(new User('unsaved@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')));
     }

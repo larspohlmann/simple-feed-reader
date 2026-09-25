@@ -912,7 +912,7 @@ final class EntryControllerTest extends WebTestCase
             content: json_encode(['scope' => 'all', 'until' => '2026-08-01T00:00:00Z'], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(204);
-        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, $sub->requireId()));
 
         // The sweep leaves these entries sparse: they are read by the
         // watermark alone. Materialising a state row must not resurrect them.
@@ -939,7 +939,7 @@ final class EntryControllerTest extends WebTestCase
             self::assertTrue($entry['isHidden'], 'Every swept entry must stay read.');
         }
 
-        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $sub->getId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, $sub->requireId()));
     }
 
     public function testMarkingViewedReadsTheEntryEvenAboveTheWatermark(): void
@@ -1090,8 +1090,8 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(Subscription::class, $survivorSubscription);
         self::assertInstanceOf(Subscription::class, $siblingSubscription);
 
-        self::assertSame(1, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
-        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()));
+        self::assertSame(1, $this->unreadCountOf($client, $headers, $survivorSubscription->requireId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, $siblingSubscription->requireId()));
 
         $client->request(
             'PATCH',
@@ -1101,10 +1101,10 @@ final class EntryControllerTest extends WebTestCase
         );
         self::assertResponseIsSuccessful();
 
-        self::assertSame(0, $this->unreadCountOf($client, $headers, (int) $survivorSubscription->getId()));
+        self::assertSame(0, $this->unreadCountOf($client, $headers, $survivorSubscription->requireId()));
         self::assertSame(
             0,
-            $this->unreadCountOf($client, $headers, (int) $siblingSubscription->getId()),
+            $this->unreadCountOf($client, $headers, $siblingSubscription->requireId()),
             'Hiding the survivor must mirror isHidden onto the sibling copy, not resurrect it as unread.',
         );
     }
@@ -1328,7 +1328,7 @@ final class EntryControllerTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
-        $markIds = [(int) $entries[0]->getId(), (int) $entries[1]->getId()];
+        $markIds = [$entries[0]->requireId(), $entries[1]->requireId()];
 
         $this->postMarkReadBatch($client, $headers, $markIds);
         self::assertResponseStatusCodeSame(204);
@@ -1346,7 +1346,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
-        $id = (int) $entry->getId();
+        $id = $entry->requireId();
 
         $this->postMarkReadBatch($client, $headers, [$id, $id]);
         self::assertResponseStatusCodeSame(204);
@@ -1364,7 +1364,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
         $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
-        $id = (int) $entry->getId();
+        $id = $entry->requireId();
         $missingId = 99999999;
         self::assertNull($em->getRepository(Entry::class)->find($missingId));
 
@@ -1377,7 +1377,7 @@ final class EntryControllerTest extends WebTestCase
         // No state row at all: `findExistingIds()` dropped the id, not a dialect's FK check.
         $states = self::getContainer()->get(EntryStateRepository::class);
         self::assertInstanceOf(EntryStateRepository::class, $states);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         self::assertNull($states->findOneForUserEntry($userId, $missingId));
         $existingState = $states->findOneForUserEntry($userId, $id);
         self::assertInstanceOf(EntryState::class, $existingState);

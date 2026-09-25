@@ -18,6 +18,6 @@ final readonly class MarkEntriesReadService
     /** @param list<int> $entryIds */
     public function mark(User $user, array $entryIds): void
     {
-        $this->readMarker->markRead((int) $user->getId(), $this->entries->findExistingIds($entryIds));
+        $this->readMarker->markRead($user->requireId(), $this->entries->findExistingIds($entryIds));
     }
 }

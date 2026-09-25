@@ -67,7 +67,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $user = $this->user('next-position-empty@example.com');
         $this->em->flush();
 
-        self::assertSame(0, $this->repository->nextPositionForUser((int) $user->getId()));
+        self::assertSame(0, $this->repository->nextPositionForUser($user->requireId()));
     }
 
     public function testNextPositionForUserIsOnePastTheCurrentMaximum(): void
@@ -76,7 +76,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $this->subscribe($user, $this->feed('https://a.example/feed.xml'), 4);
         $this->em->flush();
 
-        self::assertSame(5, $this->repository->nextPositionForUser((int) $user->getId()));
+        self::assertSame(5, $this->repository->nextPositionForUser($user->requireId()));
     }
 
     /**
@@ -92,11 +92,11 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
         $this->em->flush();
 
-        $rows = $this->repository->findForUserWithTags((int) $user->getId());
+        $rows = $this->repository->findForUserWithTags($user->requireId());
 
         self::assertSame(
-            [(int) $first->getId(), (int) $second->getId()],
-            array_map(static fn (Subscription $s): int => (int) $s->getId(), $rows),
+            [$first->requireId(), $second->requireId()],
+            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
         );
     }
 
@@ -117,11 +117,11 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $second->addTag($tag, 1);
         $this->em->flush();
 
-        $rows = $this->repository->findForUserByTagId((int) $user->getId(), (int) $tag->getId());
+        $rows = $this->repository->findForUserByTagId($user->requireId(), $tag->requireId());
 
         self::assertSame(
-            [(int) $first->getId(), (int) $second->getId()],
-            array_map(static fn (Subscription $s): int => (int) $s->getId(), $rows),
+            [$first->requireId(), $second->requireId()],
+            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
         );
     }
 }

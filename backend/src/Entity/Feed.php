@@ -14,6 +14,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_feed_url', columns: ['url'])]
 class Feed
 {
+    use PersistedId;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

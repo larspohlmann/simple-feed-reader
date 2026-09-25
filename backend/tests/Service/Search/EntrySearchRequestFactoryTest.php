@@ -58,8 +58,6 @@ final class EntrySearchRequestFactoryTest extends TestCase
     {
         $request = Request::create('/api/entries/search?q=angular');
         $user = $this->buildUser();
-        // User has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
         $reflection = new \ReflectionProperty(User::class, 'id');
         $reflection->setValue($user, 42);
 
@@ -210,6 +208,12 @@ final class EntrySearchRequestFactoryTest extends TestCase
 
     private function buildUser(): User
     {
-        return new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        // User has no id setter: the id only exists once Doctrine assigns it,
+        // and this test builds the row by hand without booting the kernel.
+        $reflection = new \ReflectionProperty(User::class, 'id');
+        $reflection->setValue($user, 1);
+
+        return $user;
     }
 }

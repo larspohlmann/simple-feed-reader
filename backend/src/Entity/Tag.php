@@ -12,6 +12,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_tag_user_name', columns: ['user_id', 'name'])]
 class Tag
 {
+    use PersistedId;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

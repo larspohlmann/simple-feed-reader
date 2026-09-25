@@ -87,7 +87,7 @@ final readonly class AdminUserController
     public function detail(int $id): JsonResponse
     {
         $user = $this->users->getById($id);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         // Loaded once and threaded through every mapper below, not re-read per
         // section: findForUserWithTags() is this endpoint's heaviest query (the

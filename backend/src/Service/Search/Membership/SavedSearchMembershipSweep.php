@@ -188,6 +188,6 @@ final readonly class SavedSearchMembershipSweep
      */
     private static function idsOf(array $group): array
     {
-        return array_map(static fn (SavedSearch $search): int => (int) $search->getId(), $group);
+        return array_map(static fn (SavedSearch $search): int => $search->requireId(), $group);
     }
 }

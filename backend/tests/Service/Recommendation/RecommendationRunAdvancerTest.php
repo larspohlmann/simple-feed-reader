@@ -6,6 +6,7 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
+use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
@@ -287,7 +288,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $this->em->getConnection()->update(
             'recommendation_run',
@@ -358,26 +359,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->fixtures->deleteAiSettings($this->user);
     }
 
-    /**
-     * Pins the ?? 0 fallback in the lock name for an unsaved user (getId()
-     * null): pre-acquiring 'ai-recommendations-0' must make advance() busy
-     * for such a user, which only holds if the code really names the lock
-     * after that fallback and not some other value.
-     */
-    public function testLockNameFallsBackToZeroForAnUnsavedUser(): void
+    public function testAdvancingForAnUnsavedUserIsRefused(): void
     {
-        $lock = $this->lockFactory()->createLock('ai-recommendations-0');
-        self::assertTrue($lock->acquire());
+        $unsavedUser = new User('unsaved@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
 
-        try {
-            $unsavedUser = new User('unsaved@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->expectException(UnpersistedEntityException::class);
+        $this->expectExceptionMessage(User::class);
 
-            $report = $this->advancer()->advance($unsavedUser);
-
-            self::assertSame('busy', $report->status);
-        } finally {
-            $lock->release();
-        }
+        $this->advancer()->advance($unsavedUser);
     }
 
     /**
@@ -592,7 +581,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
@@ -634,7 +623,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->recordLocksOverTheRealStore();
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill();
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $thief = null;
         $this->stubChatClient()->duringNextCall(function () use (&$thief): void {
@@ -680,7 +669,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 80, 'reason' => 'from batch one']],
@@ -3038,7 +3027,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
 
-        return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
+        return $this->runLogs()->listForRun($this->user, $run->requireId());
     }
 
     /**
@@ -3114,7 +3103,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill();
         $firstBatch = $run->getCandidateBatches()[0];
 
-        $runId = $run->getId() ?? 0;
+        $runId = $run->requireId();
         $this->stubChatClient()->duringNextCall(function () use ($runId): void {
             $this->em->getConnection()->update(
                 'recommendation_run',

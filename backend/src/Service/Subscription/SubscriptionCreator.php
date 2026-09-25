@@ -52,7 +52,7 @@ final readonly class SubscriptionCreator
         array $tags,
         ?string $initialTitle = null,
     ): Subscription {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $limit = $this->subscriptionLimits->resolve($user);
         if ($this->subscriptions->countForUser($userId) >= $limit) {
             throw new SubscriptionLimitReachedException($limit);
@@ -82,7 +82,7 @@ final readonly class SubscriptionCreator
             $this->em->flush();
         }
 
-        if ($this->subscriptions->existsForUserAndFeed($userId, (int) $feed->getId())) {
+        if ($this->subscriptions->existsForUserAndFeed($userId, $feed->requireId())) {
             throw new AlreadySubscribedException();
         }
 

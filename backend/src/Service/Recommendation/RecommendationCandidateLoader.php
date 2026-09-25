@@ -90,9 +90,7 @@ final readonly class RecommendationCandidateLoader
 
         $linesById = [];
         foreach ($this->linesFor($qb) as $line) {
-            /** @var int $entryId non-null: every line here came from an Entry row */
-            $entryId = $line->entryId;
-            $linesById[$entryId] = $line;
+            $linesById[$line->entryId] = $line;
         }
 
         return $linesById;
@@ -201,7 +199,7 @@ final readonly class RecommendationCandidateLoader
         );
 
         return new PromptLine(
-            entryId: $entry->getId(),
+            entryId: $entry->requireId(),
             title: $entry->getTitle(),
             feedName: $feedName,
             date: $entry->getEffectiveDate()->format('Y-m-d'),

@@ -26,6 +26,6 @@ final readonly class SavedSearchSlug
 
     public function assignTo(SavedSearch $savedSearch): void
     {
-        $savedSearch->setSlug($this->build((int) $savedSearch->getId(), $savedSearch->getTerm()));
+        $savedSearch->setSlug($this->build($savedSearch->requireId(), $savedSearch->getTerm()));
     }
 }

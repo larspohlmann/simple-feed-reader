@@ -38,8 +38,8 @@ final readonly class EntryStateResolver
      */
     public function resolve(User $user, EntryListRow $row): EntryState
     {
-        $userId = (int) $user->getId();
-        $entryId = (int) $row->entry->getId();
+        $userId = $user->requireId();
+        $entryId = $row->entry->requireId();
 
         $existing = $this->states->findOneForUserEntry($userId, $entryId);
         if ($existing !== null) {

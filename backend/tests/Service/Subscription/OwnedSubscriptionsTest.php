@@ -54,13 +54,13 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->owned->resolve(
-            [(int) $second->getId(), (int) $first->getId()],
-            (int) $user->getId(),
+            [$second->requireId(), $first->requireId()],
+            $user->requireId(),
         );
 
         self::assertCount(2, $resolved);
-        self::assertSame($first, $resolved[(int) $first->getId()]);
-        self::assertSame($second, $resolved[(int) $second->getId()]);
+        self::assertSame($first, $resolved[$first->requireId()]);
+        self::assertSame($second, $resolved[$second->requireId()]);
     }
 
     public function testRejectsAnIdThatBelongsToAnotherUser(): void
@@ -73,8 +73,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->owned->resolve(
-            [(int) $ours->getId(), (int) $foreign->getId()],
-            (int) $mine->getId(),
+            [$ours->requireId(), $foreign->requireId()],
+            $mine->requireId(),
         );
     }
 
@@ -84,7 +84,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $this->expectException(InvalidSelectionException::class);
-        $this->owned->resolve([999_999], (int) $user->getId());
+        $this->owned->resolve([999_999], $user->requireId());
     }
 
     public function testRejectsADuplicateId(): void
@@ -93,10 +93,10 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $subscription = $this->subscription($user, 'https://dupe.example/feed.xml');
         $this->em->flush();
 
-        $id = (int) $subscription->getId();
+        $id = $subscription->requireId();
 
         $this->expectException(InvalidSelectionException::class);
-        $this->owned->resolve([$id, $id], (int) $user->getId());
+        $this->owned->resolve([$id, $id], $user->requireId());
     }
 
     /**
@@ -111,13 +111,13 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->owned->resolveWithAssociations(
-            [(int) $second->getId(), (int) $first->getId()],
-            (int) $user->getId(),
+            [$second->requireId(), $first->requireId()],
+            $user->requireId(),
         );
 
         self::assertCount(2, $resolved);
-        self::assertSame($first, $resolved[(int) $first->getId()]);
-        self::assertSame($second, $resolved[(int) $second->getId()]);
+        self::assertSame($first, $resolved[$first->requireId()]);
+        self::assertSame($second, $resolved[$second->requireId()]);
     }
 
     public function testResolveWithAssociationsRejectsAnIdThatBelongsToAnotherUser(): void
@@ -130,8 +130,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->owned->resolveWithAssociations(
-            [(int) $ours->getId(), (int) $foreign->getId()],
-            (int) $mine->getId(),
+            [$ours->requireId(), $foreign->requireId()],
+            $mine->requireId(),
         );
     }
 }

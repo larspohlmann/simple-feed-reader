@@ -47,7 +47,7 @@ final readonly class EntryReaderController
     ): JsonResponse {
         // Ownership is checked BEFORE the limiter so an unowned id 404s without
         // spending the caller's reader budget.
-        $entry = $this->entryList->findOneSubscribedByUser($id, (int) $user->getId())
+        $entry = $this->entryList->findOneSubscribedByUser($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such entry.');
 
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);

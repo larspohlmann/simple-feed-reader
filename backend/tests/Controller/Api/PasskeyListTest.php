@@ -113,7 +113,7 @@ final class PasskeyListTest extends ApiTestCase
         // Captured before the request: the controller's remove() runs on the
         // SAME entity manager this test shares, so Doctrine nulls the id field
         // on this very object once the deletion succeeds.
-        $deletedId = (int) $toDelete->getId();
+        $deletedId = $toDelete->requireId();
         $this->authenticate($client, 'remover@example.test');
 
         $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $deletedId));
@@ -134,7 +134,7 @@ final class PasskeyListTest extends ApiTestCase
         $this->factory()->create('caller@example.test');
         $this->authenticate($client, 'caller@example.test');
 
-        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $foreignPasskey->getId()));
+        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $foreignPasskey->requireId()));
 
         $this->assertRejected($client, 404);
         self::assertSame('passkey_not_found', $this->payload($client)['type']);
@@ -157,7 +157,7 @@ final class PasskeyListTest extends ApiTestCase
         $onlyPasskey = $this->givenAPasskeyFor($user, credentialId: 'b25seS1jcmVk');
         $this->authenticate($client, 'oauth-only@example.test');
 
-        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $onlyPasskey->getId()));
+        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $onlyPasskey->requireId()));
 
         $this->assertRejected($client, 409);
         /** @var UserPasskeyRepository $repository */
@@ -197,7 +197,7 @@ final class PasskeyListTest extends ApiTestCase
         $this->authenticate($client, 'delete-while-disabled@example.test');
         $this->disablePasskeySignIn();
 
-        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', (int) $toDelete->getId()));
+        $client->request('DELETE', \sprintf('/api/auth/passkeys/%d', $toDelete->requireId()));
 
         self::assertResponseStatusCodeSame(204);
     }

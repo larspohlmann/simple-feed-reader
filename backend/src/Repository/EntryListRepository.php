@@ -250,7 +250,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             $hash = $row->entry->getUrlHash();
             if ($hash !== null) {
                 $hashes[$hash] = true;
-                $survivorIds[] = (int) $row->entry->getId();
+                $survivorIds[] = $row->entry->requireId();
             }
         }
         if ($hashes === []) {

@@ -86,10 +86,6 @@ final readonly class EntryPage
             return null;
         }
 
-        $entryId = $row->entry->getId() ?? throw new \LogicException(
-            'An entry loaded from the database must have an id.',
-        );
-
-        return EntryCursor::encode($sort->instantOf($row), $entryId);
+        return EntryCursor::encode($sort->instantOf($row), $row->entry->requireId());
     }
 }

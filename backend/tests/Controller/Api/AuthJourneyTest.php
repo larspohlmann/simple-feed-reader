@@ -274,7 +274,7 @@ final class AuthJourneyTest extends WebTestCase
 
     private function userId(): int
     {
-        return (int) $this->currentUser()->getId();
+        return $this->currentUser()->requireId();
     }
 
     /** Pulls the plaintext token out of the mail, the only place it exists. */

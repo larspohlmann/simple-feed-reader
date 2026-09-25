@@ -80,7 +80,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     private function query(): EntrySearchQuery
     {
         return new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
         );
     }
@@ -88,7 +88,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     private function unreadQuery(): EntrySearchQuery
     {
         return new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput('angular'),
             unread: true,
         );

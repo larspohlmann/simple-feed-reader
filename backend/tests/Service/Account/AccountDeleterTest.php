@@ -37,7 +37,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $admin = $this->users->create('admin@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->users->create('target@example.com');
-        $targetId = (int) $target->getId();
+        $targetId = $target->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -53,7 +53,7 @@ final class AccountDeleterTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -74,7 +74,7 @@ final class AccountDeleterTest extends DbTestCase
         $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable(self::NOW)));
         $this->em->flush();
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -96,7 +96,7 @@ final class AccountDeleterTest extends DbTestCase
         $target = $this->users->create('target-ai@example.com');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal((int) $target->getId(), 'sk-throwaway1234');
+        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway1234');
         $configuration = new AiProviderSettings(
             $target,
             'Work OpenAI',
@@ -107,7 +107,7 @@ final class AccountDeleterTest extends DbTestCase
         );
         $this->em->persist($configuration);
         $this->em->flush();
-        $configurationId = (int) $configuration->getId();
+        $configurationId = $configuration->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -129,7 +129,7 @@ final class AccountDeleterTest extends DbTestCase
         $target = $this->users->create('target-ai-2@example.com');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $sealed = $cipher->seal((int) $target->getId(), 'sk-throwaway5678');
+        $sealed = $cipher->seal($target->requireId(), 'sk-throwaway5678');
         $configuration = new AiProviderSettings(
             $target,
             'Active OpenAI',
@@ -142,8 +142,8 @@ final class AccountDeleterTest extends DbTestCase
         $this->em->flush();
         $target->setActiveAiProviderSettings($configuration);
         $this->em->flush();
-        $targetId = (int) $target->getId();
-        $configurationId = (int) $configuration->getId();
+        $targetId = $target->requireId();
+        $configurationId = $configuration->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
@@ -191,7 +191,7 @@ final class AccountDeleterTest extends DbTestCase
     {
         $this->users->create('keeper-admin@example.com', roles: ['ROLE_ADMIN']);
         $user = $this->users->create('leaving@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $this->deleter->deleteSelf($user);
 

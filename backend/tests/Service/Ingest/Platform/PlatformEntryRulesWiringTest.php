@@ -21,6 +21,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         self::assertInstanceOf(EntryIngestor::class, $ingestor);
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
         $this->em->persist($feed);
+        $this->em->flush();
         $thread = new ParsedEntry(
             't3_1abc',
             'https://www.reddit.com/r/PHP/comments/1abc/t/',

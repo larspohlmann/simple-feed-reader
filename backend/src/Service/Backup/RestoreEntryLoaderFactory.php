@@ -43,7 +43,7 @@ final readonly class RestoreEntryLoaderFactory
             $this->clock,
         );
         $loader->begin(
-            new RestoreFeedTargets((int) $user->getId(), $feedIdsByUrl, $this->feeds, $this->entries),
+            new RestoreFeedTargets($user->requireId(), $feedIdsByUrl, $this->feeds, $this->entries),
             $user,
         );
 

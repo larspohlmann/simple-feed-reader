@@ -243,7 +243,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return new RecommendationFeedRow(
             row: $listRow,
             reason: $item->getReason(),
-            runId: $item->getRun()->getId() ?? 0,
+            runId: $item->getRun()->requireId(),
             position: $item->getPosition(),
             score: $item->getScore(),
             runGeneratedAt: $runCompletedAt instanceof \DateTimeImmutable ? $runCompletedAt : null,

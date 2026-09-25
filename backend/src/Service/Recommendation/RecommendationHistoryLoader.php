@@ -126,7 +126,7 @@ final readonly class RecommendationHistoryLoader
         );
 
         return new PromptLine(
-            entryId: null,
+            entryId: $entry->requireId(),
             title: $entry->getTitle(),
             feedName: $feedName,
             date: $entry->getEffectiveDate()->format('Y-m-d'),

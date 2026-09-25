@@ -25,7 +25,7 @@ final readonly class SearchMarkReadService
 
     public function mark(User $user, string $rawQuery, \DateTimeImmutable $until): void
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $this->readMarker->markRead($userId, $this->entries->unreadMatchingEntryIdsForUser(
             new EntrySearchQuery($userId, SearchTerms::fromInput($rawQuery)),

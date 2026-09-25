@@ -55,7 +55,7 @@ final class DigestEntryFinderTest extends DbTestCase
         $this->member('2026-07-10T00:00:00Z');
         $this->hide($this->member('2026-07-16T00:00:00Z'));
 
-        $matches = $this->finder()->matchesSince($this->search, (int) $this->user->getId(), $this->since);
+        $matches = $this->finder()->matchesSince($this->search, $this->user->requireId(), $this->since);
 
         $expectedIds = array_map(static fn (Entry $entry): ?int => $entry->getId(), $newestFirst);
 
@@ -66,7 +66,7 @@ final class DigestEntryFinderTest extends DbTestCase
 
     public function testNoMatchesReturnsEmptyWithoutHydrating(): void
     {
-        $matches = $this->finder()->matchesSince($this->search, (int) $this->user->getId(), $this->since);
+        $matches = $this->finder()->matchesSince($this->search, $this->user->requireId(), $this->since);
 
         self::assertSame([], $matches->entries);
         self::assertSame(0, $matches->totalCount);

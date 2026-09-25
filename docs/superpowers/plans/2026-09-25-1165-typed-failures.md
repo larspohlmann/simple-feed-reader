@@ -2564,7 +2564,7 @@ git commit -m "refactor(#1165): controllers read ids through requireId()"
 **Files:** every site listed in Appendix B.
 
 - [ ] **Step 1: Apply each before/after in Appendix B.** Then verify one assumption: `SavedSearchSlug::assignTo()` (Appendix B, `SavedSearchSlug.php:29`) must run after a flush.
-  Run: `grep -n "assignTo" -B6 src/Controller/Api/SavedSearchController.php src/Service/Backup/RestoreLoader.php`
+  Run: `grep -n "assignTo" -B6 src/Controller/Api/SavedSearchController.php src/Service/Backup/RestoreLoadPass.php` (renamed from `RestoreLoader.php` since this plan was written)
   Expected: a `flush()` precedes each call. If one does not, the old code produced a `0-…` slug. Report that as a bug, and don't mask it.
 - [ ] **Step 2: Run both database legs.**
   Run: `php bin/phpunit`, then `docker compose exec php composer test`
@@ -2743,6 +2743,7 @@ final readonly class EntityIdCoercionRule implements Rule
 - [ ] **Step 4: Run the checks.**
   Run: `php bin/phpunit tests/PhpStan`, then `composer stan`
   Expected: PASS, and `composer stan` clean across `src` and `tests`. Any hit is a site the grep missed, such as a line-wrapped cast. Convert it with `->requireId()`, and add its before/after to the commit message body.
+  **Amended during execution:** the appendices only covered `src`, so the rule found ~673 coercions in 79 test files, plus `SearchReindexCommand.php`'s `(int) $batch[array_key_last($batch)]->getId()`, which the grep regex cannot match. They are converted in a separate commit before the rule, `test(#1165): tests read ids through requireId()`. That commit also adds `PersistedId` to `AiProviderSettings`, `CatalogFeed` and `UserPasskey`, the entities the tests coerce.
 - [ ] **Step 5: Break it.** Change `SubscriptionController.php:52` back to `$rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());` and watch `composer stan` report it. Restore the line by hand.
 - [ ] **Step 6: Add this bullet to CLAUDE.md** under "Enforced mechanically by `composer check` and `composer md`", after the `ThinControllerRule` bullet:
 ```markdown

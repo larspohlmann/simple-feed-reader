@@ -27,7 +27,7 @@ final readonly class SavedSearchTallies
     #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
     {
-        $ids = array_map(static fn (SavedSearch $s): int => (int) $s->getId(), $savedSearches);
+        $ids = array_map(static fn (SavedSearch $s): int => $s->requireId(), $savedSearches);
         $unreadIds = $this->entries->unreadMemberIdsBySavedSearch($userId, $ids);
         $memberCounts = $this->entries->memberCountsBySavedSearch($userId, $ids);
 
@@ -39,6 +39,6 @@ final readonly class SavedSearchTallies
 
     public function forOne(SavedSearch $savedSearch, int $userId): SavedSearchTally
     {
-        return $this->forAll([$savedSearch], $userId)[(int) $savedSearch->getId()];
+        return $this->forAll([$savedSearch], $userId)[$savedSearch->requireId()];
     }
 }

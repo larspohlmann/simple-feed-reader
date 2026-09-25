@@ -210,7 +210,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         /** @var RecommendationRunLogRepository $logs */
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
-        $rows = $logs->listForRun($this->user, $run->getId() ?? throw new \LogicException('Run was never saved.'));
+        $rows = $logs->listForRun($this->user, $run->requireId());
 
         self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
         self::assertSame('gone', $rows[0]['errorDetail']);
@@ -357,7 +357,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
     private function idOf(Entry $entry): int
     {
-        return $entry->getId() ?? throw new \LogicException('Entry was never saved.');
+        return $entry->requireId();
     }
 
     private function activeAiSettings(): AiProviderSettings
@@ -378,7 +378,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
     private function userId(): int
     {
-        return $this->user->getId() ?? throw new \LogicException('User was never saved.');
+        return $this->user->requireId();
     }
 
     private function resolver(): RecommendationConsolidationResolver

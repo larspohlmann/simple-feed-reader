@@ -54,7 +54,7 @@ final class LastLoginStampTest extends WebTestCase
     {
         $user = $this->factory()->create('signs-in@example.com', 'correct-horse-battery');
         self::assertNull($user->getLastLoginAt());
-        $id = (int) $user->getId();
+        $id = $user->requireId();
 
         $this->client->request(
             'POST',
@@ -73,7 +73,7 @@ final class LastLoginStampTest extends WebTestCase
     public function testAFailedPasswordLoginLeavesTheAccountUnstamped(): void
     {
         $user = $this->factory()->create('wrong-pass@example.com', 'correct-horse-battery');
-        $id = (int) $user->getId();
+        $id = $user->requireId();
 
         $this->client->request(
             'POST',

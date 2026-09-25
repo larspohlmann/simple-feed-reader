@@ -30,7 +30,7 @@ final readonly class DigestComposer
 
     public function compose(User $user, \DateTimeImmutable $since): ?DigestModel
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $groups = [];
         $total = 0;
 
@@ -68,7 +68,7 @@ final readonly class DigestComposer
             $entry->getTitle(),
             $row->subscriptionTitle,
             $this->shortDescription($row),
-            $this->links->entryUrl((int) $entry->getId()),
+            $this->links->entryUrl($entry->requireId()),
             $entry->getPublishedAt(),
             $entry->getImageUrl(),
             $entry->getFeed()->getFaviconUrl(),

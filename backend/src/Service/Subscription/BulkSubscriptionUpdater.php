@@ -92,7 +92,7 @@ final readonly class BulkSubscriptionUpdater
             );
         }
 
-        return array_map(static fn (Tag $tag): int => (int) $tag->getId(), $owned);
+        return array_map(static fn (Tag $tag): int => $tag->requireId(), $owned);
     }
 
     /**
@@ -108,7 +108,7 @@ final readonly class BulkSubscriptionUpdater
     private function resultingTagIds(Subscription $subscription, array $addTagIds, array $removeTagIds): array
     {
         $current = array_map(
-            static fn (Tag $tag): int => (int) $tag->getId(),
+            static fn (Tag $tag): int => $tag->requireId(),
             $subscription->getTags()->toArray(),
         );
 

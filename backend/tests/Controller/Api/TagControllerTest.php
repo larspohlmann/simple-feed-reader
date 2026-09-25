@@ -190,7 +190,7 @@ final class TagControllerTest extends WebTestCase
         $tag = new Tag($user, 'Gone soon');
         $em->persist($tag);
         $em->flush();
-        $tagId = (int) $tag->getId();
+        $tagId = $tag->requireId();
 
         $client->request('DELETE', '/api/tags/' . $tagId, server: $this->headersFor($user));
 
@@ -224,7 +224,7 @@ final class TagControllerTest extends WebTestCase
         $subscription->addTag($tag, 0);
         $em->persist($subscription);
         $em->flush();
-        $subscriptionId = (int) $subscription->getId();
+        $subscriptionId = $subscription->requireId();
 
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->headersFor($user));
 

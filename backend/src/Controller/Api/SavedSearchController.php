@@ -39,13 +39,13 @@ final readonly class SavedSearchController
     #[Route('', name: 'api_saved_searches_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $rows = $this->savedSearches->findForUser($userId);
         $tallies = $this->tallies->forAll($rows, $userId);
 
         return new JsonResponse([
             'savedSearches' => array_map(
-                static fn (SavedSearch $s) => SavedSearchJson::one($s, $tallies[(int) $s->getId()]),
+                static fn (SavedSearch $s) => SavedSearchJson::one($s, $tallies[$s->requireId()]),
                 $rows,
             ),
         ]);
@@ -56,7 +56,7 @@ final readonly class SavedSearchController
         #[CurrentUser] User $user,
         #[MapRequestPayload] CreateSavedSearchRequest $request,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         // Saving a term already saved is idempotent, and answers 200 with the
         // row that was there rather than 201 with a second one.
         $savedSearch = $this->savedSearches->findOneForUserByTerm(
@@ -88,7 +88,7 @@ final readonly class SavedSearchController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSavedSearchRequest $request,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $savedSearch = $this->savedSearches->findOneOwnedBy($id, $userId)
             ?? throw new NotFoundHttpException('No such saved search.');
 
@@ -103,7 +103,7 @@ final readonly class SavedSearchController
     #[Route('/{id}', name: 'api_saved_searches_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $savedSearch = $this->savedSearches->findOneOwnedBy($id, (int) $user->getId())
+        $savedSearch = $this->savedSearches->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such saved search.');
 
         $this->em->remove($savedSearch);

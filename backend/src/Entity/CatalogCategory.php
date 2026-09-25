@@ -19,6 +19,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_catalog_category_key', columns: ['category_key'])]
 class CatalogCategory
 {
+    use PersistedId;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

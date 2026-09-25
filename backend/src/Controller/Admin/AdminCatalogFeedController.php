@@ -47,7 +47,7 @@ final readonly class AdminCatalogFeedController
 
         $feed = new CatalogFeed($category, $request->title, $request->url);
         $this->feedWriter->apply($feed, $request);
-        $feed->setPosition($this->feeds->nextPositionInCategory((int) $category->getId()));
+        $feed->setPosition($this->feeds->nextPositionInCategory($category->requireId()));
         $this->em->persist($feed);
         $this->em->flush();
 

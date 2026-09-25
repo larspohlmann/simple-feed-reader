@@ -39,7 +39,7 @@ final readonly class TagController
     #[Route('', name: 'api_tags_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        $rows = $this->tags->findForUser((int) $user->getId());
+        $rows = $this->tags->findForUser($user->requireId());
 
         return new JsonResponse([
             'tags' => array_map(static fn (Tag $t) => TagJson::one($t), $rows),
@@ -49,14 +49,14 @@ final readonly class TagController
     #[Route('', name: 'api_tags_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] CreateTagRequest $request): JsonResponse
     {
-        if ($this->tags->existsForUserAndName((int) $user->getId(), $request->name)) {
+        if ($this->tags->existsForUserAndName($user->requireId(), $request->name)) {
             throw new TagNameTakenException();
         }
 
         $tag = new Tag($user, $request->name);
         $tag->setColor($request->color);
         $tag->setIcon($request->icon);
-        $tag->setPosition($this->tags->nextPositionForUser((int) $user->getId()));
+        $tag->setPosition($this->tags->nextPositionForUser($user->requireId()));
         $this->em->persist($tag);
         $this->em->flush();
 
@@ -72,11 +72,11 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderTagsRequest $request,
     ): JsonResponse {
-        $owned = $this->tags->findForUser((int) $user->getId());
+        $owned = $this->tags->findForUser($user->requireId());
         /** @var array<int, Tag> $byId */
         $byId = [];
         foreach ($owned as $tag) {
-            $byId[(int) $tag->getId()] = $tag;
+            $byId[$tag->requireId()] = $tag;
         }
 
         $this->exactSet->assertPermutation($request->tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
@@ -102,7 +102,7 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] TagFeedOrderRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->findOneOwnedBy($id, (int) $user->getId())
+        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
         $joinsBySubId = $this->subscriptionTags->forTagBySubscriptionId($tag);
@@ -126,10 +126,10 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateTagRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->findOneOwnedBy($id, (int) $user->getId())
+        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
-        if ($this->tags->existsForUserAndName((int) $user->getId(), $request->name, $id)) {
+        if ($this->tags->existsForUserAndName($user->requireId(), $request->name, $id)) {
             throw new TagNameTakenException();
         }
 
@@ -144,13 +144,13 @@ final readonly class TagController
     #[Route('/{id}', name: 'api_tags_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $tag = $this->tags->findOneOwnedBy($id, (int) $user->getId())
+        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
         // Detach from every subscription first (portable across SQLite/MySQL).
         // A tag's subscriptions are always its own owner's, so findForUserByTagId
         // (userId + tagId) resolves the identical set findByTag(Tag) once did.
-        foreach ($this->subscriptions->findForUserByTagId((int) $user->getId(), $id) as $sub) {
+        foreach ($this->subscriptions->findForUserByTagId($user->requireId(), $id) as $sub) {
             $sub->removeTag($tag);
         }
         $this->em->remove($tag);

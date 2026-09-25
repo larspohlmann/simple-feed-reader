@@ -58,7 +58,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'req-body-longer');
         $this->em->flush();
 
-        $rows = $this->logs->listForRun($this->user, $run->getId() ?? 0);
+        $rows = $this->logs->listForRun($this->user, $run->requireId());
 
         self::assertSame(
             [
@@ -115,7 +115,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertNotNull($streamingId);
         self::assertSame(
             [$streamingId => ''],
-            $this->logs->streamingTextForRun($this->user, $run->getId() ?? 0),
+            $this->logs->streamingTextForRun($this->user, $run->requireId()),
         );
     }
 
@@ -174,7 +174,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         // Bulk DQL bypasses the identity map: clear before asserting survival,
         // or find() serves the stale in-memory row (see the #237 lesson).
         $this->em->clear();
-        self::assertSame([], $this->logs->listForRun($this->user, $run->getId() ?? 0));
+        self::assertSame([], $this->logs->listForRun($this->user, $run->requireId()));
         self::assertNotNull($this->em->find(RecommendationRunLog::class, $keptId));
     }
 }

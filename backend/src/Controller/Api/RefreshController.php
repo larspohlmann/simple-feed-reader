@@ -51,7 +51,7 @@ final class RefreshController
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         if (null !== $feedId) {
             // The user-facing per-feed path is the one that makes the

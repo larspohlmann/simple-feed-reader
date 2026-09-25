@@ -25,7 +25,7 @@ final readonly class OpmlExporter
      */
     public function export(User $user): string
     {
-        $subs = $this->subscriptions->findForUserWithTags((int) $user->getId());
+        $subs = $this->subscriptions->findForUserWithTags($user->requireId());
 
         $doc = new \DOMDocument('1.0', 'UTF-8');
         $doc->formatOutput = true;

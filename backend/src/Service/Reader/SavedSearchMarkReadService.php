@@ -25,13 +25,13 @@ final readonly class SavedSearchMarkReadService
 
     public function mark(User $user, \DateTimeImmutable $until): void
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->markSearches($userId, $this->savedSearches->idsForUser($userId), $until);
     }
 
     public function markOne(User $user, int $savedSearchId, \DateTimeImmutable $until): void
     {
-        $this->markSearches((int) $user->getId(), [$savedSearchId], $until);
+        $this->markSearches($user->requireId(), [$savedSearchId], $until);
     }
 
     /** @param list<int> $searchIds */

@@ -43,7 +43,7 @@ final class SubscriptionTagPositions implements ResetInterface
 
     public function nextForTag(Tag $tag): int
     {
-        $tagId = (int) $tag->getId();
+        $tagId = $tag->requireId();
         $this->nextByTagId[$tagId] ??= $this->subscriptionTags->nextPositionForTag($tag);
 
         return $this->nextByTagId[$tagId]++;

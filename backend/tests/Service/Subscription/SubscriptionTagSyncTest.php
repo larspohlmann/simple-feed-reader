@@ -27,7 +27,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
         $this->taggedSubscription($user, 'https://b.example.com/rss', [[$news, 1]]);
 
-        $this->sync()->sync($feed, [(int) $news->getId(), (int) $tech->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$news->requireId(), $tech->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($feed, $news));
@@ -41,7 +41,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $tech = $this->tag($user, 'Tech');
         $feed = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0], [$tech, 0]]);
 
-        $this->sync()->sync($feed, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         $tagNames = array_map(static fn (Tag $t): string => $t->getName(), $feed->getTags()->toArray());
@@ -60,7 +60,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($sibling);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [], (int) $user->getId());
+        $this->sync()->sync($feed, [], $user->requireId());
         $this->em->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());
@@ -79,25 +79,16 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($sibling);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [], (int) $user->getId());
+        $this->sync()->sync($feed, [], $user->requireId());
         $this->em->flush();
 
         self::assertSame(0, $feed->getPosition());
     }
 
     /**
-     * currentIds must be the feed's OWN tag ids, not the Tag objects
-     * themselves — sync() strict-compares a candidate tag's (int) id against
-     * this list to decide whether it is already attached. A feed that
-     * ALREADY carries the requested tag must be a true no-op: no removeTag(),
-     * no addTag(), and — the part a same-outcome assertion on THIS feed alone
-     * cannot see — no SubscriptionTagPositions::nextForTag() call either,
-     * since addTag() is itself idempotent and would silently absorb a wrong
-     * re-add. That call is only observable through its SIDE EFFECT: the
-     * shared per-tag counter it advances. Sync a feed that already carries
-     * News (which must be a true no-op) and THEN a fresh feed newly tagged
-     * News, on the SAME SubscriptionTagSync instance — a spurious call during
-     * the first sync leaves the second feed's News position one too high.
+     * An already-attached tag must skip nextForTag() too, since addTag() is
+     * idempotent and would absorb a wrong re-add silently. That skip is only
+     * observable via the shared counter, so this syncs a second feed after.
      */
     public function testResyncingAnAlreadyTaggedFeedNeverConsumesTheTagsPositionCounter(): void
     {
@@ -105,14 +96,14 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $news = $this->tag($user, 'News');
         $alreadyTagged = $this->taggedSubscription($user, 'https://a.example.com/rss', [[$news, 0]]);
 
-        $this->sync()->sync($alreadyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($alreadyTagged, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         $freshlyTagged = new Subscription($user, $this->feed('https://b.example.com/rss'), $this->now());
         $this->em->persist($freshlyTagged);
         $this->em->flush();
 
-        $this->sync()->sync($freshlyTagged, [(int) $news->getId()], (int) $user->getId());
+        $this->sync()->sync($freshlyTagged, [$news->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertSame(
@@ -131,7 +122,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->persist($feed);
         $this->em->flush();
 
-        $this->sync()->sync($feed, [(int) $strangerTag->getId()], (int) $user->getId());
+        $this->sync()->sync($feed, [$strangerTag->requireId()], $user->requireId());
         $this->em->flush();
 
         self::assertTrue($feed->getTags()->isEmpty());

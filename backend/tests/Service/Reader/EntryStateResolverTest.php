@@ -85,7 +85,7 @@ final class EntryStateResolverTest extends DbTestCase
     {
         return new EntryListRow(
             $entry,
-            new EntryListRowSubscription((int) $this->subscription->getId(), 'Resolver Feed'),
+            new EntryListRowSubscription($this->subscription->requireId(), 'Resolver Feed'),
             $isHidden,
             false,
             false,
@@ -104,18 +104,18 @@ final class EntryStateResolverTest extends DbTestCase
     public function testResolveSurvivesAConcurrentInsertOfTheSameRow(): void
     {
         $entry = $this->entry('race');
-        $row = $this->rows()->oneRowForUser((int) $entry->getId(), (int) $this->user->getId());
+        $row = $this->rows()->oneRowForUser($entry->requireId(), $this->user->requireId());
         self::assertNotNull($row);
 
         $state = $this->resolver()->resolve($this->user, $row);
         $state->setIsFavorite(true);
 
-        $this->repo()->ensureRow((int) $this->user->getId(), (int) $entry->getId(), false, null);
+        $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), false, null);
 
         $this->em->flush();
         $this->em->clear();
 
-        $persisted = $this->repo()->findOneForUserEntry((int) $this->user->getId(), (int) $entry->getId());
+        $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
         self::assertNotNull($persisted);
         self::assertTrue($persisted->isFavorite());
     }
@@ -130,7 +130,7 @@ final class EntryStateResolverTest extends DbTestCase
         $this->em->clear();
 
         self::assertTrue($state->isHidden());
-        $persisted = $this->repo()->findOneForUserEntry((int) $this->user->getId(), (int) $entry->getId());
+        $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
         self::assertNotNull($persisted);
         self::assertTrue($persisted->isHidden());
         self::assertEquals($watermark, $persisted->getHiddenAt());

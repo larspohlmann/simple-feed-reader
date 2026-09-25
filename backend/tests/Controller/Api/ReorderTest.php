@@ -111,9 +111,9 @@ final class ReorderTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $positions = $this->tagPositions($client, $user);
-        self::assertSame(0, $positions[(int) $c->getId()]);
-        self::assertSame(1, $positions[(int) $a->getId()]);
-        self::assertSame(2, $positions[(int) $b->getId()]);
+        self::assertSame(0, $positions[$c->requireId()]);
+        self::assertSame(1, $positions[$a->requireId()]);
+        self::assertSame(2, $positions[$b->requireId()]);
     }
 
     /**
@@ -140,9 +140,9 @@ final class ReorderTest extends WebTestCase
 
         $this->em()->clear();
         $reload = fn (int $id): Tag => $this->em()->getRepository(Tag::class)->find($id) ?? self::fail("tag $id gone");
-        self::assertSame(0, $reload((int) $c->getId())->getPosition());
-        self::assertSame(1, $reload((int) $a->getId())->getPosition());
-        self::assertSame(2, $reload((int) $b->getId())->getPosition());
+        self::assertSame(0, $reload($c->requireId())->getPosition());
+        self::assertSame(1, $reload($a->requireId())->getPosition());
+        self::assertSame(2, $reload($b->requireId())->getPosition());
     }
 
     /**
@@ -221,9 +221,9 @@ final class ReorderTest extends WebTestCase
 
             return $sub;
         };
-        self::assertSame(0, $reload((int) $s3->getId())->getPosition());
-        self::assertSame(1, $reload((int) $s1->getId())->getPosition());
-        self::assertSame(2, $reload((int) $s2->getId())->getPosition());
+        self::assertSame(0, $reload($s3->requireId())->getPosition());
+        self::assertSame(1, $reload($s1->requireId())->getPosition());
+        self::assertSame(2, $reload($s2->requireId())->getPosition());
     }
 
     public function testFeedOrderWithinTagPersistsPerTagPosition(): void
@@ -256,9 +256,9 @@ final class ReorderTest extends WebTestCase
             self::assertIsInt($sub['tags'][0]['position']);
             $perTag[$sub['id']] = $sub['tags'][0]['position'];
         }
-        self::assertSame(0, $perTag[(int) $s3->getId()]);
-        self::assertSame(1, $perTag[(int) $s1->getId()]);
-        self::assertSame(2, $perTag[(int) $s2->getId()]);
+        self::assertSame(0, $perTag[$s3->requireId()]);
+        self::assertSame(1, $perTag[$s1->requireId()]);
+        self::assertSame(2, $perTag[$s2->requireId()]);
     }
 
     /**
@@ -288,15 +288,15 @@ final class ReorderTest extends WebTestCase
             $subscription = $this->em()->getRepository(Subscription::class)->find($subscriptionId);
             self::assertInstanceOf(Subscription::class, $subscription);
             foreach ($subscription->getSubscriptionTags() as $join) {
-                if ((int) $join->getTag()->getId() === (int) $tag->getId()) {
+                if ($join->getTag()->requireId() === $tag->requireId()) {
                     return $join->getPosition();
                 }
             }
             self::fail('subscription is not tagged');
         };
-        self::assertSame(0, $joinPosition((int) $s3->getId()));
-        self::assertSame(1, $joinPosition((int) $s1->getId()));
-        self::assertSame(2, $joinPosition((int) $s2->getId()));
+        self::assertSame(0, $joinPosition($s3->requireId()));
+        self::assertSame(1, $joinPosition($s1->requireId()));
+        self::assertSame(2, $joinPosition($s2->requireId()));
     }
 
     public function testClearingTheLastTagAppendsTheFeedToTheUntaggedList(): void
@@ -318,7 +318,7 @@ final class ReorderTest extends WebTestCase
         self::assertResponseIsSuccessful();
 
         $this->em()->clear();
-        $reloaded = $this->em()->find(Subscription::class, (int) $tagged->getId());
+        $reloaded = $this->em()->find(Subscription::class, $tagged->requireId());
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertSame(2, $reloaded->getPosition());
     }

@@ -86,7 +86,7 @@ final class EntrySearchTest extends DbTestCase
     private function search(string $input, ?EntryCursor $cursor = null, int $limit = 50): array
     {
         return $this->guidsOf(new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             limit: $limit,
@@ -97,7 +97,7 @@ final class EntrySearchTest extends DbTestCase
     private function unreadSearch(string $input, ?EntryCursor $cursor = null, int $limit = 50): array
     {
         return $this->guidsOf(new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             limit: $limit,
@@ -109,7 +109,7 @@ final class EntrySearchTest extends DbTestCase
     private function oldestFirstSearch(string $input, ?EntryCursor $cursor = null): array
     {
         return $this->guidsOf(new EntrySearchQuery(
-            userId: $this->user->getId() ?? 0,
+            userId: $this->user->requireId(),
             terms: SearchTerms::fromInput($input),
             cursor: $cursor,
             order: ListOrder::OldestFirst,
@@ -198,7 +198,7 @@ final class EntrySearchTest extends DbTestCase
         $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
         $newer = $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
 
-        $cursor = new EntryCursor($newer->getEffectiveDate(), $newer->getId() ?? 0);
+        $cursor = new EntryCursor($newer->getEffectiveDate(), $newer->requireId());
 
         self::assertSame(['older'], $this->search('angular', $cursor));
     }
@@ -222,7 +222,7 @@ final class EntrySearchTest extends DbTestCase
         $this->entry('older-tied-b', 'Angular one', null, '2026-07-10T00:00:00Z');
         $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
 
-        $cursor = new EntryCursor($older->getEffectiveDate(), $older->getId() ?? 0);
+        $cursor = new EntryCursor($older->getEffectiveDate(), $older->requireId());
 
         self::assertSame(
             ['older-tied-a', 'older-tied-b', 'newer'],
@@ -241,7 +241,7 @@ final class EntrySearchTest extends DbTestCase
         $this->em->flush();
 
         self::assertSame(['middle'], $this->unreadSearch('angular', limit: 1));
-        $cursor = new EntryCursor($middle->getEffectiveDate(), $middle->getId() ?? 0);
+        $cursor = new EntryCursor($middle->getEffectiveDate(), $middle->requireId());
         self::assertSame(['older'], $this->unreadSearch('angular', $cursor, 1));
     }
 

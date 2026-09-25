@@ -29,9 +29,9 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $counts = $this->repo()->entryCountsForUser((int) $user->getId());
+        $counts = $this->repo()->entryCountsForUser($user->requireId());
 
-        self::assertSame([(int) $sub->getId() => 3], $counts);
+        self::assertSame([$sub->requireId() => 3], $counts);
     }
 
     public function testLeavesOutSubscriptionsWithoutEntriesAndOtherUsersFeeds(): void
@@ -45,7 +45,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($theirs, 'x', '2026-07-20');
         $this->em->flush();
 
-        self::assertSame([], $this->repo()->entryCountsForUser((int) $user->getId()));
+        self::assertSame([], $this->repo()->entryCountsForUser($user->requireId()));
     }
 
     /**
@@ -66,9 +66,9 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($second, 'c', '2026-07-03');
         $this->em->flush();
 
-        $counts = $this->repo()->entryCountsForUser((int) $user->getId());
+        $counts = $this->repo()->entryCountsForUser($user->requireId());
 
-        self::assertSame([(int) $firstSub->getId() => 1, (int) $secondSub->getId() => 2], $counts);
+        self::assertSame([$firstSub->requireId() => 1, $secondSub->requireId() => 2], $counts);
     }
 
     private function repo(): SubscriptionRepository

@@ -67,15 +67,15 @@ final class UnsubscribeAllTest extends KernelTestCase
         $goingTwo = $this->subscribe($user, $this->feed('https://two.example/feed.xml'));
         $this->em->flush();
 
-        $keptId = (int) $kept->getId();
+        $keptId = $kept->requireId();
 
         $removed = $this->subscriptions->unsubscribeAll([$goingOne, $goingTwo]);
 
         self::assertSame(2, $removed);
         $repository = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repository);
-        self::assertNotNull($repository->findOneOwnedBy($keptId, (int) $user->getId()));
-        self::assertCount(1, $repository->findForUserWithTags((int) $user->getId()));
+        self::assertNotNull($repository->findOneOwnedBy($keptId, $user->requireId()));
+        self::assertCount(1, $repository->findForUserWithTags($user->requireId()));
     }
 
     public function testReclaimsAFeedNobodySubscribesToAnyMore(): void
@@ -84,7 +84,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $orphaned = $this->feed('https://orphan.example/feed.xml');
         $subscription = $this->subscribe($user, $orphaned);
         $this->em->flush();
-        $orphanedId = (int) $orphaned->getId();
+        $orphanedId = $orphaned->requireId();
 
         $this->subscriptions->unsubscribeAll([$subscription]);
 
@@ -106,7 +106,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $ours = $this->subscribe($mine, $shared);
         $this->subscribe($theirs, $shared);
         $this->em->flush();
-        $sharedId = (int) $shared->getId();
+        $sharedId = $shared->requireId();
 
         $this->subscriptions->unsubscribeAll([$ours]);
 
@@ -139,7 +139,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         $ours = $this->subscribe($mine, $shared);
         $alsoOurs = $this->subscribe($theirs, $shared);
         $this->em->flush();
-        $sharedId = (int) $shared->getId();
+        $sharedId = $shared->requireId();
 
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);

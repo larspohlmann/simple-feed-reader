@@ -39,7 +39,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -61,7 +61,7 @@ final class DuplicateCollapseTest extends DbTestCase
         );
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $solo->getId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($solo->requireId(), view: 'all'));
 
         self::assertCount(1, $rows);
         self::assertSame($onlyCopy->getId(), $rows[0]->entry->getId());
@@ -76,7 +76,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->persist($read);
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'unread'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -88,7 +88,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $two = $this->entry($this->feedB, 'b-guid', null, null, '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
 
         self::assertCount(2, $rows);
         $ids = array_map(static fn ($r) => $r->entry->getId(), $rows);
@@ -106,7 +106,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->flush();
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
-            (int) $this->user->getId(),
+            $this->user->requireId(),
             SearchTerms::fromInput('Zugausfälle'),
         ));
 
@@ -122,7 +122,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
         // Meilisearch matched only the higher-id copy; the lower-id copy is not in
         // the set, so it must not win and delete the article from the results.
-        $rows = $this->repo()->rowsByIdsForUser([(int) $higher->getId()], (int) $this->user->getId());
+        $rows = $this->repo()->rowsByIdsForUser([$higher->requireId()], $this->user->requireId());
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -139,7 +139,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->flush();
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
-            (int) $this->user->getId(),
+            $this->user->requireId(),
             SearchTerms::fromInput('Zugausfälle'),
         ));
 
@@ -156,8 +156,8 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->flush();
 
         $rows = $this->repo()->rowsByIdsForUser(
-            [(int) $lower->getId(), (int) $higher->getId()],
-            (int) $this->user->getId(),
+            [$lower->requireId(), $higher->requireId()],
+            $this->user->requireId(),
         );
 
         self::assertCount(1, $rows);
@@ -170,7 +170,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -188,7 +188,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->persist($read);
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery((int) $this->user->getId(), view: 'unread'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());

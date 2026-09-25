@@ -124,6 +124,9 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`ThinControllerRule`** (`tests/PhpStan/ThinControllerRule.php`, run by
   `composer stan`) — controllers carry no private method that does real work; the
   allow-list of permitted trivial helpers lives in the rule and only ever shrinks.
+- **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
+  persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
+  `$entity->getId() ?? …`.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

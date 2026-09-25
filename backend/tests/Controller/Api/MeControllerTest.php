@@ -276,7 +276,7 @@ final class MeControllerTest extends ApiTestCase
     {
         $client = static::createClient();
         $user = $this->factory()->create('bye@example.com');
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->authenticate($client, 'bye@example.com');
 
         $client->request('DELETE', '/api/me');

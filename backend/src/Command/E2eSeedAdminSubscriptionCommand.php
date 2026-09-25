@@ -162,7 +162,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         }
 
         $subscription = new Subscription($admin, $feed, $this->clock->now());
-        $subscription->setPosition($this->subscriptions->nextPositionForUser((int) $admin->getId()));
+        $subscription->setPosition($this->subscriptions->nextPositionForUser($admin->requireId()));
 
         $this->em->persist($subscription);
         $this->em->flush();
@@ -187,7 +187,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
             $needsFlush = true;
         }
 
-        $state = $this->entryStates->findOneForUserEntry((int) $admin->getId(), (int) $entry->getId());
+        $state = $this->entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
         if (null !== $state && $state->isHidden()) {
             $state->setIsHidden(false);
             $needsFlush = true;

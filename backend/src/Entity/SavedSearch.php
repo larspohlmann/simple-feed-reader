@@ -19,6 +19,8 @@ use Doctrine\ORM\Mapping as ORM;
 )]
 class SavedSearch
 {
+    use PersistedId;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

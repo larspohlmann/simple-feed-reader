@@ -28,7 +28,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     {
         $feed = $this->feed('https://orphan.example.com/rss');
 
-        self::assertTrue($this->reclaimer->reclaim((int) $feed->getId()));
+        self::assertTrue($this->reclaimer->reclaim($feed->requireId()));
 
         $this->em->clear();
         self::assertNull($this->em->getRepository(Feed::class)->find($feed->getId()));
@@ -38,7 +38,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     {
         $feed = $this->feed('https://kept.example.com/rss');
         $this->subscribe($this->user('keeper@example.com'), $feed);
-        $feedId = (int) $feed->getId();
+        $feedId = $feed->requireId();
 
         self::assertFalse($this->reclaimer->reclaim($feedId));
 
@@ -59,7 +59,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
         ));
         $this->em->flush();
 
-        $this->reclaimer->reclaim((int) $feed->getId());
+        $this->reclaimer->reclaim($feed->requireId());
 
         $this->em->clear();
         self::assertSame(0, (int) $this->em->createQuery(

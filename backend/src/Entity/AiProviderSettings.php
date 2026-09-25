@@ -21,6 +21,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'user_ai_settings')]
 class AiProviderSettings
 {
+    use PersistedId;
+
     /**
      * The hard ceiling on one tick's wave of provider calls. Raised from 4 to
      * 8: a hosted provider answers a wave of that width without complaint and

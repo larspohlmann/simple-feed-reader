@@ -626,25 +626,16 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertCount(1, $messages);
     }
 
-    public function testPackBatchesFallsBackToZeroForACandidateWithoutAnEntryId(): void
-    {
-        $candidates = [new PromptLine(null, 'No Id', 'Feed D', '2026-01-04', null)];
-
-        $batches = $this->builder->packBatches($candidates, $this->emptyHistory(), $this->settings(32768, 10));
-
-        self::assertSame([[0]], $batches);
-    }
-
     public function testBatchMessagesReturnsTheExactRoleContentStructure(): void
     {
         $history = new RecommendationHistory(
-            favorites: [new PromptLine(null, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
-            kept: [new PromptLine(null, 'Kept Title', 'Feed B', '2026-01-02', null)],
-            viewed: [new PromptLine(null, 'View Title', 'Feed C', '2026-01-02', null)],
+            favorites: [new PromptLine(101, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
+            kept: [new PromptLine(102, 'Kept Title', 'Feed B', '2026-01-02', null)],
+            viewed: [new PromptLine(103, 'View Title', 'Feed C', '2026-01-02', null)],
         );
         $candidateLines = [
             new PromptLine(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
-            new PromptLine(null, 'No Id', 'Feed D', '2026-01-04', null),
+            new PromptLine(6, 'Second', 'Feed D', '2026-01-04', null),
         ];
         $settings = $this->settings(32768, 3);
 
@@ -660,7 +651,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             "FAVORITES (newest first):\n- Fav Title — Feed A — 2026-01-01 — fav desc",
             "CANDIDATES (2 posts — return 2 objects, one per line):\n"
                 . "- [5] Cand Title — Feed C — 2026-01-03 — cand desc\n"
-                . '- [0] No Id — Feed D — 2026-01-04',
+                . '- [6] Second — Feed D — 2026-01-04',
         ]);
 
         self::assertSame(

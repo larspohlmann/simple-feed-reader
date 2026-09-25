@@ -73,7 +73,7 @@ final class OwnedTagsCache implements ResetInterface
         }
 
         foreach ($this->tags->findAllByIdsForUser($missing, $userId) as $tag) {
-            $this->resolvedByUser[$userId][(int) $tag->getId()] = $tag;
+            $this->resolvedByUser[$userId][$tag->requireId()] = $tag;
         }
     }
 }

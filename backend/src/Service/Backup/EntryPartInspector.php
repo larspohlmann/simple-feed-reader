@@ -81,7 +81,7 @@ final readonly class EntryPartInspector
      */
     private function subscribedFeedIds(User $user, array $feedUrls): array
     {
-        $feedIdsByUrl = $this->feeds->idsByUrlsForUser((int) $user->getId(), array_keys($feedUrls));
+        $feedIdsByUrl = $this->feeds->idsByUrlsForUser($user->requireId(), array_keys($feedUrls));
         foreach (array_keys($feedUrls) as $feedUrl) {
             if (!isset($feedIdsByUrl[$feedUrl])) {
                 throw new InvalidBackupException(sprintf(
@@ -116,7 +116,7 @@ final readonly class EntryPartInspector
 
     private function assertFits(User $user, int $newEntryCount): void
     {
-        $current = $this->entries->countInFeedsSubscribedBy((int) $user->getId());
+        $current = $this->entries->countInFeedsSubscribedBy($user->requireId());
         if ($current + $newEntryCount > $this->accountEntryCeiling) {
             throw new BackupDoesNotFitException(sprintf(
                 'The account holds %d entries; this part would add %d, past the %d ceiling.',

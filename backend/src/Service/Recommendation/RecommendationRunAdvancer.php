@@ -111,7 +111,7 @@ final class RecommendationRunAdvancer
      */
     public static function lockNameFor(User $user): string
     {
-        return self::LOCK_NAME_PREFIX . ($user->getId() ?? 0);
+        return self::LOCK_NAME_PREFIX . $user->requireId();
     }
 
     public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReport
@@ -272,7 +272,7 @@ final class RecommendationRunAdvancer
 
     private function snapshotTick(RecommendationRun $run, User $user): RecommendationRunReport
     {
-        $userId = $this->requireUserId($user);
+        $userId = $user->requireId();
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $now = $this->clock->now();
         $candidates = $this->candidateLoader->load($userId, new CandidatePoolRequest(
@@ -310,7 +310,7 @@ final class RecommendationRunAdvancer
         RetryPlan $plan,
     ): RecommendationRunReport {
         $this->markFirstBatchBeforeCallingProvider($run);
-        $userId = $this->requireUserId($user);
+        $userId = $user->requireId();
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $waveSize = $this->waveSize($run, $settings, $driver);
 
@@ -429,7 +429,7 @@ final class RecommendationRunAdvancer
         AiProviderSettings $settings,
         RetryPlan $plan,
     ): RecommendationRunReport {
-        $userId = $this->requireUserId($user);
+        $userId = $user->requireId();
         $effectiveSettings = $this->settingsResolver->forUser($user);
 
         try {
@@ -481,7 +481,7 @@ final class RecommendationRunAdvancer
         AiProviderSettings $settings,
         RetryPlan $plan,
     ): RecommendationRunReport {
-        $userId = $this->requireUserId($user);
+        $userId = $user->requireId();
         $effectiveSettings = $this->settingsResolver->forUser($user);
         $picksLimit = $effectiveSettings->picksLimit;
 
@@ -535,10 +535,5 @@ final class RecommendationRunAdvancer
         $this->entityManager->flush();
 
         return RecommendationRunReport::fromRun($run);
-    }
-
-    private function requireUserId(User $user): int
-    {
-        return $user->getId() ?? throw new \LogicException('Cannot advance a run for an unsaved account.');
     }
 }

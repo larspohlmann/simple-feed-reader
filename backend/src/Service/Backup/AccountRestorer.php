@@ -40,7 +40,7 @@ final readonly class AccountRestorer
 
         $inventory = $this->inspector->inspect($gzipBytes);
         $this->fitCheck->assertFits($inventory, $user);
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->accountReset->reset($user);
 
         return $this->loader->load($this->refreshed($userId), $gzipBytes);

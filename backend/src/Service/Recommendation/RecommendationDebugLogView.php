@@ -48,7 +48,7 @@ final readonly class RecommendationDebugLogView
             return RecommendationDebugLogJson::list([], [], null, []);
         }
 
-        $selectedId = $selected->getId() ?? 0;
+        $selectedId = $selected->requireId();
 
         return RecommendationDebugLogJson::list(
             $this->logs->listForRun($user, $selectedId),

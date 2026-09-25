@@ -61,7 +61,7 @@ final readonly class OwnedSubscriptions
 
         $byId = [];
         foreach ($owned as $subscription) {
-            $byId[(int) $subscription->getId()] = $subscription;
+            $byId[$subscription->requireId()] = $subscription;
         }
 
         return $byId;

@@ -208,7 +208,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
         $survivingRunIds = $this->runIdsHoldingLogs();
         $expected = array_map(
-            static fn (RecommendationRun $run): int => $run->getId() ?? 0,
+            static fn (RecommendationRun $run): int => $run->requireId(),
             \array_slice($seeded, 2),
         );
 
@@ -291,7 +291,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
 
-        return $this->runLogs()->listForRun($this->user, $run->getId() ?? 0);
+        return $this->runLogs()->listForRun($this->user, $run->requireId());
     }
 
     private function runLogs(): RecommendationRunLogRepository

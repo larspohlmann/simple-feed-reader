@@ -291,11 +291,11 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($laterRun, $tooLate, 1, 'reason too late');
 
         $ids = $this->repo()->unreadEntryIdsForYou(
-            (int) $this->user->getId(),
+            $this->user->requireId(),
             new \DateTimeImmutable('2026-08-07T10:30:00Z'),
         );
 
-        self::assertSame([(int) $unread->getId()], $ids);
+        self::assertSame([$unread->requireId()], $ids);
     }
 
     /** A completed run stamped at a time this test chooses — `seedRun` fixes
@@ -448,7 +448,7 @@ final class RecommendationFeedTest extends DbTestCase
         self::assertCount(1, $rows);
         self::assertSame('a', $rows[0]->row->entry->getGuid());
 
-        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
+        self::assertSame(1, $this->repo()->countForYou($this->user->requireId()));
     }
 
     public function testCountForYouIncludingReadCountsReadPicksToo(): void
@@ -463,8 +463,8 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($readState);
         $this->em->flush();
 
-        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
-        self::assertSame(2, $this->repo()->countForYouIncludingRead((int) $this->user->getId()));
+        self::assertSame(1, $this->repo()->countForYou($this->user->requireId()));
+        self::assertSame(2, $this->repo()->countForYouIncludingRead($this->user->requireId()));
     }
 
     public function testCountForYouCountsUnreadPicksOnly(): void
@@ -491,6 +491,6 @@ final class RecommendationFeedTest extends DbTestCase
         $this->item($run, $hidden, 2, 'reason hidden');
         $this->item($run, $underWatermark, 3, 'reason under watermark');
 
-        self::assertSame(1, $this->repo()->countForYou((int) $this->user->getId()));
+        self::assertSame(1, $this->repo()->countForYou($this->user->requireId()));
     }
 }

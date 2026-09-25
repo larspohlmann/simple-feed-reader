@@ -30,16 +30,16 @@ final readonly class SubscriptionTagSync
         // its per-tag position, and a newly added tag appends to the end of
         // that tag's list.
         $resolved = $this->tags->findAllByIdsForUser($requestedTagIds, $userId);
-        $resolvedIds = array_map(static fn (Tag $tag): int => (int) $tag->getId(), $resolved);
+        $resolvedIds = array_map(static fn (Tag $tag): int => $tag->requireId(), $resolved);
 
         foreach ($subscription->getTags() as $existing) {
-            if (!\in_array((int) $existing->getId(), $resolvedIds, true)) {
+            if (!\in_array($existing->requireId(), $resolvedIds, true)) {
                 $subscription->removeTag($existing);
             }
         }
-        $currentIds = array_map(static fn (Tag $tag): int => (int) $tag->getId(), $subscription->getTags()->toArray());
+        $currentIds = array_map(static fn (Tag $tag): int => $tag->requireId(), $subscription->getTags()->toArray());
         foreach ($resolved as $tag) {
-            if (!\in_array((int) $tag->getId(), $currentIds, true)) {
+            if (!\in_array($tag->requireId(), $currentIds, true)) {
                 $subscription->addTag($tag, $this->positions->nextForTag($tag));
             }
         }

@@ -36,19 +36,19 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
 
         // Owner CAN reach the feed by id.
         $ownerResult = $repo->findDue(
-            new DueFeedCriteria($now, (int) $owner->getId(), (int) $feed->getId(), force: true),
+            new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // Stranger CANNOT reach it by id — the subscription EXISTS clause must still apply.
         $strangerResult = $repo->findDue(
-            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(0, $strangerResult);
         self::assertSame(0, $repo->countDue(
-            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
         ));
     }
 
@@ -76,14 +76,14 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         // reach a dead feed by id. This guards against a refactor hoisting the
         // `status != gone` clause out of the else-branch.
         $ownerResult = $repo->findDue(
-            new DueFeedCriteria($now, (int) $owner->getId(), (int) $feed->getId(), force: true),
+            new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // The subscription scope still applies to the gone-feed retry path.
         $strangerResult = $repo->findDue(
-            new DueFeedCriteria($now, (int) $stranger->getId(), (int) $feed->getId(), force: true),
+            new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(0, $strangerResult);

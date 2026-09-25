@@ -26,7 +26,7 @@ final readonly class DigestEntryFinder
 
     public function matchesSince(SavedSearch $search, int $userId, \DateTimeImmutable $since): DigestSearchMatches
     {
-        $ids = $this->members->unreadMemberIdsSince((int) $search->getId(), $userId, $since);
+        $ids = $this->members->unreadMemberIdsSince($search->requireId(), $userId, $since);
         if ($ids === []) {
             return new DigestSearchMatches([], 0);
         }
