@@ -290,6 +290,8 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('back-to-top button', () => {
+    afterEach(() => sessionStorage.clear());
+
     function scrollHostTo(host: HTMLElement, top: number): void {
       Object.defineProperty(host, 'scrollTop', { configurable: true, value: top });
       host.dispatchEvent(new Event('scroll'));
@@ -965,19 +967,33 @@ describe('ReaderViewComponent', () => {
   });
 
   describe('comments section (#1140)', () => {
+    let commentsState: WritableSignal<CommentsState>;
+
     beforeEach(() => {
+      commentsState = signal<CommentsState>({ status: 'idle' });
       TestBed.overrideProvider(CommentsService, {
-        useValue: {
-          state: () => signal<CommentsState>({ status: 'idle' }),
-          load: jest.fn(),
-          reload: jest.fn(),
-        },
+        useValue: { state: () => commentsState, load: jest.fn(), reload: jest.fn() },
       });
     });
 
     function commentsSection(f: { nativeElement: HTMLElement }): Element | null {
       return f.nativeElement.querySelector('article app-entry-comments');
     }
+
+    const loadedComments: CommentsState = {
+      status: 'ok',
+      comments: [
+        {
+          author: 'u/first',
+          authorUrl: null,
+          url: null,
+          publishedAt: null,
+          byEntryAuthor: false,
+          html: '<p>First comment</p>',
+        },
+      ],
+      loadedAt: 0,
+    };
 
     it('follows the article when the entry has a comments feed', () => {
       expect(commentsSection(mount(entry({ comments: 'auto' })))).not.toBeNull();
@@ -991,6 +1007,33 @@ describe('ReaderViewComponent', () => {
       loadMock.mockReturnValue(new Subject<ReaderContent>());
 
       expect(commentsSection(mount(entry({ comments: 'manual' })))).toBeNull();
+    });
+
+    it('falls under the reading focus with the article body (#1150)', async () => {
+      commentsState.set(loadedComments);
+      const f = mount(entry({ comments: 'manual' }));
+      await Promise.resolve();
+      f.detectChanges();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      const list = commentsSection(f)!.querySelector<HTMLElement>('.list')!;
+      expect(list.style.opacity).not.toBe('');
+    });
+
+    it('re-seats the reading focus when the comments arrive late (#1150)', async () => {
+      commentsState.set({ status: 'loading' });
+      const f = mount(entry({ comments: 'manual' }));
+      await Promise.resolve();
+      f.detectChanges();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      commentsState.set(loadedComments);
+      f.detectChanges();
+      const host = commentsSection(f)!;
+      MockResizeObserver.instances.find((observer) => observer.targets.has(host))!.fire();
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      expect(host.querySelector<HTMLElement>('.list')!.style.opacity).not.toBe('');
     });
   });
 

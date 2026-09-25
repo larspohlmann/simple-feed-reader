@@ -9,6 +9,7 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { Observable, Subscription, timeout } from 'rxjs';
@@ -158,6 +159,9 @@ export class ReaderViewComponent {
   readonly close = output<void>();
 
   private readonly content = viewChild<ElementRef<HTMLElement>>('content');
+  private readonly commentsSection = viewChild(EntryCommentsComponent, {
+    read: ElementRef<HTMLElement>,
+  });
   /** Focus target for the corner button on activation — see scrollToTop(). */
   private readonly titleHeading = viewChild<ElementRef<HTMLElement>>('titleHeading');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -199,6 +203,7 @@ export class ReaderViewComponent {
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private applier?: ReadingFocusApplier;
   private contentObs?: ResizeObserver;
+  private commentsObs?: ResizeObserver;
 
   // Touch gestures (full-screen only): a rightward swipe or a pull past the end
   // returns to the list. dragX follows a horizontal swipe; pull follows an
@@ -410,7 +415,7 @@ export class ReaderViewComponent {
       if (!content) return;
       this.applier = new ReadingFocusApplier({
         scroller: this.host.nativeElement,
-        blocks: () => readingBlocks(content),
+        blocks: () => [content, ...this.commentsRoot()].flatMap((root) => readingBlocks(root)),
         curve: ARTICLE_FOCUS_CURVE,
         isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
         units: sectionedUnits(() => this.language.lang()),
@@ -484,6 +489,21 @@ export class ReaderViewComponent {
       this.contentObs = obs;
     });
     this.destroyRef.onDestroy(() => this.contentObs?.disconnect());
+
+    // The comments load after the article, past the applier's last refresh.
+    effect(() => {
+      const comments = this.commentsSection()?.nativeElement;
+      this.commentsObs?.disconnect();
+      this.commentsObs = undefined;
+      if (!comments || typeof ResizeObserver === 'undefined') return;
+      const obs = new ResizeObserver(() => {
+        this.applier?.refresh();
+        this.measureScrollRange();
+      });
+      obs.observe(comments);
+      this.commentsObs = obs;
+    });
+    this.destroyRef.onDestroy(() => this.commentsObs?.disconnect());
     this.destroyRef.onDestroy(() => this.applier?.destroy());
 
     // Touch listeners live on the scroll host. touchmove is non-passive so a
@@ -710,6 +730,12 @@ export class ReaderViewComponent {
     this.contentBottom.set(
       content.getBoundingClientRect().bottom - host.getBoundingClientRect().top + host.scrollTop,
     );
+  }
+
+  // `blocks()` runs inside effects, which must not rerun when the comments mount.
+  private commentsRoot(): HTMLElement[] {
+    const comments = untracked(this.commentsSection);
+    return comments ? [comments.nativeElement] : [];
   }
 
   /** Extract the article's headings into a contents list, giving each a unique
