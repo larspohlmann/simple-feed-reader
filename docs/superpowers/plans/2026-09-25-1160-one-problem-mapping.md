@@ -3007,7 +3007,7 @@ final class AssertionRejectedException extends \RuntimeException implements Pass
 {
     public function __construct(?\Throwable $previous = null)
     {
-        parent::__construct('The passkey assertion failed verification.', 0, $previous);
+        parent::__construct('The passkey assertion failed verification.', previous: $previous);
     }
 }
 ```
@@ -3026,7 +3026,7 @@ final class AttestationRejectedException extends \RuntimeException
 {
     public function __construct(\Throwable $previous)
     {
-        parent::__construct('The passkey attestation failed verification.', 0, $previous);
+        parent::__construct('The passkey attestation failed verification.', previous: $previous);
     }
 }
 ```
@@ -3536,7 +3536,7 @@ final class BackupLoadFailedException extends \RuntimeException
 
     private function __construct(string $message, \Throwable $cause)
     {
-        parent::__construct($message, 0, $cause);
+        parent::__construct($message, previous: $cause);
     }
 }
 ```
@@ -4277,6 +4277,8 @@ final readonly class RateLimitProblems implements ExceptionProblems
 
 Run the Step 3 command again. Expected: `OK (11 tests, 67 assertions)`.
 
+*(Executor amendment, preflight2 #1)* The `(string)` cast is an escaped mutant, because `HeaderBag::get()` stringifies an int. Add `tests/Http/Problem/RateLimitProblemsTest.php`, which asserts `(new RateLimitProblems())->resolve(new RateLimitedException(120))?->headers === ['Retry-After' => '120']` with `assertSame`, and asserts that an unrelated exception resolves to `null`.
+
 - [ ] **Step 5: Fix the two comments that named the old class or the listener.**
 
 `src/Service/RateLimit/RateLimitGuard.php`:
@@ -4419,7 +4421,7 @@ final class OAuthFailedException extends OAuthException
 {
     public function __construct(public readonly string $logDetail, ?\Throwable $previous = null)
     {
-        parent::__construct('The OAuth exchange failed.', 0, $previous);
+        parent::__construct('The OAuth exchange failed.', previous: $previous);
     }
 }
 ```
@@ -4950,7 +4952,8 @@ grep -rn "HttpException" tests/Service tests/Repository
 Expected grep output: nothing. The result:
 - `ExactSetGuardTest` reads `$this->fail('Expected an InvalidSelectionException.');` and `} catch (InvalidSelectionException $exception) {` at lines 41-42, and `$this->expectException(InvalidSelectionException::class);` at line 53.
 - `BulkSubscriptionUpdaterTest` lines 225, 243, 261 and 278, `FeedTagMoveTest` line 135, and `OwnedSubscriptionsTest` lines 74, 86, 98 and 131 each read `$this->expectException(InvalidSelectionException::class);`.
-- `MarkReadServiceTest` lines 98 and 176 read `$this->expectException(RecordNotFoundException::class);`. Line 195 (`testUnknownScopeIsRejected`) reads `$this->expectException(ValidationException::class);`. `ValidationException` is already imported at line 13.
+- `MarkReadServiceTest` lines 98 and 176 read `$this->expectException(RecordNotFoundException::class);`. Line 195 (`testUnknownScopeIsRejected`) reads `$this->expectException(ValidationException::class);`. `ValidationException` is already imported at line 13. *(Executor amendment, preflight2 #4: once perl removes the import on line 16, these lines shift to 97, 175 and 194.)*
+- *(Executor amendment, preflight2 #3)* Asserting only the class lets mutants survive. Rewrite `testUnknownScopeIsRejected` to catch the `ValidationException` and `assertSame(['scope' => ['Unknown scope "bogus".']], $exception->errors)`, using the scope value that test already sends.
 
 - [ ] **Step 3: Run the red tests.**
 
