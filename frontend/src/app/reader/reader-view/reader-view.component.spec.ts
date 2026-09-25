@@ -157,6 +157,12 @@ const failedContent = (over: Partial<ReaderFailure> = {}): ReaderFailure => ({
   ...over,
 });
 
+function stubComments(state: Signal<CommentsState>): void {
+  TestBed.overrideProvider(CommentsService, {
+    useValue: { state: () => state, load: jest.fn(), reload: jest.fn() },
+  });
+}
+
 describe('ReaderViewComponent', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -435,13 +441,7 @@ describe('ReaderViewComponent', () => {
     });
 
     it('adds it when the comments carry a short post past the pane (#1150)', () => {
-      TestBed.overrideProvider(CommentsService, {
-        useValue: {
-          state: () => signal<CommentsState>({ status: 'idle' }),
-          load: jest.fn(),
-          reload: jest.fn(),
-        },
-      });
+      stubComments(signal<CommentsState>({ status: 'idle' }));
       const f = mount(entry({ comments: 'manual' }));
       const comments = (f.nativeElement as HTMLElement).querySelector(
         'app-entry-comments',
@@ -991,9 +991,7 @@ describe('ReaderViewComponent', () => {
 
     beforeEach(() => {
       commentsState = signal<CommentsState>({ status: 'idle' });
-      TestBed.overrideProvider(CommentsService, {
-        useValue: { state: () => commentsState, load: jest.fn(), reload: jest.fn() },
-      });
+      stubComments(commentsState);
     });
 
     function commentsSection(f: { nativeElement: HTMLElement }): Element | null {

@@ -104,6 +104,10 @@ interface TocEntry {
   level: number;
 }
 
+function isPresent(element: HTMLElement | undefined): element is HTMLElement {
+  return element !== undefined;
+}
+
 /** A stable, DOM-id-safe slug for a heading's anchor. */
 function slugify(text: string): string {
   return (
@@ -416,9 +420,7 @@ export class ReaderViewComponent {
       this.applier = new ReadingFocusApplier({
         scroller: this.host.nativeElement,
         blocks: () =>
-          [content, this.commentsHost()]
-            .filter((root): root is HTMLElement => root !== undefined)
-            .flatMap((root) => readingBlocks(root)),
+          [content, this.commentsHost()].filter(isPresent).flatMap((root) => readingBlocks(root)),
         curve: ARTICLE_FOCUS_CURVE,
         isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
         units: sectionedUnits(() => this.language.lang()),
@@ -480,16 +482,15 @@ export class ReaderViewComponent {
     window.addEventListener('resize', onResize, { passive: true });
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
-    // The reading scope's height firms up after first paint (images, fonts, the
-    // original→reader swap) and again once the comments load, past the
-    // applier's last refresh — retarget whenever either host changes.
+    // The scope's height firms up after first paint (images, fonts, the original→reader
+    // swap), and the comments load after the article, past the applier's last refresh.
     effect(() => {
       const content = this.content()?.nativeElement;
       const comments = this.commentsSection()?.nativeElement;
       this.scopeObs?.disconnect();
       this.scopeObs = undefined;
       if (typeof ResizeObserver === 'undefined') return;
-      const targets = [content, comments].filter((el): el is HTMLElement => el !== undefined);
+      const targets = [content, comments].filter(isPresent);
       if (targets.length === 0) return;
       const obs = new ResizeObserver(() => {
         this.applier?.refresh();
