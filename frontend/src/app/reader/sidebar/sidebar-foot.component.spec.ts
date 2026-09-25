@@ -85,6 +85,24 @@ describe('SidebarFootComponent', () => {
     expect(badge?.getAttribute('rel')).toBe('noopener noreferrer');
   });
 
+  it('keeps the update badge out of the version and feedback row', () => {
+    const f = mount();
+    const versions = TestBed.inject(VersionService);
+    versions.latest.set({ version: 'v9.9.9', notesUrl: 'https://github.test/releases/tag/v9.9.9' });
+    versions.updateAvailable.set(true);
+    f.detectChanges();
+
+    const host = f.nativeElement as HTMLElement;
+    const badge = host.querySelector('.update-badge');
+    const meta = host.querySelector('.meta');
+    expect(badge?.parentElement).toBe(host);
+    expect(badge?.nextElementSibling).toBe(meta);
+    expect(Array.from(meta?.children ?? []).map((link) => link.className)).toEqual([
+      'version',
+      'feedback',
+    ]);
+  });
+
   it('shows no update badge when the running build is current', () => {
     const f = mount();
     const versions = TestBed.inject(VersionService);
