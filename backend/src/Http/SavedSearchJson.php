@@ -5,12 +5,11 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\SavedSearch;
+use App\Service\Search\SavedSearchTally;
 
 final class SavedSearchJson
 {
     /**
-     * @param list<int> $unreadEntryIds
-     *
      * @return array{
      *     id: int|null,
      *     slug: string|null,
@@ -19,10 +18,11 @@ final class SavedSearchJson
      *     phrase: bool,
      *     position: int,
      *     unreadEntryIds: list<int>,
+     *     memberCount: int,
      *     includeInDigest: bool,
      * }
      */
-    public static function one(SavedSearch $savedSearch, array $unreadEntryIds): array
+    public static function one(SavedSearch $savedSearch, SavedSearchTally $tally): array
     {
         return [
             'id' => $savedSearch->getId(),
@@ -31,7 +31,8 @@ final class SavedSearchJson
             'wholeWord' => $savedSearch->isWholeWord(),
             'phrase' => $savedSearch->isPhrase(),
             'position' => $savedSearch->getPosition(),
-            'unreadEntryIds' => $unreadEntryIds,
+            'unreadEntryIds' => $tally->unreadEntryIds,
+            'memberCount' => $tally->memberCount,
             'includeInDigest' => $savedSearch->isIncludeInDigest(),
         ];
     }

@@ -20,7 +20,7 @@ use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunStatusPayload;
 use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Search\SavedSearchMatchIds;
+use App\Service\Search\SavedSearchTallies;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -51,7 +51,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'subscriptions list, state counts' => [EntryStateRepository::class, 'stateCountsForUser'];
         yield 'tags list' => [TagRepository::class, 'findForUser'];
         yield 'saved searches list' => [SavedSearchRepository::class, 'findForUser'];
-        yield 'saved searches list, matches' => [SavedSearchMatchIds::class, 'forAll'];
+        yield 'saved searches list, matches' => [SavedSearchTallies::class, 'forAll'];
         yield 'recommendations current, poll' => [RecommendationPollDriver::class, 'current'];
         yield 'recommendations current, payload' => [RecommendationRunStatusPayload::class, 'forReport'];
     }

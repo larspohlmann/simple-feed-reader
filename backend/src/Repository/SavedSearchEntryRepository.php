@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\SavedSearchEntry;
+use App\Entity\Subscription;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -89,6 +90,42 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         }
 
         return $idsBySearch;
+    }
+
+    /**
+     * Saved-search id => how many members, read or not, the caller may see.
+     * Every requested id keeps its key.
+     *
+     * @param list<int> $savedSearchIds
+     *
+     * @return array<int, int>
+     */
+    public function memberCountsBySavedSearch(int $userId, array $savedSearchIds): array
+    {
+        $countsBySearch = array_fill_keys($savedSearchIds, 0);
+        if ($savedSearchIds === []) {
+            return $countsBySearch;
+        }
+
+        /** @var list<array{searchId: int, memberCount: int}> $rows */
+        $rows = $this->getEntityManager()->createQueryBuilder()
+            ->select('ss.id AS searchId', 'COUNT(e.id) AS memberCount')
+            ->from(SavedSearchEntry::class, 'sse')
+            ->join('sse.savedSearch', 'ss')
+            ->join('sse.entry', 'e')
+            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = ss.user')
+            ->andWhere('ss.id IN (:searchIds)')
+            ->andWhere('ss.user = :user')
+            ->groupBy('ss.id')
+            ->setParameter('searchIds', $savedSearchIds)
+            ->setParameter('user', $userId)
+            ->getQuery()
+            ->getScalarResult();
+        foreach ($rows as $row) {
+            $countsBySearch[(int) $row['searchId']] = (int) $row['memberCount'];
+        }
+
+        return $countsBySearch;
     }
 
     /**

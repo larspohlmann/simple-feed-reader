@@ -71,6 +71,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertSame('punk', $created['savedSearch']['term']);
         self::assertTrue($created['savedSearch']['wholeWord']);
         self::assertSame([$entry->getId()], $created['savedSearch']['unreadEntryIds']);
+        self::assertSame(1, $created['savedSearch']['memberCount']);
         $savedId = $created['savedSearch']['id'];
         self::assertIsInt($savedId);
 
@@ -95,6 +96,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertIsArray($list['savedSearches'][0]);
         self::assertSame('punk', $list['savedSearches'][0]['term']);
         self::assertSame([$entry->getId()], $list['savedSearches'][0]['unreadEntryIds']);
+        self::assertSame(1, $list['savedSearches'][0]['memberCount']);
         self::assertSame(0, $list['savedSearches'][0]['position']);
 
         $client->request('DELETE', '/api/saved-searches/' . $savedId, server: $headers);
@@ -119,7 +121,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         // The violation must come from the DTO's own Length constraint
         // (property path "term"), not from the redundant length check
-        // SavedSearchMatchIds's SearchTerms::fromInput() would apply
+        // SavedSearchTallies's SearchTerms::fromInput() would apply
         // downstream (property path "q") — that only fires once the entity
         // is already persisted, which a request this short must never reach.
         $body = $this->payload($client);
@@ -162,7 +164,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         // Same reasoning as the short-term case: the rejection must be the
         // DTO's own Length constraint ("term"), not the redundant downstream
-        // check in SavedSearchMatchIds ("q") that only runs after persist.
+        // check in SavedSearchTallies ("q") that only runs after persist.
         $body = $this->payload($client);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('term', $body['errors']);
