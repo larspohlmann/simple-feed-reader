@@ -3722,3 +3722,23 @@ EOF
 | `WorkerHeartbeatRepository::touch/forget` flush the whole EntityManager | Task 9, tested on both legs (Ruling 2) |
 | `AbstractEntryProjectionRepository` shares code by inheritance | Not in this plan. It moves to #1169 (Ruling 3). |
 | A mechanical guard | Task 1, emptied by Task 8 |
+
+## Execution rulings (implementer, pre-flight 2026-09-26)
+
+- **F1 (Task 2 Step 8):** deleting `->andWhere($this->notProtectedDql())` leaves `:true` bound but unused, so Doctrine throws "Too many parameters" instead of failing the assertion. Break it by turning `OR s.isKept` into `AND s.isKept`.
+- **F2 (Task 5 Step 10):** same problem with `:since`. Break it by turning `>= :since` into `<= :since`.
+- **F3 (Task 7 Step 7):** the "nothing names the old classes" grep has doubled backslashes and can never match. Use single `\\` in the pattern, and confirm it finds the four references at HEAD before the move.
+- **F4 (Task 4, Task 6 Step 5):** in a file this plan rewrites or moves whole (`RecordedCall`), or a class docblock in a touched file (`MarkReadService`), trim docblocks longer than 3 lines to 3 or fewer, keeping only what a reader would otherwise get wrong. CLAUDE.md's cap wins over "unchanged members keep their comments".
+- **F5 (Task 9):** delete `WorkerHeartbeat::touch()` once it has no caller. First grep `src` and `tests` to confirm.
+- **F6 (Task 9 Step 7):** also run these on both database legs:
+  - `tests/Command/RecommendationDrainCommandTest.php`
+  - `tests/EventListener/RecommendationDrainOnTerminateListenerTest.php`
+  - `tests/Service/Recommendation/{RecommendationRunAdvancerTest,CompletionStreamHeartbeatWiringTest,RecommendationDrainSpawnerTest}.php`
+- **F7 (Task 4 Step 8):** bound hiddenAt on both sides with before and after instants, and name the test for what it proves.
+- **F8 (Task 6 Step 7):** `RecordedCallTest` helpers read the run id with `requireId()`.
+- **F9 (Task 8 Step 2):** accepted as written; `DatabaseHealthRepositoryTest` kills a mutant.
+- **F10 (Task 2 Step 5):** `EntryPruner` becomes `final readonly class` if every property allows it.
+- **F11 (Task 1 Step 9):** accepted. §7 names classes created later, and Finishing Step 2 checks that they exist.
+- **F12 (Finishing Step 7):** merge-when-green is covered by Lars's standing authorization for this series, relayed by the planner. It does not cover deploys or tags.
+- **F14 (Task 9 Step 1):** extract the failure-fill loop into one private test helper.
+- **F15 (Task 7 Step 11 and every commit):** run `git status` first and stage explicit paths, never `git add -A` on a directory.
