@@ -230,7 +230,7 @@ final class RestoreEntryLoader
         }
 
         $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
-        $userId = (int) $this->userReference()->getId();
+        $userId = $this->userReference()->requireId();
         $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
         foreach ($held as [$line, $entryId]) {
             if (isset($alreadyStated[$entryId])) {
@@ -252,7 +252,7 @@ final class RestoreEntryLoader
             throw BackupLoadFailedException::duringEntries($e);
         }
 
-        $userId = (int) $this->userReference()->getId();
+        $userId = $this->userReference()->requireId();
         $this->em->clear();
         $this->user = $this->em->getReference(User::class, $userId);
     }
@@ -273,7 +273,7 @@ final class RestoreEntryLoader
             $batch = $this->entries->entriesAfterId($lastId, self::BATCH);
             $created = [];
             foreach ($batch as $entry) {
-                $lastId = (int) $entry->getId();
+                $lastId = $entry->requireId();
                 if (isset($this->createdEntryIds[$lastId])) {
                     $created[] = $entry;
                 }

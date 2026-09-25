@@ -23,6 +23,6 @@ final readonly class SavedSearchTerms
 
     public static function termOf(SavedSearch $savedSearch): SavedSearchTerm
     {
-        return new SavedSearchTerm((int) $savedSearch->getId(), self::of($savedSearch));
+        return new SavedSearchTerm($savedSearch->requireId(), self::of($savedSearch));
     }
 }

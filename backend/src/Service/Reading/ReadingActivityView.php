@@ -39,7 +39,7 @@ final readonly class ReadingActivityView
     public function daily(User $user, ViewerTimeZone $viewer): array
     {
         $window = ReadingWindow::lastDays(self::WINDOW_DAYS, $viewer, $this->nowUtc());
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $countsByDay = $this->countByLocalDay(
             $this->states->viewedAtSince($userId, $window->sinceUtc),

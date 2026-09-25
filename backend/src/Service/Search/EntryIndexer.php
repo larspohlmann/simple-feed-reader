@@ -124,8 +124,8 @@ final class EntryIndexer
     private static function toIndexedEntry(Entry $entry): IndexedEntry
     {
         return new IndexedEntry(
-            id: (int) $entry->getId(),
-            feedId: (int) $entry->getFeed()->getId(),
+            id: $entry->requireId(),
+            feedId: $entry->getFeed()->requireId(),
             title: $entry->getTitle(),
             summary: $entry->getSummary(),
             content: PlainText::fromHtmlBlocks($entry->getContentHtml()),

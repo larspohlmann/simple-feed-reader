@@ -72,7 +72,7 @@ final class EntryIngestor
 
         $deduplicator = new EntryDeduplicator(
             $this->entryRepository->existingGuidHashesForFeed(
-                (int) $feed->getId(),
+                $feed->requireId(),
                 $this->guidHashesOf($entries),
             ),
             $this->entryRepository->findExistingUrlHashes($feed, $this->urlHashesOf($entries)),

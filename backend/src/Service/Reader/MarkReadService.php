@@ -42,7 +42,7 @@ final readonly class MarkReadService
 
         $feedIds = [];
         foreach ($subs as $sub) {
-            $feedIds[] = (int) $sub->getFeed()->getId();
+            $feedIds[] = $sub->getFeed()->requireId();
             $current = $sub->getMarkedReadUntil();
             if ($current === null || $current < $until) {
                 $sub->setMarkedReadUntil($until);
@@ -79,7 +79,7 @@ final readonly class MarkReadService
      */
     private function resolveScope(User $user, string $scope, ?int $id): array
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         return match ($scope) {
             'all' => $this->includedInAllItems($this->subscriptions->findForUserWithTags($userId)),
@@ -125,6 +125,6 @@ final readonly class MarkReadService
         $tag = $this->tags->findOneOwnedBy($id, $userId)
             ?? throw new RecordNotFoundException('No such tag.');
 
-        return (int) $tag->getId();
+        return $tag->requireId();
     }
 }

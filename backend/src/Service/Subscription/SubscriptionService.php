@@ -46,7 +46,7 @@ final readonly class SubscriptionService
      */
     public function unsubscribe(Subscription $subscription): void
     {
-        $feedId = (int) $subscription->getFeed()->getId();
+        $feedId = $subscription->getFeed()->requireId();
 
         $this->em->remove($subscription);
         $this->em->flush();
@@ -76,7 +76,7 @@ final readonly class SubscriptionService
 
         $feedIds = [];
         foreach ($subscriptions as $subscription) {
-            $feedIds[(int) $subscription->getFeed()->getId()] = true;
+            $feedIds[$subscription->getFeed()->requireId()] = true;
             $this->em->remove($subscription);
         }
         $this->em->flush();

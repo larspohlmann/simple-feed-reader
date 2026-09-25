@@ -39,9 +39,9 @@ final class BudgetedFeedQueue
                 return;
             }
 
-            $this->startedFeedIds[] = (int) $feed->getId();
+            $this->startedFeedIds[] = $feed->requireId();
 
-            yield (int) $feed->getId() => new FetchTicket(
+            yield $feed->requireId() => new FetchTicket(
                 $feed->getUrl(),
                 $feed->getEtag(),
                 $feed->getLastModified(),

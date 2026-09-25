@@ -15,9 +15,21 @@ final class BudgetedFeedQueueTest extends TestCase
     private function feeds(int $count): array
     {
         return array_map(
-            static fn (int $index): Feed => new Feed(sprintf('https://feed%d.example.com/rss', $index)),
+            static fn (int $index): Feed => self::withId(
+                new Feed(sprintf('https://feed%d.example.com/rss', $index)),
+                $index,
+            ),
             range(1, $count),
         );
+    }
+
+    // Feed has no id setter: the id only exists once Doctrine assigns it,
+    // and these tests build the row by hand without booting the kernel.
+    private static function withId(Feed $feed, int $id): Feed
+    {
+        (new \ReflectionProperty(Feed::class, 'id'))->setValue($feed, $id);
+
+        return $feed;
     }
 
     public function testYieldsEveryFeedWhenTheBudgetIsAmple(): void
@@ -35,7 +47,7 @@ final class BudgetedFeedQueueTest extends TestCase
     public function testCarriesTheFeedsConditionalGetHeaders(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
-        $feed = new Feed('https://one.example.com/feed');
+        $feed = self::withId(new Feed('https://one.example.com/feed'), 1);
         $feed->setEtag('"v1"');
         $feed->setLastModified('Mon, 20 Jul 2026 08:30:00 GMT');
 

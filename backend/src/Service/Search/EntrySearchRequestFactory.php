@@ -27,7 +27,7 @@ final readonly class EntrySearchRequestFactory
         $this->assertNoUnknownParameters($request);
 
         return new EntrySearchQuery(
-            userId: (int) $user->getId(),
+            userId: $user->requireId(),
             terms: SearchTerms::fromInput($this->singleValue($request, 'q')),
             cursor: EntryCursor::fromRequestValue($this->singleValue($request, 'cursor')),
             limit: $this->limit($request),

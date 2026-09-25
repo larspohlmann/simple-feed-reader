@@ -50,7 +50,7 @@ class SubscriptionTagRepository extends ServiceEntityRepository
 
         $byId = [];
         foreach ($rows as $row) {
-            $byId[(int) $row->getSubscription()->getId()] = $row;
+            $byId[$row->getSubscription()->requireId()] = $row;
         }
 
         return $byId;

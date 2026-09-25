@@ -34,6 +34,6 @@ final readonly class ForYouFeedQuery
 
     public function userId(): int
     {
-        return (int) $this->user->getId();
+        return $this->user->requireId();
     }
 }

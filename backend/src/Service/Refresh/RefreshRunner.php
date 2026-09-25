@@ -221,7 +221,7 @@ final class RefreshRunner implements RefreshRunnerInterface
     {
         $byId = [];
         foreach ($feeds as $feed) {
-            $byId[(int) $feed->getId()] = $feed;
+            $byId[$feed->requireId()] = $feed;
         }
 
         $tally = new RefreshTally();
@@ -382,7 +382,7 @@ final class RefreshRunner implements RefreshRunnerInterface
             if (null !== $feed->getFaviconUrl()) {
                 continue;
             }
-            $baseUrls[(int) $feed->getId()] = $feed->getSiteUrl() ?? $feed->getUrl();
+            $baseUrls[$feed->requireId()] = $feed->getSiteUrl() ?? $feed->getUrl();
         }
 
         if ([] === $baseUrls) {
@@ -391,7 +391,7 @@ final class RefreshRunner implements RefreshRunnerInterface
 
         $icons = $this->faviconResolver->resolveAll($baseUrls);
         foreach ($feeds as $feed) {
-            $icon = $icons[(int) $feed->getId()] ?? null;
+            $icon = $icons[$feed->requireId()] ?? null;
             if (null !== $icon) {
                 $feed->setFaviconUrl($icon);
             }

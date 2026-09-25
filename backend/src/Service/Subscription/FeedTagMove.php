@@ -72,7 +72,7 @@ final readonly class FeedTagMove
 
     private function placeInTag(Subscription $subscription, Tag $tag, ?int $position): void
     {
-        $others = $this->tagFeedsExcept($tag, (int) $subscription->getId());
+        $others = $this->tagFeedsExcept($tag, $subscription->requireId());
         $subscription->addTag($tag);
         $ordered = $this->spliceIn($others, $this->tagJoin($subscription, $tag), $position);
 
@@ -83,7 +83,7 @@ final readonly class FeedTagMove
 
     private function placeInUntaggedList(Subscription $subscription, int $userId, ?int $position): void
     {
-        $others = $this->untaggedFeedsExcept($userId, (int) $subscription->getId());
+        $others = $this->untaggedFeedsExcept($userId, $subscription->requireId());
         $ordered = $this->spliceIn($others, $subscription, $position);
 
         foreach ($ordered as $index => $feed) {
@@ -122,7 +122,7 @@ final readonly class FeedTagMove
         $untagged = array_values(array_filter(
             $this->subscriptions->findForUserWithTags($userId),
             static fn (Subscription $feed): bool => $feed->getTags()->isEmpty()
-                && (int) $feed->getId() !== $subscriptionId,
+                && $feed->requireId() !== $subscriptionId,
         ));
         usort($untagged, static fn (Subscription $a, Subscription $b): int => $a->getPosition() <=> $b->getPosition());
 

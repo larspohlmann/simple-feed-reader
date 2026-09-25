@@ -54,7 +54,7 @@ final readonly class AccountDeleter
     {
         $this->ensureNotTheLastAdmin($user);
 
-        $feedIds = $this->feeds->idsSubscribedByUser((int) $user->getId());
+        $feedIds = $this->feeds->idsSubscribedByUser($user->requireId());
 
         $this->entityManager->remove($user);
         $this->entityManager->flush();

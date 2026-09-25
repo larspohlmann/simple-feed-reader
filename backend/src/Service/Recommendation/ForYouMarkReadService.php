@@ -27,7 +27,7 @@ final readonly class ForYouMarkReadService
 
     public function mark(User $user, \DateTimeImmutable $until): void
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
 
         $this->readMarker->markRead($userId, $this->items->unreadEntryIdsForYou($userId, $until));
     }

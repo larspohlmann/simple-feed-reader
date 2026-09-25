@@ -56,7 +56,7 @@ final readonly class BulkSubscriber
      */
     public function subscribeAll(User $user, iterable $items): BulkSubscribeResult
     {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $state = new BulkSubscribeState(
             existing: $this->subscriptions->countForUser($userId),
             nextSubscriptionPosition: $this->subscriptions->nextPositionForUser($userId),
@@ -91,7 +91,7 @@ final readonly class BulkSubscriber
         // Look up but do NOT create yet: an over-limit batch must not leave orphan
         // Feed rows behind for feeds it never subscribes to.
         $feed = $this->feeds->findOneBy(['url' => $url]);
-        if (null !== $feed && $this->subscriptions->existsForUserAndFeed((int) $user->getId(), (int) $feed->getId())) {
+        if (null !== $feed && $this->subscriptions->existsForUserAndFeed($user->requireId(), $feed->requireId())) {
             return $result->with(alreadySubscribed: 1);
         }
         if ($state->existing >= $this->subscriptionLimits->resolve($user)) {
@@ -138,7 +138,7 @@ final readonly class BulkSubscriber
         $key = mb_strtolower($name);
 
         $created = [];
-        $tag = $state->tagCache[$key] ?? $this->tags->findOneByNameForUser((int) $user->getId(), $name);
+        $tag = $state->tagCache[$key] ?? $this->tags->findOneByNameForUser($user->requireId(), $name);
         if (null === $tag) {
             $tag = new Tag($user, $name);
             $tag->setColor($item->tagStyle?->color);
