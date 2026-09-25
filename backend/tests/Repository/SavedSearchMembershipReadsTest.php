@@ -219,6 +219,19 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         self::assertSame([(int) $theirs->getId() => 0], $counts);
     }
 
+    public function testMemberCountsExcludeAMemberWhoseFeedTheUserDoesNotSubscribeTo(): void
+    {
+        $climate = $this->search('climate');
+        $otherFeed = new Feed('https://elsewhere.example.com/feed.xml');
+        $this->em->persist($otherFeed);
+        $this->em->flush();
+        $this->member($climate, $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed));
+
+        $counts = $this->repo()->memberCountsBySavedSearch((int) $this->user->getId(), [(int) $climate->getId()]);
+
+        self::assertSame([(int) $climate->getId() => 0], $counts);
+    }
+
     public function testTheMarkReadSetHonoursUntil(): void
     {
         $climate = $this->search('climate');
