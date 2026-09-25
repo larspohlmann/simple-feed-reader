@@ -188,4 +188,23 @@ describe('EntryActionsComponent', () => {
     expect(iconSizes(f)).toEqual(['md', 'md', 'md']);
     expect(f.nativeElement.querySelector('app-entry-actions')!.classList).toContain('glyph-md');
   });
+
+  it('fills the star and bookmark only while they are on', () => {
+    const fills = (e: EntryDto) =>
+      mount(e)
+        .debugElement.queryAll(By.directive(IconComponent))
+        .map((d) => d.componentInstance.fill());
+
+    expect(fills(entry({ isFavorite: false, isKept: false }))).toEqual([false, false, false]);
+    expect(fills(entry({ isFavorite: true, isKept: true, isViewed: true }))).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+
+  it('styles every toggle through the shared flag-toggle look', () => {
+    const shared = buttons(mount()).map((b) => b.classList.contains('flag-toggle'));
+    expect(shared).toEqual([true, true, true]);
+  });
 });
