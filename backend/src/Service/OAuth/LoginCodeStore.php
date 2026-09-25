@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
+use App\Service\Auth\Exception\InvalidTokenException;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -107,29 +108,21 @@ final readonly class LoginCodeStore
     }
 
     /**
-     * @param string|null $browserToken the flow cookie the exchange arrived
-     *                                  with, or null if it arrived with none —
-     *                                  which is itself a failure, not a bypass
+     * @param string|null $browserToken the flow cookie the exchange arrived with, or null when it arrived with none
      *
-     * @return int|null the user id, or null if the code is unknown, spent,
-     *                  expired, or presented by a browser that did not complete
-     *                  the flow — the caller must not distinguish those
-     * See the class docblock for what "single use" does and does not promise
-     * when two exchanges arrive at once.
+     * @throws InvalidTokenException when the code is unknown, spent, expired, or presented by another browser
      * @throws InvalidArgumentException
      */
-    public function consume(string $code, ?string $browserToken): ?int
+    public function consume(string $code, ?string $browserToken): int
     {
         $key = self::keyFor($code);
         $item = $this->loginCodeCache->getItem($key);
 
         if (!$item->isHit()) {
-            return null;
+            throw new InvalidTokenException();
         }
 
-        // Deleted before the checks below, so an expired entry is burned rather
-        // than left available to retry. This does not make redemption atomic —
-        // see the class docblock.
+        // Deleted before the checks below, so a failed check burns the code instead of leaving it to retry.
         $this->loginCodeCache->deleteItem($key);
 
         $stored = $item->get();
@@ -139,26 +132,17 @@ final readonly class LoginCodeStore
             || !\is_string($stored['browser_digest'] ?? null)
             || !\is_int($stored['expires_at'] ?? null)
         ) {
-            return null;
+            throw new InvalidTokenException();
         }
 
-        // The browser binding, and the reason this class is not a bearer-token
-        // store. See the class docblock for the login CSRF it closes.
-        //
-        // Positioned AFTER the deleteItem() above, so a wrong token burns the
-        // code rather than leaving it live to guess against again. hash_equals
-        // because the stored digest is secret-derived and a byte-at-a-time
-        // comparison leaks its prefix.
+        // hash_equals: the stored digest is secret-derived, and a byte-wise compare leaks its prefix.
         if (null === $browserToken || !hash_equals($stored['browser_digest'], self::digest($browserToken))) {
-            return null;
+            throw new InvalidTokenException();
         }
 
-        // The pool's own TTL should have removed it already. This check exists
-        // because that TTL runs on the cache backend's clock while the app — and
-        // every test — runs on the injected one. Belt and braces, and it makes
-        // the expiry testable.
+        // The pool's TTL runs on the cache backend's clock; this runs on the injected one.
         if ($stored['expires_at'] < $this->clock->now()->getTimestamp()) {
-            return null;
+            throw new InvalidTokenException();
         }
 
         return $stored['user_id'];

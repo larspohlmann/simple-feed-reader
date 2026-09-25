@@ -12,6 +12,7 @@ use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizer;
 use App\Service\Auth\ActionTokenService;
+use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
 use App\Service\Mail\AccountMailer;
@@ -287,6 +288,24 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertTrue($user->isEmailVerified());
 
         self::assertSame([], $captured);
+    }
+
+    public function testVerifyingWithAnUnknownTokenIsRefused(): void
+    {
+        $service = $this->serviceUnderPolicy($this->policy(confirm: true, approve: false));
+
+        $this->expectException(InvalidTokenException::class);
+
+        $service->verifyEmail('never-issued');
+    }
+
+    public function testResettingWithAnUnknownTokenIsRefused(): void
+    {
+        $service = $this->serviceUnderPolicy($this->policy(confirm: true, approve: false));
+
+        $this->expectException(InvalidTokenException::class);
+
+        $service->resetPassword('never-issued', 'correct-horse-battery');
     }
 
     private function users(): UserRepository

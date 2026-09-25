@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\OAuth\LoginCodeStore;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -39,12 +40,12 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
 
         self::assertSame(42, $this->store->consume($code, self::TOKEN));
-        self::assertNull($this->store->consume($code, self::TOKEN));
+        $this->assertRefused($code, self::TOKEN);
     }
 
-    public function testAnUnknownCodeReturnsNull(): void
+    public function testAnUnknownCodeIsRefused(): void
     {
-        self::assertNull($this->store->consume('not-a-code', self::TOKEN));
+        $this->assertRefused('not-a-code', self::TOKEN);
     }
 
     public function testACodeExpiresAfterThirtySeconds(): void
@@ -52,7 +53,7 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
         $this->clock->modify('+31 seconds');
 
-        self::assertNull($this->store->consume($code, self::TOKEN));
+        $this->assertRefused($code, self::TOKEN);
     }
 
     public function testACodeIsStillValidJustInsideTheWindow(): void
@@ -88,11 +89,12 @@ final class LoginCodeStoreTest extends TestCase
         $this->clock->modify('+20 seconds');
         // A miss on an unrelated key: traffic through the store, touching
         // neither this entry nor its deadline.
-        self::assertNull($this->store->consume('some-other-code', self::TOKEN));
+        $this->assertRefused('some-other-code', self::TOKEN);
 
         $this->clock->modify('+11 seconds');
-        self::assertNull(
-            $this->store->consume($code, self::TOKEN),
+        $this->assertRefused(
+            $code,
+            self::TOKEN,
             'the code outlived T+30, so its deadline moved with the store rather than with its issue',
         );
     }
@@ -114,7 +116,7 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, 'a-different-browsers-token'));
+        $this->assertRefused($code, 'a-different-browsers-token');
     }
 
     /**
@@ -126,7 +128,7 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, null));
+        $this->assertRefused($code, null);
     }
 
     /**
@@ -138,10 +140,10 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, ''));
+        $this->assertRefused($code, '');
 
         $emptyBound = $this->store->issue(7, '');
-        self::assertNull($this->store->consume($emptyBound, self::TOKEN));
+        $this->assertRefused($emptyBound, self::TOKEN);
     }
 
     /**
@@ -153,8 +155,8 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, 'wrong'));
-        self::assertNull($this->store->consume($code, self::TOKEN), 'the code survived a failed binding check');
+        $this->assertRefused($code, 'wrong');
+        $this->assertRefused($code, self::TOKEN, 'the code survived a failed binding check');
     }
 
     /**
@@ -174,6 +176,19 @@ final class LoginCodeStoreTest extends TestCase
             self::assertStringNotContainsString($code, serialize($value));
             self::assertStringNotContainsString(self::TOKEN, (string) $key);
             self::assertStringNotContainsString(self::TOKEN, serialize($value));
+        }
+    }
+
+    private function assertRefused(
+        string $code,
+        ?string $browserToken,
+        string $whyItMatters = 'The code was redeemed.',
+    ): void {
+        try {
+            $this->store->consume($code, $browserToken);
+            self::fail($whyItMatters);
+        } catch (InvalidTokenException) {
+            $this->addToAssertionCount(1);
         }
     }
 }

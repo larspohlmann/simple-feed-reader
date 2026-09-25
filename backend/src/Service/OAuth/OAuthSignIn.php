@@ -74,30 +74,16 @@ final readonly class OAuthSignIn
     }
 
     /**
-     * Leg two: spend the code and mint the JWT. The failures below are ONE
-     * answer on purpose. An unknown code, an already-spent one, an expired
-     * one, one presented by a browser that didn't complete the flow, and one
-     * naming an account deleted since the callback are all
-     * InvalidTokenException — telling them apart could confirm a captured
-     * code was still live, or probe which accounts exist.
-     *
-     * @param string|null $browserToken null when the browser sent no binding
-     *                                  cookie, which the store treats as a
-     *                                  failure rather than as a reason to skip
-     *                                  the check
+     * Leg two: spend the code and mint the JWT; every refusal, a since-deleted account included, is one answer.
      *
      * @return string the JWT for the signed-in user
+     *
+     * @throws InvalidTokenException
      * @throws InvalidArgumentException
      */
     public function redeemLoginCode(string $code, ?string $browserToken): string
     {
-        $userId = $this->loginCodes->consume($code, $browserToken);
-
-        if (null === $userId) {
-            throw new InvalidTokenException();
-        }
-
-        $user = $this->users->find($userId);
+        $user = $this->users->find($this->loginCodes->consume($code, $browserToken));
 
         // The account was deleted, or purged, between the callback and this
         // request. Same answer as a bad code — there is nothing to sign in as,
