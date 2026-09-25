@@ -7,7 +7,6 @@ namespace App\Tests\Http\Problem;
 use App\EventListener\ApiExceptionListener;
 use App\Exception\AccountNotActiveException;
 use App\Exception\AlreadySubscribedException;
-use App\Exception\FeedPreviewApiException;
 use App\Exception\InvalidCredentialsException;
 use App\Exception\InvalidOpmlException;
 use App\Exception\InvalidSetupSecretException;
@@ -16,7 +15,6 @@ use App\Exception\LastAdminException;
 use App\Exception\OAuth\OAuthFailedException;
 use App\Exception\OAuth\UnknownProviderException;
 use App\Exception\RateLimitedException;
-use App\Exception\ScrapingDisabledApiException;
 use App\Exception\SetupUnavailableException;
 use App\Exception\SubscriptionLimitReachedException;
 use App\Exception\TagNameTakenException;
@@ -33,7 +31,10 @@ use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\AttestationRejectedException;
@@ -44,6 +45,7 @@ use App\Service\Passkey\Exception\PasskeyNotFoundException;
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\Exception\UnknownChallengeException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Recommendation\Exception\NoActiveRecommendationRunException;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
@@ -449,7 +451,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'scraping disabled' => [
-            new ScrapingDisabledApiException('Website scraping is turned off for this account.'),
+            new ScrapingDisabledException(),
             [
                 'type' => 'scraping_disabled',
                 'title' => 'Website scraping is disabled',
@@ -458,7 +460,7 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'feed preview failed' => [
-            new FeedPreviewApiException('The feed returned an empty document.'),
+            new FeedPreviewException('The feed returned an empty document.'),
             [
                 'type' => 'feed_preview_failed',
                 'title' => 'Feed preview failed',
@@ -467,11 +469,11 @@ final class ProblemContractTest extends KernelTestCase
             ],
         ];
         yield 'invalid catalog document, message withheld' => [
-            new UnprocessableEntityHttpException('Duplicate feed URL "https://a.example/feed".'),
+            new InvalidCatalogDocumentException('Duplicate feed URL "https://a.example/feed".'),
             ['type' => 'request_error', 'title' => 'Unprocessable Content', 'status' => 422],
         ];
         yield 'no comments feed, message withheld' => [
-            new NotFoundHttpException('The entry has no comments feed.'),
+            new NoCommentsFeedException('The entry has no comments feed.'),
             ['type' => 'not_found', 'title' => 'Not Found', 'status' => 404],
         ];
         yield 'http not found' => [

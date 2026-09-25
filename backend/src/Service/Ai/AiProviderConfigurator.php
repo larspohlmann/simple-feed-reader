@@ -213,7 +213,7 @@ final readonly class AiProviderConfigurator
         try {
             $apiKey = $this->cipher->open($this->identify($settings->getUser()), $settings->getSealedSecret());
         } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableException('The stored API key cannot be opened.', 0, $e);
+            throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $e);
         }
 
         return ProviderCredentials::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);

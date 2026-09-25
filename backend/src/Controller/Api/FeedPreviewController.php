@@ -6,11 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Feed\PreviewFeedRequest;
 use App\Entity\User;
-use App\Exception\FeedPreviewApiException;
-use App\Exception\FeedPreviewException;
-use App\Exception\ScrapingDisabledApiException;
 use App\Http\FeedPreviewJson;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -35,21 +31,7 @@ final readonly class FeedPreviewController
         #[MapRequestPayload] PreviewFeedRequest $request,
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->feedPreviewLimiter, $user);
-
-        try {
-            $preview = $this->previews->preview($user, $request->url, $request->format);
-        } catch (ScrapingDisabledException $e) {
-            // Same status and type as SubscriptionController's refusal: a
-            // client has one signal for "scraping is off for this account",
-            // not a different one per endpoint (see docs/architecture.md §6).
-            throw new ScrapingDisabledApiException($e->getMessage(), $e);
-        } catch (FeedPreviewException $e) {
-            // Rethrow as an ApiException so the listener keeps the message: a
-            // scraped failure carries the extractor's own diagnosis, an xml
-            // failure "That address is not a readable feed." — both reach the
-            // client as the problem document's `detail`.
-            throw new FeedPreviewApiException($e->getMessage(), $e);
-        }
+        $preview = $this->previews->preview($user, $request->url, $request->format);
 
         return new JsonResponse(FeedPreviewJson::one($preview));
     }

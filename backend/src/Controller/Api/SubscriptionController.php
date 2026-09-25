@@ -12,13 +12,11 @@ use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Exception\ScrapingDisabledApiException;
 use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
 use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\FeedTagMove;
 use App\Service\Subscription\OwnedSubscriptions;
@@ -90,15 +88,7 @@ final readonly class SubscriptionController
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
         $tags = $this->tags->findAllByIdsForUser($request->tagIds, (int) $user->getId());
-
-        try {
-            $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
-        } catch (ScrapingDisabledException $e) {
-            // Rethrow as an ApiException so the listener renders a problem+json
-            // document — a bare RuntimeException would otherwise reach
-            // ApiExceptionListener's unhandled branch and 500.
-            throw new ScrapingDisabledApiException($e->getMessage(), $e);
-        }
+        $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {
             $payload = [
