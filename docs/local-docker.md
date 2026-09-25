@@ -254,6 +254,13 @@ work in one browser and silently fail in another, which is exactly the kind of
   container's live index instead. If you ever need a test that genuinely
   exercises the engine, use `composer e2e` (against the real running stack),
   not `vendor/bin/phpunit`.
+- **The containers keep their own kernel cache.** `php` and `worker` set
+  `APP_CACHE_DIR`, so their compiled container and cache pools (rate limiters
+  included) live in `backend/var/cache-docker`, apart from a native run's
+  `backend/var/cache`. That is what lets the native SQLite suite and
+  `docker compose exec php composer test` run at the same time (#1173). It also
+  means a native `bin/console cache:clear` never reaches the stack: clear it
+  with `docker compose exec php bin/console cache:clear`.
 - **Run e2e from the checkout that owns the stack.** Both e2e suites are
   black-box tests against the single shared Docker stack, whose project name is
   pinned to `simple-feed-reader`. The code under test comes from the `./backend`
