@@ -27,7 +27,7 @@ final class FetchResponseTest extends TestCase
         self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
     }
 
-    public function testNotModifiedHasNoBody(): void
+    public function testNotModifiedEchoesItsCachingHeaders(): void
     {
         $response = FetchResponse::notModified('https://example.com/feed', true, '"abc"', null);
 
