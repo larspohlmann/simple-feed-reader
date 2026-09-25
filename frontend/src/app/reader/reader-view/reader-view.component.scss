@@ -244,8 +244,7 @@ app-to-top-button {
   }
 }
 
-.close,
-.actions button {
+.close {
   /* Centre the glyph within the button rather than letting it sit on the
      button's text baseline, where a 20px icon over 15px type hangs low. */
   display: inline-flex;
@@ -342,10 +341,6 @@ article {
   padding: var(--space-2) 0 var(--space-4);
   border-bottom: 1px solid var(--border);
   margin-bottom: var(--space-4);
-}
-
-.actions button.on {
-  color: var(--accent);
 }
 
 .listen {

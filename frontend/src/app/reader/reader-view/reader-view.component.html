@@ -77,8 +77,7 @@
           class="mobile-icon-only"
           type="button"
           [attr.aria-label]="'reader.keep' | transloco"
-          [class.on]="e.isKept"
-          [attr.aria-pressed]="e.isKept"
+          [appFlagToggle]="e.isKept"
           (click)="keep.emit()"
         >
           <app-icon name="bookmark" size="sm" [fill]="e.isKept" />
@@ -89,8 +88,7 @@
           class="mobile-icon-only"
           type="button"
           [attr.aria-label]="'reader.favorite' | transloco"
-          [class.on]="e.isFavorite"
-          [attr.aria-pressed]="e.isFavorite"
+          [appFlagToggle]="e.isFavorite"
           (click)="favorite.emit()"
         >
           <app-icon name="star" size="sm" [fill]="e.isFavorite" />
@@ -135,38 +133,14 @@
         }
       </p>
       <app-entry-pills class="tags" [tags]="tags()" [savedSearches]="e.savedSearches ?? []" />
-      <!-- One language for all three: a fixed glyph, muted while off and accent
-           while on. Labels are static, so `aria-pressed` alone carries the state
-           now that the read button no longer swaps its glyph. -->
-      <div class="actions">
-        <button
-          type="button"
-          [attr.aria-label]="'reader.favorite' | transloco"
-          [class.on]="e.isFavorite"
-          [attr.aria-pressed]="e.isFavorite"
-          (click)="favorite.emit()"
-        >
-          <app-icon name="star" size="md" />
-        </button>
-        <button
-          type="button"
-          [attr.aria-label]="'reader.keep' | transloco"
-          [class.on]="e.isKept"
-          [attr.aria-pressed]="e.isKept"
-          (click)="keep.emit()"
-        >
-          <app-icon name="bookmark" size="md" />
-        </button>
-        <button
-          type="button"
-          [attr.aria-label]="'reader.toggleRead' | transloco"
-          [class.on]="e.isViewed"
-          [attr.aria-pressed]="e.isViewed"
-          (click)="read.emit()"
-        >
-          <app-icon name="check" size="md" />
-        </button>
-      </div>
+      <app-entry-actions
+        class="actions"
+        size="md"
+        [entry]="e"
+        (favorite)="favorite.emit()"
+        (keep)="keep.emit()"
+        (read)="read.emit()"
+      />
       @if (audioAttachment(); as audio) {
         <button class="listen" type="button" (click)="listen()">
           <app-icon name="play_circle" size="lg" />
