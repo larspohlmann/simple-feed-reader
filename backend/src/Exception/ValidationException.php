@@ -4,17 +4,10 @@ declare(strict_types=1);
 
 namespace App\Exception;
 
-final class ValidationException extends ApiException
+final class ValidationException extends \RuntimeException
 {
-    /** @param array<string, list<string>> $errors */
-    public function __construct(array $errors)
+    /** @param array<string, list<string>> $errors field name => messages */
+    public function __construct(public readonly array $errors)
     {
-        parent::__construct(
-            'validation_error',
-            422,
-            'Validation failed',
-            'One or more fields are invalid.',
-            $errors,
-        );
     }
 }
