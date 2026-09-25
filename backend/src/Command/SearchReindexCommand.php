@@ -130,7 +130,7 @@ final class SearchReindexCommand extends Command
             $this->writer->upsert(EntryIndexer::toIndexedEntries($batch));
 
             $indexed += \count($batch);
-            $lastId = (int) $batch[array_key_last($batch)]->getId();
+            $lastId = $batch[array_key_last($batch)]->requireId();
             $io->writeln(\sprintf('  %d indexed', $indexed));
 
             // Keeps the run's memory bounded over a full table: without this,
