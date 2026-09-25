@@ -142,6 +142,22 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
+     * 21 recent fillers put a second entry beyond the floor boundary besides
+     * the stale one — the floor alone would delete both. Only the
+     * `createdAt < :cutoff` condition tells them apart: the stale entry is
+     * old enough to go, the recent one beyond the boundary is not.
+     */
+    public function testAgePassDeletesOnlyTheEntryPastTheCutoff(): void
+    {
+        $feed = $this->feedWithEntries(21, $this->daysAgo(1));
+        $this->seedEntry($feed, 'stale', $this->daysAgo(100));
+
+        self::assertSame(1, $this->pruner->prune());
+        self::assertNull($this->findByGuid($feed, 'stale'));
+        self::assertCount(21, $this->findAllEntries($feed));
+    }
+
+    /**
      * The bulk DQL delete bypasses the ORM's events, which is exactly why
      * EntryPruner tells the index explicitly — this pins that the ids it
      * forgets are the SAME ids the DELETE removed, captured before the row

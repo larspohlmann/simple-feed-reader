@@ -11,6 +11,7 @@ use App\Entity\RecommendationRun;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -88,7 +89,7 @@ final class EntryPruner
         $deleted = 0;
         foreach ($this->feedIdsFetchedBefore($cutoff) as $feedId) {
             $deleted += $this->deleteByIds(
-                $this->deletableIdsPastBoundary((int) $feedId, self::MIN_ENTRIES_PER_FEED, $cutoff),
+                $this->staleIdsPastBoundary((int) $feedId, $cutoff),
             );
         }
 
@@ -118,7 +119,7 @@ final class EntryPruner
         $deleted = 0;
         foreach ($this->feedIdsOverCap($cap) as $feedId) {
             $deleted += $this->deleteByIds(
-                $this->deletableIdsPastBoundary((int) $feedId, $cap, null),
+                $this->idsPastBoundary((int) $feedId, $cap),
             );
         }
 
@@ -152,47 +153,50 @@ final class EntryPruner
         return $feedIds;
     }
 
-    /**
-     * A feed's deletable entries past its `keep`-th newest — the shape both
-     * passes need, differing only in the boundary and whether staleness is
-     * also required.
-     *
-     * The cap pass passes no cutoff: everything past the boundary goes. The
-     * age pass passes one, kept as a separate condition so a feed just over
-     * the floor with mixed-age entries isn't all-or-nothing — only the stale
-     * excess is deleted.
-     *
-     * @return list<int>
-     */
-    private function deletableIdsPastBoundary(int $feedId, int $keep, ?\DateTimeImmutable $cutoff): array
+    /** @return list<int> */
+    private function idsPastBoundary(int $feedId, int $keep): array
     {
-        $boundary = $this->rankBoundaryBeyond($feedId, $keep);
-        if ($boundary === null) {
+        $query = $this->deletablePastBoundary($feedId, $keep);
+
+        return null === $query ? [] : self::idsOf($query);
+    }
+
+    /** @return list<int> */
+    private function staleIdsPastBoundary(int $feedId, \DateTimeImmutable $cutoff): array
+    {
+        $query = $this->deletablePastBoundary($feedId, self::MIN_ENTRIES_PER_FEED);
+        if (null === $query) {
             return [];
         }
 
-        $query = $this->em->createQuery(sprintf(
-            'SELECT e.id FROM %s e
-             WHERE e.feed = :feed
-             AND %s
-             %s
-             AND %s',
-            Entry::class,
-            $this->pastBoundaryDql(),
-            $cutoff === null ? '' : 'AND e.createdAt < :cutoff',
-            $this->notProtectedDql(),
-        ))
+        return self::idsOf($query->andWhere('e.createdAt < :cutoff')->setParameter('cutoff', $cutoff));
+    }
+
+    /** Null when the feed holds no more than `keep` entries. */
+    private function deletablePastBoundary(int $feedId, int $keep): ?QueryBuilder
+    {
+        $boundary = $this->rankBoundaryBeyond($feedId, $keep);
+        if (null === $boundary) {
+            return null;
+        }
+
+        return $this->em->createQueryBuilder()
+            ->select('e.id')
+            ->from(Entry::class, 'e')
+            ->where('e.feed = :feed')
+            ->andWhere($this->pastBoundaryDql())
+            ->andWhere($this->notProtectedDql())
             ->setParameter('feed', $feedId)
             ->setParameter('boundaryCreatedAt', $boundary->createdAt)
             ->setParameter('boundaryId', $boundary->id)
             ->setParameter('true', true, Types::BOOLEAN);
+    }
 
-        if ($cutoff !== null) {
-            $query->setParameter('cutoff', $cutoff);
-        }
-
+    /** @return list<int> */
+    private static function idsOf(QueryBuilder $query): array
+    {
         /** @var list<int> $ids */
-        $ids = $query->getSingleColumnResult();
+        $ids = $query->getQuery()->getSingleColumnResult();
 
         return $ids;
     }
