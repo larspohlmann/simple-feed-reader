@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
-use App\Exception\ApiException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -45,7 +44,7 @@ final readonly class ProblemCatalog
             }
         }
 
-        return $exception instanceof ApiException ? self::legacy($exception) : null;
+        return null;
     }
 
     private static function fromFramework(\Throwable $exception): ?ResolvedProblem
@@ -125,16 +124,5 @@ final readonly class ProblemCatalog
         }
 
         return $errors;
-    }
-
-    private static function legacy(ApiException $exception): ResolvedProblem
-    {
-        return new ResolvedProblem(new ApiProblem(
-            $exception->type,
-            $exception->title,
-            $exception->status,
-            $exception->detail,
-            $exception->errors,
-        ));
     }
 }
