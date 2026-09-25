@@ -7,7 +7,6 @@ namespace App\Http\Problem;
 use App\Exception\AccountNotActiveException;
 use App\Exception\ApiException;
 use App\Exception\RateLimitedException;
-use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -148,10 +147,6 @@ final readonly class ProblemCatalog
         $extensions = [];
         if ($exception instanceof AccountNotActiveException) {
             $extensions['accountStatus'] = $exception->accountStatus;
-        }
-
-        if ($exception instanceof RelyingPartyChangeRequiresConfirmationException) {
-            $extensions['invalidatedPasskeyCount'] = $exception->invalidatedPasskeyCount;
         }
 
         return new ResolvedProblem($problem, $headers, $extensions);

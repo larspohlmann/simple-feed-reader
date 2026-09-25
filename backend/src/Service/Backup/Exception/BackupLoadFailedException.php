@@ -4,21 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Exception;
 
-use App\Exception\ApiException;
-
 /**
- * A restore load failed after grammar validation, when the storage layer
- * refuses a value the grammar accepts (a title too long, an integer too wide,
- * a duplicate key) — BackupReader checks types, never widths — or, as a
- * backstop, on a dangling reference the inspector should already have refused.
- *
- * The wipe-path factories report from an already-emptied account; the additive
- * entries path (duringEntries) leaves every existing row in place, so its
- * message must not raise the data-loss alarm. The cause is chained for the log
- * only — ApiExceptionListener never puts a previous exception into the problem
- * document, so nothing about the schema reaches the client.
+ * A restore load failed after grammar validation: the storage layer refused a value the grammar accepts, or a
+ * reference dangled. The cause is chained for the log only; the message is authored and safe to show.
  */
-final class BackupLoadFailedException extends ApiException
+final class BackupLoadFailedException extends \RuntimeException
 {
     private const string REMEDY = 'The account is now empty. '
         . 'Correct or re-export the backup, then run the restore again.';
@@ -43,25 +33,14 @@ final class BackupLoadFailedException extends ApiException
         return new self(self::ADDITIVE, $cause);
     }
 
-    /**
-     * A reference BackupInspector accepted and the load could not resolve.
-     * Reaching this means the two passes disagree about the same bytes, so
-     * the reason travels as a chained exception for the log.
-     */
+    /** BackupInspector accepted a reference the load cannot resolve: the two passes disagree about the same bytes. */
     public static function danglingReference(string $reason): self
     {
         return new self(self::DANGLING . self::REMEDY, new \LogicException($reason));
     }
 
-    private function __construct(string $detail, \Throwable $cause)
+    private function __construct(string $message, \Throwable $cause)
     {
-        parent::__construct(
-            'backup_load_failed',
-            422,
-            'The backup could not be loaded',
-            $detail,
-            [],
-            $cause,
-        );
+        parent::__construct($message, previous: $cause);
     }
 }
