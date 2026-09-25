@@ -5,19 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationRunLog;
-use Doctrine\DBAL\Connection;
+use App\Repository\CallSettlement;
+use App\Repository\RecommendationCallRepository;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The stream observer for one recorded provider call (#309). Checkpoints go
- * through the DBAL connection, not the EntityManager, on purpose: they must
- * commit immediately (the cheap status poll reads them while the tick
- * request is still blocked on the provider), and they must not flush
- * whatever else the advancer's EntityManager holds dirty mid-tick.
- *
- * Deliberately not readonly: a call is a short-lived session whose one piece
- * of state is when it last checkpointed. `$logId` null means debug is off —
- * the liveness counter is still maintained, the transcript is not.
+ * The stream observer for one recorded provider call (#309). Not readonly: its one piece of state is when it last
+ * checkpointed. `$logId` null means debug is off — liveness is still kept, the transcript is not.
  */
 final class RecordedCall implements CompletionStreamObserver
 {
@@ -61,7 +55,7 @@ final class RecordedCall implements CompletionStreamObserver
     private bool $usageBanked = false;
 
     public function __construct(
-        private readonly Connection $connection,
+        private readonly RecommendationCallRepository $calls,
         private readonly ClockInterface $clock,
         private readonly int $runId,
         private readonly ?int $logId,
@@ -84,21 +78,13 @@ final class RecordedCall implements CompletionStreamObserver
         }
         $this->lastCheckpointAt = $now;
 
-        $this->connection->update(
-            'recommendation_run',
-            ['streamed_chars' => $progress->wireBytes],
-            ['id' => $this->runId],
-        );
+        $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
 
         if (null === $this->logId) {
             return;
         }
 
-        $this->connection->update(
-            'recommendation_run_log',
-            ['response_text' => $progress->answerSoFar, 'wire_bytes' => $progress->wireBytes],
-            ['id' => $this->logId],
-        );
+        $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
     }
 
     public function finishUsable(string $content): void
@@ -127,15 +113,7 @@ final class RecordedCall implements CompletionStreamObserver
         $this->finishUnusable($content);
     }
 
-    /**
-     * The stream died mid-answer: whatever the checkpoints salvaged stays, stamped with
-     * the transport verdict so the panel can say so. The byte count makes that row
-     * readable -- megabytes of reasoning without answering is a different story from a
-     * provider that said nothing, and only this number tells them apart (#320). The
-     * transport exception's message is recorded too, so a stalled or failing run can be
-     * diagnosed from the log alone rather than a live tail of the server's own error
-     * output.
-     */
+    /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */
     public function abortAfterTransportFailure(?string $errorDetail): void
     {
         $this->resetLiveness();
@@ -145,13 +123,10 @@ final class RecordedCall implements CompletionStreamObserver
             return;
         }
 
-        $this->connection->update('recommendation_run_log', [
-            'verdict' => RecommendationRunLog::VERDICT_TRANSPORT_FAILED,
-            'wire_bytes' => $this->wireBytes,
-            'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
-            'error_detail' => $errorDetail,
-            'finish_reason' => $this->finishReason,
-        ], ['id' => $this->logId]);
+        $this->calls->settleTransportFailure(
+            $this->settlement($this->logId, RecommendationRunLog::VERDICT_TRANSPORT_FAILED),
+            $errorDetail,
+        );
     }
 
     private function finish(string $content, string $verdict): void
@@ -163,31 +138,20 @@ final class RecordedCall implements CompletionStreamObserver
             return;
         }
 
-        $this->connection->update('recommendation_run_log', [
-            'response_text' => $content,
-            'verdict' => $verdict,
-            'wire_bytes' => $this->wireBytes,
-            'finished_at' => $this->clock->now()->format('Y-m-d H:i:s'),
-            'finish_reason' => $this->finishReason,
-        ], ['id' => $this->logId]);
+        $this->calls->settleAnswered($this->settlement($this->logId, $verdict), $content);
+    }
+
+    private function settlement(int $logId, string $verdict): CallSettlement
+    {
+        return new CallSettlement($logId, $verdict, $this->wireBytes, $this->clock->now(), $this->finishReason);
     }
 
     private function resetLiveness(): void
     {
-        $this->connection->update('recommendation_run', ['streamed_chars' => 0], ['id' => $this->runId]);
+        $this->calls->recordStreamedChars($this->runId, 0);
     }
 
-    /**
-     * Adds this call's consumption to the run's own totals -- with SQL arithmetic, not
-     * read-modify-write: a #344 wave settles several calls against one run, and two
-     * PHP-side increments would silently lose one of them. Through DBAL rather than the
-     * EntityManager for the reason every write in this class is: the advancer holds other
-     * work dirty mid-tick, and flushing it here would commit that too.
-     *
-     * Runs before the debug guard in both callers on purpose: the RecordedCall exists
-     * whether or not the debug switch is on, and a spending record that only exists with
-     * debug on is the defect #409 was filed about.
-     */
+    /** Runs before the debug guard in both callers: a spend record must not depend on the debug switch (#409). */
     private function bankUsage(): void
     {
         $usage = $this->usage;
@@ -197,42 +161,6 @@ final class RecordedCall implements CompletionStreamObserver
         }
         $this->usageBanked = true;
 
-        $this->connection->executeStatement(
-            'UPDATE recommendation_run SET'
-            . ' prompt_tokens = prompt_tokens + :promptTokens,'
-            . ' completion_tokens = completion_tokens + :completionTokens,'
-            . ' reasoning_tokens = reasoning_tokens + :reasoningTokens,'
-            . ' cached_tokens = cached_tokens + :cachedTokens'
-            . ' WHERE id = :runId',
-            [
-                'promptTokens' => $usage->promptTokens,
-                'completionTokens' => $usage->completionTokens,
-                'reasoningTokens' => $usage->reasoningTokens,
-                'cachedTokens' => $usage->cachedTokens,
-                'runId' => $this->runId,
-            ],
-        );
-
-        $this->bankCost($usage->costNanoCredits);
-    }
-
-    /**
-     * The price, kept out of the token statement so an unpriced call leaves
-     * the column NULL rather than coercing it to 0 — null means "no provider
-     * reported a price", and 0 would claim the run was free. COALESCE is what
-     * makes the first priced call of a run initialise the column.
-     */
-    private function bankCost(?int $costNanoCredits): void
-    {
-        if (null === $costNanoCredits) {
-            return;
-        }
-
-        $this->connection->executeStatement(
-            'UPDATE recommendation_run'
-            . ' SET cost_nano_credits = COALESCE(cost_nano_credits, 0) + :costNanoCredits'
-            . ' WHERE id = :runId',
-            ['costNanoCredits' => $costNanoCredits, 'runId' => $this->runId],
-        );
+        $this->calls->addUsage($this->runId, $usage);
     }
 }

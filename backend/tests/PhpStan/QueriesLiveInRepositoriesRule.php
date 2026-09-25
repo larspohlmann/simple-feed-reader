@@ -42,8 +42,6 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
         'App\\Service\\Backup\\EntryBatchInserter',
         'App\\Service\\ReaderAudit\\AuditSampler',
         'App\\Service\\ReaderAudit\\AuditUserResolver',
-        'App\\Service\\Recommendation\\RecommendationCallRecorder',
-        'App\\Service\\Recommendation\\RecordedCall',
         'App\\Service\\Search\\Membership\\DatabaseSavedSearchMatcher',
         'App\\Service\\Worker\\Handler\\PurgeFailedMessagesHandler',
     ];

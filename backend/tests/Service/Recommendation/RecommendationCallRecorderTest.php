@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\RecommendationCallRecorder;
@@ -45,7 +46,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->recorder = new RecommendationCallRecorder(
             $this->em,
             $this->logs,
-            $this->em->getConnection(),
+            new RecommendationCallRepository($this->em->getConnection()),
             $this->clock,
         );
     }
