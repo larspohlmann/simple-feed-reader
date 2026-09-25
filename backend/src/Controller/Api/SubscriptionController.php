@@ -49,17 +49,17 @@ final readonly class SubscriptionController
     #[Route('', name: 'api_subscriptions_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
-        $counts = $this->entryStates->unreadCountsForUser((int) $user->getId());
-        $entryCounts = $this->subscriptionRepo->entryCountsForUser((int) $user->getId());
-        $flags = $this->entryStates->stateCountsForUser((int) $user->getId());
+        $rows = $this->subscriptionRepo->findForUserWithTags($user->requireId());
+        $counts = $this->entryStates->unreadCountsForUser($user->requireId());
+        $entryCounts = $this->subscriptionRepo->entryCountsForUser($user->requireId());
+        $flags = $this->entryStates->stateCountsForUser($user->requireId());
 
         return new JsonResponse([
             'subscriptions' => array_map(
                 static fn ($s) => SubscriptionJson::one(
                     $s,
-                    $counts[(int) $s->getId()] ?? 0,
-                    $entryCounts[(int) $s->getId()] ?? 0,
+                    $counts[$s->requireId()] ?? 0,
+                    $entryCounts[$s->requireId()] ?? 0,
                 ),
                 $rows,
             ),
@@ -78,16 +78,16 @@ final readonly class SubscriptionController
     public function counts(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse(SubscriptionCountsJson::from(
-            $this->entryStates->unreadCountsForUser((int) $user->getId()),
-            $this->subscriptionRepo->entryCountsForUser((int) $user->getId()),
-            $this->entryStates->stateCountsForUser((int) $user->getId()),
+            $this->entryStates->unreadCountsForUser($user->requireId()),
+            $this->subscriptionRepo->entryCountsForUser($user->requireId()),
+            $this->entryStates->stateCountsForUser($user->requireId()),
         ));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
-        $tags = $this->tags->findAllByIdsForUser($request->tagIds, (int) $user->getId());
+        $tags = $this->tags->findAllByIdsForUser($request->tagIds, $user->requireId());
         $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {
@@ -118,12 +118,12 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSubscriptionRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())
+        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such subscription.');
 
         $sub->setCustomTitle('' === (string) $request->customTitle ? null : $request->customTitle);
 
-        $this->tagSync->sync($sub, $request->tagIds, (int) $user->getId());
+        $this->tagSync->sync($sub, $request->tagIds, $user->requireId());
 
         // null on either flag means "leave the stored value unchanged", matching
         // EntryController::updateState()'s nullable-PATCH convention (#695).
@@ -150,7 +150,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MoveFeedToTagRequest $request,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $sub = $this->subscriptionRepo->findOneOwnedBy($id, $userId)
             ?? throw new NotFoundHttpException('No such subscription.');
 
@@ -170,7 +170,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderSubscriptionsRequest $request,
     ): JsonResponse {
-        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, $user->requireId());
 
         foreach ($request->subscriptionIds as $index => $subscriptionId) {
             $byId[$subscriptionId]->setPosition($index);
@@ -189,7 +189,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] BulkUpdateSubscriptionsRequest $request,
     ): JsonResponse {
-        $changed = $this->bulkUpdater->apply($request, (int) $user->getId());
+        $changed = $this->bulkUpdater->apply($request, $user->requireId());
 
         return new JsonResponse([
             'subscriptions' => array_map(
@@ -208,7 +208,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] BulkUnsubscribeRequest $request,
     ): JsonResponse {
-        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, (int) $user->getId());
+        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, $user->requireId());
 
         return new JsonResponse(['removed' => $this->subscriptions->unsubscribeAll(array_values($byId))]);
     }
@@ -216,7 +216,7 @@ final readonly class SubscriptionController
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $subscription = $this->subscriptionRepo->findOneOwnedBy($id, (int) $user->getId())
+        $subscription = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such subscription.');
 
         $this->subscriptions->unsubscribe($subscription);

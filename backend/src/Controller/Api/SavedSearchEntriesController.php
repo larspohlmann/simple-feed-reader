@@ -49,7 +49,7 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
         #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: $this->savedSearches->idsForUser($userId),
@@ -76,7 +76,7 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] bool $unread = false,
         #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->savedSearches->findOneOwnedBy($id, $userId)
             ?? throw new NotFoundHttpException('No such saved search.');
 
@@ -118,7 +118,7 @@ final readonly class SavedSearchEntriesController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkSavedSearchesReadRequest $request,
     ): JsonResponse {
-        $userId = (int) $user->getId();
+        $userId = $user->requireId();
         $this->savedSearches->findOneOwnedBy($id, $userId)
             ?? throw new NotFoundHttpException('No such saved search.');
         $this->markRead->markOne($user, $id, $request->until);

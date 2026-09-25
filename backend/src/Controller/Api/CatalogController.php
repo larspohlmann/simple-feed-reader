@@ -32,7 +32,7 @@ final readonly class CatalogController
     {
         return new JsonResponse(CatalogJson::many(
             $this->categories->findEnabledWithFeeds(),
-            $this->feeds->subscribedUrlSetForUser((int) $user->getId()),
+            $this->feeds->subscribedUrlSetForUser($user->requireId()),
         ));
     }
 

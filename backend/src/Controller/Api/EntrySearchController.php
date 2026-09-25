@@ -38,7 +38,7 @@ final readonly class EntrySearchController
         $result = $this->search->search($query);
         $rows = $this->savedSearchLoader->loadInto(
             $this->categoryLoader->loadInto($result->rows),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         return new JsonResponse(SearchPage::of($result->withRows($rows), $query->limit));

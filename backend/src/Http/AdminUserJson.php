@@ -97,7 +97,7 @@ final class AdminUserJson
     public static function account(User $user, array $identities): AdminUserAccount
     {
         return new AdminUserAccount(
-            id: (int) $user->getId(),
+            id: $user->requireId(),
             email: $user->getEmail(),
             status: $user->getStatus()->value,
             roles: $user->getRoles(),
@@ -143,19 +143,19 @@ final class AdminUserJson
         $feedsPerTag = [];
         foreach ($subscriptions as $subscription) {
             foreach ($subscription->getTags() as $tag) {
-                $tagId = (int) $tag->getId();
+                $tagId = $tag->requireId();
                 $feedsPerTag[$tagId] = ($feedsPerTag[$tagId] ?? 0) + 1;
             }
         }
 
         return array_map(
             static fn (Tag $tag): AdminUserTag => new AdminUserTag(
-                id: (int) $tag->getId(),
+                id: $tag->requireId(),
                 name: $tag->getName(),
                 color: $tag->getColor(),
                 icon: $tag->getIcon(),
                 position: $tag->getPosition(),
-                feedsCount: $feedsPerTag[(int) $tag->getId()] ?? 0,
+                feedsCount: $feedsPerTag[$tag->requireId()] ?? 0,
             ),
             $tags,
         );
@@ -173,7 +173,7 @@ final class AdminUserJson
     {
         return array_map(
             static fn (Subscription $subscription): AdminUserSubscription => new AdminUserSubscription(
-                id: (int) $subscription->getId(),
+                id: $subscription->requireId(),
                 title: $subscription->getFeed()->getTitle(),
                 customTitle: $subscription->getCustomTitle(),
                 url: $subscription->getFeed()->getUrl(),
@@ -182,7 +182,7 @@ final class AdminUserJson
                 lastFetchedAt: $subscription->getFeed()->getLastFetchedAt()?->format(\DateTimeInterface::ATOM),
                 tags: array_map(
                     static fn (Tag $tag): AdminSubscriptionTag => new AdminSubscriptionTag(
-                        id: (int) $tag->getId(),
+                        id: $tag->requireId(),
                         name: $tag->getName(),
                         color: $tag->getColor(),
                         icon: $tag->getIcon(),

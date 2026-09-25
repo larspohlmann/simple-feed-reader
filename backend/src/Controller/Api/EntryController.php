@@ -88,7 +88,7 @@ final readonly class EntryController
         }
 
         $query = new EntryQuery(
-            userId: (int) $user->getId(),
+            userId: $user->requireId(),
             view: $view,
             subscriptionId: $subscription,
             tagId: $tag,
@@ -99,7 +99,7 @@ final readonly class EntryController
 
         $rows = $this->savedSearchLoader->loadInto(
             $this->categoryLoader->loadInto($this->entryList->listForUser($query)),
-            (int) $user->getId(),
+            $user->requireId(),
         );
 
         return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($view)));
@@ -110,11 +110,11 @@ final readonly class EntryController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
+        $row = $this->entryList->oneRowForUser($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such entry.');
         $row = $this->savedSearchLoader->loadInto(
             $this->categoryLoader->loadInto([$row]),
-            (int) $user->getId(),
+            $user->requireId(),
         )[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);
@@ -162,7 +162,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, (int) $user->getId())
+        $row = $this->entryList->oneRowForUser($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such entry.');
 
         $state = $this->entryStateUpdater->apply($user, $row, $request);
