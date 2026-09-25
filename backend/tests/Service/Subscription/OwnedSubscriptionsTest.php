@@ -10,7 +10,7 @@ use App\Entity\User;
 use App\Service\Subscription\OwnedSubscriptions;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 final class OwnedSubscriptionsTest extends KernelTestCase
 {
@@ -71,7 +71,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $foreign = $this->subscription($theirs, 'https://foreign.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->owned->resolve(
             [(int) $ours->getId(), (int) $foreign->getId()],
             (int) $mine->getId(),
@@ -83,7 +83,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $user = $this->user('owner-missing@example.com');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->owned->resolve([999_999], (int) $user->getId());
     }
 
@@ -95,7 +95,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
 
         $id = (int) $subscription->getId();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->owned->resolve([$id, $id], (int) $user->getId());
     }
 
@@ -128,7 +128,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $foreign = $this->subscription($theirs, 'https://assoc-foreign.example/feed.xml');
         $this->em->flush();
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->owned->resolveWithAssociations(
             [(int) $ours->getId(), (int) $foreign->getId()],
             (int) $mine->getId(),

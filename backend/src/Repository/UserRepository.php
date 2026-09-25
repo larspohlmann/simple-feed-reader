@@ -6,10 +6,10 @@ namespace App\Repository;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
@@ -27,13 +27,9 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
         return $this->findOneBy(['email' => User::normalizeEmail($email)]);
     }
 
-    /**
-     * Fetch by id or fail with a 404. Throwing the HTTP exception here keeps the
-     * lookup-or-404 guard out of the admin controller.
-     */
     public function getById(int $id): User
     {
-        return $this->find($id) ?? throw new NotFoundHttpException('User not found.');
+        return $this->find($id) ?? throw new RecordNotFoundException('User not found.');
     }
 
     /**

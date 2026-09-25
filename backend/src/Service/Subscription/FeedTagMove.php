@@ -10,7 +10,7 @@ use App\Entity\Tag;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 /**
  * Moves one feed between the sidebar's lists the way a drag does: out of the
@@ -67,7 +67,7 @@ final readonly class FeedTagMove
         }
 
         return $this->tags->findOneOwnedBy($tagId, $userId)
-            ?? throw new UnprocessableEntityHttpException('The tag must be one of yours.');
+            ?? throw new InvalidSelectionException('The tag must be one of yours.');
     }
 
     private function placeInTag(Subscription $subscription, Tag $tag, ?int $position): void

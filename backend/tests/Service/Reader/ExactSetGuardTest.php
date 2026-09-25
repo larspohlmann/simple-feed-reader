@@ -6,7 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\ExactSetGuard;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 
 final class ExactSetGuardTest extends TestCase
 {
@@ -38,8 +38,8 @@ final class ExactSetGuardTest extends TestCase
     {
         try {
             (new ExactSetGuard())->assertPermutation([1], [1, 2], 'the exact message');
-            $this->fail('Expected an UnprocessableEntityHttpException.');
-        } catch (UnprocessableEntityHttpException $exception) {
+            $this->fail('Expected an InvalidSelectionException.');
+        } catch (InvalidSelectionException $exception) {
             $this->assertSame('the exact message', $exception->getMessage());
         }
     }
@@ -50,7 +50,7 @@ final class ExactSetGuardTest extends TestCase
      */
     private function assertRejected(array $requested, array $owned): void
     {
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
 
         (new ExactSetGuard())->assertPermutation($requested, $owned, 'rejected');
     }

@@ -8,6 +8,8 @@ use App\EventListener\ApiExceptionListener;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Exception\InvalidCredentialsException;
+use App\Exception\InvalidSelectionException;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Auth\Exception\InvalidSetupSecretException;
 use App\Service\Auth\Exception\InvalidTokenException;
@@ -348,6 +350,19 @@ final class ProblemContractTest extends KernelTestCase
                 'status' => 422,
                 'detail' => 'One or more fields are invalid.',
                 'errors' => ['email' => ['Not a valid email address.']],
+            ],
+        ];
+        yield 'record not found' => [
+            new RecordNotFoundException('No such tag.'),
+            ['type' => 'not_found', 'title' => 'Not Found', 'status' => 404, 'detail' => 'No such tag.'],
+        ];
+        yield 'invalid selection' => [
+            new InvalidSelectionException('subscriptionIds must all be your feeds, without duplicates.'),
+            [
+                'type' => 'request_error',
+                'title' => 'Unprocessable Content',
+                'status' => 422,
+                'detail' => 'subscriptionIds must all be your feeds, without duplicates.',
             ],
         ];
         yield 'unknown sign-in provider' => [

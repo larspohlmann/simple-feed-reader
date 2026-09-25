@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Service\Subscription\FeedTagMove;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
-use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use App\Exception\InvalidSelectionException;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class FeedTagMoveTest extends DbTestCase
@@ -132,7 +132,7 @@ final class FeedTagMoveTest extends DbTestCase
         $foreignTag = $this->tag($stranger, 'Theirs');
         $moved = $this->untaggedSubscription($user, 'https://m.example.com/rss', 0);
 
-        $this->expectException(UnprocessableEntityHttpException::class);
+        $this->expectException(InvalidSelectionException::class);
         $this->move($moved, null, (int) $foreignTag->getId(), 0, (int) $user->getId());
     }
 

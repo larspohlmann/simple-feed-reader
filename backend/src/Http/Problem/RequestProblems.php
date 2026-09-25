@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
+use App\Exception\InvalidSelectionException;
 use App\Exception\ValidationException;
+use App\Repository\Exception\RecordNotFoundException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class RequestProblems implements ExceptionProblems
@@ -18,6 +20,18 @@ final readonly class RequestProblems implements ExceptionProblems
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 'One or more fields are invalid.',
                 $exception->errors,
+            )),
+            $exception instanceof RecordNotFoundException => new ResolvedProblem(new ApiProblem(
+                'not_found',
+                Response::$statusTexts[Response::HTTP_NOT_FOUND],
+                Response::HTTP_NOT_FOUND,
+                $exception->getMessage(),
+            )),
+            $exception instanceof InvalidSelectionException => new ResolvedProblem(new ApiProblem(
+                'request_error',
+                Response::$statusTexts[Response::HTTP_UNPROCESSABLE_ENTITY],
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
             )),
             default => null,
         };

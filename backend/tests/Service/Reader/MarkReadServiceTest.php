@@ -11,10 +11,9 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\ValidationException;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Reader\MarkReadService;
 use App\Tests\DbTestCase;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 final class MarkReadServiceTest extends DbTestCase
 {
@@ -95,7 +94,7 @@ final class MarkReadServiceTest extends DbTestCase
     public function testFeedScopeRequiresOwnership(): void
     {
         [$user] = $this->seed();
-        $this->expectException(NotFoundHttpException::class);
+        $this->expectException(RecordNotFoundException::class);
         $this->service()->mark($user, 'feed', 999999, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
     }
 
@@ -173,7 +172,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->persist($strangerTag);
         $this->em->flush();
 
-        $this->expectException(NotFoundHttpException::class);
+        $this->expectException(RecordNotFoundException::class);
         $this->service()->mark(
             $user,
             'tag',
@@ -192,8 +191,13 @@ final class MarkReadServiceTest extends DbTestCase
     public function testUnknownScopeIsRejected(): void
     {
         [$user] = $this->seed();
-        $this->expectException(BadRequestHttpException::class);
-        $this->service()->mark($user, 'bogus', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+
+        try {
+            $this->service()->mark($user, 'bogus', null, new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+            self::fail('Expected a ValidationException.');
+        } catch (ValidationException $exception) {
+            self::assertSame(['scope' => ['Unknown scope "bogus".']], $exception->errors);
+        }
     }
 
     /**
