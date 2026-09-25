@@ -8,5 +8,6 @@ final class RateLimitedException extends \RuntimeException
 {
     public function __construct(public readonly int $retryAfterSeconds)
     {
+        parent::__construct('Too many attempts. Try again later.');
     }
 }
