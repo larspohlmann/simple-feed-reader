@@ -36,7 +36,7 @@ final readonly class CommentsLoader
         }
 
         try {
-            $body = (string) $this->fetcher->fetch($feedUrl)->body;
+            $body = $this->fetcher->fetch($feedUrl)->modifiedBody();
 
             return CommentsResult::ok($this->comments($entry, $this->parser->parse($body)->entries));
         } catch (FeedThrottledException $e) {

@@ -69,7 +69,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 
-        $body = $response->body ?? '';
+        $body = $response->modifiedBody();
 
         try {
             // Parsing IS the test of "is this a feed?", and the document it

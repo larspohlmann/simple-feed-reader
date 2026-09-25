@@ -59,7 +59,7 @@ final readonly class FeedPreviewService
             throw new FeedPreviewException('The feed could not be loaded.', 0, $e);
         }
 
-        $body = $response->body ?? '';
+        $body = $response->modifiedBody();
         if (trim($body) === '') {
             throw new FeedPreviewException('The feed returned an empty document.');
         }

@@ -70,7 +70,7 @@ final class HttpFeedFetcherTest extends TestCase
         $response = $fetcher->fetch('https://example.com/feed');
 
         self::assertFalse($response->notModified);
-        self::assertSame('<rss/>', $response->body);
+        self::assertSame('<rss/>', $response->modifiedBody());
         self::assertSame('"v1"', $response->etag);
         self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
         self::assertSame('https://example.com/feed', $response->finalUrl);
@@ -149,7 +149,7 @@ final class HttpFeedFetcherTest extends TestCase
 
         self::assertTrue($response->permanentRedirect);
         self::assertSame('https://example.com/new-feed', $response->finalUrl);
-        self::assertSame('<rss/>', $response->body);
+        self::assertSame('<rss/>', $response->modifiedBody());
     }
 
     public function testRevalidatesRedirectTargetAgainstGuard(): void

@@ -10,7 +10,7 @@ final readonly class FetchResponse
         public bool $notModified,
         public string $finalUrl,
         public bool $permanentRedirect,
-        public ?string $body,
+        private ?string $body,
         public ?string $etag,
         public ?string $lastModified,
     ) {
@@ -33,5 +33,10 @@ final readonly class FetchResponse
         ?string $lastModified,
     ): self {
         return new self(true, $finalUrl, $permanentRedirect, null, $etag, $lastModified);
+    }
+
+    public function modifiedBody(): string
+    {
+        return $this->body ?? throw new \LogicException('A not-modified response carries no body.');
     }
 }

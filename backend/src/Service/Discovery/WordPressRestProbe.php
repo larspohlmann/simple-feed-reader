@@ -119,7 +119,7 @@ final readonly class WordPressRestProbe
             return false;
         }
 
-        $posts = json_decode($response->body ?? '', true);
+        $posts = json_decode($response->modifiedBody(), true);
 
         return \is_array($posts) && array_is_list($posts) && [] !== $posts;
     }

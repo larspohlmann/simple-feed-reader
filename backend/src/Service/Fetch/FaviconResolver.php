@@ -101,7 +101,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         }
 
         $response = $outcome->responseOrThrow();
-        $body = $response->body ?? '';
+        $body = $response->modifiedBody();
 
         return '' === trim($body) ? null : $this->pickIcon($body, new PageUrls($response->finalUrl));
     }
