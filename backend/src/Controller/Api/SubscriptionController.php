@@ -53,11 +53,16 @@ final readonly class SubscriptionController
     {
         $rows = $this->subscriptionRepo->findForUserWithTags((int) $user->getId());
         $counts = $this->entryStates->unreadCountsForUser((int) $user->getId());
+        $entryCounts = $this->subscriptionRepo->entryCountsForUser((int) $user->getId());
         $flags = $this->entryStates->stateCountsForUser((int) $user->getId());
 
         return new JsonResponse([
             'subscriptions' => array_map(
-                static fn ($s) => SubscriptionJson::one($s, $counts[(int) $s->getId()] ?? 0),
+                static fn ($s) => SubscriptionJson::one(
+                    $s,
+                    $counts[(int) $s->getId()] ?? 0,
+                    $entryCounts[(int) $s->getId()] ?? 0,
+                ),
                 $rows,
             ),
             'favoritesCount' => $flags['favorites'],
@@ -76,6 +81,7 @@ final readonly class SubscriptionController
     {
         return new JsonResponse(SubscriptionCountsJson::from(
             $this->entryStates->unreadCountsForUser((int) $user->getId()),
+            $this->subscriptionRepo->entryCountsForUser((int) $user->getId()),
             $this->entryStates->stateCountsForUser((int) $user->getId()),
         ));
     }

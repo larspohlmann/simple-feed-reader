@@ -7,7 +7,7 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\SubscriptionRepository;
+use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 
 /**
@@ -15,7 +15,7 @@ use App\Tests\DbTestCase;
  * names a feed the user does not subscribe to, whether the feed row exists
  * for someone else or does not exist at all.
  */
-final class FeedIdsByUrlForUserTest extends DbTestCase
+final class FeedIdsByUrlsForUserTest extends DbTestCase
 {
     public function testReturnsOnlyTheUrlsThisUserSubscribesTo(): void
     {
@@ -32,7 +32,7 @@ final class FeedIdsByUrlForUserTest extends DbTestCase
         $this->em->persist(new Subscription($stranger, $theirs, new \DateTimeImmutable('2026-07-01 00:00:00')));
         $this->em->flush();
 
-        $result = $this->repository()->feedIdsByUrlForUser(
+        $result = $this->repository()->idsByUrlsForUser(
             (int) $user->getId(),
             ['https://mine.example/feed.xml', 'https://theirs.example/feed.xml', 'https://unknown.example/feed.xml'],
         );
@@ -42,13 +42,13 @@ final class FeedIdsByUrlForUserTest extends DbTestCase
 
     public function testAnEmptyListAsksForNothing(): void
     {
-        self::assertSame([], $this->repository()->feedIdsByUrlForUser(1, []));
+        self::assertSame([], $this->repository()->idsByUrlsForUser(1, []));
     }
 
-    private function repository(): SubscriptionRepository
+    private function repository(): FeedRepository
     {
-        $repository = $this->em->getRepository(Subscription::class);
-        self::assertInstanceOf(SubscriptionRepository::class, $repository);
+        $repository = $this->em->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
 
         return $repository;
     }

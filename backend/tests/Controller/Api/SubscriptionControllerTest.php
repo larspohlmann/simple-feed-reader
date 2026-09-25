@@ -141,6 +141,7 @@ final class SubscriptionControllerTest extends WebTestCase
         // subscribe stores it — so the feed arrives with the fixture's two
         // entries rather than empty until some later refresh (#290).
         self::assertSame(2, $first['unreadCount']);
+        self::assertSame(2, $first['entryCount']);
         // Sidebar favourite/kept badge totals travel on the same payload.
         self::assertSame(0, $list['favoritesCount']);
         self::assertSame(0, $list['keptCount']);
@@ -183,7 +184,7 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $counts = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertIsArray($counts);
-        self::assertSame([['id' => $subscriptionId, 'unreadCount' => 2]], $counts['subscriptions']);
+        self::assertSame([['id' => $subscriptionId, 'unreadCount' => 2, 'entryCount' => 2]], $counts['subscriptions']);
         self::assertSame(0, $counts['favoritesCount']);
         self::assertSame(0, $counts['keptCount']);
         self::assertSame(0, $counts['viewedCount']);

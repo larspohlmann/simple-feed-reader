@@ -6,7 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Repository\EntryRepository;
-use App\Repository\SubscriptionRepository;
+use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
@@ -22,7 +22,7 @@ final readonly class EntryPartInspector
 {
     public function __construct(
         private BackupReader $reader,
-        private SubscriptionRepository $subscriptions,
+        private FeedRepository $feeds,
         private EntryRepository $entries,
         private int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES,
     ) {
@@ -81,7 +81,7 @@ final readonly class EntryPartInspector
      */
     private function subscribedFeedIds(User $user, array $feedUrls): array
     {
-        $feedIdsByUrl = $this->subscriptions->feedIdsByUrlForUser((int) $user->getId(), array_keys($feedUrls));
+        $feedIdsByUrl = $this->feeds->idsByUrlsForUser((int) $user->getId(), array_keys($feedUrls));
         foreach (array_keys($feedUrls) as $feedUrl) {
             if (!isset($feedIdsByUrl[$feedUrl])) {
                 throw new InvalidBackupException(sprintf(

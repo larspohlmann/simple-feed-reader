@@ -46,6 +46,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'reader, body clean' => [ReaderBodyCleaner::class, 'clean'];
         yield 'reader, sanitise' => [EntrySanitizer::class, 'sanitize'];
         yield 'subscriptions list' => [SubscriptionRepository::class, 'findForUserWithTags'];
+        yield 'subscriptions list, entry counts' => [SubscriptionRepository::class, 'entryCountsForUser'];
         yield 'subscriptions list, unread counts' => [EntryStateRepository::class, 'unreadCountsForUser'];
         yield 'subscriptions list, state counts' => [EntryStateRepository::class, 'stateCountsForUser'];
         yield 'tags list' => [TagRepository::class, 'findForUser'];
