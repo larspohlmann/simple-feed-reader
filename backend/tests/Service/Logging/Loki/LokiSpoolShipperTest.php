@@ -7,6 +7,7 @@ namespace App\Tests\Service\Logging\Loki;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Tests\Support\StubLokiEndpoint;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -47,9 +48,19 @@ final class LokiSpoolShipperTest extends TestCase
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
     }
 
-    public function testDeletesACorruptFileAndCountsItFailed(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function corruptSpoolContents(): iterable
     {
-        file_put_contents($this->spoolDirectory . '/1-deadbeef.json', 'not json');
+        yield 'not valid JSON' => ['not json'];
+        yield 'a JSON scalar, not a batch' => ['42'];
+    }
+
+    #[DataProvider('corruptSpoolContents')]
+    public function testDeletesACorruptFileAndCountsItFailed(string $contents): void
+    {
+        file_put_contents($this->spoolDirectory . '/1-deadbeef.json', $contents);
         $shipper = new LokiSpoolShipper(
             new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
             $this->spoolDirectory,
