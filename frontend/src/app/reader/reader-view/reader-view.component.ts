@@ -202,8 +202,7 @@ export class ReaderViewComponent {
   private readonly reduceMotion =
     typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   private applier?: ReadingFocusApplier;
-  private contentObs?: ResizeObserver;
-  private commentsObs?: ResizeObserver;
+  private scopeObs?: ResizeObserver;
 
   // Touch gestures (full-screen only): a rightward swipe or a pull past the end
   // returns to the list. dragX follows a horizontal swipe; pull follows an
@@ -262,9 +261,9 @@ export class ReaderViewComponent {
   readonly toolbarHidden = signal(false);
   private lastToolbarScrollTop = 0;
 
-  // The article's scroll range, re-measured whenever the content or the pane
-  // changes size — see measureScrollRange(). The reading tail and the progress
-  // bar are both derived from it rather than measuring the DOM for themselves.
+  // The reading scope's extent, re-measured whenever the content, the comments
+  // or the pane changes size — see measureScrollRange(). The tail keys on the
+  // scope's bottom (body + comments); the progress bar keys on the body alone.
   private readonly contentBottom = signal(0);
   private readonly readingBottom = signal(0);
   private readonly viewportHeight = signal(0);
@@ -416,7 +415,10 @@ export class ReaderViewComponent {
       if (!content) return;
       this.applier = new ReadingFocusApplier({
         scroller: this.host.nativeElement,
-        blocks: () => [content, ...this.commentsRoot()].flatMap((root) => readingBlocks(root)),
+        blocks: () =>
+          [content, this.commentsHost()]
+            .filter((root): root is HTMLElement => root !== undefined)
+            .flatMap((root) => readingBlocks(root)),
         curve: ARTICLE_FOCUS_CURVE,
         isActive: () => this.readingFocus.enabled() && !this.screen.isWide() && !this.reduceMotion,
         units: sectionedUnits(() => this.language.lang()),
@@ -478,33 +480,25 @@ export class ReaderViewComponent {
     window.addEventListener('resize', onResize, { passive: true });
     this.destroyRef.onDestroy(() => window.removeEventListener('resize', onResize));
 
-    // The article's height firms up after first paint (images, fonts, the
-    // original→reader swap), and whether it overflows can change with it.
+    // The reading scope's height firms up after first paint (images, fonts, the
+    // original→reader swap) and again once the comments load, past the
+    // applier's last refresh — retarget whenever either host changes.
     effect(() => {
-      const el = this.content()?.nativeElement;
-      this.contentObs?.disconnect();
-      this.contentObs = undefined;
-      if (!el || typeof ResizeObserver === 'undefined') return;
-      const obs = new ResizeObserver(() => this.measureScrollRange());
-      obs.observe(el);
-      this.contentObs = obs;
-    });
-    this.destroyRef.onDestroy(() => this.contentObs?.disconnect());
-
-    // The comments load after the article, past the applier's last refresh.
-    effect(() => {
+      const content = this.content()?.nativeElement;
       const comments = this.commentsSection()?.nativeElement;
-      this.commentsObs?.disconnect();
-      this.commentsObs = undefined;
-      if (!comments || typeof ResizeObserver === 'undefined') return;
+      this.scopeObs?.disconnect();
+      this.scopeObs = undefined;
+      if (typeof ResizeObserver === 'undefined') return;
+      const targets = [content, comments].filter((el): el is HTMLElement => el !== undefined);
+      if (targets.length === 0) return;
       const obs = new ResizeObserver(() => {
         this.applier?.refresh();
         this.measureScrollRange();
       });
-      obs.observe(comments);
-      this.commentsObs = obs;
+      for (const target of targets) obs.observe(target);
+      this.scopeObs = obs;
     });
-    this.destroyRef.onDestroy(() => this.commentsObs?.disconnect());
+    this.destroyRef.onDestroy(() => this.scopeObs?.disconnect());
     this.destroyRef.onDestroy(() => this.applier?.destroy());
 
     // Touch listeners live on the scroll host. touchmove is non-passive so a
@@ -716,9 +710,9 @@ export class ReaderViewComponent {
   }
 
   /**
-   * Measure how far the article reaches inside its pane. Takes the article's own
-   * content box — never the panel's, which already includes the tail and would
-   * feed the measurement back into itself.
+   * Measure how far the article and its comments reach inside the pane. Takes
+   * the article's own content box — never the panel's, which already includes
+   * the tail and would feed the measurement back into itself.
    */
   private measureScrollRange(): void {
     this.viewportHeight.set(this.host.nativeElement.clientHeight);
@@ -729,7 +723,7 @@ export class ReaderViewComponent {
       return;
     }
     this.contentBottom.set(this.bottomInScroller(content));
-    this.readingBottom.set(this.bottomInScroller(this.commentsRoot()[0] ?? content));
+    this.readingBottom.set(this.bottomInScroller(this.commentsHost() ?? content));
   }
 
   private bottomInScroller(element: HTMLElement): number {
@@ -740,9 +734,8 @@ export class ReaderViewComponent {
   }
 
   // `blocks()` runs inside effects, which must not rerun when the comments mount.
-  private commentsRoot(): HTMLElement[] {
-    const comments = untracked(this.commentsSection);
-    return comments ? [comments.nativeElement] : [];
+  private commentsHost(): HTMLElement | undefined {
+    return untracked(this.commentsSection)?.nativeElement;
   }
 
   /** Extract the article's headings into a contents list, giving each a unique
