@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Enum\ScrapeFallback;
+use App\Service\Discovery\ScrapeFailureReason;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
@@ -192,7 +193,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $result = $this->discovery($fetcher)->discover('https://forbidden.example.com', ScrapeFallback::Enabled);
 
         self::assertNull($result->feed);
-        self::assertSame('blocked', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Blocked, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -223,7 +224,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         );
 
         self::assertNull($result->feed);
-        self::assertSame('blocked', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Blocked, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -282,7 +283,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/typo', ScrapeFallback::Enabled);
 
-        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -298,7 +299,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $result = $this->discovery($fetcher)->discover('https://www.reddit.com/r/Bitwig/', ScrapeFallback::Enabled);
 
         // Its own reason: "slow down" is not "you may not have this".
-        self::assertSame('throttled', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Throttled, $result->scrapeFailureReason);
         self::assertSame(['https://www.reddit.com/r/Bitwig/'], $fetcher->fetchedUrls);
     }
 
@@ -313,7 +314,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://outage.example.com', ScrapeFallback::Enabled);
 
-        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
         self::assertSame(['https://outage.example.com'], $fetcher->fetchedUrls);
     }
 
@@ -328,7 +329,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://nxdomain.example.com', ScrapeFallback::Enabled);
 
-        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
         self::assertSame(['https://nxdomain.example.com'], $fetcher->fetchedUrls);
     }
@@ -340,7 +341,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://internal.example.com', ScrapeFallback::Enabled);
 
-        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -355,7 +356,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $result = $this->discovery($fetcher)->discover('https://example.com/plain', ScrapeFallback::Enabled);
 
         self::assertNull($result->feed);
-        self::assertSame('not_scrapable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::NotScrapable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -365,7 +366,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/empty', ScrapeFallback::Enabled);
 
-        self::assertSame('not_scrapable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::NotScrapable, $result->scrapeFailureReason);
         self::assertSame([], $result->candidates);
     }
 
@@ -403,6 +404,6 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $result = $this->discovery($fetcher)->discover('https://example.com/gone', ScrapeFallback::Disabled);
 
-        self::assertSame('unreachable', $result->scrapeFailureReason);
+        self::assertSame(ScrapeFailureReason::Unreachable, $result->scrapeFailureReason);
     }
 }

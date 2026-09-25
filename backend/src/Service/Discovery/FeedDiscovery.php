@@ -61,12 +61,12 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         } catch (FeedThrottledException) {
             // The site has just asked us to slow down; the parallel guesses are
             // the opposite of that, and each would draw its own 429.
-            return FeedDiscoveryResult::scrapeFailed('throttled');
+            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Throttled);
         } catch (FeedUnreachableException $e) {
             return $this->feedTheSiteMightStillServe($url, $e);
         } catch (FetchException) {
             // Gone, over-size, SSRF-blocked: nothing usable ever arrived.
-            return FeedDiscoveryResult::scrapeFailed('unreachable');
+            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 
         $body = $response->body ?? '';
@@ -91,7 +91,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         // scrapes to nothing, so every step below would end in "no feed here" —
         // which is the one thing this answer does not mean.
         if ($this->botChallenge->wasReturned($body)) {
-            return FeedDiscoveryResult::scrapeFailed('blocked');
+            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Blocked);
         }
 
         // Native feeds first: an <link rel="alternate"> RSS/Atom is the site's
@@ -141,13 +141,14 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     ): FeedDiscoveryResult {
         $status = $error->statusCode;
         if (null === $status || $status >= 500) {
-            return FeedDiscoveryResult::scrapeFailed('unreachable');
+            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 
-        return $this->probedFeed($url)
-            ?? FeedDiscoveryResult::scrapeFailed(
-                \in_array($status, self::BLOCKED_STATUSES, true) ? 'blocked' : 'unreachable',
-            );
+        $reason = \in_array($status, self::BLOCKED_STATUSES, true)
+            ? ScrapeFailureReason::Blocked
+            : ScrapeFailureReason::Unreachable;
+
+        return $this->probedFeed($url) ?? FeedDiscoveryResult::scrapeFailed($reason);
     }
 
     /**
@@ -177,7 +178,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             // Deliberately wider than HtmlExtractionException: an extractor
             // bug on exotic markup must degrade to "not scrapable", not 500
             // the subscribe endpoint.
-            return FeedDiscoveryResult::scrapeFailed('not_scrapable');
+            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::NotScrapable);
         }
 
         return FeedDiscoveryResult::candidates([
