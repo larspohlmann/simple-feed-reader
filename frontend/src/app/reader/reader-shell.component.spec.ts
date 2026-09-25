@@ -90,6 +90,7 @@ describe('ReaderShellComponent', () => {
         createdAt: 'x',
         tags: [],
         unreadCount: 2,
+        entryCount: 9,
         includeInAllItems: true,
         includeInForYou: true,
       },
@@ -1428,6 +1429,7 @@ describe('ReaderShellComponent', () => {
   // must label it "unread" too — not "items" — the way All items, a tag and a
   // feed already do. Otherwise the same number is described two ways.
   it('titles the for-you count as unread, matching the sidebar badge', () => {
+    localStorage.setItem('sfr.user.1.unread-only', '1');
     const f = boot();
     TestBed.inject(RecommendationsService).report.set({
       status: 'completed',
@@ -1450,10 +1452,34 @@ describe('ReaderShellComponent', () => {
     expect(list.componentInstance.titleCount()).toEqual({ value: 7, counts: 'unread' });
   });
 
+  it('titles the for-you count as its total when All posts is on', () => {
+    const f = boot();
+    TestBed.inject(RecommendationsService).report.set({
+      status: 'completed',
+      batchesTotal: 1,
+      batchesDone: 1,
+      error: null,
+      background: false,
+      streamedChars: 0,
+      elapsedSeconds: null,
+      forYou: { itemCount: 7, totalCount: 20, generatedAt: null, newestRunId: null },
+    });
+    qp.next(convertToParamMap({ view: 'for-you' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    const list = f.debugElement.query(By.directive(EntryListComponent));
+    expect(list.componentInstance.titleCount()).toEqual({ value: 20, counts: 'items' });
+  });
+
   // The reader route declares DYNAMIC_TITLE, which tells the title strategy to
   // stand back — so if the reader ever stopped naming the tab, nothing else
   // would, and #549 would be back through the door built for the reader.
   it('names the browser tab after the list on screen, and what it holds', () => {
+    localStorage.setItem('sfr.user.1.unread-only', '1');
     const f = boot();
     f.detectChanges();
 
@@ -1461,6 +1487,7 @@ describe('ReaderShellComponent', () => {
   });
 
   it('names the browser tab after the selected feed and its unread count', () => {
+    localStorage.setItem('sfr.user.1.unread-only', '1');
     const f = boot();
     qp.next(convertToParamMap({ subscription: '5' }));
     f.detectChanges();
@@ -1475,11 +1502,62 @@ describe('ReaderShellComponent', () => {
   // The heading shows the same number as the tab, from the same computed — two
   // resolutions of "how much is in this list" would drift apart.
   it('hands the list heading the same count the tab shows', () => {
+    localStorage.setItem('sfr.user.1.unread-only', '1');
     const f = boot();
     f.detectChanges();
 
     const list = f.debugElement.query(By.directive(EntryListComponent));
     expect(list.componentInstance.titleCount()).toEqual({ value: 2, counts: 'unread' });
+  });
+
+  // Task 5 (#1154): the heading and tab total flip with the switch — the
+  // sidebar's unread number under "Only unread", the list's total otherwise.
+  it('counts every post in the heading and tab when All posts is on', () => {
+    const f = boot();
+    f.detectChanges();
+
+    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+    expect(TestBed.inject(Title).getTitle()).toBe('All items (9) | simple feed reader');
+  });
+
+  it('counts every post of a feed when All posts is on', () => {
+    const f = boot();
+    qp.next(convertToParamMap({ subscription: '5' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+  });
+
+  it('counts every post of a tag when All posts is on', () => {
+    const f = bootWith([
+      {
+        ...subsBody.subscriptions[0],
+        tags: [{ id: 3, name: 'Tech', color: null, icon: null, position: 0 }],
+      },
+    ]);
+    qp.next(convertToParamMap({ tag: '3' }));
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+    f.detectChanges();
+
+    expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
+  });
+
+  it('switches the count when the unread switch flips', () => {
+    const f = boot();
+    TestBed.inject(UnreadFilterService).set(true);
+    f.detectChanges();
+    ctrl
+      .expectOne((r) => r.url === 'https://api.test/api/entries')
+      .flush({ entries: [], nextCursor: null });
+
+    expect(f.componentInstance.titleCount()).toEqual({ value: 2, counts: 'unread' });
   });
 
   // A search names itself with its own result count, in the heading and in the
@@ -3149,6 +3227,7 @@ describe('ReaderShellComponent', () => {
     });
 
     it('counts the same unread total the sidebar row shows', () => {
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = bootWithSavedSearches([
         {
           id: 1,
@@ -3175,6 +3254,35 @@ describe('ReaderShellComponent', () => {
       ]);
 
       expect(f.componentInstance.titleCount()).toEqual({ value: 5, counts: 'unread' });
+    });
+
+    it('counts the combined member total when All posts is on', () => {
+      const f = bootWithSavedSearches([
+        {
+          id: 1,
+          slug: '1-a',
+          term: 'a',
+          wholeWord: false,
+          phrase: false,
+          position: 0,
+          unreadEntryIds: [1, 2],
+          memberCount: 4,
+          includeInDigest: false,
+        },
+        {
+          id: 2,
+          slug: '2-b',
+          term: 'b',
+          wholeWord: false,
+          phrase: false,
+          position: 1,
+          unreadEntryIds: [3, 4, 5],
+          memberCount: 5,
+          includeInDigest: false,
+        },
+      ]);
+
+      expect(f.componentInstance.titleCount()).toEqual({ value: 9, counts: 'items' });
     });
   });
 
@@ -3240,10 +3348,27 @@ describe('ReaderShellComponent', () => {
     });
 
     it('titles the list with the saved search term and counts its unread total', () => {
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = bootSingleSavedSearch();
 
       expect(f.componentInstance.title()).toBe('climate');
       expect(f.componentInstance.titleCount()).toEqual({ value: 3, counts: 'unread' });
+    });
+
+    it('counts the saved search member total when All posts is on', () => {
+      const f = boot();
+      f.componentInstance.savedSearchesStore.load();
+      ctrl
+        .expectOne('https://api.test/api/saved-searches')
+        .flush({ savedSearches: [{ ...savedClimate, memberCount: 6 }] });
+      pp.next(convertToParamMap({ savedSearch: '4-climate' }));
+      f.detectChanges();
+      ctrl
+        .expectOne((r) => r.url === 'https://api.test/api/entries/saved-searches/4')
+        .flush({ entries: [], nextCursor: null });
+      f.detectChanges();
+
+      expect(f.componentInstance.titleCount()).toEqual({ value: 6, counts: 'items' });
     });
 
     it('turns on Mark all read and the unread filter', () => {
@@ -3713,6 +3838,7 @@ describe('ReaderShellComponent', () => {
     // the tab title all read it. A tick moves the store, so it moves all three
     // at once — none of them can be refreshed and leave another behind.
     it('moves the sidebar badge, the list heading and the tab title on one tick', async () => {
+      localStorage.setItem('sfr.user.1.unread-only', '1');
       const f = boot();
       expect(TestBed.inject(Title).getTitle()).toBe('All items (2) | simple feed reader');
 
