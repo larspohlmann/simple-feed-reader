@@ -17,8 +17,7 @@ final readonly class RecommendationForYouSummary
         // the sidebar counts, so the For-You badge drops to zero once the reader
         // has read every pick (#724).
         public int $itemCount,
-        // The count of ALL surviving picks, read or unread — the total the
-        // "All posts" view of the header shows (#1154).
+        // The count of ALL surviving picks, unlike itemCount which is unread-only.
         public int $totalCount,
         public ?\DateTimeImmutable $generatedAt,
         // The newest completed run's id — the run whose generation time the

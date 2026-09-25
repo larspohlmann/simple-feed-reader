@@ -148,9 +148,7 @@ class FeedRepository extends ServiceEntityRepository
     }
 
     /**
-     * The subset of the given urls this user subscribes to, keyed by url. A
-     * restore check about feed urls, so it lives here rather than on
-     * SubscriptionRepository — same reasoning as isReadByAnotherUser().
+     * The subset of the given urls this user subscribes to, keyed by url.
      *
      * @param list<string> $urls
      *

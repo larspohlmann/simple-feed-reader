@@ -118,8 +118,6 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    /** All surviving picks in this user's for-you feed, read or unread — the
-     *  total the "All posts" view of the header shows (#1154). */
     public function countForYouIncludingRead(int $userId): int
     {
         $qb = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId);
