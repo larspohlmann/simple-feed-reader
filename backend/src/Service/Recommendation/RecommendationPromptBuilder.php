@@ -130,7 +130,7 @@ final class RecommendationPromptBuilder
                 $current = [];
                 $used = 0;
             }
-            $current[] = $candidate->entryId ?? 0;
+            $current[] = $candidate->entryId;
             $used += $lineTokens;
         }
 
@@ -487,12 +487,11 @@ final class RecommendationPromptBuilder
     private function candidateLine(PromptLine $line, int $descriptionLength): string
     {
         $description = $this->truncatedDescription($line->description, $descriptionLength);
-
-        $entryId = $line->entryId ?? 0;
+        $baseLine = \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date);
 
         return null === $description
-            ? \sprintf('- [%d] %s — %s — %s', $entryId, $line->title, $line->feedName, $line->date)
-            : \sprintf('- [%d] %s — %s — %s — %s', $entryId, $line->title, $line->feedName, $line->date, $description);
+            ? $baseLine
+            : $baseLine . ' — ' . $description;
     }
 
     private function truncatedDescription(?string $description, int $length): ?string

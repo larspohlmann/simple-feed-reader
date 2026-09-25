@@ -76,7 +76,6 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         self::assertSame(['E', 'A'], array_map(static fn ($l) => $l->title, $history->favorites));
         self::assertSame(['B'], array_map(static fn ($l) => $l->title, $history->kept));
         self::assertSame(['C'], array_map(static fn ($l) => $l->title, $history->viewed));
-        self::assertNull($history->favorites[0]->entryId);
     }
 
     public function testCapsApplyNewestFirst(): void
