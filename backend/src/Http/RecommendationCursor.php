@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Http\Exception\MalformedCursorException;
+
 /**
  * Opaque keyset-pagination cursor for the for-you feed: base64url of
  * "<runId>|<position>". Modeled on EntryCursor, but the for-you feed orders by
@@ -25,20 +27,13 @@ final readonly class RecommendationCursor
         return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
     }
 
-    public static function decode(string $cursor): ?self
+    /** @throws MalformedCursorException */
+    public static function decode(string $cursor): self
     {
-        if ($cursor === '') {
-            return null;
-        }
-
         $raw = base64_decode(strtr($cursor, '-_', '+/'), true);
-        if ($raw === false) {
-            return null;
-        }
-
-        $parts = explode('|', $raw);
+        $parts = false === $raw ? [] : explode('|', $raw);
         if (\count($parts) !== 2 || !ctype_digit($parts[0]) || !ctype_digit($parts[1])) {
-            return null;
+            throw new MalformedCursorException();
         }
 
         return new self((int) $parts[0], (int) $parts[1]);

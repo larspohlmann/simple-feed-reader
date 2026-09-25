@@ -14,10 +14,9 @@ final readonly class SchemaOrgAccess
     private const string JSON_LD_PATTERN = '#<script\b[^>]*application/ld\+json[^>]*>(.*?)</script\s*>#is';
     private const string KEY = 'isAccessibleForFree';
 
-    /** True when the page declares a paywall, false when it declares free access, null when it says nothing. */
-    public static function paywalledIn(string $html): ?bool
+    public static function declaredIn(string $html): AccessDeclaration
     {
-        $verdict = null;
+        $declaration = AccessDeclaration::Undeclared;
         preg_match_all(self::JSON_LD_PATTERN, $html, $blocks);
         foreach ($blocks[1] as $json) {
             $decoded = json_decode(trim($json), true);
@@ -26,13 +25,13 @@ final readonly class SchemaOrgAccess
             }
             foreach (self::declarationsIn($decoded) as $accessibleForFree) {
                 if (!$accessibleForFree) {
-                    return true;
+                    return AccessDeclaration::Paywalled;
                 }
-                $verdict = false;
+                $declaration = AccessDeclaration::Free;
             }
         }
 
-        return $verdict;
+        return $declaration;
     }
 
     /**

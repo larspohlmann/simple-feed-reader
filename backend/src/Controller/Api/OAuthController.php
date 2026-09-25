@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
+use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\CallbackParameters;
 use App\Service\OAuth\FlowCookie;
@@ -162,22 +163,14 @@ final class OAuthController
         // the store treats as a failed binding, not a reason to skip the check.
         $cookie = $request->cookies->get(self::FLOW_COOKIE);
         $browserToken = \is_string($cookie) ? $cookie : null;
-        $started = $this->stateStore->consume($state, $browserToken);
+        try {
+            $started = $this->stateStore->consume($state, $browserToken);
+        } catch (InvalidOAuthStateException) {
+            return $this->oauthRedirect->failure('invalid_state');
+        }
 
-        // No valid state: not started by this server, already used, older than
-        // ten minutes, or — the case state alone cannot catch — started by a
-        // DIFFERENT BROWSER. All four are discarded without touching the provider.
-        //
-        // The fourth case is login CSRF, the reason the binding exists: an
-        // attacker who obtains a state and code from their own account and gets a
-        // victim to open this URL would otherwise sign the victim's browser in as
-        // themselves, silently (the SPA exchanges with no user gesture). One code
-        // for all four so a caller cannot probe for live states.
-        //
-        // The provider comparison stops a Google state replayed at Apple's
-        // callback from spending a Google code against Apple's token endpoint, and
-        // from letting the URL's chooser decide which provider is trusted.
-        if (null === $started || $started->provider !== $provider) {
+        // A state replayed at another provider's callback is refused like a forged one.
+        if ($started->provider !== $provider) {
             return $this->oauthRedirect->failure('invalid_state');
         }
 

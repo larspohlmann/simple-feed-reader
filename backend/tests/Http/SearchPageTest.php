@@ -114,7 +114,6 @@ final class SearchPageTest extends TestCase
         self::assertSame([], $page['entries']);
         self::assertNotNull($page['nextCursor'], 'A fully-read page must still advance the cursor.');
         $cursor = EntryCursor::decode($page['nextCursor']);
-        self::assertNotNull($cursor);
         self::assertSame(4, $cursor->id);
     }
 

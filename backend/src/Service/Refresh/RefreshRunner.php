@@ -325,14 +325,7 @@ final class RefreshRunner implements RefreshRunnerInterface
                 return FeedRefreshResult::of(FeedOutcome::NotModified);
             }
 
-            $body = $response->body;
-            if (null === $body) {
-                // Not reachable via the FetchResponse factories, but parsing an
-                // empty string would silently record a bogus "successful" fetch.
-                throw new FeedParseException('Fetcher returned a modified response without a body.');
-            }
-
-            $parsed = $this->bodyParser->parse($feed, $body);
+            $parsed = $this->bodyParser->parse($feed, $response->modifiedBody());
             $createdEntries = $this->ingestor->ingest($feed, $parsed, $context);
             // Opportunistically fill images onto entries stored before the image
             // column existed (#148). The count is discarded on purpose: the

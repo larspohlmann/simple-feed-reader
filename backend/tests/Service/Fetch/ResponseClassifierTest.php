@@ -123,6 +123,42 @@ final class ResponseClassifierTest extends TestCase
         self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
     }
 
+    public function testAThreeOhFourToAnUnconditionalRequestIsAnEmptyFetch(): void
+    {
+        $verdict = $this->classifier()->fromHeaders(
+            $this->respond(new MockResponse('', ['http_code' => 304])),
+            FetchAttempt::start(1, new FetchTicket('https://example.com/feed')),
+        );
+
+        self::assertSame(HeaderDecision::Terminal, $verdict->decision);
+        $response = $verdict->response;
+        self::assertNotNull($response);
+        self::assertFalse($response->notModified);
+        self::assertSame('', $response->modifiedBody());
+    }
+
+    /** @return iterable<string, array{?string, ?string}> */
+    public static function singleCachingHeaders(): iterable
+    {
+        yield 'an ETag only' => ['"v1"', null];
+        yield 'a Last-Modified only' => [null, 'Mon, 20 Jul 2026 08:30:00 GMT'];
+    }
+
+    #[DataProvider('singleCachingHeaders')]
+    public function testAThreeOhFourToATicketCarryingOnlyOneCachingHeaderIsStillNotModified(
+        ?string $etag,
+        ?string $lastModified,
+    ): void {
+        $verdict = $this->classifier()->fromHeaders(
+            $this->respond(new MockResponse('', ['http_code' => 304])),
+            FetchAttempt::start(1, new FetchTicket('https://example.com/feed', $etag, $lastModified)),
+        );
+
+        $response = $verdict->response;
+        self::assertNotNull($response);
+        self::assertTrue($response->notModified);
+    }
+
     public function testAFourTenIsGone(): void
     {
         $this->expectException(FeedGoneException::class);
@@ -184,7 +220,7 @@ final class ResponseClassifierTest extends TestCase
         $fetched = $this->classifier()->fromBody($response, $this->attempt());
 
         self::assertFalse($fetched->notModified);
-        self::assertSame('<rss/>', $fetched->body);
+        self::assertSame('<rss/>', $fetched->modifiedBody());
         self::assertSame('"v2"', $fetched->etag);
         self::assertSame('Tue, 21 Jul 2026 08:30:00 GMT', $fetched->lastModified);
         self::assertSame('https://example.com/feed', $fetched->finalUrl);

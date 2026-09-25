@@ -18,17 +18,18 @@ final readonly class LokiSinkFactory
 
     public function create(): LokiSink
     {
-        return 'spool' === self::selects(\PHP_SAPI, \function_exists('fastcgi_finish_request'))
-            ? $this->spool
-            : $this->direct;
+        return match (self::selects(\PHP_SAPI, \function_exists('fastcgi_finish_request'))) {
+            LokiDelivery::Spool => $this->spool,
+            LokiDelivery::Direct => $this->direct,
+        };
     }
 
-    public static function selects(string $sapi, bool $canFinishRequest): string
+    public static function selects(string $sapi, bool $canFinishRequest): LokiDelivery
     {
-        if ('cli' === $sapi) {
-            return 'direct';
+        if ('cli' === $sapi || $canFinishRequest) {
+            return LokiDelivery::Direct;
         }
 
-        return $canFinishRequest ? 'direct' : 'spool';
+        return LokiDelivery::Spool;
     }
 }

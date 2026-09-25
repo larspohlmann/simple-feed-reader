@@ -134,7 +134,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $outcomes = $this->collect($fetcher->fetchAll([7 => new FetchTicket('https://example.com/feed')]));
 
         self::assertCount(1, $outcomes);
-        self::assertSame('<rss/>', $outcomes[7]->responseOrThrow()->body);
+        self::assertSame('<rss/>', $outcomes[7]->responseOrThrow()->modifiedBody());
     }
 
     /**
@@ -195,7 +195,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
 
         self::assertNull($outcomes[1]->failure());
-        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
         self::assertSame(
             ['2a02:2e0:3fe:1001:7777:772e:2:85,193.99.144.85', '193.99.144.85'],
             $seenPins,
@@ -228,7 +228,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $ticket = new FetchTicket('https://www.heise.de/rss/heise-atom.xml');
         $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
 
-        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
         self::assertSame([$ipv6 . ',' . $ipv4, $ipv4, $ipv6], $seenPins);
     }
 
@@ -252,7 +252,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://taz.de/!p4608;rss/')]));
 
-        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->body);
+        self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
     }
 
     public function testAFailoverRetryForcesAFreshConnection(): void
@@ -367,7 +367,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             self::assertNull($outcomes[$key]->failure(), sprintf('ticket %d should have succeeded', $key));
         }
         // Concurrency is 4, so the fifth only starts once a slot frees.
-        self::assertStringContainsString('five.example.com', (string) $outcomes[5]->responseOrThrow()->body);
+        self::assertStringContainsString('five.example.com', $outcomes[5]->responseOrThrow()->modifiedBody());
     }
 
     public function testOneFailureDoesNotAbandonTheRestOfTheBatch(): void
@@ -419,7 +419,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         $response = $outcomes[1]->responseOrThrow();
         self::assertSame('https://example.com/two', $response->finalUrl);
         self::assertTrue($response->permanentRedirect);
-        self::assertSame('<rss/>', $response->body);
+        self::assertSame('<rss/>', $response->modifiedBody());
     }
 
     /**

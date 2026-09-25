@@ -8,6 +8,7 @@ use App\Entity\ActionToken;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Repository\ActionTokenRepository;
+use App\Service\Auth\Exception\InvalidTokenException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Random\RandomException;
@@ -58,22 +59,14 @@ final readonly class ActionTokenService
         return $plain;
     }
 
-    /**
-     * Redeems a token, marking it used. Returns null for every failure mode —
-     * unknown, wrong purpose, already consumed, expired — because the caller
-     * must not tell a guesser which of those it hit.
-     */
-    public function consume(string $plainToken, TokenPurpose $purpose): ?User
+    /** Every failure mode is the same exception, so a guesser cannot tell which one it hit. */
+    public function consume(string $plainToken, TokenPurpose $purpose): User
     {
         $token = $this->repository()->findOneByHashAndPurpose(hash('sha256', $plainToken), $purpose);
-
-        if (null === $token || null !== $token->getConsumedAt()) {
-            return null;
-        }
-
         $now = $this->clock->now();
-        if ($token->isExpiredAt($now)) {
-            return null;
+
+        if (null === $token || null !== $token->getConsumedAt() || $token->isExpiredAt($now)) {
+            throw new InvalidTokenException();
         }
 
         $token->setConsumedAt($now);

@@ -92,7 +92,7 @@ final readonly class SubstackProfileFeed
             return null;
         }
 
-        return $this->subdomainOf($response->body ?? '');
+        return $this->subdomainOf($response->modifiedBody());
     }
 
     /** Reads and validates `primaryPublication.subdomain` out of a profile-API body. */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Http\Exception\MalformedCursorException;
 use App\Http\RecommendationCursor;
 use PHPUnit\Framework\TestCase;
 
@@ -14,7 +15,6 @@ final class RecommendationCursorTest extends TestCase
         $encoded = RecommendationCursor::encode(42, 7);
 
         $decoded = RecommendationCursor::decode($encoded);
-        self::assertNotNull($decoded);
         self::assertSame(42, $decoded->runId);
         self::assertSame(7, $decoded->position);
     }
@@ -36,50 +36,46 @@ final class RecommendationCursorTest extends TestCase
         self::assertSame($encoded, rawurlencode($encoded));
     }
 
-    // Each case below is named for, and exercises, exactly one of decode()'s
-    // four guard branches — see the comment on each for which one and why.
-
     public function testDecodeRejectsTheEmptyString(): void
     {
-        // Hits the `$cursor === ''` guard directly, before base64 is even
-        // attempted.
-        self::assertNull(RecommendationCursor::decode(''));
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode('');
     }
 
     public function testDecodeRejectsInputThatFailsStrictBase64Decoding(): void
     {
-        // Spaces and '!' are outside the base64 alphabet, so strict-mode
-        // base64_decode() returns false here — the one guard branch
-        // ($raw === false) none of the other cases below ever reach, since
-        // they are all valid (if meaningless) base64. Confirmed directly:
-        //   $ php -r 'var_dump(base64_decode(strtr("not a valid base64!!", "-_", "+/"), true));'
-        //   bool(false)
-        self::assertNull(RecommendationCursor::decode('not a valid base64!!'));
+        // Spaces and '!' are outside the alphabet, so strict base64_decode() returns false.
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode('not a valid base64!!');
     }
 
     public function testDecodeRejectsValidBase64WithNoDelimiter(): void
     {
-        // Decodes cleanly but has no '|', so explode() yields a single
-        // part — the `count($parts) !== 2` guard.
-        self::assertNull(RecommendationCursor::decode(base64_encode('only-one-part')));
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode(base64_encode('only-one-part'));
     }
 
     public function testDecodeRejectsValidBase64WithThreeParts(): void
     {
-        // Same `count($parts) !== 2` guard, from the other direction: too
-        // many delimiters instead of none.
-        self::assertNull(RecommendationCursor::decode(base64_encode('1|2|3')));
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode(base64_encode('1|2|3'));
     }
 
     public function testDecodeRejectsANonNumericRunId(): void
     {
-        // Two well-formed parts, but the first fails ctype_digit().
-        self::assertNull(RecommendationCursor::decode(base64_encode('abc|1')));
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode(base64_encode('abc|1'));
     }
 
     public function testDecodeRejectsANonNumericPosition(): void
     {
-        // Two well-formed parts, but the second fails ctype_digit().
-        self::assertNull(RecommendationCursor::decode(base64_encode('1|abc')));
+        $this->expectException(MalformedCursorException::class);
+
+        RecommendationCursor::decode(base64_encode('1|abc'));
     }
 }

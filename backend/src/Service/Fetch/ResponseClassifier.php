@@ -45,12 +45,7 @@ final readonly class ResponseClassifier
         }
 
         if (304 === $status) {
-            return HeaderVerdict::terminal(FetchResponse::notModified(
-                $attempt->url,
-                $attempt->permanentRedirect,
-                $attempt->ticket->etag,
-                $attempt->ticket->lastModified,
-            ));
+            return HeaderVerdict::terminal($this->notModifiedOrEmptyFetch($attempt));
         }
 
         if (410 === $status) {
@@ -85,6 +80,22 @@ final readonly class ResponseClassifier
             $body,
             $this->header($response, 'etag'),
             $this->header($response, 'last-modified'),
+        );
+    }
+
+    /** A 304 answering an unconditional request confirms nothing; it becomes an empty fetch instead. */
+    private function notModifiedOrEmptyFetch(FetchAttempt $attempt): FetchResponse
+    {
+        $ticket = $attempt->ticket;
+        if (!$ticket->isConditional()) {
+            return FetchResponse::fetched($attempt->url, $attempt->permanentRedirect, '', null, null);
+        }
+
+        return FetchResponse::notModified(
+            $attempt->url,
+            $attempt->permanentRedirect,
+            $ticket->etag,
+            $ticket->lastModified,
         );
     }
 

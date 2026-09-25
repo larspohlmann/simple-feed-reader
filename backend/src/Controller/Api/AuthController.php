@@ -8,7 +8,6 @@ use App\Dto\Auth\PasswordResetConfirmRequest;
 use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
-use App\Service\Auth\Exception\InvalidTokenException;
 use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationPolicy;
@@ -90,16 +89,7 @@ final readonly class AuthController
     #[Route('/verify-email', name: 'api_auth_verify_email', methods: ['POST'])]
     public function verifyEmail(#[MapRequestPayload] VerifyEmailRequest $request): JsonResponse
     {
-        $status = $this->registration->verifyEmail($request->token);
-
-        if (null === $status) {
-            throw new InvalidTokenException();
-        }
-
-        // The real status, not a hardcoded one: an account approved between the
-        // mail going out and the link being clicked is already active, and
-        // telling that user to wait would be simply false.
-        return new JsonResponse(['status' => $status->value]);
+        return new JsonResponse(['status' => $this->registration->verifyEmail($request->token)->value]);
     }
 
     /**
@@ -129,9 +119,7 @@ final readonly class AuthController
     #[Route('/password-reset', name: 'api_auth_password_reset', methods: ['POST'])]
     public function passwordReset(#[MapRequestPayload] PasswordResetConfirmRequest $request): JsonResponse
     {
-        if (!$this->registration->resetPassword($request->token, $request->password)) {
-            throw new InvalidTokenException();
-        }
+        $this->registration->resetPassword($request->token, $request->password);
 
         return new JsonResponse(['status' => 'reset']);
     }

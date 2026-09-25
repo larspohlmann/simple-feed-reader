@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Http\Exception\MalformedCursorException;
 use App\Http\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
@@ -17,20 +18,26 @@ final readonly class RecommendationFeedPager
     ) {
     }
 
-    /**
-     * A malformed cursor decodes to null, which yields the first page rather
-     * than an error — the same leniency EntryCursor deliberately does NOT
-     * have, because here a stale/garbled cursor should never break the feed.
-     */
     #[WithSpan]
     public function page(ForYouFeedQuery $query): RecommendationFeedPage
     {
-        $cursor = $query->cursor;
-        $decodedCursor = $cursor === null || $cursor === '' ? null : RecommendationCursor::decode($cursor);
-
-        $rows = $this->items->listForYou($query, $decodedCursor);
+        $rows = $this->items->listForYou($query, self::cursorOf($query));
 
         return new RecommendationFeedPage($rows, $this->nextCursorFor($rows, $query->limit));
+    }
+
+    /** A garbled For You cursor restarts the feed instead of breaking it, unlike EntryCursor. */
+    private static function cursorOf(ForYouFeedQuery $query): ?RecommendationCursor
+    {
+        if (null === $query->cursor || '' === $query->cursor) {
+            return null;
+        }
+
+        try {
+            return RecommendationCursor::decode($query->cursor);
+        } catch (MalformedCursorException) {
+            return null;
+        }
     }
 
     /**

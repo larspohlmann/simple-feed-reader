@@ -97,10 +97,8 @@ final readonly class SubscriptionController
                     $outcome->candidates,
                 ),
             ];
-            // Key present only on failure: successful candidate lists stay
-            // byte-compatible with what pre-scraper clients already parse.
             if (null !== $outcome->scrapeFailureReason) {
-                $payload['scrapeFailureReason'] = $outcome->scrapeFailureReason;
+                $payload['scrapeFailureReason'] = $outcome->scrapeFailureReason->value;
             }
 
             return new JsonResponse($payload);

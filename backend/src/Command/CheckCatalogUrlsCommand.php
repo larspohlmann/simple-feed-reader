@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\Catalog\CatalogDocument;
+use App\Service\Catalog\Exception\BrokenCatalogUrlException;
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Fetch\ProxyEgressResolver;
@@ -14,6 +15,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -73,9 +75,10 @@ final class CheckCatalogUrlsCommand extends Command
 
         $broken = [];
         foreach ($feeds as $feed) {
-            $failure = $this->check($feed->url, $proxy);
-            if (null !== $failure) {
-                $broken[] = \sprintf('%s (%s): %s', $feed->title, $feed->url, $failure);
+            try {
+                $this->assertServesFeed($feed->url, $proxy);
+            } catch (BrokenCatalogUrlException $e) {
+                $broken[] = \sprintf('%s (%s): %s', $feed->title, $feed->url, $e->getMessage());
             }
         }
 
@@ -101,35 +104,28 @@ final class CheckCatalogUrlsCommand extends Command
         return max(1, (int) $value);
     }
 
-    /**
-     * @return string|null the reason it is broken, or null when it is fine
-     */
-    private function check(string $url, ?ProxyConfig $proxy): ?string
+    /** @throws BrokenCatalogUrlException */
+    private function assertServesFeed(string $url, ?ProxyConfig $proxy): void
     {
         try {
             $response = $this->httpClient->request('GET', $url, [
                 'timeout' => self::TIMEOUT_SECONDS,
                 'max_duration' => self::TIMEOUT_SECONDS,
-                // The fetcher's agent, not one of its own: a publisher that blocks
-                // the reader but tolerates an unfamiliar checker would otherwise
-                // let this command report a healthy catalog nobody can subscribe to.
+                // The fetcher's agent: a publisher tolerating an unknown checker must not pass for healthy.
                 'headers' => ['User-Agent' => $this->userAgent],
                 ...(null !== $proxy ? EgressOptions::proxied($proxy) : []),
             ]);
+            $status = $response->getStatusCode();
+            $head = 200 === $status ? mb_substr($response->getContent(), 0, 2048) : '';
+        } catch (ExceptionInterface $e) {
+            throw new BrokenCatalogUrlException($e->getMessage(), 0, $e);
+        }
 
-            if (200 !== $response->getStatusCode()) {
-                return 'HTTP ' . $response->getStatusCode();
-            }
-
-            // A prefix is enough: a feed announces itself in its root element.
-            $head = mb_substr($response->getContent(), 0, 2048);
-            $isFeed = str_contains($head, '<rss')
-                || str_contains($head, '<feed')
-                || str_contains($head, '<rdf:RDF');
-
-            return $isFeed ? null : 'not a feed document';
-        } catch (\Throwable $e) {
-            return $e->getMessage();
+        if (200 !== $status) {
+            throw new BrokenCatalogUrlException('HTTP ' . $status);
+        }
+        if (!str_contains($head, '<rss') && !str_contains($head, '<feed') && !str_contains($head, '<rdf:RDF')) {
+            throw new BrokenCatalogUrlException('not a feed document');
         }
     }
 }

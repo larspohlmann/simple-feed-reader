@@ -41,14 +41,14 @@ final readonly class MailConnectionTester
         } catch (SecretUnreadableException $e) {
             // A config guard, not a failed send: nothing was ever attempted,
             // so the health log stays untouched.
-            return MailTestResult::failed($e->getMessage());
+            return MailTestResult::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
         }
 
         $transport = $this->effectiveTransport($resolved);
         $recipient = $this->actingAdminEmail();
 
         if (null === $transport || null === $recipient) {
-            return MailTestResult::failed('not_configured');
+            return MailTestResult::failed(MailTestFailure::NotConfigured);
         }
 
         $identity = $this->settings->identity();
@@ -57,7 +57,7 @@ final readonly class MailConnectionTester
             // Address() throws RfcComplianceException on a blank address --
             // naming that state upfront as a guard clause avoids exception-
             // driven control flow. Still a config guard: nothing is recorded.
-            return MailTestResult::failed('no_from_address');
+            return MailTestResult::failed(MailTestFailure::NoFromAddress);
         }
 
         return $this->sendTestMessage($transport, $recipient, $identity);
@@ -80,7 +80,7 @@ final readonly class MailConnectionTester
         } catch (TransportExceptionInterface | RfcComplianceException $e) {
             $this->health->recordFailure(MailKind::Test, $recipient, $e->getMessage());
 
-            return MailTestResult::failed($e->getMessage());
+            return MailTestResult::failed(MailTestFailure::SendRejected, $e->getMessage());
         }
 
         $this->health->recordSuccess();

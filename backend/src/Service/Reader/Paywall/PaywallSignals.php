@@ -18,7 +18,11 @@ final readonly class PaywallSignals
 {
     public static function isPreview(string $html, ?HTMLDocument $normalized): bool
     {
-        return SchemaOrgAccess::paywalledIn($html) ?? ($normalized !== null && self::gatedInBody($normalized));
+        return match (SchemaOrgAccess::declaredIn($html)) {
+            AccessDeclaration::Paywalled => true,
+            AccessDeclaration::Free => false,
+            AccessDeclaration::Undeclared => $normalized !== null && self::gatedInBody($normalized),
+        };
     }
 
     private static function gatedInBody(HTMLDocument $normalized): bool

@@ -22,18 +22,26 @@ final class FetchResponseTest extends TestCase
         self::assertFalse($response->notModified);
         self::assertSame('https://example.com/feed', $response->finalUrl);
         self::assertFalse($response->permanentRedirect);
-        self::assertSame('<rss/>', $response->body);
+        self::assertSame('<rss/>', $response->modifiedBody());
         self::assertSame('"abc"', $response->etag);
         self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $response->lastModified);
     }
 
-    public function testNotModifiedHasNoBody(): void
+    public function testNotModifiedEchoesItsCachingHeaders(): void
     {
         $response = FetchResponse::notModified('https://example.com/feed', true, '"abc"', null);
 
         self::assertTrue($response->notModified);
         self::assertTrue($response->permanentRedirect);
-        self::assertNull($response->body);
         self::assertSame('"abc"', $response->etag);
+    }
+
+    public function testANotModifiedResponseHasNoBodyToHandBack(): void
+    {
+        $response = FetchResponse::notModified('https://example.com/feed', false, '"abc"', null);
+
+        $this->expectException(\LogicException::class);
+
+        $response->modifiedBody();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth;
 
 use App\Dto\OAuth\OAuthStartState;
+use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -120,50 +121,33 @@ final readonly class OAuthStateStore
     }
 
     /**
-     * Redeems a state value, destroying it. Returns null for every failure —
-     * unknown, already used, expired, or presented by a browser that did not
-     * start this flow — because the callback must not report which: a caller who
-     * could tell "wrong cookie" from "no such state" could probe for live states.
+     * @param string|null $browserToken the flow cookie, or null when the callback arrived without one, which fails
      *
-     * @param string|null $browserToken the flow cookie the callback arrived
-     *                                  with, or null if it arrived with none —
-     *                                  which is itself a failure, not a bypass
-     *
+     * @throws InvalidOAuthStateException when the state is unknown, spent, expired, or presented by another browser
      * @throws InvalidArgumentException
      */
-    public function consume(string $state, ?string $browserToken): ?OAuthStartState
+    public function consume(string $state, ?string $browserToken): OAuthStartState
     {
         $key = self::keyFor($state);
         $item = $this->oauthStateCache->getItem($key);
 
         if (!$item->isHit()) {
-            return null;
+            throw new InvalidOAuthStateException();
         }
 
-        // Deleted before any validation below, so a state that fails the
-        // expiry check is still burned rather than left available to retry.
+        // Deleted before validation, so a failed check burns the state instead of leaving it to retry.
         $this->oauthStateCache->deleteItem($key);
 
         $stored = self::decodeStored($item->get());
-        if (null === $stored) {
-            return null;
-        }
 
-        // The browser binding: a callback that cannot produce the token this flow
-        // started with is refused, which is what makes the promise "this browser
-        // started this flow" (see class docblock). Checked AFTER deleteItem() so a
-        // wrong token burns the state rather than leaving it live. hash_equals
-        // because the stored value is a secret-derived digest and a byte-at-a-time
-        // compare leaks its prefix.
+        // hash_equals: the stored digest is secret-derived, and a byte-wise compare leaks its prefix.
         if (null === $browserToken || !hash_equals($stored['browser_digest'], self::digest($browserToken))) {
-            return null;
+            throw new InvalidOAuthStateException();
         }
 
-        // The pool's TTL should have removed it already, but that runs on the
-        // cache backend's clock while the app and tests use the injected one.
-        // Belt and braces, and it makes expiry testable.
+        // The pool's TTL runs on the cache backend's clock; this runs on the injected one.
         if ($stored['expires_at'] < $this->clock->now()->getTimestamp()) {
-            return null;
+            throw new InvalidOAuthStateException();
         }
 
         $codeVerifier = $stored['code_verifier'];
@@ -178,19 +162,11 @@ final readonly class OAuthStateStore
     }
 
     /**
-     * Validates the shape of a cache entry written by start(), returning it typed
-     * or null if anything is missing or wrong-typed — so a corrupt or tampered
-     * entry is treated exactly like an unknown state.
+     * @return array{provider: string, nonce: string, code_verifier: string, browser_digest: string, expires_at: int}
      *
-     * @return array{
-     *     provider: string,
-     *     nonce: string,
-     *     code_verifier: string,
-     *     browser_digest: string,
-     *     expires_at: int,
-     * }|null
+     * @throws InvalidOAuthStateException when the entry is corrupt or tampered with
      */
-    private static function decodeStored(mixed $stored): ?array
+    private static function decodeStored(mixed $stored): array
     {
         if (
             !\is_array($stored)
@@ -200,7 +176,7 @@ final readonly class OAuthStateStore
             || !\is_string($stored['browser_digest'] ?? null)
             || !\is_int($stored['expires_at'] ?? null)
         ) {
-            return null;
+            throw new InvalidOAuthStateException();
         }
 
         return [

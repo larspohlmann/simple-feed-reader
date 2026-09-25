@@ -102,22 +102,10 @@ final readonly class RegistrationService
         };
     }
 
-    /**
-     * Returns the account's status *after* verification, so the caller reports
-     * what is actually true, not what is usually true: an admin may have
-     * approved the account between the mail being sent and the link being
-     * clicked, in which case the user is already Active. A blanket
-     * "pending_approval" would tell someone who can sign in right now to sit
-     * and wait for an approval that already happened.
-     *
-     * @return UserStatus|null null when the token is unknown, used, or expired
-     */
-    public function verifyEmail(string $plainToken): ?UserStatus
+    /** The status after verification: an admin may have approved the account while the mail was in flight. */
+    public function verifyEmail(string $plainToken): UserStatus
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::VerifyEmail);
-        if (null === $user) {
-            return null;
-        }
 
         // Re-verifying an already-approved account must not demote it back to
         // the admin queue.
@@ -200,20 +188,12 @@ final readonly class RegistrationService
         $this->mailer->sendVerification($user, $this->tokens->issue($user, TokenPurpose::VerifyEmail));
     }
 
-    public function resetPassword(string $plainToken, string $plainPassword): bool
+    public function resetPassword(string $plainToken, string $plainPassword): void
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::ResetPassword);
-        if (null === $user) {
-            return false;
-        }
 
-        // Stamping the change is what evicts tokens minted before it — see
-        // App\Security\PasswordChangeTokenInvalidator. Without it this method
-        // changes the password and leaves whoever stole a token still signed
-        // in, which is the opposite of what a reset is for.
+        // The timestamp evicts JWTs minted before the reset (PasswordChangeTokenInvalidator).
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $this->clock->now());
         $this->em->flush();
-
-        return true;
     }
 }

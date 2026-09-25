@@ -6,6 +6,7 @@ namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
+use App\Service\Logging\Loki\LokiDelivery;
 use App\Service\Logging\Loki\LokiSinkFactory;
 use App\Service\Logging\Loki\SpoolLokiSink;
 use App\Tests\Support\StubLokiEndpoint;
@@ -16,18 +17,18 @@ final class LokiSinkFactoryTest extends TestCase
 {
     public function testCliAlwaysSelectsDirectEvenWithoutFastcgiFinishRequest(): void
     {
-        self::assertSame('direct', LokiSinkFactory::selects('cli', false));
-        self::assertSame('direct', LokiSinkFactory::selects('cli', true));
+        self::assertSame(LokiDelivery::Direct, LokiSinkFactory::selects('cli', false));
+        self::assertSame(LokiDelivery::Direct, LokiSinkFactory::selects('cli', true));
     }
 
     public function testFpmWebSelectsDirect(): void
     {
-        self::assertSame('direct', LokiSinkFactory::selects('fpm-fcgi', true));
+        self::assertSame(LokiDelivery::Direct, LokiSinkFactory::selects('fpm-fcgi', true));
     }
 
     public function testCgiFcgiWithoutFastcgiFinishRequestSelectsSpool(): void
     {
-        self::assertSame('spool', LokiSinkFactory::selects('cgi-fcgi', false));
+        self::assertSame(LokiDelivery::Spool, LokiSinkFactory::selects('cgi-fcgi', false));
     }
 
     public function testCreateReturnsALokiSink(): void

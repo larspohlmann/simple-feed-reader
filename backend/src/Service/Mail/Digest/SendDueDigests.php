@@ -54,10 +54,10 @@ final readonly class SendDueDigests
         foreach ($this->preferences->findWithDigestEnabled() as $prefs) {
             ++$considered;
 
-            $outcome = $this->attemptSend($prefs, $now);
-            if (true === $outcome) {
+            $attempt = $this->attemptSend($prefs, $now);
+            if (DigestAttempt::Sent === $attempt) {
                 ++$sent;
-            } elseif (false === $outcome) {
+            } elseif (DigestAttempt::NothingToReport === $attempt) {
                 ++$skippedEmpty;
             }
         }
@@ -65,47 +65,33 @@ final readonly class SendDueDigests
         return new DigestSweepReport($considered, $sent, $skippedEmpty);
     }
 
-    /**
-     * Null: not due; due but not eligible to receive mail right now; or the
-     * send to this recipient failed and was isolated so it does not stop the
-     * sweep (retried next tick, since the watermark was left untouched).
-     * True: composed something and sent it.
-     * False: due and eligible, but there was nothing to report.
-     */
-    private function attemptSend(Preferences $prefs, \DateTimeImmutable $now): ?bool
+    private function attemptSend(Preferences $prefs, \DateTimeImmutable $now): DigestAttempt
     {
         $occurrence = $this->dueOccurrence($prefs, $now);
         if (null === $occurrence) {
-            return null;
+            return DigestAttempt::NotDue;
         }
 
         $user = $prefs->getUser();
         if (!$user->isEmailVerified()) {
-            return null;
+            return DigestAttempt::Ineligible;
         }
 
-        $since = $prefs->getDigestLastSentAt() ?? $occurrence;
-        $model = $this->composer->compose($user, $since);
+        $model = $this->composer->compose($user, $prefs->getDigestLastSentAt() ?? $occurrence);
         if (null === $model) {
-            return false;
+            return DigestAttempt::NothingToReport;
         }
 
         return $this->sendAndAdvance($user, $model, $prefs, $occurrence);
     }
 
-    /**
-     * A recipient's mail transport can reject or fail independently of every
-     * other recipient (relay error, rejected mailbox). One bad address must
-     * not starve the rest of the sweep, so the send is isolated here: on
-     * failure the watermark is left untouched, and the occurrence is retried
-     * on the next tick (#636).
-     */
+    /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick (#636). */
     private function sendAndAdvance(
         User $user,
         DigestModel $model,
         Preferences $prefs,
         \DateTimeImmutable $occurrence,
-    ): ?bool {
+    ): DigestAttempt {
         try {
             $this->mailer->send($user, $model);
         } catch (TransportExceptionInterface $e) {
@@ -115,14 +101,14 @@ final readonly class SendDueDigests
             );
             $this->health->recordFailure(MailKind::Digest, $user->getEmail(), $e->getMessage());
 
-            return null;
+            return DigestAttempt::SendFailed;
         }
 
         $this->health->recordSuccess();
         $prefs->setDigestLastSentAt($occurrence);
         $this->em->flush();
 
-        return true;
+        return DigestAttempt::Sent;
     }
 
     /** The schedule's occurrence, but only if it is newer than the last send. */

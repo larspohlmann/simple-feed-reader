@@ -16,4 +16,9 @@ final readonly class FetchTicket
         public ?string $lastModified = null,
     ) {
     }
+
+    public function isConditional(): bool
+    {
+        return null !== $this->etag || null !== $this->lastModified;
+    }
 }

@@ -104,7 +104,7 @@ final readonly class WellKnownFeedProbe
         try {
             return new DiscoveredFeed(
                 $response->finalUrl,
-                $this->parser->parse($response->body ?? ''),
+                $this->parser->parse($response->modifiedBody()),
                 $response->etag,
                 $response->lastModified,
             );

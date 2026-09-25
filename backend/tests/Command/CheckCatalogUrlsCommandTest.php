@@ -47,4 +47,55 @@ final class CheckCatalogUrlsCommandTest extends KernelTestCase
 
         self::assertSame(0, $tester->getStatusCode());
     }
+
+    /**
+     * The feed tag sits at byte 0 of the body, with nothing ahead of it to
+     * absorb an off-by-one: reading from offset 1 instead of 0 would drop
+     * the leading `<` and turn a healthy feed into a reported failure.
+     */
+    public function testATagAtTheVeryStartOfTheBodyStillCountsAsAFeed(): void
+    {
+        $client = new MockHttpClient(static fn (): MockResponse => new MockResponse(
+            '<rss version="2.0"><channel><title>x</title></channel></rss>',
+        ));
+
+        $tester = $this->tester($client);
+        $tester->execute(['--limit' => '1']);
+
+        self::assertSame(0, $tester->getStatusCode());
+    }
+
+    /**
+     * A multi-byte prefix long enough that its BYTE length already exceeds
+     * the 2048 head we read, while its CHARACTER length does not: reading by
+     * byte instead of by character would cut the head off before ever
+     * reaching the feed tag that follows, mistaking a healthy feed for a
+     * broken one.
+     */
+    public function testAFeedTagPastTheByteLimitButWithinTheCharacterLimitIsStillFound(): void
+    {
+        $multiByteFiller = str_repeat('é', 2000);
+        $client = new MockHttpClient(static fn (): MockResponse => new MockResponse(
+            $multiByteFiller . '<rss version="2.0"><channel><title>x</title></channel></rss>',
+        ));
+
+        $tester = $this->tester($client);
+        $tester->execute(['--limit' => '1']);
+
+        self::assertSame(0, $tester->getStatusCode());
+    }
+
+    public function testReportsATransportFailureAsBroken(): void
+    {
+        $client = new MockHttpClient(static fn (): MockResponse => new MockResponse(
+            '',
+            ['error' => 'Could not resolve host: rotten.example'],
+        ));
+
+        $tester = $this->tester($client);
+        $tester->execute(['--limit' => '1']);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('Could not resolve host', $tester->getDisplay());
+    }
 }

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
+use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\OAuth\LoginCodeStore;
+use App\Tests\Support\AssertsRefusal;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class LoginCodeStoreTest extends TestCase
 {
+    use AssertsRefusal;
+
     /**
      * Stands in for the flow cookie the callback authenticated. Shaped like the
      * real one — 64 hex characters — so the "not stored in the clear"
@@ -39,12 +43,20 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
 
         self::assertSame(42, $this->store->consume($code, self::TOKEN));
-        self::assertNull($this->store->consume($code, self::TOKEN));
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
-    public function testAnUnknownCodeReturnsNull(): void
+    public function testAnUnknownCodeIsRefused(): void
     {
-        self::assertNull($this->store->consume('not-a-code', self::TOKEN));
+        $this->assertRefused(
+            fn () => $this->store->consume('not-a-code', self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     public function testACodeExpiresAfterThirtySeconds(): void
@@ -52,7 +64,11 @@ final class LoginCodeStoreTest extends TestCase
         $code = $this->store->issue(42, self::TOKEN);
         $this->clock->modify('+31 seconds');
 
-        self::assertNull($this->store->consume($code, self::TOKEN));
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     public function testACodeIsStillValidJustInsideTheWindow(): void
@@ -88,11 +104,16 @@ final class LoginCodeStoreTest extends TestCase
         $this->clock->modify('+20 seconds');
         // A miss on an unrelated key: traffic through the store, touching
         // neither this entry nor its deadline.
-        self::assertNull($this->store->consume('some-other-code', self::TOKEN));
+        $this->assertRefused(
+            fn () => $this->store->consume('some-other-code', self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
 
         $this->clock->modify('+11 seconds');
-        self::assertNull(
-            $this->store->consume($code, self::TOKEN),
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
             'the code outlived T+30, so its deadline moved with the store rather than with its issue',
         );
     }
@@ -114,7 +135,11 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, 'a-different-browsers-token'));
+        $this->assertRefused(
+            fn () => $this->store->consume($code, 'a-different-browsers-token'),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -126,7 +151,11 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, null));
+        $this->assertRefused(
+            fn () => $this->store->consume($code, null),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -138,10 +167,18 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, ''));
+        $this->assertRefused(
+            fn () => $this->store->consume($code, ''),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
 
         $emptyBound = $this->store->issue(7, '');
-        self::assertNull($this->store->consume($emptyBound, self::TOKEN));
+        $this->assertRefused(
+            fn () => $this->store->consume($emptyBound, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 
     /**
@@ -153,8 +190,16 @@ final class LoginCodeStoreTest extends TestCase
     {
         $code = $this->store->issue(42, self::TOKEN);
 
-        self::assertNull($this->store->consume($code, 'wrong'));
-        self::assertNull($this->store->consume($code, self::TOKEN), 'the code survived a failed binding check');
+        $this->assertRefused(
+            fn () => $this->store->consume($code, 'wrong'),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'the code survived a failed binding check',
+        );
     }
 
     /**
@@ -175,5 +220,27 @@ final class LoginCodeStoreTest extends TestCase
             self::assertStringNotContainsString(self::TOKEN, (string) $key);
             self::assertStringNotContainsString(self::TOKEN, serialize($value));
         }
+    }
+
+    /**
+     * A stored entry that is not the shape issue() writes — corrupted on disk,
+     * or written by a future version this one cannot read — must refuse rather
+     * than emit a TypeError from an undefined array key.
+     */
+    public function testACorruptStoredEntryIsRefused(): void
+    {
+        $code = $this->store->issue(42, self::TOKEN);
+
+        $key = array_key_first($this->cache->getValues());
+        self::assertIsString($key);
+        $item = $this->cache->getItem($key);
+        $item->set(['user_id' => 42]);
+        $this->cache->save($item);
+
+        $this->assertRefused(
+            fn () => $this->store->consume($code, self::TOKEN),
+            InvalidTokenException::class,
+            'The code was redeemed.',
+        );
     }
 }

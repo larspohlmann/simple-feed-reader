@@ -7,6 +7,7 @@ namespace App\Tests\Service\Logging\Loki;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Tests\Support\StubLokiEndpoint;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -47,9 +48,19 @@ final class LokiSpoolShipperTest extends TestCase
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
     }
 
-    public function testDeletesACorruptFileAndCountsItFailed(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function corruptSpoolContents(): iterable
     {
-        file_put_contents($this->spoolDirectory . '/1-deadbeef.json', 'not json');
+        yield 'not valid JSON' => ['not json'];
+        yield 'a JSON scalar, not a batch' => ['42'];
+    }
+
+    #[DataProvider('corruptSpoolContents')]
+    public function testDeletesACorruptFileAndCountsItFailed(string $contents): void
+    {
+        file_put_contents($this->spoolDirectory . '/1-deadbeef.json', $contents);
         $shipper = new LokiSpoolShipper(
             new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
             $this->spoolDirectory,
@@ -60,6 +71,30 @@ final class LokiSpoolShipperTest extends TestCase
         self::assertSame(0, $report->shipped);
         self::assertSame(1, $report->failed);
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
+    }
+
+    /**
+     * A dangling symlink is exactly what a concurrent tick racing unlink()
+     * against glob() can leave behind: glob() lists it, but
+     * file_get_contents() on a target that no longer exists returns false
+     * rather than throwing. That must count as a failure, not a fatal error,
+     * and the link must not be left to trip the next tick.
+     */
+    public function testCountsAnUnreadableFileAsFailedAndDeletesIt(): void
+    {
+        $link = $this->spoolDirectory . '/2-dangling.json';
+        symlink('/nonexistent-loki-spool-target', $link);
+        $shipper = new LokiSpoolShipper(
+            new LokiClient(new MockHttpClient(), new StubLokiEndpoint()),
+            $this->spoolDirectory,
+        );
+
+        $report = $shipper->ship();
+
+        self::assertSame(0, $report->shipped);
+        self::assertSame(1, $report->failed);
+        clearstatcache(true, $link);
+        self::assertFalse(is_link($link), 'the dangling symlink was left behind');
     }
 
     public function testShipsAtMostOneHundredFilesPerCallOldestFirst(): void
@@ -79,6 +114,40 @@ final class LokiSpoolShipperTest extends TestCase
 
         self::assertSame(1, $secondReport->shipped);
         self::assertSame([], glob($this->spoolDirectory . '/*.json') ?: []);
+    }
+
+    /**
+     * A batch of several lines in one spool file must ship every line, not
+     * just the first: linesIn() decodes the whole file and hands it to
+     * push() unchanged.
+     */
+    public function testShipsEveryLineOfAMultiLineBatchNotJustTheFirst(): void
+    {
+        $this->spool([
+            ['ts' => '1', 'line' => '{"m":"a"}', 'labels' => ['app' => 'sfr']],
+            ['ts' => '2', 'line' => '{"m":"b"}', 'labels' => ['app' => 'sfr']],
+            ['ts' => '3', 'line' => '{"m":"c"}', 'labels' => ['app' => 'sfr']],
+        ]);
+        $capturedBody = null;
+        $http = new MockHttpClient(
+            function (string $method, string $url, array $options) use (&$capturedBody): MockResponse {
+                $capturedBody = $options['body'] ?? null;
+
+                return new MockResponse('', ['http_code' => 204]);
+            },
+        );
+        $shipper = new LokiSpoolShipper(new LokiClient($http, new StubLokiEndpoint()), $this->spoolDirectory);
+
+        $report = $shipper->ship();
+
+        self::assertSame(1, $report->shipped);
+        self::assertIsString($capturedBody);
+        $payload = json_decode($capturedBody, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($payload);
+        self::assertIsArray($payload['streams']);
+        self::assertIsArray($payload['streams'][0]);
+        self::assertIsArray($payload['streams'][0]['values']);
+        self::assertCount(3, $payload['streams'][0]['values']);
     }
 
     public function testEmptyDirectoryIsANoOp(): void

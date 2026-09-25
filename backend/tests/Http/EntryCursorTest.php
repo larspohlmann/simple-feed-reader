@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\EntryCursor;
+use App\Http\Exception\MalformedCursorException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class EntryCursorTest extends TestCase
@@ -15,7 +17,6 @@ final class EntryCursorTest extends TestCase
             EntryCursor::encode(new \DateTimeImmutable('2026-08-14 12:00:00'), 42),
         );
 
-        self::assertNotNull($cursor);
         self::assertSame('2026-08-14 12:00:00', $cursor->sortInstant->format('Y-m-d H:i:s'));
         self::assertSame(42, $cursor->id);
     }
@@ -24,7 +25,9 @@ final class EntryCursorTest extends TestCase
     {
         $stale = rtrim(strtr(base64_encode('2026-08-14T12:00:00+00:00||42'), '+/', '-_'), '=');
 
-        self::assertNull(EntryCursor::decode($stale));
+        $this->expectException(MalformedCursorException::class);
+
+        EntryCursor::decode($stale);
     }
 
     public function testEncodeIsUrlSafeAndOpaque(): void
@@ -34,13 +37,22 @@ final class EntryCursorTest extends TestCase
         self::assertStringNotContainsString('|', $encoded);
     }
 
-    public function testDecodeRejectsGarbage(): void
+    /** @return iterable<string, array{string}> */
+    public static function malformedCursors(): iterable
     {
-        self::assertNull(EntryCursor::decode('not-a-cursor'));
-        self::assertNull(EntryCursor::decode(base64_encode('only-one-part')));
-        self::assertNull(EntryCursor::decode(base64_encode('bad-date|1')));
-        self::assertNull(EntryCursor::decode(base64_encode('2026-01-01T00:00:00+00:00|notint')));
-        self::assertNull(EntryCursor::decode(''));
+        yield 'not base64' => ['not-a-cursor'];
+        yield 'one part' => [base64_encode('only-one-part')];
+        yield 'bad date' => [base64_encode('bad-date|1')];
+        yield 'non-numeric id' => [base64_encode('2026-01-01T00:00:00+00:00|notint')];
+        yield 'empty' => [''];
+    }
+
+    #[DataProvider('malformedCursors')]
+    public function testDecodeRejectsGarbage(string $cursor): void
+    {
+        $this->expectException(MalformedCursorException::class);
+
+        EntryCursor::decode($cursor);
     }
 
     public function testInclusiveUpperBoundAdmitsEveryRealIdAtThatInstant(): void
