@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Account;
 
 use App\Entity\User;
-use App\Exception\LastAdminException;
+use App\Service\Account\Exception\LastAdminException;
 use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
 use App\Service\Admin\SelfActionGuard;
