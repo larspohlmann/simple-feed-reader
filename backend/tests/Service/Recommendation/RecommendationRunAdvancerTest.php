@@ -359,12 +359,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->fixtures->deleteAiSettings($this->user);
     }
 
-    /**
-     * Pins the ?? 0 fallback in the lock name for an unsaved user (getId()
-     * null): pre-acquiring 'ai-recommendations-0' must make advance() busy
-     * for such a user, which only holds if the code really names the lock
-     * after that fallback and not some other value.
-     */
     public function testAdvancingForAnUnsavedUserIsRefused(): void
     {
         $unsavedUser = new User('unsaved@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
