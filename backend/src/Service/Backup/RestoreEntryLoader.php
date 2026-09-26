@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
+use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Service\Backup\Dto\EntryLine;

@@ -39,10 +39,8 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
     /** Seeded with every offender the day the rule landed; each #1170 task deletes its own, so it only shrinks. */
     private const array ALLOW_LIST = [
         'App\\Controller\\Api\\HealthController',
-        'App\\Service\\Backup\\EntryBatchInserter',
         'App\\Service\\ReaderAudit\\AuditSampler',
         'App\\Service\\ReaderAudit\\AuditUserResolver',
-        'App\\Service\\Search\\Membership\\DatabaseSavedSearchMatcher',
         'App\\Service\\Worker\\Handler\\PurgeFailedMessagesHandler',
     ];
 

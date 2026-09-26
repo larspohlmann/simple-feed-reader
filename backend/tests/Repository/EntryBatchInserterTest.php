@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Repository\EntryBatchInserter;
 use App\Repository\PendingImageVerificationRepository;
 use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\EntryBatchInserter;
 use App\Tests\DbTestCase;
 
 final class EntryBatchInserterTest extends DbTestCase

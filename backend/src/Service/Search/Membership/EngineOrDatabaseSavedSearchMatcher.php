@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Membership;
 
+use App\Repository\DatabaseSavedSearchMatcher;
 use App\Service\Search\SearchEngineCapability;
 
 /**

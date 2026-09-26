@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Entity\User;
+use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\EntryLine;
-use App\Service\Backup\EntryBatchInserter;
 use App\Service\Backup\RestoreEntryLoader;
 use App\Service\Backup\RestoreFeedTargets;
 use App\Service\Search\EntryIndexer;
