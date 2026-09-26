@@ -9,6 +9,7 @@ use App\Entity\MailSendFailure;
 use App\Http\MailDeliveryHealthJson;
 use App\Repository\MailSendFailureRepository;
 use App\Service\Clock\NaiveUtcClock;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * The in-app signal that automated mail is failing (#882). Every send path
@@ -19,15 +20,15 @@ final readonly class MailDeliveryHealth implements MailFailureRecorder
 {
     public function __construct(
         private MailSendFailureRepository $failures,
+        private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
     ) {
     }
 
     public function recordFailure(MailKind $kind, string $recipient, string $error): void
     {
-        $occurredAt = $this->clock->now();
-
-        $this->failures->add(new MailSendFailure($kind, $recipient, $error, $occurredAt));
+        $this->failures->add(new MailSendFailure($kind, $recipient, $error, $this->clock->now()));
+        $this->entityManager->flush();
         $this->failures->pruneToRetention();
     }
 

@@ -10,7 +10,6 @@ use App\Repository\EntryListRepository;
 use App\Service\Comments\CommentsLoader;
 use App\Service\RateLimit\RateLimitGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -29,8 +28,7 @@ final readonly class EntryCommentsController
     #[Route('/{id}/comments', name: 'api_entries_comments', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function comments(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $entry = $this->entryList->findOneSubscribedByUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
+        $entry = $this->entryList->getOneSubscribedByUser($id, $user->requireId());
 
         $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $user);
 

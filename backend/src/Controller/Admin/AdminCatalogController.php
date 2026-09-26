@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Controller\Admin;
 
-use App\Entity\CatalogCategory;
-use App\Entity\CatalogFeed;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
@@ -38,35 +36,19 @@ final class AdminCatalogController
     #[Route('', name: 'api_admin_catalog_list', methods: ['GET'])]
     public function list(): JsonResponse
     {
-        return new JsonResponse([
-            'categories' => array_map(
-                static fn (CatalogCategory $c) => AdminCatalogJson::category($c),
-                $this->categories->findAllOrdered(),
-            ),
-            'feeds' => array_map(
-                static fn (CatalogFeed $f) => AdminCatalogJson::feed($f),
-                $this->feeds->findBy([], ['position' => 'ASC', 'title' => 'ASC']),
-            ),
-        ]);
+        return new JsonResponse(AdminCatalogJson::listing(
+            $this->categories->findAllOrdered(),
+            $this->feeds->findAllOrdered(),
+        ));
     }
 
     /**
-     * One budgeted slice of favicon warming. The admin UI polls this until
-     * `remaining` reaches 0 — the same contract /api/refresh uses, and for the
-     * same reason: 111 publisher round trips cannot fit in one request.
-     *
-     * This is what makes icons a property of the app rather than of one
-     * deployment: an install that never runs a console command still gets them.
+     * One budgeted slice of favicon warming, polled until `remaining` is 0, as /api/refresh is. It makes icons a
+     * property of the app: an install that never runs a console command still gets them.
      */
     #[Route('/favicons/warm', name: 'api_admin_catalog_warm_favicons', methods: ['POST'])]
     public function warmFavicons(): JsonResponse
     {
-        $report = $this->warmer->warm(self::WARM_BUDGET_SECONDS);
-
-        return new JsonResponse([
-            'warmed' => $report->warmed,
-            'failed' => $report->failed,
-            'remaining' => $report->remaining,
-        ]);
+        return new JsonResponse(AdminCatalogJson::warmReport($this->warmer->warm(self::WARM_BUDGET_SECONDS)));
     }
 }

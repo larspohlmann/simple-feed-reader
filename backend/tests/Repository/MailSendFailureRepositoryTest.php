@@ -21,10 +21,22 @@ final class MailSendFailureRepositoryTest extends DbTestCase
         $this->failures = $failures;
     }
 
-    public function testAddPersistsAndRecentReturnsNewestFirst(): void
+    public function testAddOnlyPersistsAndLeavesTheFlushToTheCaller(): void
+    {
+        $this->failures->add($this->failure('a@example.test', '2026-09-06T10:00:00Z'));
+
+        self::assertSame(0, $this->failures->countAll());
+
+        $this->em->flush();
+
+        self::assertSame(1, $this->failures->countAll());
+    }
+
+    public function testRecentReturnsTheStoredFailuresNewestFirst(): void
     {
         $this->failures->add($this->failure('a@example.test', '2026-09-06T10:00:00Z'));
         $this->failures->add($this->failure('b@example.test', '2026-09-06T11:00:00Z'));
+        $this->em->flush();
 
         $recent = $this->failures->recent(10);
 
@@ -37,6 +49,7 @@ final class MailSendFailureRepositoryTest extends DbTestCase
     public function testDeleteAllClearsTheTable(): void
     {
         $this->failures->add($this->failure('a@example.test', '2026-09-06T10:00:00Z'));
+        $this->em->flush();
 
         $this->failures->deleteAll();
 
@@ -46,14 +59,14 @@ final class MailSendFailureRepositoryTest extends DbTestCase
 
     public function testAddKeepsEveryRowItWrites(): void
     {
-        $this->fillFailures(MailSendFailureRepository::RETENTION + 1);
+        $this->storeFailures(MailSendFailureRepository::RETENTION + 1);
 
         self::assertSame(MailSendFailureRepository::RETENTION + 1, $this->failures->countAll());
     }
 
     public function testPruneToRetentionKeepsTheNewest(): void
     {
-        $this->fillFailures(MailSendFailureRepository::RETENTION + 5);
+        $this->storeFailures(MailSendFailureRepository::RETENTION + 5);
 
         $this->failures->pruneToRetention();
 
@@ -66,12 +79,13 @@ final class MailSendFailureRepositoryTest extends DbTestCase
         self::assertSame('user5@example.test', $retained[MailSendFailureRepository::RETENTION - 1]->getRecipient());
     }
 
-    private function fillFailures(int $count): void
+    private function storeFailures(int $count): void
     {
         for ($minute = 0; $minute < $count; ++$minute) {
             $stamp = sprintf('2026-09-06T10:%02d:00Z', $minute);
             $this->failures->add($this->failure("user{$minute}@example.test", $stamp));
         }
+        $this->em->flush();
     }
 
     private function failure(string $recipient, string $createdAt): MailSendFailure

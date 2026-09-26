@@ -1254,6 +1254,7 @@ final class EntryControllerTest extends WebTestCase
         $client->request('GET', "/api/entries/$entryId", server: $headers);
 
         self::assertResponseStatusCodeSame(404);
+        self::assertStringContainsString('"detail":"No such entry."', (string) $client->getResponse()->getContent());
     }
 
     public function testGetMissingEntryIs404(): void

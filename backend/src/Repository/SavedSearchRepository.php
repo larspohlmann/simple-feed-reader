@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\SavedSearch;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
@@ -52,7 +53,7 @@ class SavedSearchRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
-    public function findOneOwnedBy(int $id, int $userId): ?SavedSearch
+    public function getOneOwnedBy(int $id, int $userId): SavedSearch
     {
         /** @var SavedSearch|null $row */
         $row = $this->createQueryBuilder('savedSearch')
@@ -61,7 +62,7 @@ class SavedSearchRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $row;
+        return $row ?? throw new RecordNotFoundException('No such saved search.');
     }
 
     /**

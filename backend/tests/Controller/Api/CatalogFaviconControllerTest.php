@@ -88,6 +88,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
         $client->request('GET', '/api/catalog/feeds/999999/favicon', server: $headers);
 
         self::assertResponseStatusCodeSame(404);
+        self::assertStringContainsString('"detail":"No such feed."', (string) $client->getResponse()->getContent());
     }
 
     /**

@@ -41,6 +41,16 @@ services:
         tags:
             - phpstan.rules.rule
     -
+        class: App\Tests\PhpStan\ControllerEntityUse
+    -
         class: App\Tests\PhpStan\ControllerMutatesNoEntityRule
+        tags:
+            - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ControllerMutatesNoEntityThroughMethodCallableRule
+        tags:
+            - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ControllerMutatesNoEntityThroughStaticCallableRule
         tags:
             - phpstan.rules.rule

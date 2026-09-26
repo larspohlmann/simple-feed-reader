@@ -41,4 +41,14 @@ final readonly class BundledCatalog
 
         return $this->parser->parse((string) file_get_contents($this->path()));
     }
+
+    public function summary(): BundledCatalogSummary
+    {
+        try {
+            return BundledCatalogSummary::of($this->document());
+        } catch (InvalidCatalogDocumentException) {
+            // Missing or corrupt reads as unavailable, not a 500: the admin can still upload a file.
+            return BundledCatalogSummary::unavailable();
+        }
+    }
 }

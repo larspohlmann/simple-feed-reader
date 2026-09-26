@@ -8,7 +8,6 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Repository\EntryReadMarkRepository;
-use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\ReadMarking;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
@@ -94,8 +93,7 @@ final readonly class MarkReadService
             throw new ValidationException(['id' => ['An id is required when scope is "feed".']]);
         }
 
-        return $this->subscriptions->findOneOwnedBy($id, $userId)
-            ?? throw new RecordNotFoundException('No such subscription.');
+        return $this->subscriptions->getOneOwnedBy($id, $userId);
     }
 
     private function requireTag(?int $id, int $userId): int
@@ -104,9 +102,6 @@ final readonly class MarkReadService
             throw new ValidationException(['id' => ['An id is required when scope is "tag".']]);
         }
 
-        $tag = $this->tags->findOneOwnedBy($id, $userId)
-            ?? throw new RecordNotFoundException('No such tag.');
-
-        return $tag->requireId();
+        return $this->tags->getOneOwnedBy($id, $userId)->requireId();
     }
 }

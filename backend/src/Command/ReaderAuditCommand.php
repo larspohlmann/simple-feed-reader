@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Service\ReaderAudit\AuditFindingsFile;
 use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
+use App\Service\ReaderAudit\AuditShard;
 use App\Service\ReaderAudit\AuditUserResolver;
 use App\Service\ReaderAudit\ReaderAuditRunner;
 use App\Service\ReaderAudit\ReaderLink;
@@ -74,7 +76,7 @@ final class ReaderAuditCommand extends Command
 
         $userId = $this->users->resolve($this->option($input, 'user'));
         $sample = $this->articlesToAudit($input, $userId);
-        $mine = $this->shardOf($sample, $this->number($input, 'shard'), $this->number($input, 'shards'));
+        $mine = (new AuditShard($this->number($input, 'shard'), $this->number($input, 'shards')))->pick($sample);
 
         $io->text(\sprintf(
             'user %d — %d articles sampled over %d feeds, %d in this shard',
@@ -84,18 +86,18 @@ final class ReaderAuditCommand extends Command
             \count($mine),
         ));
 
-        $handle = $this->openOutput((string) $this->option($input, 'out'));
+        $file = AuditFindingsFile::create((string) $this->option($input, 'out'));
         $link = new ReaderLink((string) $this->option($input, 'base-url'));
 
         $io->progressStart(\count($mine));
         $flagged = 0;
         foreach ($this->runner->run($mine, $link) as $finding) {
-            fwrite($handle, json_encode($finding->toArray(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n");
+            $file->append($finding);
             $flagged += $finding->markers === [] ? 0 : 1;
             $io->progressAdvance();
         }
         $io->progressFinish();
-        fclose($handle);
+        $file->close();
 
         $io->success(\sprintf('%d of %d audited articles carry at least one marker.', $flagged, \count($mine)));
 
@@ -117,43 +119,6 @@ final class ReaderAuditCommand extends Command
             $this->number($input, 'seed'),
             new \DateTimeImmutable($this->option($input, 'before') ?? 'now'),
         ));
-    }
-
-    /**
-     * @param list<SampledEntry> $sample
-     *
-     * @return list<SampledEntry>
-     */
-    private function shardOf(array $sample, int $shard, int $shards): array
-    {
-        if ($shards <= 1) {
-            return $sample;
-        }
-
-        $mine = [];
-        foreach ($sample as $index => $entry) {
-            if ($index % $shards === $shard) {
-                $mine[] = $entry;
-            }
-        }
-
-        return $mine;
-    }
-
-    /** @return resource */
-    private function openOutput(string $path)
-    {
-        $directory = \dirname($path);
-        if (!is_dir($directory)) {
-            mkdir($directory, 0o775, true);
-        }
-
-        $handle = fopen($path, 'wb');
-        if ($handle === false) {
-            throw new \RuntimeException(\sprintf('Cannot write %s.', $path));
-        }
-
-        return $handle;
     }
 
     private function option(InputInterface $input, string $name): ?string

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * Reads are shaped for the ~2 s debug poll: the list query hydrates no
  * LONGTEXT at all (sizes come from SQL LENGTH()), and only verdict-null
  * rows — the one call currently streaming — ship their partial text. Full
- * bodies load one row at a time via findOwned() when the user expands an
+ * bodies load one row at a time via getOwned() when the user expands an
  * entry.
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
@@ -138,7 +139,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $textById;
     }
 
-    public function findOwned(int $id, User $user): ?RecommendationRunLog
+    public function getOwned(int $id, User $user): RecommendationRunLog
     {
         /** @var RecommendationRunLog|null $log */
         $log = $this->createQueryBuilder('l')
@@ -150,7 +151,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $log;
+        return $log ?? throw new RecordNotFoundException('No such debug log entry.');
     }
 
     /**

@@ -153,4 +153,33 @@ final class CatalogFeedRepositoryTest extends DbTestCase
 
         self::assertCount(2, $rows);
     }
+
+    public function testFindAllOrderedSortsByPositionThenTitleAndKeepsDisabledFeeds(): void
+    {
+        $category = new CatalogCategory('ordering', 'Ordering', 'sort', '#6b7280');
+        $bravo = new CatalogFeed($category, 'Bravo', 'https://example.com/bravo.xml');
+        $bravo->setPosition(1);
+        $alpha = new CatalogFeed($category, 'Alpha', 'https://example.com/alpha.xml');
+        $alpha->setPosition(1);
+        $zulu = new CatalogFeed($category, 'Zulu', 'https://example.com/zulu.xml');
+        $zulu->setPosition(0);
+        $zulu->setEnabled(false);
+        $this->em->persist($category);
+        foreach ([$bravo, $alpha, $zulu] as $feed) {
+            $this->em->persist($feed);
+        }
+        $this->em->flush();
+
+        $repository = self::getContainer()->get(CatalogFeedRepository::class);
+        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
+        $mine = array_filter(
+            $repository->findAllOrdered(),
+            static fn (CatalogFeed $feed): bool => $feed->getCategory() === $category,
+        );
+
+        self::assertSame(
+            ['Zulu', 'Alpha', 'Bravo'],
+            array_values(array_map(static fn (CatalogFeed $feed): string => $feed->getTitle(), $mine)),
+        );
+    }
 }

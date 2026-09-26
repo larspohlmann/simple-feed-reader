@@ -225,4 +225,28 @@ final class OpmlImporterTest extends DbTestCase
             ->createQueryBuilder('f')->select('COUNT(f.id)')->getQuery()->getSingleScalarResult();
         self::assertSame($feedsBefore, $feedsAfter); // no orphan Feed rows created
     }
+
+    public function testAnEmptyBodyIsRefusedBeforeParsing(): void
+    {
+        $this->expectException(InvalidOpmlException::class);
+        $this->expectExceptionMessage('The OPML body is empty or larger than 1 MB.');
+
+        $this->importer()->import($this->user('empty-opml@example.com'), '');
+    }
+
+    public function testABodyOverOneMegabyteIsRefusedBeforeParsing(): void
+    {
+        $this->expectException(InvalidOpmlException::class);
+        $this->expectExceptionMessage('The OPML body is empty or larger than 1 MB.');
+
+        $this->importer()->import($this->user('large-opml@example.com'), str_repeat('a', 1_048_577));
+    }
+
+    public function testABodyOfExactlyOneMegabyteReachesTheParser(): void
+    {
+        $this->expectException(InvalidOpmlException::class);
+        $this->expectExceptionMessage('Not a well-formed OPML 2.0 document.');
+
+        $this->importer()->import($this->user('limit-opml@example.com'), str_repeat('a', 1_048_576));
+    }
 }

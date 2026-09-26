@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
@@ -143,20 +144,39 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertSame(1, $this->logs->countAttempts($currentRun, RecommendationRunLog::PHASE_BATCH, 1));
     }
 
-    public function testFindOwnedRefusesAnotherUsersRow(): void
+    public function testGetOwnedReturnsTheCallersRow(): void
     {
-        $myRun = $this->fixtures->createRun($this->user);
-        $mine = $this->fixtures->log($myRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $theirRun = $this->fixtures->createRun($this->otherUser);
-        $theirs = $this->fixtures->log($theirRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $mine = $this->fixtures->log(
+            $this->fixtures->createRun($this->user),
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'r',
+        );
         $this->em->flush();
         $mineId = $mine->getId();
-        $theirsId = $theirs->getId();
         self::assertNotNull($mineId);
+
+        self::assertSame($mine, $this->logs->getOwned($mineId, $this->user));
+    }
+
+    public function testGetOwnedRefusesAnotherUsersRow(): void
+    {
+        $theirs = $this->fixtures->log(
+            $this->fixtures->createRun($this->otherUser),
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'r',
+        );
+        $this->em->flush();
+        $theirsId = $theirs->getId();
         self::assertNotNull($theirsId);
 
-        self::assertSame($mine, $this->logs->findOwned($mineId, $this->user));
-        self::assertNull($this->logs->findOwned($theirsId, $this->user));
+        $this->expectException(RecordNotFoundException::class);
+        $this->expectExceptionMessage('No such debug log entry.');
+
+        $this->logs->getOwned($theirsId, $this->user);
     }
 
     public function testDeleteForUserLeavesOtherUsersRows(): void

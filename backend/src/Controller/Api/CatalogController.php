@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Http\CatalogFaviconResponse;
 use App\Http\CatalogJson;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
 use App\Repository\FeedRepository;
-use App\Service\Catalog\MonogramFavicon;
+use App\Service\Catalog\CatalogFaviconSource;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -23,7 +23,7 @@ final readonly class CatalogController
         private CatalogCategoryRepository $categories,
         private FeedRepository $feeds,
         private CatalogFeedRepository $catalogFeeds,
-        private MonogramFavicon $monogram,
+        private CatalogFaviconSource $favicons,
     ) {
     }
 
@@ -36,30 +36,9 @@ final readonly class CatalogController
         ));
     }
 
-    /**
-     * Cached bytes, or the monogram on a miss. NEVER fetches: a cache miss here
-     * is a normal state, filled by app:catalog:warm-favicons at deploy time.
-     * The long max-age is safe because the URL is per-feed-id and the ETag
-     * changes whenever the bytes do.
-     */
     #[Route('/feeds/{id}/favicon', name: 'api_catalog_favicon', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function favicon(int $id): Response
     {
-        $feed = $this->catalogFeeds->find($id) ?? throw new NotFoundHttpException('No such catalog feed.');
-
-        $bytes = $feed->getFaviconBytes();
-        $contentType = $feed->getFaviconContentType();
-
-        if (null === $bytes || null === $contentType) {
-            $bytes = $this->monogram->render($feed);
-            $contentType = MonogramFavicon::CONTENT_TYPE;
-        }
-
-        $response = new Response($bytes, Response::HTTP_OK, ['Content-Type' => $contentType]);
-        $response->setEtag(md5($bytes));
-        $response->setPublic();
-        $response->setMaxAge(86400);
-
-        return $response;
+        return CatalogFaviconResponse::of($this->favicons->imageFor($this->catalogFeeds->getById($id)));
     }
 }

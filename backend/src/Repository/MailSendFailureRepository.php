@@ -22,9 +22,7 @@ final class MailSendFailureRepository extends ServiceEntityRepository
 
     public function add(MailSendFailure $failure): void
     {
-        $manager = $this->getEntityManager();
-        $manager->persist($failure);
-        $manager->flush();
+        $this->getEntityManager()->persist($failure);
     }
 
     public function deleteAll(): void

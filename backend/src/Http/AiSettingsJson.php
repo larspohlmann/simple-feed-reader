@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\User;
 use App\Service\Recommendation\RecommendationPackingSettings;
 
 /**
@@ -42,6 +43,12 @@ final class AiSettingsJson
             'ready' => self::isReady($settings),
             'active' => $settings->getId() === $activeId,
         ];
+    }
+
+    /** @return array<string, mixed> */
+    public static function configurationFor(AiProviderSettings $settings, User $owner): array
+    {
+        return self::configuration($settings, $owner->getActiveAiProviderSettings()?->getId());
     }
 
     /**

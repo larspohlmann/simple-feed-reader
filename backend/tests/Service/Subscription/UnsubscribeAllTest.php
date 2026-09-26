@@ -74,7 +74,7 @@ final class UnsubscribeAllTest extends KernelTestCase
         self::assertSame(2, $removed);
         $repository = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repository);
-        self::assertNotNull($repository->findOneOwnedBy($keptId, $user->requireId()));
+        self::assertSame($keptId, $repository->getOneOwnedBy($keptId, $user->requireId())->requireId());
         self::assertCount(1, $repository->findForUserWithTags($user->requireId()));
     }
 

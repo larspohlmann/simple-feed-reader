@@ -322,5 +322,9 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             'application/problem+json',
             (string) $client->getResponse()->headers->get('Content-Type'),
         );
+        self::assertStringContainsString(
+            '"detail":"No such debug log entry."',
+            (string) $client->getResponse()->getContent(),
+        );
     }
 }

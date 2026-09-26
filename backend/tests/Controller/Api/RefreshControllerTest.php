@@ -80,6 +80,10 @@ final class RefreshControllerTest extends WebTestCase
         $headers = $this->auth('nosub@example.com');
         $client->request('POST', '/api/refresh?feedId=' . $feed->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404);
+        self::assertStringContainsString(
+            '"detail":"No such subscription."',
+            (string) $client->getResponse()->getContent(),
+        );
     }
 
     public function testPerFeedRefreshOfOwnFeedIsAccepted(): void
@@ -147,6 +151,7 @@ final class RefreshControllerTest extends WebTestCase
         $headers = $this->auth('unknowntag@example.com');
         $client->request('POST', '/api/refresh?tag=999999', server: $headers);
         self::assertResponseStatusCodeSame(404);
+        self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
     }
 
     public function testTagRefreshOfOwnTagIsAccepted(): void

@@ -6,11 +6,10 @@ namespace App\Service\Recommendation;
 
 use App\Http\FeedAnnotationVisibility;
 use App\Http\RecommendationFeedJson;
-use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryListRow;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
-use App\Repository\SavedSearchMembershipLoader;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -26,8 +25,7 @@ final readonly class ForYouFeedResponder
     public function __construct(
         private RecommendationFeedPager $pager,
         private RecommendationSettingsResolver $settings,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
     ) {
     }
 
@@ -53,10 +51,8 @@ final readonly class ForYouFeedResponder
      */
     private function enrichedRows(array $rows, int $userId): array
     {
-        $entryRows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto(
-                array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
-            ),
+        $entryRows = $this->enricher->enrich(
+            array_map(static fn (RecommendationFeedRow $row): EntryListRow => $row->row, $rows),
             $userId,
         );
 

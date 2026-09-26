@@ -10,7 +10,6 @@ use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\RecommendationDebugLogView;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -42,9 +41,6 @@ final readonly class RecommendationDebugLogController
     #[Route('/{id}', name: 'api_recommendations_debug_log_entry', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function entry(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $log = $this->logs->findOwned($id, $user)
-            ?? throw new NotFoundHttpException('No such debug log entry.');
-
-        return new JsonResponse(RecommendationDebugLogJson::detail($log));
+        return new JsonResponse(RecommendationDebugLogJson::detail($this->logs->getOwned($id, $user)));
     }
 }

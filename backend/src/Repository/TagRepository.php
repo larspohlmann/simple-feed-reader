@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Tag;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -105,6 +106,11 @@ class TagRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $row;
+    }
+
+    public function getOneOwnedBy(int $id, int $userId): Tag
+    {
+        return $this->findOneOwnedBy($id, $userId) ?? throw new RecordNotFoundException('No such tag.');
     }
 
     /**

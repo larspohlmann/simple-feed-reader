@@ -4,23 +4,21 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
-use App\Repository\EntryCategoryLoader;
-use App\Repository\EntryQuery;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\SavedSearchListQuery;
-use App\Repository\SavedSearchMembershipLoader;
 use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -35,8 +33,7 @@ final readonly class SavedSearchEntriesController
     public function __construct(
         private SavedSearchRepository $savedSearches,
         private SavedSearchEntries $entries,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -44,25 +41,20 @@ final readonly class SavedSearchEntriesController
     #[Route('', name: 'api_entries_saved_searches', methods: ['GET'])]
     public function list(
         #[CurrentUser] User $user,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         $userId = $user->requireId();
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: $this->savedSearches->idsForUser($userId),
-            onlyUnread: $unread,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
-            order: ListOrder::fromRequestValue($order),
+            onlyUnread: $page->unread,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
+            order: ListOrder::fromRequestValue($page->order),
         );
         $result = $this->entries->list($query);
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($result->rows),
-            $userId,
-        );
+        $rows = $this->enricher->enrich($result->rows, $userId);
 
         return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
@@ -71,28 +63,22 @@ final readonly class SavedSearchEntriesController
     public function one(
         int $id,
         #[CurrentUser] User $user,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         $userId = $user->requireId();
-        $this->savedSearches->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such saved search.');
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
 
         $query = new SavedSearchListQuery(
             userId: $userId,
-            savedSearchIds: [$id],
-            onlyUnread: $unread,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
-            order: ListOrder::fromRequestValue($order),
+            savedSearchIds: [$savedSearch->requireId()],
+            onlyUnread: $page->unread,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
+            order: ListOrder::fromRequestValue($page->order),
         );
         $result = $this->entries->list($query);
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($result->rows),
-            $userId,
-        );
+        $rows = $this->enricher->enrich($result->rows, $userId);
 
         return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
@@ -118,10 +104,8 @@ final readonly class SavedSearchEntriesController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkSavedSearchesReadRequest $request,
     ): JsonResponse {
-        $userId = $user->requireId();
-        $this->savedSearches->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such saved search.');
-        $this->markRead->markOne($user, $id, $request->until);
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $user->requireId());
+        $this->markRead->markOne($user, $savedSearch->requireId(), $request->until);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

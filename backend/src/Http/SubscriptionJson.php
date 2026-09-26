@@ -6,8 +6,9 @@ namespace App\Http;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Url\FeedWebsite;
+use App\Service\Subscription\SubscriptionTallies;
 use App\Service\Text\PlainText;
+use App\Service\Url\FeedWebsite;
 
 final class SubscriptionJson
 {
@@ -17,6 +18,26 @@ final class SubscriptionJson
      * whole reader down for a block that shows a few lines.
      */
     private const int DESCRIPTION_MAX = 1000;
+
+    /**
+     * @param list<Subscription> $subscriptions
+     *
+     * @return array<string, mixed>
+     */
+    public static function list(array $subscriptions, SubscriptionTallies $tallies): array
+    {
+        return [
+            'subscriptions' => array_map(
+                static fn (Subscription $subscription): array => self::one(
+                    $subscription,
+                    $tallies->unreadCounts[$subscription->requireId()] ?? 0,
+                    $tallies->entryCounts[$subscription->requireId()] ?? 0,
+                ),
+                $subscriptions,
+            ),
+            ...SubscriptionCountsJson::surfaceTotals($tallies),
+        ];
+    }
 
     /**
      * The embedded tag's `position` is this feed's order WITHIN that tag (the

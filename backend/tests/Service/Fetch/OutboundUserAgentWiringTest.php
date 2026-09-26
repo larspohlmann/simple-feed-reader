@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use App\Command\CheckCatalogUrlsCommand;
+use App\Service\Catalog\CatalogUrlChecker;
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Reader\HtmlPageFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,7 +49,7 @@ final class OutboundUserAgentWiringTest extends KernelTestCase
     {
         yield 'feed fetcher' => [ConcurrentFeedFetcher::class, 'userAgent'];
         yield 'reader page fetcher' => [HtmlPageFetcher::class, 'userAgent'];
-        yield 'catalog rot check' => [CheckCatalogUrlsCommand::class, 'userAgent'];
+        yield 'catalog rot check' => [CatalogUrlChecker::class, 'userAgent'];
     }
 
     public function testTheConfiguredAgentAdvertisesNoHost(): void

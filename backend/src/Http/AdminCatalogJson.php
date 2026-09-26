@@ -6,7 +6,9 @@ namespace App\Http;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Service\Catalog\BundledCatalogSummary;
 use App\Service\Catalog\CatalogImportResult;
+use App\Service\Catalog\CatalogWarmReport;
 
 /**
  * The admin view of the catalog: every row, enabled or not, plus the favicon
@@ -66,6 +68,40 @@ final class AdminCatalogJson
             'feedsUpdated' => $result->feedsUpdated,
             'feedsRemoved' => $result->feedsRemoved,
             'lockedSkipped' => $result->lockedSkipped,
+        ];
+    }
+
+    /**
+     * @param list<CatalogCategory> $categories
+     * @param list<CatalogFeed>     $feeds
+     *
+     * @return array{categories: list<array<string, mixed>>, feeds: list<array<string, mixed>>}
+     */
+    public static function listing(array $categories, array $feeds): array
+    {
+        return [
+            'categories' => array_map(self::category(...), $categories),
+            'feeds' => array_map(self::feed(...), $feeds),
+        ];
+    }
+
+    /** @return array{warmed: int, failed: int, remaining: int} */
+    public static function warmReport(CatalogWarmReport $report): array
+    {
+        return [
+            'warmed' => $report->warmed,
+            'failed' => $report->failed,
+            'remaining' => $report->remaining,
+        ];
+    }
+
+    /** @return array{available: bool, categories: int, feeds: int} */
+    public static function bundled(BundledCatalogSummary $summary): array
+    {
+        return [
+            'available' => $summary->available,
+            'categories' => $summary->categories,
+            'feeds' => $summary->feeds,
         ];
     }
 }

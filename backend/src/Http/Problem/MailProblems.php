@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
+use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -18,6 +19,9 @@ final readonly class MailProblems implements ExceptionProblems
                 Response::HTTP_UNPROCESSABLE_ENTITY,
                 $exception->getMessage(),
             )),
+            $exception instanceof TestDigestUnavailableException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_FORBIDDEN),
+            ),
             default => null,
         };
     }

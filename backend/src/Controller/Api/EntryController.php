@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkEntriesReadRequest;
 use App\Dto\Entry\MarkForYouReadRequest;
 use App\Dto\Entry\MarkReadRequest;
@@ -15,12 +16,11 @@ use App\Http\EntryCursor;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
-use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
-use App\Repository\SavedSearchMembershipLoader;
 use App\Service\Reader\EntryStateUpdater;
 use App\Service\Reader\MarkEntriesReadService;
 use App\Service\Reader\MarkReadService;
@@ -29,8 +29,8 @@ use App\Service\Recommendation\ForYouMarkReadService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -39,8 +39,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
         private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
@@ -55,10 +54,8 @@ final readonly class EntryController
         #[MapQueryParameter] ?string $view = null,
         #[MapQueryParameter] ?int $subscription = null,
         #[MapQueryParameter] ?int $tag = null,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         // Validate `view` in-controller (not via a MapQueryParameter regexp) so a
         // bad value reports the SAME `validation_error` problem type as every other
@@ -75,7 +72,7 @@ final readonly class EntryController
                 ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             ),
         };
-        $listOrder = ListOrder::fromRequestValue($order);
+        $listOrder = ListOrder::fromRequestValue($page->order);
 
         // The for-you feed is score-ranked, not (effectiveDate, id)-ranked, so
         // it needs its own cursor and never reaches EntryQuery's applyView.
@@ -83,7 +80,7 @@ final readonly class EntryController
         // this one IS the view, so its filter rides beside it as a flag.
         if ($view === 'for-you') {
             return new JsonResponse($this->forYouFeed->page(
-                new ForYouFeedQuery($user, $cursor, $limit, $unread),
+                new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),
             ));
         }
 
@@ -92,15 +89,12 @@ final readonly class EntryController
             view: $view,
             subscriptionId: $subscription,
             tagId: $tag,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
             order: $listOrder,
         );
 
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($this->entryList->listForUser($query)),
-            $user->requireId(),
-        );
+        $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
         return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($view)));
     }
@@ -110,12 +104,8 @@ final readonly class EntryController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
-        $row = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto([$row]),
-            $user->requireId(),
-        )[0];
+        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
+        $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);
     }
@@ -162,8 +152,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
+        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
 
         $state = $this->entryStateUpdater->apply($user, $row, $request);
 

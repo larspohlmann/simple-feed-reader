@@ -54,7 +54,7 @@ abstract class AbstractEntryProjectionRepository extends ServiceEntityRepository
     /**
      * The shared "entry list row" projection: the entry plus the caller's
      * subscription, feed, and optional per-entry state. listForUser adds
-     * ordering/paging/filters; oneRowForUser adds an id filter.
+     * ordering/paging/filters; getOneRowForUser adds an id filter.
      */
     protected function rowQueryBuilder(int $userId): QueryBuilder
     {
