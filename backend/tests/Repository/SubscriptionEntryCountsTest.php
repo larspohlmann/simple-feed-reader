@@ -25,7 +25,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($feed, 'b', '2026-07-05');
         $this->entry($feed, 'c', '2026-07-21');
         $state = new EntryState($user, $read);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
@@ -116,15 +117,15 @@ final class RestoreEntryLoader
         $entry = $this->em->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
         $state = new EntryState($this->userReference(), $entry);
-        $state->setIsHidden($line->isHidden);
-        $state->setIsFavorite($line->isFavorite);
-        $state->setIsKept($line->isKept);
-        $state->setHiddenAt($line->hiddenAt);
+        $state->restoreReadMark(new BackedUpReadMark($line->isHidden, $line->hiddenAt));
+        if ($line->isFavorite) {
+            $state->markFavorite();
+        }
+        if ($line->isKept) {
+            $state->markKept();
+        }
         if ($line->isViewed) {
-            // markViewed() is the only way in (#307, one-way by design) and it
-            // needs an instant. A file that says "viewed" without a timestamp
-            // keeps the flag — the fact that matters to the recommendation
-            // history — and is stamped with the restore's own time.
+            // A "viewed" line without its timestamp keeps the flag and takes the restore's own time (#307).
             $state->markViewed($line->viewedAt ?? $this->clock->now());
         }
 

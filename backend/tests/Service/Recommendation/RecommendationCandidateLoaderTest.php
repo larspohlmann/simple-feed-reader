@@ -48,7 +48,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         // caught up, finishing the run with zero picks.
         $readByFlag = $this->entry('read-by-flag', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $readByFlag);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 
@@ -82,7 +82,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $favorited);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -95,7 +95,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $kept);
-        $state->setIsKept(true);
+        $state->markKept();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -130,8 +130,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $untouched = $this->entry('untouched', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $untouched);
-        $state->setIsFavorite(false);
-        $state->setIsKept(false);
+        $state->clearFavorite();
+        $state->clearKept();
         $this->em->persist($state);
         $this->em->flush();
 

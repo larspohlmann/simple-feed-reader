@@ -244,7 +244,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 
         $entry = $this->fixtureEntry($this->fixtureFeed());
         $state = new EntryState($admin, $entry);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 
@@ -256,6 +256,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $reloaded = $entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
         self::assertInstanceOf(EntryState::class, $reloaded);
         self::assertFalse($reloaded->isHidden());
+        self::assertNull($reloaded->getHiddenAt());
     }
 
     public function testFailsWhenTheAdminDoesNotExistYet(): void

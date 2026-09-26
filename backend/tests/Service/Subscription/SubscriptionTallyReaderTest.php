@@ -27,8 +27,8 @@ final class SubscriptionTallyReaderTest extends DbTestCase
         $read = $this->entry($feed, 'read');
         $this->entry($feed, 'unread');
         $state = new EntryState($user, $read);
-        $state->setIsHidden(true);
-        $state->setIsFavorite(true);
+        $state->hide($when);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 

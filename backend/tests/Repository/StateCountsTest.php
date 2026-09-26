@@ -41,16 +41,16 @@ final class StateCountsTest extends DbTestCase
         $this->em->persist(new Subscription($user, $feed, $when));
 
         $fav = new EntryState($user, $this->entry($feed, 'fav'));
-        $fav->setIsFavorite(true);
+        $fav->markFavorite();
         $this->em->persist($fav);
 
         $kept = new EntryState($user, $this->entry($feed, 'kept'));
-        $kept->setIsKept(true);
+        $kept->markKept();
         $this->em->persist($kept);
 
         $both = new EntryState($user, $this->entry($feed, 'both'));
-        $both->setIsFavorite(true);
-        $both->setIsKept(true);
+        $both->markFavorite();
+        $both->markKept();
         $this->em->persist($both);
 
         // Opened, so it counts as viewed but neither favourite nor kept.
@@ -106,8 +106,8 @@ final class StateCountsTest extends DbTestCase
         $feed = new Feed('https://example.com/unsub.xml');
         $this->em->persist($feed);
         $orphan = new EntryState($user, $this->entry($feed, 'orphan'));
-        $orphan->setIsFavorite(true);
-        $orphan->setIsKept(true);
+        $orphan->markFavorite();
+        $orphan->markKept();
         $orphan->markViewed($when);
         $this->em->persist($orphan);
         $this->em->flush();
@@ -132,7 +132,7 @@ final class StateCountsTest extends DbTestCase
 
         $entry = $this->entry($feed, 'shared');
         $theirs = new EntryState($other, $entry);
-        $theirs->setIsFavorite(true);
+        $theirs->markFavorite();
         $theirs->markViewed($when);
         $this->em->persist($theirs);
         $this->em->flush();

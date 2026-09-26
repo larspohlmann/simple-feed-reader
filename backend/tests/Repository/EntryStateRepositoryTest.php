@@ -64,7 +64,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-set');
 
         $state = new EntryState($this->user, $withState);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -98,11 +98,11 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-guid');
 
         $mineState = new EntryState($this->user, $shared);
-        $mineState->setIsFavorite(true);
+        $mineState->markFavorite();
         $this->em->persist($mineState);
 
         $theirState = new EntryState($otherUser, $shared);
-        $theirState->setIsKept(true);
+        $theirState->markKept();
         $this->em->persist($theirState);
         $this->em->flush();
 
@@ -138,7 +138,7 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->flush();
 
         $this->repo()->ensureRow($userId, $entryId, false, null);

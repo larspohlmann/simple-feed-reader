@@ -195,7 +195,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
 
         $state = $this->entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
         if (null !== $state && $state->isHidden()) {
-            $state->setIsHidden(false);
+            $state->markUnread();
             $needsFlush = true;
         }
 

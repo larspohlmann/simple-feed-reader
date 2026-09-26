@@ -289,12 +289,11 @@ final class AccountRestorerTest extends DbTestCase
         $entryC = $this->makeEntry($two, 'guid-c', 'Article C', '2026-08-04');
 
         $read = new EntryState($user, $entryA);
-        $read->setIsHidden(true);
-        $read->setIsFavorite(true);
-        $read->setHiddenAt(new \DateTimeImmutable('2026-08-05 10:00:00'));
+        $read->hide(new \DateTimeImmutable('2026-08-05 10:00:00'));
+        $read->markFavorite();
         $this->em->persist($read);
         $viewed = new EntryState($user, $entryC);
-        $viewed->setIsKept(true);
+        $viewed->markKept();
         $viewed->markViewed(new \DateTimeImmutable('2026-08-06 11:00:00'));
         $this->em->persist($viewed);
 
@@ -841,7 +840,7 @@ final class AccountRestorerTest extends DbTestCase
         for ($index = 0; $index < $entryCount; ++$index) {
             $entry = $this->makeEntry($feed, 'wide-guid-' . $index, 'Wide ' . $index, '2026-08-02');
             $state = new EntryState($user, $entry);
-            $state->setIsFavorite(true);
+            $state->markFavorite();
             $this->em->persist($state);
         }
         $this->em->flush();

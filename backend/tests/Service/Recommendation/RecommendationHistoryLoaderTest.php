@@ -51,13 +51,13 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entryE = $this->entry('E', '2026-07-14T00:00:00Z');
 
         $stateA = new EntryState($this->user, $entryA);
-        $stateA->setIsFavorite(true);
-        $stateA->setIsKept(true);
+        $stateA->markFavorite();
+        $stateA->markKept();
         $stateA->markViewed(new \DateTimeImmutable('2026-07-10T09:00:00Z'));
         $this->em->persist($stateA);
 
         $stateB = new EntryState($this->user, $entryB);
-        $stateB->setIsKept(true);
+        $stateB->markKept();
         $stateB->markViewed(new \DateTimeImmutable('2026-07-11T09:00:00Z'));
         $this->em->persist($stateB);
 
@@ -66,7 +66,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->em->persist($stateC);
 
         $stateE = new EntryState($this->user, $entryE);
-        $stateE->setIsFavorite(true);
+        $stateE->markFavorite();
         $this->em->persist($stateE);
 
         $this->em->flush();
@@ -90,7 +90,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->em->persist($stateC);
 
         $stateB = new EntryState($this->user, $entryB);
-        $stateB->setIsKept(true);
+        $stateB->markKept();
         $stateB->markViewed(new \DateTimeImmutable('2026-07-15T11:00:00Z'));
         $this->em->persist($stateB);
 
@@ -131,7 +131,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->subscription->setCustomTitle('My Custom Feed');
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -146,7 +146,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $entry->setSummary('Summary text');
         $entry->setContentHtml('<p>Content text</p>');
         $state = new EntryState($this->user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -159,7 +159,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     {
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -173,7 +173,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $this->feed->setTitle('');
         $entry = $this->entry('A', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 

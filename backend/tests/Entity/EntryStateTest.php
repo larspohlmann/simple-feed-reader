@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
@@ -86,6 +87,80 @@ final class EntryStateTest extends TestCase
         self::assertNull($state->getViewedAt());
         self::assertTrue($state->isHidden());
         self::assertSame($when, $state->getHiddenAt());
+    }
+
+    public function testMarkingAFavoriteLeavesTheOtherFlagsAlone(): void
+    {
+        $state = $this->makeState();
+
+        $state->markFavorite();
+
+        self::assertTrue($state->isFavorite());
+        self::assertFalse($state->isKept());
+        self::assertFalse($state->isHidden());
+    }
+
+    public function testClearingAFavoriteUndoesIt(): void
+    {
+        $state = $this->makeState();
+        $state->markFavorite();
+
+        $state->clearFavorite();
+
+        self::assertFalse($state->isFavorite());
+    }
+
+    public function testMarkingKeptLeavesTheOtherFlagsAlone(): void
+    {
+        $state = $this->makeState();
+
+        $state->markKept();
+
+        self::assertTrue($state->isKept());
+        self::assertFalse($state->isFavorite());
+        self::assertFalse($state->isHidden());
+    }
+
+    public function testClearingKeptUndoesIt(): void
+    {
+        $state = $this->makeState();
+        $state->markKept();
+
+        $state->clearKept();
+
+        self::assertFalse($state->isKept());
+    }
+
+    public function testARestoredLegacyReadMarkKeepsItsMissingInstant(): void
+    {
+        $state = $this->makeState();
+
+        $state->restoreReadMark(new BackedUpReadMark(true, null));
+
+        self::assertTrue($state->isHidden());
+        self::assertNull($state->getHiddenAt());
+    }
+
+    public function testARestoredUnreadMarkKeepsAStaleInstantVerbatim(): void
+    {
+        $state = $this->makeState();
+        $staleInstant = new \DateTimeImmutable('2026-08-03T00:00:00Z');
+
+        $state->restoreReadMark(new BackedUpReadMark(false, $staleInstant));
+
+        self::assertFalse($state->isHidden());
+        self::assertSame($staleInstant, $state->getHiddenAt());
+    }
+
+    public function testRestoringAReadMarkLeavesTheOtherFlagsAlone(): void
+    {
+        $state = $this->makeState();
+        $state->markFavorite();
+
+        $state->restoreReadMark(new BackedUpReadMark(true, new \DateTimeImmutable('2026-08-02T00:00:00Z')));
+
+        self::assertTrue($state->isFavorite());
+        self::assertFalse($state->isViewed());
     }
 
     private function makeState(): EntryState

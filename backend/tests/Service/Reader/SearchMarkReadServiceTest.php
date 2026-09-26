@@ -64,7 +64,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     private function stateFor(Entry $entry, bool $isHidden): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $state->setIsHidden($isHidden);
+        $isHidden ? $state->hide(new \DateTimeImmutable('2026-07-05T00:00:00Z')) : $state->markUnread();
         $this->em->persist($state);
         $this->em->flush();
 

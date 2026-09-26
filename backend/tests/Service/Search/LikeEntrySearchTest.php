@@ -85,9 +85,9 @@ final class LikeEntrySearchTest extends DbTestCase
         $explicitRead = $this->matchingEntry($feed, 'explicit-read', '2026-07-15T00:00:00Z');
 
         $unreadState = new EntryState($user, $explicitUnread);
-        $unreadState->setIsHidden(false);
+        $unreadState->markUnread();
         $readState = new EntryState($user, $explicitRead);
-        $readState->setIsHidden(true);
+        $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($unreadState);
         $this->em->persist($readState);
         $this->em->flush();

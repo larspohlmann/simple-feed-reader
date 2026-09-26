@@ -97,8 +97,7 @@ final class SubscriptionTest extends DbTestCase
         $this->em->flush();
 
         $state = new EntryState($user, $entry);
-        $state->setIsHidden(true);
-        $state->setHiddenAt(new \DateTimeImmutable());
+        $state->hide(new \DateTimeImmutable());
         $this->em->persist($state);
         $this->em->flush();
         $this->em->clear();
@@ -144,8 +143,8 @@ final class SubscriptionTest extends DbTestCase
         $this->em->flush();
 
         $state = new EntryState($user, $entry);
-        $state->setIsFavorite(true);
-        $state->setIsKept(true);
+        $state->markFavorite();
+        $state->markKept();
         $this->em->persist($state);
         $this->em->flush();
         $this->em->clear();

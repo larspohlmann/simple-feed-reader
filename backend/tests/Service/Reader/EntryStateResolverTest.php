@@ -107,7 +107,7 @@ final class EntryStateResolverTest extends DbTestCase
         $row = $this->rows()->getOneRowForUser($entry->requireId(), $this->user->requireId());
 
         $state = $this->resolver()->resolve($this->user, $row);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
 
         $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), false, null);
 
@@ -139,7 +139,7 @@ final class EntryStateResolverTest extends DbTestCase
     {
         $entry = $this->entry('existing');
         $existing = new EntryState($this->user, $entry);
-        $existing->setIsKept(true);
+        $existing->markKept();
         $this->em->persist($existing);
         $this->em->flush();
 

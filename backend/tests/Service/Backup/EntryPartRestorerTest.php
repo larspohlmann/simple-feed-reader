@@ -69,6 +69,35 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertTrue($state->isFavorite());
     }
 
+    public function testReadMarksAreRestoredExactlyAsBackedUpIncludingALegacyUndatedOne(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([
+            $this->entryLine('a'),
+            $this->entryLine('b'),
+            $this->entryLine('c'),
+            array_replace($this->entryStateLine('a'), ['isHidden' => true, 'hiddenAt' => '2026-08-02T00:00:00+00:00']),
+            array_replace($this->entryStateLine('b'), ['isHidden' => true, 'isKept' => true]),
+            array_replace($this->entryStateLine('c'), ['hiddenAt' => '2026-08-03T00:00:00+00:00']),
+        ]);
+
+        $this->restorer()->load($user, $gzip);
+
+        $this->em->clear();
+        $dated = $this->restoredStateOf($user, 'a');
+        self::assertTrue($dated->isHidden());
+        self::assertEquals(new \DateTimeImmutable('2026-08-02 00:00:00'), $dated->getHiddenAt());
+        self::assertFalse($dated->isKept());
+        $legacy = $this->restoredStateOf($user, 'b');
+        self::assertTrue($legacy->isHidden());
+        self::assertNull($legacy->getHiddenAt());
+        self::assertTrue($legacy->isKept());
+        self::assertFalse($legacy->isFavorite());
+        $staleUnread = $this->restoredStateOf($user, 'c');
+        self::assertFalse($staleUnread->isHidden());
+        self::assertEquals(new \DateTimeImmutable('2026-08-03 00:00:00'), $staleUnread->getHiddenAt());
+    }
+
     public function testARetriedPartCreatesNothingAndFailsNothing(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
@@ -123,7 +152,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
-        $state->setIsFavorite(false);
+        $state->clearFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -311,7 +340,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $this->makeEntry($feed, 'b', 'B');
         $this->em->flush();
         $existingState = new EntryState($user, $entryA);
-        $existingState->setIsFavorite(false);
+        $existingState->clearFavorite();
         $this->em->persist($existingState);
         $this->em->flush();
 
@@ -450,6 +479,16 @@ final class EntryPartRestorerTest extends DbTestCase
         /** @var EntryState|null $state */
         $state = $this->em->getRepository(EntryState::class)
             ->findOneBy(['user' => $user->getId(), 'entry' => $entry->getId()]);
+
+        return $state;
+    }
+
+    private function restoredStateOf(User $user, string $token): EntryState
+    {
+        $entry = $this->findEntry($token);
+        self::assertNotNull($entry);
+        $state = $this->stateFor($user, $entry);
+        self::assertNotNull($state);
 
         return $state;
     }
