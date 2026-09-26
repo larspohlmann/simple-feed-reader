@@ -35,10 +35,12 @@ final class GrafanaSettingsRequestTest extends TestCase
         self::assertFalse($request->removeToken);
     }
 
-    public function testPyroscopePushUrlOverTheLengthLimitIsRejected(): void
+    public function testPyroscopePushUrlAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
+        $atLimit = SettingsRequests::grafana(pyroscopePushUrl: 'http://' . str_repeat('a', 248));
         $overLimit = SettingsRequests::grafana(pyroscopePushUrl: 'http://' . str_repeat('a', 249));
 
+        self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
 
