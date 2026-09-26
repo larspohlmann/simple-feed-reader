@@ -24,6 +24,19 @@ class CatalogFeedRepository extends ServiceEntityRepository
         return $this->find($id) ?? throw new RecordNotFoundException('No such feed.');
     }
 
+    /** @return list<CatalogFeed> every catalog feed in admin order, enabled or not */
+    public function findAllOrdered(): array
+    {
+        /** @var list<CatalogFeed> $rows */
+        $rows = $this->createQueryBuilder('f')
+            ->orderBy('f.position', 'ASC')
+            ->addOrderBy('f.title', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
     /**
      * The enabled feeds matching these ids. Fewer results than ids means one or
      * more ids were unknown or disabled — which the subscribe path IGNORES

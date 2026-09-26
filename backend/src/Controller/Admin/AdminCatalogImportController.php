@@ -10,7 +10,6 @@ use App\Http\AdminCatalogJson;
 use App\Service\Catalog\BundledCatalog;
 use App\Service\Catalog\CatalogDocument;
 use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -38,19 +37,7 @@ final readonly class AdminCatalogImportController
     #[Route('/bundled', name: 'api_admin_catalog_bundled', methods: ['GET'])]
     public function describeBundled(): JsonResponse
     {
-        try {
-            $document = $this->bundled->document();
-        } catch (InvalidCatalogDocumentException) {
-            // Missing or corrupt: report it as unavailable rather than 500. The
-            // admin can still upload a file, which is the more useful answer.
-            return new JsonResponse(['available' => false, 'categories' => 0, 'feeds' => 0]);
-        }
-
-        return new JsonResponse([
-            'available' => true,
-            'categories' => \count($document->categories),
-            'feeds' => $document->feedCount(),
-        ]);
+        return new JsonResponse(AdminCatalogJson::bundled($this->bundled->summary()));
     }
 
     /**

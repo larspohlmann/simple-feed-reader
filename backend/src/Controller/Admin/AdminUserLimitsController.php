@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\SetSubscriptionLimitRequest;
 use App\Dto\Admin\StartTrialRequest;
+use App\Http\AdminUserLimitsJson;
 use App\Repository\UserRepository;
 use App\Service\Admin\UserLimits;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -35,10 +36,7 @@ final readonly class AdminUserLimitsController
         $user = $this->users->getById($id);
         $this->userLimits->startTrial($user, $request->days);
 
-        return new JsonResponse([
-            'status' => $user->getStatus()->value,
-            'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
-        ]);
+        return new JsonResponse(AdminUserLimitsJson::trial($user));
     }
 
     #[Route('/{id}/trial', name: 'api_admin_users_clear_trial', methods: ['DELETE'], requirements: ['id' => '\d+'])]
@@ -47,10 +45,7 @@ final readonly class AdminUserLimitsController
         $user = $this->users->getById($id);
         $this->userLimits->clearTrial($user);
 
-        return new JsonResponse([
-            'status' => $user->getStatus()->value,
-            'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
-        ]);
+        return new JsonResponse(AdminUserLimitsJson::trial($user));
     }
 
     #[Route(
@@ -66,6 +61,6 @@ final readonly class AdminUserLimitsController
         $user = $this->users->getById($id);
         $this->userLimits->setSubscriptionLimit($user, $request->maxSubscriptions);
 
-        return new JsonResponse(['maxSubscriptions' => $user->getMaxSubscriptions()]);
+        return new JsonResponse(AdminUserLimitsJson::subscriptionLimit($user));
     }
 }
