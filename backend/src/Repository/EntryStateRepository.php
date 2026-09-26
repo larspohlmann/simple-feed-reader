@@ -40,11 +40,10 @@ class EntryStateRepository extends ServiceEntityRepository
     }
 
     /**
-     * Idempotent insert of the (user, entry) state row, seeded for read state:
-     * one racing writer wins, the other's INSERT is ignored rather than dying on
-     * the duplicate primary key, and an existing row keeps its flags.
+     * Idempotent insert of the (user, entry) state row, read since $hiddenSince or unread when it is null:
+     * one racing writer wins, the other's INSERT is ignored, and an existing row keeps its flags.
      */
-    public function ensureRow(int $userId, int $entryId, bool $seedHidden, ?\DateTimeImmutable $seedHiddenAt): void
+    public function ensureRow(int $userId, int $entryId, ?\DateTimeImmutable $hiddenSince): void
     {
         $connection = $this->getEntityManager()->getConnection();
         $isMysql = DatabasePlatform::isMySql($connection);
@@ -57,7 +56,7 @@ class EntryStateRepository extends ServiceEntityRepository
                 . ' VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 $conflictClause,
             ),
-            [$userId, $entryId, $seedHidden, $seedHiddenAt, false, false, false, null],
+            [$userId, $entryId, null !== $hiddenSince, $hiddenSince, false, false, false, null],
             [
                 Types::INTEGER,
                 Types::INTEGER,

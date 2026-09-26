@@ -109,7 +109,7 @@ final class EntryStateResolverTest extends DbTestCase
         $state = $this->resolver()->resolve($this->user, $row);
         $state->markFavorite();
 
-        $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), false, null);
+        $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), null);
 
         $this->em->flush();
         $this->em->clear();
