@@ -10,8 +10,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Every setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without which a
- * missing nullable setting reads as null. `invalidateExistingPasskeys` is no setting: it confirms an id change
- * refused with 409.
+ * missing nullable setting reads as null. A null URL or relying-party field restores its derived default.
+ * `invalidateExistingPasskeys` is no setting: it confirms an id change refused with 409.
  */
 final readonly class InstanceSettingsRequest
 {

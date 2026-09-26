@@ -9,8 +9,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Every setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without which a
- * missing nullable setting reads as null. The token is an optional three-state intent: null keeps it, a string
- * replaces it, `removeToken` clears it.
+ * missing nullable setting reads as null. A null URL falls back to the env default. The token is an optional
+ * three-state intent: null keeps it, a string replaces it, `removeToken` clears it.
  */
 final readonly class GrafanaSettingsRequest
 {
