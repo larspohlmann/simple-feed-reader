@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
@@ -112,10 +113,12 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2026-08-08T' . $startedAt . 'Z'),
         )->finish(
             'reply',
-            RecommendationRunLog::VERDICT_USABLE,
-            0,
-            'stop',
-            new \DateTimeImmutable('2026-08-08T' . $finishedAt . 'Z'),
+            new CallOutcome(
+                RecommendationRunLog::VERDICT_USABLE,
+                0,
+                new \DateTimeImmutable('2026-08-08T' . $finishedAt . 'Z'),
+                'stop',
+            ),
         );
     }
 }

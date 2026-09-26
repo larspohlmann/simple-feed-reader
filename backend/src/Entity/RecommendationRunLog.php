@@ -95,6 +95,7 @@ class RecommendationRunLog
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $finishReason = null;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         RecommendationRun $run,
         string $phase,
@@ -176,23 +177,13 @@ class RecommendationRunLog
         return $this->finishReason;
     }
 
-    /**
-     * The call ended: the final decoded text replaces whatever partial state
-     * the checkpoints wrote, the verdict says how the reply was judged, the
-     * byte count says what it cost on the wire to get there, and the finish
-     * reason says why the provider stopped.
-     */
-    public function finish(
-        string $responseText,
-        string $verdict,
-        int $wireBytes,
-        ?string $finishReason,
-        \DateTimeImmutable $finishedAt,
-    ): void {
+    /** The final decoded text replaces whatever partial state the checkpoints wrote. */
+    public function finish(string $responseText, CallOutcome $outcome): void
+    {
         $this->responseText = $responseText;
-        $this->verdict = $verdict;
-        $this->wireBytes = $wireBytes;
-        $this->finishReason = $finishReason;
-        $this->finishedAt = $finishedAt;
+        $this->verdict = $outcome->verdict;
+        $this->wireBytes = $outcome->wireBytes;
+        $this->finishReason = $outcome->finishReason;
+        $this->finishedAt = $outcome->finishedAt;
     }
 }

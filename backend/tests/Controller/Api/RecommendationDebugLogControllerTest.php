@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
@@ -79,10 +80,12 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         );
         $finished->finish(
             'done text',
-            RecommendationRunLog::VERDICT_USABLE,
-            1_900_000,
-            'stop',
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+            new CallOutcome(
+                RecommendationRunLog::VERDICT_USABLE,
+                1_900_000,
+                new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+                'stop',
+            ),
         );
         $open = $this->fixtures()->log(
             $run,
@@ -276,10 +279,12 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $log = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
         $log->finish(
             'res',
-            RecommendationRunLog::VERDICT_USABLE,
-            4_096,
-            'length',
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+            new CallOutcome(
+                RecommendationRunLog::VERDICT_USABLE,
+                4_096,
+                new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+                'length',
+            ),
         );
         $this->em()->flush();
         $id = $log->getId();

@@ -37,23 +37,25 @@ final readonly class RecommendationCallRepository
 
     public function settleAnswered(CallSettlement $settlement, string $content): void
     {
+        $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
             'response_text' => $content,
-            'verdict' => $settlement->verdict,
-            'wire_bytes' => $settlement->wireBytes,
-            'finished_at' => $settlement->finishedAt->format('Y-m-d H:i:s'),
-            'finish_reason' => $settlement->finishReason,
+            'verdict' => $outcome->verdict,
+            'wire_bytes' => $outcome->wireBytes,
+            'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
+            'finish_reason' => $outcome->finishReason,
         ], ['id' => $settlement->logId]);
     }
 
     public function settleTransportFailure(CallSettlement $settlement, ?string $errorDetail): void
     {
+        $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
-            'verdict' => $settlement->verdict,
-            'wire_bytes' => $settlement->wireBytes,
-            'finished_at' => $settlement->finishedAt->format('Y-m-d H:i:s'),
+            'verdict' => $outcome->verdict,
+            'wire_bytes' => $outcome->wireBytes,
+            'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
             'error_detail' => $errorDetail,
-            'finish_reason' => $settlement->finishReason,
+            'finish_reason' => $outcome->finishReason,
         ], ['id' => $settlement->logId]);
     }
 
