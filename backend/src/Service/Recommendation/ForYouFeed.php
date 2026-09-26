@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
-use App\Http\FeedAnnotationVisibility;
-use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
@@ -13,14 +11,11 @@ use App\Repository\RecommendationFeedRow;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * What JSON the for-you feed page returns for a user — paginates their
- * recommendation feed, then annotates each entry according to their
- * recommendation settings (#321). The reason and its score are one
- * explanation and follow one switch — the reader's "show reasons" preference.
- * Debug is deliberately not consulted here: it keeps the per-run call logs,
- * not a second way into the feed's annotations (#576).
+ * A page of the user's for-you feed (#321), enriched like every entry list, with the annotations the
+ * reader's "show reasons" preference allows. Debug is deliberately not consulted here: it keeps the
+ * per-run call logs, not a second way into the feed's annotations (#576).
  */
-final readonly class ForYouFeedResponder
+final readonly class ForYouFeed
 {
     public function __construct(
         private RecommendationFeedPager $pager,
@@ -29,9 +24,8 @@ final readonly class ForYouFeedResponder
     ) {
     }
 
-    /** @return array<string, mixed> */
     #[WithSpan]
-    public function page(ForYouFeedQuery $query): array
+    public function page(ForYouFeedQuery $query): ForYouFeedPage
     {
         $page = $this->pager->page($query);
 
@@ -39,9 +33,11 @@ final readonly class ForYouFeedResponder
             showExplanation: $this->settings->forUser($query->user)->showReasons,
         );
 
-        $rows = $this->enrichedRows($page->rows, $query->userId());
-
-        return RecommendationFeedJson::page($rows, $page->nextCursor, $visibility);
+        return new ForYouFeedPage(
+            $this->enrichedRows($page->rows, $query->userId()),
+            $page->nextCursor,
+            $visibility,
+        );
     }
 
     /**

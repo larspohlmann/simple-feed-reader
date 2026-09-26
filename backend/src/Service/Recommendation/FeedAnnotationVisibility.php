@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Http;
+namespace App\Service\Recommendation;
 
 /**
  * Which per-entry recommendation annotations a for-you feed page carries.

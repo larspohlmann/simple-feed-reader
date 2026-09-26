@@ -14,17 +14,18 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Http\RecommendationFeedJson;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\ForYouFeedResponder;
+use App\Service\Recommendation\ForYouFeed;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
-final class ForYouFeedResponderTest extends DbTestCase
+final class ForYouFeedTest extends DbTestCase
 {
     private User $user;
     private RecommendationRunFixtures $fixtures;
@@ -119,34 +120,27 @@ final class ForYouFeedResponderTest extends DbTestCase
         $search = new SavedSearch($this->user, 'title', false);
         $this->em->persist($search);
         $this->em->flush();
-        $search->setSlug($search->getId() . '-title');
+        $search->setSlug($search->requireId() . '-title');
         $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-08-07T09:00:00Z')));
         $this->em->flush();
 
         $first = $this->firstEntry();
 
         self::assertSame(
-            [['id' => $search->getId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
+            [['id' => $search->requireId(), 'slug' => $search->getSlug(), 'term' => $search->getTerm()]],
             $first['savedSearches'],
         );
     }
 
-    /** `assertIsArray()` narrows to a plain array, not to a keyed shape, so
-     *  this says what the assertion actually proves.
-     *
-     *  @return array<mixed>
-     */
+    /** @return array<string, mixed> */
     private function firstEntry(): array
     {
-        $page = $this->responder()->page(new ForYouFeedQuery($this->user, null, 50));
-        self::assertIsArray($page['entries']);
-        $first = $page['entries'][0];
-        self::assertIsArray($first);
+        $page = $this->forYouFeed()->page(new ForYouFeedQuery($this->user, null, 50));
 
-        return $first;
+        return RecommendationFeedJson::page($page)['entries'][0];
     }
 
-    private function responder(): ForYouFeedResponder
+    private function forYouFeed(): ForYouFeed
     {
         $repository = $this->em->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $repository);
@@ -157,7 +151,7 @@ final class ForYouFeedResponderTest extends DbTestCase
         $enricher = self::getContainer()->get(EntryListRowEnricher::class);
         self::assertInstanceOf(EntryListRowEnricher::class, $enricher);
 
-        return new ForYouFeedResponder(
+        return new ForYouFeed(
             new RecommendationFeedPager($repository),
             $settings,
             $enricher,
