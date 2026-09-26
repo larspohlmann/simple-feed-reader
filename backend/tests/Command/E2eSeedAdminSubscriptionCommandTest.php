@@ -10,7 +10,6 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\UserStatus;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
@@ -31,7 +30,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     {
         $admin = new User(self::ADMIN_EMAIL, new \DateTimeImmutable('-1 day'));
         $admin->setRoles(['ROLE_ADMIN']);
-        $admin->setStatus(UserStatus::Active);
+        $admin->approve(new \DateTimeImmutable('-1 day'));
         $this->em->persist($admin);
         $this->em->flush();
 

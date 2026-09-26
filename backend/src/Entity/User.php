@@ -210,9 +210,25 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->status;
     }
 
-    public function setStatus(UserStatus $status): void
+    public function approve(\DateTimeImmutable $approvedAt): void
     {
-        $this->status = $status;
+        $this->status = UserStatus::Active;
+        $this->approvedAt = $approvedAt;
+    }
+
+    public function queueForApproval(): void
+    {
+        $this->status = UserStatus::PendingApproval;
+    }
+
+    public function reject(): void
+    {
+        $this->status = UserStatus::Rejected;
+    }
+
+    public function suspend(): void
+    {
+        $this->status = UserStatus::Suspended;
     }
 
     public function getCreatedAt(): \DateTimeImmutable
@@ -223,11 +239,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getApprovedAt(): ?\DateTimeImmutable
     {
         return $this->approvedAt;
-    }
-
-    public function setApprovedAt(?\DateTimeImmutable $approvedAt): void
-    {
-        $this->approvedAt = $approvedAt;
     }
 
     public function getEmailVerifiedAt(): ?\DateTimeImmutable

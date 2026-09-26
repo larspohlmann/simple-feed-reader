@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\User;
-use App\Enum\UserStatus;
 use App\Http\AdminUserLimitsJson;
 use PHPUnit\Framework\TestCase;
 
@@ -14,7 +13,7 @@ final class AdminUserLimitsJsonTest extends TestCase
     public function testATrialReportsTheStatusAndItsEnd(): void
     {
         $user = $this->user();
-        $user->setStatus(UserStatus::Active);
+        $user->approve(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
         $user->setTrialEndsAt(new \DateTimeImmutable('2026-10-01T00:00:00+00:00'));
 
         self::assertSame(

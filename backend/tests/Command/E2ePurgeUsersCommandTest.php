@@ -11,7 +11,6 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Tests\DbTestCase;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -30,7 +29,7 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
     private function seedUser(string $email): User
     {
         $user = new User($email, new \DateTimeImmutable('-1 day'));
-        $user->setStatus(UserStatus::Active);
+        $user->approve(new \DateTimeImmutable('-1 day'));
         $this->em->persist($user);
         $this->em->flush();
 

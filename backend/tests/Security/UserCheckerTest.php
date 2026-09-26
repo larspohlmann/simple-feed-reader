@@ -9,6 +9,7 @@ use App\Enum\UserStatus;
 use App\Security\AccountStatusException;
 use App\Security\TrialExpiryGuard;
 use App\Security\UserChecker;
+use App\Tests\Support\NewUserStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +21,7 @@ final class UserCheckerTest extends TestCase
     private function user(UserStatus $status): User
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-21 09:00:00'));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-21 09:00:00'));
 
         return $user;
     }

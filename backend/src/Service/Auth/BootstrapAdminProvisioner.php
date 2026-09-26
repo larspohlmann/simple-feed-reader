@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Auth;
 
 use App\Entity\User;
-use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -37,8 +36,7 @@ final readonly class BootstrapAdminProvisioner
         $admin = $this->users->findOneByEmail($email) ?? new User($email, $now);
 
         $admin->setRoles(['ROLE_ADMIN']);
-        $admin->setStatus(UserStatus::Active);
-        $admin->setApprovedAt($now);
+        $admin->approve($now);
         $admin->setPasswordHash($this->hasher->hashPassword($admin, $password), $now);
 
         $this->entityManager->persist($admin);

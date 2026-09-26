@@ -65,10 +65,7 @@ final readonly class RegistrationService
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
 
         $status = $this->policy->prospectiveStatusForEmailSignup();
-        $user->setStatus($status);
-        if (UserStatus::Active === $status) {
-            $user->setApprovedAt($now);
-        }
+        $this->enterSignupStatus($user, $status, $now);
 
         $this->em->persist($user);
 
@@ -82,6 +79,15 @@ final readonly class RegistrationService
         }
 
         $this->completeRegistration($user, $status);
+    }
+
+    private function enterSignupStatus(User $user, UserStatus $status, \DateTimeImmutable $now): void
+    {
+        match ($status) {
+            UserStatus::Active => $user->approve($now),
+            UserStatus::PendingApproval => $user->queueForApproval(),
+            default => null,
+        };
     }
 
     /**
@@ -116,7 +122,7 @@ final readonly class RegistrationService
             $user->markEmailVerified($now);
 
             if ($this->policy->approvalRequired()) {
-                $user->setStatus(UserStatus::PendingApproval);
+                $user->queueForApproval();
                 $this->em->flush();
 
                 // After the flush: the account is now persisted in the queue, so
@@ -124,8 +130,7 @@ final readonly class RegistrationService
                 // flush above means no notification goes out.
                 $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
             } else {
-                $user->setStatus(UserStatus::Active);
-                $user->setApprovedAt($now);
+                $user->approve($now);
                 $this->em->flush();
             }
         }

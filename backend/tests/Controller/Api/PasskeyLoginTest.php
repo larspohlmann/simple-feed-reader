@@ -6,7 +6,6 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Enum\UserStatus;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Clock\NaiveUtcClock;
@@ -444,7 +443,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->serveFrom($client, self::ORIGIN);
         $user = $this->factory()->create('suspended@example.test');
         $fixture = $this->enrol($client, 'suspended@example.test');
-        $user->setStatus(UserStatus::Suspended);
+        $user->suspend();
         $this->em()->flush();
         $handle = $this->issueLoginChallenge($fixture->challenge);
 

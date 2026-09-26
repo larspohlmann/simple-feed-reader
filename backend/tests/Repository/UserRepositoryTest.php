@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NewUserStatus;
 
 final class UserRepositoryTest extends DbTestCase
 {
@@ -22,7 +23,7 @@ final class UserRepositoryTest extends DbTestCase
     private function persist(string $email, UserStatus $status, string ...$roles): User
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-01 10:00:00'));
         $user->setRoles(array_values($roles));
         $this->em->persist($user);
         $this->em->flush();

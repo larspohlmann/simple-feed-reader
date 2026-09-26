@@ -12,6 +12,7 @@ use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NewUserStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Clock\MockClock;
@@ -30,7 +31,7 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     private function seed(string $email, UserStatus $status, string $createdAt): User
     {
         $user = new User($email, new \DateTimeImmutable($createdAt));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable($createdAt));
         $this->em->persist($user);
         $this->em->flush();
 

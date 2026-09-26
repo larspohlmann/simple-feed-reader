@@ -11,6 +11,7 @@ use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\OAuth\OAuthSignIn;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NewUserStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
@@ -194,7 +195,7 @@ final class OAuthSignInTest extends DbTestCase
     private function persistUser(string $email, UserStatus $status): User
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-21 12:00:00'));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-21 12:00:00'));
         $this->em->persist($user);
         $this->em->flush();
 

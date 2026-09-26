@@ -393,7 +393,8 @@ final class AdminUserControllerTest extends WebTestCase
         $admin = $this->admin();
         $target = $this->factory()->create('back@example.com', status: UserStatus::Suspended);
         $original = new \DateTimeImmutable('2020-01-01 00:00:00');
-        $target->setApprovedAt($original);
+        $target->approve($original);
+        $target->suspend();
 
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -772,7 +773,8 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('de', $account['locale']);
         self::assertIsString($account['createdAt']);
         self::assertStringStartsWith('2026-07-01T10:00:00', $account['createdAt']);
-        self::assertNull($account['approvedAt']);
+        self::assertIsString($account['approvedAt']);
+        self::assertStringStartsWith('2026-07-01T10:00:00', $account['approvedAt']);
         self::assertIsString($account['lastLoginAt']);
         self::assertStringStartsWith('2026-07-29T09:00:00', $account['lastLoginAt']);
         self::assertSame([], $account['identities']);
