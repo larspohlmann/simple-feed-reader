@@ -4,25 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\PageTextBlocks;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class PageTextBlocksTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string LONG =
         'A paragraph long enough to count as prose the reader keeps, well past forty characters.';
     private const string OTHER =
         'Another paragraph long enough to count as prose, also comfortably past forty characters.';
-
-    private function document(string $html): HTMLDocument
-    {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-
-        return $document;
-    }
 
     private function before(string $html, string $selector): ?string
     {

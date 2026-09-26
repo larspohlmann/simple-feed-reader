@@ -4,30 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Teaser;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class TeaserPlayerScannerTest extends TestCase
 {
+    use ParsesHtml;
+
     private TeaserPlayerScanner $scanner;
 
     protected function setUp(): void
     {
         $this->scanner = new TeaserPlayerScanner(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
-    }
-
-    private function document(string $html): HTMLDocument
-    {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-
-        return $document;
     }
 
     /** A block that pairs a player with its own still, a headline and a link is an inline media teaser. */

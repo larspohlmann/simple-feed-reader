@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
+use App\Service\Html\JsonLd;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\EmbedTarget;
 use App\Service\Reader\Media\MediaCandidate;
@@ -44,7 +45,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
             }
             // JSON-LD scripts are already handled by JsonLdMediaSource, which has
             // prioritized logic for choosing between contentUrl and embedUrl.
-            if ($script->getAttribute('type') === 'application/ld+json') {
+            if (JsonLd::isScript($script)) {
                 continue;
             }
             foreach ($this->embedTargets($script->textContent ?? '') as $target) {

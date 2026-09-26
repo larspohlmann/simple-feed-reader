@@ -36,7 +36,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  * PageMediaScanner also runs on the raw page before readability, so recovered
  * media can satisfy the length gate below and still be inserted when
  * readability's own extraction is thin (#748). PaywallSignals reads the same
- * normalised document and raw source, trusting the publisher's declaration and
+ * normalised document and raw page, trusting the publisher's declaration and
  * falling back to a gated-block presence check (#908).
  *
  * SiblingMediaExtender derives from the declared scan but appends onto the
@@ -78,8 +78,9 @@ final class ArticleExtractor implements ArticleExtractorInterface
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
         $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
-        $paywalled = PaywallSignals::isPreview($page->html, $normalized);
-        $media = $this->mediaScanner->scan(RawPage::parse($page->html, $page->finalUrl), $feedMedia);
+        $rawPage = RawPage::parse($page->html, $page->finalUrl);
+        $paywalled = PaywallSignals::isPreview($rawPage->document, $normalized);
+        $media = $this->mediaScanner->scan($rawPage, $feedMedia);
         $slideshows = $this->slideshowsIn($normalized);
         $teasers = $this->teasersIn($normalized, $page->finalUrl);
 

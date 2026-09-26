@@ -4,51 +4,44 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Paywall;
 
+use App\Service\Html\JsonLd;
+use Dom\HTMLDocument;
+
 /**
  * The publisher's own paywall declaration: schema.org `isAccessibleForFree`,
- * the markup Google documents for paywalled content. Read from the raw source
- * because FetchedPageNormalizer strips every <script> before the shared parse.
+ * the markup Google documents for paywalled content. Read from the raw page,
+ * because FetchedPageNormalizer strips every <script> from the normalized one.
  */
 final readonly class SchemaOrgAccess
 {
-    private const string JSON_LD_PATTERN = '#<script\b[^>]*application/ld\+json[^>]*>(.*?)</script\s*>#is';
     private const string KEY = 'isAccessibleForFree';
 
-    public static function declaredIn(string $html): AccessDeclaration
+    public static function declaredIn(HTMLDocument $rawPage): AccessDeclaration
     {
-        $declaration = AccessDeclaration::Undeclared;
-        preg_match_all(self::JSON_LD_PATTERN, $html, $blocks);
-        foreach ($blocks[1] as $json) {
-            $decoded = json_decode(trim($json), true);
-            if (!\is_array($decoded)) {
-                continue;
-            }
-            foreach (self::declarationsIn($decoded) as $accessibleForFree) {
-                if (!$accessibleForFree) {
-                    return AccessDeclaration::Paywalled;
-                }
-                $declaration = AccessDeclaration::Free;
-            }
+        $declarations = [];
+        foreach (JsonLd::scriptsIn($rawPage) as $script) {
+            array_push($declarations, ...self::declarationsIn(JsonLd::decode($script)));
         }
 
-        return $declaration;
+        if (\in_array(false, $declarations, true)) {
+            return AccessDeclaration::Paywalled;
+        }
+
+        return $declarations === [] ? AccessDeclaration::Undeclared : AccessDeclaration::Free;
     }
 
     /**
-     * @param array<mixed> $node
+     * @param array<mixed> $block
      *
-     * @return list<bool> every isAccessibleForFree in the tree, as a boolean
+     * @return list<bool> every isAccessibleForFree in the block, as a boolean
      */
-    private static function declarationsIn(array $node): array
+    private static function declarationsIn(array $block): array
     {
         $declarations = [];
-        $declared = self::asBoolean($node[self::KEY] ?? null);
-        if ($declared !== null) {
-            $declarations[] = $declared;
-        }
-        foreach ($node as $child) {
-            if (\is_array($child)) {
-                array_push($declarations, ...self::declarationsIn($child));
+        foreach (JsonLd::nodesIn($block) as $node) {
+            $declared = self::asBoolean($node[self::KEY] ?? null);
+            if ($declared !== null) {
+                $declarations[] = $declared;
             }
         }
 

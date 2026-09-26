@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Source;
 
+use App\Service\Html\JsonLd;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSourceInterface;
@@ -14,9 +15,9 @@ use App\Service\Reader\Media\RawPage;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * A publisher's own schema.org markup. `Service/Scraper/JsonLdArticles.php`
- * walks the same blocks but exposes only modelled Article cards, nothing this
- * layer could reuse for a bare media URL — so this is its own walker.
+ * A publisher's own schema.org markup. `JsonLdArticles` reads the same blocks
+ * but models only Article cards, so this source walks every node for a bare
+ * media URL instead.
  *
  * schema.org nests `contentUrl`/`embedUrl` under many shapes (VideoObject,
  * AudioObject, an Article's "video" property, …), so every string value in
@@ -39,11 +40,11 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     public function find(RawPage $page): array
     {
         $found = [];
-        foreach ($page->document->querySelectorAll('script[type="application/ld+json"]') as $script) {
+        foreach (JsonLd::scriptsIn($page->document) as $script) {
             if (PageFurniture::holds($script)) {
                 continue;
             }
-            foreach ($this->declarationsIn($script->textContent ?? '') as $declaration) {
+            foreach ($this->declarationsIn(JsonLd::decode($script)) as $declaration) {
                 $candidate = $this->firstPlayable($declaration, $page->blocks->before($script));
                 if ($candidate !== null) {
                     $found[$candidate->url] ??= $candidate;
@@ -54,23 +55,33 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return array_values($found);
     }
 
-    /** @return list<array{urls: list<string>, poster: ?string}> */
-    private function declarationsIn(string $jsonLd): array
-    {
-        $decoded = json_decode($jsonLd, true);
-
-        return \is_array($decoded) ? $this->collect($decoded) : [];
-    }
-
     /**
      * One node is one asset: its URL keys are gathered together, with the poster
      * schema.org places beside them (`thumbnailUrl` on the same node).
      *
-     * @param array<mixed> $node
+     * @param array<mixed> $block
      *
      * @return list<array{urls: list<string>, poster: ?string}>
      */
-    private function collect(array $node): array
+    private function declarationsIn(array $block): array
+    {
+        $declarations = [];
+        foreach (JsonLd::nodesIn($block) as $node) {
+            $urls = $this->urlsIn($node);
+            if ($urls !== []) {
+                $declarations[] = ['urls' => $urls, 'poster' => $this->thumbnailIn($node)];
+            }
+        }
+
+        return $declarations;
+    }
+
+    /**
+     * @param array<mixed> $node
+     *
+     * @return list<string>
+     */
+    private function urlsIn(array $node): array
     {
         $urls = [];
         foreach (self::URL_KEYS as $key) {
@@ -78,14 +89,8 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
                 $urls[] = $node[$key];
             }
         }
-        $declarations = $urls === [] ? [] : [['urls' => $urls, 'poster' => $this->thumbnailIn($node)]];
-        foreach ($node as $value) {
-            if (\is_array($value)) {
-                array_push($declarations, ...$this->collect($value));
-            }
-        }
 
-        return $declarations;
+        return $urls;
     }
 
     /** @param array<mixed> $node */
