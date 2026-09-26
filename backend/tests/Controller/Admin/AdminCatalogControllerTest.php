@@ -58,6 +58,15 @@ final class AdminCatalogControllerTest extends WebTestCase
         return $decoded;
     }
 
+    private function reloadedCategory(int $id): ?CatalogCategory
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $em->clear();
+
+        return $em->find(CatalogCategory::class, $id);
+    }
+
     /**
      * @param list<string> $roles
      *
@@ -125,9 +134,14 @@ final class AdminCatalogControllerTest extends WebTestCase
             ),
         );
         self::assertResponseIsSuccessful();
+        $updated = $this->reloadedCategory($id);
+        self::assertNotNull($updated);
+        self::assertSame('Tech', $updated->getName());
+        self::assertFalse($updated->isEnabled());
 
         $client->request('DELETE', '/api/admin/catalog/categories/' . $id, server: $headers);
         self::assertResponseStatusCodeSame(204);
+        self::assertNull($this->reloadedCategory($id));
     }
 
     public function testAdminCanCreateAFeedAndRefreshItsFavicon(): void
