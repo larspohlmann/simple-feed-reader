@@ -31,13 +31,7 @@ final class LeadingEngagementRules
     /** @var array<string, \IntlDateFormatter> strict formatters, one per locale/style, reused across calls */
     private static array $dateFormatters = [];
 
-    /** The single whitespace-collapse every rule and both layers normalize with. */
-    public static function collapse(?string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', (string) $text));
-    }
-
-    /** Callers pass already-collapsed text (see {@see collapse()}). */
+    /** Callers pass text already collapsed by {@see \App\Service\Text\Whitespace::collapse()}. */
     public static function isProse(string $text, int $linkTextLength): bool
     {
         $textLength = mb_strlen($text);

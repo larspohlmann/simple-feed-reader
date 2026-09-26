@@ -10,6 +10,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\PlayerPoster;
 use App\Service\Reader\Media\ResolvedMediaUrl;
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -114,7 +115,7 @@ final readonly class TeaserPlayerScanner
 
     private function readableText(Element $element): ?string
     {
-        $text = trim((string) preg_replace('/\s+/', ' ', $element->textContent ?? ''));
+        $text = Whitespace::collapse($element->textContent);
 
         return $text === '' ? null : $text;
     }

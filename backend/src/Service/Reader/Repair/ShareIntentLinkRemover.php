@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Repair;
 
 use App\Service\Reader\ShareLinkMatcher;
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -126,7 +127,7 @@ final readonly class ShareIntentLinkRemover implements PageRepair
 
     private function textLengthOutsideLinks(Element $element): int
     {
-        return mb_strlen($this->collapsedText($this->textOutsideLinks($element)));
+        return mb_strlen(Whitespace::collapse($this->textOutsideLinks($element)));
     }
 
     /**
@@ -160,10 +161,5 @@ final readonly class ShareIntentLinkRemover implements PageRepair
         }
 
         return $children;
-    }
-
-    private function collapsedText(string $text): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
     }
 }

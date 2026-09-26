@@ -51,6 +51,16 @@ final class LeadFigureCaptionsTest extends TestCase
         self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->captionFor('https://cdn.test/hero-photo.jpg'));
     }
 
+    public function testCollapsesANoBreakSpaceLikeAnyOtherSpace(): void
+    {
+        $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'
+            . '<figcaption>Bild:&nbsp;&nbsp;Berti Kolbow-Lehradt&nbsp;</figcaption></figure></body>';
+
+        $captions = $this->captionsOf($html);
+
+        self::assertSame('Bild: Berti Kolbow-Lehradt', $captions->captionFor('https://cdn.test/hero-photo.jpg'));
+    }
+
     public function testReturnsNullForAnUnrelatedUrl(): void
     {
         $html = '<body><figure><img src="https://cdn.test/hero-photo.jpg">'

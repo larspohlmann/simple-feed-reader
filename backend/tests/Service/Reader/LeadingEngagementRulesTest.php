@@ -196,10 +196,4 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertFalse(LeadingEngagementRules::hasAuthor('   '));
         self::assertTrue(LeadingEngagementRules::hasAuthor('Jana'));
     }
-
-    public function testCollapseTrimsAndFoldsRunsOfWhitespace(): void
-    {
-        self::assertSame('a b', LeadingEngagementRules::collapse("  a \n\t b  "));
-        self::assertSame('', LeadingEngagementRules::collapse(null));
-    }
 }

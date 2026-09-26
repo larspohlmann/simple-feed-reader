@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -73,7 +74,7 @@ final readonly class LeadFigureCaptions
             return null;
         }
 
-        $caption = trim((string) preg_replace('/\s+/', ' ', $captionElement->textContent ?? ''));
+        $caption = Whitespace::collapse($captionElement->textContent);
 
         return $caption !== '' ? ['url' => $source, 'caption' => $caption] : null;
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Text\Whitespace;
 use Dom\Element;
 
 /**
@@ -18,7 +19,7 @@ final class BlockText
 
     public static function collapsed(Element $element): string
     {
-        return LeadingEngagementRules::collapse((string) $element->textContent);
+        return Whitespace::collapse($element->textContent);
     }
 
     public static function isLinkDominated(Element $block): bool

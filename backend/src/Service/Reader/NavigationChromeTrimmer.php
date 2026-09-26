@@ -165,7 +165,7 @@ final readonly class NavigationChromeTrimmer
             if (!$this->isProseCandidate($element)) {
                 continue;
             }
-            if (mb_strlen($this->collapsedText($element)) >= $minLength) {
+            if (mb_strlen(BlockText::collapsed($element)) >= $minLength) {
                 return $element;
             }
         }
@@ -223,21 +223,11 @@ final readonly class NavigationChromeTrimmer
 
     private function linkTextRatio(Element $element): float
     {
-        $totalLength = mb_strlen($this->collapsedText($element));
+        $totalLength = mb_strlen(BlockText::collapsed($element));
         if ($totalLength === 0) {
             return 1.0;
         }
 
-        $linkLength = 0;
-        foreach ($element->getElementsByTagName('a') as $link) {
-            $linkLength += mb_strlen($this->collapsedText($link));
-        }
-
-        return $linkLength / $totalLength;
-    }
-
-    private function collapsedText(Element $element): string
-    {
-        return trim((string) preg_replace('/\s+/u', ' ', (string) $element->textContent));
+        return BlockText::linkTextLength($element) / $totalLength;
     }
 }
