@@ -135,7 +135,7 @@ final class EntryStateTest extends TestCase
     {
         $state = $this->makeState();
 
-        $state->restoreReadMark(new BackedUpReadMark(true, null));
+        $state->restoreReadMark(new BackedUpReadMark(isHidden: true, hiddenAt: null));
 
         self::assertTrue($state->isHidden());
         self::assertNull($state->getHiddenAt());
@@ -146,7 +146,7 @@ final class EntryStateTest extends TestCase
         $state = $this->makeState();
         $staleInstant = new \DateTimeImmutable('2026-08-03T00:00:00Z');
 
-        $state->restoreReadMark(new BackedUpReadMark(false, $staleInstant));
+        $state->restoreReadMark(new BackedUpReadMark(isHidden: false, hiddenAt: $staleInstant));
 
         self::assertFalse($state->isHidden());
         self::assertSame($staleInstant, $state->getHiddenAt());
@@ -157,7 +157,9 @@ final class EntryStateTest extends TestCase
         $state = $this->makeState();
         $state->markFavorite();
 
-        $state->restoreReadMark(new BackedUpReadMark(true, new \DateTimeImmutable('2026-08-02T00:00:00Z')));
+        $readAt = new \DateTimeImmutable('2026-08-02T00:00:00Z');
+
+        $state->restoreReadMark(new BackedUpReadMark(isHidden: true, hiddenAt: $readAt));
 
         self::assertTrue($state->isFavorite());
         self::assertFalse($state->isViewed());
