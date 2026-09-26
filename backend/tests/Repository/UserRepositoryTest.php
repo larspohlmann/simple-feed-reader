@@ -45,6 +45,22 @@ final class UserRepositoryTest extends DbTestCase
         self::assertSame($activeAdmin->getId(), $admins[0]->getId());
     }
 
+    public function testActiveAdminsComeBackAsAList(): void
+    {
+        $this->persist('lookalike@example.com', UserStatus::Active, 'ROLE_ADMINISTRATOR');
+        $activeAdmin = $this->persist('admin@example.com', UserStatus::Active, 'ROLE_ADMIN');
+
+        self::assertSame([$activeAdmin], $this->users()->findActiveAdmins());
+    }
+
+    public function testCountActiveAdminsIgnoresALookalikeRole(): void
+    {
+        $this->persist('admin@example.com', UserStatus::Active, 'ROLE_ADMIN');
+        $this->persist('lookalike@example.com', UserStatus::Active, 'ROLE_ADMINISTRATOR');
+
+        self::assertSame(1, $this->users()->countActiveAdmins());
+    }
+
     public function testFindActiveAdminsIsEmptyWhenNoActiveAdminExists(): void
     {
         $this->persist('pending-admin@example.com', UserStatus::PendingApproval, 'ROLE_ADMIN');
