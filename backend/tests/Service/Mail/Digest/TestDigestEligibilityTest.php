@@ -41,10 +41,7 @@ final class TestDigestEligibilityTest extends DbTestCase
 
     private function eligibility(): TestDigestEligibility
     {
-        $eligibility = self::getContainer()->get(TestDigestEligibility::class);
-        self::assertInstanceOf(TestDigestEligibility::class, $eligibility);
-
-        return $eligibility;
+        return self::getContainer()->get(TestDigestEligibility::class);
     }
 
     private function user(bool $verified): User
