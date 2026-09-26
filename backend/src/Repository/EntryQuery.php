@@ -69,8 +69,9 @@ final readonly class EntryQuery
     }
 
     /**
-     * A chronological list spanning many feeds, a tag's subset included (#1040) but not one subscription:
-     * the only shape that gains from driving the join from `entry` and its effective-date index.
+     * A chronological list spanning many feeds, a tag's subset included (#1040, unlike hidesExcludedFeeds())
+     * but not one subscription: the only shape that gains from driving the join from `entry` and its
+     * effective-date index.
      */
     public function isDateOrderedFanIn(): bool
     {
