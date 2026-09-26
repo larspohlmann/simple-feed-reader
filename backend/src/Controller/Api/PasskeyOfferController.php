@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Service\Passkey\PasskeyOffer;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Account\AccountPreferencesWriter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -24,16 +23,14 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class PasskeyOfferController
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
-        private PasskeyOffer $passkeyOffer,
+        private AccountPreferencesWriter $preferences,
     ) {
     }
 
     #[Route('/api/me/passkey-offer/answer', name: 'api_me_passkey_offer_answer', methods: ['POST'])]
     public function answer(#[CurrentUser] User $user): JsonResponse
     {
-        $this->passkeyOffer->markAnswered($user);
-        $this->entityManager->flush();
+        $this->preferences->answerPasskeyOffer($user);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

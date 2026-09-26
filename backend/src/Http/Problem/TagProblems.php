@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
-use App\Exception\TagNameTakenException;
+use App\Service\Tag\Exception\TagNameTakenException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class TagProblems implements ExceptionProblems

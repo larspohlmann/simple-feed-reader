@@ -13,6 +13,8 @@ use PHPStan\Testing\RuleTestCase;
 final class ThinControllerRuleTest extends RuleTestCase
 {
     private const string FIXTURE_CONTROLLER = 'App\Controller\Fixtures\ViolatingController';
+    private const string PERSISTING_CONTROLLER = 'App\Controller\Fixtures\Persistence\PersistingController';
+    private const string UNION_CONTROLLER = 'App\Controller\Fixtures\PersistenceUnion\UnionPersistingController';
 
     protected function getRule(): Rule
     {
@@ -23,7 +25,7 @@ final class ThinControllerRuleTest extends RuleTestCase
         ]);
     }
 
-    public function testItFlagsPrivateAndStaticControllerMethodsButNotAllowListedOrNonControllerOnes(): void
+    public function testItFlagsHiddenHelpersAndPersistenceParametersOnControllersOnly(): void
     {
         $this->analyse(
             [__DIR__ . '/data/thin-controller-fixtures.php'],
@@ -35,6 +37,12 @@ final class ThinControllerRuleTest extends RuleTestCase
                 [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'readParameter'), 27],
                 // allowedHelper (line 32) is allow-listed, so it is not reported.
                 // NotAController::helper (line 49) is outside App\Controller, so it is ignored.
+                [$this->persistenceMessage(self::PERSISTING_CONTROLLER, '__construct', 'entityManager'), 64],
+                [$this->persistenceMessage(self::PERSISTING_CONTROLLER, 'action', 'registry'), 68],
+                // clean() (line 73) takes no persistence; PersistingService (line 87) is no controller.
+                // A union with a persistence member is reported too.
+                [$this->persistenceMessage(self::UNION_CONTROLLER, 'withPersistenceUnion', 'target'), 100],
+                // withoutPersistenceUnion() (line 105) unions two non-persistence classes.
             ],
         );
     }
@@ -52,6 +60,18 @@ final class ThinControllerRuleTest extends RuleTestCase
             $visibility,
             $method,
             $className . '::' . $method,
+        );
+    }
+
+    private function persistenceMessage(string $className, string $method, string $parameter): string
+    {
+        return sprintf(
+            'Controller %s receives persistence through %s($%s). An action reads the request, delegates, '
+            . 'and returns a response; persisting, flushing and removing entities belong in a service '
+            . 'under src/Service (#1157).',
+            $className,
+            $method,
+            $parameter,
         );
     }
 }

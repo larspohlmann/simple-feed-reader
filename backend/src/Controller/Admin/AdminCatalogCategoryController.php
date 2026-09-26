@@ -6,10 +6,9 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\CatalogCategoryRequest;
 use App\Dto\Admin\ReorderRequest;
-use App\Entity\CatalogCategory;
 use App\Http\AdminCatalogJson;
 use App\Repository\CatalogCategoryRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Catalog\CatalogCategoryEditor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -29,22 +28,15 @@ final readonly class AdminCatalogCategoryController
 {
     public function __construct(
         private CatalogCategoryRepository $categories,
-        private EntityManagerInterface $em,
+        private CatalogCategoryEditor $editor,
     ) {
     }
 
     #[Route('', name: 'api_admin_catalog_category_create', methods: ['POST'])]
     public function create(#[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
-        $category = new CatalogCategory($request->key, $request->name, $request->icon, $request->color);
-        $category->setEnabled($request->enabled);
-        $category->setLocked($request->locked);
-        $category->setPosition($this->categories->nextPosition());
-        $this->em->persist($category);
-        $this->em->flush();
-
         return new JsonResponse(
-            ['category' => AdminCatalogJson::category($category)],
+            ['category' => AdminCatalogJson::category($this->editor->create($request))],
             Response::HTTP_CREATED,
         );
     }
@@ -52,10 +44,7 @@ final readonly class AdminCatalogCategoryController
     #[Route('/reorder', name: 'api_admin_catalog_category_reorder', methods: ['PATCH'])]
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
-        foreach ($request->ids as $index => $id) {
-            $this->categories->getById($id)->setPosition($index);
-        }
-        $this->em->flush();
+        $this->editor->reorder($request);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -64,12 +53,7 @@ final readonly class AdminCatalogCategoryController
     public function update(int $id, #[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
         $category = $this->categories->getById($id);
-        $category->setName($request->name);
-        $category->setIcon($request->icon);
-        $category->setColor($request->color);
-        $category->setEnabled($request->enabled);
-        $category->setLocked($request->locked);
-        $this->em->flush();
+        $this->editor->update($category, $request);
 
         return new JsonResponse(['category' => AdminCatalogJson::category($category)]);
     }
@@ -77,11 +61,7 @@ final readonly class AdminCatalogCategoryController
     #[Route('/{id}', name: 'api_admin_catalog_category_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id): JsonResponse
     {
-        $category = $this->categories->getById($id);
-        // Its feeds go with it via the FK's ON DELETE CASCADE. Subscriptions a
-        // user already made are untouched: they are Feed rows, not catalog rows.
-        $this->em->remove($category);
-        $this->em->flush();
+        $this->editor->delete($this->categories->getById($id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

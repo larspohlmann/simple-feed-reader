@@ -156,7 +156,8 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
   does, and is the one write left to fix.
 - **`src/Doctrine/`** (DQL functions, SQL walkers, schema listeners, driver middleware) extends the ORM itself and may
   touch the connection.
-- **Controllers** follow the same rule. Their remaining `persist`/`flush` calls are #1157's to move into services.
+- **Controllers** follow the same rule and go further: they hold no unit of work either. `ThinControllerRule` and
+  `ControllerMutatesNoEntityRule` keep `persist`, `flush`, `remove` and entity mutation in services (#1157).
 
 Enforced by `QueriesLiveInRepositoriesRule` (`backend/tests/PhpStan/`, run by `composer stan`). Outside `src/Repository`
 and `src/Doctrine`, no class may call `createQuery`, `createQueryBuilder`, `createNativeQuery` or `getConnection`. It

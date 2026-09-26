@@ -10,13 +10,10 @@ use App\Dto\Tag\TagFeedOrderRequest;
 use App\Dto\Tag\UpdateTagRequest;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Exception\TagNameTakenException;
 use App\Http\TagJson;
-use App\Repository\SubscriptionRepository;
-use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Service\Reader\ExactSetGuard;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Tag\TagEditor;
+use App\Service\Tag\TagOrdering;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -29,10 +26,8 @@ final readonly class TagController
 {
     public function __construct(
         private TagRepository $tags,
-        private SubscriptionRepository $subscriptions,
-        private SubscriptionTagRepository $subscriptionTags,
-        private EntityManagerInterface $em,
-        private ExactSetGuard $exactSet,
+        private TagEditor $editor,
+        private TagOrdering $ordering,
     ) {
     }
 
@@ -49,18 +44,10 @@ final readonly class TagController
     #[Route('', name: 'api_tags_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] CreateTagRequest $request): JsonResponse
     {
-        if ($this->tags->existsForUserAndName($user->requireId(), $request->name)) {
-            throw new TagNameTakenException();
-        }
-
-        $tag = new Tag($user, $request->name);
-        $tag->setColor($request->color);
-        $tag->setIcon($request->icon);
-        $tag->setPosition($this->tags->nextPositionForUser($user->requireId()));
-        $this->em->persist($tag);
-        $this->em->flush();
-
-        return new JsonResponse(['tag' => TagJson::one($tag)], Response::HTTP_CREATED);
+        return new JsonResponse(
+            ['tag' => TagJson::one($this->editor->create($user, $request))],
+            Response::HTTP_CREATED,
+        );
     }
 
     /**
@@ -72,22 +59,11 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderTagsRequest $request,
     ): JsonResponse {
-        $owned = $this->tags->findForUser($user->requireId());
-        /** @var array<int, Tag> $byId */
-        $byId = [];
-        foreach ($owned as $tag) {
-            $byId[$tag->requireId()] = $tag;
-        }
-
-        $this->exactSet->assertPermutation($request->tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
-
-        foreach ($request->tagIds as $index => $tagId) {
-            $byId[$tagId]->setPosition($index);
-        }
-        $this->em->flush();
-
         return new JsonResponse([
-            'tags' => array_map(static fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
+            'tags' => array_map(
+                static fn (Tag $tag): array => TagJson::one($tag),
+                $this->ordering->reorder($user, $request),
+            ),
         ]);
     }
 
@@ -105,17 +81,7 @@ final readonly class TagController
         $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
-        $joinsBySubId = $this->subscriptionTags->forTagBySubscriptionId($tag);
-        $this->exactSet->assertPermutation(
-            $request->subscriptionIds,
-            array_keys($joinsBySubId),
-            "subscriptionIds must list exactly this tag's feeds.",
-        );
-
-        foreach ($request->subscriptionIds as $index => $subscriptionId) {
-            $joinsBySubId[$subscriptionId]->setPosition($index);
-        }
-        $this->em->flush();
+        $this->ordering->orderFeeds($tag, $request);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -129,14 +95,7 @@ final readonly class TagController
         $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
-        if ($this->tags->existsForUserAndName($user->requireId(), $request->name, $id)) {
-            throw new TagNameTakenException();
-        }
-
-        $tag->setName($request->name);
-        $tag->setColor($request->color);
-        $tag->setIcon($request->icon);
-        $this->em->flush();
+        $this->editor->update($tag, $request);
 
         return new JsonResponse(['tag' => TagJson::one($tag)]);
     }
@@ -147,14 +106,7 @@ final readonly class TagController
         $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
-        // Detach from every subscription first (portable across SQLite/MySQL).
-        // A tag's subscriptions are always its own owner's, so findForUserByTagId
-        // (userId + tagId) resolves the identical set findByTag(Tag) once did.
-        foreach ($this->subscriptions->findForUserByTagId($user->requireId(), $id) as $sub) {
-            $sub->removeTag($tag);
-        }
-        $this->em->remove($tag);
-        $this->em->flush();
+        $this->editor->delete($tag);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

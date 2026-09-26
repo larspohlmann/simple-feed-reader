@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: TagRepository::class)]
 #[ORM\Table(name: 'tag')]
 #[ORM\UniqueConstraint(name: 'uniq_tag_user_name', columns: ['user_id', 'name'])]
-class Tag
+class Tag implements Positioned
 {
     use PersistedId;
 

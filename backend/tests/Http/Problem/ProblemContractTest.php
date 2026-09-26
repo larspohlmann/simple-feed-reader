@@ -19,7 +19,7 @@ use App\Service\OAuth\Exception\UnknownProviderException;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\Auth\Exception\SetupUnavailableException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
-use App\Exception\TagNameTakenException;
+use App\Service\Tag\Exception\TagNameTakenException;
 use App\Exception\ValidationException;
 use App\Security\AccountStatusException;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
