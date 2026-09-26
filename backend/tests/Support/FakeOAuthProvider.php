@@ -34,7 +34,7 @@ final class FakeOAuthProvider implements OAuthProviderInterface
 
     private function __construct(
         private readonly OAuthIdentity $identity,
-        private readonly ?OAuthFailedException $exchangeFailure,
+        private readonly ?string $exchangeFailure,
     ) {
     }
 
@@ -45,7 +45,7 @@ final class FakeOAuthProvider implements OAuthProviderInterface
 
     public static function failingExchange(OAuthIdentity $identity): self
     {
-        return new self($identity, new OAuthFailedException('fake provider was told to fail'));
+        return new self($identity, 'fake provider was told to fail');
     }
 
     public function getName(): string
@@ -75,7 +75,7 @@ final class FakeOAuthProvider implements OAuthProviderInterface
         $this->exchanges[] = ['code' => $code, 'codeVerifier' => $codeVerifier, 'nonce' => $nonce];
 
         if (null !== $this->exchangeFailure) {
-            throw $this->exchangeFailure;
+            throw new OAuthFailedException($this->exchangeFailure);
         }
 
         return $this->identity;

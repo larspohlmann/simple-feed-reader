@@ -9,7 +9,6 @@ use App\Entity\CatalogFeed;
 use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class CatalogFeedRepositoryTest extends DbTestCase
 {
@@ -17,9 +16,6 @@ final class CatalogFeedRepositoryTest extends DbTestCase
 
     public function testFindEnabledByIdsExcludesDisabledFeedsAndCategoriesAndOrdersByPosition(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
         // Category positions are deliberately out of insert order, same as the
         // feed positions within Gadgets below, so a naive "return in whatever
         // order the DB gives them" implementation would fail this test.
@@ -44,15 +40,12 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $buriedFeed->setPosition(0);
 
         foreach ([$technology, $gadgets, $archived, $engadget, $wired, $deadFeed, $mitReview, $buriedFeed] as $row) {
-            $em->persist($row);
+            $this->em->persist($row);
         }
-        $em->flush();
+        $this->em->flush();
         // See CatalogCategoryRepositoryTest for why: already-managed entities are
         // returned from the identity map without being re-hydrated from the query.
-        $em->clear();
-
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
+        $this->em->clear();
 
         $requestedIds = array_map(
             static fn (CatalogFeed $f): int => $f->requireId(),
@@ -60,7 +53,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         );
         $requestedIds[] = 999_999; // an id nothing maps to
 
-        $rows = $repository->findEnabledByIds($requestedIds);
+        $rows = $this->catalogFeeds()->findEnabledByIds($requestedIds);
 
         self::assertSame(['Wired', 'Engadget', 'MIT Technology Review'], array_map(
             static fn (CatalogFeed $f): string => $f->getTitle(),
@@ -70,10 +63,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
 
     public function testFindEnabledByIdsReturnsEmptyForEmptyInput(): void
     {
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
-
-        self::assertSame([], $repository->findEnabledByIds([]));
+        self::assertSame([], $this->catalogFeeds()->findEnabledByIds([]));
     }
 
     public function testFindNeedingFaviconAppliesStaleAndRetryThresholdsAndSkipsDisabledFeeds(): void
@@ -118,10 +108,8 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         }
         $this->em->flush();
 
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
         $mine = array_filter(
-            $repository->findAllOrdered(),
+            $this->catalogFeeds()->findAllOrdered(),
             static fn (CatalogFeed $feed): bool => $feed->getCategory() === $category,
         );
 
@@ -151,8 +139,6 @@ final class CatalogFeedRepositoryTest extends DbTestCase
      */
     private function persistFaviconQueue(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
         $now = new \DateTimeImmutable(self::NOW);
         $criteria = $this->faviconCriteria();
 
@@ -180,11 +166,11 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $disabled = new CatalogFeed($category, 'Disabled Feed', 'https://example.com/disabled.xml');
         $disabled->setEnabled(false);
 
-        $em->persist($category);
+        $this->em->persist($category);
         foreach ([$neverFetched, $staleIcon, $freshIcon, $recentlyFailed, $longFailed, $disabled] as $feed) {
-            $em->persist($feed);
+            $this->em->persist($feed);
         }
-        $em->flush();
-        $em->clear();
+        $this->em->flush();
+        $this->em->clear();
     }
 }

@@ -858,20 +858,18 @@ final class OAuthFlowTest extends WebTestCase
 
     private function fakeProvider(OAuthIdentity $identity): FakeOAuthProvider
     {
-        return $this->installed(FakeOAuthProvider::returning($identity));
+        return $this->installBeforeTheFirstRequest(FakeOAuthProvider::returning($identity));
     }
 
     private function failingFakeProvider(OAuthIdentity $identity): FakeOAuthProvider
     {
-        return $this->installed(FakeOAuthProvider::failingExchange($identity));
+        return $this->installBeforeTheFirstRequest(FakeOAuthProvider::failingExchange($identity));
     }
 
     /**
-     * Installs a fake provider by replacing the whole registry. MUST be called
-     * before the first request of a test — see the class docblock for why, and
-     * for why the provider service itself is not the seam.
+     * Replaces the whole registry; see the class docblock for why the provider service is not the seam.
      */
-    private function installed(FakeOAuthProvider $provider): FakeOAuthProvider
+    private function installBeforeTheFirstRequest(FakeOAuthProvider $provider): FakeOAuthProvider
     {
         self::getContainer()->set(
             OAuthProviderRegistry::class,

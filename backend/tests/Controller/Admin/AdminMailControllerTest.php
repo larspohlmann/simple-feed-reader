@@ -77,7 +77,7 @@ final class AdminMailControllerTest extends ApiTestCase
      *
      * @return array<string, mixed>
      */
-    private function mailBody(array $changes): array
+    private function mailBody(array $changes = []): array
     {
         return [
             'enabled' => false,
@@ -284,7 +284,7 @@ final class AdminMailControllerTest extends ApiTestCase
     public function testPutRefusesABodyMissingAnySingleSetting(string $key): void
     {
         $admin = $this->admin();
-        $incomplete = $this->mailBody([]);
+        $incomplete = $this->mailBody();
         unset($incomplete[$key]);
 
         $this->requestWithJsonBody('PUT', $admin, $incomplete);

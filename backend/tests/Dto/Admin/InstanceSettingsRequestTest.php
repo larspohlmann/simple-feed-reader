@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\InstanceSettingsRequest;
+use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -38,9 +39,9 @@ final class InstanceSettingsRequestTest extends TestCase
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
 
-    public function testTheUpdateCarriesEverySettingAndTheConfirmationDefaultsToOff(): void
+    public function testTheUpdateCarriesEverySettingAndThePasskeyInvalidationDefaultsToOff(): void
     {
-        $request = new InstanceSettingsRequest(
+        $request = SettingsRequests::instance(
             requireEmailConfirmation: false,
             requireApproval: true,
             publicBaseUrl: 'https://reader.example',
@@ -62,13 +63,6 @@ final class InstanceSettingsRequestTest extends TestCase
 
     private static function withRelyingParty(?string $passkeyRpId, ?string $passkeyRpName): InstanceSettingsRequest
     {
-        return new InstanceSettingsRequest(
-            requireEmailConfirmation: true,
-            requireApproval: true,
-            publicBaseUrl: null,
-            passkeyRpId: $passkeyRpId,
-            passkeyRpName: $passkeyRpName,
-            passkeySignInEnabled: false,
-        );
+        return SettingsRequests::instance(passkeyRpId: $passkeyRpId, passkeyRpName: $passkeyRpName);
     }
 }
