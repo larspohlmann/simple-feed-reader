@@ -6,17 +6,9 @@ namespace App\Tests\Support;
 
 use App\Entity\PasskeyRegistration;
 
-/**
- * `PasskeyRegistration`'s eight fields are mostly filler for tests that
- * exercise something else entirely — listing, removal policy, sign-in
- * availability — so `any()` carries the values none of those tests care
- * about and lets a call site name only the ones it does.
- */
 final readonly class PasskeyRegistrations
 {
-    /**
-     * @param list<string> $transports
-     */
+    /** @param list<string> $transports */
     public static function any(
         string $credentialId = 'Y3JlZC1hYmM',
         string $userHandle = 'aGFuZGxl',
