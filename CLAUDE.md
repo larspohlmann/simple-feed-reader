@@ -112,7 +112,11 @@ Non-negotiables:
   reads the request, delegates, and returns a response. Querying, response
   assembly, validation, entity mutation and security decisions belong in a
   service, a repository, or an `src/Http/*Json.php` mapper — never in a private
-  method on the controller. Enforced by `ThinControllerRule` (PHPStan). The one
+  method on the controller, and never inline in a public action either: a
+  controller takes no `EntityManagerInterface`/`ManagerRegistry`, constructs no
+  entity, and calls only `get*`/`is*`/`has*` and `requireId()` on one (#1157).
+  Enforced by `ThinControllerRule` and `ControllerMutatesNoEntityRule`
+  (PHPStan). The one
   permitted exception is a trivial single-expression helper used by exactly one
   action in exactly one controller; add it to the rule's allow-list with a
   comment that says why. The same helper in a second controller is duplication,
@@ -125,8 +129,11 @@ Enforced mechanically by `composer check` and `composer md`:
 - **PHPStan level max** over `src` and `tests` — no new baselines, no
   `@phpstan-ignore` without a comment saying why.
 - **`ThinControllerRule`** (`tests/PhpStan/ThinControllerRule.php`, run by
-  `composer stan`) — controllers carry no private method that does real work; the
-  allow-list of permitted trivial helpers lives in the rule and only ever shrinks.
+  `composer stan`) — controllers carry no private method that does real work and
+  take no `ObjectManager`/`ManagerRegistry`; the allow-list of permitted trivial
+  helpers lives in the rule and only ever shrinks. Its sibling
+  **`ControllerMutatesNoEntityRule`** rejects entity construction and any call on
+  an entity other than `get*`/`is*`/`has*` and `requireId()` inside a controller.
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.

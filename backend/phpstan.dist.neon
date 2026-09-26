@@ -40,3 +40,7 @@ services:
         class: App\Tests\PhpStan\QueriesLiveInRepositoriesRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ControllerMutatesNoEntityRule
+        tags:
+            - phpstan.rules.rule
