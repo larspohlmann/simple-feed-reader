@@ -50,6 +50,29 @@ final class BackupHeaderTest extends TestCase
         self::header(part: 0, parts: null)->requireCoherent();
     }
 
+    public function testAFoundationWithAZeroPartsCountIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The foundation must declare its parts count and totals.');
+
+        self::header(part: 0, parts: 0, totals: new BackupTotals(1, 1))->requireCoherent();
+    }
+
+    public function testAFoundationWithoutTotalsIsRefused(): void
+    {
+        $this->expectException(InvalidBackupException::class);
+        $this->expectExceptionMessage('The foundation must declare its parts count and totals.');
+
+        self::header(part: 0, parts: 2)->requireCoherent();
+    }
+
+    public function testACoherentFoundationIsCoherent(): void
+    {
+        $header = self::header(part: 0, parts: 2, totals: new BackupTotals(1, 1));
+
+        self::assertSame($header, $header->requireCoherent());
+    }
+
     private static function header(int $part, ?int $parts, ?BackupTotals $totals = null): BackupHeader
     {
         return new BackupHeader(
