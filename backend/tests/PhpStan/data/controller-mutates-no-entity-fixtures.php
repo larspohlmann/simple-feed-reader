@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-// Fixtures for ControllerMutatesNoEntityRuleTest, analysed only by that RuleTestCase (see excludePaths in
-// phpstan.dist.neon). The namespaces deliberately do not match the path, hence the PSR-4 suppressions.
+// Fixtures shared by the three ControllerMutatesNoEntity* rule tests (see excludePaths in phpstan.dist.neon).
+// The namespaces deliberately do not match the path, hence the PSR-4 suppressions.
 /** @noinspection PhpIllegalPsrClassPathInspection */
 
 namespace App\Entity\Fixtures {

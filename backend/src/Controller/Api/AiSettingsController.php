@@ -47,7 +47,7 @@ final readonly class AiSettingsController
     {
         return new JsonResponse(AiSettingsJson::list(
             $this->configurator->listConfigurations($user),
-            $this->configurator->settingsFor($user)?->getId(),
+            $user->getActiveAiProviderSettings()?->getId(),
         ));
     }
 

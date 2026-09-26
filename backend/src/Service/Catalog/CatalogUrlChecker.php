@@ -68,7 +68,7 @@ final readonly class CatalogUrlChecker
             $status = $response->getStatusCode();
             $head = 200 === $status ? mb_substr($response->getContent(), 0, 2048) : '';
         } catch (ExceptionInterface $e) {
-            throw new BrokenCatalogUrlException($e->getMessage(), 0, $e);
+            throw new BrokenCatalogUrlException($e->getMessage(), previous: $e);
         }
 
         if (200 !== $status) {

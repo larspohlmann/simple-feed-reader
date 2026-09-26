@@ -169,11 +169,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     }
 
     /**
-     * One entry as a list row (entry + subscription + folded state), or null if
-     * the caller does not subscribe to its feed — the same IDOR gate as the list.
-     * Lets a deep link open an entry the current list page does not contain.
+     * One entry as a list row (entry + subscription + folded state) — the same
+     * IDOR gate as the list. Lets a deep link open an entry the current list
+     * page does not contain.
      */
-    public function oneRowForUser(int $entryId, int $userId): ?EntryListRow
+    public function getOneRowForUser(int $entryId, int $userId): EntryListRow
     {
         /** @var array<array-key, mixed>|null $row */
         $row = $this->rowQueryBuilder($userId)
@@ -182,12 +182,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $row === null ? null : $this->rowHydrator->hydrate($row);
-    }
+        if ($row === null) {
+            throw new RecordNotFoundException('No such entry.');
+        }
 
-    public function getOneRowForUser(int $entryId, int $userId): EntryListRow
-    {
-        return $this->oneRowForUser($entryId, $userId) ?? throw new RecordNotFoundException('No such entry.');
+        return $this->rowHydrator->hydrate($row);
     }
 
     /**

@@ -24,10 +24,13 @@ final class OAuthCallbackTest extends DbTestCase
         $provider = $this->provider();
         $attempt = new OAuthCallbackAttempt('google', true, null, null, null);
 
-        self::assertSame(
-            OAuthCallbackFailure::AccessDenied,
-            $this->refusalOf($this->oauthCallback($provider), $attempt),
-        );
+        try {
+            $this->oauthCallback($provider)->complete($attempt);
+            self::fail('The callback was not refused.');
+        } catch (OAuthCallbackRefusedException $refusal) {
+            self::assertSame(OAuthCallbackFailure::AccessDenied, $refusal->failure);
+            self::assertSame('The OAuth callback was refused: access_denied.', $refusal->getMessage());
+        }
         self::assertSame([], $provider->exchanges);
     }
 

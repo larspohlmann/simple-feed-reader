@@ -108,8 +108,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     public function testReadMirrorsToTheSubscribedSibling(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-        $row = $this->rows()->oneRowForUser($target->requireId(), $user->requireId());
-        self::assertNotNull($row);
+        $row = $this->rows()->getOneRowForUser($target->requireId(), $user->requireId());
 
         $this->updater()->apply($user, $row, $this->request(isHidden: true));
 
@@ -120,8 +119,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     public function testFavoriteDoesNotMirror(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-        $row = $this->rows()->oneRowForUser($target->requireId(), $user->requireId());
-        self::assertNotNull($row);
+        $row = $this->rows()->getOneRowForUser($target->requireId(), $user->requireId());
 
         $this->updater()->apply($user, $row, $this->request(isFavorite: true));
 
@@ -133,8 +131,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     public function testKeptDoesNotMirror(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-        $row = $this->rows()->oneRowForUser($target->requireId(), $user->requireId());
-        self::assertNotNull($row);
+        $row = $this->rows()->getOneRowForUser($target->requireId(), $user->requireId());
 
         $this->updater()->apply($user, $row, $this->request(isKept: true));
 
@@ -146,8 +143,7 @@ final class EntryStateUpdaterTest extends DbTestCase
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();
-        $row = $this->rows()->oneRowForUser($target->requireId(), $user->requireId());
-        self::assertNotNull($row);
+        $row = $this->rows()->getOneRowForUser($target->requireId(), $user->requireId());
 
         $this->updater()->apply($user, $row, $this->request(isViewed: true));
 

@@ -33,6 +33,7 @@ final class CheckCatalogUrlsCommandTest extends KernelTestCase
 
         self::assertSame(1, $tester->getStatusCode());
         self::assertStringContainsString('not a feed', $tester->getDisplay());
+        self::assertStringContainsString('1 of 1 catalog URLs need attention', $tester->getDisplay());
     }
 
     public function testExitsZeroWhenEveryCheckedUrlServesAFeed(): void
@@ -43,9 +44,10 @@ final class CheckCatalogUrlsCommandTest extends KernelTestCase
         ));
 
         $tester = $this->tester($client);
-        $tester->execute(['--limit' => '1']);
+        $tester->execute(['--limit' => '2']);
 
         self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('All 2 catalog URLs still serve a feed.', $tester->getDisplay());
     }
 
     /**

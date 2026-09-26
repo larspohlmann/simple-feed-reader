@@ -34,13 +34,26 @@ final class CatalogUrlCheckerTest extends KernelTestCase
 
     public function testUrlsThatServeAFeedLeaveTheReportHealthy(): void
     {
-        $checker = $this->checker(new MockHttpClient(static fn (): MockResponse => new MockResponse(self::FEED_BODY)));
+        $requestOptions = [];
+        $checker = $this->checker(new MockHttpClient(
+            static function (string $method, string $url, array $options) use (&$requestOptions): MockResponse {
+                $requestOptions[] = $options;
+
+                return new MockResponse(self::FEED_BODY);
+            },
+        ));
 
         $report = $checker->check(2);
 
         self::assertSame(2, $report->checked);
         self::assertSame([], $report->broken);
         self::assertTrue($report->isHealthy());
+        /** @var array{normalized_headers: array{'user-agent': list<string>}} $firstRequestOptions */
+        $firstRequestOptions = $requestOptions[0];
+        self::assertSame(
+            ['User-Agent: SimpleFeedReader/1.0'],
+            $firstRequestOptions['normalized_headers']['user-agent'],
+        );
     }
 
     public function testNoLimitChecksTheWholeShippedCatalog(): void

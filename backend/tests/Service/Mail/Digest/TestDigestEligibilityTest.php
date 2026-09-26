@@ -20,7 +20,7 @@ final class TestDigestEligibilityTest extends DbTestCase
 
         $this->expectNotToPerformAssertions();
 
-        $this->eligibility()->assertEligible($this->user(verified: true));
+        $this->eligibility()->assertEligible($this->verifiedUser());
     }
 
     public function testAnUnverifiedAddressIsRefused(): void
@@ -28,15 +28,17 @@ final class TestDigestEligibilityTest extends DbTestCase
         $this->seedEnabledMailInstance();
 
         $this->expectException(TestDigestUnavailableException::class);
+        $this->expectExceptionMessage('Mail is unavailable for this account.');
 
-        $this->eligibility()->assertEligible($this->user(verified: false));
+        $this->eligibility()->assertEligible($this->unverifiedUser());
     }
 
     public function testAnInstanceThatSendsNoMailRefusesEvenAVerifiedAddress(): void
     {
         $this->expectException(TestDigestUnavailableException::class);
+        $this->expectExceptionMessage('Mail is unavailable for this account.');
 
-        $this->eligibility()->assertEligible($this->user(verified: true));
+        $this->eligibility()->assertEligible($this->verifiedUser());
     }
 
     private function eligibility(): TestDigestEligibility
@@ -44,13 +46,16 @@ final class TestDigestEligibilityTest extends DbTestCase
         return self::getContainer()->get(TestDigestEligibility::class);
     }
 
-    private function user(bool $verified): User
+    private function verifiedUser(): User
     {
-        $user = new User('test-digest@example.test', new \DateTimeImmutable('2026-08-01T00:00:00Z'));
-        if ($verified) {
-            $user->markEmailVerified(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
-        }
+        $user = $this->unverifiedUser();
+        $user->markEmailVerified(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
 
         return $user;
+    }
+
+    private function unverifiedUser(): User
+    {
+        return new User('test-digest@example.test', new \DateTimeImmutable('2026-08-01T00:00:00Z'));
     }
 }
