@@ -18,11 +18,9 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Subscription\BulkSubscriptionUpdater;
-use App\Service\Subscription\FeedTagMove;
 use App\Service\Subscription\OwnedSubscriptions;
+use App\Service\Subscription\SubscriptionEditor;
 use App\Service\Subscription\SubscriptionService;
-use App\Service\Subscription\SubscriptionTagSync;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -36,13 +34,11 @@ final readonly class SubscriptionController
     public function __construct(
         private SubscriptionService $subscriptions,
         private SubscriptionRepository $subscriptionRepo,
-        private SubscriptionTagSync $tagSync,
         private TagRepository $tags,
         private EntryStateRepository $entryStates,
-        private EntityManagerInterface $em,
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
-        private FeedTagMove $feedTagMove,
+        private SubscriptionEditor $editor,
     ) {
     }
 
@@ -121,20 +117,7 @@ final readonly class SubscriptionController
         $sub = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such subscription.');
 
-        $sub->setCustomTitle('' === (string) $request->customTitle ? null : $request->customTitle);
-
-        $this->tagSync->sync($sub, $request->tagIds, $user->requireId());
-
-        // null on either flag means "leave the stored value unchanged", matching
-        // EntryController::updateState()'s nullable-PATCH convention (#695).
-        if (null !== $request->includeInAllItems) {
-            $sub->setIncludeInAllItems($request->includeInAllItems);
-        }
-        if (null !== $request->includeInForYou) {
-            $sub->setIncludeInForYou($request->includeInForYou);
-        }
-
-        $this->em->flush();
+        $this->editor->update($sub, $request);
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
     }
@@ -150,12 +133,10 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MoveFeedToTagRequest $request,
     ): JsonResponse {
-        $userId = $user->requireId();
-        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $userId)
+        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such subscription.');
 
-        $this->feedTagMove->move($sub, $request->fromTagId, $request->toTagId, $request->position, $userId);
-        $this->em->flush();
+        $this->editor->moveToTag($sub, $request);
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
     }
@@ -170,12 +151,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderSubscriptionsRequest $request,
     ): JsonResponse {
-        $byId = $this->ownedSubscriptions->resolve($request->subscriptionIds, $user->requireId());
-
-        foreach ($request->subscriptionIds as $index => $subscriptionId) {
-            $byId[$subscriptionId]->setPosition($index);
-        }
-        $this->em->flush();
+        $this->editor->reorder($user, $request);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
