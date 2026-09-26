@@ -2957,6 +2957,26 @@ EOF
 ```
 - [ ] After a merge (the user's call), check that #1167 is still OPEN: `gh issue view 1167 --json state --jq .state`.
 
+### Execution rulings (PR A)
+
+Recorded while executing Tasks A0–A9. Each ruling amends the text above.
+
+- **B1 (A4 Step 6):** the perl sweep misses `EntryListTest.php:762`'s positional `'all'`; it is rewritten by hand, and the check is `git grep -nE "EntryQuery\(.*'(all|unread|favorites|kept|viewed|for-you)'" -- backend/tests`.
+- **S1 (A7a):** `InstanceSetting`'s docblock writes `{@see InstanceSettingsUpdate}`, not the qualified name (a PhpStorm WARNING).
+- **S2 (A7b):** `docs/local-docker.md`'s Grafana PUT hint says the body carries every setting.
+- **S3 (A7a/A7b):** each settings controller test has one data-provider test that leaves out each required key in turn and expects 422 naming exactly that key.
+- **S4 (A1):** `RefreshFeedsCommand` compares `getOption(…) === true`, not a `(bool)` cast.
+- **S5 (A3):** `infection.json5` ignores `NullSafeMethodCall` on `SlideshowMarkup::loadFirstSlideEagerly` (a slideshow always has 2+ images).
+- **R1 (A1):** `RefreshFeedsCommandRequestTest` also pins the requests `--feed` and `--user` build; two `MatchArmRemoval` mutants escaped without it.
+- **R2 (A4):** `EntryScopePredicates::applyView()` keeps `default: break;` for the unfiltered views; `case All: case ForYou:` produced unkillable `SharedCaseRemoval` mutants, since `EntryQuery` refuses ForYou.
+- **R3 (A4):** `isDateOrderedFanIn()`'s docblock keeps its contrast with `hidesExcludedFeeds()` (tag scope counts for one, not the other).
+- **R4 (A5):** `FeedTagMove::move()` keeps the plan's one-line same-list comment.
+- **R5 (A9):** `infection.json5` ignores `MatchArmRemoval` on `BackupReader::toDto` for its unreachable default arm. Arm-removal mutants all report at the `match` line, so a line-scoped ignore cannot isolate it; each real arm stays covered behaviourally by the reader tests.
+- **R6 (A9):** N2's complexity table is wrong (the reader measured 47 before, already clean); the requirement stays "PHPMD-clean", which holds.
+- **R7 (final review):** the settings DTO docblocks point at `FullReplacePayload::CONTEXT` and keep what a null setting means; `SettingsRequests` gains `instance()` and mirrors the DTOs' parameter order; `BackupHeaderTest` pins every arm of `requireCoherent()`; `FakeOAuthProvider` builds its exception in `exchangeCode()`; `OAuthFlowTest::installBeforeTheFirstRequest()` names its precondition; the `RefreshRequest` withers sit below the named constructors.
+- **R8 (/simplify):** skipped E1 (reuse `$this` in `BackupLineOrder::admit()` on an unchanged rank: negligible next to per-line gzip and JSON, and it adds an equivalent mutant) and the altitude proposal to pass each slide's `loading` value (S5 settled it).
+- **Deferred:** pre-existing `$this->once()/never()` WARNINGs in `CatalogFaviconWarmerTest`, `GrafanaSettingsTest`, `ProxySettingsTest`, `SendDueDigestsTest` → #1169's sweep. Candidate follow-up: a missing settings field's 422 message is Symfony's generic "This value should be of type …".
+
 ---
 
 # PR B
