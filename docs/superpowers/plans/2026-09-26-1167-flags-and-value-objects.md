@@ -3636,3 +3636,17 @@ EOF
 )"
 ```
 - [ ] After a merge (the user's call), confirm that #1167 closed: `gh issue view 1167 --json state --jq .state`. Do not close it by hand.
+
+### Execution rulings (PR B)
+
+Recorded while executing Tasks B0–B3. Each ruling amends the text above.
+
+- **PB1 (B3):** `SavedSearchEntryRepository::unreadMemberIdsSince` is renamed to `unreadMemberIdsForUserSince(int $userId, int $savedSearchId, \DateTimeImmutable $since)`. Its reorder swaps two adjacent ints, so the rename rule applies; the table's "kept" cell contradicted it. B3's swap-guard tests stay as the behavioural check.
+- **PS1 (B2):** `AbstractEntryProjectionRepository`'s docblock names `getRowForUser`; Step 3's check greps `getOneRowForUser|(find|get)OneSubscribedByUser` (the plan's version also matched `idsSubscribedByUser`).
+- **PS2 (B3):** the `docs/architecture.md` bullet says owned-row lookups by id are named `…ForUser`, not every user-scoped method; `savedSearchesByEntry` and `detailRows` keep their names.
+- **PS3 (B1/B3):** the `RecommendationRunLogRepository` class docblock and `findAllByIdsForUserWithAssociations`'s docblock are trimmed to three lines or fewer.
+- **PS4:** B1's run adds `SavedSearchEntriesControllerTest`; B3's adds `SubscriptionControllerTest`.
+- **N4/N5/N8:** B2's expected `ReflectionException` did not occur (the rename keeps the method resolvable); the swap tests are named for behaviour; B3's red run is its failing proof.
+- **R1 (B2):** `EntryListTest` calls `findOneSubscribedForUser` directly, which kills a `PublicVisibility` mutant; the method is public for its `#[WithSpan]`.
+- **R2 (B3):** an `UnwrapArrayValues` mutant in `OwnedTagsCache::resolveMissing()` is equivalent (the keys never reach the query) and is accepted without an ignore.
+- **R3 (final review, /simplify):** `OwnedSubscriptions::resolve()` stays ids-first, because it is a service wrapper outside the repository rule. The digest swap test keeps its separate owner for the throwaway searches. A shared id-divergence test helper waits for a third use.
