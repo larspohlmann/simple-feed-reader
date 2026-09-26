@@ -6,13 +6,10 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\CatalogFeedRequest;
 use App\Dto\Admin\ReorderRequest;
-use App\Entity\CatalogFeed;
 use App\Http\AdminCatalogJson;
-use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\CatalogFaviconWarmer;
-use App\Service\Catalog\CatalogFeedWriter;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Catalog\CatalogFeedEditor;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -33,34 +30,24 @@ final readonly class AdminCatalogFeedController
 {
     public function __construct(
         private CatalogFeedRepository $feeds,
-        private CatalogCategoryRepository $categories,
         private CatalogFaviconWarmer $warmer,
-        private CatalogFeedWriter $feedWriter,
-        private EntityManagerInterface $em,
+        private CatalogFeedEditor $editor,
     ) {
     }
 
     #[Route('', name: 'api_admin_catalog_feed_create', methods: ['POST'])]
     public function create(#[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
-        $category = $this->categories->getById($request->categoryId);
-
-        $feed = new CatalogFeed($category, $request->title, $request->url);
-        $this->feedWriter->apply($feed, $request);
-        $feed->setPosition($this->feeds->nextPositionInCategory($category->requireId()));
-        $this->em->persist($feed);
-        $this->em->flush();
-
-        return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)], Response::HTTP_CREATED);
+        return new JsonResponse(
+            ['feed' => AdminCatalogJson::feed($this->editor->create($request))],
+            Response::HTTP_CREATED,
+        );
     }
 
     #[Route('/reorder', name: 'api_admin_catalog_feed_reorder', methods: ['PATCH'])]
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
-        foreach ($request->ids as $index => $id) {
-            $this->feeds->getById($id)->setPosition($index);
-        }
-        $this->em->flush();
+        $this->editor->reorder($request);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -69,13 +56,7 @@ final readonly class AdminCatalogFeedController
     public function update(int $id, #[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
         $feed = $this->feeds->getById($id);
-        $category = $this->categories->getById($request->categoryId);
-
-        $feed->setCategory($category);
-        $feed->setTitle($request->title);
-        $feed->setUrl($request->url);
-        $this->feedWriter->apply($feed, $request);
-        $this->em->flush();
+        $this->editor->update($feed, $request);
 
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
     }
@@ -83,9 +64,7 @@ final readonly class AdminCatalogFeedController
     #[Route('/{id}', name: 'api_admin_catalog_feed_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id): JsonResponse
     {
-        $feed = $this->feeds->getById($id);
-        $this->em->remove($feed);
-        $this->em->flush();
+        $this->editor->delete($this->feeds->getById($id));
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
