@@ -28,6 +28,7 @@ final readonly class MailDeliveryHealth implements MailFailureRecorder
         $occurredAt = $this->clock->now();
 
         $this->failures->add(new MailSendFailure($kind, $recipient, $error, $occurredAt));
+        $this->failures->pruneToRetention();
     }
 
     public function recordSuccess(): void

@@ -6,9 +6,14 @@ namespace App\Repository;
 
 use App\Entity\WorkerHeartbeat;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
+ * Writes are single statements, never a flush: a worker touches its heartbeat mid-tick, and a flush would commit
+ * whatever else the tick holds dirty. Reads are arrays, so no managed copy goes stale behind a write.
+ *
  * @extends ServiceEntityRepository<WorkerHeartbeat>
  */
 final class WorkerHeartbeatRepository extends ServiceEntityRepository
@@ -18,74 +23,54 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
         parent::__construct($registry, WorkerHeartbeat::class);
     }
 
-    /**
-     * A single worker process touches any given name, so there is never a
-     * concurrent writer to race — find-or-create is enough and no upsert SQL
-     * is needed.
-     */
+    /** An upsert, not UPDATE-then-INSERT: MySQL counts an UPDATE to the same value as zero rows. */
     public function touch(string $name, \DateTimeImmutable $when): void
     {
-        $heartbeat = $this->find($name);
+        $connection = $this->getEntityManager()->getConnection();
+        $onConflict = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform
+            ? 'ON DUPLICATE KEY UPDATE'
+            : 'ON CONFLICT (name) DO UPDATE SET';
 
-        if (null === $heartbeat) {
-            $heartbeat = new WorkerHeartbeat($name, $when);
-            $this->getEntityManager()->persist($heartbeat);
-        } else {
-            $heartbeat->touch($when);
-        }
-
-        $this->getEntityManager()->flush();
+        $connection->executeStatement(
+            sprintf('INSERT INTO worker_heartbeat (name, touched_at) VALUES (?, ?) %s touched_at = ?', $onConflict),
+            [$name, $when, $when],
+            [Types::STRING, Types::DATETIME_IMMUTABLE, Types::DATETIME_IMMUTABLE],
+        );
     }
 
     public function findTouchedAt(string $name): ?\DateTimeImmutable
     {
-        return $this->find($name)?->getTouchedAt();
+        return $this->findTouchedAtByNames([$name])[$name] ?? null;
     }
 
     /**
-     * The touch instants of the names that have a row, keyed by name; names
-     * without one are simply absent. One query rather than one per name,
-     * because the caller on the poll path asks about every driver kind on
-     * every request from every open tab.
+     * One query for every name, because the poll path asks about every driver kind on every request.
      *
      * @param list<string> $names
      *
-     * @return array<string, \DateTimeImmutable>
+     * @return array<string, \DateTimeImmutable> names without a row are absent
      */
     public function findTouchedAtByNames(array $names): array
     {
-        $touchedAt = [];
-
-        /** @var list<WorkerHeartbeat> $heartbeats */
-        $heartbeats = $this->createQueryBuilder('heartbeat')
+        /** @var list<array{name: string, touchedAt: \DateTimeImmutable}> $rows */
+        $rows = $this->createQueryBuilder('heartbeat')
+            ->select('heartbeat.name AS name', 'heartbeat.touchedAt AS touchedAt')
             ->andWhere('heartbeat.name IN (:names)')
             ->setParameter('names', $names)
             ->getQuery()
-            ->getResult();
+            ->getArrayResult();
 
-        foreach ($heartbeats as $heartbeat) {
-            $touchedAt[$heartbeat->getName()] = $heartbeat->getTouchedAt();
-        }
-
-        return $touchedAt;
+        return array_column($rows, 'touchedAt', 'name');
     }
 
-    /**
-     * Removes the row rather than back-dating it, so "no worker" is the
-     * absence of a heartbeat — the same state a host that never ran one is
-     * in. A name that was never touched is already forgotten, so this is
-     * idempotent by design: the drain command calls it from both its
-     * `finally` and its shutdown hook (#371).
-     */
+    /** Idempotent by design: the drain command forgets from both its `finally` and its shutdown hook (#371). */
     public function forget(string $name): void
     {
-        $heartbeat = $this->find($name);
-
-        if (null === $heartbeat) {
-            return;
-        }
-
-        $this->getEntityManager()->remove($heartbeat);
-        $this->getEntityManager()->flush();
+        $this->createQueryBuilder('heartbeat')
+            ->delete()
+            ->where('heartbeat.name = :name')
+            ->setParameter('name', $name)
+            ->getQuery()
+            ->execute();
     }
 }

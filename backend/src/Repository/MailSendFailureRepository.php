@@ -9,10 +9,6 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The failure log stays bounded: {@see self::add()} prunes to the newest
- * RETENTION rows on every write, so a proxy outage sending every five minutes
- * for hours cannot grow it without limit (#882).
- *
  * @extends ServiceEntityRepository<MailSendFailure>
  */
 final class MailSendFailureRepository extends ServiceEntityRepository
@@ -29,8 +25,6 @@ final class MailSendFailureRepository extends ServiceEntityRepository
         $manager = $this->getEntityManager();
         $manager->persist($failure);
         $manager->flush();
-
-        $this->pruneToRetention();
     }
 
     public function deleteAll(): void
@@ -57,7 +51,8 @@ final class MailSendFailureRepository extends ServiceEntityRepository
         return $this->count([]);
     }
 
-    private function pruneToRetention(): void
+    /** Keeps the newest RETENTION rows: an outage retrying every five minutes must not grow the log (#882). */
+    public function pruneToRetention(): void
     {
         /** @var list<int> $ids */
         $ids = array_column(

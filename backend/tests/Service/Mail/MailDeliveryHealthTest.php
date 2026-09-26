@@ -48,4 +48,13 @@ final class MailDeliveryHealthTest extends DbTestCase
         self::assertSame([], $this->health->view()['failures']);
         self::assertSame(0, $this->failures->countAll());
     }
+
+    public function testRecordFailureKeepsTheLogWithinRetention(): void
+    {
+        for ($failure = 0; $failure <= MailSendFailureRepository::RETENTION; ++$failure) {
+            $this->health->recordFailure(MailKind::Digest, "reader{$failure}@example.test", 'SMTP is down');
+        }
+
+        self::assertSame(MailSendFailureRepository::RETENTION, $this->failures->countAll());
+    }
 }
