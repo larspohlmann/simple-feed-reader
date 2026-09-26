@@ -386,7 +386,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         // Pruning disabled: an entry this old would otherwise be swept by the
         // same run, which is not what this test is about.
-        $this->runner()->run(RefreshRequest::allDue(300, prune: false));
+        $this->runner()->run(RefreshRequest::allDue(300)->withoutPruning());
 
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'old'));
         self::assertSame(
@@ -427,7 +427,7 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
         );
 
-        $this->runner()->run(RefreshRequest::allDue(300, prune: false));
+        $this->runner()->run(RefreshRequest::allDue(300)->withoutPruning());
 
         self::assertSame(
             $this->clock->now()->format('Y-m-d H:i:s'),

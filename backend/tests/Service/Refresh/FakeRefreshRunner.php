@@ -15,6 +15,9 @@ use App\Service\Refresh\RefreshRunnerInterface;
  */
 final class FakeRefreshRunner implements RefreshRunnerInterface
 {
+    /** @var list<RefreshRequest> */
+    public array $requests = [];
+
     /** @var list<RefreshReport> */
     private array $reports;
 
@@ -25,6 +28,7 @@ final class FakeRefreshRunner implements RefreshRunnerInterface
 
     public function run(RefreshRequest $request): RefreshReport
     {
+        $this->requests[] = $request;
         $report = array_shift($this->reports);
         if (null === $report) {
             throw new \LogicException('The runner was asked for more slices than the test prepared.');
