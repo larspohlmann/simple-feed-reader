@@ -7,6 +7,8 @@ namespace App\Http;
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Recommendation\HistoryMonth;
+use App\Service\Recommendation\RunHistoryMonthPage;
+use App\Service\Recommendation\RunHistoryOverview;
 
 /**
  * The wire shape of the run history (#409): the overview card (the account's
@@ -22,11 +24,6 @@ use App\Service\Recommendation\HistoryMonth;
  * across machines. `status` goes out as the raw wire vocabulary, untranslated,
  * the same convention the #309 debug log records.
  *
- * The two named shapes below are exported so RecommendationRunHistoryView can
- * declare return types against them instead of a bare `array`: a key renamed
- * here without a matching update there is a level-max PHPStan error at the
- * call site, not a silent wire break the client discovers.
- *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  * @phpstan-type MonthPagePayload array{
  *     month: string,
@@ -41,37 +38,26 @@ use App\Service\Recommendation\HistoryMonth;
  */
 final class RecommendationRunHistoryJson
 {
-    /**
-     * @param list<HistoryMonth> $months newest first
-     * @param ?MonthPagePayload $latest the newest month's own monthPage(),
-     *                                   or null for an account that has
-     *                                   never run
-     *
-     * @return OverviewPayload
-     */
-    public static function overview(?int $totalCostNanoCredits, array $months, ?array $latest): array
+    /** @return OverviewPayload */
+    public static function overview(RunHistoryOverview $overview): array
     {
         return [
             // The account's whole spend, not the sum of the page above it. A
             // total that silently means "of the last fifty" is a wrong number,
             // not a cheaper one.
-            'totalCostNanoCredits' => $totalCostNanoCredits,
-            'months' => array_map(self::monthSummary(...), $months),
-            'latest' => $latest,
+            'totalCostNanoCredits' => $overview->totalCostNanoCredits,
+            'months' => array_map(self::monthSummary(...), $overview->months),
+            'latest' => null === $overview->latest ? null : self::monthPage($overview->latest),
         ];
     }
 
-    /**
-     * @param list<HistoryRow> $rows already truncated to the page size
-     *
-     * @return MonthPagePayload
-     */
-    public static function monthPage(string $month, array $rows, ?int $nextCursor): array
+    /** @return MonthPagePayload */
+    public static function monthPage(RunHistoryMonthPage $page): array
     {
         return [
-            'month' => $month,
-            'runs' => array_map(self::row(...), $rows),
-            'nextCursor' => $nextCursor,
+            'month' => $page->month,
+            'runs' => array_map(self::row(...), $page->rows),
+            'nextCursor' => $page->nextCursor,
         ];
     }
 

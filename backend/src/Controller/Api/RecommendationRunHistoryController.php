@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Http\RecommendationRunHistoryJson;
 use App\Service\Recommendation\MonthWindow;
-use App\Service\Recommendation\RecommendationRunHistoryView;
+use App\Service\Recommendation\RecommendationRunHistory;
 use App\Service\Recommendation\ViewerTimeZone;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -29,17 +30,17 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/recommendations/runs/history')]
 final readonly class RecommendationRunHistoryController
 {
-    public function __construct(private RecommendationRunHistoryView $view)
+    public function __construct(private RecommendationRunHistory $history)
     {
     }
 
     #[Route('', name: 'api_recommendations_run_history', methods: ['GET'])]
     public function overview(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        return new JsonResponse($this->view->overview(
+        return new JsonResponse(RecommendationRunHistoryJson::overview($this->history->overview(
             $user,
             ViewerTimeZone::of($request->query->get('tz')),
-        ));
+        )));
     }
 
     #[Route(
@@ -50,10 +51,10 @@ final readonly class RecommendationRunHistoryController
     )]
     public function month(string $month, #[CurrentUser] User $user, Request $request): JsonResponse
     {
-        return new JsonResponse($this->view->month(
+        return new JsonResponse(RecommendationRunHistoryJson::monthPage($this->history->month(
             $user,
             MonthWindow::of($month, ViewerTimeZone::of($request->query->get('tz'))),
             $request->query->getInt('before') ?: null,
-        ));
+        )));
     }
 }
