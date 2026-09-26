@@ -6,6 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
+use App\Http\PasskeyJson;
 use App\Service\Passkey\AssertionOptionsFactory;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\PasskeyListing;
@@ -128,7 +129,7 @@ final readonly class PasskeyController
         $this->availability->guard();
         $this->attestationVerifier->verifyAndStore($user, $request);
 
-        return new JsonResponse($this->listing->forUser($user), Response::HTTP_CREATED);
+        return new JsonResponse(PasskeyJson::listing($this->listing->forUser($user)), Response::HTTP_CREATED);
     }
 
     #[Route('/api/auth/passkeys', name: 'api_auth_passkeys_list', methods: ['GET'])]
@@ -136,7 +137,7 @@ final readonly class PasskeyController
     {
         $this->availability->guard();
 
-        return new JsonResponse($this->listing->forUser($user));
+        return new JsonResponse(PasskeyJson::listing($this->listing->forUser($user)));
     }
 
     /** Own credential 204; a foreign or unknown id 404 — see PasskeyRemoval. */

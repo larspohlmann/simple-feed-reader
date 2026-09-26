@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Dto\Admin\ProxySettingsRequest;
+use App\Http\Admin\ProxySettingsJson;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -25,7 +26,7 @@ final readonly class AdminProxyController
     #[Route('', name: 'api_admin_proxy_get', methods: ['GET'])]
     public function get(): JsonResponse
     {
-        return new JsonResponse($this->settings->view());
+        return new JsonResponse(ProxySettingsJson::from($this->settings->stored()));
     }
 
     #[Route('', name: 'api_admin_proxy_update', methods: ['PUT'])]
@@ -33,7 +34,7 @@ final readonly class AdminProxyController
     {
         $this->settings->update($request);
 
-        return new JsonResponse($this->settings->view());
+        return new JsonResponse(ProxySettingsJson::from($this->settings->stored()));
     }
 
     #[Route('/test', name: 'api_admin_proxy_test', methods: ['POST'])]

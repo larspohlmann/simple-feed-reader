@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\RecommendationFeedRow;
+use App\Service\Recommendation\FeedAnnotationVisibility;
+use App\Service\Recommendation\ForYouFeedPage;
 
 final class RecommendationFeedJson
 {
@@ -16,15 +18,13 @@ final class RecommendationFeedJson
      * article was picked (#576; see FeedAnnotationVisibility for why the two
      * travel as one).
      *
-     * @param list<RecommendationFeedRow> $rows
-     *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function page(array $rows, ?string $nextCursor, FeedAnnotationVisibility $visibility): array
+    public static function page(ForYouFeedPage $page): array
     {
         return [
-            'entries' => self::entries($rows, $visibility),
-            'nextCursor' => $nextCursor,
+            'entries' => self::entries($page->rows, $page->visibility),
+            'nextCursor' => $page->nextCursor,
         ];
     }
 

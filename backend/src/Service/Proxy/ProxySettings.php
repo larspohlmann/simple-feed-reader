@@ -7,7 +7,6 @@ namespace App\Service\Proxy;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Http\Admin\ProxySettingsJson;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
@@ -27,21 +26,9 @@ readonly class ProxySettings
     ) {
     }
 
-    /**
-     * @return array{
-     *     enabled: bool,
-     *     directFallback: bool,
-     *     type: string,
-     *     host: string,
-     *     port: int,
-     *     username: string|null,
-     *     remoteDns: bool,
-     *     hasPassword: bool,
-     * }
-     */
-    public function view(): array
+    public function stored(): ?ProxyServerSettings
     {
-        return ProxySettingsJson::from($this->repository->findSingleton());
+        return $this->repository->findSingleton();
     }
 
     public function update(ProxySettingsRequest $request): void

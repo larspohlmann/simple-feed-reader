@@ -7,6 +7,7 @@ namespace App\Tests\Service\Mail\Settings;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Enum\MailEncryption;
+use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailFallback;
@@ -14,11 +15,20 @@ use App\Service\Mail\Settings\MailSettings;
 use App\Service\Proxy\ProxySettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
+/**
+ * @phpstan-import-type MailSettingsPayload from MailSettingsJson
+ */
 final class MailSettingsTest extends KernelTestCase
 {
     private function settings(): MailSettings
     {
         return self::getContainer()->get(MailSettings::class);
+    }
+
+    /** @return MailSettingsPayload */
+    private function view(): array
+    {
+        return MailSettingsJson::from($this->settings()->overview());
     }
 
     private function repository(): MailServerSettingsRepository
@@ -39,7 +49,7 @@ final class MailSettingsTest extends KernelTestCase
     {
         // The test env fallback is null://null, so mail derives to disabled.
         self::assertFalse($this->settings()->isSendingEnabled());
-        self::assertFalse($this->settings()->view()['hasPassword']);
+        self::assertFalse($this->view()['hasPassword']);
     }
 
     public function testUpdateStoresTheConnectionAndSealsThePassword(): void
@@ -55,7 +65,7 @@ final class MailSettingsTest extends KernelTestCase
             password: 'top-secret',
         ));
 
-        $view = $this->settings()->view();
+        $view = $this->view();
         self::assertTrue($view['enabled']);
         self::assertSame('smtp.relay.test', $view['host']);
         self::assertTrue($view['hasPassword']);
@@ -77,11 +87,12 @@ final class MailSettingsTest extends KernelTestCase
     public function testResetToEnvironmentDeletesTheSavedRow(): void
     {
         $this->settings()->update(new MailSettingsRequest(host: 'smtp.relay.test', password: 'top-secret'));
-        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+        $before = $this->view();
+        self::assertTrue($before['hasSavedConfig']);
 
         $this->settings()->resetToEnvironment();
 
-        $view = $this->settings()->view();
+        $view = $this->view();
         self::assertFalse($view['hasSavedConfig']);
         self::assertFalse($view['envFallbackConfigured']);
         self::assertNull($this->settings()->configuredTransport());
@@ -123,8 +134,9 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['enabled']);
-        self::assertTrue($this->settings()->view()['hasPassword']);
+        $view = $this->view();
+        self::assertTrue($view['enabled']);
+        self::assertTrue($view['hasPassword']);
     }
 
     public function testUpdateAcceptsAnEnabledUnauthenticatedRelayWithNoUsername(): void
@@ -136,7 +148,7 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['enabled']);
+        self::assertTrue($this->view()['enabled']);
     }
 
     public function testASavedFromAddressWinsOverTheEnvIdentity(): void
@@ -172,7 +184,7 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+        self::assertTrue($this->view()['hasSavedConfig']);
     }
 
     public function testAnEnabledRowWithNoHostAndAUsernameIsRefusedForTheMissingTransportNotThePassword(): void
@@ -194,7 +206,8 @@ final class MailSettingsTest extends KernelTestCase
             username: null,
             password: 'topsecret',
         ));
-        self::assertTrue($this->settings()->view()['hasPassword']);
+        $before = $this->view();
+        self::assertTrue($before['hasPassword']);
 
         // A different host proves the remove-password update still applies the
         // connection edits carried in the same request, not only clears the secret.
@@ -204,8 +217,9 @@ final class MailSettingsTest extends KernelTestCase
             removePassword: true,
         ));
 
-        self::assertFalse($this->settings()->view()['hasPassword']);
-        self::assertSame('smtp.moved.test', $this->settings()->view()['host']);
+        $view = $this->view();
+        self::assertFalse($view['hasPassword']);
+        self::assertSame('smtp.moved.test', $view['host']);
     }
 
     public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void

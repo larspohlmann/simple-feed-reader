@@ -18,6 +18,10 @@ use Doctrine\Persistence\ManagerRegistry;
  * bodies load one row at a time via getOwned() when the user expands an
  * entry.
  *
+ * @phpstan-type DebugLogRow array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
+ *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+ *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}
+ *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
 final class RecommendationRunLogRepository extends ServiceEntityRepository
@@ -27,11 +31,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         parent::__construct($registry, RecommendationRunLog::class);
     }
 
-    /**
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
-     */
+    /** @return list<DebugLogRow> */
     public function listForRun(User $user, int $runId): array
     {
         /** @var list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,

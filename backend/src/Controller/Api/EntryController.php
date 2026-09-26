@@ -15,6 +15,7 @@ use App\Exception\ValidationException;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
+use App\Http\RecommendationFeedJson;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRowEnricher;
@@ -24,7 +25,7 @@ use App\Repository\ForYouFeedQuery;
 use App\Service\Reader\EntryStateUpdater;
 use App\Service\Reader\MarkEntriesReadService;
 use App\Service\Reader\MarkReadService;
-use App\Service\Recommendation\ForYouFeedResponder;
+use App\Service\Recommendation\ForYouFeed;
 use App\Service\Recommendation\ForYouMarkReadService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -42,7 +43,7 @@ final readonly class EntryController
         private EntryListRowEnricher $enricher,
         private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
-        private ForYouFeedResponder $forYouFeed,
+        private ForYouFeed $forYouFeed,
         private ForYouMarkReadService $forYouMarkRead,
         private MarkEntriesReadService $markEntriesRead,
     ) {
@@ -79,9 +80,9 @@ final readonly class EntryController
         // Every other list says "only unread" by asking for the `unread` VIEW;
         // this one IS the view, so its filter rides beside it as a flag.
         if ($view === 'for-you') {
-            return new JsonResponse($this->forYouFeed->page(
+            return new JsonResponse(RecommendationFeedJson::page($this->forYouFeed->page(
                 new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),
-            ));
+            )));
         }
 
         $query = new EntryQuery(

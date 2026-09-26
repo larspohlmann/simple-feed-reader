@@ -15,10 +15,10 @@ use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Recommendation\ForYouFeedResponder;
+use App\Service\Recommendation\ForYouFeed;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationPollDriver;
-use App\Service\Recommendation\RecommendationRunStatusPayload;
+use App\Service\Recommendation\RecommendationRunStatusResolver;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\SavedSearchTallies;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -35,7 +35,7 @@ final class TracedServiceMethodsTest extends TestCase
     public static function tracedMethods(): iterable
     {
         yield 'entries list' => [EntryListRepository::class, 'listForUser'];
-        yield 'entries list, for-you responder' => [ForYouFeedResponder::class, 'page'];
+        yield 'entries list, for-you feed' => [ForYouFeed::class, 'page'];
         yield 'entries list, for-you pager' => [RecommendationFeedPager::class, 'page'];
         yield 'reader, ownership lookup' => [EntryListRepository::class, 'findOneSubscribedByUser'];
         yield 'reader, extraction' => [ArticleExtractor::class, 'extract'];
@@ -53,7 +53,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'saved searches list' => [SavedSearchRepository::class, 'findForUser'];
         yield 'saved searches list, matches' => [SavedSearchTallies::class, 'forAll'];
         yield 'recommendations current, poll' => [RecommendationPollDriver::class, 'current'];
-        yield 'recommendations current, payload' => [RecommendationRunStatusPayload::class, 'forReport'];
+        yield 'recommendations current, status' => [RecommendationRunStatusResolver::class, 'forReport'];
     }
 
     /** @param class-string $class */

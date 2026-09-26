@@ -115,11 +115,18 @@ namespace App\Http\Fixtures {
 }
 
 namespace App\Repository\Fixtures\Clean {
+    use Symfony\Component\Security\Core\User\UserInterface;
+
     final class NamesNoHttp
     {
         public function label(): string
         {
             return 'App\HttpClientSettings is not the HTTP layer';
+        }
+
+        public function owner(UserInterface $user): string
+        {
+            return $user->getUserIdentifier();
         }
     }
 }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Admin;
 
 use App\Entity\GrafanaSettings;
-use App\Service\Grafana\GrafanaEnvDefaults;
+use App\Service\Grafana\GrafanaSettingsOverview;
 
 /**
  * The admin Grafana payload. The token is absent by construction: only hasToken
@@ -35,12 +35,10 @@ final readonly class GrafanaSettingsJson
      *     profilerAvailable: bool,
      * }
      */
-    public static function from(
-        ?GrafanaSettings $settings,
-        GrafanaEnvDefaults $defaults,
-        bool $profilerAvailable,
-    ): array {
-        $settings ??= new GrafanaSettings();
+    public static function from(GrafanaSettingsOverview $overview): array
+    {
+        $settings = $overview->settings ?? new GrafanaSettings();
+        $defaults = $overview->defaults;
         $lokiOverride = $settings->getLokiPushUrlOverride();
         $grafanaOverride = $settings->getGrafanaUrlOverride();
         $pyroscopeOverride = $settings->getPyroscopePushUrlOverride();
@@ -61,7 +59,7 @@ final readonly class GrafanaSettingsJson
             'pyroscopePushUrlEffective' => self::effective($pyroscopeOverride, $defaults->pyroscopePushUrl),
             'profilingEnabled' => $settings->isProfilingEnabled(),
             'profilingContainerPresent' => '' !== $defaults->pyroscopePushUrl,
-            'profilerAvailable' => $profilerAvailable,
+            'profilerAvailable' => $overview->profilerAvailable,
         ];
     }
 

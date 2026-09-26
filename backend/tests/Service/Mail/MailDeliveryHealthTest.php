@@ -25,17 +25,16 @@ final class MailDeliveryHealthTest extends DbTestCase
         $this->failures = $failures;
     }
 
-    public function testRecordFailurePersistsAViewableRow(): void
+    public function testRecordFailurePersistsARecentFailure(): void
     {
         $this->health->recordFailure(MailKind::Digest, 'reader@example.test', 'SMTP is down');
 
-        $view = $this->health->view();
+        $failures = $this->health->recentFailures();
 
-        self::assertCount(1, $view['failures']);
-        self::assertSame('digest', $view['failures'][0]['kind']);
-        self::assertSame('reader@example.test', $view['failures'][0]['recipient']);
-        self::assertSame('SMTP is down', $view['failures'][0]['error']);
-        self::assertNotEmpty($view['failures'][0]['at']);
+        self::assertCount(1, $failures);
+        self::assertSame(MailKind::Digest, $failures[0]->getKind());
+        self::assertSame('reader@example.test', $failures[0]->getRecipient());
+        self::assertSame('SMTP is down', $failures[0]->getErrorDetail());
     }
 
     public function testRecordSuccessClearsEveryStoredFailure(): void
@@ -45,7 +44,7 @@ final class MailDeliveryHealthTest extends DbTestCase
 
         $this->health->recordSuccess();
 
-        self::assertSame([], $this->health->view()['failures']);
+        self::assertSame([], $this->health->recentFailures());
         self::assertSame(0, $this->failures->countAll());
     }
 

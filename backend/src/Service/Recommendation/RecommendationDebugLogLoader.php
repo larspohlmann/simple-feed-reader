@@ -6,22 +6,15 @@ namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 
 /**
- * Assembles one payload for the debug panel: the runs it may switch between,
- * and the rows of the one it is looking at.
- *
- * The panel reads one run at a time on purpose. The log keeps the last ten
- * runs since #401, and the panel polls every two seconds while a run is in
- * flight — shipping all ten runs' rows on every one of those polls would cost
- * ten times what the panel costs today, for nine runs the user is not reading.
- * The retained runs are named in the payload instead, and the panel asks for
- * the one it wants.
+ * What the debug panel shows: the runs it may switch between, and the rows of the one it is looking at.
+ * One run at a time on purpose: the panel polls every two seconds mid-run, and shipping all ten retained
+ * runs' rows on every poll costs ten times as much for nine runs nobody is reading.
  */
-final readonly class RecommendationDebugLogView
+final readonly class RecommendationDebugLogLoader
 {
     public function __construct(
         private RecommendationRunLogRepository $logs,
@@ -36,21 +29,19 @@ final readonly class RecommendationDebugLogView
      *                            selection the window has since dropped. A
      *                            stale pick lands on something real rather
      *                            than on an empty panel
-     *
-     * @return array<string, mixed>
      */
-    public function forUser(User $user, int $requestedRunId): array
+    public function forUser(User $user, int $requestedRunId): RecommendationDebugLog
     {
         $runs = $this->runs->findNewestForUser($user, RunLogRetention::RUNS);
         $selected = self::select($runs, $requestedRunId);
 
         if (null === $selected) {
-            return RecommendationDebugLogJson::list([], [], null, []);
+            return RecommendationDebugLog::empty();
         }
 
         $selectedId = $selected->requireId();
 
-        return RecommendationDebugLogJson::list(
+        return new RecommendationDebugLog(
             $this->logs->listForRun($user, $selectedId),
             $this->logs->streamingTextForRun($user, $selectedId),
             $selected,

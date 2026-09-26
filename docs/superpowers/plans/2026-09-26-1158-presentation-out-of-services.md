@@ -31,15 +31,15 @@
 | Task 6: `ServingHost` becomes an interface; `App\Http\RequestServingHost` implements it | 1 | ✅ done |
 | Task 7: `HtmlPageFetcher` asks `StatusReasonPhrases` instead of `Response` | 1 | ✅ done |
 | Task 8: Rule, step 1: Symfony HTTP forbidden in every domain namespace | 1 | ✅ done |
-| Task 9: `ForYouFeed` returns `ForYouFeedPage` | 2 | ⬜ not started |
-| Task 10: `RecommendationRunStatusResolver` returns `RecommendationRunStatus` | 2 | ⬜ not started |
-| Task 11: `RecommendationRunHistory` returns `RunHistoryOverview` / `RunHistoryMonthPage` | 2 | ⬜ not started |
-| Task 12: `RecommendationDebugLogLoader` returns `RecommendationDebugLog` | 2 | ⬜ not started |
-| Task 13: `ReadingActivityCounter` returns `ReadingActivity` | 2 | ⬜ not started |
-| Task 14: `PasskeyListing` returns `AccountPasskeys` | 2 | ⬜ not started |
-| Task 15: `MailDeliveryHealth::recentFailures()` | 2 | ⬜ not started |
-| Task 16: Settings overviews (Grafana, Mail, Proxy) — #1159 boundary | 2 | ⬜ not started |
-| Task 17: Rule, step 2: `App\Http` forbidden in services too; CLAUDE.md | 2 | ⬜ not started |
+| Task 9: `ForYouFeed` returns `ForYouFeedPage` | 2 | ✅ done |
+| Task 10: `RecommendationRunStatusResolver` returns `RecommendationRunStatus` | 2 | ✅ done |
+| Task 11: `RecommendationRunHistory` returns `RunHistoryOverview` / `RunHistoryMonthPage` | 2 | ✅ done |
+| Task 12: `RecommendationDebugLogLoader` returns `RecommendationDebugLog` | 2 | ✅ done |
+| Task 13: `ReadingActivityCounter` returns `ReadingActivity` | 2 | ✅ done |
+| Task 14: `PasskeyListing` returns `AccountPasskeys` | 2 | ✅ done |
+| Task 15: `MailDeliveryHealth::recentFailures()` | 2 | ✅ done |
+| Task 16: Settings overviews (Grafana, Mail, Proxy) — #1159 boundary | 2 | ✅ done |
+| Task 17: Rule, step 2: `App\Http` forbidden in services too; CLAUDE.md | 2 | ✅ done |
 
 ## Scope and PR split
 
@@ -5483,3 +5483,22 @@ Made during execution, on the planner's pre-flight scan and the reviews. Each: w
   - case-insensitive and interpolated class strings;
   - an `*\Exceptions` segment, which the carve-out would miss (Task 17 deletes the carve-out);
   - a `Security\Core\User\*` negative line in the fixture.
+
+## Execution rulings (PR 2)
+
+- **P1–P2:** The branch was already cut, and EntryController's imports were already sorted by PR 1. Only `RecommendationFeedJson` was inserted.
+- **P3–P5:** Task 17 edited the rule in place and kept PR 1's one-pass `references()`. The fixture keeps `\App\Http\EntryPage` (F3). A `Symfony\Component\Security\Core\User\UserInterface` negative was added at fixture line 118 and used in a signature, and no asserted line moved.
+- **P6:** Rule gaps are left to #1182: group-use and alias imports, case-insensitive and interpolated strings.
+- **P7–P8 (planner-accepted):** The Dto layout row stays "Request/response shapes". CLAUDE.md's new bullet states only what `DomainKnowsNoHttpRule` enforces. The drafted sentence "a service returns a final readonly value and the controller hands it to a mapper" was dropped, because six controllers still serialise `toArray()` values until #1182. The older "Errors are exceptions" bullet no longer repeats the rule.
+- **P10:** `tests/Http/MailDeliveryHealthJsonTest` pins the `error` and `at` keys.
+- **P11:** The `DebugLogRow` shape is declared once, on `RecommendationRunLogRepository`, which produces it. The value object and tests import it.
+- **P12:** Docblocks this PR edits or rewrites stay at 3 lines or fewer. Moved docblocks stay verbatim.
+- **P13:** No test helper takes a bool flag. The settings tests read the mapped view through one small `view()` / `viewOf()` helper per file.
+- **P14:** `ForYouFeedPage` stays a separate type from `RecommendationFeedPage`. It carries enriched rows plus the annotation visibility, for a different consumer.
+- **P16:** `ProxySettings::stored()` hands out the entity. That belongs to #1159.
+- **P17:** Four `tests/Service` files import `App\Http` mappers. Tests are outside the rule's scope.
+- **AutowireWrongClass:** The Symfony plugin flags any constructor parameter typed with a Doctrine-mapped class. The three new value objects that carry an entity (`RecommendationDebugLog`, `GrafanaSettingsOverview`, `MailSettingsOverview`) suppress it with `@noinspection AutowireWrongClass` and a one-line reason. Every PHPStan-clean alternative failed level max. The three older bare occurrences (SubscribeOutcome, SavedSearchOutcome, AddedConfiguration) are in the #1182 plan.
+- **Not taken:**
+  - A bool-flag test factory for `ForYouFeedPage`, because it is banned.
+  - Snapshotting the settings entities into plain values, because it needs entity read-side getters and that is #1159's scope.
+  - Tightening the nullable `GrafanaSettingsOverview::$settings`, also #1159's scope.

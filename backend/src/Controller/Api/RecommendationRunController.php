@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
+use App\Http\RecommendationRunStatusJson;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Recommendation\RecommendationPollDriver;
 use App\Service\Recommendation\RecommendationRunCanceller;
 use App\Service\Recommendation\RecommendationRunPurger;
 use App\Service\Recommendation\RecommendationRunReport;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Recommendation\RecommendationRunStatusPayload;
+use App\Service\Recommendation\RecommendationRunStatusResolver;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
@@ -29,7 +30,7 @@ final readonly class RecommendationRunController
         private RecommendationPollDriver $pollDriver,
         private RecommendationRunPurger $purger,
         private RecommendationRunCanceller $canceller,
-        private RecommendationRunStatusPayload $statusPayload,
+        private RecommendationRunStatusResolver $status,
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $aiRecommendationsLimiter,
         private RateLimiterFactoryInterface $aiRecommendationStartsLimiter,
@@ -41,7 +42,9 @@ final readonly class RecommendationRunController
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
 
-        return new JsonResponse($this->statusPayload->forReport($this->starter->start($user), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport($this->starter->start($user), $user),
+        ));
     }
 
     /** Resumes the latest failed run; it shares the start limiter because it commits the same outbound spend. */
@@ -50,7 +53,9 @@ final readonly class RecommendationRunController
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationStartsLimiter, $user);
 
-        return new JsonResponse($this->statusPayload->forReport($this->starter->resume($user), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport($this->starter->resume($user), $user),
+        ));
     }
 
     #[Route('/tick', name: 'api_recommendations_tick', methods: ['POST'])]
@@ -58,13 +63,17 @@ final readonly class RecommendationRunController
     {
         $this->rateLimitGuard->enforceForUser($this->aiRecommendationsLimiter, $user);
 
-        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->poll($user), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport($this->pollDriver->poll($user), $user),
+        ));
     }
 
     #[Route('/current', name: 'api_recommendations_current', methods: ['GET'])]
     public function current(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport($this->pollDriver->current($user), $user),
+        ));
     }
 
     /** No limiter: stopping only reduces work, and throttling the way out of a spending run is backwards. */
@@ -73,7 +82,9 @@ final readonly class RecommendationRunController
     {
         $this->canceller->cancel($user);
 
-        return new JsonResponse($this->statusPayload->forReport($this->pollDriver->current($user), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport($this->pollDriver->current($user), $user),
+        ));
     }
 
     #[Route('', name: 'api_recommendations_purge', methods: ['DELETE'])]
@@ -81,6 +92,8 @@ final readonly class RecommendationRunController
     {
         $this->purger->purge($user);
 
-        return new JsonResponse($this->statusPayload->forReport(RecommendationRunReport::none(), $user));
+        return new JsonResponse(RecommendationRunStatusJson::report(
+            $this->status->forReport(RecommendationRunReport::none(), $user),
+        ));
     }
 }
