@@ -7,9 +7,6 @@ namespace App\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * A feed's fetch-schedule state, embedded into Feed with unprefixed columns so the table is unchanged.
- */
 #[ORM\Embeddable]
 class FetchSchedule
 {

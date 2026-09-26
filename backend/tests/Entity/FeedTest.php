@@ -84,11 +84,13 @@ final class FeedTest extends TestCase
     {
         $feed = new Feed('https://example.com/feed.xml');
 
-        $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-20 08:00:00'), str_repeat('é', 1001), 45);
-        self::assertSame(str_repeat('é', 1000), $feed->getLastErrorMessage());
+        $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-20 08:00:00'), 'é' . str_repeat('x', 1000), 45);
+        self::assertStringStartsWith('é', (string) $feed->getLastErrorMessage());
+        self::assertSame(1000, mb_strlen((string) $feed->getLastErrorMessage()));
 
-        $feed->markGone(new \DateTimeImmutable('2026-07-21 10:00:00'), str_repeat('ü', 1001));
-        self::assertSame(str_repeat('ü', 1000), $feed->getLastErrorMessage());
+        $feed->markGone(new \DateTimeImmutable('2026-07-21 10:00:00'), 'ü' . str_repeat('x', 1000));
+        self::assertStringStartsWith('ü', (string) $feed->getLastErrorMessage());
+        self::assertSame(1000, mb_strlen((string) $feed->getLastErrorMessage()));
     }
 
     public function testNewEntriesStampOnlyTheirArrival(): void

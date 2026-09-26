@@ -8,10 +8,6 @@ use App\Entity\Feed;
 use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Clock\ClockInterface;
 
-/**
- * Decides Feed's fetch schedule: adaptive interval on success, a wait on a rationed request,
- * exponential backoff on failure, and when a failing feed is gone.
- */
 final readonly class FeedScheduler
 {
     private const int FLOOR_MINUTES = 5;
