@@ -6505,7 +6505,11 @@ Implementer rulings:
 
   Update the Interfaces text, Step 2, the CLAUDE.md text, the commit message and the PR body to match. `src/Controller` must end with 0 findings.
 - **F3 (Task 18 Step 6):** the break test expects exactly one error, `Tag::setName(...)`. `User::normalizeEmail()` is not reported.
-- **F2 (Task 8) and F4 (Task 6):** wire changes outside D1/D3. PENDING the planner's ruling; do not start those tasks without it.
+- **F2 (Task 8), planner-ruled (a) with a condition:**
+  - `unread=true`, `unread=false`, `unread=1` and `unread=0` MUST keep answering 200 with their old meaning. Pin each of the four with a test.
+  - If `#[MapQueryString]` rejects any of them, give that value alone a coercion (option b).
+  - Every other difference is a deliberate change listed in the PR body under D3: `unread=yes/on/no/off` and an empty `unread` → 422; `limit=+5` and `limit= 5` → 422; `limit=05` → 200; `cursor[]` and `order[]` → 422.
+- **F4 (Task 6), planner-ruled (a):** an array-valued `state`, `code` or cookie on the OAuth callback now answers 400 problem+json instead of a redirect. The PR body lists this with the other wire changes.
 - **F5 (Task 15):** use `AuditShard(1, 1)` so the `<= 1` → `< 1` mutant dies.
 - **F6 (Task 13):** the `||` → `&&` mutant in `CatalogFaviconSource` is equivalent, because `storeFavicon()` always sets both fields. Accept it and document it. No Infection ignore.
 - **F7 (Task 15):** add a test for `AuditFindingsFile::create()`'s unwritable branch, where the path is an existing directory.
