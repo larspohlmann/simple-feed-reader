@@ -11,15 +11,14 @@ use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
+use App\Http\MeProfileJson;
 use App\Service\Account\AccountDeleter;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Auth\RegistrationService;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\Digest\TestDigestEligibility;
-use App\Service\Mail\MailCapability;
 use App\Service\RateLimit\MeRateLimiters;
 use App\Service\RateLimit\RateLimitGuard;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -35,21 +34,19 @@ final readonly class MeController
     public function __construct(
         private AccountPreferencesWriter $preferences,
         private AccountDeleter $accountDeleter,
-        private MailCapability $mail,
         private RegistrationService $registration,
         private SendTestDigest $sendTestDigest,
         private TestDigestEligibility $testDigestEligibility,
         private RateLimitGuard $rateLimitGuard,
         private MeRateLimiters $rateLimiters,
-        #[Autowire('%env(string:APP_TIMEZONE)%')]
-        private string $instanceTimezone,
+        private MeProfileJson $profile,
     ) {
     }
 
     #[Route('/api/me', name: 'api_me', methods: ['GET'])]
     public function show(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+        return new JsonResponse($this->profile->of($user));
     }
 
     /**
@@ -63,7 +60,7 @@ final readonly class MeController
     ): JsonResponse {
         $this->preferences->changeLocale($user, $request);
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+        return new JsonResponse($this->profile->of($user));
     }
 
     /**
@@ -77,7 +74,7 @@ final readonly class MeController
     ): JsonResponse {
         $this->preferences->changeScrapeFallback($user, $request);
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+        return new JsonResponse($this->profile->of($user));
     }
 
     /** Its own PATCH for the reason updatePreferences() gives (#723). */
@@ -88,7 +85,7 @@ final readonly class MeController
     ): JsonResponse {
         $this->preferences->changeMagazineStyle($user, $request);
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+        return new JsonResponse($this->profile->of($user));
     }
 
     /**
@@ -102,7 +99,7 @@ final readonly class MeController
     ): JsonResponse {
         $this->preferences->changeDigest($user, $request);
 
-        return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
+        return new JsonResponse($this->profile->of($user));
     }
 
     /**
