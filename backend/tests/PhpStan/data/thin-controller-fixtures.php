@@ -52,3 +52,40 @@ namespace App\Service\Fixtures {
         }
     }
 }
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
+
+namespace App\Controller\Fixtures\Persistence {
+    use Doctrine\ORM\EntityManagerInterface;
+    use Doctrine\Persistence\ManagerRegistry;
+
+    final readonly class PersistingController
+    {
+        public function __construct(private EntityManagerInterface $entityManager)
+        {
+        }
+
+        public function action(?ManagerRegistry $registry): int
+        {
+            return null === $registry ? 0 : 1;
+        }
+
+        public function clean(int $id): int
+        {
+            return $id;
+        }
+    }
+}
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
+
+namespace App\Service\Fixtures\Persistence {
+    use Doctrine\ORM\EntityManagerInterface;
+
+    final readonly class PersistingService
+    {
+        public function __construct(private EntityManagerInterface $entityManager)
+        {
+        }
+    }
+}

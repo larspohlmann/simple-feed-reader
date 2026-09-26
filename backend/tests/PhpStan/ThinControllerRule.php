@@ -4,24 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
+use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Persistence\ObjectManager;
 use PhpParser\Node;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\InClassMethodNode;
+use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\Type\ObjectType;
+use PHPStan\Type\Type;
+use PHPStan\Type\TypeCombinator;
 
 /**
- * Enforces the "thin controller" rule from CLAUDE.md: a controller action reads
- * the request, delegates, and returns a response. A private or protected method
- * on a controller that carries responsibility — querying, response assembly,
- * validation, entity mutation, a security decision, or logic duplicated in a
- * second controller — belongs in a service, a repository, or an
- * `src/Http/*Json.php` mapper, not on the controller.
- *
- * The one permitted exception is a trivial single-expression helper used by
- * exactly one action in exactly one controller. Such a helper is named in
- * {@see self::ALLOW_LIST} with a comment that justifies it. The same helper in a
- * second controller is duplication, so the exception no longer applies.
+ * CLAUDE.md's thin-controller rule for method shapes: no private or protected helper outside {@see self::ALLOW_LIST},
+ * and no ObjectManager or ManagerRegistry parameter on any controller method (#1157).
  *
  * @implements Rule<InClassMethodNode>
  */
@@ -29,28 +27,16 @@ final readonly class ThinControllerRule implements Rule
 {
     private const string CONTROLLER_NAMESPACE_PREFIX = 'App\\Controller\\';
 
+    private const array PERSISTENCE_TYPES = [ObjectManager::class, ManagerRegistry::class];
+
     /**
-     * Keyed `Fully\Qualified\Class::method`. Seeded from the live audit in #186
-     * with every violation present the day the rule lands, so `composer stan` is
-     * green from the start. Each later slice of #186 deletes its own entries as
-     * it removes the violation, so the list only ever shrinks; when the refactor
-     * finishes it holds only genuine trivial-helper exceptions. Every entry
-     * carries a comment that justifies it under the rule above.
+     * Keyed `Fully\Qualified\Class::method`; only ever shrinks, and every entry carries a comment justifying it.
      *
      * @var array<string, string>
      */
-    private const array ALLOW_LIST = [
-        // Empty: #186 removed every seeded violation, and no genuine
-        // trivial-single-expression helper has needed the exception yet. A new
-        // entry here must name exactly one action in exactly one controller and
-        // carry a comment justifying it under the rule above.
-    ];
+    private const array ALLOW_LIST = [];
 
-    /**
-     * @param array<string, string> $allowList keyed `Fully\Qualified\Class::method`;
-     *        defaults to the seeded {@see self::ALLOW_LIST} and is overridable only
-     *        so the rule's own test can exercise it against fixtures.
-     */
+    /** @param array<string, string> $allowList overridable only for the rule's own test */
     public function __construct(private array $allowList = self::ALLOW_LIST)
     {
     }
@@ -62,13 +48,23 @@ final readonly class ThinControllerRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        $method = $node->getMethodReflection();
-        if ($method->isPublic()) {
+        $className = $node->getClassReflection()->getName();
+        if (!str_starts_with($className, self::CONTROLLER_NAMESPACE_PREFIX)) {
             return [];
         }
 
-        $className = $node->getClassReflection()->getName();
-        if (!str_starts_with($className, self::CONTROLLER_NAMESPACE_PREFIX)) {
+        $method = $node->getMethodReflection();
+
+        return [
+            ...$this->hiddenHelperErrors($className, $method),
+            ...self::persistenceParameterErrors($className, $method),
+        ];
+    }
+
+    /** @return list<IdentifierRuleError> */
+    private function hiddenHelperErrors(string $className, ExtendedMethodReflection $method): array
+    {
+        if ($method->isPublic()) {
             return [];
         }
 
@@ -95,5 +91,40 @@ final readonly class ThinControllerRule implements Rule
                 ->identifier('simpleFeedReader.thinController')
                 ->build(),
         ];
+    }
+
+    /** @return list<IdentifierRuleError> */
+    private static function persistenceParameterErrors(string $className, ExtendedMethodReflection $method): array
+    {
+        $errors = [];
+        foreach ($method->getOnlyVariant()->getParameters() as $parameter) {
+            if (!self::isPersistence($parameter->getType())) {
+                continue;
+            }
+            $errors[] = RuleErrorBuilder::message(sprintf(
+                'Controller %s receives persistence through %s($%s). An action reads the request, delegates, '
+                . 'and returns a response; persisting, flushing and removing entities belong in a service '
+                . 'under src/Service (#1157).',
+                $className,
+                $method->getName(),
+                $parameter->getName(),
+            ))
+                ->identifier('simpleFeedReader.thinController.persistence')
+                ->build();
+        }
+
+        return $errors;
+    }
+
+    private static function isPersistence(Type $type): bool
+    {
+        $nonNullable = TypeCombinator::removeNull($type);
+        foreach (self::PERSISTENCE_TYPES as $persistenceClass) {
+            if ((new ObjectType($persistenceClass))->isSuperTypeOf($nonNullable)->yes()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
