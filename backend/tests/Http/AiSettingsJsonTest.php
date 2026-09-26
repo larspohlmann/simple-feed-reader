@@ -170,4 +170,33 @@ final class AiSettingsJsonTest extends TestCase
         self::assertSame('Work OpenAI', $shape['name']);
         self::assertFalse($shape['ready']);
     }
+
+    public function testConfigurationForIsActiveWhenItIsTheOwnersActiveConfiguration(): void
+    {
+        $settings = $this->withId($this->settings(null), 7);
+        $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
+        $owner->setActiveAiProviderSettings($settings);
+
+        self::assertTrue(AiSettingsJson::configurationFor($settings, $owner)['active']);
+    }
+
+    public function testConfigurationForIsNotActiveWhenTheOwnerHasAnotherOneActive(): void
+    {
+        $settings = $this->withId($this->settings(null), 7);
+        $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
+        $owner->setActiveAiProviderSettings($this->withId($this->settings(null), 42));
+
+        self::assertFalse(AiSettingsJson::configurationFor($settings, $owner)['active']);
+    }
+
+    public function testConfigurationForIsNotActiveWhenTheOwnerHasNoneActive(): void
+    {
+        $settings = $this->withId($this->settings('gpt-4o', 'Work OpenAI'), 7);
+        $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
+
+        self::assertSame(
+            AiSettingsJson::configuration($settings, null),
+            AiSettingsJson::configurationFor($settings, $owner),
+        );
+    }
 }
