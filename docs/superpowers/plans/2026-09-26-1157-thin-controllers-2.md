@@ -29,7 +29,7 @@ Three follow-ups from PR A's execution ride along:
   - `Service/ReaderAudit/AuditShard` and `Service/ReaderAudit/AuditFindingsFile` take over the sharding and the file I/O.
 - **PR A follow-ups:**
   - `MailDeliveryHealth::recordFailure()` owns the flush of the failure log. The repository's `add()` only persists.
-  - `ControllerMutatesNoEntityRule` recognises a Doctrine-mapped class by its `#[ORM\Entity]` or `#[ORM\Embeddable]` attribute, not by its namespace. It also sees first-class callables and static calls.
+  - `ControllerMutatesNoEntityRule` recognises a Doctrine-mapped class by its `#[ORM\Entity]` or `#[ORM\Embeddable]` attribute, not by its namespace. It also sees first-class callables and static calls that return a mapped class.
 
 **Tech Stack:** PHP 8.4, Symfony 7.4, Doctrine ORM, PHPUnit 12 with DAMA DoctrineTestBundle (each test rolls back), PHPStan 2.2.5 at level max with the custom rules in `backend/tests/PhpStan/`, PHPMD codesize, phptramp, Infection 0.34.
 
@@ -114,7 +114,7 @@ Lars ruled on the draft's decisions on 2026-09-26. They are settled; do not re-o
 - **Added: three PR A follow-ups (Tasks 16–18).**
   - Task 16: `AdminCatalogControllerTest` reloads the category after the PATCH and the DELETE, so the two escaped mutants at `AdminCatalogCategoryController:56,64` die.
   - Task 17: `MailSendFailureRepository::add()` only persists. `MailDeliveryHealth::recordFailure()`, which owns the unit of work, flushes. `docs/architecture.md` §7 stops naming it as "the one write left to fix".
-  - Task 18: `ControllerMutatesNoEntityRule` decides "entity" by Doctrine mapping (`#[ORM\Entity]` or `#[ORM\Embeddable]`), not by the `App\Entity\` namespace. That stops the false positives on `App\Entity\Exception\*` and on the readonly value objects `EntryAttachment`, `EntryMedium` and `RecommendationRunProgress`, which carry neither attribute. It also catches the two blind spots: first-class callables (`$entity->setX(...)`, which PHPStan passes to rules only as `MethodCallableNode`) and static calls on a mapped class (`StaticCall`, and `StaticMethodCallableNode` for `Entity::create(...)`). An embeddable stays covered, because it is part of its entity's persisted state.
+  - Task 18: `ControllerMutatesNoEntityRule` decides "entity" by Doctrine mapping (`#[ORM\Entity]` or `#[ORM\Embeddable]`), not by the `App\Entity\` namespace. That stops the false positives on `App\Entity\Exception\*` and on the readonly value objects `EntryAttachment`, `EntryMedium` and `RecommendationRunProgress`, which carry neither attribute. It also catches the two blind spots: first-class callables (`$entity->setX(...)`, which PHPStan passes to rules only as `MethodCallableNode`) and disguised construction, a static call on a mapped class that returns a mapped class (`StaticCall`, and `StaticMethodCallableNode` for `Entity::create(...)`). A pure static helper such as `User::normalizeEmail()` stays allowed. An embeddable stays covered, because it is part of its entity's persisted state.
 
 ## PR A facts this plan relies on
 
@@ -5893,6 +5893,21 @@ git commit -m "refactor(#1157): MailDeliveryHealth flushes the failure log; the 
 
 ### Task 18: `ControllerMutatesNoEntityRule` sees mapped classes, first-class callables and static calls
 
+> **Amended during execution** (planner's Task 18 CHANGE, implementer rulings F1/F3, and two gate findings). The
+> landed code in `tests/PhpStan/` supersedes the whole-file blocks below. What changed:
+> - A static call or static callable is reported only when the called class is mapped **and** its return type (null
+>   removed, plus its iterable value type) contains a mapped class: a disguised construction. The return type comes
+>   from the method reflection. `User::normalizeEmail()` and `AdminUserJson::positionOrdered()` are not reported.
+> - `composer stan` rejects an `instanceof` on PHPStan's own node classes (`phpstanApi.instanceofAssumption`), so
+>   the rule is split: `ControllerMutatesNoEntityRule` (`Rule<Expr>`: `New_`, `StaticCall`, `MethodCall`),
+>   `ControllerMutatesNoEntityThroughMethodCallableRule` and `ControllerMutatesNoEntityThroughStaticCallableRule`,
+>   all delegating to `ControllerEntityUse`. Each has its own test over the shared fixture, via the abstract
+>   `ControllerEntityUseRuleTestCase`; all three are registered in `phpstan.dist.neon`.
+> - The test reflector finds the fixture's classes (and so their mapping attributes) only once they are declared,
+>   so the test case `require_once`s the fixture file.
+> - The break test expects exactly one error, `Tag::setName()` (F3). A second break test adds a temporary
+>   `Tag::named()` factory and proves both its call and its callable are reported.
+
 **Files:**
 - Modify: `tests/PhpStan/ControllerMutatesNoEntityRule.php` (whole file)
 - Modify: `tests/PhpStan/ControllerMutatesNoEntityRuleTest.php` (whole file)
@@ -5907,9 +5922,9 @@ git commit -m "refactor(#1157): MailDeliveryHealth flushes the failure log; the 
   - `New_`: constructing a mapped class, as before.
   - `MethodCall`: a non-query call on a mapped receiver, as before. F1 still holds: a `?->` call is caught through its `MethodCall` pass, so `NullsafeMethodCall` stays unhandled.
   - New, `MethodCallableNode`: `$entity->setX(...)`. PHPStan 2.2.5 turns every first-class callable into its `*CallableNode` before any rule sees it (`NodeScopeResolver::processExprNode`), so a `Rule<CallLike>` never saw these.
-  - New, `StaticCall` and `StaticMethodCallableNode`: any static call on a mapped class, whatever its name. On an entity, a static method is either a named constructor or a shared helper, and a controller needs neither.
+  - New, `StaticCall` and `StaticMethodCallableNode`: a static call on a mapped class whose return type contains a mapped class, a disguised construction. A pure static helper such as `User::normalizeEmail()` stays allowed, and a static on an unmapped class (`AdminUserJson::positionOrdered()`) is out of scope.
 - The node type widens from `CallLike` to `Expr`, because the two `*CallableNode` classes extend `Expr` and are not `CallLike`.
-- The message and identifier of the construction and mutation errors are unchanged. The static-call error is new: `A controller calls <Class>::<method>(), a static method of an entity. <advice>`, identifier `simpleFeedReader.thinController.entity`.
+- The message and identifier of the construction and mutation errors are unchanged. The static-call error is new: `A controller calls <Class>::<method>(), a static method that returns an entity: a disguised construction. <advice>`, identifier `simpleFeedReader.thinController.entity`.
 - develop has no first-class callable and no static call on an entity class in `src/Controller`, so the widened rule adds no finding at HEAD. Step 5 proves that, and Step 6 proves that the new branches bite.
 
 - [ ] **Step 1: Write the failing test.**
@@ -6172,8 +6187,8 @@ final class ControllerMutatesNoEntityRuleTest extends RuleTestCase
 
 Run: `php bin/phpunit tests/PhpStan/ControllerMutatesNoEntityRuleTest.php`
 Expected: FAIL, in both directions:
-- The expected errors on lines 138, 140 and 146 are missing. These are the blind spots.
-- Unexpected errors appear on lines 159 and 162. `WidgetGoneException` and `Coordinates` sit under `App\Entity\`, and those are the false positives.
+- The expected errors on the callables (169, 171) and the disguised constructions (182, 183, 184) are missing. These are the blind spots.
+- Unexpected errors appear on lines 208, 211 and 214. `UnpersistedEntityException`, `Coordinates` and `EntryAttachment` sit under `App\Entity\`, and those are the false positives.
 
 - [ ] **Step 3: Rewrite the rule.** `tests/PhpStan/ControllerMutatesNoEntityRule.php`, whole file after:
 ```php
@@ -6358,11 +6373,10 @@ Expected: green, with no new finding in `src/Controller`.
         $medium = new EntryMedium('https://example.com/break-test.png', 'image');
 ```
 Run: `vendor/bin/phpstan clear-result-cache && composer stan`
-Expected: exactly two errors, both identified `simpleFeedReader.thinController.entity`:
+Expected: exactly one error, identified `simpleFeedReader.thinController.entity`:
 - `A controller calls App\Entity\Tag::setName(), which changes an entity. …`
-- `A controller calls App\Entity\User::normalizeEmail(), a static method of an entity. …`
 
-There is no error for `EntryMedium`. The old rule would have reported its construction.
+There is no error for `User::normalizeEmail()`, a pure helper, nor for `EntryMedium`. The old rule would have reported its construction.
 
 Restore by hand with the Edit tool: delete the three lines and the `EntryMedium` import. Then run `vendor/bin/phpstan clear-result-cache && composer stan` again. Expected: green. Also run `git diff --stat -- src/Controller/Api/TagController.php`. Expected: only Task 1's change to that file.
 
@@ -6375,10 +6389,12 @@ Restore by hand with the Edit tool: delete the three lines and the `EntryMedium`
 after:
 ```markdown
   helpers lives in the rule and only ever shrinks. Its sibling
-  **`ControllerMutatesNoEntityRule`** rejects, inside a controller, constructing a
-  class Doctrine maps (`#[ORM\Entity]` or `#[ORM\Embeddable]`), calling it
-  statically, and calling, or taking as a first-class callable, any of its
-  methods other than `get*`/`is*`/`has*` and `requireId()`.
+  **`ControllerMutatesNoEntityRule`** (and its two `…Through*CallableRule`
+  siblings) rejects, inside a controller, constructing a class Doctrine maps
+  (`#[ORM\Entity]` or `#[ORM\Embeddable]`), calling a static method of one that
+  returns a mapped class (a disguised `new`), and calling, or taking as a
+  first-class callable, any of its methods other than `get*`/`is*`/`has*` and
+  `requireId()`. A pure static helper such as `User::normalizeEmail()` is fine.
 ```
 
 - [ ] **Step 8: Run the gates.**
@@ -6389,13 +6405,22 @@ Expected: all green. The rule lives in `tests/`, so `composer md` does not cover
 - [ ] **Step 9: Commit.**
 
 ```bash
-git add tests/PhpStan/ControllerMutatesNoEntityRule.php tests/PhpStan/ControllerMutatesNoEntityRuleTest.php \
-  tests/PhpStan/data/controller-mutates-no-entity-fixtures.php ../CLAUDE.md
-git commit -m "refactor(#1157): ControllerMutatesNoEntityRule keys on Doctrine mapping and sees callables and static calls
+git add tests/PhpStan/ControllerEntityUse.php tests/PhpStan/ControllerEntityUseRuleTestCase.php \
+  tests/PhpStan/ControllerMutatesNoEntityRule.php tests/PhpStan/ControllerMutatesNoEntityRuleTest.php \
+  tests/PhpStan/ControllerMutatesNoEntityThroughMethodCallableRule.php \
+  tests/PhpStan/ControllerMutatesNoEntityThroughMethodCallableRuleTest.php \
+  tests/PhpStan/ControllerMutatesNoEntityThroughStaticCallableRule.php \
+  tests/PhpStan/ControllerMutatesNoEntityThroughStaticCallableRuleTest.php \
+  tests/PhpStan/data/controller-mutates-no-entity-fixtures.php phpstan.dist.neon \
+  ../CLAUDE.md ../docs/superpowers/plans/2026-09-26-1157-thin-controllers-2.md
+git commit -m "refactor(#1157): ControllerMutatesNoEntityRule keys on Doctrine mapping and sees callables and disguised construction
 
 A class under App\Entity that Doctrine does not map (an exception, a readonly
 value object) is no longer an entity to the rule. First-class callables reach
-rules only as *CallableNode, and static calls were never checked (PR A F6)."
+rules only as *CallableNode, which two sibling rules now take: PHPStan rejects
+an instanceof on its own node classes. A static call on a mapped class that
+returns a mapped class is a disguised new and is reported; a pure helper such
+as User::normalizeEmail() stays allowed (PR A F6)."
 ```
 
 ---
@@ -6463,7 +6488,7 @@ rules only as *CallableNode, and static calls were never checked (PR A F6)."
    - **Follow-ups from part A.** The admin category test reads update and delete back from the database, which kills
      two escaped mutants. `MailSendFailureRepository::add()` only persists, and `MailDeliveryHealth` owns the flush.
      `ControllerMutatesNoEntityRule` keys on Doctrine mapping (`#[ORM\Entity]` / `#[ORM\Embeddable]`) instead of
-     the `App\Entity` namespace, and it now also catches first-class callables and static calls.
+     the `App\Entity` namespace, and it now also catches first-class callables and static calls that return an entity.
 
    `(int) $user->getId()` was already gone (#1165), and `$user->requireId()` stays as the cast-free id read. The
    ThinControllerRule allow-list stays empty.

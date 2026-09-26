@@ -131,8 +131,12 @@ Enforced mechanically by `composer check` and `composer md`:
   `composer stan`) — controllers carry no private method that does real work and
   take no `ObjectManager`/`ManagerRegistry`; the allow-list of permitted trivial
   helpers lives in the rule and only ever shrinks. Its sibling
-  **`ControllerMutatesNoEntityRule`** rejects entity construction and any call on
-  an entity other than `get*`/`is*`/`has*` and `requireId()` inside a controller.
+  **`ControllerMutatesNoEntityRule`** (and its two `…Through*CallableRule`
+  siblings) rejects, inside a controller, constructing a class Doctrine maps
+  (`#[ORM\Entity]` or `#[ORM\Embeddable]`), calling a static method of one that
+  returns a mapped class (a disguised `new`), and calling, or taking as a
+  first-class callable, any of its methods other than `get*`/`is*`/`has*` and
+  `requireId()`. A pure static helper such as `User::normalizeEmail()` is fine.
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.
