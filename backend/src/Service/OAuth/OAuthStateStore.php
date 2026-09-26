@@ -6,6 +6,7 @@ namespace App\Service\OAuth;
 
 use App\Dto\OAuth\OAuthStartState;
 use App\Service\OAuth\Exception\InvalidOAuthStateException;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -195,7 +196,7 @@ final readonly class OAuthStateStore
      */
     private static function challengeFor(string $codeVerifier): string
     {
-        return rtrim(strtr(base64_encode(hash('sha256', $codeVerifier, true)), '+/', '-_'), '=');
+        return Base64UrlSafe::encodeUnpadded(hash('sha256', $codeVerifier, true));
     }
 
     /**

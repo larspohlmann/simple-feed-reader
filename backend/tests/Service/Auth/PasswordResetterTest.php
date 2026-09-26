@@ -50,4 +50,11 @@ final class PasswordResetterTest extends DbTestCase
         self::assertGreaterThanOrEqual(16, \strlen($plaintext));
         self::assertTrue($hasher->isPasswordValid($user, $plaintext));
     }
+
+    public function testTheGeneratedPasswordIsThirtyTwoUrlSafeCharacters(): void
+    {
+        $user = (new UserFactory($this->em, $this->hasher()))->create('reset-alphabet@example.com');
+
+        self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]{32}$/', $this->resetter()->generateAndSet($user));
+    }
 }

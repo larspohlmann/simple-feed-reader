@@ -27,6 +27,7 @@
         "open-telemetry/opentelemetry-auto-doctrine": "^0.5",
         "open-telemetry/opentelemetry-auto-symfony": "^1.4",
         "open-telemetry/sdk": "^1.15",
+        "paragonie/constant_time_encoding": "^3.1",
         "symfony/clock": "7.4.*",
         "symfony/console": "7.4.*",
         "symfony/doctrine-messenger": "7.4.*",
