@@ -14,15 +14,15 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class TagRepositoryTest extends DbTestCase
 {
-    public function testGetOneOwnedByReturnsTheOwnersTag(): void
+    public function testGetOneForUserReturnsTheOwnersTag(): void
     {
         $owner = $this->userFactory()->create('tag-owner@example.com');
         $tag = $this->tag($owner);
 
-        self::assertSame($tag, $this->repo()->getOneOwnedBy($tag->requireId(), $owner->requireId()));
+        self::assertSame($tag, $this->repo()->getOneForUser($owner->requireId(), $tag->requireId()));
     }
 
-    public function testGetOneOwnedByRefusesAnotherUsersTag(): void
+    public function testGetOneForUserRefusesAnotherUsersTag(): void
     {
         $tag = $this->tag($this->userFactory()->create('tag-owner@example.com'));
         $stranger = $this->userFactory()->create('tag-stranger@example.com');
@@ -30,7 +30,7 @@ final class TagRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such tag.');
 
-        $this->repo()->getOneOwnedBy($tag->requireId(), $stranger->requireId());
+        $this->repo()->getOneForUser($stranger->requireId(), $tag->requireId());
     }
 
     private function repo(): TagRepository

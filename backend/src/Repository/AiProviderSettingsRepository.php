@@ -19,9 +19,9 @@ final class AiProviderSettingsRepository extends ServiceEntityRepository
         parent::__construct($registry, AiProviderSettings::class);
     }
 
-    public function findOwnedById(User $user, int $id): ?AiProviderSettings
+    public function findOneForUser(User $user, int $settingsId): ?AiProviderSettings
     {
-        return $this->findOneBy(['id' => $id, 'user' => $user]);
+        return $this->findOneBy(['id' => $settingsId, 'user' => $user]);
     }
 
     /** @return list<AiProviderSettings> */

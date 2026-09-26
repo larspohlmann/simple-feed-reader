@@ -96,11 +96,11 @@ class TagRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult() > 0;
     }
 
-    public function findOneOwnedBy(int $id, int $userId): ?Tag
+    public function findOneForUser(int $userId, int $tagId): ?Tag
     {
         /** @var Tag|null $row */
         $row = $this->createQueryBuilder('t')
-            ->andWhere('t.id = :id')->setParameter('id', $id)
+            ->andWhere('t.id = :id')->setParameter('id', $tagId)
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();
@@ -108,9 +108,9 @@ class TagRepository extends ServiceEntityRepository
         return $row;
     }
 
-    public function getOneOwnedBy(int $id, int $userId): Tag
+    public function getOneForUser(int $userId, int $tagId): Tag
     {
-        return $this->findOneOwnedBy($id, $userId) ?? throw new RecordNotFoundException('No such tag.');
+        return $this->findOneForUser($userId, $tagId) ?? throw new RecordNotFoundException('No such tag.');
     }
 
     /**

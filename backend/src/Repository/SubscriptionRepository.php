@@ -138,14 +138,14 @@ class SubscriptionRepository extends ServiceEntityRepository
         return null === $max ? 0 : (int) $max + 1;
     }
 
-    public function getOneOwnedBy(int $id, int $userId): Subscription
+    public function getOneForUser(int $userId, int $subscriptionId): Subscription
     {
         /** @var Subscription|null $row */
         $row = $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
             ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
             ->leftJoin('st.tag', 't')->addSelect('t')
-            ->andWhere('s.id = :id')->setParameter('id', $id)
+            ->andWhere('s.id = :id')->setParameter('id', $subscriptionId)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();

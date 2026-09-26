@@ -96,7 +96,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         self::assertTrue($phrase->isPhrase());
     }
 
-    public function testGetOneOwnedByReturnsTheOwnersSavedSearch(): void
+    public function testGetOneForUserReturnsTheOwnersSavedSearch(): void
     {
         $owner = new User('owner3@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($owner);
@@ -104,10 +104,10 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->em->persist($saved);
         $this->em->flush();
 
-        self::assertSame($saved, $this->repo()->getOneOwnedBy($saved->requireId(), $owner->requireId()));
+        self::assertSame($saved, $this->repo()->getOneForUser($owner->requireId(), $saved->requireId()));
     }
 
-    public function testGetOneOwnedByRefusesAnotherUsersSavedSearch(): void
+    public function testGetOneForUserRefusesAnotherUsersSavedSearch(): void
     {
         $owner = new User('owner4@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $stranger = new User('stranger4@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -120,6 +120,6 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such saved search.');
 
-        $this->repo()->getOneOwnedBy($saved->requireId(), $stranger->requireId());
+        $this->repo()->getOneForUser($stranger->requireId(), $saved->requireId());
     }
 }
