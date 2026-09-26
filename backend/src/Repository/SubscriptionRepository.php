@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Subscription;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -150,6 +151,11 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $row;
+    }
+
+    public function getOneOwnedBy(int $id, int $userId): Subscription
+    {
+        return $this->findOneOwnedBy($id, $userId) ?? throw new RecordNotFoundException('No such subscription.');
     }
 
     /**

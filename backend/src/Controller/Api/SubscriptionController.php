@@ -24,7 +24,6 @@ use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -114,8 +113,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSubscriptionRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such subscription.');
+        $sub = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
 
         $this->editor->update($sub, $request);
 
@@ -133,8 +131,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MoveFeedToTagRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such subscription.');
+        $sub = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
 
         $this->editor->moveToTag($sub, $request);
 
@@ -192,8 +189,7 @@ final readonly class SubscriptionController
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $subscription = $this->subscriptionRepo->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such subscription.');
+        $subscription = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
 
         $this->subscriptions->unsubscribe($subscription);
 

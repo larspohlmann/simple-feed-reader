@@ -17,7 +17,6 @@ use App\Service\Tag\TagOrdering;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -78,8 +77,7 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] TagFeedOrderRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such tag.');
+        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
 
         $this->ordering->orderFeeds($tag, $request);
 
@@ -92,8 +90,7 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateTagRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such tag.');
+        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
 
         $this->editor->update($tag, $request);
 
@@ -103,8 +100,7 @@ final readonly class TagController
     #[Route('/{id}', name: 'api_tags_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such tag.');
+        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
 
         $this->editor->delete($tag);
 

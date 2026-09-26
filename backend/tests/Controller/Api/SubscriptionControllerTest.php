@@ -675,6 +675,10 @@ final class SubscriptionControllerTest extends WebTestCase
             content: json_encode(['customTitle' => 'hijacked', 'tagIds' => []], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+        self::assertStringContainsString(
+            '"detail":"No such subscription."',
+            (string) $client->getResponse()->getContent(),
+        );
     }
 
     public function testPatchSetsIncludeInAllItemsFalse(): void

@@ -20,7 +20,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -77,12 +76,11 @@ final readonly class SavedSearchEntriesController
         #[MapQueryParameter] ?string $order = null,
     ): JsonResponse {
         $userId = $user->requireId();
-        $this->savedSearches->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such saved search.');
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
 
         $query = new SavedSearchListQuery(
             userId: $userId,
-            savedSearchIds: [$id],
+            savedSearchIds: [$savedSearch->requireId()],
             onlyUnread: $unread,
             cursor: EntryCursor::fromRequestValue($cursor),
             limit: $limit,
@@ -118,10 +116,8 @@ final readonly class SavedSearchEntriesController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkSavedSearchesReadRequest $request,
     ): JsonResponse {
-        $userId = $user->requireId();
-        $this->savedSearches->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such saved search.');
-        $this->markRead->markOne($user, $id, $request->until);
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $user->requireId());
+        $this->markRead->markOne($user, $savedSearch->requireId(), $request->until);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

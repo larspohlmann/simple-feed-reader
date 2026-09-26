@@ -322,5 +322,9 @@ final class SavedSearchControllerTest extends ApiTestCase
         $headers = $this->authHeaderFor($this->factory()->create('intruder3@example.com'));
         $client->request('DELETE', '/api/saved-searches/' . $saved->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+        self::assertStringContainsString(
+            '"detail":"No such saved search."',
+            (string) $client->getResponse()->getContent(),
+        );
     }
 }

@@ -15,7 +15,6 @@ use App\Service\Search\SavedSearchTallies;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -66,8 +65,7 @@ final readonly class SavedSearchController
         #[MapRequestPayload] UpdateSavedSearchRequest $request,
     ): JsonResponse {
         $userId = $user->requireId();
-        $savedSearch = $this->savedSearches->findOneOwnedBy($id, $userId)
-            ?? throw new NotFoundHttpException('No such saved search.');
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
 
         $this->editor->changeDigestInclusion($savedSearch, $request);
 
@@ -79,8 +77,7 @@ final readonly class SavedSearchController
     #[Route('/{id}', name: 'api_saved_searches_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $savedSearch = $this->savedSearches->findOneOwnedBy($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such saved search.');
+        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $user->requireId());
 
         $this->editor->delete($savedSearch);
 

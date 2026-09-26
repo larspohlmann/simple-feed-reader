@@ -169,6 +169,7 @@ final class TagControllerTest extends WebTestCase
         $headers = $this->authHeader('intruder@example.com');
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
         self::assertResponseStatusCodeSame(404); // not 403 — do not reveal existence
+        self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
     }
 
     /**
