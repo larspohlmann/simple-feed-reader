@@ -374,8 +374,8 @@ gh workflow run e2e-rot-check.yml
 
 The stack runs a `pyroscope` container (<http://localhost:4040>) that stores
 code-level profiles. Profiling is **off by default**: turn it on in the admin
-**Settings → Grafana → Profiling** toggle (or `PUT /api/admin/grafana` with
-`{"profilingEnabled": true}`). While it is on, each traced HTTP request and the
+**Settings → Grafana → Profiling** toggle (or a `PUT /api/admin/grafana` whose
+body carries every setting). While it is on, each traced HTTP request and the
 `messenger:consume` worker sample PHP stacks (via `ext-excimer`) and ship folded
 stacks to Pyroscope; the pusher fails open, so a dead or absent Pyroscope never
 breaks a request or the worker. The toggle takes effect within ~30 s on the

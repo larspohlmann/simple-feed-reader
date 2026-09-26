@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\RefreshRunnerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -28,7 +28,7 @@ final class RefreshFeedsCommand extends Command
      */
     private const int DEFAULT_BUDGET_SECONDS = 120;
 
-    public function __construct(private readonly RefreshRunner $refreshRunner)
+    public function __construct(private readonly RefreshRunnerInterface $refreshRunner)
     {
         parent::__construct();
     }
@@ -66,11 +66,7 @@ final class RefreshFeedsCommand extends Command
         $request = match (true) {
             $feedId !== null => RefreshRequest::forFeed($feedId, $budget),
             $userId !== null => RefreshRequest::forUser($userId, $budget),
-            default => RefreshRequest::allDue(
-                $budget,
-                prune: !(bool) $input->getOption('no-prune'),
-                force: (bool) $input->getOption('force'),
-            ),
+            default => $this->allDueRequest($input, $budget),
         };
 
         $report = $this->refreshRunner->run($request);
@@ -106,5 +102,18 @@ final class RefreshFeedsCommand extends Command
         }
 
         return (int) $value;
+    }
+
+    private function allDueRequest(InputInterface $input, int $budget): RefreshRequest
+    {
+        $request = RefreshRequest::allDue($budget);
+        if ($input->getOption('no-prune') === true) {
+            $request = $request->withoutPruning();
+        }
+        if ($input->getOption('force') === true) {
+            $request = $request->ignoringSchedule();
+        }
+
+        return $request;
     }
 }

@@ -66,7 +66,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
@@ -94,7 +94,7 @@ final class SendDueDigestsTest extends DbTestCase
      */
     public function testSinceIsTheLastSendNotJustTheOccurrenceThatBecameDue(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable('2026-08-27T08:00:00Z'));
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-27T20:00:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
@@ -111,7 +111,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testAUserAlreadySentThisPeriodIsNotDueAndIsNotSent(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         // digestLastSentAt already sits at the current occurrence: the next
         // occurrence has not arrived yet, so nothing should go out.
         $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
@@ -129,7 +129,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testADueUserWithNoMatchesIsCountedAsSkippedEmptyAndTheMarkerStaysPut(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $prefs = $this->duePreferences($user, lastSentAt: $seededAt);
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
@@ -147,7 +147,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testADueButUnverifiedUserIsSkippedAndNotCountedAsSent(): void
     {
-        $user = $this->user(verified: false);
+        $user = $this->unverifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
@@ -178,10 +178,10 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testOneDueAndOneNotDueUserAreBothConsideredButOnlyTheDueOneIsSent(): void
     {
-        $dueUser = $this->user();
+        $dueUser = $this->verifiedUser();
         $duePrefs = $this->duePreferences($dueUser, lastSentAt: null);
 
-        $notDueUser = $this->user();
+        $notDueUser = $this->verifiedUser();
         $notDuePrefs = $this->duePreferences($notDueUser, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
 
         $search = $this->givenOneMatch($dueUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
@@ -201,10 +201,10 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testAFailingSendForOneUserDoesNotStarveTheRestOfTheSweep(): void
     {
-        $failingUser = $this->user();
+        $failingUser = $this->verifiedUser();
         $failingPrefs = $this->duePreferences($failingUser, lastSentAt: null);
 
-        $healthyUser = $this->user();
+        $healthyUser = $this->verifiedUser();
         $healthyPrefs = $this->duePreferences($healthyUser, lastSentAt: null);
 
         $failingSearch = $this->givenOneMatch($failingUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
@@ -261,16 +261,20 @@ final class SendDueDigestsTest extends DbTestCase
         return new MailCapability($settings);
     }
 
-    private function user(bool $verified = true): User
+    private function verifiedUser(): User
+    {
+        $user = $this->unverifiedUser();
+        $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
+
+        return $user;
+    }
+
+    private function unverifiedUser(): User
     {
         $email = \sprintf('digest-%s@example.com', uniqid('', true));
         $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($user);
         $this->em->flush();
-
-        if ($verified) {
-            $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-        }
 
         return $user;
     }

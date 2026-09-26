@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Catalog;
 
 use App\Entity\CatalogFeed;
+use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\FaviconResolverInterface;
@@ -50,9 +51,9 @@ final readonly class CatalogFaviconWarmer
     {
         $now = $this->clock->now();
         $deadline = $now->getTimestamp() + $budgetSeconds;
-        [$staleBefore, $retryBefore] = $this->windows($now);
+        $criteria = $this->dueCriteriaAt($now);
 
-        $due = $this->feeds->findNeedingFavicon($staleBefore, $retryBefore, $limit ?? self::BATCH_LIMIT);
+        $due = $this->feeds->findNeedingFavicon($criteria, $limit ?? self::BATCH_LIMIT);
 
         // Resolve the whole slice's icon URLs up front, in one concurrent burst.
         // `$due` is a list, so its 0..n keys line the resolved URLs up with the
@@ -78,20 +79,19 @@ final readonly class CatalogFaviconWarmer
         return new CatalogWarmReport(
             $warmed,
             $failed,
-            $this->feeds->countNeedingFavicon($staleBefore, $retryBefore),
+            $this->feeds->countNeedingFavicon($criteria),
         );
     }
 
     /**
-     * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable}
      * @throws \DateInvalidOperationException
      */
-    private function windows(\DateTimeImmutable $now): array
+    private function dueCriteriaAt(\DateTimeImmutable $now): CatalogFaviconDueCriteria
     {
-        return [
+        return new CatalogFaviconDueCriteria(
             $now->sub(new \DateInterval(self::STALE_AFTER)),
             $now->sub(new \DateInterval(self::RETRY_FAILURES_AFTER)),
-        ];
+        );
     }
 
     /**

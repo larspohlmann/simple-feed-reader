@@ -61,10 +61,21 @@ final class SearchMarkReadServiceTest extends DbTestCase
         return $entry;
     }
 
-    private function stateFor(Entry $entry, bool $isHidden): EntryState
+    private function unreadStateFor(Entry $entry): EntryState
+    {
+        return $this->persisted(new EntryState($this->user, $entry));
+    }
+
+    private function readStateFor(Entry $entry): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $isHidden ? $state->hide(new \DateTimeImmutable('2026-07-05T00:00:00Z')) : $state->markUnread();
+        $state->hide(new \DateTimeImmutable('2026-07-05T00:00:00Z'));
+
+        return $this->persisted($state);
+    }
+
+    private function persisted(EntryState $state): EntryState
+    {
         $this->em->persist($state);
         $this->em->flush();
 
@@ -96,7 +107,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     public function testFlipsAnExplicitlyUnreadMatch(): void
     {
         $entry = $this->entry('b', 'Klima update');
-        $this->stateFor($entry, false);
+        $this->unreadStateFor($entry);
 
         $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
 
@@ -108,7 +119,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     public function testAFlippedMatchIsStampedWithTheMarkingInstant(): void
     {
         $entry = $this->entry('stamp', 'Klima stamp');
-        $this->stateFor($entry, false);
+        $this->unreadStateFor($entry);
         $before = (new \DateTimeImmutable())->modify('-1 second');
 
         $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));
@@ -123,7 +134,7 @@ final class SearchMarkReadServiceTest extends DbTestCase
     public function testLeavesAnAlreadyReadMatchUnchanged(): void
     {
         $entry = $this->entry('c', 'Klima old');
-        $existing = $this->stateFor($entry, true);
+        $existing = $this->readStateFor($entry);
         $hiddenAt = $existing->getHiddenAt();
 
         $this->service()->mark($this->user, 'klima', new \DateTimeImmutable('2100-01-01'));

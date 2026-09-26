@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Admin;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /** `/api/admin/mail` is covered by the `^/api/admin/` ROLE_ADMIN prefix rule in security.yaml. */
@@ -23,6 +24,7 @@ final class AdminMailControllerTest extends ApiTestCase
         'fromAddress' => 'noreply@example.com',
         'fromName' => 'Example',
         'password' => 'sw0rdfish',
+        'useProxy' => false,
     ];
 
     private KernelBrowser $client;
@@ -68,6 +70,26 @@ final class AdminMailControllerTest extends ApiTestCase
             ],
             content: json_encode($body, \JSON_THROW_ON_ERROR),
         );
+    }
+
+    /**
+     * @param array<string, mixed> $changes
+     *
+     * @return array<string, mixed>
+     */
+    private function mailBody(array $changes = []): array
+    {
+        return [
+            'enabled' => false,
+            'host' => '',
+            'port' => 587,
+            'username' => null,
+            'encryption' => 'starttls',
+            'fromAddress' => '',
+            'fromName' => '',
+            'useProxy' => false,
+            ...$changes,
+        ];
     }
 
     public function testGetWithoutAdminTokenIsRejected(): void
@@ -133,13 +155,13 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
             'enabled' => true,
             'host' => '127.0.0.1',
             'port' => 1,
             'fromAddress' => 'from@example.com',
             'password' => 'sw0rdfish',
-        ]);
+        ]));
         self::assertResponseIsSuccessful();
 
         $this->requestAs($admin, 'POST', self::MAIL . '/test');
@@ -170,12 +192,12 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
             'enabled' => true,
             'host' => 'smtp.example',
             'username' => 'user',
             'password' => null,
-        ]);
+        ]));
 
         self::assertResponseStatusCodeSame(422);
         self::assertSame('application/problem+json', $this->client->getResponse()->headers->get('Content-Type'));
@@ -188,20 +210,20 @@ final class AdminMailControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
             'enabled' => true,
             'host' => 'smtp.example',
             'username' => 'user',
             'password' => 'sw0rdfish',
-        ]);
+        ]));
         self::assertResponseIsSuccessful();
 
-        $this->requestWithJsonBody('PUT', $admin, [
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
             'enabled' => true,
             'host' => 'smtp.example',
             'username' => 'user',
             'password' => null,
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
     }
@@ -213,15 +235,64 @@ final class AdminMailControllerTest extends ApiTestCase
         $this->requestWithJsonBody('PUT', $admin, self::SAVED_SMTP_ROW);
         self::assertResponseIsSuccessful();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => false,
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
             'host' => 'smtp.example',
             'username' => 'user',
             'removePassword' => true,
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
         self::assertFalse($this->payload($this->client)['hasPassword']);
+    }
+
+    public function testAPutLeavingSettingsOutIsRefusedAndStoresNothing(): void
+    {
+        $admin = $this->admin();
+        $this->requestWithJsonBody('PUT', $admin, self::SAVED_SMTP_ROW);
+        self::assertResponseIsSuccessful();
+
+        $incomplete = self::SAVED_SMTP_ROW;
+        unset($incomplete['username'], $incomplete['useProxy']);
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['username', 'useProxy'], array_keys($problem['errors']));
+
+        $this->requestAs($admin, 'GET');
+        self::assertSame('user', $this->payload($this->client)['username']);
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function mailBodyKeys(): iterable
+    {
+        yield 'enabled' => ['enabled'];
+        yield 'host' => ['host'];
+        yield 'port' => ['port'];
+        yield 'username' => ['username'];
+        yield 'encryption' => ['encryption'];
+        yield 'fromAddress' => ['fromAddress'];
+        yield 'fromName' => ['fromName'];
+        yield 'useProxy' => ['useProxy'];
+    }
+
+    #[DataProvider('mailBodyKeys')]
+    public function testPutRefusesABodyMissingAnySingleSetting(string $key): void
+    {
+        $admin = $this->admin();
+        $incomplete = $this->mailBody();
+        unset($incomplete[$key]);
+
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertIsArray($problem['errors']);
+        self::assertSame([$key], array_keys($problem['errors']));
     }
 
     public function testResetAsNonAdminIsForbidden(): void

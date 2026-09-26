@@ -6,17 +6,16 @@ namespace App\Tests\Repository;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 
 final class CatalogFeedRepositoryTest extends DbTestCase
 {
+    private const string NOW = '2026-07-01T00:00:00+00:00';
+
     public function testFindEnabledByIdsExcludesDisabledFeedsAndCategoriesAndOrdersByPosition(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
         // Category positions are deliberately out of insert order, same as the
         // feed positions within Gadgets below, so a naive "return in whatever
         // order the DB gives them" implementation would fail this test.
@@ -41,15 +40,12 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $buriedFeed->setPosition(0);
 
         foreach ([$technology, $gadgets, $archived, $engadget, $wired, $deadFeed, $mitReview, $buriedFeed] as $row) {
-            $em->persist($row);
+            $this->em->persist($row);
         }
-        $em->flush();
+        $this->em->flush();
         // See CatalogCategoryRepositoryTest for why: already-managed entities are
         // returned from the identity map without being re-hydrated from the query.
-        $em->clear();
-
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
+        $this->em->clear();
 
         $requestedIds = array_map(
             static fn (CatalogFeed $f): int => $f->requireId(),
@@ -57,7 +53,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         );
         $requestedIds[] = 999_999; // an id nothing maps to
 
-        $rows = $repository->findEnabledByIds($requestedIds);
+        $rows = $this->catalogFeeds()->findEnabledByIds($requestedIds);
 
         self::assertSame(['Wired', 'Engadget', 'MIT Technology Review'], array_map(
             static fn (CatalogFeed $f): string => $f->getTitle(),
@@ -67,57 +63,14 @@ final class CatalogFeedRepositoryTest extends DbTestCase
 
     public function testFindEnabledByIdsReturnsEmptyForEmptyInput(): void
     {
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
-
-        self::assertSame([], $repository->findEnabledByIds([]));
+        self::assertSame([], $this->catalogFeeds()->findEnabledByIds([]));
     }
 
     public function testFindNeedingFaviconAppliesStaleAndRetryThresholdsAndSkipsDisabledFeeds(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $this->persistFaviconQueue();
 
-        $now = new \DateTimeImmutable('2026-07-01T00:00:00+00:00');
-        $staleBefore = $now->modify('-7 days');
-        $retryBefore = $now->modify('-1 day');
-
-        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
-
-        $neverFetched = new CatalogFeed($category, 'Never Fetched Feed', 'https://example.com/never.xml');
-
-        $staleIcon = new CatalogFeed($category, 'Stale Icon Feed', 'https://example.com/stale.xml');
-        $staleIcon->storeFavicon(
-            'https://example.com/stale-favicon.ico',
-            'bytes',
-            'image/x-icon',
-            $staleBefore->modify('-1 day'),
-        );
-
-        $freshIcon = new CatalogFeed($category, 'Fresh Icon Feed', 'https://example.com/fresh.xml');
-        $freshIcon->storeFavicon('https://example.com/fresh-favicon.ico', 'bytes', 'image/x-icon', $now);
-
-        $recentlyFailed = new CatalogFeed($category, 'Recently Failed Feed', 'https://example.com/recently-failed.xml');
-        $recentlyFailed->recordFaviconFailure($now);
-
-        $longFailed = new CatalogFeed($category, 'Long Failed Feed', 'https://example.com/long-failed.xml');
-        $longFailed->recordFaviconFailure($retryBefore->modify('-10 days'));
-
-        $disabled = new CatalogFeed($category, 'Disabled Feed', 'https://example.com/disabled.xml');
-        $disabled->setEnabled(false);
-
-        $feeds = [$neverFetched, $staleIcon, $freshIcon, $recentlyFailed, $longFailed, $disabled];
-        $em->persist($category);
-        foreach ($feeds as $feed) {
-            $em->persist($feed);
-        }
-        $em->flush();
-        $em->clear();
-
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
-
-        $rows = $repository->findNeedingFavicon($staleBefore, $retryBefore, null);
+        $rows = $this->catalogFeeds()->findNeedingFavicon($this->faviconCriteria(), null);
 
         self::assertSame(['Never Fetched Feed', 'Stale Icon Feed', 'Long Failed Feed'], array_map(
             static fn (CatalogFeed $f): string => $f->getTitle(),
@@ -125,33 +78,18 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         ));
     }
 
+    public function testCountNeedingFaviconCountsTheRowsFindNeedingFaviconReturns(): void
+    {
+        $this->persistFaviconQueue();
+
+        self::assertSame(3, $this->catalogFeeds()->countNeedingFavicon($this->faviconCriteria()));
+    }
+
     public function testFindNeedingFaviconRespectsLimit(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $this->persistFaviconQueue();
 
-        $now = new \DateTimeImmutable('2026-07-01T00:00:00+00:00');
-        $staleBefore = $now->modify('-7 days');
-        $retryBefore = $now->modify('-1 day');
-
-        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
-        $first = new CatalogFeed($category, 'First Feed', 'https://example.com/first.xml');
-        $second = new CatalogFeed($category, 'Second Feed', 'https://example.com/second.xml');
-        $third = new CatalogFeed($category, 'Third Feed', 'https://example.com/third.xml');
-
-        $em->persist($category);
-        foreach ([$first, $second, $third] as $feed) {
-            $em->persist($feed);
-        }
-        $em->flush();
-        $em->clear();
-
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
-
-        $rows = $repository->findNeedingFavicon($staleBefore, $retryBefore, 2);
-
-        self::assertCount(2, $rows);
+        self::assertCount(2, $this->catalogFeeds()->findNeedingFavicon($this->faviconCriteria(), 2));
     }
 
     public function testFindAllOrderedSortsByPositionThenTitleAndKeepsDisabledFeeds(): void
@@ -170,10 +108,8 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         }
         $this->em->flush();
 
-        $repository = self::getContainer()->get(CatalogFeedRepository::class);
-        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
         $mine = array_filter(
-            $repository->findAllOrdered(),
+            $this->catalogFeeds()->findAllOrdered(),
             static fn (CatalogFeed $feed): bool => $feed->getCategory() === $category,
         );
 
@@ -181,5 +117,60 @@ final class CatalogFeedRepositoryTest extends DbTestCase
             ['Zulu', 'Alpha', 'Bravo'],
             array_values(array_map(static fn (CatalogFeed $feed): string => $feed->getTitle(), $mine)),
         );
+    }
+
+    private function catalogFeeds(): CatalogFeedRepository
+    {
+        $repository = self::getContainer()->get(CatalogFeedRepository::class);
+        self::assertInstanceOf(CatalogFeedRepository::class, $repository);
+
+        return $repository;
+    }
+
+    private function faviconCriteria(): CatalogFaviconDueCriteria
+    {
+        $now = new \DateTimeImmutable(self::NOW);
+
+        return new CatalogFaviconDueCriteria($now->modify('-7 days'), $now->modify('-1 day'));
+    }
+
+    /**
+     * Six feeds, three of them due: never fetched, stale, and failed before the retry window.
+     */
+    private function persistFaviconQueue(): void
+    {
+        $now = new \DateTimeImmutable(self::NOW);
+        $criteria = $this->faviconCriteria();
+
+        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
+
+        $neverFetched = new CatalogFeed($category, 'Never Fetched Feed', 'https://example.com/never.xml');
+
+        $staleIcon = new CatalogFeed($category, 'Stale Icon Feed', 'https://example.com/stale.xml');
+        $staleIcon->storeFavicon(
+            'https://example.com/stale-favicon.ico',
+            'bytes',
+            'image/x-icon',
+            $criteria->staleBefore->modify('-1 day'),
+        );
+
+        $freshIcon = new CatalogFeed($category, 'Fresh Icon Feed', 'https://example.com/fresh.xml');
+        $freshIcon->storeFavicon('https://example.com/fresh-favicon.ico', 'bytes', 'image/x-icon', $now);
+
+        $recentlyFailed = new CatalogFeed($category, 'Recently Failed Feed', 'https://example.com/recently-failed.xml');
+        $recentlyFailed->recordFaviconFailure($now);
+
+        $longFailed = new CatalogFeed($category, 'Long Failed Feed', 'https://example.com/long-failed.xml');
+        $longFailed->recordFaviconFailure($criteria->retryBefore->modify('-10 days'));
+
+        $disabled = new CatalogFeed($category, 'Disabled Feed', 'https://example.com/disabled.xml');
+        $disabled->setEnabled(false);
+
+        $this->em->persist($category);
+        foreach ([$neverFetched, $staleIcon, $freshIcon, $recentlyFailed, $longFailed, $disabled] as $feed) {
+            $this->em->persist($feed);
+        }
+        $this->em->flush();
+        $this->em->clear();
     }
 }

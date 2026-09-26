@@ -30,11 +30,9 @@ export interface InstanceSettings {
 }
 
 /**
- * The full-replace PUT body `InstanceSettingsRequest` expects (#624): every
- * field must be sent together, or the server resets whatever is missing to
- * its constructor default. `invalidateExistingPasskeys` is a one-shot command
- * modifier, not a stored setting -- it confirms a relying-party id change the
- * server already refused with a 409.
+ * The full-replace PUT body (#624): leaving a setting out is a 422 (#1167).
+ * `invalidateExistingPasskeys` is no stored setting: it confirms a relying-party id change
+ * the server refused with a 409.
  */
 export interface InstanceSettingsUpdate {
   requireEmailConfirmation: boolean;

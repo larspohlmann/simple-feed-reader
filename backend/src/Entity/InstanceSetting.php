@@ -69,9 +69,8 @@ class InstanceSetting
      * this with the relying-party validity check.
      *
      * This default is also declared in the migration's column DEFAULT (this
-     * property's own `options`), and in the constructor defaults of
-     * {@see \App\Service\Settings\InstanceSettingsUpdate} and
-     * {@see \App\Dto\Admin\InstanceSettingsRequest}.
+     * property's own `options`) and in the constructor default of
+     * {@see InstanceSettingsUpdate}.
      */
     #[ORM\Column(name: 'passkey_sign_in_enabled', options: ['default' => false])]
     private bool $passkeySignInEnabled = false;

@@ -13,6 +13,7 @@ use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\RelyingPartyChange;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
+use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -89,7 +90,7 @@ final class RelyingPartyChangeTest extends TestCase
 
     private function requestFor(string $passkeyRpId, string $publicBaseUrl): InstanceSettingsRequest
     {
-        return new InstanceSettingsRequest(
+        return SettingsRequests::instance(
             publicBaseUrl: $publicBaseUrl,
             passkeyRpId: $passkeyRpId,
             passkeyRpName: 'Reader',

@@ -96,4 +96,28 @@ final class SlideshowMarkupTest extends TestCase
         self::assertStringNotContainsString('<p>', $html);
         self::assertStringNotContainsString('<a ', $html);
     }
+
+    public function testOnlyTheFirstOfThreeSlidesLoadsEagerly(): void
+    {
+        $document = HtmlDocumentParser::parseOrNull('<body></body>');
+        self::assertNotNull($document);
+        $show = Slideshow::fromSlides(
+            [
+                new Slide('https://img/1.jpg', 'a'),
+                new Slide('https://img/2.jpg', 'b'),
+                new Slide('https://img/3.jpg', 'c'),
+            ],
+            null,
+            null,
+            null,
+        );
+        self::assertNotNull($show);
+
+        $document->body?->appendChild((new SlideshowMarkup())->figureFor($document, $show));
+        $html = $document->saveHtml();
+
+        self::assertSame(1, substr_count($html, 'loading="eager"'));
+        self::assertSame(2, substr_count($html, 'loading="lazy"'));
+        self::assertStringContainsString('src="https://img/1.jpg" alt="a" loading="eager"', $html);
+    }
 }

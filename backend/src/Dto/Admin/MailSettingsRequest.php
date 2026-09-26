@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\MailConnection;
+use App\Http\FullReplacePayload;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Full-replace payload for the mail settings. The password is a three-state
- * intent: null keeps the stored secret, a string replaces it, and
- * `removePassword` clears it. Both are inbound-only, never echoed back.
+ * Every setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without which a
+ * missing nullable setting reads as null. The password is an optional three-state intent: null keeps the stored
+ * secret, a string replaces it, `removePassword` clears it.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
  * mirrors the admin mail form field-for-field, not a behavioural method.
@@ -20,30 +20,30 @@ final readonly class MailSettingsRequest
 {
     public function __construct(
         #[Assert\Type('bool')]
-        public bool $enabled = false,
+        public bool $enabled,
         #[Assert\Length(max: 255)]
-        public string $host = '',
+        public string $host,
         #[Assert\Range(min: 1, max: 65535)]
-        public int $port = MailConnection::DEFAULT_PORT,
+        public int $port,
         #[Assert\Length(max: 255)]
-        public ?string $username = null,
+        public ?string $username,
         #[Assert\Choice(choices: [
             MailEncryption::None->value,
             MailEncryption::Starttls->value,
             MailEncryption::Tls->value,
         ])]
-        public string $encryption = MailEncryption::Starttls->value,
+        public string $encryption,
         #[Assert\Length(max: 255)]
         #[Assert\Email]
-        public string $fromAddress = '',
+        public string $fromAddress,
         #[Assert\Length(max: 255)]
-        public string $fromName = '',
+        public string $fromName,
+        #[Assert\Type('bool')]
+        public bool $useProxy,
         #[Assert\Length(max: 512)]
         public ?string $password = null,
         #[Assert\Type('bool')]
         public bool $removePassword = false,
-        #[Assert\Type('bool')]
-        public bool $useProxy = false,
     ) {
     }
 }

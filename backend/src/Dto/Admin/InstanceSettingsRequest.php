@@ -4,54 +4,35 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Http\FullReplacePayload;
 use App\Service\Settings\InstanceSettingsUpdate;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * This is a full-replace payload, not a partial patch. `#[MapRequestPayload]`
- * fills any field missing from the request body with the constructor default
- * (`requireEmailConfirmation` and `requireApproval` default to `true`,
- * `passkeySignInEnabled` to `false`, the URL and both relying-party fields to
- * `null`), so a `PUT` that sends only one field silently resets the others.
- * Clients must always send every field together.
- *
- * `publicBaseUrl` is null when the admin clears it — the client sends `null`,
- * not an empty string — which restores the APP_FRONTEND_URL fallback.
- * `passkeyRpId` and `passkeyRpName` behave the same way, restoring the
- * derived host and the "Simple Feed Reader" default respectively.
- *
- * `passkeySignInEnabled` is the instance-wide switch
- * {@see \App\Service\Passkey\PasskeySignInAvailability} reads alongside the
- * relying-party validity check — turning it off refuses every passkey
- * endpoint (registration, listing, login) regardless of configuration,
- * without touching a single stored credential. Defaults to `false`, matching
- * {@see \App\Entity\InstanceSetting::$passkeySignInEnabled}.
- *
- * `invalidateExistingPasskeys` is NOT a setting — it is not part of
- * InstanceSettingsUpdate and is never persisted. It is a one-shot command
- * modifier, read only by RelyingPartyChange, that confirms a passkeyRpId
- * change the admin already saw refused with a 409. It defaults to `false`.
+ * Every setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without which a
+ * missing nullable setting reads as null. A null URL or relying-party field restores its derived default.
+ * `invalidateExistingPasskeys` is no setting: it confirms an id change refused with 409.
  */
 final readonly class InstanceSettingsRequest
 {
     public function __construct(
         #[Assert\NotNull]
         #[Assert\Type('bool')]
-        public bool $requireEmailConfirmation = true,
+        public bool $requireEmailConfirmation,
         #[Assert\NotNull]
         #[Assert\Type('bool')]
-        public bool $requireApproval = true,
+        public bool $requireApproval,
         #[Assert\Url(requireTld: false)]
         #[Assert\Length(max: 255)]
-        public ?string $publicBaseUrl = null,
+        public ?string $publicBaseUrl,
         #[Assert\Length(max: 255)]
-        public ?string $passkeyRpId = null,
+        public ?string $passkeyRpId,
         #[Assert\Length(max: 100)]
-        public ?string $passkeyRpName = null,
-        public bool $invalidateExistingPasskeys = false,
+        public ?string $passkeyRpName,
         #[Assert\NotNull]
         #[Assert\Type('bool')]
-        public bool $passkeySignInEnabled = false,
+        public bool $passkeySignInEnabled,
+        public bool $invalidateExistingPasskeys = false,
     ) {
     }
 

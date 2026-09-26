@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Proxy;
 
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
 use App\Http\Admin\ProxySettingsJson;
@@ -12,6 +11,7 @@ use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -34,7 +34,7 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: true,
             type: 'SOCKS5',
@@ -59,7 +59,7 @@ final class ProxySettingsTest extends TestCase
     public function testRemovePasswordClearsTheStoredSecret(): void
     {
         $settings = $this->service($stored);
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: false,
             directFallback: true,
             type: 'SOCKS5',
@@ -70,7 +70,7 @@ final class ProxySettingsTest extends TestCase
         ));
         self::assertTrue($this->viewOf($settings)['hasPassword']);
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: false,
             directFallback: true,
             type: 'SOCKS5',
@@ -95,7 +95,7 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: true,
             type: 'SOCKS5',
@@ -116,7 +116,7 @@ final class ProxySettingsTest extends TestCase
 
         self::assertFalse($this->viewOf($settings)['remoteDns']);
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: true,
             type: 'SOCKS5',
@@ -132,7 +132,7 @@ final class ProxySettingsTest extends TestCase
     public function testBlankPasswordKeepsTheStoredSecret(): void
     {
         $settings = $this->service($stored);
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: true,
             type: 'SOCKS5',
@@ -142,7 +142,7 @@ final class ProxySettingsTest extends TestCase
             password: 'sw0rdfish',
         ));
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: false,
             directFallback: false,
             type: 'HTTP',
@@ -162,7 +162,7 @@ final class ProxySettingsTest extends TestCase
     public function testEgressProxyIsNullWhenDisabled(): void
     {
         $settings = $this->service($stored);
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: false,
             directFallback: true,
             type: 'SOCKS5',
@@ -192,7 +192,7 @@ final class ProxySettingsTest extends TestCase
         $cipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET));
         $settings = new ProxySettings($repository, $em, $cipher);
 
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: true,
             type: 'SOCKS5',
@@ -206,7 +206,7 @@ final class ProxySettingsTest extends TestCase
     public function testDirectFallbackSurvivesTheRoundTrip(): void
     {
         $settings = $this->service($stored);
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: true,
             directFallback: false,
             type: 'SOCKS5',

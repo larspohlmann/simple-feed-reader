@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Proxy;
 
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Crypto\InstanceSecretCipher;
@@ -12,6 +11,7 @@ use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
 use App\Service\Proxy\ProxyTestFailure;
+use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -167,7 +167,7 @@ final class ProxyConnectionTesterTest extends TestCase
         });
 
         (new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET))))->update(
-            new ProxySettingsRequest(
+            SettingsRequests::proxy(
                 enabled: true,
                 directFallback: true,
                 type: 'SOCKS5',
@@ -211,7 +211,7 @@ final class ProxyConnectionTesterTest extends TestCase
     private function configuredSettings(): ProxySettings
     {
         $settings = $this->settings();
-        $settings->update(new ProxySettingsRequest(
+        $settings->update(SettingsRequests::proxy(
             enabled: false,
             directFallback: true,
             type: 'SOCKS5',

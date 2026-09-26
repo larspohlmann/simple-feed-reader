@@ -7,6 +7,7 @@ namespace App\Tests\Controller\Admin;
 use App\Entity\User;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -54,6 +55,25 @@ final class AdminProxyControllerTest extends ApiTestCase
         );
     }
 
+    /**
+     * @param array<string, mixed> $changes
+     *
+     * @return array<string, mixed>
+     */
+    private function proxyBody(array $changes = []): array
+    {
+        return [
+            'enabled' => true,
+            'directFallback' => true,
+            'type' => 'SOCKS5',
+            'host' => 'proxy.example',
+            'port' => 1080,
+            'username' => 'user',
+            'remoteDns' => false,
+            ...$changes,
+        ];
+    }
+
     public function testGetWithoutAdminTokenIsRejected(): void
     {
         $this->client->request('GET', self::PROXY);
@@ -78,14 +98,7 @@ final class AdminProxyControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['password' => 'sw0rdfish']));
 
         self::assertResponseIsSuccessful();
 
@@ -110,59 +123,24 @@ final class AdminProxyControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'remoteDns' => true,
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody(
+            'PUT',
+            $admin,
+            $this->proxyBody(['remoteDns' => true, 'password' => 'sw0rdfish']),
+        );
 
         self::assertResponseIsSuccessful();
         self::assertTrue($this->payload($this->client)['remoteDns']);
-    }
-
-    public function testRemoteDnsDefaultsToOffWhenTheClientOmitsIt(): void
-    {
-        $admin = $this->admin();
-
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'password' => 'sw0rdfish',
-        ]);
-
-        self::assertResponseIsSuccessful();
-        self::assertFalse($this->payload($this->client)['remoteDns']);
     }
 
     public function testPuttingWithoutAPasswordKeepsTheStoredSecret(): void
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['password' => 'sw0rdfish']));
         self::assertResponseIsSuccessful();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'password' => null,
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['password' => null]));
         self::assertResponseIsSuccessful();
 
         $body = $this->payload($this->client);
@@ -173,27 +151,68 @@ final class AdminProxyControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'password' => 'sw0rdfish',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['password' => 'sw0rdfish']));
         self::assertResponseIsSuccessful();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'enabled' => true,
-            'type' => 'SOCKS5',
-            'host' => 'proxy.example',
-            'port' => 1080,
-            'username' => 'user',
-            'removePassword' => true,
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['removePassword' => true]));
 
         self::assertResponseIsSuccessful();
         self::assertFalse($this->payload($this->client)['hasPassword']);
+    }
+
+    public function testAPutLeavingSettingsOutIsRefusedAndStoresNothing(): void
+    {
+        $admin = $this->admin();
+        $this->requestWithJsonBody('PUT', $admin, $this->proxyBody(['remoteDns' => true, 'password' => 'sw0rdfish']));
+        self::assertResponseIsSuccessful();
+
+        $incomplete = $this->proxyBody(['host' => 'other.example']);
+        unset($incomplete['username'], $incomplete['remoteDns']);
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['username', 'remoteDns'], array_keys($problem['errors']));
+
+        $this->client->request(
+            'GET',
+            self::PROXY,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+        $stored = $this->payload($this->client);
+        self::assertSame('proxy.example', $stored['host']);
+        self::assertTrue($stored['remoteDns']);
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function proxyBodyKeys(): iterable
+    {
+        yield 'enabled' => ['enabled'];
+        yield 'directFallback' => ['directFallback'];
+        yield 'type' => ['type'];
+        yield 'host' => ['host'];
+        yield 'port' => ['port'];
+        yield 'username' => ['username'];
+        yield 'remoteDns' => ['remoteDns'];
+    }
+
+    #[DataProvider('proxyBodyKeys')]
+    public function testPutRefusesABodyMissingAnySingleSetting(string $key): void
+    {
+        $admin = $this->admin();
+        $incomplete = $this->proxyBody();
+        unset($incomplete[$key]);
+
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertIsArray($problem['errors']);
+        self::assertSame([$key], array_keys($problem['errors']));
     }
 
     public function testTestConnectionReportsNotConfiguredWhenNoProxyIsStored(): void

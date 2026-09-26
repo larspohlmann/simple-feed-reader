@@ -16,9 +16,9 @@ final readonly class RefreshRequest
     ) {
     }
 
-    public static function allDue(int $budgetSeconds, bool $prune = true, bool $force = false): self
+    public static function allDue(int $budgetSeconds): self
     {
-        return new self(null, null, null, $force, $budgetSeconds, $prune);
+        return new self(null, null, null, false, $budgetSeconds, true);
     }
 
     public static function forUser(int $userId, int $budgetSeconds): self
@@ -39,5 +39,15 @@ final readonly class RefreshRequest
     public static function forUserFeed(int $userId, int $feedId, int $budgetSeconds): self
     {
         return new self($userId, $feedId, null, true, $budgetSeconds, false);
+    }
+
+    public function withoutPruning(): self
+    {
+        return new self($this->userId, $this->feedId, $this->tagId, $this->force, $this->budgetSeconds, false);
+    }
+
+    public function ignoringSchedule(): self
+    {
+        return new self($this->userId, $this->feedId, $this->tagId, true, $this->budgetSeconds, $this->prune);
     }
 }

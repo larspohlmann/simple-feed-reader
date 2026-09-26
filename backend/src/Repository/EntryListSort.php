@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\EntryView;
+
 /**
  * Which instant a keyset-paginated list orders by. Every list but "viewed"
  * ranks by publish instant (effectiveDate); "viewed" is a reading history
@@ -23,9 +25,9 @@ enum EntryListSort
      * The sort every date-ordered list shares, and the fallback for a view
      * that names no history instant — only "viewed" reorders by view time.
      */
-    public static function forView(string $view): self
+    public static function forView(EntryView $view): self
     {
-        return $view === 'viewed' ? self::ViewedAt : self::PublishedDate;
+        return $view === EntryView::Viewed ? self::ViewedAt : self::PublishedDate;
     }
 
     /**

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Settings;
 
-use App\Dto\Admin\MailSettingsRequest;
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Enum\MailEncryption;
 use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
@@ -13,6 +11,7 @@ use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailFallback;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\SettingsRequests;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -38,7 +37,7 @@ final class MailSettingsTest extends KernelTestCase
 
     private function configureAProxy(): void
     {
-        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+        self::getContainer()->get(ProxySettings::class)->update(SettingsRequests::proxy(
             type: 'SOCKS5',
             host: 'proxy.example',
             port: 1080,
@@ -54,7 +53,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testUpdateStoresTheConnectionAndSealsThePassword(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.relay.test',
             port: 587,
@@ -78,15 +77,15 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testANullPasswordKeepsTheStoredSecret(): void
     {
-        $this->settings()->update(new MailSettingsRequest(host: 'h', password: 'keep-me'));
-        $this->settings()->update(new MailSettingsRequest(host: 'h2', password: null));
+        $this->settings()->update(SettingsRequests::mail(host: 'h', password: 'keep-me'));
+        $this->settings()->update(SettingsRequests::mail(host: 'h2', password: null));
 
         self::assertSame('keep-me', $this->settings()->configuredTransport()?->password);
     }
 
     public function testResetToEnvironmentDeletesTheSavedRow(): void
     {
-        $this->settings()->update(new MailSettingsRequest(host: 'smtp.relay.test', password: 'top-secret'));
+        $this->settings()->update(SettingsRequests::mail(host: 'smtp.relay.test', password: 'top-secret'));
         $before = $this->view();
         self::assertTrue($before['hasSavedConfig']);
 
@@ -103,7 +102,7 @@ final class MailSettingsTest extends KernelTestCase
     {
         $this->expectExceptionObject(IncompleteMailConfigurationException::passwordMissing());
 
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.relay.test',
             username: 'postbox',
@@ -115,19 +114,19 @@ final class MailSettingsTest extends KernelTestCase
     {
         $this->expectExceptionObject(IncompleteMailConfigurationException::transportMissing());
 
-        $this->settings()->update(new MailSettingsRequest(enabled: true, host: ''));
+        $this->settings()->update(SettingsRequests::mail(enabled: true, host: ''));
     }
 
     public function testUpdateAcceptsAnEnabledAuthenticatedRowThatKeepsAStoredPassword(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: false,
             host: 'smtp.relay.test',
             username: 'postbox',
             password: 'top-secret',
         ));
 
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.relay.test',
             username: 'postbox',
@@ -141,7 +140,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testUpdateAcceptsAnEnabledUnauthenticatedRelayWithNoUsername(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.relay.test',
             username: null,
@@ -153,7 +152,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testASavedFromAddressWinsOverTheEnvIdentity(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             host: 'h',
             fromAddress: 'saved@reader.test',
             fromName: 'Saved',
@@ -167,7 +166,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testARowWithABlankFromAddressFallsBackToTheEnvIdentity(): void
     {
-        $this->settings()->update(new MailSettingsRequest(host: 'h', fromAddress: '', password: 'p'));
+        $this->settings()->update(SettingsRequests::mail(host: 'h', fromAddress: '', password: 'p'));
 
         self::assertSame(
             self::getContainer()->get(MailFallback::class)->identity()->address,
@@ -177,7 +176,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testADisabledAuthenticatedRowMayBeSavedWithoutAPassword(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: false,
             host: 'smtp.relay.test',
             username: 'postbox',
@@ -191,7 +190,7 @@ final class MailSettingsTest extends KernelTestCase
     {
         $this->expectExceptionObject(IncompleteMailConfigurationException::transportMissing());
 
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: '',
             username: 'postbox',
@@ -201,7 +200,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testRemovePasswordClearsTheStoredSecret(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             host: 'smtp.example.test',
             username: null,
             password: 'topsecret',
@@ -211,7 +210,7 @@ final class MailSettingsTest extends KernelTestCase
 
         // A different host proves the remove-password update still applies the
         // connection edits carried in the same request, not only clears the secret.
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             host: 'smtp.moved.test',
             username: null,
             removePassword: true,
@@ -224,7 +223,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void
     {
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.example.test',
             username: 'alice',
@@ -233,7 +232,7 @@ final class MailSettingsTest extends KernelTestCase
 
         $this->expectException(IncompleteMailConfigurationException::class);
 
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.example.test',
             username: 'alice',
@@ -245,14 +244,14 @@ final class MailSettingsTest extends KernelTestCase
     {
         $this->expectException(IncompleteMailConfigurationException::class);
 
-        $this->settings()->update(new MailSettingsRequest(host: 'smtp.gmail.com', useProxy: true));
+        $this->settings()->update(SettingsRequests::mail(host: 'smtp.gmail.com', useProxy: true));
     }
 
     public function testUseProxyIsPersistedWhenAProxyIsConfigured(): void
     {
         $this->configureAProxy();
 
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             host: 'smtp.gmail.com',
             useProxy: true,
             password: 'app-pw',

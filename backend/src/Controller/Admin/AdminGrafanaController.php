@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Http\Admin\GrafanaSettingsJson;
+use App\Http\FullReplacePayload;
 use App\Service\Grafana\GrafanaSettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -29,8 +30,9 @@ final readonly class AdminGrafanaController
     }
 
     #[Route('', name: 'api_admin_grafana_update', methods: ['PUT'])]
-    public function update(#[MapRequestPayload] GrafanaSettingsRequest $request): JsonResponse
-    {
+    public function update(
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] GrafanaSettingsRequest $request,
+    ): JsonResponse {
         $this->settings->update($request);
 
         return new JsonResponse(GrafanaSettingsJson::from($this->settings->overview()));

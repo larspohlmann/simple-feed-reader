@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\EntryView;
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 
@@ -36,22 +37,20 @@ final readonly class EntryQuery
     public int $limit;
 
     /**
-     * @param int                                                  $userId
-     * @param 'all'|'unread'|'favorites'|'kept'|'viewed'|'for-you' $view
-     * @param int|null                                             $subscriptionId
-     * @param int|null                                             $tagId
-     * @param EntryCursor|null                                     $cursor
-     * @param int                                                  $limit the size the client asked for
+     * @param int $limit the size the client asked for
      */
     public function __construct(
         public int $userId,
-        public string $view = 'all',
+        public EntryView $view = EntryView::All,
         public ?int $subscriptionId = null,
         public ?int $tagId = null,
         public ?EntryCursor $cursor = null,
         int $limit = self::DEFAULT_LIMIT,
         public ListOrder $order = ListOrder::NewestFirst,
     ) {
+        if ($view === EntryView::ForYou) {
+            throw new \LogicException('The for-you feed pages through ForYouFeedQuery, never an EntryQuery.');
+        }
         $this->limit = self::clampLimit($limit);
     }
 
@@ -66,16 +65,13 @@ final readonly class EntryQuery
             return false;
         }
 
-        return $this->view === 'all' || $this->view === 'unread';
+        return $this->view->isChronological();
     }
 
     /**
-     * A list that spans many feeds and ranks them by publish date: the two
-     * chronological views ('all', 'unread'), a tag's subset included, but not a
-     * single subscription. Only this shape gains from driving the join from
-     * `entry` and its effective-date index; a single-feed scope and the
-     * state-driven views ('favorites', 'kept', 'viewed') keep the planner's own
-     * order. Unlike hidesExcludedFeeds(), tag scope counts — see #1040.
+     * A chronological list spanning many feeds, a tag's subset included (#1040, unlike hidesExcludedFeeds())
+     * but not one subscription: the only shape that gains from driving the join from `entry` and its
+     * effective-date index.
      */
     public function isDateOrderedFanIn(): bool
     {
@@ -83,7 +79,7 @@ final readonly class EntryQuery
             return false;
         }
 
-        return $this->view === 'all' || $this->view === 'unread';
+        return $this->view->isChronological();
     }
 
     /**

@@ -5,14 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\InstanceSettingsRequest;
+use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
-/**
- * Mirrors ProxySettingsRequestTest's boundary style for the two passkey
- * fields #624 added to this DTO.
- */
 final class InstanceSettingsRequestTest extends TestCase
 {
     private ValidatorInterface $validator;
@@ -26,8 +23,8 @@ final class InstanceSettingsRequestTest extends TestCase
 
     public function testPasskeyRpIdAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new InstanceSettingsRequest(passkeyRpId: str_repeat('a', 255));
-        $overLimit = new InstanceSettingsRequest(passkeyRpId: str_repeat('a', 256));
+        $atLimit = self::withRelyingParty(str_repeat('a', 255), null);
+        $overLimit = self::withRelyingParty(str_repeat('a', 256), null);
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
@@ -35,23 +32,37 @@ final class InstanceSettingsRequestTest extends TestCase
 
     public function testPasskeyRpNameAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new InstanceSettingsRequest(passkeyRpName: str_repeat('a', 100));
-        $overLimit = new InstanceSettingsRequest(passkeyRpName: str_repeat('a', 101));
+        $atLimit = self::withRelyingParty(null, str_repeat('a', 100));
+        $overLimit = self::withRelyingParty(null, str_repeat('a', 101));
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
 
-    /**
-     * #624 follow-up, addendum: a `PUT` that omits `passkeySignInEnabled`
-     * must reset it to `false`, not silently keep the toggle on — see this
-     * class's own docblock on the full-replace contract.
-     */
-    public function testPasskeySignInEnabledDefaultsToFalseAndForwardsToTheUpdate(): void
+    public function testTheUpdateCarriesEverySettingAndThePasskeyInvalidationDefaultsToOff(): void
     {
-        $request = new InstanceSettingsRequest();
+        $request = SettingsRequests::instance(
+            requireEmailConfirmation: false,
+            requireApproval: true,
+            publicBaseUrl: 'https://reader.example',
+            passkeyRpId: 'reader.example',
+            passkeyRpName: 'Reader',
+            passkeySignInEnabled: true,
+        );
 
-        self::assertFalse($request->passkeySignInEnabled);
-        self::assertFalse($request->toUpdate()->passkeySignInEnabled);
+        $update = $request->toUpdate();
+
+        self::assertFalse($request->invalidateExistingPasskeys);
+        self::assertFalse($update->requireEmailConfirmation);
+        self::assertTrue($update->requireApproval);
+        self::assertSame('https://reader.example', $update->publicBaseUrl);
+        self::assertSame('reader.example', $update->passkeyRpId);
+        self::assertSame('Reader', $update->passkeyRpName);
+        self::assertTrue($update->passkeySignInEnabled);
+    }
+
+    private static function withRelyingParty(?string $passkeyRpId, ?string $passkeyRpName): InstanceSettingsRequest
+    {
+        return SettingsRequests::instance(passkeyRpId: $passkeyRpId, passkeyRpName: $passkeyRpName);
     }
 }

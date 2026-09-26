@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
+use App\Dto\Subscription\MoveFeedToTagRequest;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
@@ -28,35 +29,29 @@ final readonly class FeedTagMove
     ) {
     }
 
-    public function move(
-        Subscription $subscription,
-        ?int $fromTagId,
-        ?int $toTagId,
-        ?int $position,
-        int $userId,
-    ): void {
-        // Same source and target is not a move but a same-list reorder, which
-        // the reorder endpoints own; without this the removeTag/addTag below
-        // would churn the join for no change.
-        if ($fromTagId === $toTagId) {
+    public function move(Subscription $subscription, MoveFeedToTagRequest $move): void
+    {
+        // A same-list drop is a reorder, which the reorder endpoints own.
+        if ($move->fromTagId === $move->toTagId) {
             return;
         }
 
-        $fromTag = $this->ownedTagOrNull($fromTagId, $userId);
-        $toTag = $this->ownedTagOrNull($toTagId, $userId);
+        $userId = $subscription->getUser()->requireId();
+        $fromTag = $this->ownedTagOrNull($move->fromTagId, $userId);
+        $toTag = $this->ownedTagOrNull($move->toTagId, $userId);
 
         if (null !== $fromTag) {
             $subscription->removeTag($fromTag);
         }
 
         if (null !== $toTag) {
-            $this->placeInTag($subscription, $toTag, $position);
+            $this->placeInTag($subscription, $toTag, $move->position);
 
             return;
         }
 
         if ($subscription->getTags()->isEmpty()) {
-            $this->placeInUntaggedList($subscription, $userId, $position);
+            $this->placeInUntaggedList($subscription, $userId, $move->position);
         }
     }
 

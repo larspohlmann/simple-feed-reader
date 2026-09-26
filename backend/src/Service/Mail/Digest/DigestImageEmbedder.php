@@ -32,23 +32,25 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
         $images = [];
         $cidByUrl = [];
 
-        foreach ($this->requests($page) as $url => $isFavicon) {
-            $embedded = $this->tryEmbed($url, $isFavicon);
-            if ($embedded === null) {
+        foreach ($this->requests($page) as $url => $kind) {
+            try {
+                $image = $this->embedOne($url, $kind);
+            } catch (FaviconUnavailableException | ImageProcessingException $e) {
+                $this->logger->debug('Digest image skipped: {url}', ['url' => $url, 'exception' => $e]);
                 continue;
             }
 
-            $cidByUrl[$url] = $embedded->cid;
-            $images[] = $embedded;
+            $cidByUrl[$url] = $image->cid;
+            $images[] = $image;
         }
 
         return new DigestImageSet($images, $cidByUrl);
     }
 
     /**
-     * Distinct source URLs, each flagged favicon-or-thumbnail; first sighting wins.
+     * The first sighting of a URL decides its kind.
      *
-     * @return array<string, bool>
+     * @return array<string, DigestImageKind>
      */
     private function requests(DigestPage $page): array
     {
@@ -57,10 +59,10 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
         foreach ($page->groups as $group) {
             foreach ($group->cards as $card) {
                 if ($card->faviconUrl !== null) {
-                    $requests[$card->faviconUrl] ??= true;
+                    $requests[$card->faviconUrl] ??= DigestImageKind::Favicon;
                 }
                 if ($card->imageUrl !== null) {
-                    $requests[$card->imageUrl] ??= false;
+                    $requests[$card->imageUrl] ??= DigestImageKind::Thumbnail;
                 }
             }
         }
@@ -68,23 +70,35 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
         return $requests;
     }
 
-    private function tryEmbed(string $url, bool $isFavicon): ?EmbeddedImage
+    /**
+     * @throws FaviconUnavailableException
+     * @throws ImageProcessingException
+     */
+    private function embedOne(string $url, DigestImageKind $kind): EmbeddedImage
     {
-        try {
-            $raw = $this->downloader->download($url)->bytes;
-            $bytes = $isFavicon
-                ? $this->resizer->containPng($raw, self::FAVICON_SIZE, self::FAVICON_SIZE)
-                : $this->resizer->coverJpeg($raw, self::THUMBNAIL_WIDTH, self::THUMBNAIL_HEIGHT);
+        return new EmbeddedImage(
+            'img' . substr(hash('xxh128', $url), 0, 16),
+            $this->resized($this->downloader->download($url)->bytes, $kind),
+            $kind->contentType(),
+        );
+    }
 
-            return new EmbeddedImage(
-                'img' . substr(hash('xxh128', $url), 0, 16),
-                $bytes,
-                $isFavicon ? 'image/png' : 'image/jpeg',
-            );
-        } catch (FaviconUnavailableException | ImageProcessingException $e) {
-            $this->logger->debug('Digest image skipped: {url}', ['url' => $url, 'exception' => $e]);
-
-            return null;
-        }
+    /**
+     * @throws ImageProcessingException
+     */
+    private function resized(string $sourceBytes, DigestImageKind $kind): string
+    {
+        return match ($kind) {
+            DigestImageKind::Favicon => $this->resizer->containPng(
+                $sourceBytes,
+                self::FAVICON_SIZE,
+                self::FAVICON_SIZE,
+            ),
+            DigestImageKind::Thumbnail => $this->resizer->coverJpeg(
+                $sourceBytes,
+                self::THUMBNAIL_WIDTH,
+                self::THUMBNAIL_HEIGHT,
+            ),
+        };
     }
 }

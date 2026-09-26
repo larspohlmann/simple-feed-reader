@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\CatalogFeed;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -67,25 +68,13 @@ class CatalogFeedRepository extends ServiceEntityRepository
     }
 
     /**
-     * The warm queue: enabled feeds with no cached icon, or one older than
-     * $staleBefore, skipping rows whose last failure is newer than $retryBefore
-     * so a dead icon is not re-attempted on every deploy.
+     * The warm queue, oldest row first.
      *
      * @return list<CatalogFeed>
      */
-    public function findNeedingFavicon(
-        \DateTimeImmutable $staleBefore,
-        \DateTimeImmutable $retryBefore,
-        ?int $limit,
-    ): array {
-        $qb = $this->createQueryBuilder('f')
-            ->andWhere('f.enabled = true')
-            ->andWhere('f.faviconFetchedAt IS NULL OR f.faviconFetchedAt < :stale')
-            ->setParameter('stale', $staleBefore)
-            ->andWhere('f.faviconFailedAt IS NULL OR f.faviconFailedAt < :retry')
-            ->setParameter('retry', $retryBefore)
-            ->orderBy('f.id', 'ASC');
-
+    public function findNeedingFavicon(CatalogFaviconDueCriteria $criteria, ?int $limit): array
+    {
+        $qb = $this->needingFaviconQueryBuilder($criteria)->orderBy('f.id', 'ASC');
         if (null !== $limit) {
             $qb->setMaxResults($limit);
         }
@@ -96,18 +85,10 @@ class CatalogFeedRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /**
-     * How many rows still want an icon — what a polling caller stops on.
-     */
-    public function countNeedingFavicon(\DateTimeImmutable $staleBefore, \DateTimeImmutable $retryBefore): int
+    public function countNeedingFavicon(CatalogFaviconDueCriteria $criteria): int
     {
-        return (int) $this->createQueryBuilder('f')
+        return (int) $this->needingFaviconQueryBuilder($criteria)
             ->select('COUNT(f.id)')
-            ->andWhere('f.enabled = true')
-            ->andWhere('f.faviconFetchedAt IS NULL OR f.faviconFetchedAt < :stale')
-            ->setParameter('stale', $staleBefore)
-            ->andWhere('f.faviconFailedAt IS NULL OR f.faviconFailedAt < :retry')
-            ->setParameter('retry', $retryBefore)
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -143,5 +124,15 @@ class CatalogFeedRepository extends ServiceEntityRepository
             ->getSingleScalarResult();
 
         return null === $max ? 0 : (int) $max + 1;
+    }
+
+    private function needingFaviconQueryBuilder(CatalogFaviconDueCriteria $criteria): QueryBuilder
+    {
+        return $this->createQueryBuilder('f')
+            ->andWhere('f.enabled = true')
+            ->andWhere('f.faviconFetchedAt IS NULL OR f.faviconFetchedAt < :stale')
+            ->setParameter('stale', $criteria->staleBefore)
+            ->andWhere('f.faviconFailedAt IS NULL OR f.faviconFailedAt < :retry')
+            ->setParameter('retry', $criteria->retryBefore);
     }
 }

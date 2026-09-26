@@ -32,10 +32,20 @@ final class FakeOAuthProvider implements OAuthProviderInterface
     /** @var list<array{code: string, codeVerifier: string, nonce: string}> */
     public array $exchanges = [];
 
-    public function __construct(
+    private function __construct(
         private readonly OAuthIdentity $identity,
-        private readonly bool $failExchange = false,
+        private readonly ?string $exchangeFailure,
     ) {
+    }
+
+    public static function returning(OAuthIdentity $identity): self
+    {
+        return new self($identity, null);
+    }
+
+    public static function failingExchange(OAuthIdentity $identity): self
+    {
+        return new self($identity, 'fake provider was told to fail');
     }
 
     public function getName(): string
@@ -64,8 +74,8 @@ final class FakeOAuthProvider implements OAuthProviderInterface
         // flow — the two values a state mix-up would get wrong.
         $this->exchanges[] = ['code' => $code, 'codeVerifier' => $codeVerifier, 'nonce' => $nonce];
 
-        if ($this->failExchange) {
-            throw new OAuthFailedException('fake provider was told to fail');
+        if (null !== $this->exchangeFailure) {
+            throw new OAuthFailedException($this->exchangeFailure);
         }
 
         return $this->identity;
