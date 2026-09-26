@@ -90,7 +90,7 @@ final readonly class EntryController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
+        $row = $this->entryList->getRowForUser($user->requireId(), $id);
         $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);
@@ -138,7 +138,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
+        $row = $this->entryList->getRowForUser($user->requireId(), $id);
 
         $state = $this->entryStateUpdater->apply($user, $row, $request);
 

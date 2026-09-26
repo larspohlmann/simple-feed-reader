@@ -67,7 +67,7 @@ final readonly class EntryStateUpdater
             return;
         }
 
-        $siblings = $this->rows->siblingRowsForUser($hash, $row->entry->requireId(), $user->requireId());
+        $siblings = $this->rows->siblingRowsForUser($user->requireId(), $hash, $row->entry->requireId());
         foreach ($siblings as $siblingRow) {
             $this->mirrorOnto($this->states->resolve($user, $siblingRow), $request);
         }

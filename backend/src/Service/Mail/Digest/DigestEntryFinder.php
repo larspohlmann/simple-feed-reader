@@ -37,6 +37,6 @@ final readonly class DigestEntryFinder
         // head is the newest; totalCount stays the full pre-cap count for "+N more".
         $newestIds = \array_slice($ids, 0, self::PER_SEARCH);
 
-        return new DigestSearchMatches($this->entries->rowsByIdsForUser($newestIds, $userId), \count($ids));
+        return new DigestSearchMatches($this->entries->rowsByIdsForUser($userId, $newestIds), \count($ids));
     }
 }

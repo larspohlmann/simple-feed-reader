@@ -58,7 +58,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
         ));
 
         $candidates = $query->order->arrange(
-            $this->entries->rowsByIdsForUser($matches->entryIds, $query->userId),
+            $this->entries->rowsByIdsForUser($query->userId, $matches->entryIds),
         );
 
         return new EntrySearchResult(

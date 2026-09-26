@@ -104,7 +104,7 @@ final class EntryStateResolverTest extends DbTestCase
     public function testResolveSurvivesAConcurrentInsertOfTheSameRow(): void
     {
         $entry = $this->entry('race');
-        $row = $this->rows()->getOneRowForUser($entry->requireId(), $this->user->requireId());
+        $row = $this->rows()->getRowForUser($this->user->requireId(), $entry->requireId());
 
         $state = $this->resolver()->resolve($this->user, $row);
         $state->markFavorite();

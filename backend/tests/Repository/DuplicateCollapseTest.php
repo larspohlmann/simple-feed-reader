@@ -123,7 +123,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
         // Meilisearch matched only the higher-id copy; the lower-id copy is not in
         // the set, so it must not win and delete the article from the results.
-        $rows = $this->repo()->rowsByIdsForUser([$higher->requireId()], $this->user->requireId());
+        $rows = $this->repo()->rowsByIdsForUser($this->user->requireId(), [$higher->requireId()]);
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -157,8 +157,8 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->flush();
 
         $rows = $this->repo()->rowsByIdsForUser(
-            [$lower->requireId(), $higher->requireId()],
             $this->user->requireId(),
+            [$lower->requireId(), $higher->requireId()],
         );
 
         self::assertCount(1, $rows);

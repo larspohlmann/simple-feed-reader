@@ -1021,43 +1021,43 @@ final class EntryListTest extends DbTestCase
         self::assertFalse($rows[1]->isHidden);
     }
 
-    public function testGetOneRowForUserReturnsTheRowOfASubscribedEntry(): void
+    public function testGetRowForUserReturnsTheRowOfASubscribedEntry(): void
     {
         $entry = $this->entry('owned-row', '2026-07-02T00:00:00Z');
 
-        $row = $this->repo()->getOneRowForUser($entry->requireId(), $this->user->requireId());
+        $row = $this->repo()->getRowForUser($this->user->requireId(), $entry->requireId());
 
         self::assertSame($entry->requireId(), $row->entry->requireId());
     }
 
-    public function testGetOneRowForUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
+    public function testGetRowForUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
     {
         $entry = $this->entryOfAnUnsubscribedFeed('foreign-row');
 
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such entry.');
 
-        $this->repo()->getOneRowForUser($entry->requireId(), $this->user->requireId());
+        $this->repo()->getRowForUser($this->user->requireId(), $entry->requireId());
     }
 
-    public function testGetOneSubscribedByUserReturnsASubscribedEntry(): void
+    public function testGetOneSubscribedForUserReturnsASubscribedEntry(): void
     {
         $entry = $this->entry('owned-entry', '2026-07-02T00:00:00Z');
 
         self::assertSame(
             $entry,
-            $this->repo()->getOneSubscribedByUser($entry->requireId(), $this->user->requireId()),
+            $this->repo()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId()),
         );
     }
 
-    public function testGetOneSubscribedByUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
+    public function testGetOneSubscribedForUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
     {
         $entry = $this->entryOfAnUnsubscribedFeed('foreign-entry');
 
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such entry.');
 
-        $this->repo()->getOneSubscribedByUser($entry->requireId(), $this->user->requireId());
+        $this->repo()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId());
     }
 
     private function entryOfAnUnsubscribedFeed(string $guid): Entry
