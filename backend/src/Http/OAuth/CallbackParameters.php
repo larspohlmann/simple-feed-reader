@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\OAuth;
+namespace App\Http\OAuth;
 
 use Symfony\Component\HttpFoundation\Request;
 
