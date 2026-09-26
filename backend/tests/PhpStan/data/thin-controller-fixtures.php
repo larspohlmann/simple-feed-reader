@@ -89,3 +89,22 @@ namespace App\Service\Fixtures\Persistence {
         }
     }
 }
+
+/** @noinspection PhpIllegalPsrClassPathInspection */
+
+namespace App\Controller\Fixtures\PersistenceUnion {
+    use Doctrine\ORM\EntityManagerInterface;
+
+    final readonly class UnionPersistingController
+    {
+        public function withPersistenceUnion(EntityManagerInterface|\DateTimeInterface $target): int
+        {
+            return 1;
+        }
+
+        public function withoutPersistenceUnion(\DateTimeInterface|\Stringable $target): int
+        {
+            return 1;
+        }
+    }
+}

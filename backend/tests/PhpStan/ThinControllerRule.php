@@ -119,8 +119,20 @@ final readonly class ThinControllerRule implements Rule
     private static function isPersistence(Type $type): bool
     {
         $nonNullable = TypeCombinator::removeNull($type);
+        foreach ($nonNullable->getObjectClassNames() as $className) {
+            if (self::isPersistenceClass($className)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static function isPersistenceClass(string $className): bool
+    {
+        $classType = new ObjectType($className);
         foreach (self::PERSISTENCE_TYPES as $persistenceClass) {
-            if ((new ObjectType($persistenceClass))->isSuperTypeOf($nonNullable)->yes()) {
+            if ((new ObjectType($persistenceClass))->isSuperTypeOf($classType)->yes()) {
                 return true;
             }
         }
