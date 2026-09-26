@@ -35,11 +35,10 @@ final class OAuthCallbackTest extends DbTestCase
     {
         $started = $this->stateStore()->start('google');
         $attempt = new OAuthCallbackAttempt('google', false, $started->state, null, $started->browserToken);
+        $callback = $this->oauthCallback($this->provider());
 
-        self::assertSame(
-            OAuthCallbackFailure::InvalidRequest,
-            $this->refusalOf($this->oauthCallback($this->provider()), $attempt),
-        );
+        self::assertSame(OAuthCallbackFailure::InvalidRequest, $this->refusalOf($callback, $attempt));
+        self::assertNotSame('', $callback->complete($this->attemptFor($started)));
     }
 
     public function testAMissingStateIsRefusedAsAnInvalidRequest(): void
@@ -64,16 +63,15 @@ final class OAuthCallbackTest extends DbTestCase
         self::assertSame([], $provider->exchanges);
     }
 
-    public function testAStateStartedForAnotherProviderIsRefusedAsInvalidState(): void
+    public function testAStateReplayedAtAnotherProvidersCallbackIsRefusedAndBurned(): void
     {
         $provider = $this->provider();
-        $started = $this->stateStore()->start('apple');
-        $attempt = new OAuthCallbackAttempt('google', false, $started->state, 'the-code', $started->browserToken);
+        $callback = $this->oauthCallback($provider);
+        $started = $this->stateStore()->start('google');
+        $atApple = new OAuthCallbackAttempt('apple', false, $started->state, 'the-code', $started->browserToken);
 
-        self::assertSame(
-            OAuthCallbackFailure::InvalidState,
-            $this->refusalOf($this->oauthCallback($provider), $attempt),
-        );
+        self::assertSame(OAuthCallbackFailure::InvalidState, $this->refusalOf($callback, $atApple));
+        self::assertSame(OAuthCallbackFailure::InvalidState, $this->refusalOf($callback, $this->attemptFor($started)));
         self::assertSame([], $provider->exchanges);
     }
 
@@ -93,6 +91,8 @@ final class OAuthCallbackTest extends DbTestCase
         self::assertSame('OAuth exchange failed', $logger->records[0]['message']);
         self::assertSame('google', $logger->records[0]['context']['provider']);
         self::assertSame('fake provider was told to fail', $logger->records[0]['context']['detail']);
+        self::assertArrayHasKey('exception', $logger->records[0]['context']);
+        self::assertNull($logger->records[0]['context']['exception']);
     }
 
     public function testACompletedCallbackExchangesThisFlowsSecretsAndIssuesALoginCode(): void
