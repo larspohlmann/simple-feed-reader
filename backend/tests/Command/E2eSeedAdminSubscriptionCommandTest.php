@@ -10,6 +10,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\FeedStatus;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
@@ -107,6 +108,11 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $feed = $this->fixtureFeed();
         self::assertNotSame('', (string) $feed->getTitle());
         self::assertNotNull($feed->getLastFetchedAt());
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertEquals(
+            $feed->getLastFetchedAt()->modify('+60 minutes'),
+            $feed->getNextFetchAt(),
+        );
     }
 
     /**

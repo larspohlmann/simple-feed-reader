@@ -273,6 +273,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testAGoneFeedReportsANullNextFetchTime(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
+        $feed->scheduleNextFetchAt(new \DateTimeImmutable('2026-02-04T11:00:00Z'));
         $feed->markGone(new \DateTimeImmutable('2026-02-04T10:00:00Z'), 'HTTP 410 Gone');
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['nextFetchAt']);

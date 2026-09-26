@@ -830,8 +830,8 @@ final class AdminUserControllerTest extends WebTestCase
      * hard-wiring AdminUserController::footprintRow()'s lastRefreshAt to null
      * and staleFeedsCount to 0, and subscriptionRows()'s lastFetchedAt to
      * null, left every other test in this class green — no other fixture
-     * here ever calls Feed::setLastFetchedAt(), so the null/zero branch was
-     * the only one ever pinned.
+     * here ever records a fetch (`Feed::recordSuccessfulFetch()`), so the
+     * null/zero branch was the only one ever pinned.
      */
     public function testTheFootprintAndSubscriptionRowCarryARealFetchTimestamp(): void
     {

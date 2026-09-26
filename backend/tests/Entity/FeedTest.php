@@ -80,15 +80,22 @@ final class FeedTest extends TestCase
         self::assertNull($feed->getLastSuccessfulFetchAt());
     }
 
-    public function testAFailureMessageIsCappedAtAThousandCharacters(): void
+    public function testAFailedFetchCapsItsMessageAtAThousandCharacters(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
 
         $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-20 08:00:00'), 'é' . str_repeat('x', 1000), 45);
+
         self::assertStringStartsWith('é', (string) $feed->getLastErrorMessage());
         self::assertSame(1000, mb_strlen((string) $feed->getLastErrorMessage()));
+    }
+
+    public function testGoingGoneCapsItsMessageAtAThousandCharacters(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
 
         $feed->markGone(new \DateTimeImmutable('2026-07-21 10:00:00'), 'ü' . str_repeat('x', 1000));
+
         self::assertStringStartsWith('ü', (string) $feed->getLastErrorMessage());
         self::assertSame(1000, mb_strlen((string) $feed->getLastErrorMessage()));
     }

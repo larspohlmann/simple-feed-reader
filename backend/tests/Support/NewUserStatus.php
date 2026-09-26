@@ -11,23 +11,12 @@ final class NewUserStatus
 {
     public static function apply(User $newUser, UserStatus $status, \DateTimeImmutable $approvedAt): void
     {
-        if (UserStatus::Active === $status) {
-            $newUser->approve($approvedAt);
-
-            return;
-        }
-        if (UserStatus::PendingApproval === $status) {
-            $newUser->queueForApproval();
-
-            return;
-        }
-        if (UserStatus::Rejected === $status) {
-            $newUser->reject();
-
-            return;
-        }
-        if (UserStatus::Suspended === $status) {
-            $newUser->suspend();
-        }
+        match ($status) {
+            UserStatus::Active => $newUser->approve($approvedAt),
+            UserStatus::PendingApproval => $newUser->queueForApproval(),
+            UserStatus::Rejected => $newUser->reject(),
+            UserStatus::Suspended => $newUser->suspend(),
+            UserStatus::PendingVerification => null,
+        };
     }
 }

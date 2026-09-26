@@ -64,10 +64,10 @@ class Feed
     #[ORM\Embedded(class: FetchSchedule::class, columnPrefix: false)]
     private FetchSchedule $fetchSchedule;
 
-    #[ORM\Column(length: 512, nullable: true)]
+    #[ORM\Column(length: self::ETAG_MAX, nullable: true)]
     private ?string $etag = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: self::LAST_MODIFIED_MAX, nullable: true)]
     private ?string $lastModified = null;
 
     public function __construct(string $url)

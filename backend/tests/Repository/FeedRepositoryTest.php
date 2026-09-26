@@ -25,9 +25,8 @@ final class FeedRepositoryTest extends DbTestCase
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
 
-    private function feed(string $url, ?\DateTimeImmutable $nextFetchAt): Feed
+    private function persistedFeed(Feed $feed, ?\DateTimeImmutable $nextFetchAt): Feed
     {
-        $feed = new Feed($url);
         if (null !== $nextFetchAt) {
             $feed->scheduleNextFetchAt($nextFetchAt);
         }
@@ -36,16 +35,17 @@ final class FeedRepositoryTest extends DbTestCase
         return $feed;
     }
 
+    private function feed(string $url, ?\DateTimeImmutable $nextFetchAt): Feed
+    {
+        return $this->persistedFeed(new Feed($url), $nextFetchAt);
+    }
+
     private function goneFeed(string $url, ?\DateTimeImmutable $nextFetchAt): Feed
     {
         $feed = new Feed($url);
         $feed->markGone($this->now->modify('-1 day'), 'HTTP 410 Gone');
-        if (null !== $nextFetchAt) {
-            $feed->scheduleNextFetchAt($nextFetchAt);
-        }
-        $this->em->persist($feed);
 
-        return $feed;
+        return $this->persistedFeed($feed, $nextFetchAt);
     }
 
     /**
