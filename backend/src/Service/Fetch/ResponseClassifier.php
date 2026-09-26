@@ -78,8 +78,8 @@ final readonly class ResponseClassifier
             $attempt->url,
             $attempt->permanentRedirect,
             $body,
-            $this->header($response, 'etag'),
-            $this->header($response, 'last-modified'),
+            ResponseHeader::first($response, 'etag'),
+            ResponseHeader::first($response, 'last-modified'),
         );
     }
 
@@ -101,7 +101,7 @@ final readonly class ResponseClassifier
 
     private function redirect(ResponseInterface $response, FetchAttempt $attempt, int $status): HeaderVerdict
     {
-        $location = $this->header($response, 'location');
+        $location = ResponseHeader::first($response, 'location');
         if (null === $location) {
             throw new FeedUnreachableException(
                 sprintf('%s: redirect without Location header', $attempt->url),
@@ -124,7 +124,7 @@ final readonly class ResponseClassifier
      */
     private function retryAfterSeconds(ResponseInterface $response): ?int
     {
-        $header = $this->header($response, 'retry-after');
+        $header = ResponseHeader::first($response, 'retry-after');
         if (null === $header) {
             return null;
         }
@@ -160,16 +160,5 @@ final readonly class ResponseClassifier
         } catch (ExceptionInterface $e) {
             throw FetchException::from($url, $e);
         }
-    }
-
-    private function header(ResponseInterface $response, string $name): ?string
-    {
-        try {
-            $headers = $response->getHeaders(false);
-        } catch (ExceptionInterface) {
-            return null;
-        }
-
-        return $headers[$name][0] ?? null;
     }
 }

@@ -9,6 +9,7 @@ use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
+use App\Service\Fetch\ResponseHeader;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Fetch\UrlResolver;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
@@ -160,15 +161,9 @@ final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInter
         ]);
     }
 
-    /**
-     * @throws TransportExceptionInterface
-     * @throws ServerExceptionInterface
-     * @throws RedirectionExceptionInterface
-     * @throws ClientExceptionInterface
-     */
     private function redirectLocation(ResponseInterface $response): string
     {
-        return $response->getHeaders(false)['location'][0]
+        return ResponseHeader::first($response, 'location')
             ?? throw new FaviconUnavailableException('Redirect response carried no Location header.');
     }
 
