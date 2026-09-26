@@ -3286,6 +3286,30 @@ git commit -m "refactor(#1164): ensureRow seeds read state from one nullable ins
 
 **Spec:** #1164's bullets on `Entity/UserPasskey.php:77`, `RecommendationRunLog::finish()`, `RecommendationRun::recordTransportFailure(): bool` and `EntryMedium`/`EntryAttachment`; rulings D2 and D6 above.
 
+## Execution rulings (PR A)
+
+Recorded while executing Tasks 0–6. Each ruling amends the text above.
+
+- **F1 (Task 5 step order):** Step 3 only adds the new `EntryState` methods. The four raw setters go after Step 8, because their callers and the Step 5/6a/7 runs need them until then.
+- **F2:** `FirstFetchRecorderTest` asserts the validators that the first fetch stores.
+- **F3:** Cap tests use position-sensitive input (a distinct first character, then filler), so an `mb_substr` start-offset mutant dies.
+- **F4:** `RegistrationService::enterSignupStatus` is a `match`, like `completeRegistration()`.
+- **F5:** Explicit deletion checks run only where a task lists them. `infection:diff` covers the rest.
+- **F6:** Commits stage explicit files, never directories.
+- **F8:** The PR body says "15 setters" and states that the e2e seed's `markUnread()` now also clears viewed.
+- **N3:** `E2eSeedAdminSubscriptionCommand::ensureFixtureFeed()` and `execute()` declare `@throws \DateMalformedStringException`.
+- **N6:** No class docblocks on `FetchSchedule` or `FeedScheduler`, and no trailing comment on the touched `BulkSubscriber` line.
+- **N7:** `FeedScheduler` is `final readonly class`.
+- **N9:** The new-feed test in `BulkSubscriberTest` asserts `nextFetchAt` equals the clock's instant.
+- **N10:** Tests build `BackedUpReadMark` with named arguments.
+- **Infection:** Two mutants escaped at `UserRepository:161` (`array_values`) and `:233` (the lookalike filter). Tests now pin both: the list shape and the exact role.
+- **Final review:**
+  - Applied M1 and M3–M8, plus two /simplify items: `NewUserStatus` is now a `match`, and `FeedRepositoryTest` shares one persist helper.
+  - M2 skipped: `infection:diff` did not report the `FeedScheduler` CastInt mutant.
+- **Skipped /simplify findings:**
+  - `User::enterStatus(UserStatus)` and `EntryState::applyFavorite(bool)` were proposed. Both would bring back the status setter or boolean flag that this issue removes.
+  - The e2e seed's `recordSuccessfulFetch()` stays, as Task 1 mandates.
+
 ## Status (PR B)
 
 | Task | State |
