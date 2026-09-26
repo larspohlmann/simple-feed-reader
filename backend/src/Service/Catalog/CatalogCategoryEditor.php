@@ -44,6 +44,7 @@ final readonly class CatalogCategoryEditor
 
     public function delete(CatalogCategory $category): void
     {
+        // The FK cascades to its catalog feeds; users' subscriptions are Feed rows and stay untouched.
         $this->entityManager->remove($category);
         $this->entityManager->flush();
     }
