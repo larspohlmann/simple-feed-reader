@@ -14,10 +14,9 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Repository\EntryCategoryLoader;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
-use App\Repository\SavedSearchMembershipLoader;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\ForYouFeedResponder;
 use App\Service\Recommendation\RecommendationFeedPager;
@@ -155,17 +154,13 @@ final class ForYouFeedResponderTest extends DbTestCase
         $settings = self::getContainer()->get(RecommendationSettingsResolver::class);
         self::assertInstanceOf(RecommendationSettingsResolver::class, $settings);
 
-        $categoryLoader = self::getContainer()->get(EntryCategoryLoader::class);
-        self::assertInstanceOf(EntryCategoryLoader::class, $categoryLoader);
-
-        $savedSearchLoader = self::getContainer()->get(SavedSearchMembershipLoader::class);
-        self::assertInstanceOf(SavedSearchMembershipLoader::class, $savedSearchLoader);
+        $enricher = self::getContainer()->get(EntryListRowEnricher::class);
+        self::assertInstanceOf(EntryListRowEnricher::class, $enricher);
 
         return new ForYouFeedResponder(
             new RecommendationFeedPager($repository),
             $settings,
-            $categoryLoader,
-            $savedSearchLoader,
+            $enricher,
         );
     }
 }

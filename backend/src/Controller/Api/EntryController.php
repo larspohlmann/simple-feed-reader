@@ -15,12 +15,11 @@ use App\Http\EntryCursor;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
-use App\Repository\EntryCategoryLoader;
 use App\Repository\EntryListRepository;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 use App\Repository\ForYouFeedQuery;
-use App\Repository\SavedSearchMembershipLoader;
 use App\Service\Reader\EntryStateUpdater;
 use App\Service\Reader\MarkEntriesReadService;
 use App\Service\Reader\MarkReadService;
@@ -38,8 +37,7 @@ final readonly class EntryController
 {
     public function __construct(
         private EntryListRepository $entryList,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
         private EntryStateUpdater $entryStateUpdater,
         private MarkReadService $markRead,
         private ForYouFeedResponder $forYouFeed,
@@ -96,10 +94,7 @@ final readonly class EntryController
             order: $listOrder,
         );
 
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($this->entryList->listForUser($query)),
-            $user->requireId(),
-        );
+        $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
         return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($view)));
     }
@@ -110,10 +105,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
     ): JsonResponse {
         $row = $this->entryList->getOneRowForUser($id, $user->requireId());
-        $row = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto([$row]),
-            $user->requireId(),
-        )[0];
+        $row = $this->enricher->enrich([$row], $user->requireId())[0];
 
         return new JsonResponse(['entry' => EntryJson::detail($row)]);
     }

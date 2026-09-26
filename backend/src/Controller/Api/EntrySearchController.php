@@ -7,8 +7,7 @@ namespace App\Controller\Api;
 use App\Dto\Search\MarkSearchReadRequest;
 use App\Entity\User;
 use App\Http\SearchPage;
-use App\Repository\EntryCategoryLoader;
-use App\Repository\SavedSearchMembershipLoader;
+use App\Repository\EntryListRowEnricher;
 use App\Service\Reader\SearchMarkReadService;
 use App\Service\Search\EntrySearchInterface;
 use App\Service\Search\EntrySearchRequestFactory;
@@ -25,8 +24,7 @@ final readonly class EntrySearchController
     public function __construct(
         private EntrySearchInterface $search,
         private EntrySearchRequestFactory $requests,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
         private SearchMarkReadService $searchMarkRead,
     ) {
     }
@@ -36,10 +34,7 @@ final readonly class EntrySearchController
     {
         $query = $this->requests->fromRequest($request, $user);
         $result = $this->search->search($query);
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($result->rows),
-            $user->requireId(),
-        );
+        $rows = $this->enricher->enrich($result->rows, $user->requireId());
 
         return new JsonResponse(SearchPage::of($result->withRows($rows), $query->limit));
     }

@@ -9,10 +9,9 @@ use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
-use App\Repository\EntryCategoryLoader;
+use App\Repository\EntryListRowEnricher;
 use App\Repository\EntryQuery;
 use App\Repository\SavedSearchListQuery;
-use App\Repository\SavedSearchMembershipLoader;
 use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
@@ -34,8 +33,7 @@ final readonly class SavedSearchEntriesController
     public function __construct(
         private SavedSearchRepository $savedSearches,
         private SavedSearchEntries $entries,
-        private EntryCategoryLoader $categoryLoader,
-        private SavedSearchMembershipLoader $savedSearchLoader,
+        private EntryListRowEnricher $enricher,
         private SavedSearchMarkReadService $markRead,
     ) {
     }
@@ -58,10 +56,7 @@ final readonly class SavedSearchEntriesController
             order: ListOrder::fromRequestValue($order),
         );
         $result = $this->entries->list($query);
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($result->rows),
-            $userId,
-        );
+        $rows = $this->enricher->enrich($result->rows, $userId);
 
         return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
@@ -87,10 +82,7 @@ final readonly class SavedSearchEntriesController
             order: ListOrder::fromRequestValue($order),
         );
         $result = $this->entries->list($query);
-        $rows = $this->savedSearchLoader->loadInto(
-            $this->categoryLoader->loadInto($result->rows),
-            $userId,
-        );
+        $rows = $this->enricher->enrich($result->rows, $userId);
 
         return new JsonResponse(SavedSearchPage::of($result->withRows($rows), $query->limit));
     }
