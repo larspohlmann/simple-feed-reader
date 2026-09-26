@@ -6,14 +6,11 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\RefreshJson;
-use App\Repository\SubscriptionRepository;
-use App\Repository\TagRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\TrackedRefreshRunner;
+use App\Service\Refresh\UserRefreshScope;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -28,16 +25,9 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  */
 final class RefreshController
 {
-    /**
-     * Above BudgetedFeedQueue::SAFETY_MARGIN_SECONDS (10) so a call processes
-     * more than a single feed, and below typical FastCGI limits.
-     */
-    private const int BUDGET_SECONDS = 25;
-
     public function __construct(
         private readonly TrackedRefreshRunner $trackedRefreshRunner,
-        private readonly SubscriptionRepository $subscriptions,
-        private readonly TagRepository $tags,
+        private readonly UserRefreshScope $scope,
         private readonly RateLimitGuard $rateLimitGuard,
         private readonly RateLimiterFactoryInterface $refreshLimiter,
     ) {
@@ -51,27 +41,7 @@ final class RefreshController
     ): JsonResponse {
         $this->rateLimitGuard->enforceForUser($this->refreshLimiter, $user);
 
-        $userId = $user->requireId();
-
-        if (null !== $feedId) {
-            // The user-facing per-feed path is the one that makes the
-            // FeedRepository IDOR reachable, so ownership is checked here too
-            // (defence in depth) — 404, not 403, to avoid confirming the feed
-            // exists to someone who is not subscribed to it.
-            if (!$this->subscriptions->existsForUserAndFeed($userId, $feedId)) {
-                throw new NotFoundHttpException('No such subscription.');
-            }
-            $request = RefreshRequest::forUserFeed($userId, $feedId, self::BUDGET_SECONDS);
-        } elseif (null !== $tag) {
-            // Same IDOR guard as the per-feed path: 404 (not 403) when the tag is
-            // unknown or belongs to someone else, so it stays scoped to the user.
-            if (null === $this->tags->findOneOwnedBy($tag, $userId)) {
-                throw new NotFoundHttpException('No such tag.');
-            }
-            $request = RefreshRequest::forUserTag($userId, $tag, self::BUDGET_SECONDS);
-        } else {
-            $request = RefreshRequest::forUser($userId, self::BUDGET_SECONDS);
-        }
+        $request = $this->scope->requestFor($user->requireId(), $feedId, $tag);
 
         return new JsonResponse(RefreshJson::slice($this->trackedRefreshRunner->run($request)));
     }
