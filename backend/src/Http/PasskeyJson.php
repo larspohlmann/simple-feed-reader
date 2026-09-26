@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\UserPasskey;
+use App\Service\Passkey\AccountPasskeys;
 
 /**
  * The passkey listing body (#624): the rows plus the three values the WebAuthn
@@ -28,20 +29,18 @@ final readonly class PasskeyJson
      * to the browser unchanged: a rebuilt or shortened list deletes valid
      * credentials. The handle comes from PasskeyCredentials::sharedHandle().
      *
-     * @param list<UserPasskey> $passkeys
-     *
      * @return PasskeyListingBody
      */
-    public static function listing(string $relyingPartyId, ?string $userHandle, array $passkeys): array
+    public static function listing(AccountPasskeys $account): array
     {
         return [
-            'rpId' => $relyingPartyId,
-            'userHandle' => $userHandle,
+            'rpId' => $account->relyingPartyId,
+            'userHandle' => $account->userHandle,
             'acceptedCredentialIds' => array_map(
                 static fn (UserPasskey $passkey): string => $passkey->getCredentialId(),
-                $passkeys,
+                $account->passkeys,
             ),
-            'passkeys' => array_map(self::passkey(...), $passkeys),
+            'passkeys' => array_map(self::passkey(...), $account->passkeys),
         ];
     }
 
