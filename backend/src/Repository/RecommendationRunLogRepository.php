@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -151,6 +152,11 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
 
         return $log;
+    }
+
+    public function getOwned(int $id, User $user): RecommendationRunLog
+    {
+        return $this->findOwned($id, $user) ?? throw new RecordNotFoundException('No such debug log entry.');
     }
 
     /**

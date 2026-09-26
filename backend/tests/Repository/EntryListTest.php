@@ -19,6 +19,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowHydrator;
 use App\Repository\EntryQuery;
 use App\Repository\EntryScopePredicates;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -1011,6 +1012,53 @@ final class EntryListTest extends DbTestCase
         ));
         self::assertFalse($rows[0]->isHidden);
         self::assertFalse($rows[1]->isHidden);
+    }
+
+    public function testGetOneRowForUserReturnsTheRowOfASubscribedEntry(): void
+    {
+        $entry = $this->entry('owned-row', '2026-07-02T00:00:00Z');
+
+        $row = $this->repo()->getOneRowForUser($entry->requireId(), $this->user->requireId());
+
+        self::assertSame($entry->requireId(), $row->entry->requireId());
+    }
+
+    public function testGetOneRowForUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
+    {
+        $entry = $this->entryOfAnUnsubscribedFeed('foreign-row');
+
+        $this->expectException(RecordNotFoundException::class);
+        $this->expectExceptionMessage('No such entry.');
+
+        $this->repo()->getOneRowForUser($entry->requireId(), $this->user->requireId());
+    }
+
+    public function testGetOneSubscribedByUserReturnsASubscribedEntry(): void
+    {
+        $entry = $this->entry('owned-entry', '2026-07-02T00:00:00Z');
+
+        self::assertSame(
+            $entry,
+            $this->repo()->getOneSubscribedByUser($entry->requireId(), $this->user->requireId()),
+        );
+    }
+
+    public function testGetOneSubscribedByUserRefusesAnEntryOfAFeedTheUserDoesNotSubscribeTo(): void
+    {
+        $entry = $this->entryOfAnUnsubscribedFeed('foreign-entry');
+
+        $this->expectException(RecordNotFoundException::class);
+        $this->expectExceptionMessage('No such entry.');
+
+        $this->repo()->getOneSubscribedByUser($entry->requireId(), $this->user->requireId());
+    }
+
+    private function entryOfAnUnsubscribedFeed(string $guid): Entry
+    {
+        $feed = new Feed('https://example.com/' . $guid . '.xml');
+        $this->em->persist($feed);
+
+        return $this->entryAt($guid, '2026-07-01T00:00:00Z', '2026-07-01T00:00:00Z', $feed);
     }
 
     private function hidden(Entry $entry): EntryState

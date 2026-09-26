@@ -30,7 +30,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
@@ -110,8 +109,7 @@ final readonly class EntryController
         int $id,
         #[CurrentUser] User $user,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
+        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
         $row = $this->savedSearchLoader->loadInto(
             $this->categoryLoader->loadInto([$row]),
             $user->requireId(),
@@ -162,8 +160,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateEntryStateRequest $request,
     ): JsonResponse {
-        $row = $this->entryList->oneRowForUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
+        $row = $this->entryList->getOneRowForUser($id, $user->requireId());
 
         $state = $this->entryStateUpdater->apply($user, $row, $request);
 

@@ -8,6 +8,7 @@ use App\Doctrine\EntryPlanHint;
 use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
+use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -184,6 +185,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         return $row === null ? null : $this->rowHydrator->hydrate($row);
     }
 
+    public function getOneRowForUser(int $entryId, int $userId): EntryListRow
+    {
+        return $this->oneRowForUser($entryId, $userId) ?? throw new RecordNotFoundException('No such entry.');
+    }
+
     /**
      * Every OTHER copy of the same article this caller subscribes to, as list
      * rows — the group a read/viewed mirror must reach. Not collapsed: the
@@ -222,6 +228,12 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             ->getOneOrNullResult();
 
         return $entry;
+    }
+
+    public function getOneSubscribedByUser(int $entryId, int $userId): Entry
+    {
+        return $this->findOneSubscribedByUser($entryId, $userId)
+            ?? throw new RecordNotFoundException('No such entry.');
     }
 
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder

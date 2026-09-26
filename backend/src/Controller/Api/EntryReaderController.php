@@ -15,7 +15,6 @@ use App\Service\Reader\FeedMedia;
 use App\Service\Reader\OriginalHeroResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -47,8 +46,7 @@ final readonly class EntryReaderController
     ): JsonResponse {
         // Ownership is checked BEFORE the limiter so an unowned id 404s without
         // spending the caller's reader budget.
-        $entry = $this->entryList->findOneSubscribedByUser($id, $user->requireId())
-            ?? throw new NotFoundHttpException('No such entry.');
+        $entry = $this->entryList->getOneSubscribedByUser($id, $user->requireId());
 
         $this->rateLimitGuard->enforceForUser($this->readerLimiter, $user);
 

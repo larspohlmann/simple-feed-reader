@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
@@ -157,6 +158,41 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         self::assertSame($mine, $this->logs->findOwned($mineId, $this->user));
         self::assertNull($this->logs->findOwned($theirsId, $this->user));
+    }
+
+    public function testGetOwnedReturnsTheCallersRow(): void
+    {
+        $mine = $this->fixtures->log(
+            $this->fixtures->createRun($this->user),
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'r',
+        );
+        $this->em->flush();
+        $mineId = $mine->getId();
+        self::assertNotNull($mineId);
+
+        self::assertSame($mine, $this->logs->getOwned($mineId, $this->user));
+    }
+
+    public function testGetOwnedRefusesAnotherUsersRow(): void
+    {
+        $theirs = $this->fixtures->log(
+            $this->fixtures->createRun($this->otherUser),
+            RecommendationRunLog::PHASE_BATCH,
+            1,
+            1,
+            'r',
+        );
+        $this->em->flush();
+        $theirsId = $theirs->getId();
+        self::assertNotNull($theirsId);
+
+        $this->expectException(RecordNotFoundException::class);
+        $this->expectExceptionMessage('No such debug log entry.');
+
+        $this->logs->getOwned($theirsId, $this->user);
     }
 
     public function testDeleteForUserLeavesOtherUsersRows(): void
