@@ -84,6 +84,16 @@ final class ScriptEmbedSourceTest extends TestCase
         self::assertSame([], $found);
     }
 
+    public function testSkipsJsonLdScriptsRegardlessOfTypeAttributeCase(): void
+    {
+        $found = $this->findInBody(
+            '<script type="Application/LD+JSON">{"@type":"VideoObject",'
+            . '"embedUrl":"https://www.youtube.com/embed/aaaaaaaaaa1"}</script>'
+        );
+
+        self::assertSame([], $found);
+    }
+
     public function testEmbedsEverySeparateProviderVideoInOneScript(): void
     {
         $found = $this->findInBody(
