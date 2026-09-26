@@ -19,23 +19,27 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
     private const string HTTP_KERNEL = 'Symfony\Component\HttpKernel\Exception\\';
     private const string ACCESS_DENIED = 'Symfony\Component\Security\Core\Exception\AccessDeniedException';
     private const string API_PROBLEM = 'App\Http\Problem\ApiProblem';
+    private const string FEED_JSON = 'App\Http\RecommendationFeedJson';
 
     protected function getRule(): Rule
     {
         return new DomainKnowsNoHttpRule(new NodeFinder());
     }
 
-    public function testItReportsSymfonyHttpEverywhereAndTheHttpLayerOutsideServiceMappers(): void
+    public function testItReportsHttpInDomainCodeButNotInTheHttpLayer(): void
     {
         $this->analyse(
             [__DIR__ . '/data/domain-knows-no-http-fixtures.php'],
             [
+                [self::message(self::SERVICE, self::FEED_JSON), 9],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Request'), 10],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Response'), 11],
                 [self::message(self::SERVICE, self::HTTP_KERNEL . 'NotFoundHttpException'), 12],
                 [self::message(self::SERVICE, self::HTTP_KERNEL . 'NotFoundHttpException'), 18],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Response'), 23],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Request'), 26],
+                [self::message(self::SERVICE, self::FEED_JSON), 33],
+                [self::message(self::SERVICE, self::FEED_JSON), 38],
                 [self::message(self::SERVICE, self::FOUNDATION . 'Response'), 43],
                 [self::message(self::SERVICE_EXCEPTION, self::API_PROBLEM), 49],
                 [self::message(self::SERVICE_EXCEPTION, self::FOUNDATION . 'Exception\BadRequestException'), 50],

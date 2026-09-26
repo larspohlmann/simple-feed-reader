@@ -31,17 +31,15 @@ final readonly class DomainKnowsNoHttpRule implements Rule
         'App\\Exception\\',
     ];
 
-    private const array SYMFONY_HTTP_PREFIXES = [
+    private const array HTTP_PREFIXES = [
+        'App\\Http\\',
         'Symfony\\Component\\HttpFoundation\\',
         'Symfony\\Component\\HttpKernel\\Exception\\',
     ];
 
-    private const array SYMFONY_HTTP_CLASSES = [
+    private const array HTTP_CLASSES = [
         'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException',
     ];
-
-    private const string HTTP_LAYER = 'App\\Http\\';
-    private const string SERVICES = 'App\\Service\\';
 
     public function __construct(private NodeFinder $finder)
     {
@@ -72,7 +70,7 @@ final readonly class DomainKnowsNoHttpRule implements Rule
 
         $errors = [];
         foreach ($this->references($namespace) as [$reference, $line]) {
-            if (self::isForbidden($reference, $namespaceName)) {
+            if (self::isHttp($reference)) {
                 $errors[] = self::error($namespaceName, $reference, $line);
             }
         }
@@ -107,26 +105,10 @@ final readonly class DomainKnowsNoHttpRule implements Rule
         return self::startsWithAny($namespaceName . '\\', self::DOMAIN_NAMESPACES);
     }
 
-    private static function isForbidden(string $reference, string $namespaceName): bool
+    private static function isHttp(string $reference): bool
     {
-        if (self::isSymfonyHttp($reference)) {
-            return true;
-        }
-
-        return str_starts_with($reference, self::HTTP_LAYER) && !self::stillShapesJson($namespaceName);
-    }
-
-    private static function isSymfonyHttp(string $reference): bool
-    {
-        return \in_array($reference, self::SYMFONY_HTTP_CLASSES, true)
-            || self::startsWithAny($reference, self::SYMFONY_HTTP_PREFIXES);
-    }
-
-    /** Until #1158's second PR, services outside exception namespaces may still call App\Http mappers. */
-    private static function stillShapesJson(string $namespaceName): bool
-    {
-        return str_starts_with($namespaceName . '\\', self::SERVICES)
-            && !\in_array('Exception', explode('\\', $namespaceName), true);
+        return \in_array($reference, self::HTTP_CLASSES, true)
+            || self::startsWithAny($reference, self::HTTP_PREFIXES);
     }
 
     /** @param list<string> $prefixes */
