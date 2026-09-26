@@ -44,6 +44,7 @@ class EntryState
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $viewedAt = null;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry)
     {
         $this->user = $user;
