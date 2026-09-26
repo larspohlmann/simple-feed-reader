@@ -788,10 +788,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testAFailedExchangeRedirectsWithAnErrorRatherThanJson(): void
     {
-        $provider = $this->fakeProvider(
-            new OAuthIdentity('google', 'sub-1', null, false),
-            failExchange: true,
-        );
+        $provider = $this->failingFakeProvider(new OAuthIdentity('google', 'sub-1', null, false));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -859,15 +856,23 @@ final class OAuthFlowTest extends WebTestCase
         self::assertNotSame('0', $this->client->getResponse()->headers->get('Retry-After'));
     }
 
+    private function fakeProvider(OAuthIdentity $identity): FakeOAuthProvider
+    {
+        return $this->installed(FakeOAuthProvider::returning($identity));
+    }
+
+    private function failingFakeProvider(OAuthIdentity $identity): FakeOAuthProvider
+    {
+        return $this->installed(FakeOAuthProvider::failingExchange($identity));
+    }
+
     /**
      * Installs a fake provider by replacing the whole registry. MUST be called
      * before the first request of a test — see the class docblock for why, and
      * for why the provider service itself is not the seam.
      */
-    private function fakeProvider(OAuthIdentity $identity, bool $failExchange = false): FakeOAuthProvider
+    private function installed(FakeOAuthProvider $provider): FakeOAuthProvider
     {
-        $provider = new FakeOAuthProvider($identity, $failExchange);
-
         self::getContainer()->set(
             OAuthProviderRegistry::class,
             new OAuthProviderRegistry([$provider]),

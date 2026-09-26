@@ -84,7 +84,7 @@ final class OAuthCallbackTest extends DbTestCase
         $started = $this->stateStore()->start('google');
 
         $failure = $this->refusalOf(
-            $this->oauthCallback($this->provider(failExchange: true), $logger),
+            $this->oauthCallback($this->failingProvider(), $logger),
             $this->attemptFor($started),
         );
 
@@ -141,12 +141,19 @@ final class OAuthCallbackTest extends DbTestCase
         );
     }
 
-    private function provider(bool $failExchange = false): FakeOAuthProvider
+    private function provider(): FakeOAuthProvider
     {
-        return new FakeOAuthProvider(
-            new OAuthIdentity('google', 'sub-callback', 'callback@example.com', true),
-            $failExchange,
-        );
+        return FakeOAuthProvider::returning($this->identity());
+    }
+
+    private function failingProvider(): FakeOAuthProvider
+    {
+        return FakeOAuthProvider::failingExchange($this->identity());
+    }
+
+    private function identity(): OAuthIdentity
+    {
+        return new OAuthIdentity('google', 'sub-callback', 'callback@example.com', true);
     }
 
     private function stateStore(): OAuthStateStore

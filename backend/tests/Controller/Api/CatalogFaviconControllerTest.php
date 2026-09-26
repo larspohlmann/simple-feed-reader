@@ -30,23 +30,37 @@ final class CatalogFaviconControllerTest extends WebTestCase
         return ['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)];
     }
 
-    private function persistFeed(bool $withIcon): CatalogFeed
+    private function persistFeedWithIcon(): CatalogFeed
+    {
+        $feed = $this->newFeed();
+        $feed->storeFavicon(
+            'https://www.theverge.com/favicon.ico',
+            'PNGBYTES',
+            'image/png',
+            new \DateTimeImmutable('2026-07-26 10:00:00'),
+        );
+
+        return $this->persisted($feed);
+    }
+
+    private function persistFeedWithoutIcon(): CatalogFeed
+    {
+        return $this->persisted($this->newFeed());
+    }
+
+    private function newFeed(): CatalogFeed
+    {
+        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
+
+        return new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
+    }
+
+    private function persisted(CatalogFeed $feed): CatalogFeed
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
-        $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
-        $feed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
-        if ($withIcon) {
-            $feed->storeFavicon(
-                'https://www.theverge.com/favicon.ico',
-                'PNGBYTES',
-                'image/png',
-                new \DateTimeImmutable('2026-07-26 10:00:00'),
-            );
-        }
-
-        $em->persist($category);
+        $em->persist($feed->getCategory());
         $em->persist($feed);
         $em->flush();
 
@@ -57,7 +71,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('icons@example.com');
-        $feed = $this->persistFeed(withIcon: true);
+        $feed = $this->persistFeedWithIcon();
 
         $client->request('GET', '/api/catalog/feeds/' . $feed->getId() . '/favicon', server: $headers);
 
@@ -71,7 +85,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     {
         $client = self::createClient();
         $headers = $this->authHeader('placeholder@example.com');
-        $feed = $this->persistFeed(withIcon: false);
+        $feed = $this->persistFeedWithoutIcon();
 
         $client->request('GET', '/api/catalog/feeds/' . $feed->getId() . '/favicon', server: $headers);
 
@@ -101,7 +115,7 @@ final class CatalogFaviconControllerTest extends WebTestCase
     public function testTheFaviconIsPubliclyReachableWithoutAuthentication(): void
     {
         $client = self::createClient();
-        $feed = $this->persistFeed(withIcon: false);
+        $feed = $this->persistFeedWithoutIcon();
 
         $client->request('GET', '/api/catalog/feeds/' . $feed->getId() . '/favicon');
 
