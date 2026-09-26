@@ -10,6 +10,7 @@ use App\Service\Fetch\ProxyConfig;
 final readonly class MailSettingsOverview
 {
     public function __construct(
+        /** @noinspection AutowireWrongClass Built with new, never autowired */
         public ?MailServerSettings $saved,
         public MailConnection $fallback,
         public ?ProxyConfig $proxy,
