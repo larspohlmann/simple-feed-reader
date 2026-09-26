@@ -110,6 +110,8 @@
         // A slideshow always has 2+ images, so querySelector('img') never returns
         // null here; the `?->` exists only for PHPStan.
         NullSafeMethodCall: { ignore: ['App\\Service\\Reader\\Slideshow\\SlideshowMarkup::loadFirstSlideEagerly'] },
+        // toDto()'s default arm is unreachable: BackupLineOrder refuses every other kind first.
+        MatchArmRemoval: { ignore: ['App\\Service\\Backup\\BackupReader::toDto'] },
     },
     phpUnit: {
         configDir: '.',
