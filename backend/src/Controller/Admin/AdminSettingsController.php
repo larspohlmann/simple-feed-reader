@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\InstanceSettingsRequest;
 use App\Http\Admin\InstanceSettingsJson;
+use App\Http\FullReplacePayload;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\RelyingPartyChange;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,8 +30,9 @@ final readonly class AdminSettingsController
     }
 
     #[Route('', name: 'api_admin_settings_update', methods: ['PUT'])]
-    public function update(#[MapRequestPayload] InstanceSettingsRequest $request): JsonResponse
-    {
+    public function update(
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] InstanceSettingsRequest $request,
+    ): JsonResponse {
         $this->relyingPartyChange->guardAndInvalidatePasskeysIfChanged($request);
         $this->settings->update($request->toUpdate());
 

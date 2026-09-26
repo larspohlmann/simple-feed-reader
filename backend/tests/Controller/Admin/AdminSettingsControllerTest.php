@@ -11,6 +11,7 @@ use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\PasskeyRegistrations;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -80,6 +81,24 @@ final class AdminSettingsControllerTest extends ApiTestCase
     }
 
     /**
+     * @param array<string, mixed> $changes
+     *
+     * @return array<string, mixed>
+     */
+    private function settingsBody(array $changes = []): array
+    {
+        return [
+            'requireEmailConfirmation' => true,
+            'requireApproval' => true,
+            'publicBaseUrl' => null,
+            'passkeyRpId' => null,
+            'passkeyRpName' => null,
+            'passkeySignInEnabled' => false,
+            ...$changes,
+        ];
+    }
+
+    /**
      * There is no enrolment endpoint yet (it arrives in a later task), so the
      * fixture builds the row directly through the entity manager, exactly as
      * an enrolment would leave it.
@@ -130,21 +149,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
         );
     }
 
-    /**
-     * The PUT body below omits passkeySignInEnabled on purpose: this is a
-     * full-replace payload (InstanceSettingsRequest's own docblock), so the
-     * missing field resets to the constructor default — false (#624
-     * follow-up, addendum) — same as every other omitted field here.
-     */
     public function testPutUpdatesTheToggles(): void
     {
         $client = $this->adminClient();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => false,
-            'requireApproval' => true,
-            'publicBaseUrl' => null,
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['requireEmailConfirmation' => false]));
 
         self::assertResponseIsSuccessful();
         self::assertSame(
@@ -185,11 +194,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->adminClient();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'https://reader.example.ts.net/reader',
-        ]);
+        $client->jsonRequest(
+            'PUT',
+            self::SETTINGS,
+            $this->settingsBody(['publicBaseUrl' => 'https://reader.example.ts.net/reader']),
+        );
 
         self::assertResponseIsSuccessful();
         self::assertSame('https://reader.example.ts.net/reader', $this->payload($client)['publicBaseUrl']);
@@ -199,11 +208,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->adminClient();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'not a url',
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['publicBaseUrl' => 'not a url']));
 
         self::assertResponseStatusCodeSame(422);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
@@ -213,13 +218,77 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->adminClient();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => 'nope',
-            'requireApproval' => true,
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['requireEmailConfirmation' => 'nope']));
 
         self::assertResponseStatusCodeSame(422);
         self::assertResponseHeaderSame('content-type', 'application/problem+json');
+    }
+
+    public function testPutRefusesABodyThatLeavesASettingOutAndKeepsIt(): void
+    {
+        $client = $this->adminClient();
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['passkeySignInEnabled' => true]));
+        self::assertResponseIsSuccessful();
+
+        $incomplete = $this->settingsBody();
+        unset($incomplete['passkeySignInEnabled']);
+        $client->jsonRequest('PUT', self::SETTINGS, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['passkeySignInEnabled'], array_keys($problem['errors']));
+
+        $client->request('GET', self::SETTINGS);
+        self::assertTrue($this->payload($client)['passkeySignInEnabled']);
+    }
+
+    public function testPutRefusesABodyThatLeavesANullableSettingOutAndKeepsIt(): void
+    {
+        $client = $this->adminClient();
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['publicBaseUrl' => 'https://kept.example']));
+        self::assertResponseIsSuccessful();
+
+        $incomplete = $this->settingsBody();
+        unset($incomplete['publicBaseUrl']);
+        $client->jsonRequest('PUT', self::SETTINGS, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($client);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['publicBaseUrl'], array_keys($problem['errors']));
+
+        $client->request('GET', self::SETTINGS);
+        self::assertSame('https://kept.example', $this->payload($client)['publicBaseUrl']);
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function settingsBodyKeys(): iterable
+    {
+        yield 'requireEmailConfirmation' => ['requireEmailConfirmation'];
+        yield 'requireApproval' => ['requireApproval'];
+        yield 'publicBaseUrl' => ['publicBaseUrl'];
+        yield 'passkeyRpId' => ['passkeyRpId'];
+        yield 'passkeyRpName' => ['passkeyRpName'];
+        yield 'passkeySignInEnabled' => ['passkeySignInEnabled'];
+    }
+
+    #[DataProvider('settingsBodyKeys')]
+    public function testPutRefusesABodyMissingAnySingleSetting(string $key): void
+    {
+        $client = $this->adminClient();
+        $incomplete = $this->settingsBody();
+        unset($incomplete[$key]);
+
+        $client->jsonRequest('PUT', self::SETTINGS, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($client);
+        self::assertIsArray($problem['errors']);
+        self::assertSame([$key], array_keys($problem['errors']));
     }
 
     public function testNonAdminIsForbidden(): void
@@ -236,13 +305,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->adminClient();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'publicBaseUrl' => 'https://example.test',
             'passkeyRpId' => '203.0.113.5',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
 
         self::assertResponseStatusCodeSame(422);
     }
@@ -252,12 +319,10 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $this->givenAnEnrolledPasskey();
         $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
 
         self::assertResponseStatusCodeSame(409);
         self::assertSame(1, $this->payload($client)['invalidatedPasskeyCount']);
@@ -268,13 +333,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $this->givenAnEnrolledPasskey();
         $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
             'invalidateExistingPasskeys' => true,
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
         // A fresh repository read, not an entity handle: after a bulk DELETE,
@@ -291,13 +354,11 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->servedFrom($this->adminClient(), 'reader.example.ts.net');
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'publicBaseUrl' => 'http://localhost:4200',
             'passkeyRpId' => 'reader.example.ts.net',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
         self::assertSame('reader.example.ts.net', $this->payload($client)['passkeyRpIdEffective']);
@@ -311,20 +372,12 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'https://a.example',
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['publicBaseUrl' => 'https://a.example']));
         self::assertResponseIsSuccessful();
 
         $this->givenAnEnrolledPasskey();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => 'https://b.example',
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['publicBaseUrl' => 'https://b.example']));
 
         self::assertResponseIsSuccessful();
         self::assertSame(1, $this->passkeys()->countAll());
@@ -340,24 +393,20 @@ final class AdminSettingsControllerTest extends ApiTestCase
     {
         $client = $this->servedFrom($this->adminClient(), 'a.example.test');
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'publicBaseUrl' => 'https://a.example.test',
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
         self::assertResponseIsSuccessful();
 
         $this->givenAnEnrolledPasskey();
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'publicBaseUrl' => 'https://b.example.test',
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
         self::assertSame(1, $this->passkeys()->countAll());
@@ -371,12 +420,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
     public function testResendingTheSameRelyingPartyIdSucceedsWithCredentialsPresent(): void
     {
         $client = $this->servedFrom($this->adminClient(), 'a.example.test');
-        $body = [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'passkeyRpId' => 'example.test',
-            'passkeyRpName' => 'Reader',
-        ];
+        $body = $this->settingsBody(['passkeyRpId' => 'example.test', 'passkeyRpName' => 'Reader']);
 
         $client->jsonRequest('PUT', self::SETTINGS, $body);
         self::assertResponseIsSuccessful();
@@ -402,12 +446,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $client->request('GET', self::SETTINGS);
         self::assertFalse($this->payload($client)['passkeySignInEnabled']);
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
-            'publicBaseUrl' => null,
-            'passkeySignInEnabled' => true,
-        ]);
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody(['passkeySignInEnabled' => true]));
 
         self::assertResponseIsSuccessful();
         self::assertTrue($this->payload($client)['passkeySignInEnabled']);
@@ -423,12 +462,10 @@ final class AdminSettingsControllerTest extends ApiTestCase
         $client->request('GET', self::SETTINGS);
         self::assertSame('a.example.test', $this->payload($client)['passkeyRpIdEffective']);
 
-        $client->jsonRequest('PUT', self::SETTINGS, [
-            'requireEmailConfirmation' => true,
-            'requireApproval' => true,
+        $client->jsonRequest('PUT', self::SETTINGS, $this->settingsBody([
             'passkeyRpId' => 'example.test',
             'passkeyRpName' => 'Reader',
-        ]);
+        ]));
 
         self::assertResponseIsSuccessful();
         self::assertSame('example.test', $this->payload($client)['passkeyRpIdEffective']);

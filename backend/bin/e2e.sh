@@ -79,14 +79,9 @@ json_string() {
   php -r '$b = json_decode(stream_get_contents(STDIN), true); echo is_array($b) && isset($b[$argv[1]]) && is_string($b[$argv[1]]) ? $b[$argv[1]] : "";' "$1"
 }
 
-# Build a full InstanceSettingsRequest body from the current settings on stdin,
-# optionally forcing the two registration gates. `PUT /api/admin/settings` is a
-# full-replace payload, not a patch: a body that omits a field resets it to the
-# constructor default, so a two-field pin would clear passkeyRpId back to the
-# derived host and 409 on any instance with an enrolled passkey (the guard reads
-# it as a relying-party change). Carry every writable field through verbatim and
-# override only the gates. `mailEnabled`, `publicBaseUrlDefault` and
-# `passkeyRpIdEffective` are read-only in the GET and not part of the PUT DTO.
+# Build a full InstanceSettingsRequest body from the current settings on stdin, optionally forcing the two
+# registration gates. The PUT refuses a body that leaves a setting out, so every writable field is carried
+# through verbatim; mailEnabled, publicBaseUrlDefault and passkeyRpIdEffective are read-only in the GET.
 settings_body() {
   # shellcheck disable=SC2016  # single quotes are the point: this is PHP source, not shell.
   php -r '

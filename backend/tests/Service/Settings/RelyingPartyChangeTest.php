@@ -90,9 +90,12 @@ final class RelyingPartyChangeTest extends TestCase
     private function requestFor(string $passkeyRpId, string $publicBaseUrl): InstanceSettingsRequest
     {
         return new InstanceSettingsRequest(
+            requireEmailConfirmation: true,
+            requireApproval: true,
             publicBaseUrl: $publicBaseUrl,
             passkeyRpId: $passkeyRpId,
             passkeyRpName: 'Reader',
+            passkeySignInEnabled: false,
         );
     }
 
