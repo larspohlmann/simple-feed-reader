@@ -154,8 +154,8 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
 - **No hidden side effects.** A write method does what its name says. `add()` persists: it neither prunes nor runs a
   whole-EntityManager `flush()` that would commit someone else's pending changes. The service that owns the unit of
   work flushes, as `MailDeliveryHealth::recordFailure()` does for the mail-failure log.
-- **The owner comes first.** A user-scoped repository method takes the user, or its id, first; a lookup by the
-  caller's ids is named `…ForUser` (`getOneForUser(int $userId, int $tagId)`, `findAllByIdsForUser(int $userId,
+- **The owner comes first.** A user-scoped repository method takes the user, or its id, first; a lookup of owned
+  rows by their ids is named `…ForUser` (`getOneForUser(int $userId, int $tagId)`, `findAllByIdsForUser(int $userId,
   array $tagIds)`). Where the reorder swaps two adjacent ints, the method is renamed too. The subject a method
   works on otherwise stays in front (`EntryListRowEnricher::enrich($rows, $userId)`). Decided in #1167.
 - **`src/Doctrine/`** (DQL functions, SQL walkers, schema listeners, driver middleware) extends the ORM itself and may
