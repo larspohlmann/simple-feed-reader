@@ -31,6 +31,15 @@ final class CatalogCategoryEditorTest extends DbTestCase
         self::assertSame($first->getPosition() + 1, $reloaded->getPosition());
     }
 
+    public function testCreateCanLockACategory(): void
+    {
+        $category = $this->editor()->create(
+            new CatalogCategoryRequest('editor_locked', 'Locked', 'star', '#112233', locked: true),
+        );
+
+        self::assertTrue($this->reload($category)->isLocked());
+    }
+
     public function testUpdateRewritesEveryEditableFieldButTheKey(): void
     {
         $category = $this->editor()->create(new CatalogCategoryRequest('editor_update', 'Before', 'star', '#000000'));

@@ -14,13 +14,11 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
+use PHPStan\Type\Type;
 
 /**
- * The expression half of the thin-controller rule (#1157): a controller constructs no App\Entity object and calls
- * only get/is/has queries and requireId() on one. Needs per-expression types, so not part of ThinControllerRule.
- *
- * A nullsafe call (?->) is also passed to this rule as a plain MethodCall by PHPStan 2.2.5, so handling MethodCall
- * alone catches both without double-reporting.
+ * Thin-controller rule, expression half (#1157): no `new App\Entity\*`, and only get/is/has/requireId() on an entity.
+ * Handles MethodCall only: PHPStan 2.2.5 also passes each ?-> call as a MethodCall, so this reports it once.
  *
  * @implements Rule<CallLike>
  */
@@ -81,20 +79,23 @@ final readonly class ControllerMutatesNoEntityRule implements Rule
             return [];
         }
 
-        $entities = array_values(array_filter(
-            $scope->getType($node->var)->getObjectClassNames(),
-            self::isEntity(...),
-        ));
+        $receiverType = $scope->getType($node->var);
+        $entities = array_values(array_filter($receiverType->getObjectClassNames(), self::isEntity(...)));
         if ([] === $entities) {
             return [];
         }
 
         return [self::error(sprintf(
             'A controller calls %s::%s(), which changes an entity. %s',
-            $entities[0],
+            self::declaringClassName($scope, $receiverType, $node->name->name) ?? $entities[0],
             $node->name->name,
             self::ADVICE,
         ))];
+    }
+
+    private static function declaringClassName(Scope $scope, Type $receiverType, string $methodName): ?string
+    {
+        return $scope->getMethodReflection($receiverType, $methodName)?->getDeclaringClass()->getName();
     }
 
     private static function isQuery(string $methodName): bool

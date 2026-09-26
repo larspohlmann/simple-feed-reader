@@ -118,8 +118,9 @@ final readonly class ThinControllerRule implements Rule
 
     private static function isPersistence(Type $type): bool
     {
-        $nonNullable = TypeCombinator::removeNull($type);
-        foreach ($nonNullable->getObjectClassNames() as $className) {
+        // A nullable parameter's UnionType.getObjectClassNames() returns [] unless every member
+        // contributes one, so NullType empties out the whole union; strip it first.
+        foreach (TypeCombinator::removeNull($type)->getObjectClassNames() as $className) {
             if (self::isPersistenceClass($className)) {
                 return true;
             }

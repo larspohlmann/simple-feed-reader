@@ -43,6 +43,19 @@ final class CatalogFeedEditorTest extends DbTestCase
         self::assertSame($first->getPosition() + 1, $reloaded->getPosition());
     }
 
+    public function testCreateCanLockAFeed(): void
+    {
+        $category = $this->category('feed_editor_locked');
+        $feed = $this->editor()->create(new CatalogFeedRequest(
+            $category->requireId(),
+            'Locked',
+            'https://locked.feed-editor.example.com/rss',
+            locked: true,
+        ));
+
+        self::assertTrue($this->reload($feed)->isLocked());
+    }
+
     public function testUpdateMovesTheFeedAndRewritesItsFields(): void
     {
         $from = $this->category('feed_editor_from');

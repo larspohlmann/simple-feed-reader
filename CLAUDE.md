@@ -115,12 +115,11 @@ Non-negotiables:
   method on the controller, and never inline in a public action either: a
   controller takes no `EntityManagerInterface`/`ManagerRegistry`, constructs no
   entity, and calls only `get*`/`is*`/`has*` and `requireId()` on one (#1157).
-  Enforced by `ThinControllerRule` and `ControllerMutatesNoEntityRule`
-  (PHPStan). The one
-  permitted exception is a trivial single-expression helper used by exactly one
-  action in exactly one controller; add it to the rule's allow-list with a
-  comment that says why. The same helper in a second controller is duplication,
-  and the exception no longer applies.
+  Enforced by `ThinControllerRule` and `ControllerMutatesNoEntityRule` (PHPStan).
+  The one permitted exception is a trivial single-expression helper used by
+  exactly one action in exactly one controller; add it to the rule's allow-list
+  with a comment that says why. The same helper in a second controller is
+  duplication, and the exception no longer applies.
 - **Tests are production code** — same naming, same structure, same standards.
 
 Enforced mechanically by `composer check` and `composer md`:

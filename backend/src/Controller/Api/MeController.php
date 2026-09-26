@@ -53,7 +53,7 @@ final readonly class MeController
 
     /**
      * The server is the source of truth for the account's language: it is what
-     * AccountMailer reads for every transactional email, unlike an SPA-only cache.
+     * AccountMailer reads for every email, and what a native client reads.
      */
     #[Route('/api/me', name: 'api_me_update_locale', methods: ['PATCH'])]
     public function updateLocale(
@@ -66,9 +66,8 @@ final readonly class MeController
     }
 
     /**
-     * Split from the locale PATCH because UpdateLocaleRequest requires a
-     * non-blank locale, which would cost it its 422-on-unsupported-value
-     * guarantee if preference writes had to resend the language too (#180).
+     * Split from the locale PATCH: folding them would force every preference write to resend the language, or
+     * cost the locale its 422-on-unsupported-value guarantee (#180).
      */
     #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
     public function updatePreferences(
