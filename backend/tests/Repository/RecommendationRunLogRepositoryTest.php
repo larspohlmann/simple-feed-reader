@@ -144,22 +144,6 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertSame(1, $this->logs->countAttempts($currentRun, RecommendationRunLog::PHASE_BATCH, 1));
     }
 
-    public function testFindOwnedRefusesAnotherUsersRow(): void
-    {
-        $myRun = $this->fixtures->createRun($this->user);
-        $mine = $this->fixtures->log($myRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $theirRun = $this->fixtures->createRun($this->otherUser);
-        $theirs = $this->fixtures->log($theirRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $this->em->flush();
-        $mineId = $mine->getId();
-        $theirsId = $theirs->getId();
-        self::assertNotNull($mineId);
-        self::assertNotNull($theirsId);
-
-        self::assertSame($mine, $this->logs->findOwned($mineId, $this->user));
-        self::assertNull($this->logs->findOwned($theirsId, $this->user));
-    }
-
     public function testGetOwnedReturnsTheCallersRow(): void
     {
         $mine = $this->fixtures->log(

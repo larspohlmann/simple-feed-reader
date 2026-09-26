@@ -138,7 +138,7 @@ class SubscriptionRepository extends ServiceEntityRepository
         return null === $max ? 0 : (int) $max + 1;
     }
 
-    public function findOneOwnedBy(int $id, int $userId): ?Subscription
+    public function getOneOwnedBy(int $id, int $userId): Subscription
     {
         /** @var Subscription|null $row */
         $row = $this->createQueryBuilder('s')
@@ -150,12 +150,7 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult();
 
-        return $row;
-    }
-
-    public function getOneOwnedBy(int $id, int $userId): Subscription
-    {
-        return $this->findOneOwnedBy($id, $userId) ?? throw new RecordNotFoundException('No such subscription.');
+        return $row ?? throw new RecordNotFoundException('No such subscription.');
     }
 
     /**

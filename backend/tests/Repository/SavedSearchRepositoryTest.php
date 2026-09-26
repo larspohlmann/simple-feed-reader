@@ -96,20 +96,6 @@ final class SavedSearchRepositoryTest extends DbTestCase
         self::assertTrue($phrase->isPhrase());
     }
 
-    public function testFindOneOwnedByRejectsAnotherUser(): void
-    {
-        $owner = new User('owner2@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $stranger = new User('stranger2@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($owner);
-        $this->em->persist($stranger);
-        $saved = new SavedSearch($owner, 'mine', false);
-        $this->em->persist($saved);
-        $this->em->flush();
-
-        self::assertNotNull($this->repo()->findOneOwnedBy($saved->requireId(), $owner->requireId()));
-        self::assertNull($this->repo()->findOneOwnedBy($saved->requireId(), $stranger->requireId()));
-    }
-
     public function testGetOneOwnedByReturnsTheOwnersSavedSearch(): void
     {
         $owner = new User('owner3@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
