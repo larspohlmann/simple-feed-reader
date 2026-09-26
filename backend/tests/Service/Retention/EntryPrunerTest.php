@@ -326,15 +326,15 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testProtectionAppliesAcrossUsers(): void
     {
-        $feed = new Feed('https://example.com/feed');
         $alice = new User('alice@example.com', $this->clock->now());
         $bob = new User('bob@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($alice);
         $this->em->persist($bob);
 
-        $shared = $this->persistEntry($feed, 'shared', $this->daysAgo(200));
-        $this->em->flush();
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // shared entry below falls beyond the newest-twenty boundary.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $shared = $this->seedEntry($feed, 'shared', $this->daysAgo(200));
 
         $aliceRead = new EntryState($alice, $shared);
         $aliceRead->setIsHidden(true);
@@ -345,7 +345,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->flush();
 
         self::assertSame(0, $this->pruner->prune());
-        self::assertCount(1, $this->findAllEntries($feed));
+        self::assertNotNull($this->findByGuid($feed, 'shared'));
     }
 
     public function testDeletingEntryRemovesItsStateRows(): void

@@ -27,12 +27,7 @@ final class RecordedCall implements CompletionStreamObserver
      */
     private int $wireBytes = 0;
 
-    /**
-     * Held like $wireBytes, not written until the call settles: the provider
-     * stamps it near the end of the stream, and the settled row is where it
-     * explains the outcome — a `length` beside an empty answer is a truncation,
-     * not silence (#327).
-     */
+    /** Held until the call settles: a `length` beside an empty answer is a truncation (#327). */
     private ?string $finishReason = null;
 
     /**
@@ -43,14 +38,8 @@ final class RecordedCall implements CompletionStreamObserver
     private ?CompletionUsage $usage = null;
 
     /**
-     * One provider call is billed once. Every settle path -- a verdict, a transport
-     * abort, a wave that aborts a call the round already settled -- runs through
-     * bankUsage(), and without this flag a call reachable by two of them would double
-     * its own spend. Per-instance on purpose: a retry and the discarded sibling of an
-     * aborted wave are separate RecordedCalls, each billed by the provider (#344). Only
-     * set once bankUsage() actually writes, so a settle that finds no usage yet (a
-     * transport failure before the provider's usage message arrived) leaves this false
-     * for a later settle path to still bank it.
+     * Billed once per instance across every settle path; set only once
+     * bankUsage() writes, so a later path can still bank (#344, #409).
      */
     private bool $usageBanked = false;
 
