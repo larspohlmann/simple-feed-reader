@@ -55,7 +55,7 @@ Pyroscope, for viewing app logs, traces and profiles.
 |---|---|
 | `backend/src/Controller/Api`, `Controller/Admin` | HTTP entry points; thin, they delegate to services |
 | `backend/src/Service/**` | The domain work, one subdirectory per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`) |
-| `backend/src/Dto/**` | Request and response shapes, grouped by feature |
+| `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
 | `backend/src/Entity`, `Repository`, `Doctrine` | Persistence |
@@ -91,11 +91,9 @@ Non-negotiables:
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's `src/Http/Problem/*Problems`
   mapper; domain code never imports HTTP classes (`DomainKnowsNoHttpRule`).
-- **Domain code never imports `App\Http` or Symfony HTTP.** A service returns a
-  `final readonly` value, and the controller hands that to an `src/Http/*Json` mapper.
-  `DomainKnowsNoHttpRule` forbids `App\Http\*` and Symfony's HTTP classes, class
-  names in strings included, in `Service`, `Repository`, `Entity`, `Enum`, `Exception`
-  and `Pagination`.
+- **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*` and
+  Symfony's HttpFoundation and HTTP-exception classes, class names in strings
+  included, in `Service`, `Repository`, `Entity`, `Enum`, `Exception` and `Pagination`.
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
   typed value, or the git history beats a sentence about the code — reach for
   those first, and prefer them even when a comment would be easy. Write a
