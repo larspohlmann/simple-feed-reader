@@ -6,6 +6,7 @@ namespace App\Http;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Service\Recommendation\RecommendationDebugLog;
 
 /**
  * Response shapes for the recommendation debug log (#309). The list shape is
@@ -15,28 +16,21 @@ use App\Entity\RecommendationRunLog;
 final class RecommendationDebugLogJson
 {
     /**
-     * @param list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}> $rows
-     * @param array<int, string>       $streamingTextById
-     * @param list<RecommendationRun>  $retainedRuns newest first, the runs the panel may switch to
-     *
      * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>,
      *     runs: list<array<string, mixed>>}
      */
-    public static function list(
-        array $rows,
-        array $streamingTextById,
-        ?RecommendationRun $run,
-        array $retainedRuns,
-    ): array {
+    public static function list(RecommendationDebugLog $log): array
+    {
         return [
             'entries' => array_map(
-                static fn (array $row): array => [...$row, 'streamingText' => $streamingTextById[$row['id']] ?? null],
-                $rows,
+                static fn (array $row): array => [
+                    ...$row,
+                    'streamingText' => $log->streamingTextById[$row['id']] ?? null,
+                ],
+                $log->rows,
             ),
-            'run' => null === $run ? null : self::run($run),
-            'runs' => array_map(self::choice(...), $retainedRuns),
+            'run' => null === $log->selectedRun ? null : self::run($log->selectedRun),
+            'runs' => array_map(self::choice(...), $log->retainedRuns),
         ];
     }
 
