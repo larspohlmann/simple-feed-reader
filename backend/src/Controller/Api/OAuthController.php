@@ -181,7 +181,7 @@ final class OAuthController
         // exchange's 32-byte code lives 30 seconds, so a limiter on either defends
         // something already closed, while start() is where a scripted loop could
         // fill the state pool for free.
-        $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request);
+        $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request->getClientIp());
 
         // Throws UnknownProviderException (404 problem+json) for a name this
         // deployment does not offer. That is the right shape here: nothing has

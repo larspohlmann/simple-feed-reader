@@ -46,7 +46,7 @@ final readonly class SetupController
     #[Route('/admin', name: 'api_setup_admin', methods: ['POST'])]
     public function createAdmin(#[MapRequestPayload] SetupAdminRequest $request, Request $httpRequest): JsonResponse
     {
-        $this->rateLimitGuard->enforceForClient($this->setupLimiter, $httpRequest);
+        $this->rateLimitGuard->enforceForClient($this->setupLimiter, $httpRequest->getClientIp());
 
         $token = $this->setup->createFirstAdmin($request->email, $request->password, $request->secret);
 
