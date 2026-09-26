@@ -38,6 +38,22 @@ final class RefreshFeedsCommandRequestTest extends TestCase
         self::assertTrue($request->prune);
     }
 
+    public function testAFeedOptionRefreshesThatFeedOnly(): void
+    {
+        $request = $this->requestFor(['--budget' => '45', '--feed' => '7']);
+
+        self::assertSame(7, $request->feedId);
+        self::assertNull($request->userId);
+    }
+
+    public function testAUserOptionRefreshesThatUsersFeeds(): void
+    {
+        $request = $this->requestFor(['--budget' => '45', '--user' => '3']);
+
+        self::assertSame(3, $request->userId);
+        self::assertNull($request->feedId);
+    }
+
     /** @param array<string, string|bool> $input */
     private function requestFor(array $input): RefreshRequest
     {

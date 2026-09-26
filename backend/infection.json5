@@ -107,10 +107,8 @@
         },
         // Guard only runs with [], so slicing changes nothing.
         ArrayOneItem: { ignore: ['App\\Repository\\SavedSearchEntryRepository::memberCountsBySavedSearch'] },
-        // NullSafeMethodCall on SlideshowMarkup::loadFirstSlideEagerly()'s
-        // querySelector('img')?->setAttribute(): a slideshow always has 2+ images,
-        // so the null case is unreachable. PHPStan needs `?->` because querySelector
-        // returns ?Element; the method is equivalent to one without it.
+        // A slideshow always has 2+ images, so querySelector('img') never returns
+        // null here; the `?->` exists only for PHPStan.
         NullSafeMethodCall: { ignore: ['App\\Service\\Reader\\Slideshow\\SlideshowMarkup::loadFirstSlideEagerly'] },
     },
     phpUnit: {
