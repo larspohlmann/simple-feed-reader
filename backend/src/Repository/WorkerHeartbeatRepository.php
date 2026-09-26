@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Entity\WorkerHeartbeat;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -27,7 +26,7 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
     public function touch(string $name, \DateTimeImmutable $when): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $onConflict = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform
+        $onConflict = DatabasePlatform::isMySql($connection)
             ? 'ON DUPLICATE KEY UPDATE'
             : 'ON CONFLICT (name) DO UPDATE SET';
 

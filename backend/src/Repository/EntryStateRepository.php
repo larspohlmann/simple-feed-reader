@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -48,7 +47,7 @@ class EntryStateRepository extends ServiceEntityRepository
     public function ensureRow(int $userId, int $entryId, bool $seedHidden, ?\DateTimeImmutable $seedHiddenAt): void
     {
         $connection = $this->getEntityManager()->getConnection();
-        $isMysql = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform;
+        $isMysql = DatabasePlatform::isMySql($connection);
         $conflictClause = $isMysql ? 'IGNORE' : 'OR IGNORE';
 
         $connection->executeStatement(

@@ -11,7 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Feeds nobody subscribes to; entries and read state follow through the FK cascade. */
 final readonly class OrphanedFeedRepository
 {
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $em)
     {
     }
 
@@ -19,7 +19,7 @@ final readonly class OrphanedFeedRepository
     public function orphanIds(): array
     {
         /** @var list<int> $feedIds */
-        $feedIds = $this->entityManager->createQuery(sprintf(
+        $feedIds = $this->em->createQuery(sprintf(
             'SELECT f.id FROM %s f WHERE %s',
             Feed::class,
             $this->hasNoSubscriberDql(),
@@ -35,7 +35,7 @@ final readonly class OrphanedFeedRepository
      */
     public function deleteOrphansAmong(array $feedIds): int
     {
-        $affected = $this->entityManager->createQuery(sprintf(
+        $affected = $this->em->createQuery(sprintf(
             'DELETE FROM %s f WHERE f.id IN (:feedIds) AND %s',
             Feed::class,
             $this->hasNoSubscriberDql(),

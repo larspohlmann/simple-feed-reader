@@ -16,7 +16,7 @@ use Doctrine\ORM\QueryBuilder;
  */
 final readonly class ReadingHistoryRepository
 {
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private EntityManagerInterface $em)
     {
     }
 
@@ -62,7 +62,7 @@ final readonly class ReadingHistoryRepository
 
     private function historyQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->entityManager->createQueryBuilder()
+        return $this->em->createQueryBuilder()
             ->select('es', 'e', 'f')
             ->addSelect('s.customTitle AS customTitle')
             ->from(EntryState::class, 'es')
