@@ -1040,6 +1040,13 @@ final class EntryListTest extends DbTestCase
         $this->repo()->getRowForUser($this->user->requireId(), $entry->requireId());
     }
 
+    public function testFindOneSubscribedForUserFindsNothingInAFeedTheUserDoesNotSubscribeTo(): void
+    {
+        $entry = $this->entryOfAnUnsubscribedFeed('foreign-lookup');
+
+        self::assertNull($this->repo()->findOneSubscribedForUser($this->user->requireId(), $entry->requireId()));
+    }
+
     public function testGetOneSubscribedForUserReturnsASubscribedEntry(): void
     {
         $entry = $this->entry('owned-entry', '2026-07-02T00:00:00Z');
