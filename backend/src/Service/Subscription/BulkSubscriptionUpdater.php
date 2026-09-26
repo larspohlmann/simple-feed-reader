@@ -85,7 +85,7 @@ final readonly class BulkSubscriptionUpdater
             return [];
         }
 
-        $owned = $this->tags->findAllByIdsForUser($tagIds, $userId);
+        $owned = $this->tags->findAllByIdsForUser($userId, $tagIds);
         if (\count($owned) !== \count($tagIds)) {
             throw new InvalidSelectionException(
                 'addTagIds and removeTagIds must all be your tags, without duplicates.',

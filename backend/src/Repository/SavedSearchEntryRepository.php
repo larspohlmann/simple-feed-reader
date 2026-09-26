@@ -157,7 +157,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      *
      * @return list<int>
      */
-    public function unreadMemberIdsSince(int $savedSearchId, int $userId, \DateTimeImmutable $since): array
+    public function unreadMemberIdsForUserSince(int $userId, int $savedSearchId, \DateTimeImmutable $since): array
     {
         $qb = $this->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
@@ -177,7 +177,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      *
      * @return array<int, list<array{id: int, slug: string, term: string}>>
      */
-    public function savedSearchesByEntry(array $entryIds, int $userId): array
+    public function savedSearchesByEntry(int $userId, array $entryIds): array
     {
         if ($entryIds === []) {
             return [];

@@ -26,7 +26,7 @@ final readonly class OwnedSubscriptions
      */
     public function resolve(array $ids, int $userId): array
     {
-        return $this->keyedById($this->subscriptions->findAllByIdsForUser($ids, $userId), $ids);
+        return $this->keyedById($this->subscriptions->findAllByIdsForUser($userId, $ids), $ids);
     }
 
     /**
@@ -40,7 +40,7 @@ final readonly class OwnedSubscriptions
      */
     public function resolveWithAssociations(array $ids, int $userId): array
     {
-        $owned = $this->subscriptions->findAllByIdsForUserWithAssociations($ids, $userId);
+        $owned = $this->subscriptions->findAllByIdsForUserWithAssociations($userId, $ids);
 
         return $this->keyedById($owned, $ids);
     }

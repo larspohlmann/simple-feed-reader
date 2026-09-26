@@ -24,19 +24,19 @@ class TagRepository extends ServiceEntityRepository
      * The user's tags matching the given ids. Fewer results than ids means one
      * or more ids were invalid or belonged to another user.
      *
-     * @param list<int> $ids
+     * @param list<int> $tagIds
      *
      * @return list<Tag>
      */
-    public function findAllByIdsForUser(array $ids, int $userId): array
+    public function findAllByIdsForUser(int $userId, array $tagIds): array
     {
-        if ([] === $ids) {
+        if ([] === $tagIds) {
             return [];
         }
 
         /** @var list<Tag> $rows */
         $rows = $this->createQueryBuilder('t')
-            ->andWhere('t.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('t.id IN (:ids)')->setParameter('ids', $tagIds)
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getResult();

@@ -65,7 +65,7 @@ final readonly class SubscriptionController
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
-        $tags = $this->tags->findAllByIdsForUser($request->tagIds, $user->requireId());
+        $tags = $this->tags->findAllByIdsForUser($user->requireId(), $request->tagIds);
         $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {

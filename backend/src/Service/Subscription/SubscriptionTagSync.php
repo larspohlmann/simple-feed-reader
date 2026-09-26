@@ -29,7 +29,7 @@ final readonly class SubscriptionTagSync
         // Sync by DIFF, not clear-and-re-add: a tag the feed keeps must retain
         // its per-tag position, and a newly added tag appends to the end of
         // that tag's list.
-        $resolved = $this->tags->findAllByIdsForUser($requestedTagIds, $userId);
+        $resolved = $this->tags->findAllByIdsForUser($userId, $requestedTagIds);
         $resolvedIds = array_map(static fn (Tag $tag): int => $tag->requireId(), $resolved);
 
         foreach ($subscription->getTags() as $existing) {

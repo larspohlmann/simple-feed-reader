@@ -43,36 +43,36 @@ final class OwnedTagsCache implements ResetInterface
     }
 
     /**
-     * @param list<int> $ids
+     * @param list<int> $tagIds
      *
      * @return list<Tag>
      */
-    public function findAllByIdsForUser(array $ids, int $userId): array
+    public function findAllByIdsForUser(int $userId, array $tagIds): array
     {
-        $this->resolveMissing($ids, $userId);
+        $this->resolveMissing($userId, $tagIds);
 
         $resolved = $this->resolvedByUser[$userId] ?? [];
 
         return array_values(array_filter(array_map(
             static fn (int $id): ?Tag => $resolved[$id] ?? null,
-            $ids,
+            $tagIds,
         )));
     }
 
     /**
-     * @param list<int> $ids
+     * @param list<int> $tagIds
      */
-    private function resolveMissing(array $ids, int $userId): void
+    private function resolveMissing(int $userId, array $tagIds): void
     {
         $known = $this->resolvedByUser[$userId] ?? [];
         $missing = array_values(array_unique(
-            array_filter($ids, static fn (int $id): bool => !isset($known[$id])),
+            array_filter($tagIds, static fn (int $id): bool => !isset($known[$id])),
         ));
         if ([] === $missing) {
             return;
         }
 
-        foreach ($this->tags->findAllByIdsForUser($missing, $userId) as $tag) {
+        foreach ($this->tags->findAllByIdsForUser($userId, $missing) as $tag) {
             $this->resolvedByUser[$userId][$tag->requireId()] = $tag;
         }
     }
