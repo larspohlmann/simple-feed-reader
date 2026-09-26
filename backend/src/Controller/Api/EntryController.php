@@ -63,7 +63,7 @@ final readonly class EntryController
         $entryView = EntryView::fromRequestValue($view);
         $listOrder = ListOrder::fromRequestValue($page->order);
 
-        // Score-ranked: it pages with its own cursor and never reaches EntryQuery.
+        // Score-ranked, with its own cursor.
         if ($entryView === EntryView::ForYou) {
             return new JsonResponse(RecommendationFeedJson::page($this->forYouFeed->page(
                 new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),

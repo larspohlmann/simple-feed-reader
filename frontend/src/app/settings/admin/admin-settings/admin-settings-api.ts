@@ -31,8 +31,8 @@ export interface InstanceSettings {
 
 /**
  * The full-replace PUT body (#624): leaving a setting out is a 422 (#1167).
- * `invalidateExistingPasskeys` is no stored setting: it confirms a relying-party id change the server
- * refused with a 409.
+ * `invalidateExistingPasskeys` is no stored setting: it confirms a relying-party id change
+ * the server refused with a 409.
  */
 export interface InstanceSettingsUpdate {
   requireEmailConfirmation: boolean;

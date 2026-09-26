@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\ProxyType;
+use App\Http\FullReplacePayload;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Every connection setting is required, so a PUT that leaves one out is a 422, not a reset. The password is an
- * optional three-state intent: null keeps the stored secret, a string replaces it, `removePassword` clears it.
+ * Every connection setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without
+ * which a missing nullable setting reads as null. The password is an optional three-state intent: null keeps the
+ * stored secret, a string replaces it, `removePassword` clears it.
  */
 final readonly class ProxySettingsRequest
 {
