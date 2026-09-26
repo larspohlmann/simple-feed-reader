@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Opml;
 
 use App\Entity\User;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
 
@@ -16,6 +17,8 @@ use App\Service\Subscription\BulkSubscriber;
  */
 final readonly class OpmlImporter
 {
+    private const int MAX_BYTES = 1_048_576;
+
     public function __construct(
         private OpmlBodyReader $bodyReader,
         private BulkSubscriber $subscriber,
@@ -24,6 +27,10 @@ final readonly class OpmlImporter
 
     public function import(User $user, string $opml): OpmlImportResult
     {
+        if ($opml === '' || \strlen($opml) > self::MAX_BYTES) {
+            throw new InvalidOpmlException('The OPML body is empty or larger than 1 MB.');
+        }
+
         $body = $this->bodyReader->read($opml);
 
         $items = [];

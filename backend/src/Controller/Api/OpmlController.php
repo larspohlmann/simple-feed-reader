@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Http\OpmlJson;
 use App\Service\Opml\OpmlExporter;
 use App\Service\Opml\OpmlImporter;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -40,18 +40,6 @@ final readonly class OpmlController
     #[Route('/import', name: 'api_opml_import', methods: ['POST'])]
     public function import(#[CurrentUser] User $user, Request $request): JsonResponse
     {
-        $body = $request->getContent();
-        if ($body === '' || \strlen($body) > 1_048_576) {
-            throw new InvalidOpmlException('The OPML body is empty or larger than 1 MB.');
-        }
-
-        $result = $this->importer->import($user, $body);
-
-        return new JsonResponse([
-            'imported' => $result->imported,
-            'alreadySubscribed' => $result->alreadySubscribed,
-            'invalid' => $result->invalid,
-            'skippedOverLimit' => $result->skippedOverLimit,
-        ]);
+        return new JsonResponse(OpmlJson::imported($this->importer->import($user, $request->getContent())));
     }
 }
