@@ -11,11 +11,9 @@ use App\Dto\Tag\UpdateTagRequest;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\TagJson;
-use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Service\Reader\ExactSetGuard;
 use App\Service\Tag\TagEditor;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Tag\TagOrdering;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -28,10 +26,8 @@ final readonly class TagController
 {
     public function __construct(
         private TagRepository $tags,
-        private SubscriptionTagRepository $subscriptionTags,
-        private EntityManagerInterface $em,
-        private ExactSetGuard $exactSet,
         private TagEditor $editor,
+        private TagOrdering $ordering,
     ) {
     }
 
@@ -63,22 +59,11 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderTagsRequest $request,
     ): JsonResponse {
-        $owned = $this->tags->findForUser($user->requireId());
-        /** @var array<int, Tag> $byId */
-        $byId = [];
-        foreach ($owned as $tag) {
-            $byId[$tag->requireId()] = $tag;
-        }
-
-        $this->exactSet->assertPermutation($request->tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
-
-        foreach ($request->tagIds as $index => $tagId) {
-            $byId[$tagId]->setPosition($index);
-        }
-        $this->em->flush();
-
         return new JsonResponse([
-            'tags' => array_map(static fn (int $id): array => TagJson::one($byId[$id]), $request->tagIds),
+            'tags' => array_map(
+                static fn (Tag $tag): array => TagJson::one($tag),
+                $this->ordering->reorder($user, $request),
+            ),
         ]);
     }
 
@@ -96,17 +81,7 @@ final readonly class TagController
         $tag = $this->tags->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such tag.');
 
-        $joinsBySubId = $this->subscriptionTags->forTagBySubscriptionId($tag);
-        $this->exactSet->assertPermutation(
-            $request->subscriptionIds,
-            array_keys($joinsBySubId),
-            "subscriptionIds must list exactly this tag's feeds.",
-        );
-
-        foreach ($request->subscriptionIds as $index => $subscriptionId) {
-            $joinsBySubId[$subscriptionId]->setPosition($index);
-        }
-        $this->em->flush();
+        $this->ordering->orderFeeds($tag, $request);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
