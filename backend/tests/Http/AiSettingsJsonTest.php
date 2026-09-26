@@ -45,21 +45,6 @@ final class AiSettingsJsonTest extends TestCase
         return $settings;
     }
 
-    public function testARowWithoutAModelIsNotReady(): void
-    {
-        self::assertFalse(AiSettingsJson::isReady($this->settings(null)));
-    }
-
-    public function testARowWithAModelIsReady(): void
-    {
-        self::assertTrue(AiSettingsJson::isReady($this->settings('gpt-4o')));
-    }
-
-    public function testNoRowIsNotReady(): void
-    {
-        self::assertFalse(AiSettingsJson::isReady(null));
-    }
-
     public function testConfigurationCarriesTheRowsOwnShape(): void
     {
         $settings = $this->withId($this->settings('gpt-4o', 'Work OpenAI'), 1);

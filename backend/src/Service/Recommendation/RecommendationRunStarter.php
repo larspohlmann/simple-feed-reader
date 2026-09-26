@@ -6,10 +6,10 @@ namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Http\AiSettingsJson;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\AiReadiness;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,7 +41,7 @@ final readonly class RecommendationRunStarter
      */
     public function start(User $user): RecommendationRunReport
     {
-        if (!AiSettingsJson::isReady($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 
@@ -85,7 +85,7 @@ final readonly class RecommendationRunStarter
      */
     public function resume(User $user): RecommendationRunReport
     {
-        if (!AiSettingsJson::isReady($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
         }
 

@@ -6,22 +6,12 @@ namespace App\Http;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
+use App\Service\Ai\AiReadiness;
 use App\Service\Recommendation\RecommendationPackingSettings;
 
 /**
- * The client's view of the account's AI provider configurations, and the ONE
- * definition of "ready".
- *
- * Hand-built for the same reason MeJson is: the entity holds sealed key
- * material, and a serialiser that learned to walk it would put that on the
- * wire. The API key is absent by construction; `apiKeyHint` is its last four
- * characters, letting the settings page say which key is stored.
- *
- * `ready` reports what the last successful save proved — an endpoint, a key
- * and a model the provider accepted together. Not a live health check: a key
- * revoked since then still reads as ready, and the feature using it carries
- * that failure. Polling the provider on every /api/me isn't worth a round
- * trip per profile read.
+ * The client's view of the account's AI provider configurations. Hand-built,
+ * not serialised, so a sealed key never reaches the wire.
  */
 final class AiSettingsJson
 {
@@ -40,7 +30,7 @@ final class AiSettingsJson
             'batchConcurrency' => $settings->batchConcurrency(),
             'slowModel' => $settings->isSlowModel(),
             'maxBatchSize' => $settings->maxBatchSize(),
-            'ready' => self::isReady($settings),
+            'ready' => AiReadiness::of($settings),
             'active' => $settings->getId() === $activeId,
         ];
     }
@@ -89,21 +79,5 @@ final class AiSettingsJson
     public static function models(array $models): array
     {
         return ['models' => $models];
-    }
-
-    /**
-     * The one definition of "ready", named so the other responses that report
-     * it — MeJson — reach a method instead of an array key no static analysis
-     * can follow.
-     *
-     * No verifiedAt term: AiProviderSettings::chooseModel() is the only writer
-     * of `model` and stamps verifiedAt in the same call, while
-     * replaceConnection() clears `model` again. A row with a model is therefore
-     * always a verified row, so testing both would be a term that can never be
-     * false.
-     */
-    public static function isReady(?AiProviderSettings $settings): bool
-    {
-        return null !== $settings && $settings->hasModel();
     }
 }
