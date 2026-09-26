@@ -31,6 +31,7 @@ final readonly class FeedTagMove
 
     public function move(Subscription $subscription, MoveFeedToTagRequest $move): void
     {
+        // A same-list drop is a reorder, which the reorder endpoints own.
         if ($move->fromTagId === $move->toTagId) {
             return;
         }
