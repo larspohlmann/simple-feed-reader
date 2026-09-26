@@ -33,13 +33,7 @@ final readonly class SubscriptionEditor
 
     public function moveToTag(Subscription $subscription, MoveFeedToTagRequest $request): void
     {
-        $this->feedTagMove->move(
-            $subscription,
-            $request->fromTagId,
-            $request->toTagId,
-            $request->position,
-            $subscription->getUser()->requireId(),
-        );
+        $this->feedTagMove->move($subscription, $request);
         $this->entityManager->flush();
     }
 
