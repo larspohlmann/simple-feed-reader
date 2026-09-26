@@ -10,11 +10,8 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Http\SavedSearchJson;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SweepBudget;
-use App\Service\Search\SavedSearchSlug;
+use App\Service\Search\SavedSearchEditor;
 use App\Service\Search\SavedSearchTallies;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -25,14 +22,10 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 #[Route('/api/saved-searches')]
 final readonly class SavedSearchController
 {
-    private const int CREATE_SWEEP_BUDGET_SECONDS = 8;
-
     public function __construct(
         private SavedSearchRepository $savedSearches,
         private SavedSearchTallies $tallies,
-        private SavedSearchMembershipSweep $sweep,
-        private EntityManagerInterface $em,
-        private SavedSearchSlug $slug,
+        private SavedSearchEditor $editor,
     ) {
     }
 
@@ -57,28 +50,12 @@ final readonly class SavedSearchController
         #[MapRequestPayload] CreateSavedSearchRequest $request,
     ): JsonResponse {
         $userId = $user->requireId();
-        // Saving a term already saved is idempotent, and answers 200 with the
-        // row that was there rather than 201 with a second one.
-        $savedSearch = $this->savedSearches->findOneForUserByTerm(
-            $userId,
-            $request->term,
-            $request->wholeWord,
-            $request->phrase,
-        );
-        $status = $savedSearch === null ? Response::HTTP_CREATED : Response::HTTP_OK;
-
-        if ($savedSearch === null) {
-            $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
-            $this->em->persist($savedSearch);
-            $this->em->flush();
-            $this->slug->assignTo($savedSearch);
-            $this->em->flush();
-            $this->sweep->sweepOne($savedSearch, SweepBudget::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
-        }
+        $outcome = $this->editor->save($user, $request);
+        $savedSearch = $outcome->savedSearch;
 
         return new JsonResponse(
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
-            $status,
+            $outcome->isNew ? Response::HTTP_CREATED : Response::HTTP_OK,
         );
     }
 
@@ -92,8 +69,7 @@ final readonly class SavedSearchController
         $savedSearch = $this->savedSearches->findOneOwnedBy($id, $userId)
             ?? throw new NotFoundHttpException('No such saved search.');
 
-        $savedSearch->setIncludeInDigest($request->includeInDigest);
-        $this->em->flush();
+        $this->editor->changeDigestInclusion($savedSearch, $request);
 
         return new JsonResponse(
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
@@ -106,8 +82,7 @@ final readonly class SavedSearchController
         $savedSearch = $this->savedSearches->findOneOwnedBy($id, $user->requireId())
             ?? throw new NotFoundHttpException('No such saved search.');
 
-        $this->em->remove($savedSearch);
-        $this->em->flush();
+        $this->editor->delete($savedSearch);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
