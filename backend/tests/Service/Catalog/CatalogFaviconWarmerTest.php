@@ -6,6 +6,7 @@ namespace App\Tests\Service\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\CatalogFaviconFetcherInterface;
 use App\Service\Catalog\CatalogFaviconWarmer;
@@ -186,8 +187,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $now = $this->clock()->now();
 
         return $this->feeds()->findNeedingFavicon(
-            $now->sub(new \DateInterval('P90D')),
-            $now->sub(new \DateInterval('P14D')),
+            new CatalogFaviconDueCriteria($now->sub(new \DateInterval('P90D')), $now->sub(new \DateInterval('P14D'))),
             null,
         );
     }
