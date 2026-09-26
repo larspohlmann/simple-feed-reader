@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\EntryView;
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
@@ -215,8 +216,8 @@ final class EntryListTest extends DbTestCase
     {
         $userId = $this->user->requireId();
 
-        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'all')));
-        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, 'unread')));
+        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, EntryView::All)));
+        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($userId, EntryView::Unread)));
     }
 
     public function testOldestFirstReversesTheListIdTieBreakIncluded(): void
@@ -268,7 +269,7 @@ final class EntryListTest extends DbTestCase
         $this->em->flush();
 
         $rows = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), view: 'viewed', order: ListOrder::OldestFirst),
+            new EntryQuery($this->user->requireId(), view: EntryView::Viewed, order: ListOrder::OldestFirst),
         );
 
         self::assertSame(['late', 'early'], $this->guids($rows));
@@ -279,9 +280,9 @@ final class EntryListTest extends DbTestCase
         $userId = $this->user->requireId();
 
         self::assertSame([], $this->joinPrefixQueries(
-            new EntryQuery($userId, 'all', subscriptionId: $this->sub->getId()),
+            new EntryQuery($userId, EntryView::All, subscriptionId: $this->sub->getId()),
         ));
-        self::assertSame([], $this->joinPrefixQueries(new EntryQuery($userId, 'favorites')));
+        self::assertSame([], $this->joinPrefixQueries(new EntryQuery($userId, EntryView::Favorites)));
     }
 
     public function testNewestFirstAndCarriesSubscriptionTitle(): void
@@ -371,7 +372,7 @@ final class EntryListTest extends DbTestCase
         self::assertTrue($byGuid['old']->isHidden);   // under the watermark
         self::assertFalse($byGuid['new']->isHidden);  // above it
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
+        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
         self::assertSame('new', $unread[0]->entry->getGuid());
     }
@@ -386,7 +387,7 @@ final class EntryListTest extends DbTestCase
         $this->em->persist($state);
         $this->em->flush();
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
+        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
         self::assertFalse($unread[0]->isHidden);
     }
@@ -405,12 +406,12 @@ final class EntryListTest extends DbTestCase
         $this->em->persist($s2);
         $this->em->flush();
 
-        $favs = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'favorites'));
+        $favs = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Favorites));
         self::assertCount(1, $favs);
         self::assertSame('fav', $favs[0]->entry->getGuid());
         self::assertTrue($favs[0]->isFavorite);
 
-        $kepts = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'kept'));
+        $kepts = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Kept));
         self::assertCount(1, $kepts);
         self::assertSame('kept', $kepts[0]->entry->getGuid());
     }
@@ -433,7 +434,7 @@ final class EntryListTest extends DbTestCase
         $this->em->persist($lateState);
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'viewed'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Viewed));
 
         self::assertSame(['early', 'late'], array_map(
             static fn ($row) => $row->entry->getGuid(),
@@ -456,7 +457,7 @@ final class EntryListTest extends DbTestCase
         $this->em->flush();
 
         $page1 = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), view: 'viewed', limit: 1),
+            new EntryQuery($this->user->requireId(), view: EntryView::Viewed, limit: 1),
         );
         self::assertCount(1, $page1);
         self::assertSame('first', $page1[0]->entry->getGuid());
@@ -468,7 +469,7 @@ final class EntryListTest extends DbTestCase
             $page1[0]->entry->requireId(),
         );
         $page2 = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), view: 'viewed', cursor: $cursor, limit: 1),
+            new EntryQuery($this->user->requireId(), view: EntryView::Viewed, cursor: $cursor, limit: 1),
         );
         self::assertCount(1, $page2);
         self::assertSame('second', $page2[0]->entry->getGuid());
@@ -615,7 +616,7 @@ final class EntryListTest extends DbTestCase
         $all = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $all));
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
+        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $unread));
 
         $own = $this->repo()->listForUser(
@@ -626,7 +627,7 @@ final class EntryListTest extends DbTestCase
         $tagged = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
         self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $tagged));
 
-        $favorites = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'favorites'));
+        $favorites = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Favorites));
         self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $favorites));
     }
 
@@ -744,7 +745,10 @@ final class EntryListTest extends DbTestCase
         // The favorites view drops the chronological-fan-in hint entirely
         // (testAScopedOrStateDrivenViewDropsTheJoinOrderHint), so a JOIN_PREFIX
         // here can only come from attachDuplicates's own, unconditional hint.
-        self::assertCount(1, $this->joinPrefixQueries(new EntryQuery($this->user->requireId(), view: 'favorites')));
+        self::assertCount(
+            1,
+            $this->joinPrefixQueries(new EntryQuery($this->user->requireId(), view: EntryView::Favorites)),
+        );
     }
 
     private function favorited(Entry $entry): EntryState
@@ -759,7 +763,10 @@ final class EntryListTest extends DbTestCase
     {
         $this->entry('a', '2026-07-05T00:00:00Z');
 
-        $queries = $this->recordedList($this->repo(), new EntryQuery($this->user->requireId(), 'all'))['queries'];
+        $queries = $this->recordedList(
+            $this->repo(),
+            new EntryQuery($this->user->requireId(), EntryView::All),
+        )['queries'];
 
         self::assertCount(1, $queries, 'a dense fan-in view must run the page query alone, no probe');
         self::assertStringContainsString('JOIN_PREFIX', $queries[0]);
@@ -996,7 +1003,7 @@ final class EntryListTest extends DbTestCase
         $this->em->flush();
 
         $repo = $this->repoWithWindow(2);
-        $query = new EntryQuery($this->user->requireId(), view: 'unread', tagId: $tag->getId(), limit: 2);
+        $query = new EntryQuery($this->user->requireId(), view: EntryView::Unread, tagId: $tag->getId(), limit: 2);
 
         $recorded = $this->recordedList($repo, $query);
         self::assertCount(

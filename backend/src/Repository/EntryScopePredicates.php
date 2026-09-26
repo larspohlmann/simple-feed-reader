@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Enum\EntryView;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 
@@ -57,27 +58,30 @@ final readonly class EntryScopePredicates
         $qb->andWhere(\sprintf('%s.id IN (:ids)', $a->entry))->setParameter('ids', $entryIds);
     }
 
-    private function applyView(QueryBuilder $qb, EntryAliases $a, string $view): void
+    private function applyView(QueryBuilder $qb, EntryAliases $a, EntryView $view): void
     {
         switch ($view) {
-            case 'unread':
+            case EntryView::Unread:
                 $this->unread($qb, $a);
                 break;
-            case 'favorites':
-                $qb->andWhere(\sprintf('%s.isFavorite = :flag', $a->state))
-                    ->setParameter('flag', true, Types::BOOLEAN);
+            case EntryView::Favorites:
+                $this->stateFlagIsSet($qb, $a, 'isFavorite');
                 break;
-            case 'kept':
-                $qb->andWhere(\sprintf('%s.isKept = :flag', $a->state))
-                    ->setParameter('flag', true, Types::BOOLEAN);
+            case EntryView::Kept:
+                $this->stateFlagIsSet($qb, $a, 'isKept');
                 break;
-            case 'viewed':
-                $qb->andWhere(\sprintf('%s.isViewed = :flag', $a->state))
-                    ->setParameter('flag', true, Types::BOOLEAN);
+            case EntryView::Viewed:
+                $this->stateFlagIsSet($qb, $a, 'isViewed');
                 break;
-            default:
+            case EntryView::All:
+            case EntryView::ForYou:
                 break;
         }
+    }
+
+    private function stateFlagIsSet(QueryBuilder $qb, EntryAliases $a, string $flag): void
+    {
+        $qb->andWhere(\sprintf('%s.%s = :flag', $a->state, $flag))->setParameter('flag', true, Types::BOOLEAN);
     }
 
     private function unread(QueryBuilder $qb, EntryAliases $a): void

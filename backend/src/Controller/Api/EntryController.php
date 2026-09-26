@@ -10,8 +10,8 @@ use App\Dto\Entry\MarkForYouReadRequest;
 use App\Dto\Entry\MarkReadRequest;
 use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\User;
+use App\Enum\EntryView;
 use App\Enum\ListOrder;
-use App\Exception\ValidationException;
 use App\Http\EntryJson;
 use App\Http\EntryPage;
 use App\Http\EntryStateJson;
@@ -58,28 +58,13 @@ final readonly class EntryController
         #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
         EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
-        // Validate `view` in-controller (not via a MapQueryParameter regexp) so a
-        // bad value reports the SAME `validation_error` problem type as every other
-        // invalid field, which the client switches on. The match also narrows the
-        // string to EntryQuery's literal-union view type for static analysis.
-        $view = match ($view) {
-            null, 'all' => 'all',
-            'unread' => 'unread',
-            'favorites' => 'favorites',
-            'kept' => 'kept',
-            'viewed' => 'viewed',
-            'for-you' => 'for-you',
-            default => throw new ValidationException(
-                ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
-            ),
-        };
+        // Parsed here, not by a MapQueryParameter filter, so a bad view is the same
+        // `validation_error` as every other invalid field, which the client switches on.
+        $entryView = EntryView::fromRequestValue($view);
         $listOrder = ListOrder::fromRequestValue($page->order);
 
-        // The for-you feed is score-ranked, not (effectiveDate, id)-ranked, so
-        // it needs its own cursor and never reaches EntryQuery's applyView.
-        // Every other list says "only unread" by asking for the `unread` VIEW;
-        // this one IS the view, so its filter rides beside it as a flag.
-        if ($view === 'for-you') {
+        // Score-ranked: it pages with its own cursor and never reaches EntryQuery.
+        if ($entryView === EntryView::ForYou) {
             return new JsonResponse(RecommendationFeedJson::page($this->forYouFeed->page(
                 new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),
             )));
@@ -87,7 +72,7 @@ final readonly class EntryController
 
         $query = new EntryQuery(
             userId: $user->requireId(),
-            view: $view,
+            view: $entryView,
             subscriptionId: $subscription,
             tagId: $tag,
             cursor: EntryCursor::fromRequestValue($page->cursor),
@@ -97,7 +82,7 @@ final readonly class EntryController
 
         $rows = $this->enricher->enrich($this->entryList->listForUser($query), $user->requireId());
 
-        return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($view)));
+        return new JsonResponse(EntryPage::of($rows, $query->limit, EntryListSort::forView($entryView)));
     }
 
     #[Route('/{id}', name: 'api_entries_get', methods: ['GET'], requirements: ['id' => '\d+'])]

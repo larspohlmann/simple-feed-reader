@@ -9,6 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\EntryView;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
@@ -39,7 +40,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -61,7 +62,7 @@ final class DuplicateCollapseTest extends DbTestCase
         );
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($solo->requireId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($solo->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($onlyCopy->getId(), $rows[0]->entry->getId());
@@ -76,7 +77,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->persist($read);
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -88,7 +89,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $two = $this->entry($this->feedB, 'b-guid', null, null, '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(2, $rows);
         $ids = array_map(static fn ($r) => $r->entry->getId(), $rows);
@@ -170,7 +171,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'all'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -188,7 +189,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->em->persist($read);
         $this->em->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: 'unread'));
+        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
