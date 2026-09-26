@@ -131,7 +131,7 @@ final class JwtAccessTest extends ApiTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $user = $em->getRepository(User::class)->findOneBy(['email' => 'revoked@example.com']);
         self::assertInstanceOf(User::class, $user);
-        $user->setStatus(UserStatus::Suspended);
+        $user->suspend();
         $em->flush();
 
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);
@@ -163,7 +163,7 @@ final class JwtAccessTest extends ApiTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $user = $em->getRepository(User::class)->findOneBy(['email' => 'quiet@example.com']);
         self::assertInstanceOf(User::class, $user);
-        $user->setStatus(UserStatus::Suspended);
+        $user->suspend();
         $em->flush();
 
         $client->request('GET', self::PROTECTED, server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $token]);

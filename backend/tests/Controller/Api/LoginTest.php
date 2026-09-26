@@ -374,7 +374,7 @@ final class LoginTest extends WebTestCase
         $em = self::getContainer()->get(EntityManagerInterface::class);
 
         $user = new User('oauth-only@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $user->setStatus(UserStatus::Active);
+        $user->approve(new \DateTimeImmutable('2026-07-01 10:00:00'));
         // No password hash: this account exists only through a provider.
         $em->persist($user);
         $em->flush();
@@ -416,7 +416,7 @@ final class LoginTest extends WebTestCase
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $oauthOnly = new User('no-password@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $oauthOnly->setStatus(UserStatus::Active);
+        $oauthOnly->approve(new \DateTimeImmutable('2026-07-01 10:00:00'));
         $em->persist($oauthOnly);
         $em->flush();
 

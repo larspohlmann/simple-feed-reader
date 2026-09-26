@@ -5,28 +5,21 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Entity\Feed;
-use App\Enum\FeedStatus;
 use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Clock\ClockInterface;
 
-/**
- * Owns all fetch-schedule state transitions on Feed: adaptive interval on
- * success, a wait on a rationed request, exponential backoff on failure, and
- * the "gone" terminal state.
- */
-final class FeedScheduler
+final readonly class FeedScheduler
 {
     private const int FLOOR_MINUTES = 5;
     private const int CEILING_MINUTES = 120;       // 2 h
     private const int FAILURE_CAP_MINUTES = 10080; // 7 days
     private const int FAILURES_UNTIL_GONE = 30;
     private const int MAX_BACKOFF_EXPONENT = 9;
-    private const int ERROR_MESSAGE_MAX = 1000;
     private const int SECONDS_PER_MINUTE = 60;
 
     public function __construct(
-        private readonly ClockInterface $clock,
-        private readonly HostThrottle $hostThrottle,
+        private ClockInterface $clock,
+        private HostThrottle $hostThrottle,
     ) {
     }
 
@@ -35,12 +28,8 @@ final class FeedScheduler
      */
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
-        // A source that just delivered resets to the floor at once, not eased
-        // down by halving: after a quiet spell the interval has grown toward the
-        // ceiling, and a slow walk back would let a burst block the top of All
-        // items (#643). The grow branch keeps the floor guard: a stored interval
-        // of <= 0 (corruption, manual edit) would survive the *1.5 growth and
-        // set nextFetchAt <= now, refetching the feed every run.
+        // New entries reset to the floor at once, not by halving, or a burst blocks the top of All items (#643).
+        // The grow branch keeps the floor guard: a stored interval <= 0 would otherwise refetch the feed every run.
         $interval = $newEntryCount > 0
             ? self::FLOOR_MINUTES
             : max(
@@ -49,28 +38,15 @@ final class FeedScheduler
             );
 
         $now = $this->clock->now();
-        $feed->setFetchIntervalMinutes($interval);
-        $feed->setConsecutiveFailures(0);
-        $feed->setLastErrorMessage(null);
-        $feed->setStatus(FeedStatus::Active);
-        $feed->setLastFetchedAt($now);
-        $feed->setLastSuccessfulFetchAt($now);
+        $feed->recordSuccessfulFetch($now, $interval);
         if ($newEntryCount > 0) {
-            $feed->setLastNewEntryAt($now);
+            $feed->recordNewEntries($now);
         }
-        $feed->setNextFetchAt($now->modify(sprintf('+%d minutes', $interval)));
     }
 
     /**
-     * The site is rationing requests, not broken. This writes one field — when
-     * we may ask again. No failure counted, no erroring status, no error
-     * message, no backoff growth: anything else would let one 429 cost a
-     * working feed hours of silence, which is what emptied the Reddit feeds in
-     * #290.
-     *
-     * lastFetchedAt stays as it was: it records when content last arrived, and
-     * the manual refresh's cooldown reads it, so stamping it here would also
-     * lock the user out of retrying by hand.
+     * A 429 rations, it does not fail: only nextFetchAt moves, or one 429 silences a working feed for hours (#290).
+     * lastFetchedAt stays too: the manual refresh's cooldown reads it, and stamping it would block a retry by hand.
      *
      * @throws \DateMalformedStringException
      */
@@ -80,7 +56,7 @@ final class FeedScheduler
         // Reddit resets in seconds, so only this feed, not the whole host, waits out its own cadence.
         $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
 
-        $feed->setNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
+        $feed->scheduleNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
     }
 
     private function cadenceSeconds(Feed $feed): int
@@ -96,33 +72,26 @@ final class FeedScheduler
         $failures = $feed->getConsecutiveFailures() + 1;
         $now = $this->clock->now();
 
-        $feed->setConsecutiveFailures($failures);
-        $feed->setLastErrorMessage(mb_substr($message, 0, self::ERROR_MESSAGE_MAX));
-        $feed->setLastFetchedAt($now);
-
         if ($failures >= self::FAILURES_UNTIL_GONE) {
-            $feed->setStatus(FeedStatus::Gone);
-            $feed->setNextFetchAt(null);
+            $feed->markGone($now, $message);
 
             return;
         }
 
-        $feed->setStatus(FeedStatus::Erroring);
-        $backoffMinutes = (int) min(
-            self::FAILURE_CAP_MINUTES,
-            max($feed->getFetchIntervalMinutes(), self::FLOOR_MINUTES)
-                * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
-        );
-        $feed->setNextFetchAt($now->modify(sprintf('+%d minutes', $backoffMinutes)));
+        $feed->recordFailedFetch($now, $message, $this->backoffMinutes($feed, $failures));
     }
 
     public function recordGone(Feed $feed, string $message): void
     {
-        $now = $this->clock->now();
-        $feed->setStatus(FeedStatus::Gone);
-        $feed->setConsecutiveFailures($feed->getConsecutiveFailures() + 1);
-        $feed->setLastErrorMessage(mb_substr($message, 0, self::ERROR_MESSAGE_MAX));
-        $feed->setLastFetchedAt($now);
-        $feed->setNextFetchAt(null);
+        $feed->markGone($this->clock->now(), $message);
+    }
+
+    private function backoffMinutes(Feed $feed, int $failures): int
+    {
+        return (int) min(
+            self::FAILURE_CAP_MINUTES,
+            max($feed->getFetchIntervalMinutes(), self::FLOOR_MINUTES)
+                * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
+        );
     }
 }

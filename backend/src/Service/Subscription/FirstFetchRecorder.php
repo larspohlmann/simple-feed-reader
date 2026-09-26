@@ -30,9 +30,6 @@ use Symfony\Component\Clock\ClockInterface;
  */
 final readonly class FirstFetchRecorder
 {
-    private const int ETAG_MAX = 512;
-    private const int LAST_MODIFIED_MAX = 255;
-
     /**
      * A subscribe inserts every stored entry inside one HTTP request, and a feed
      * that serves its whole archive (841 items for one measured in #384) makes
@@ -75,8 +72,7 @@ final readonly class FirstFetchRecorder
             $this->newest($discovered->document),
             new FeedIngestContext($this->clock->now(), null),
         );
-        $feed->setEtag($this->truncate($discovered->etag, self::ETAG_MAX));
-        $feed->setLastModified($this->truncate($discovered->lastModified, self::LAST_MODIFIED_MAX));
+        $feed->recordCacheValidators($discovered->etag, $discovered->lastModified);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->em->flush();
         // See RefreshRunner's identical ordering: an id only exists after this
@@ -84,11 +80,6 @@ final readonly class FirstFetchRecorder
         $this->indexer->index($createdEntries);
 
         return \count($createdEntries);
-    }
-
-    private function truncate(?string $value, int $max): ?string
-    {
-        return null === $value ? null : mb_substr($value, 0, $max);
     }
 
     /**

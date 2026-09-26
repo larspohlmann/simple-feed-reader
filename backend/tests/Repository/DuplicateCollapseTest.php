@@ -72,7 +72,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $read = new EntryState($this->user, $lower);
-        $read->setIsHidden(true);
+        $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($read);
         $this->em->flush();
 
@@ -184,7 +184,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $read = new EntryState($this->user, $higher);
-        $read->setIsHidden(true);
+        $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($read);
         $this->em->flush();
 

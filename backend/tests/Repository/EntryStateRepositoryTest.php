@@ -64,7 +64,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-set');
 
         $state = new EntryState($this->user, $withState);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -98,11 +98,11 @@ final class EntryStateRepositoryTest extends DbTestCase
         $withoutState = $this->entry('without-state-guid');
 
         $mineState = new EntryState($this->user, $shared);
-        $mineState->setIsFavorite(true);
+        $mineState->markFavorite();
         $this->em->persist($mineState);
 
         $theirState = new EntryState($otherUser, $shared);
-        $theirState->setIsKept(true);
+        $theirState->markKept();
         $this->em->persist($theirState);
         $this->em->flush();
 
@@ -122,8 +122,8 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, false, null);
-        $this->repo()->ensureRow($userId, $entryId, false, null);
+        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repo()->ensureRow($userId, $entryId, null);
 
         self::assertSame(1, $this->repo()->countForUser($userId));
     }
@@ -134,14 +134,14 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, false, null);
+        $this->repo()->ensureRow($userId, $entryId, null);
 
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $this->em->flush();
 
-        $this->repo()->ensureRow($userId, $entryId, false, null);
+        $this->repo()->ensureRow($userId, $entryId, null);
 
         $this->em->clear();
         $reloaded = $this->repo()->findOneForUserEntry($userId, $entryId);
@@ -156,7 +156,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $entryId = $entry->requireId();
         $watermark = new \DateTimeImmutable('2026-07-08T09:30:00');
 
-        $this->repo()->ensureRow($userId, $entryId, true, $watermark);
+        $this->repo()->ensureRow($userId, $entryId, $watermark);
 
         $this->em->clear();
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
@@ -171,7 +171,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, false, null);
+        $this->repo()->ensureRow($userId, $entryId, null);
 
         $this->em->clear();
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
@@ -180,5 +180,20 @@ final class EntryStateRepositoryTest extends DbTestCase
         self::assertFalse($state->isKept());
         self::assertFalse($state->isViewed());
         self::assertNull($state->getViewedAt());
+    }
+
+    public function testEnsureRowWithoutAHiddenSinceSeedsAnUnreadRow(): void
+    {
+        $entry = $this->entry('ensure-unread');
+        $userId = $this->user->requireId();
+        $entryId = $entry->requireId();
+
+        $this->repo()->ensureRow($userId, $entryId, null);
+
+        $this->em->clear();
+        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        self::assertNotNull($state);
+        self::assertFalse($state->isHidden());
+        self::assertNull($state->getHiddenAt());
     }
 }

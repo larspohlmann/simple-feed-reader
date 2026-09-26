@@ -40,7 +40,7 @@ final class UnreadCountsTest extends DbTestCase
             $this->em->persist($e);
             if ($g === 'c') {
                 $st = new EntryState($user, $e);
-                $st->setIsHidden(true);
+                $st->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
                 $this->em->persist($st);
             }
         }
@@ -154,7 +154,7 @@ final class UnreadCountsTest extends DbTestCase
         );
         $this->em->persist($higher);
         $state = new EntryState($user, $lower);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 

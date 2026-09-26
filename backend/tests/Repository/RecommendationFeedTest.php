@@ -172,9 +172,9 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->flush();
 
         $favState = new EntryState($this->user, $entryFav);
-        $favState->setIsFavorite(true);
+        $favState->markFavorite();
         $keptState = new EntryState($this->user, $entryKept);
-        $keptState->setIsKept(true);
+        $keptState->markKept();
         $viewedState = new EntryState($this->user, $entryViewed);
         $viewedState->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
         $this->em->persist($favState);

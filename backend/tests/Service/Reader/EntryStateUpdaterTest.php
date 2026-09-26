@@ -140,6 +140,18 @@ final class EntryStateUpdaterTest extends DbTestCase
         self::assertNull($this->persistedStateOf($user, $sibling));
     }
 
+    public function testUnfavouritingAndUnkeepingClearBothFlags(): void
+    {
+        [$user, $target] = $this->seedGroup();
+        $row = $this->rows()->getOneRowForUser($target->requireId(), $user->requireId());
+        $this->updater()->apply($user, $row, $this->request(isFavorite: true, isKept: true));
+
+        $this->updater()->apply($user, $row, $this->request(isFavorite: false, isKept: false));
+
+        self::assertFalse($this->stateOf($user, $target)->isFavorite());
+        self::assertFalse($this->stateOf($user, $target)->isKept());
+    }
+
     public function testViewedMirrorsToTheSubscribedSiblingAndImpliesHiddenThere(): void
     {
         [$user, $target, $sibling] = $this->seedGroup();

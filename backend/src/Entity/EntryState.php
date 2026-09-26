@@ -44,6 +44,7 @@ class EntryState
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $viewedAt = null;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, Entry $entry)
     {
         $this->user = $user;
@@ -65,19 +66,19 @@ class EntryState
         return $this->isHidden;
     }
 
-    public function setIsHidden(bool $isHidden): void
-    {
-        $this->isHidden = $isHidden;
-    }
-
     public function isFavorite(): bool
     {
         return $this->isFavorite;
     }
 
-    public function setIsFavorite(bool $isFavorite): void
+    public function markFavorite(): void
     {
-        $this->isFavorite = $isFavorite;
+        $this->isFavorite = true;
+    }
+
+    public function clearFavorite(): void
+    {
+        $this->isFavorite = false;
     }
 
     public function isKept(): bool
@@ -85,9 +86,14 @@ class EntryState
         return $this->isKept;
     }
 
-    public function setIsKept(bool $isKept): void
+    public function markKept(): void
     {
-        $this->isKept = $isKept;
+        $this->isKept = true;
+    }
+
+    public function clearKept(): void
+    {
+        $this->isKept = false;
     }
 
     public function getHiddenAt(): ?\DateTimeImmutable
@@ -95,9 +101,11 @@ class EntryState
         return $this->hiddenAt;
     }
 
-    public function setHiddenAt(?\DateTimeImmutable $hiddenAt): void
+    // Restore only: a legacy "read, instant unknown" (null hiddenAt) must survive, which hide() cannot express.
+    public function restoreReadMark(BackedUpReadMark $readMark): void
     {
-        $this->hiddenAt = $hiddenAt;
+        $this->isHidden = $readMark->isHidden;
+        $this->hiddenAt = $readMark->hiddenAt;
     }
 
     public function isViewed(): bool

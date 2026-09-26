@@ -14,6 +14,8 @@ use App\Service\Subscription\TagStyle;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Clock\ClockInterface;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class BulkSubscriberTest extends DbTestCase
@@ -82,6 +84,21 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertNotNull($fresh);
         self::assertSame('Publisher Title', $shared->getTitle(), 'an existing shared Feed row is never retitled');
         self::assertSame('Catalog Title', $fresh->getTitle(), 'a new Feed row is seeded from the catalog');
+    }
+
+    public function testANewFeedIsScheduledForTheNextRefresh(): void
+    {
+        $clock = new MockClock('2026-07-21 12:00:00', 'UTC');
+        self::getContainer()->set(ClockInterface::class, $clock);
+        $user = $this->user('due@example.com');
+
+        $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItem('https://due.example.com/rss.xml', 'Due Feed', null, null),
+        ]);
+
+        $feed = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://due.example.com/rss.xml']);
+        self::assertNotNull($feed);
+        self::assertEquals($clock->now(), $feed->getNextFetchAt());
     }
 
     public function testReusesAnExistingTagAndLeavesItsStylingAlone(): void

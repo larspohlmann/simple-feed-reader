@@ -166,7 +166,7 @@ final class RefreshRunnerTest extends DbTestCase
     private function dueFeed(string $url): Feed
     {
         $feed = new Feed($url);
-        $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
+        $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
         $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
@@ -364,9 +364,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testARefreshSinksAnArticleTheFeedServedBeforeTheLastFetch(): void
     {
         $feed = $this->dueFeed('https://old-news.example.com/feed');
-        // A normal previous fetch: it succeeded, so it stamped both fields alike.
-        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
-        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-21 06:00:00'));
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 06:00:00'), 60);
         $this->em->flush();
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
@@ -410,10 +408,8 @@ final class RefreshRunnerTest extends DbTestCase
     public function testARefreshSurfacesBacklogPublishedDuringAFeedOutage(): void
     {
         $feed = $this->dueFeed('https://recovered.example.com/feed');
-        // Last real success was nine days ago; every attempt since failed but
-        // still stamped lastFetchedAt (FeedScheduler::recordFailure()).
-        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-07-12 06:00:00'));
-        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-12 06:00:00'), 60);
+        $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 'HTTP 503', 30);
         $this->em->flush();
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
@@ -518,7 +514,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testAThrottledFeedKeepsItsHealthAndIsAskedAgainShortly(): void
     {
         $feed = $this->dueFeed('https://www.reddit.com/r/Bitwig/.rss');
-        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 30);
         $this->em->flush();
 
         $this->fetcher->willThrow(
@@ -921,7 +917,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testPermanentRedirectToAnAlreadyKnownUrlIsIgnored(): void
     {
         $existing = $this->dueFeed('https://new.example.com/feed');
-        $existing->setNextFetchAt($this->clock->now()->modify('+1 day'));
+        $existing->scheduleNextFetchAt($this->clock->now()->modify('+1 day'));
         $moving = $this->dueFeed('https://old.example.com/feed');
         $this->em->flush();
 
@@ -1117,7 +1113,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->runner()->run(RefreshRequest::allDue(300));
         $countAfterFirst = \count($this->em->getRepository(Entry::class)->findAll());
 
-        $feed->setNextFetchAt($this->clock->now()->modify('-1 hour')); // due again
+        $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour')); // due again
         $this->em->flush();
         $report = $this->runner()->run(RefreshRequest::allDue(300));
 

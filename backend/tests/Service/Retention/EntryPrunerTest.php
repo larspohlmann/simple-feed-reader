@@ -300,11 +300,11 @@ final class EntryPrunerTest extends DbTestCase
         $oldButRead = $this->seedEntry($feed, 'old-read', $old);
 
         $favoriteState = new EntryState($user, $favorite);
-        $favoriteState->setIsFavorite(true);
+        $favoriteState->markFavorite();
         $keptState = new EntryState($user, $kept);
-        $keptState->setIsKept(true);
+        $keptState->markKept();
         $readState = new EntryState($user, $oldButRead);
-        $readState->setIsHidden(true);
+        $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($favoriteState);
         $this->em->persist($keptState);
         $this->em->persist($readState);
@@ -337,9 +337,9 @@ final class EntryPrunerTest extends DbTestCase
         $shared = $this->seedEntry($feed, 'shared', $this->daysAgo(200));
 
         $aliceRead = new EntryState($alice, $shared);
-        $aliceRead->setIsHidden(true);
+        $aliceRead->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $bobKept = new EntryState($bob, $shared);
-        $bobKept->setIsKept(true);
+        $bobKept->markKept();
         $this->em->persist($aliceRead);
         $this->em->persist($bobKept);
         $this->em->flush();
@@ -358,7 +358,7 @@ final class EntryPrunerTest extends DbTestCase
         $feed = $this->feedWithEntries(20, $this->daysAgo(5));
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
         $state = new EntryState($user, $doomed);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 
@@ -413,7 +413,7 @@ final class EntryPrunerTest extends DbTestCase
         // One of the two is kept, so it survives despite being beyond the cap;
         // its unprotected sibling is the only entry this prune may delete.
         $keptState = new EntryState($user, $protected);
-        $keptState->setIsKept(true);
+        $keptState->markKept();
         $this->em->persist($keptState);
         $this->em->flush();
 
@@ -443,7 +443,7 @@ final class EntryPrunerTest extends DbTestCase
         $oldest = $this->seedEntry($feed, 'oldest', $this->daysAgo(2));
 
         $readState = new EntryState($user, $oldest);
-        $readState->setIsHidden(true);
+        $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($readState);
         $this->em->flush();
 
@@ -477,7 +477,7 @@ final class EntryPrunerTest extends DbTestCase
         $favorite = $this->seedEntry($feed, 'favorite-newest', $this->daysAgo(1));
 
         $favoriteState = new EntryState($user, $favorite);
-        $favoriteState->setIsFavorite(true);
+        $favoriteState->markFavorite();
         $this->em->persist($favoriteState);
         $this->em->flush();
 

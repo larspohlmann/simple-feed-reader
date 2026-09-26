@@ -67,8 +67,7 @@ final readonly class UserStatusChanger
             true,
         );
 
-        $user->setStatus(UserStatus::Active);
-        $user->setApprovedAt($this->clock->now());
+        $user->approve($this->clock->now());
         $this->entityManager->flush();
 
         if ($isFirstTimeGrant) {
@@ -80,7 +79,7 @@ final readonly class UserStatusChanger
     {
         $this->selfActionGuard->ensureNotSelf($user, $admin);
 
-        $user->setStatus(UserStatus::Rejected);
+        $user->reject();
         $this->entityManager->flush();
     }
 
@@ -88,7 +87,7 @@ final readonly class UserStatusChanger
     {
         $this->selfActionGuard->ensureNotSelf($user, $admin);
 
-        $user->setStatus(UserStatus::Suspended);
+        $user->suspend();
         $this->entityManager->flush();
     }
 }

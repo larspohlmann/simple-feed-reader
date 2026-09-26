@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\User;
-use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -71,8 +70,7 @@ final class E2eSeedAdminCommand extends Command
         $user = $this->users->findOneByEmail($email) ?? new User($email, $now);
 
         $user->setRoles(['ROLE_ADMIN']);
-        $user->setStatus(UserStatus::Active);
-        $user->setApprovedAt($now);
+        $user->approve($now);
         $user->setPasswordHash($this->hasher->hashPassword($user, $password), $now);
         // The scrape fallback is opt-in, so an account left at the default never
         // gets a scraped candidate: discovery answers an empty list for a page that

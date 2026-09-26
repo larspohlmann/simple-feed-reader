@@ -61,7 +61,7 @@ final class AccountBackupControllerTest extends WebTestCase
         );
         $em->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $em->persist($state);
         $em->flush();
     }

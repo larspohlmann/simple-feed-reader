@@ -182,8 +182,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $fetchedAt = new \DateTimeImmutable('2026-05-30T09:00:00Z');
         $shared = new Feed('https://example.com/feed.xml');
-        $shared->setLastFetchedAt($fetchedAt);
-        $shared->setNextFetchAt($fetchedAt->modify('+1 hour'));
+        $shared->recordSuccessfulFetch($fetchedAt, 60);
         $this->em->persist($shared);
         $this->em->flush();
 

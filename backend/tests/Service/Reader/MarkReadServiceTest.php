@@ -53,7 +53,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, $sub, $old] = $this->seed();
         // A pre-existing explicit "unread" below the mark point.
         $state = new EntryState($user, $old);
-        $state->setIsHidden(false);
+        $state->markUnread();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -123,9 +123,9 @@ final class MarkReadServiceTest extends DbTestCase
         // disturb the favorite/kept flags that protect an entry from pruning.
         [$user, , $old] = $this->seed();
         $state = new EntryState($user, $old);
-        $state->setIsHidden(false);
-        $state->setIsFavorite(true);
-        $state->setIsKept(true);
+        $state->markUnread();
+        $state->markFavorite();
+        $state->markKept();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -224,7 +224,7 @@ final class MarkReadServiceTest extends DbTestCase
         $this->em->persist($entry);
 
         $state = new EntryState($user, $entry);
-        $state->setIsHidden(false);
+        $state->markUnread();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -236,7 +236,7 @@ final class MarkReadServiceTest extends DbTestCase
         [$user, $sub, $old] = $this->seed();
         // A pre-existing explicit "unread" on the included feed, below the mark point.
         $includedState = new EntryState($user, $old);
-        $includedState->setIsHidden(false);
+        $includedState->markUnread();
         $this->em->persist($includedState);
         $this->em->flush();
 

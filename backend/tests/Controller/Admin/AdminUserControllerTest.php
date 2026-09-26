@@ -393,7 +393,8 @@ final class AdminUserControllerTest extends WebTestCase
         $admin = $this->admin();
         $target = $this->factory()->create('back@example.com', status: UserStatus::Suspended);
         $original = new \DateTimeImmutable('2020-01-01 00:00:00');
-        $target->setApprovedAt($original);
+        $target->approve($original);
+        $target->suspend();
 
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -772,7 +773,8 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('de', $account['locale']);
         self::assertIsString($account['createdAt']);
         self::assertStringStartsWith('2026-07-01T10:00:00', $account['createdAt']);
-        self::assertNull($account['approvedAt']);
+        self::assertIsString($account['approvedAt']);
+        self::assertStringStartsWith('2026-07-01T10:00:00', $account['approvedAt']);
         self::assertIsString($account['lastLoginAt']);
         self::assertStringStartsWith('2026-07-29T09:00:00', $account['lastLoginAt']);
         self::assertSame([], $account['identities']);
@@ -828,8 +830,8 @@ final class AdminUserControllerTest extends WebTestCase
      * hard-wiring AdminUserController::footprintRow()'s lastRefreshAt to null
      * and staleFeedsCount to 0, and subscriptionRows()'s lastFetchedAt to
      * null, left every other test in this class green — no other fixture
-     * here ever calls Feed::setLastFetchedAt(), so the null/zero branch was
-     * the only one ever pinned.
+     * here ever records a fetch (`Feed::recordSuccessfulFetch()`), so the
+     * null/zero branch was the only one ever pinned.
      */
     public function testTheFootprintAndSubscriptionRowCarryARealFetchTimestamp(): void
     {
@@ -843,7 +845,7 @@ final class AdminUserControllerTest extends WebTestCase
         $feed = new Feed('https://example.com/stale-fetcher.xml');
         $feed->setTitle('Stale Fetcher Weekly');
         $lastFetch = new \DateTimeImmutable('-10 days');
-        $feed->setLastFetchedAt($lastFetch);
+        $feed->recordSuccessfulFetch($lastFetch, 60);
         $em->persist($feed);
 
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-30 days'));

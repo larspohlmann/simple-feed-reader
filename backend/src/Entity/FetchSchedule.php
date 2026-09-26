@@ -7,39 +7,19 @@ namespace App\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * A feed's fetch-schedule state: when it was last asked, when it last
- * actually delivered, when it last brought back new entries, when it may be
- * asked again, and the failure streak and message behind that schedule.
- *
- * Embedded into Feed rather than left as seven of its own scalar columns —
- * PHPMD's field-count ceiling on Feed is a proxy for a real seam: these seven
- * values are read and written together, by FeedScheduler alone, and belong
- * to the same concern. An embeddable keeps them there without the join or
- * lifecycle a separate entity would add; the column names are unprefixed so
- * the table itself is unchanged.
- */
 #[ORM\Embeddable]
 class FetchSchedule
 {
+    private const int ERROR_MESSAGE_MAX = 1000;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastFetchedAt = null;
 
-    /**
-     * When a fetch last actually delivered — as opposed to lastFetchedAt,
-     * which also advances on a failed or gone attempt (FeedScheduler::
-     * recordFailure(), recordGone()). Null means every fetch of this feed has
-     * failed so far.
-     */
+    /** When a fetch last delivered; unlike lastFetchedAt, a failed or gone attempt leaves it alone. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastSuccessfulFetchAt = null;
 
-    /**
-     * When a fetch last brought back new entries — as opposed to
-     * lastSuccessfulFetchAt, which advances on every 200 even when the feed
-     * carried nothing new. This is the "last updated" the reader shows. Null
-     * until the first fetch that adds an entry.
-     */
+    /** When a fetch last brought new entries, the reader's "last updated"; an empty 200 leaves it alone. */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastNewEntryAt = null;
 
@@ -60,19 +40,9 @@ class FetchSchedule
         return $this->lastFetchedAt;
     }
 
-    public function setLastFetchedAt(?\DateTimeImmutable $lastFetchedAt): void
-    {
-        $this->lastFetchedAt = $lastFetchedAt;
-    }
-
     public function getLastSuccessfulFetchAt(): ?\DateTimeImmutable
     {
         return $this->lastSuccessfulFetchAt;
-    }
-
-    public function setLastSuccessfulFetchAt(?\DateTimeImmutable $lastSuccessfulFetchAt): void
-    {
-        $this->lastSuccessfulFetchAt = $lastSuccessfulFetchAt;
     }
 
     public function getLastNewEntryAt(): ?\DateTimeImmutable
@@ -80,19 +50,9 @@ class FetchSchedule
         return $this->lastNewEntryAt;
     }
 
-    public function setLastNewEntryAt(?\DateTimeImmutable $lastNewEntryAt): void
-    {
-        $this->lastNewEntryAt = $lastNewEntryAt;
-    }
-
     public function getNextFetchAt(): ?\DateTimeImmutable
     {
         return $this->nextFetchAt;
-    }
-
-    public function setNextFetchAt(?\DateTimeImmutable $nextFetchAt): void
-    {
-        $this->nextFetchAt = $nextFetchAt;
     }
 
     public function getFetchIntervalMinutes(): int
@@ -100,19 +60,9 @@ class FetchSchedule
         return $this->fetchIntervalMinutes;
     }
 
-    public function setFetchIntervalMinutes(int $fetchIntervalMinutes): void
-    {
-        $this->fetchIntervalMinutes = $fetchIntervalMinutes;
-    }
-
     public function getConsecutiveFailures(): int
     {
         return $this->consecutiveFailures;
-    }
-
-    public function setConsecutiveFailures(int $consecutiveFailures): void
-    {
-        $this->consecutiveFailures = $consecutiveFailures;
     }
 
     public function getLastErrorMessage(): ?string
@@ -120,8 +70,48 @@ class FetchSchedule
         return $this->lastErrorMessage;
     }
 
-    public function setLastErrorMessage(?string $lastErrorMessage): void
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordSuccess(\DateTimeImmutable $fetchedAt, int $intervalMinutes): void
     {
-        $this->lastErrorMessage = $lastErrorMessage;
+        $this->fetchIntervalMinutes = $intervalMinutes;
+        $this->consecutiveFailures = 0;
+        $this->lastErrorMessage = null;
+        $this->lastFetchedAt = $fetchedAt;
+        $this->lastSuccessfulFetchAt = $fetchedAt;
+        $this->nextFetchAt = $fetchedAt->modify(sprintf('+%d minutes', $intervalMinutes));
+    }
+
+    public function recordNewEntries(\DateTimeImmutable $arrivedAt): void
+    {
+        $this->lastNewEntryAt = $arrivedAt;
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordFailure(\DateTimeImmutable $failedAt, string $message, int $backoffMinutes): void
+    {
+        $this->countFailedAttempt($failedAt, $message);
+        $this->nextFetchAt = $failedAt->modify(sprintf('+%d minutes', $backoffMinutes));
+    }
+
+    public function recordGone(\DateTimeImmutable $failedAt, string $message): void
+    {
+        $this->countFailedAttempt($failedAt, $message);
+        $this->nextFetchAt = null;
+    }
+
+    public function scheduleNextFetchAt(\DateTimeImmutable $nextFetchAt): void
+    {
+        $this->nextFetchAt = $nextFetchAt;
+    }
+
+    private function countFailedAttempt(\DateTimeImmutable $failedAt, string $message): void
+    {
+        ++$this->consecutiveFailures;
+        $this->lastErrorMessage = mb_substr($message, 0, self::ERROR_MESSAGE_MAX);
+        $this->lastFetchedAt = $failedAt;
     }
 }

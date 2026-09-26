@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Security\AccountStatusException;
 use App\Security\TrialExpiryGuard;
+use App\Tests\Support\NewUserStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -17,7 +18,7 @@ final class TrialExpiryGuardTest extends TestCase
     private function user(?\DateTimeImmutable $trialEndsAt, UserStatus $status = UserStatus::Active): User
     {
         $user = new User('trial@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-01 10:00:00'));
         $user->setTrialEndsAt($trialEndsAt);
 
         return $user;

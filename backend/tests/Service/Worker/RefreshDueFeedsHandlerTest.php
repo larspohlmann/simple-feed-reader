@@ -40,7 +40,7 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
     public function testFiringRefreshesADueFeedAndMovesItsLastFetchedAt(): void
     {
         $feed = new Feed('https://example.com/due/feed.xml');
-        $feed->setNextFetchAt(new \DateTimeImmutable('-1 hour'));
+        $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
         $this->em->persist($feed);
         $subscriber = $this->user('sweeper@example.com');
         $this->em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable('-1 day')));

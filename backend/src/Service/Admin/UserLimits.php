@@ -60,7 +60,6 @@ final readonly class UserLimits
             return;
         }
 
-        $user->setStatus(UserStatus::Active);
-        $user->setApprovedAt($this->clock->now());
+        $user->approve($this->clock->now());
     }
 }

@@ -66,7 +66,7 @@ final readonly class AccountDeleter
 
     private function ensureNotTheLastAdmin(User $user): void
     {
-        if (!\in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+        if (!$user->isAdmin()) {
             return;
         }
 

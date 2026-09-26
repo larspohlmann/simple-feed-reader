@@ -46,7 +46,7 @@ final readonly class EntryStateResolver
             return $existing;
         }
 
-        $this->states->ensureRow($userId, $entryId, $row->isHidden, $row->isHidden ? $row->markedReadUntil : null);
+        $this->states->ensureRow($userId, $entryId, $row->isHidden ? $row->markedReadUntil : null);
 
         $created = $this->states->findOneForUserEntry($userId, $entryId);
         if ($created === null) {

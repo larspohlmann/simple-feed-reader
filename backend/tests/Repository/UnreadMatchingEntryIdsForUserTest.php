@@ -88,7 +88,7 @@ final class UnreadMatchingEntryIdsForUserTest extends DbTestCase
     {
         $entry = $this->entry('b', 'Klima update');
         $state = new EntryState($this->user, $entry);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 

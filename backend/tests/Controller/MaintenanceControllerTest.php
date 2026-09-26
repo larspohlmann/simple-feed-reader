@@ -27,7 +27,7 @@ final class MaintenanceControllerTest extends WebTestCase
         /** @var EntityManagerInterface $em */
         $em = self::getContainer()->get(EntityManagerInterface::class);
         $feed = new Feed($url);
-        $feed->setNextFetchAt(new \DateTimeImmutable('-1 hour'));
+        $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
         $em->persist($feed);
         $subscriber = new User('maintenance-fixture-subscriber@example.com', new \DateTimeImmutable());
         $em->persist($subscriber);

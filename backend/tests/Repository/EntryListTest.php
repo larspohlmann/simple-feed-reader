@@ -382,7 +382,7 @@ final class EntryListTest extends DbTestCase
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         // Explicitly unread despite being under the watermark.
         $state = new EntryState($this->user, $e);
-        $state->setIsHidden(false);
+        $state->markUnread();
         $this->em->persist($state);
         $this->em->flush();
 
@@ -398,9 +398,9 @@ final class EntryListTest extends DbTestCase
         $this->entry('plain', '2026-07-07T00:00:00Z');
 
         $s1 = new EntryState($this->user, $fav);
-        $s1->setIsFavorite(true);
+        $s1->markFavorite();
         $s2 = new EntryState($this->user, $kept);
-        $s2->setIsKept(true);
+        $s2->markKept();
         $this->em->persist($s1);
         $this->em->persist($s2);
         $this->em->flush();
@@ -608,7 +608,7 @@ final class EntryListTest extends DbTestCase
         );
         $this->em->persist($entryB);
         $favoriteState = new EntryState($this->user, $entryB);
-        $favoriteState->setIsFavorite(true);
+        $favoriteState->markFavorite();
         $this->em->persist($favoriteState);
         $this->em->flush();
 
@@ -641,8 +641,8 @@ final class EntryListTest extends DbTestCase
         $this->em->persist($stranger);
         $this->em->persist(new Subscription($stranger, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $strangerState = new EntryState($stranger, $entry);
-        $strangerState->setIsHidden(true);
-        $strangerState->setIsFavorite(true);
+        $strangerState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
+        $strangerState->markFavorite();
         $this->em->persist($strangerState);
         $this->em->flush();
 
@@ -750,7 +750,7 @@ final class EntryListTest extends DbTestCase
     private function favorited(Entry $entry): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
 
         return $state;
     }
@@ -1064,7 +1064,7 @@ final class EntryListTest extends DbTestCase
     private function hidden(Entry $entry): EntryState
     {
         $state = new EntryState($this->user, $entry);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
 
         return $state;
     }

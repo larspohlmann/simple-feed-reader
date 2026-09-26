@@ -127,7 +127,7 @@ final class AccountBackupExporterTest extends DbTestCase
         $entry->setContentHtml('<p>body</p>');
         $this->em->persist($entry);
         $state = new EntryState($user, $entry);
-        $state->setIsFavorite(true);
+        $state->markFavorite();
         $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
         $this->em->persist($state);
         $this->em->flush();
@@ -226,7 +226,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->em->persist($subscribedEntry);
         $subscribedState = new EntryState($user, $subscribedEntry);
-        $subscribedState->setIsFavorite(true);
+        $subscribedState->markFavorite();
         $this->em->persist($subscribedState);
 
         // No Subscription row exists for this feed — exactly the state
@@ -245,7 +245,7 @@ final class AccountBackupExporterTest extends DbTestCase
         );
         $this->em->persist($orphanEntry);
         $orphanState = new EntryState($user, $orphanEntry);
-        $orphanState->setIsFavorite(true);
+        $orphanState->markFavorite();
         $this->em->persist($orphanState);
 
         $this->em->flush();

@@ -203,9 +203,9 @@ final class EntrySearchControllerTest extends ApiTestCase
         self::assertInstanceOf(Entry::class, $aboveWatermark);
 
         $explicitUnread = new EntryState($user, $belowWatermark);
-        $explicitUnread->setIsHidden(false);
+        $explicitUnread->markUnread();
         $explicitRead = new EntryState($user, $aboveWatermark);
-        $explicitRead->setIsHidden(true);
+        $explicitRead->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $em->persist($explicitUnread);
         $em->persist($explicitRead);
         $em->flush();

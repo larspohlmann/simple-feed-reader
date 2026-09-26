@@ -45,10 +45,10 @@ final readonly class EntryStateUpdater
             $request->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
         }
         if ($request->isFavorite !== null) {
-            $state->setIsFavorite($request->isFavorite);
+            $request->isFavorite ? $state->markFavorite() : $state->clearFavorite();
         }
         if ($request->isKept !== null) {
-            $state->setIsKept($request->isKept);
+            $request->isKept ? $state->markKept() : $state->clearKept();
         }
         if ($request->isViewed !== null) {
             // markViewed sets only the viewed flag; ViewedImpliesHiddenListener

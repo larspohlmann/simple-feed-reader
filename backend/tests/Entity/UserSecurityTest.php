@@ -83,6 +83,27 @@ final class UserSecurityTest extends TestCase
         self::assertSame(['ROLE_USER', 'ROLE_ADMIN'], $user->getRoles());
     }
 
+    public function testAnAccountWithoutTheAdminRoleIsNotAnAdmin(): void
+    {
+        self::assertFalse($this->user()->isAdmin());
+    }
+
+    public function testTheAdminRoleMakesAnAdmin(): void
+    {
+        $user = $this->user();
+        $user->setRoles(['ROLE_ADMIN']);
+
+        self::assertTrue($user->isAdmin());
+    }
+
+    public function testALookalikeRoleIsNotTheAdminRole(): void
+    {
+        $user = $this->user();
+        $user->setRoles(['ROLE_ADMINISTRATOR']);
+
+        self::assertFalse($user->isAdmin());
+    }
+
     public function testEmptyEmailIsRejectedSoTheIdentifierIsAlwaysUsable(): void
     {
         $this->expectException(\InvalidArgumentException::class);

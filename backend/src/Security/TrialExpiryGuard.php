@@ -39,7 +39,7 @@ final readonly class TrialExpiryGuard
         }
 
         if (UserStatus::Active === $user->getStatus()) {
-            $user->setStatus(UserStatus::Suspended);
+            $user->suspend();
             $this->entityManager->flush();
         }
 

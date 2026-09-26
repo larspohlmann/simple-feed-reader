@@ -7,7 +7,6 @@ namespace App\Tests\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\FeedStatus;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
@@ -26,14 +25,27 @@ final class FeedRepositoryTest extends DbTestCase
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
 
-    private function feed(string $url, ?\DateTimeImmutable $nextFetchAt, FeedStatus $status = FeedStatus::Active): Feed
+    private function persistedFeed(Feed $feed, ?\DateTimeImmutable $nextFetchAt): Feed
     {
-        $feed = new Feed($url);
-        $feed->setNextFetchAt($nextFetchAt);
-        $feed->setStatus($status);
+        if (null !== $nextFetchAt) {
+            $feed->scheduleNextFetchAt($nextFetchAt);
+        }
         $this->em->persist($feed);
 
         return $feed;
+    }
+
+    private function feed(string $url, ?\DateTimeImmutable $nextFetchAt): Feed
+    {
+        return $this->persistedFeed(new Feed($url), $nextFetchAt);
+    }
+
+    private function goneFeed(string $url, ?\DateTimeImmutable $nextFetchAt): Feed
+    {
+        $feed = new Feed($url);
+        $feed->markGone($this->now->modify('-1 day'), 'HTTP 410 Gone');
+
+        return $this->persistedFeed($feed, $nextFetchAt);
     }
 
     /**
@@ -51,7 +63,7 @@ final class FeedRepositoryTest extends DbTestCase
         $overdue = $this->feed('https://a.example.com/feed', $this->now->modify('-2 hours'));
         $neverFetched = $this->feed('https://b.example.com/feed', null);
         $this->feed('https://c.example.com/feed', $this->now->modify('+1 hour'));
-        $this->feed('https://d.example.com/feed', $this->now->modify('-1 day'), FeedStatus::Gone);
+        $this->goneFeed('https://d.example.com/feed', $this->now->modify('-1 day'));
         $this->em->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now), 10);
@@ -133,9 +145,9 @@ final class FeedRepositoryTest extends DbTestCase
     public function testForceIgnoresScheduleButHonorsCooldown(): void
     {
         $fresh = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
-        $fresh->setLastFetchedAt($this->now->modify('-1 minute'));
+        $fresh->recordSuccessfulFetch($this->now->modify('-1 minute'), 60);
         $stale = $this->feed('https://b.example.com/feed', $this->now->modify('+1 hour'));
-        $stale->setLastFetchedAt($this->now->modify('-10 minutes'));
+        $stale->recordSuccessfulFetch($this->now->modify('-10 minutes'), 60);
         $this->em->flush();
 
         $due = $this->repository->findDue(
@@ -153,7 +165,7 @@ final class FeedRepositoryTest extends DbTestCase
         // fetched" and freeze the feed out of every refresh — a future fetch
         // time is impossible, so the feed is due.
         $future = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
-        $future->setLastFetchedAt($this->now->modify('+59 minutes'));
+        $future->recordSuccessfulFetch($this->now->modify('+59 minutes'), 60);
         $this->em->flush();
 
         $due = $this->repository->findDue(
@@ -174,7 +186,7 @@ final class FeedRepositoryTest extends DbTestCase
 
     public function testForceStillExcludesGoneFeeds(): void
     {
-        $this->feed('https://gone.example.com/feed', null, FeedStatus::Gone);
+        $this->goneFeed('https://gone.example.com/feed', null);
         $active = $this->feed('https://ok.example.com/feed', null);
         $this->em->flush();
 
@@ -191,7 +203,7 @@ final class FeedRepositoryTest extends DbTestCase
     public function testForceWithoutACooldownIgnoresTheFetchTime(): void
     {
         $justFetched = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
-        $justFetched->setLastFetchedAt($this->now->modify('-1 minute'));
+        $justFetched->recordSuccessfulFetch($this->now->modify('-1 minute'), 60);
         $this->em->flush();
 
         $due = $this->repository->findDue(new DueFeedCriteria($this->now, force: true), 10);
@@ -219,7 +231,7 @@ final class FeedRepositoryTest extends DbTestCase
 
     public function testFeedScopeIncludesGoneFeeds(): void
     {
-        $gone = $this->feed('https://gone.example.com/feed', null, FeedStatus::Gone);
+        $gone = $this->goneFeed('https://gone.example.com/feed', null);
         // A second due feed, so the assertion below fails if the id filter is
         // dropped rather than passing on a one-row fixture.
         $this->feed('https://ok.example.com/feed', null);

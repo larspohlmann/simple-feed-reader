@@ -34,7 +34,7 @@ final class RefreshFeedsCommandTest extends DbTestCase
     private function dueFeed(string $url): Feed
     {
         $feed = new Feed($url);
-        $feed->setNextFetchAt(new \DateTimeImmutable('-1 hour'));
+        $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
         $this->em->persist($feed);
         $subscriber = new User('cli-fixture-subscriber@example.com', new \DateTimeImmutable());
         $this->em->persist($subscriber);

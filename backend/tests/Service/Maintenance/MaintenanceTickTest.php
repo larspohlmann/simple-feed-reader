@@ -126,7 +126,7 @@ final class MaintenanceTickTest extends DbTestCase
         $this->em->persist($subscriber);
 
         $feed = new Feed('https://one.example.com/feed');
-        $feed->setNextFetchAt($clock->now()->modify('-1 hour'));
+        $feed->scheduleNextFetchAt($clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
         $this->em->persist(new Subscription($subscriber, $feed, $clock->now()));
         $this->em->flush();

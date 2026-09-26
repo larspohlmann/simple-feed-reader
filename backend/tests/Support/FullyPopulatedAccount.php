@@ -150,8 +150,8 @@ final readonly class FullyPopulatedAccount
     private function stateFor(User $user, Entry $entry): EntryState
     {
         $state = new EntryState($user, $entry);
-        $state->setIsFavorite(true);
-        $state->setIsKept(true);
+        $state->markFavorite();
+        $state->markKept();
         $state->hide(new \DateTimeImmutable('2026-08-04T10:00:00Z'));
         $state->markViewed(new \DateTimeImmutable('2026-08-05T10:00:00Z'));
 

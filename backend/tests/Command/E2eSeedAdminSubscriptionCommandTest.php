@@ -10,7 +10,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Enum\UserStatus;
+use App\Enum\FeedStatus;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
@@ -31,7 +31,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     {
         $admin = new User(self::ADMIN_EMAIL, new \DateTimeImmutable('-1 day'));
         $admin->setRoles(['ROLE_ADMIN']);
-        $admin->setStatus(UserStatus::Active);
+        $admin->approve(new \DateTimeImmutable('-1 day'));
         $this->em->persist($admin);
         $this->em->flush();
 
@@ -108,6 +108,11 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $feed = $this->fixtureFeed();
         self::assertNotSame('', (string) $feed->getTitle());
         self::assertNotNull($feed->getLastFetchedAt());
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
+        self::assertEquals(
+            $feed->getLastFetchedAt()->modify('+60 minutes'),
+            $feed->getNextFetchAt(),
+        );
     }
 
     /**
@@ -245,7 +250,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
 
         $entry = $this->fixtureEntry($this->fixtureFeed());
         $state = new EntryState($admin, $entry);
-        $state->setIsHidden(true);
+        $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($state);
         $this->em->flush();
 
@@ -257,6 +262,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         $reloaded = $entryStates->findOneForUserEntry($admin->requireId(), $entry->requireId());
         self::assertInstanceOf(EntryState::class, $reloaded);
         self::assertFalse($reloaded->isHidden());
+        self::assertNull($reloaded->getHiddenAt());
     }
 
     public function testFailsWhenTheAdminDoesNotExistYet(): void

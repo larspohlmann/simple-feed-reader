@@ -94,7 +94,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     private function dueFeed(string $url): Feed
     {
         $feed = new Feed($url);
-        $feed->setNextFetchAt($this->clock->now()->modify('-1 hour'));
+        $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
         $this->em->persist($feed);
         $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 

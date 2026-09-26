@@ -38,7 +38,9 @@ final class UserStatisticsTest extends TestCase
         $subscriptions = [];
         foreach ($fetchedAt as $stamp) {
             $feed = new Feed('https://example.test/feed');
-            $feed->setLastFetchedAt(null === $stamp ? null : new \DateTimeImmutable($stamp));
+            if (null !== $stamp) {
+                $feed->recordSuccessfulFetch(new \DateTimeImmutable($stamp), 60);
+            }
             $subscriptions[] = new Subscription($user, $feed, new \DateTimeImmutable(self::NOW));
         }
 

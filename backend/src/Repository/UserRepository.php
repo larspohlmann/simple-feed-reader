@@ -160,7 +160,7 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
 
         return array_values(array_filter(
             $active,
-            static fn (User $user): bool => \in_array('ROLE_ADMIN', $user->getRoles(), true),
+            static fn (User $user): bool => $user->isAdmin(),
         ));
     }
 
@@ -183,7 +183,7 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
             ->getResult();
 
         foreach ($candidates as $candidate) {
-            if (\in_array('ROLE_ADMIN', $candidate->getRoles(), true)) {
+            if ($candidate->isAdmin()) {
                 return true;
             }
         }
@@ -232,7 +232,7 @@ class UserRepository extends ServiceEntityRepository implements UserLoaderInterf
 
         return \count(array_filter(
             $active,
-            static fn (User $candidate): bool => \in_array('ROLE_ADMIN', $candidate->getRoles(), true),
+            static fn (User $candidate): bool => $candidate->isAdmin(),
         ));
     }
 }

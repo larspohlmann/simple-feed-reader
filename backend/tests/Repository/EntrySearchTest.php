@@ -236,7 +236,7 @@ final class EntrySearchTest extends DbTestCase
         $middle = $this->entry('middle', 'Angular two', null, '2026-07-11T00:00:00Z');
         $newer = $this->entry('newer', 'Angular three', null, '2026-07-12T00:00:00Z');
         $read = new EntryState($this->user, $newer);
-        $read->setIsHidden(true);
+        $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $this->em->persist($read);
         $this->em->flush();
 

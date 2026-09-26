@@ -17,6 +17,7 @@ use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NewUserStatus;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -425,7 +426,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     private function persistUser(string $email, UserStatus $status): User
     {
         $user = new User($email, $this->now());
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, $this->now());
         $this->em->persist($user);
         $this->em->flush();
 

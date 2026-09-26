@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\UserRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\NewUserStatus;
 
 final class UserRepositoryTest extends DbTestCase
 {
@@ -22,7 +23,7 @@ final class UserRepositoryTest extends DbTestCase
     private function persist(string $email, UserStatus $status, string ...$roles): User
     {
         $user = new User($email, new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $user->setStatus($status);
+        NewUserStatus::apply($user, $status, new \DateTimeImmutable('2026-07-01 10:00:00'));
         $user->setRoles(array_values($roles));
         $this->em->persist($user);
         $this->em->flush();
@@ -42,6 +43,22 @@ final class UserRepositoryTest extends DbTestCase
 
         self::assertCount(1, $admins);
         self::assertSame($activeAdmin->getId(), $admins[0]->getId());
+    }
+
+    public function testActiveAdminsComeBackAsAList(): void
+    {
+        $this->persist('lookalike@example.com', UserStatus::Active, 'ROLE_ADMINISTRATOR');
+        $activeAdmin = $this->persist('admin@example.com', UserStatus::Active, 'ROLE_ADMIN');
+
+        self::assertSame([$activeAdmin], $this->users()->findActiveAdmins());
+    }
+
+    public function testCountActiveAdminsIgnoresALookalikeRole(): void
+    {
+        $this->persist('admin@example.com', UserStatus::Active, 'ROLE_ADMIN');
+        $this->persist('lookalike@example.com', UserStatus::Active, 'ROLE_ADMINISTRATOR');
+
+        self::assertSame(1, $this->users()->countActiveAdmins());
     }
 
     public function testFindActiveAdminsIsEmptyWhenNoActiveAdminExists(): void
