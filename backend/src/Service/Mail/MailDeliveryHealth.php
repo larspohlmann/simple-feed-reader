@@ -6,7 +6,6 @@ namespace App\Service\Mail;
 
 use App\Entity\MailKind;
 use App\Entity\MailSendFailure;
-use App\Http\MailDeliveryHealthJson;
 use App\Repository\MailSendFailureRepository;
 use App\Service\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
@@ -37,11 +36,9 @@ final readonly class MailDeliveryHealth implements MailFailureRecorder
         $this->failures->deleteAll();
     }
 
-    /**
-     * @return array{failures: list<array{kind: string, recipient: string, error: string, at: string}>}
-     */
-    public function view(): array
+    /** @return list<MailSendFailure> newest first */
+    public function recentFailures(): array
     {
-        return MailDeliveryHealthJson::view($this->failures->recent(MailSendFailureRepository::RETENTION));
+        return $this->failures->recent(MailSendFailureRepository::RETENTION);
     }
 }

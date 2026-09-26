@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Http\MailDeliveryHealthJson;
 use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
@@ -54,6 +55,6 @@ final readonly class AdminMailController
     #[Route('/errors', name: 'api_admin_mail_errors', methods: ['GET'])]
     public function errors(MailDeliveryHealth $health): JsonResponse
     {
-        return new JsonResponse($health->view());
+        return new JsonResponse(MailDeliveryHealthJson::view($health->recentFailures()));
     }
 }
