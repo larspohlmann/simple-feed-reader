@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkSavedSearchesReadRequest;
 use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Http\EntryCursor;
 use App\Http\SavedSearchPage;
 use App\Repository\EntryListRowEnricher;
-use App\Repository\EntryQuery;
 use App\Repository\SavedSearchListQuery;
 use App\Repository\SavedSearchRepository;
 use App\Service\Reader\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -41,19 +41,17 @@ final readonly class SavedSearchEntriesController
     #[Route('', name: 'api_entries_saved_searches', methods: ['GET'])]
     public function list(
         #[CurrentUser] User $user,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         $userId = $user->requireId();
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: $this->savedSearches->idsForUser($userId),
-            onlyUnread: $unread,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
-            order: ListOrder::fromRequestValue($order),
+            onlyUnread: $page->unread,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
+            order: ListOrder::fromRequestValue($page->order),
         );
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);
@@ -65,10 +63,8 @@ final readonly class SavedSearchEntriesController
     public function one(
         int $id,
         #[CurrentUser] User $user,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         $userId = $user->requireId();
         $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
@@ -76,10 +72,10 @@ final readonly class SavedSearchEntriesController
         $query = new SavedSearchListQuery(
             userId: $userId,
             savedSearchIds: [$savedSearch->requireId()],
-            onlyUnread: $unread,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
-            order: ListOrder::fromRequestValue($order),
+            onlyUnread: $page->unread,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
+            order: ListOrder::fromRequestValue($page->order),
         );
         $result = $this->entries->list($query);
         $rows = $this->enricher->enrich($result->rows, $userId);

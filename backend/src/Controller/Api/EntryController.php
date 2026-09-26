@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\Entry\EntryPageParameters;
 use App\Dto\Entry\MarkEntriesReadRequest;
 use App\Dto\Entry\MarkForYouReadRequest;
 use App\Dto\Entry\MarkReadRequest;
@@ -28,6 +29,7 @@ use App\Service\Recommendation\ForYouMarkReadService;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
+use Symfony\Component\HttpKernel\Attribute\MapQueryString;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
@@ -52,10 +54,8 @@ final readonly class EntryController
         #[MapQueryParameter] ?string $view = null,
         #[MapQueryParameter] ?int $subscription = null,
         #[MapQueryParameter] ?int $tag = null,
-        #[MapQueryParameter] ?string $cursor = null,
-        #[MapQueryParameter] int $limit = EntryQuery::DEFAULT_LIMIT,
-        #[MapQueryParameter] bool $unread = false,
-        #[MapQueryParameter] ?string $order = null,
+        #[MapQueryString(validationFailedStatusCode: Response::HTTP_UNPROCESSABLE_ENTITY)]
+        EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         // Validate `view` in-controller (not via a MapQueryParameter regexp) so a
         // bad value reports the SAME `validation_error` problem type as every other
@@ -72,7 +72,7 @@ final readonly class EntryController
                 ['view' => ['Unknown view. Use one of: all, unread, favorites, kept, viewed, for-you.']],
             ),
         };
-        $listOrder = ListOrder::fromRequestValue($order);
+        $listOrder = ListOrder::fromRequestValue($page->order);
 
         // The for-you feed is score-ranked, not (effectiveDate, id)-ranked, so
         // it needs its own cursor and never reaches EntryQuery's applyView.
@@ -80,7 +80,7 @@ final readonly class EntryController
         // this one IS the view, so its filter rides beside it as a flag.
         if ($view === 'for-you') {
             return new JsonResponse($this->forYouFeed->page(
-                new ForYouFeedQuery($user, $cursor, $limit, $unread),
+                new ForYouFeedQuery($user, $page->cursor, $page->limit, $page->unread),
             ));
         }
 
@@ -89,8 +89,8 @@ final readonly class EntryController
             view: $view,
             subscriptionId: $subscription,
             tagId: $tag,
-            cursor: EntryCursor::fromRequestValue($cursor),
-            limit: $limit,
+            cursor: EntryCursor::fromRequestValue($page->cursor),
+            limit: $page->limit,
             order: $listOrder,
         );
 
