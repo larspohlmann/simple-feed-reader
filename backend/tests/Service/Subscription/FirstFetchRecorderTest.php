@@ -71,6 +71,22 @@ final class FirstFetchRecorderTest extends DbTestCase
         self::assertSame('2020-03-01 00:00:00', $this->effectiveDateOf($feed, 'a'));
     }
 
+    public function testAFirstFetchStoresTheDiscoveredCacheValidators(): void
+    {
+        $feed = $this->feed();
+        $discovered = new DiscoveredFeed(
+            $feed->getUrl(),
+            new ParsedFeed('Discovered', null, null, null, []),
+            '"v1"',
+            'Mon, 20 Jul 2026 08:30:00 GMT',
+        );
+
+        $this->recorder->record($feed, $discovered);
+
+        self::assertSame('"v1"', $feed->getEtag());
+        self::assertSame('Mon, 20 Jul 2026 08:30:00 GMT', $feed->getLastModified());
+    }
+
     /**
      * The #432 ordering trap: EntryIngestor persists but never flushes, so an
      * entry has no id until record()'s own flush assigns one. This proves the

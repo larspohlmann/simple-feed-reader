@@ -218,7 +218,7 @@ final class AccountRestorerTest extends DbTestCase
         $feed->setSourceFormat($sourceFormat);
         // Fetch bookkeeping is deliberately NOT in the backup: a restored feed
         // must come back virgin, so seeding these proves the file drops them.
-        $feed->setEtag('W/"seeded-etag"');
+        $feed->recordCacheValidators('W/"seeded-etag"', null);
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-08-10 07:00:00'), 60);
         $this->em->persist($feed);
 

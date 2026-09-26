@@ -48,8 +48,7 @@ final class BudgetedFeedQueueTest extends TestCase
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');
         $feed = self::withId(new Feed('https://one.example.com/feed'), 1);
-        $feed->setEtag('"v1"');
-        $feed->setLastModified('Mon, 20 Jul 2026 08:30:00 GMT');
+        $feed->recordCacheValidators('"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
 
         $queue = new BudgetedFeedQueue([$feed], $clock, $clock->now()->getTimestamp() + 300);
         $tickets = iterator_to_array($queue->tickets(), preserve_keys: false);

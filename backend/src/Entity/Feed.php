@@ -16,6 +16,9 @@ class Feed
 {
     use PersistedId;
 
+    private const int ETAG_MAX = 512;
+    private const int LAST_MODIFIED_MAX = 255;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -227,18 +230,15 @@ class Feed
         return $this->etag;
     }
 
-    public function setEtag(?string $etag): void
-    {
-        $this->etag = $etag;
-    }
-
     public function getLastModified(): ?string
     {
         return $this->lastModified;
     }
 
-    public function setLastModified(?string $lastModified): void
+    // SQLite ignores the column limit; MySQL strict mode rejects an over-long remote value and fails the flush.
+    public function recordCacheValidators(?string $etag, ?string $lastModified): void
     {
-        $this->lastModified = $lastModified;
+        $this->etag = null === $etag ? null : mb_substr($etag, 0, self::ETAG_MAX);
+        $this->lastModified = null === $lastModified ? null : mb_substr($lastModified, 0, self::LAST_MODIFIED_MAX);
     }
 }

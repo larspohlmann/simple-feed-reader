@@ -53,8 +53,6 @@ final class RefreshRunner implements RefreshRunnerInterface
     private const float LOCK_TTL_SECONDS = 60.0;
     private const int BATCH_LIMIT = 50;
     private const int COOLDOWN_MINUTES = 5;
-    private const int ETAG_MAX = 512;
-    private const int LAST_MODIFIED_MAX = 255;
     private const int URL_MAX = 750;
 
     public function __construct(
@@ -333,8 +331,7 @@ final class RefreshRunner implements RefreshRunnerInterface
             // not new content. The caller's flush below covers both writes.
             $this->ingestor->fillMissingImages($feed, $parsed);
 
-            $feed->setEtag($this->truncate($response->etag, self::ETAG_MAX));
-            $feed->setLastModified($this->truncate($response->lastModified, self::LAST_MODIFIED_MAX));
+            $feed->recordCacheValidators($response->etag, $response->lastModified);
             $this->applyPermanentRedirect($feed, $response);
             $this->scheduler->recordSuccess($feed, \count($createdEntries));
             $this->em->flush();
@@ -415,15 +412,5 @@ final class RefreshRunner implements RefreshRunnerInterface
             return;
         }
         $feed->setUrl($response->finalUrl);
-    }
-
-    /**
-     * ETag and Last-Modified are remote-controlled and go into length-limited
-     * columns. SQLite ignores the limit, MySQL in strict mode rejects the row —
-     * which would fail the flush, abort the run, and skip every queued feed.
-     */
-    private function truncate(?string $value, int $max): ?string
-    {
-        return $value === null ? null : mb_substr($value, 0, $max);
     }
 }

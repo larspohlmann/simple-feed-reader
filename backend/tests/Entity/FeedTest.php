@@ -116,4 +116,25 @@ final class FeedTest extends TestCase
         self::assertSame(1, $feed->getConsecutiveFailures());
         self::assertSame('HTTP 500', $feed->getLastErrorMessage());
     }
+
+    public function testCacheValidatorsAreCappedToTheirColumns(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+
+        $feed->recordCacheValidators('é' . str_repeat('x', 512), 'ü' . str_repeat('x', 255));
+
+        self::assertSame('é' . str_repeat('x', 511), $feed->getEtag());
+        self::assertSame('ü' . str_repeat('x', 254), $feed->getLastModified());
+    }
+
+    public function testAbsentCacheValidatorsClearTheStoredOnes(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->recordCacheValidators('"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
+
+        $feed->recordCacheValidators(null, null);
+
+        self::assertNull($feed->getEtag());
+        self::assertNull($feed->getLastModified());
+    }
 }
