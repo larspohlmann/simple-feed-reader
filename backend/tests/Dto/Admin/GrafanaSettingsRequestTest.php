@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\GrafanaSettingsRequest;
+use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -20,44 +21,45 @@ final class GrafanaSettingsRequestTest extends TestCase
             ->getValidator();
     }
 
-    public function testConstructingWithNoArgumentsKeepsEverythingUnset(): void
+    public function testTheTokenIntentIsOptionalAndKeepsTheStoredSecret(): void
     {
-        $request = new GrafanaSettingsRequest();
+        $request = new GrafanaSettingsRequest(
+            lokiPushUrl: null,
+            lokiUsername: null,
+            grafanaUrl: 'https://grafana.example',
+            pyroscopePushUrl: null,
+            profilingEnabled: true,
+        );
 
-        self::assertNull($request->lokiPushUrl);
-        self::assertNull($request->lokiUsername);
-        self::assertNull($request->grafanaUrl);
         self::assertNull($request->token);
         self::assertFalse($request->removeToken);
-        self::assertNull($request->pyroscopePushUrl);
-        self::assertFalse($request->profilingEnabled);
     }
 
     public function testPyroscopePushUrlOverTheLengthLimitIsRejected(): void
     {
-        $overLimit = new GrafanaSettingsRequest(pyroscopePushUrl: 'http://' . str_repeat('a', 249));
+        $overLimit = SettingsRequests::grafana(pyroscopePushUrl: 'http://' . str_repeat('a', 249));
 
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
 
     public function testPyroscopePushUrlThatIsNotAUrlIsRejected(): void
     {
-        $request = new GrafanaSettingsRequest(pyroscopePushUrl: 'not a url');
+        $request = SettingsRequests::grafana(pyroscopePushUrl: 'not a url');
 
         self::assertGreaterThan(0, \count($this->validator->validate($request)));
     }
 
     public function testPyroscopePushUrlWithoutATldIsValid(): void
     {
-        $request = new GrafanaSettingsRequest(pyroscopePushUrl: 'http://pyroscope:4040');
+        $request = SettingsRequests::grafana(pyroscopePushUrl: 'http://pyroscope:4040');
 
         self::assertCount(0, $this->validator->validate($request));
     }
 
     public function testLokiPushUrlAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new GrafanaSettingsRequest(lokiPushUrl: 'http://' . str_repeat('a', 248));
-        $overLimit = new GrafanaSettingsRequest(lokiPushUrl: 'http://' . str_repeat('a', 249));
+        $atLimit = SettingsRequests::grafana(lokiPushUrl: 'http://' . str_repeat('a', 248));
+        $overLimit = SettingsRequests::grafana(lokiPushUrl: 'http://' . str_repeat('a', 249));
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
@@ -65,15 +67,15 @@ final class GrafanaSettingsRequestTest extends TestCase
 
     public function testLokiPushUrlWithoutATldIsValid(): void
     {
-        $request = new GrafanaSettingsRequest(lokiPushUrl: 'http://loki:3100/loki/api/v1/push');
+        $request = SettingsRequests::grafana(lokiPushUrl: 'http://loki:3100/loki/api/v1/push');
 
         self::assertCount(0, $this->validator->validate($request));
     }
 
     public function testGrafanaUrlAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new GrafanaSettingsRequest(grafanaUrl: 'http://' . str_repeat('a', 248));
-        $overLimit = new GrafanaSettingsRequest(grafanaUrl: 'http://' . str_repeat('a', 249));
+        $atLimit = SettingsRequests::grafana(grafanaUrl: 'http://' . str_repeat('a', 248));
+        $overLimit = SettingsRequests::grafana(grafanaUrl: 'http://' . str_repeat('a', 249));
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
@@ -81,15 +83,15 @@ final class GrafanaSettingsRequestTest extends TestCase
 
     public function testGrafanaUrlWithoutATldIsValid(): void
     {
-        $request = new GrafanaSettingsRequest(grafanaUrl: 'http://localhost:3000');
+        $request = SettingsRequests::grafana(grafanaUrl: 'http://localhost:3000');
 
         self::assertCount(0, $this->validator->validate($request));
     }
 
     public function testLokiUsernameAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new GrafanaSettingsRequest(lokiUsername: str_repeat('u', 255));
-        $overLimit = new GrafanaSettingsRequest(lokiUsername: str_repeat('u', 256));
+        $atLimit = SettingsRequests::grafana(lokiUsername: str_repeat('u', 255));
+        $overLimit = SettingsRequests::grafana(lokiUsername: str_repeat('u', 256));
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
@@ -97,8 +99,8 @@ final class GrafanaSettingsRequestTest extends TestCase
 
     public function testTokenAtTheLengthLimitIsValidButOneOverIsNot(): void
     {
-        $atLimit = new GrafanaSettingsRequest(token: str_repeat('t', 512));
-        $overLimit = new GrafanaSettingsRequest(token: str_repeat('t', 513));
+        $atLimit = SettingsRequests::grafana(token: str_repeat('t', 512));
+        $overLimit = SettingsRequests::grafana(token: str_repeat('t', 513));
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));

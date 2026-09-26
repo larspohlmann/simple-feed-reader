@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Profiling\CollapsedProfile;
 use App\Service\Profiling\ProfileSampler;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\SettingsRequests;
 use OpenTelemetry\API\Instrumentation\Configurator;
 use OpenTelemetry\API\Trace\SpanKind;
 use OpenTelemetry\SDK\Trace\ImmutableSpan;
@@ -125,6 +125,6 @@ final class RequestProfilingTest extends ApiTestCase
     {
         /** @var GrafanaSettings $settings */
         $settings = self::getContainer()->get(GrafanaSettings::class);
-        $settings->update(new GrafanaSettingsRequest(profilingEnabled: true, pyroscopePushUrl: $pushUrl));
+        $settings->update(SettingsRequests::grafana(profilingEnabled: true, pyroscopePushUrl: $pushUrl));
     }
 }

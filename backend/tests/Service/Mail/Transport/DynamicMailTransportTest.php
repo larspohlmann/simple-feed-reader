@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Transport;
 
-use App\Dto\Admin\MailSettingsRequest;
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
 use App\Service\Crypto\SealedSecret;
@@ -15,6 +13,7 @@ use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
 use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -32,7 +31,7 @@ final class DynamicMailTransportTest extends KernelTestCase
     public function testWithARowItBuildsAnSmtpTransport(): void
     {
         self::getContainer()->get(MailSettings::class)->update(
-            new MailSettingsRequest(host: 'smtp.relay.test', port: 2525, password: 'p'),
+            SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'),
         );
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
@@ -52,9 +51,9 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
         $fallback = $transport->activeTransport();
 
-        $settings->update(new MailSettingsRequest(host: 'smtp.relay.test', port: 2525, password: 'p'));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'));
         $first = $transport->activeTransport();
-        $settings->update(new MailSettingsRequest(host: 'smtp.relay.test', port: 2526, password: null));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2526, password: null));
         $second = $transport->activeTransport();
 
         self::assertNotSame($fallback, $first);
@@ -90,12 +89,12 @@ final class DynamicMailTransportTest extends KernelTestCase
 
     public function testActiveTransportUsesTheCurlTransportForAProxiedRow(): void
     {
-        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+        self::getContainer()->get(ProxySettings::class)->update(SettingsRequests::proxy(
             type: 'SOCKS5',
             host: 'proxy.example',
             port: 1080,
         ));
-        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+        self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.gmail.com',
             username: 'alice',
             password: 'app-pw',
@@ -130,7 +129,7 @@ final class DynamicMailTransportTest extends KernelTestCase
 
     public function testActiveTransportUsesEsmtpForADirectRow(): void
     {
-        self::getContainer()->get(MailSettings::class)->update(new MailSettingsRequest(
+        self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.relay.test',
             password: 'p',
             useProxy: false,

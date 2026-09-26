@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
@@ -21,34 +22,39 @@ final class MailSettingsRequestTest extends TestCase
             ->getValidator();
     }
 
-    public function testConstructingWithNoArgumentsDefaultsToDisabledStarttlsOnTheSubmissionPort(): void
+    public function testThePasswordIntentIsOptionalAndKeepsTheStoredSecret(): void
     {
-        $request = new MailSettingsRequest();
+        $request = new MailSettingsRequest(
+            enabled: true,
+            host: 'smtp.example',
+            port: 2525,
+            username: 'user',
+            encryption: 'tls',
+            fromAddress: 'noreply@example.com',
+            fromName: 'Example',
+            useProxy: false,
+        );
 
-        self::assertFalse($request->enabled);
-        self::assertSame('', $request->host);
-        self::assertSame(587, $request->port);
-        self::assertNull($request->username);
-        self::assertSame('starttls', $request->encryption);
         self::assertNull($request->password);
+        self::assertFalse($request->removePassword);
     }
 
     public function testPortAtTheBoundariesIsValid(): void
     {
-        self::assertCount(0, $this->validator->validate(new MailSettingsRequest(port: 1)));
-        self::assertCount(0, $this->validator->validate(new MailSettingsRequest(port: 65535)));
+        self::assertCount(0, $this->validator->validate(SettingsRequests::mail(port: 1)));
+        self::assertCount(0, $this->validator->validate(SettingsRequests::mail(port: 65535)));
     }
 
     public function testPortOutsideTheBoundariesIsInvalid(): void
     {
-        self::assertGreaterThan(0, \count($this->validator->validate(new MailSettingsRequest(port: 0))));
-        self::assertGreaterThan(0, \count($this->validator->validate(new MailSettingsRequest(port: 65536))));
+        self::assertGreaterThan(0, \count($this->validator->validate(SettingsRequests::mail(port: 0))));
+        self::assertGreaterThan(0, \count($this->validator->validate(SettingsRequests::mail(port: 65536))));
     }
 
     public function testAMalformedFromAddressIsInvalidButABlankOneIsNot(): void
     {
-        $malformed = new MailSettingsRequest(fromAddress: 'not-an-address');
-        $blank = new MailSettingsRequest(fromAddress: '');
+        $malformed = SettingsRequests::mail(fromAddress: 'not-an-address');
+        $blank = SettingsRequests::mail(fromAddress: '');
 
         self::assertGreaterThan(0, \count($this->validator->validate($malformed)));
         self::assertCount(0, $this->validator->validate($blank));
@@ -56,20 +62,20 @@ final class MailSettingsRequestTest extends TestCase
 
     public function testAnUnknownEncryptionIsInvalid(): void
     {
-        self::assertGreaterThan(0, \count($this->validator->validate(new MailSettingsRequest(encryption: 'ssl'))));
+        self::assertGreaterThan(0, \count($this->validator->validate(SettingsRequests::mail(encryption: 'ssl'))));
     }
 
     /** @return iterable<string, array{\Closure(string): MailSettingsRequest, int}> */
     public static function lengthLimitedFields(): iterable
     {
-        yield 'host' => [fn (string $value) => new MailSettingsRequest(host: $value), 255];
-        yield 'username' => [fn (string $value) => new MailSettingsRequest(username: $value), 255];
+        yield 'host' => [fn (string $value) => SettingsRequests::mail(host: $value), 255];
+        yield 'username' => [fn (string $value) => SettingsRequests::mail(username: $value), 255];
         yield 'fromAddress' => [
-            fn (string $value) => new MailSettingsRequest(fromAddress: substr($value, 0, -12) . '@example.com'),
+            fn (string $value) => SettingsRequests::mail(fromAddress: substr($value, 0, -12) . '@example.com'),
             255,
         ];
-        yield 'fromName' => [fn (string $value) => new MailSettingsRequest(fromName: $value), 255];
-        yield 'password' => [fn (string $value) => new MailSettingsRequest(password: $value), 512];
+        yield 'fromName' => [fn (string $value) => SettingsRequests::mail(fromName: $value), 255];
+        yield 'password' => [fn (string $value) => SettingsRequests::mail(password: $value), 512];
     }
 
     /** @param \Closure(string): MailSettingsRequest $requestWith */

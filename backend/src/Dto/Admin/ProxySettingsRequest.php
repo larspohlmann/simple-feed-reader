@@ -5,34 +5,30 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\ProxyType;
-use App\Service\Proxy\ProxyConnection;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Full-replace payload for the egress proxy. `#[MapRequestPayload]` fills a
- * missing field with the constructor default, so clients always send the whole
- * connection. The password is a three-state intent: null keeps the stored
- * secret, a string replaces it, and `removePassword` clears it. Both are
- * inbound-only, never echoed back.
+ * Every connection setting is required, so a PUT that leaves one out is a 422, not a reset. The password is an
+ * optional three-state intent: null keeps the stored secret, a string replaces it, `removePassword` clears it.
  */
 final readonly class ProxySettingsRequest
 {
     public function __construct(
         #[Assert\Type('bool')]
-        public bool $enabled = false,
+        public bool $enabled,
         #[Assert\Type('bool')]
-        public bool $directFallback = true,
+        public bool $directFallback,
         #[Assert\Choice(choices: [ProxyType::Socks5->value, ProxyType::Http->value])]
-        public string $type = ProxyType::Socks5->value,
+        public string $type,
         #[Assert\NotBlank]
         #[Assert\Length(max: 255)]
-        public string $host = '',
+        public string $host,
         #[Assert\Range(min: 1, max: 65535)]
-        public int $port = ProxyConnection::DEFAULT_PORT,
+        public int $port,
         #[Assert\Length(max: 255)]
-        public ?string $username = null,
+        public ?string $username,
         #[Assert\Type('bool')]
-        public bool $remoteDns = false,
+        public bool $remoteDns,
         #[Assert\Length(max: 512)]
         public ?string $password = null,
         #[Assert\Type('bool')]

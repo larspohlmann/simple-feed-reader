@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Settings;
 
-use App\Dto\Admin\MailSettingsRequest;
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\MailKind;
 use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\Settings\MailConnectionTester;
@@ -14,6 +12,7 @@ use App\Service\Mail\Settings\MailTestFailure;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\SettingsRequests;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -76,7 +75,7 @@ final class MailConnectionTesterTest extends KernelTestCase
     {
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            new MailSettingsRequest(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p'),
+            SettingsRequests::mail(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p'),
         );
 
         $result = $this->tester()->test();
@@ -97,7 +96,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            new MailSettingsRequest(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
         );
 
         $result = $this->tester()->test();
@@ -114,7 +113,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            new MailSettingsRequest(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
         );
 
         $result = $this->tester()->test();
@@ -146,12 +145,12 @@ final class MailConnectionTesterTest extends KernelTestCase
     {
         $this->authenticateAsAdmin();
 
-        self::getContainer()->get(ProxySettings::class)->update(new ProxySettingsRequest(
+        self::getContainer()->get(ProxySettings::class)->update(SettingsRequests::proxy(
             type: 'SOCKS5',
             host: '127.0.0.1',
             port: 1,
         ));
-        $this->settings()->update(new MailSettingsRequest(
+        $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.gmail.com',
             username: 'u',
@@ -199,7 +198,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            new MailSettingsRequest(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
         );
         $health = new InMemoryMailFailureRecorder();
 

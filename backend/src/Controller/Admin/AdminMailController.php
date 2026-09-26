@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
 use App\Http\Admin\MailSettingsJson;
+use App\Http\FullReplacePayload;
 use App\Http\MailDeliveryHealthJson;
 use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailConnectionTester;
@@ -32,8 +33,9 @@ final readonly class AdminMailController
     }
 
     #[Route('', name: 'api_admin_mail_update', methods: ['PUT'])]
-    public function update(#[MapRequestPayload] MailSettingsRequest $request): JsonResponse
-    {
+    public function update(
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] MailSettingsRequest $request,
+    ): JsonResponse {
         $this->settings->update($request);
 
         return new JsonResponse(MailSettingsJson::from($this->settings->overview()));

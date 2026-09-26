@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Service\Grafana\GrafanaSettingsCache;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
@@ -73,6 +74,23 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         );
     }
 
+    /**
+     * @param array<string, mixed> $changes
+     *
+     * @return array<string, mixed>
+     */
+    private function grafanaBody(array $changes = []): array
+    {
+        return [
+            'lokiPushUrl' => null,
+            'lokiUsername' => null,
+            'grafanaUrl' => 'https://cloud.example/grafana',
+            'pyroscopePushUrl' => null,
+            'profilingEnabled' => false,
+            ...$changes,
+        ];
+    }
+
     public function testGetWithoutAdminTokenIsRejected(): void
     {
         $this->client->request('GET', self::GRAFANA);
@@ -117,10 +135,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'grafanaUrl' => 'https://cloud.example/grafana',
-            'token' => 'glc_secrettoken',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['token' => 'glc_secrettoken']));
 
         self::assertResponseIsSuccessful();
 
@@ -142,16 +157,10 @@ final class AdminGrafanaControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'grafanaUrl' => 'https://cloud.example/grafana',
-            'token' => 'glc_secrettoken',
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['token' => 'glc_secrettoken']));
         self::assertResponseIsSuccessful();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'grafanaUrl' => 'https://cloud.example/grafana',
-            'removeToken' => true,
-        ]);
+        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['removeToken' => true]));
 
         self::assertResponseIsSuccessful();
         self::assertFalse($this->payload($this->client)['hasToken']);
@@ -161,11 +170,11 @@ final class AdminGrafanaControllerTest extends ApiTestCase
     {
         $admin = $this->admin();
 
-        $this->requestWithJsonBody('PUT', $admin, [
-            'grafanaUrl' => 'https://cloud.example/grafana',
-            'profilingEnabled' => true,
-            'pyroscopePushUrl' => 'http://custom:4040',
-        ]);
+        $this->requestWithJsonBody(
+            'PUT',
+            $admin,
+            $this->grafanaBody(['profilingEnabled' => true, 'pyroscopePushUrl' => 'http://custom:4040']),
+        );
         self::assertResponseIsSuccessful();
 
         $this->client->request(
@@ -179,5 +188,59 @@ final class AdminGrafanaControllerTest extends ApiTestCase
         self::assertTrue($body['profilingEnabled']);
         self::assertSame('http://custom:4040', $body['pyroscopePushUrl']);
         self::assertIsBool($body['profilerAvailable']);
+    }
+
+    public function testAPutLeavingSettingsOutIsRefusedAndStoresNothing(): void
+    {
+        $admin = $this->admin();
+        $this->requestWithJsonBody('PUT', $admin, $this->grafanaBody(['profilingEnabled' => true]));
+        self::assertResponseIsSuccessful();
+
+        $incomplete = $this->grafanaBody(['lokiUsername' => 'tenant7']);
+        unset($incomplete['grafanaUrl'], $incomplete['profilingEnabled']);
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertSame('validation_error', $problem['type']);
+        self::assertIsArray($problem['errors']);
+        self::assertSame(['grafanaUrl', 'profilingEnabled'], array_keys($problem['errors']));
+
+        $this->client->request(
+            'GET',
+            self::GRAFANA,
+            server: ['HTTP_AUTHORIZATION' => 'Bearer ' . $this->tokenFor($admin)],
+        );
+        $stored = $this->payload($this->client);
+        self::assertSame('https://cloud.example/grafana', $stored['grafanaUrl']);
+        self::assertNull($stored['lokiUsername']);
+        self::assertTrue($stored['profilingEnabled']);
+    }
+
+    /**
+     * @return iterable<string, array{0: string}>
+     */
+    public static function grafanaBodyKeys(): iterable
+    {
+        yield 'lokiPushUrl' => ['lokiPushUrl'];
+        yield 'lokiUsername' => ['lokiUsername'];
+        yield 'grafanaUrl' => ['grafanaUrl'];
+        yield 'pyroscopePushUrl' => ['pyroscopePushUrl'];
+        yield 'profilingEnabled' => ['profilingEnabled'];
+    }
+
+    #[DataProvider('grafanaBodyKeys')]
+    public function testPutRefusesABodyMissingAnySingleSetting(string $key): void
+    {
+        $admin = $this->admin();
+        $incomplete = $this->grafanaBody();
+        unset($incomplete[$key]);
+
+        $this->requestWithJsonBody('PUT', $admin, $incomplete);
+
+        self::assertResponseStatusCodeSame(422);
+        $problem = $this->payload($this->client);
+        self::assertIsArray($problem['errors']);
+        self::assertSame([$key], array_keys($problem['errors']));
     }
 }

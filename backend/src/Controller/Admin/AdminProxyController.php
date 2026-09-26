@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Http\Admin\ProxySettingsJson;
+use App\Http\FullReplacePayload;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -30,8 +31,9 @@ final readonly class AdminProxyController
     }
 
     #[Route('', name: 'api_admin_proxy_update', methods: ['PUT'])]
-    public function update(#[MapRequestPayload] ProxySettingsRequest $request): JsonResponse
-    {
+    public function update(
+        #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] ProxySettingsRequest $request,
+    ): JsonResponse {
         $this->settings->update($request);
 
         return new JsonResponse(ProxySettingsJson::from($this->settings->stored()));
