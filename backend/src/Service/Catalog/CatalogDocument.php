@@ -8,6 +8,7 @@ use App\Enum\SourceFormat;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use App\Service\Opml\OpmlBodyReader;
+use App\Service\Url\AbsoluteHttpUrl;
 
 /**
  * Parses and fully validates a catalog OPML document.
@@ -114,7 +115,7 @@ final readonly class CatalogDocument
         if (mb_strlen($url) > 750) {
             throw new InvalidCatalogDocumentException(\sprintf('Feed URL "%s" exceeds 750 characters.', $url));
         }
-        if (1 !== preg_match('#^https?://#', $url)) {
+        if (!AbsoluteHttpUrl::matches($url)) {
             throw new InvalidCatalogDocumentException(\sprintf('Feed URL "%s" is not http(s).', $url));
         }
 

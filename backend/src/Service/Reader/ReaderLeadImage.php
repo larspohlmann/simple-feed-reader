@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -24,7 +25,7 @@ final readonly class ReaderLeadImage
     {
         $body = $document->body;
         $leadUrl = $lead->url;
-        if ($body === null || $leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
+        if ($body === null || $leadUrl === null || !AbsoluteHttpUrl::matches($leadUrl)) {
             return null;
         }
 

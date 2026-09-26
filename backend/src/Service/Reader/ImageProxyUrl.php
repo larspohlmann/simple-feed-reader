@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Url\AbsoluteHttpUrl;
+
 /**
  * Resolves the real image URL behind an image proxy or CDN wrapper. Publishers
  * route photos through a proxy that carries the true source URL in a query
@@ -41,7 +43,7 @@ final readonly class ImageProxyUrl
         parse_str($query, $parameters);
         $embedded = $parameters['url'] ?? null;
 
-        return is_string($embedded) && self::isHttpUrl($embedded) ? $embedded : null;
+        return is_string($embedded) && AbsoluteHttpUrl::matches($embedded) ? $embedded : null;
     }
 
     /** Decode imgproxy's URL-safe base64 source in the final path segment. */
@@ -51,7 +53,7 @@ final readonly class ImageProxyUrl
         $candidate = (string) preg_replace('/\.[a-z0-9]{2,5}$/i', '', $segment);
         $decoded = base64_decode(strtr($candidate, '-_', '+/'), true);
 
-        return $decoded !== false && self::isHttpUrl($decoded) ? $decoded : null;
+        return $decoded !== false && AbsoluteHttpUrl::matches($decoded) ? $decoded : null;
     }
 
     /** A percent-encoded source as the final path segment (Substack's `/image/fetch/<transforms>/<source>`). */
@@ -59,11 +61,6 @@ final readonly class ImageProxyUrl
     {
         $decoded = rawurldecode(basename((string) (parse_url($url, PHP_URL_PATH) ?? '')));
 
-        return self::isHttpUrl($decoded) ? $decoded : null;
-    }
-
-    private static function isHttpUrl(string $value): bool
-    {
-        return preg_match('#^https?://#i', $value) === 1;
+        return AbsoluteHttpUrl::matches($decoded) ? $decoded : null;
     }
 }

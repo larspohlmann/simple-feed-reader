@@ -62,6 +62,13 @@ final class SlideCaptionResolverTest extends TestCase
         self::assertSame('https://example.com/real', (new SlideCaptionResolver())->resolve($slide)->link);
     }
 
+    public function testTakesALinkWithAnUpperCaseScheme(): void
+    {
+        $slide = $this->slide('<li class="swiper-slide"><a href="HTTPS://example.com/upper">Upper</a></li>');
+
+        self::assertSame('HTTPS://example.com/upper', (new SlideCaptionResolver())->resolve($slide)->link);
+    }
+
     public function testEmptyWhenSlideHasNoText(): void
     {
         $slide = $this->slide('<li class="swiper-slide"><img src="https://img/1.jpg" alt="x"></li>');

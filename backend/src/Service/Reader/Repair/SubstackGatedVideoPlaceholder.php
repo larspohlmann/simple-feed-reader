@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Repair;
 
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -22,7 +23,6 @@ final readonly class SubstackGatedVideoPlaceholder implements PageRepair
     private const string PAYWALL = '[aria-label="Paywall"], [data-testid="paywall"]';
     private const string PLAYER = '.shows-video-player-container';
     private const string ARTICLE = 'article.podcast-post, article.shows-post';
-    private const string HTTP_URL_PATTERN = '#^https?://#i';
 
     /** A paragraph this long is prose readability keeps, not chrome or a caption. */
     private const int TEASER_MIN_LENGTH = 80;
@@ -106,8 +106,6 @@ final readonly class SubstackGatedVideoPlaceholder implements PageRepair
     /** The attribute's value when it is present and a non-empty http(s) URL. */
     private function httpUrlFrom(HTMLDocument $page, string $selector, string $attribute): ?string
     {
-        $value = $page->querySelector($selector)?->getAttribute($attribute);
-
-        return $value !== null && preg_match(self::HTTP_URL_PATTERN, $value) === 1 ? $value : null;
+        return AbsoluteHttpUrl::orNull($page->querySelector($selector)?->getAttribute($attribute));
     }
 }

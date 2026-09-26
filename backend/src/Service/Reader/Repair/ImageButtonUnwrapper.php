@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Repair;
 
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -54,7 +55,7 @@ final readonly class ImageButtonUnwrapper implements PageRepair
     private function isContentPhoto(Element $image): bool
     {
         $source = trim($image->getAttribute('src') ?? '');
-        if (preg_match('#^https?://#i', $source) !== 1) {
+        if (!AbsoluteHttpUrl::matches($source)) {
             return false;
         }
 
