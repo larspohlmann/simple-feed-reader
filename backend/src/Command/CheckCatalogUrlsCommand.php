@@ -4,19 +4,14 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Catalog\CatalogDocument;
-use App\Service\Catalog\Exception\BrokenCatalogUrlException;
-use App\Service\Fetch\EgressOptions;
-use App\Service\Fetch\ProxyConfig;
-use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Catalog\BrokenCatalogUrl;
+use App\Service\Catalog\CatalogUrlChecker;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Fetches every URL in resources/catalog/catalog.opml and reports the ones that
@@ -32,14 +27,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 )]
 final class CheckCatalogUrlsCommand extends Command
 {
-    private const int TIMEOUT_SECONDS = 20;
-
-    public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly CatalogDocument $parser,
-        private readonly string $userAgent,
-        private readonly ProxyEgressResolver $proxyEgressResolver,
-    ) {
+    public function __construct(private readonly CatalogUrlChecker $checker)
+    {
         parent::__construct();
     }
 
@@ -51,45 +40,20 @@ final class CheckCatalogUrlsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
+        $report = $this->checker->check($this->limit($input));
 
-        $document = $this->parser->parse(
-            (string) file_get_contents(\dirname(__DIR__, 2) . '/resources/catalog/catalog.opml'),
-        );
-
-        $feeds = [];
-        foreach ($document->categories as $category) {
-            foreach ($category->feeds as $feed) {
-                $feeds[] = $feed;
-            }
-        }
-
-        $limit = $this->limit($input);
-        if (null !== $limit) {
-            $feeds = \array_slice($feeds, 0, $limit);
-        }
-
-        // Resolved once for the whole sweep, not per URL: the instance proxy
-        // cannot change mid-run, and re-reading it would cost one row lookup and
-        // one password decryption for every catalog entry.
-        $proxy = $this->proxyEgressResolver->resolve();
-
-        $broken = [];
-        foreach ($feeds as $feed) {
-            try {
-                $this->assertServesFeed($feed->url, $proxy);
-            } catch (BrokenCatalogUrlException $e) {
-                $broken[] = \sprintf('%s (%s): %s', $feed->title, $feed->url, $e->getMessage());
-            }
-        }
-
-        if ([] === $broken) {
-            $io->success(\sprintf('All %d catalog URLs still serve a feed.', \count($feeds)));
+        if ($report->isHealthy()) {
+            $io->success(\sprintf('All %d catalog URLs still serve a feed.', $report->checked));
 
             return Command::SUCCESS;
         }
 
-        $io->error(\sprintf('%d of %d catalog URLs need attention:', \count($broken), \count($feeds)));
-        $io->listing($broken);
+        $io->error(\sprintf('%d of %d catalog URLs need attention:', \count($report->broken), $report->checked));
+        $io->listing(array_map(
+            static fn (BrokenCatalogUrl $broken): string
+                => \sprintf('%s (%s): %s', $broken->title, $broken->url, $broken->reason),
+            $report->broken,
+        ));
 
         return Command::FAILURE;
     }
@@ -102,30 +66,5 @@ final class CheckCatalogUrlsCommand extends Command
         }
 
         return max(1, (int) $value);
-    }
-
-    /** @throws BrokenCatalogUrlException */
-    private function assertServesFeed(string $url, ?ProxyConfig $proxy): void
-    {
-        try {
-            $response = $this->httpClient->request('GET', $url, [
-                'timeout' => self::TIMEOUT_SECONDS,
-                'max_duration' => self::TIMEOUT_SECONDS,
-                // The fetcher's agent: a publisher tolerating an unknown checker must not pass for healthy.
-                'headers' => ['User-Agent' => $this->userAgent],
-                ...(null !== $proxy ? EgressOptions::proxied($proxy) : []),
-            ]);
-            $status = $response->getStatusCode();
-            $head = 200 === $status ? mb_substr($response->getContent(), 0, 2048) : '';
-        } catch (ExceptionInterface $e) {
-            throw new BrokenCatalogUrlException($e->getMessage(), 0, $e);
-        }
-
-        if (200 !== $status) {
-            throw new BrokenCatalogUrlException('HTTP ' . $status);
-        }
-        if (!str_contains($head, '<rss') && !str_contains($head, '<feed') && !str_contains($head, '<rdf:RDF')) {
-            throw new BrokenCatalogUrlException('not a feed document');
-        }
     }
 }
