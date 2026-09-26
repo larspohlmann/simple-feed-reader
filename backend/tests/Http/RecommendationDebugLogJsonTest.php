@@ -8,6 +8,9 @@ use App\Http\RecommendationDebugLogJson;
 use App\Service\Recommendation\RecommendationDebugLog;
 use PHPUnit\Framework\TestCase;
 
+/**
+ * @phpstan-import-type DebugLogRow from RecommendationDebugLog
+ */
 final class RecommendationDebugLogJsonTest extends TestCase
 {
     public function testAnAccountWithNoRetainedRunGetsAnEmptyPanel(): void
@@ -34,11 +37,7 @@ final class RecommendationDebugLogJsonTest extends TestCase
         self::assertSame(7, $entries[0]['id']);
     }
 
-    /**
-     * @return array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}
-     */
+    /** @return DebugLogRow */
     private static function row(int $id): array
     {
         return [
