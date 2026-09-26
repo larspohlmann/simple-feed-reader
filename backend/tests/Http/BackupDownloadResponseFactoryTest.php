@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Backup;
+namespace App\Tests\Http;
 
-use App\Service\Backup\BackupDownloadResponseFactory;
+use App\Http\BackupDownloadResponseFactory;
 use App\Service\Backup\BackupPart;
 use App\Service\Version\ReleaseVersion;
 use App\Service\Version\ReleaseVersionReader;

@@ -6,10 +6,10 @@ namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
-use App\Http\AiSettingsJson;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
+use App\Service\Ai\AiReadiness;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -50,7 +50,7 @@ final readonly class DueRecommendationRunFinder
 
     private function isDue(RecommendationSettings $row, User $user): bool
     {
-        if (!AiSettingsJson::isReady($this->configurator->settingsFor($user))) {
+        if (!AiReadiness::of($this->configurator->settingsFor($user))) {
             return false;
         }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search\Index;
 
 use App\Enum\ListOrder;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\IndexedEntry;
 use App\Service\Search\Index\IndexSearch;

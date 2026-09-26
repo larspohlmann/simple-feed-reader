@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
+use App\Service\Ai\AiReadiness;
 
 /**
  * The client's view of its own account. Deliberately hand-built rather than
@@ -45,7 +46,7 @@ final class MeJson
                 ],
             ],
             'ai' => [
-                'ready' => AiSettingsJson::isReady($aiSettings),
+                'ready' => AiReadiness::of($aiSettings),
                 'model' => $aiSettings?->getModel(),
             ],
         ];

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Http;
+namespace App\Pagination;
 
 use App\Exception\ValidationException;
-use App\Http\Exception\MalformedCursorException;
+use App\Pagination\Exception\MalformedCursorException;
 
 /**
  * Opaque keyset-pagination cursor for the entry list: base64url of

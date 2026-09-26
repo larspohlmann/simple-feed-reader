@@ -96,7 +96,7 @@ final readonly class PasskeyController
     #[Route('/api/auth/passkey/login/options', name: 'api_auth_passkey_login_options', methods: ['POST'])]
     public function loginOptions(Request $request): JsonResponse
     {
-        $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request);
+        $this->rateLimitGuard->enforceForClient($this->passkeyChallengeLimiter, $request->getClientIp());
         $this->availability->guard();
 
         return new JsonResponse($this->assertionOptionsFactory->create());

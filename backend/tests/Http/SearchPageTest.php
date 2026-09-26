@@ -6,8 +6,8 @@ namespace App\Tests\Http;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Http\EntryCursor;
 use App\Http\SearchPage;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;

@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Http;
 
+use App\Service\Backup\BackupFilename;
+use App\Service\Backup\BackupPart;
 use App\Service\Version\ReleaseVersionReader;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;

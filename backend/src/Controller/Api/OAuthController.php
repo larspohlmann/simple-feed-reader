@@ -6,12 +6,12 @@ namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthCallbackAttempt;
 use App\Dto\OAuth\OAuthExchangeRequest;
-use App\Service\OAuth\CallbackParameters;
+use App\Http\OAuth\CallbackParameters;
+use App\Http\OAuth\FlowCookie;
+use App\Http\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
-use App\Service\OAuth\FlowCookie;
 use App\Service\OAuth\OAuthCallback;
 use App\Service\OAuth\OAuthProviderRegistry;
-use App\Service\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
 use App\Service\RateLimit\RateLimitGuard;
@@ -181,7 +181,7 @@ final class OAuthController
         // exchange's 32-byte code lives 30 seconds, so a limiter on either defends
         // something already closed, while start() is where a scripted loop could
         // fill the state pool for free.
-        $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request);
+        $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request->getClientIp());
 
         // Throws UnknownProviderException (404 problem+json) for a name this
         // deployment does not offer. That is the right shape here: nothing has

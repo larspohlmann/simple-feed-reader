@@ -11,7 +11,6 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
 use OpenTelemetry\API\Instrumentation\WithSpan;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
@@ -36,6 +35,7 @@ final readonly class HtmlPageFetcher
         private MetaRefreshTarget $metaRefresh,
         private LandingChallenge $challenge,
         private string $userAgent,
+        private StatusReasonPhrases $reasonPhrases,
     ) {
     }
 
@@ -79,7 +79,7 @@ final readonly class HtmlPageFetcher
         if (!$landed->isSuccess()) {
             $snippet = $this->errorBodySnippet($landed->response);
             $landed->response->cancel();
-            $status = self::describeStatus($landed->status);
+            $status = $this->describeStatus($landed->status);
 
             throw new PageFetchException($snippet === null ? $status : $status . ' — ' . $snippet);
         }
@@ -133,9 +133,9 @@ final readonly class HtmlPageFetcher
 
     /** The status line as a reader would read it — the code with its standard
      *  reason phrase ("HTTP 403 Forbidden"), or the bare code for an unknown one. */
-    private static function describeStatus(int $status): string
+    private function describeStatus(int $status): string
     {
-        $phrase = Response::$statusTexts[$status] ?? '';
+        $phrase = $this->reasonPhrases->of($status);
 
         return $phrase === '' ? sprintf('HTTP %d', $status) : sprintf('HTTP %d %s', $status, $phrase);
     }

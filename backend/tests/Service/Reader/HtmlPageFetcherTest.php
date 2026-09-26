@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -48,6 +49,7 @@ final class HtmlPageFetcherTest extends TestCase
             new MetaRefreshTarget(),
             new LandingChallenge(),
             'TestAgent/1.0',
+            new SymfonyStatusReasonPhrases(),
         );
     }
 
@@ -123,6 +125,18 @@ final class HtmlPageFetcherTest extends TestCase
             self::fail('expected a PageFetchException');
         } catch (PageFetchException $failure) {
             self::assertSame('HTTP 404 Not Found', $failure->getMessage());
+        }
+    }
+
+    public function testNon2xxWithoutAStandardPhraseReportsTheBareCode(): void
+    {
+        $fetcher = $this->fetcher([new MockResponse("   \n  ", ['http_code' => 499])]);
+
+        try {
+            $fetcher->fetch('https://example.com/closed');
+            self::fail('expected a PageFetchException');
+        } catch (PageFetchException $failure) {
+            self::assertSame('HTTP 499', $failure->getMessage());
         }
     }
 

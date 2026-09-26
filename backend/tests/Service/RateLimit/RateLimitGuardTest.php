@@ -9,7 +9,6 @@ use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\RateLimit\RateLimitGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\RateLimit;
 
 final class RateLimitGuardTest extends TestCase
@@ -25,7 +24,7 @@ final class RateLimitGuardTest extends TestCase
     {
         $factory = $this->factoryReturning($this->accepted());
 
-        $this->guard()->enforceForClient($factory, $this->requestFrom('203.0.113.7'));
+        $this->guard()->enforceForClient($factory, '203.0.113.7');
 
         $this->assertSame('203.0.113.7', $factory->capturedKey);
     }
@@ -35,7 +34,7 @@ final class RateLimitGuardTest extends TestCase
         $factory = $this->factoryReturning($this->rejectedRetryingIn(30));
 
         try {
-            $this->guard()->enforceForClient($factory, $this->requestFrom('203.0.113.7'));
+            $this->guard()->enforceForClient($factory, '203.0.113.7');
             $this->fail('Expected a RateLimitedException.');
         } catch (RateLimitedException $exception) {
             $this->assertSame(30, $exception->retryAfterSeconds);
@@ -49,11 +48,20 @@ final class RateLimitGuardTest extends TestCase
         $factory = $this->factoryReturning($this->rejectedRetryingIn(0));
 
         try {
-            $this->guard()->enforceForClient($factory, $this->requestFrom('203.0.113.7'));
+            $this->guard()->enforceForClient($factory, '203.0.113.7');
             $this->fail('Expected a RateLimitedException.');
         } catch (RateLimitedException $exception) {
             $this->assertSame(1, $exception->retryAfterSeconds);
         }
+    }
+
+    public function testEnforceForClientPassesANullIpThroughAsTheKey(): void
+    {
+        $factory = $this->factoryReturning($this->accepted());
+
+        $this->guard()->enforceForClient($factory, null);
+
+        $this->assertNull($factory->capturedKey);
     }
 
     public function testEnforceForUserKeysOnTheUserId(): void
@@ -70,11 +78,6 @@ final class RateLimitGuardTest extends TestCase
     private function guard(): RateLimitGuard
     {
         return new RateLimitGuard($this->clock);
-    }
-
-    private function requestFrom(string $clientIp): Request
-    {
-        return Request::create('/', 'GET', [], [], [], ['REMOTE_ADDR' => $clientIp]);
     }
 
     private function accepted(): RateLimit

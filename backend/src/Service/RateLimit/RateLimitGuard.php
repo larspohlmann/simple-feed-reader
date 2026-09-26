@@ -7,7 +7,6 @@ namespace App\Service\RateLimit;
 use App\Entity\User;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use Psr\Clock\ClockInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
@@ -36,21 +35,12 @@ final readonly class RateLimitGuard
     }
 
     /**
-     * Caps an anonymous endpoint per client IP.
-     *
-     * getClientIp() returns REMOTE_ADDR unless the request came from a trusted
-     * proxy, and nothing configures trusted_proxies yet — the safe default,
-     * since a spoofed X-Forwarded-For cannot buy a fresh budget. But the day
-     * this app sits behind a CDN or reverse proxy, every request wears the
-     * proxy's address and all callers share one bucket, unless
-     * framework.trusted_proxies is set at the same time.
-     *
-     * A null IP (possible for non-HTTP-ish transports) collapses every such
-     * caller into one shared bucket — fails closed, the right direction.
+     * Caps an anonymous endpoint per Request::getClientIp(); without framework.trusted_proxies,
+     * every caller behind a shared proxy spends the same bucket, and a null IP fails closed likewise.
      */
-    public function enforceForClient(RateLimiterFactoryInterface $limiter, Request $request): void
+    public function enforceForClient(RateLimiterFactoryInterface $limiter, ?string $clientIp): void
     {
-        $this->enforce($limiter->create($request->getClientIp()));
+        $this->enforce($limiter->create($clientIp));
     }
 
     private function enforce(LimiterInterface $limiter): void

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\Index;
 
 use App\Enum\ListOrder;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Service\Search\SearchTerms;
 
 /**

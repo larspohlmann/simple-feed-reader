@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\OAuth;
+namespace App\Tests\Http\OAuth;
 
-use App\Service\OAuth\FlowCookie;
+use App\Http\OAuth\FlowCookie;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Cookie;

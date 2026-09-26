@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Settings;
 
+use App\Http\RequestServingHost;
 use App\Service\Settings\ConfiguredPasskeyRelyingParty;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
-use App\Service\Settings\ServingHost;
 use App\Tests\Support\FixedPublicBaseUrl;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -83,7 +83,7 @@ final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
     {
         $relyingParty = new ConfiguredPasskeyRelyingParty(
             $this->settingsReturning(null, null),
-            new ServingHost(new RequestStack(), new FixedPublicBaseUrl(self::EMAIL_LINK_URL)),
+            new RequestServingHost(new RequestStack(), new FixedPublicBaseUrl(self::EMAIL_LINK_URL)),
             new EffectivePasskeyRelyingPartyId(),
         );
 
@@ -101,7 +101,7 @@ final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
 
         return new ConfiguredPasskeyRelyingParty(
             $this->settingsReturning($configuredId, $configuredName),
-            new ServingHost($requests, new FixedPublicBaseUrl($emailLinkUrl)),
+            new RequestServingHost($requests, new FixedPublicBaseUrl($emailLinkUrl)),
             new EffectivePasskeyRelyingPartyId(),
         );
     }

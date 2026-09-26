@@ -11,7 +11,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Http\RecommendationCursor;
+use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
 use App\Tests\DbTestCase;

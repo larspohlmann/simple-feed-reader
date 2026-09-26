@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\ListOrder;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Service\Search\SearchTerms;

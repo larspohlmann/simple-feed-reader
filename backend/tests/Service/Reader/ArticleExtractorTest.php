@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -105,7 +106,13 @@ final class ArticleExtractorTest extends TestCase
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
 
         return new ArticleExtractor(
-            new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
+            new HtmlPageFetcher(
+                $redirects,
+                new MetaRefreshTarget(),
+                new LandingChallenge(),
+                'TestAgent/1.0',
+                new SymfonyStatusReasonPhrases(),
+            ),
             new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
             new EntrySanitizer(),
@@ -490,7 +497,13 @@ final class ArticleExtractorTest extends TestCase
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
         $extractor = new ArticleExtractor(
-            new HtmlPageFetcher($redirects, new MetaRefreshTarget(), new LandingChallenge(), 'TestAgent/1.0'),
+            new HtmlPageFetcher(
+                $redirects,
+                new MetaRefreshTarget(),
+                new LandingChallenge(),
+                'TestAgent/1.0',
+                new SymfonyStatusReasonPhrases(),
+            ),
             new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
             new EntrySanitizer(),

@@ -68,7 +68,7 @@ final readonly class AuthController
         // successes. Capping only accepted solutions would leave an attacker free
         // to hammer the endpoint with junk, and — worse — would make the limiter
         // an oracle, since only requests that reached the mailer would count.
-        $this->rateLimitGuard->enforceForClient($this->registrationLimiter, $httpRequest);
+        $this->rateLimitGuard->enforceForClient($this->registrationLimiter, $httpRequest->getClientIp());
 
         if (!$this->altcha->verify($request->altcha)) {
             throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
@@ -104,7 +104,7 @@ final readonly class AuthController
     ): JsonResponse {
         // Limit before the ALTCHA check, for the same oracle-avoidance reason as
         // register().
-        $this->rateLimitGuard->enforceForClient($this->passwordResetRequestLimiter, $httpRequest);
+        $this->rateLimitGuard->enforceForClient($this->passwordResetRequestLimiter, $httpRequest->getClientIp());
 
         if (!$this->altcha->verify($request->altcha)) {
             throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);

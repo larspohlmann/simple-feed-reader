@@ -11,7 +11,7 @@ use App\Entity\SavedSearch;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchListQuery;

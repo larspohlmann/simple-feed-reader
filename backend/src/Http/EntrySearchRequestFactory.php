@@ -2,14 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search;
+namespace App\Http;
 
 use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Exception\ValidationException;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
+use App\Service\Search\SearchTerms;
 use Symfony\Component\HttpFoundation\Request;
 
 /**

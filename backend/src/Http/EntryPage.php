@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
