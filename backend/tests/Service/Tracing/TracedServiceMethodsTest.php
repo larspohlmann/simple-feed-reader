@@ -18,7 +18,7 @@ use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Recommendation\ForYouFeed;
 use App\Service\Recommendation\RecommendationFeedPager;
 use App\Service\Recommendation\RecommendationPollDriver;
-use App\Service\Recommendation\RecommendationRunStatusPayload;
+use App\Service\Recommendation\RecommendationRunStatusResolver;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\SavedSearchTallies;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -53,7 +53,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'saved searches list' => [SavedSearchRepository::class, 'findForUser'];
         yield 'saved searches list, matches' => [SavedSearchTallies::class, 'forAll'];
         yield 'recommendations current, poll' => [RecommendationPollDriver::class, 'current'];
-        yield 'recommendations current, payload' => [RecommendationRunStatusPayload::class, 'forReport'];
+        yield 'recommendations current, status' => [RecommendationRunStatusResolver::class, 'forReport'];
     }
 
     /** @param class-string $class */

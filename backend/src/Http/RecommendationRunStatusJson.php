@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\RecommendationForYouSummary;
-use App\Service\Recommendation\RecommendationRunReport;
-use Symfony\Component\Clock\ClockInterface;
+use App\Service\Recommendation\RecommendationRunStatus;
 
 /**
  * The wire shape every /api/recommendations/runs* action returns: the run
@@ -18,15 +16,13 @@ use Symfony\Component\Clock\ClockInterface;
 final class RecommendationRunStatusJson
 {
     /** @return array<string, mixed> */
-    public static function report(
-        RecommendationRunReport $report,
-        RecommendationForYouSummary $summary,
-        ClockInterface $clock,
-        ?int $etaSeconds,
-    ): array {
-        return $report->toArray() + [
-            'elapsedSeconds' => $report->elapsedSecondsAt($clock->now()),
-            'etaSeconds' => $etaSeconds,
+    public static function report(RecommendationRunStatus $status): array
+    {
+        $summary = $status->forYou;
+
+        return $status->report->toArray() + [
+            'elapsedSeconds' => $status->report->elapsedSecondsAt($status->observedAt),
+            'etaSeconds' => $status->etaSeconds,
             'forYou' => [
                 // The count of unread surviving picks (#724); the field name
                 // stays `itemCount` for wire compatibility.
