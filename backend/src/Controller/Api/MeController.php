@@ -12,13 +12,12 @@ use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
 use App\Http\MeJson;
 use App\Service\Account\AccountDeleter;
+use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Auth\RegistrationService;
-use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailCapability;
 use App\Service\RateLimit\MeRateLimiters;
 use App\Service\RateLimit\RateLimitGuard;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -34,10 +33,9 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class MeController
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private AccountPreferencesWriter $preferences,
         private AccountDeleter $accountDeleter,
         private MailCapability $mail,
-        private DigestEnablement $digestEnablement,
         private RegistrationService $registration,
         private SendTestDigest $sendTestDigest,
         private RateLimitGuard $rateLimitGuard,
@@ -54,35 +52,30 @@ final readonly class MeController
     }
 
     /**
-     * The account's language. The server is the source of truth: the SPA caches
-     * it per device, but this is what AccountMailer reads to pick the language
-     * of every transactional email, and what a native client has to read
-     * because it cannot see browser storage.
+     * The server is the source of truth for the account's language: it is what
+     * AccountMailer reads for every transactional email, unlike an SPA-only cache.
      */
     #[Route('/api/me', name: 'api_me_update_locale', methods: ['PATCH'])]
     public function updateLocale(
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateLocaleRequest $request,
     ): JsonResponse {
-        $user->setLocale($request->locale);
-        $this->entityManager->flush();
+        $this->preferences->changeLocale($user, $request);
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**
-     * Per-account settings. Separate from the locale PATCH because
-     * UpdateLocaleRequest requires a non-blank locale: folding preferences into
-     * it would force every preference write to resend the language, or cost the
-     * locale its 422-on-unsupported-value guarantee (#180).
+     * Split from the locale PATCH because UpdateLocaleRequest requires a
+     * non-blank locale, which would cost it its 422-on-unsupported-value
+     * guarantee if preference writes had to resend the language too (#180).
      */
     #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
     public function updatePreferences(
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdatePreferencesRequest $request,
     ): JsonResponse {
-        $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
-        $this->entityManager->flush();
+        $this->preferences->changeScrapeFallback($user, $request);
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
@@ -93,25 +86,21 @@ final readonly class MeController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateMagazineStyleRequest $request,
     ): JsonResponse {
-        $user->getPreferences()->setMagazineStyle($request->magazineStyle);
-        $this->entityManager->flush();
+        $this->preferences->changeMagazineStyle($user, $request);
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
 
     /**
-     * The email-digest configuration (#636). Its own PATCH, not folded into
-     * preferences: see updatePreferences() for why each settings write stays
-     * independent. First-enable seeding of digestLastSentAt lives in
-     * DigestEnablement, not here, to keep this action a plain read-delegate-return.
+     * Its own PATCH for the reason updatePreferences() gives (#636). First-enable
+     * seeding of digestLastSentAt lives in DigestEnablement, not here.
      */
     #[Route('/api/me/digest', name: 'api_me_update_digest', methods: ['PATCH'])]
     public function updateDigest(
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateDigestRequest $request,
     ): JsonResponse {
-        $this->digestEnablement->applyTo($user->getPreferences(), $request);
-        $this->entityManager->flush();
+        $this->preferences->changeDigest($user, $request);
 
         return new JsonResponse(MeJson::profile($user, $this->mail->isEnabled(), $this->instanceTimezone));
     }
