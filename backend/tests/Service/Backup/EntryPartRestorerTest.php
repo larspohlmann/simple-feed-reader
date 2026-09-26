@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup;
 
 use App\Entity\Entry;
+use App\Entity\EntryAttachment;
+use App\Entity\EntryMedium;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -96,6 +98,38 @@ final class EntryPartRestorerTest extends DbTestCase
         $staleUnread = $this->restoredStateOf($user, 'c');
         self::assertFalse($staleUnread->isHidden());
         self::assertEquals(new \DateTimeImmutable('2026-08-03 00:00:00'), $staleUnread->getHiddenAt());
+    }
+
+    public function testAStoredMediumOrAttachmentWithoutItsKeysIsLeftOutWhenRead(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([
+            array_replace($this->entryLine('a'), [
+                'media' => [
+                    ['kind' => 'image'],
+                    ['url' => 'https://i/no-kind.jpg'],
+                    ['url' => 'https://i/kept.jpg', 'kind' => 'image'],
+                ],
+                'attachments' => [
+                    ['mimeType' => 'audio/mpeg'],
+                    ['url' => 'https://cdn/kept.mp3'],
+                ],
+            ]),
+        ]);
+
+        $this->restorer()->load($user, $gzip);
+
+        $this->em->clear();
+        $entry = $this->findEntry('a');
+        self::assertNotNull($entry);
+        self::assertSame(
+            ['https://i/kept.jpg'],
+            array_map(static fn (EntryMedium $medium): string => $medium->url, $entry->getMedia()),
+        );
+        self::assertSame(
+            ['https://cdn/kept.mp3'],
+            array_map(static fn (EntryAttachment $attachment): string => $attachment->url, $entry->getAttachments()),
+        );
     }
 
     public function testARetriedPartCreatesNothingAndFailsNothing(): void

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
@@ -133,8 +134,11 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     ): void {
         $base = new \DateTimeImmutable('2026-08-07T09:00:00Z');
         $this->fixtures->log($run, $phase, $batchNumber, 1, 'req', $base->modify("+{$startOffset} seconds"))
-            ->finish('reply', RecommendationRunLog::VERDICT_USABLE, 0, 'stop', $base->modify(
-                '+' . ($startOffset + $spanSeconds) . ' seconds',
+            ->finish('reply', new CallOutcome(
+                RecommendationRunLog::VERDICT_USABLE,
+                0,
+                $base->modify('+' . ($startOffset + $spanSeconds) . ' seconds'),
+                'stop',
             ));
     }
 }

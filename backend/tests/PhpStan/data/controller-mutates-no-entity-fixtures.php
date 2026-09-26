@@ -212,7 +212,7 @@ namespace App\Controller\Fixtures\Mutation {
 
             return [
                 new EntryAttachment('https://example.test/'),
-                EntryAttachment::fromArray(['url' => 'https://example.test/' . $origin->x]),
+                EntryAttachment::fromStored(['url' => 'https://example.test/' . $origin->x]),
             ];
         }
     }

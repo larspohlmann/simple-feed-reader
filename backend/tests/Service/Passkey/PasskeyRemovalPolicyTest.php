@@ -10,6 +10,7 @@ use App\Repository\UserIdentityRepository;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\Exception\LastSignInMethodException;
 use App\Service\Passkey\PasskeyRemovalPolicy;
+use App\Tests\Support\PasskeyRegistrations;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -94,14 +95,7 @@ final class PasskeyRemovalPolicyTest extends TestCase
     {
         return new UserPasskey(
             $this->user(null),
-            'Y3JlZC1hYmM',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Test key',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(label: 'Test key'),
         );
     }
 }

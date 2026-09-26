@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -18,14 +19,16 @@ final class UserPasskeyTest extends DbTestCase
         $user = $this->user('passkey-owner@example.test');
         $passkey = new UserPasskey(
             $user,
-            'Y3JlZC1hYmM',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            '00000000-0000-0000-0000-000000000000',
-            ['internal', 'hybrid'],
-            'MacBook Touch ID',
-            new \DateTimeImmutable('2026-08-29 10:00:00'),
+            PasskeyRegistrations::any(
+                credentialId: 'Y3JlZC1hYmM',
+                userHandle: 'aGFuZGxl',
+                publicKey: 'cHVibGljLWtleQ',
+                signatureCounter: 17,
+                aaguid: '00000000-0000-0000-0000-000000000000',
+                transports: ['internal', 'hybrid'],
+                label: 'MacBook Touch ID',
+                registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            ),
         );
         $this->em->persist($passkey);
         $this->em->flush();
@@ -34,7 +37,14 @@ final class UserPasskeyTest extends DbTestCase
         $found = $this->repository()->findOneByCredentialId('Y3JlZC1hYmM');
 
         self::assertNotNull($found);
+        self::assertSame($user->requireId(), $found->getUser()->requireId());
+        self::assertSame('aGFuZGxl', $found->getUserHandle());
+        self::assertSame('cHVibGljLWtleQ', $found->getPublicKey());
+        self::assertSame(17, $found->getSignatureCounter());
+        self::assertSame('00000000-0000-0000-0000-000000000000', $found->getAaguid());
         self::assertSame(['internal', 'hybrid'], $found->getTransports());
+        self::assertSame('MacBook Touch ID', $found->getLabel());
+        self::assertEquals(new \DateTimeImmutable('2026-08-29 10:00:00'), $found->getCreatedAt());
         self::assertNull($found->getLastUsedAt());
     }
 
@@ -48,14 +58,7 @@ final class UserPasskeyTest extends DbTestCase
         $user = $this->user('case-owner@example.test');
         $this->em->persist(new UserPasskey(
             $user,
-            'Sub-ABC',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Key',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Sub-ABC'),
         ));
         $this->em->flush();
         $this->em->clear();
@@ -71,14 +74,7 @@ final class UserPasskeyTest extends DbTestCase
         $user = $this->user('recorder@example.test');
         $passkey = new UserPasskey(
             $user,
-            'Y3JlZC1yZWM',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Key',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Y3JlZC1yZWM'),
         );
         $this->em->persist($passkey);
         $this->em->flush();
@@ -101,14 +97,7 @@ final class UserPasskeyTest extends DbTestCase
         $stranger = $this->user('stranger@example.test');
         $passkey = new UserPasskey(
             $owner,
-            'Y3JlZC1vd24',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Key',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Y3JlZC1vd24'),
         );
         $this->em->persist($passkey);
         $this->em->flush();
@@ -127,25 +116,19 @@ final class UserPasskeyTest extends DbTestCase
         $user = $this->user('lister@example.test');
         $older = new UserPasskey(
             $user,
-            'Y3JlZC1vbGQ',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Older',
-            new \DateTimeImmutable('2026-08-01 00:00:00'),
+            PasskeyRegistrations::any(
+                credentialId: 'Y3JlZC1vbGQ',
+                label: 'Older',
+                registeredAt: new \DateTimeImmutable('2026-08-01 00:00:00'),
+            ),
         );
         $newer = new UserPasskey(
             $user,
-            'Y3JlZC1uZXc',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Newer',
-            new \DateTimeImmutable('2026-08-15 00:00:00'),
+            PasskeyRegistrations::any(
+                credentialId: 'Y3JlZC1uZXc',
+                label: 'Newer',
+                registeredAt: new \DateTimeImmutable('2026-08-15 00:00:00'),
+            ),
         );
         $this->em->persist($newer);
         $this->em->persist($older);
@@ -165,25 +148,11 @@ final class UserPasskeyTest extends DbTestCase
         $other = $this->user('other@example.test');
         $this->em->persist(new UserPasskey(
             $user,
-            'Y3JlZC1jbnQx',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'One',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Y3JlZC1jbnQx', label: 'One'),
         ));
         $this->em->persist(new UserPasskey(
             $other,
-            'Y3JlZC1jbnQy',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Two',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Y3JlZC1jbnQy', label: 'Two'),
         ));
         $this->em->flush();
         $this->em->clear();
@@ -199,14 +168,7 @@ final class UserPasskeyTest extends DbTestCase
         $user = $this->user('wiper@example.test');
         $this->em->persist(new UserPasskey(
             $user,
-            'Y3JlZC13aXBl',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Key',
-            new \DateTimeImmutable(),
+            PasskeyRegistrations::any(credentialId: 'Y3JlZC13aXBl'),
         ));
         $this->em->flush();
 

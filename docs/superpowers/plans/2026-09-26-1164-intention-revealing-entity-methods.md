@@ -5127,6 +5127,30 @@ git commit -m "refactor(#1164): stored media are read with fromStored() and an i
 
 ---
 
+## Execution rulings (PR B)
+
+Recorded while executing Tasks B0–B4. Each ruling amends the text above.
+
+- **S1:** `/** @noinspection AutowireWrongClass Built with new, never autowired */` goes on the `UserPasskey`, `RecommendationRunLog` and `RecommendationRun` constructors. These files are touched, and their existing WARNINGs would block.
+- **S2:** Incomplete media rows are dropped from backup export too (`BackupLines`), so the PR body says "served or exported".
+- **S3:** Commits stage explicit files, never `tests`.
+- **S4:** `RecordedCallTest` pins `wire_bytes` on the answered path.
+- **S5:** `PasskeyRegistration`, `CallOutcome` and the `PasskeyRegistrations` test factory carry no class docblock. The comment on `recordTransportFailure()` is dropped.
+- **S6:** Final review I1 found the reset test still stopped below the ceiling. `testCompleteClearsExhaustedTransportRetries` now exhausts the retries, completes the run, and asserts the retries are no longer exhausted. A break-test confirmed it catches a missing reset.
+- **S7:** The Step 5 grep for `$data` uses single quotes.
+- **B2 plan defect:** The test helper `run()` collided with PHPUnit's final `TestCase::run()`, so it is named `newRun()`.
+- **Final review, applied:**
+  - M2: `AttestationVerifier` builds the registration with named arguments.
+  - M3: the `tests/Support/PasskeyRegistrations::any()` factory replaces the repeated 8-argument literal.
+  - M4: a stored medium with a url but no kind is refused.
+  - M6: `fromStored()` guards through `isComplete()` (with `@phpstan-assert-if-true`), so the completeness rule lives in one place.
+- **Skipped:**
+  - A `?self` from `fromStored()`: it would signal failure with null.
+  - A shared filter/hydrate helper in `EntryMedia`: two occurrences.
+  - A `CallOutcome` test helper: each site passes different values.
+  - Sharing `newRun()` with `RecommendationRunTest`: two occurrences.
+  - M5: `RecommendationRunLog::finish()` has test-only callers. That predates this branch and goes to the planner.
+
 ## Appendix A: setter call sites at 6ca53dd8
 
 Re-taken at 6ca53dd8, the head of #1158's last PR (#1157 PR B and #1158 added `AdminUserLimitsJsonTest`, `SubscriptionTallyReaderTest`, `EntryPageParametersTest` and two `AiSettingsJsonTest` sites, and shifted `EntryListTest` and `EntryStateResolverTest`). A textual grep of `->setX(` over `backend/src` and `backend/tests`, excluding each entity's own forwarding. For the kept setters `setTitle`, `setDescription`, `setSiteUrl` and `setUrl`, the grep also catches other receivers with the same method name (`Entry::setTitle` in `DuplicateCollapseTest`, catalog rows in `CatalogControllerTest`). Those setters are untouched, so the list is informational. For every deleted setter, the list is exact, and the tasks above carry each site.

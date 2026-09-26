@@ -13,6 +13,7 @@ use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\PublicBaseUrl;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\TogglesPasskeySignIn;
 
 /**
@@ -101,14 +102,12 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         $owner = $this->factory()->create('passkey-owner@example.test');
         $this->em()->persist(new UserPasskey(
             $owner,
-            credentialId: bin2hex(random_bytes(16)),
-            userHandle: bin2hex(random_bytes(16)),
-            publicKey: 'test-public-key',
-            signatureCounter: 0,
-            aaguid: null,
-            transports: [],
-            label: 'Test passkey',
-            createdAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            registration: PasskeyRegistrations::any(
+                credentialId: bin2hex(random_bytes(16)),
+                userHandle: bin2hex(random_bytes(16)),
+                label: 'Test passkey',
+                registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            ),
         ));
         $this->em()->flush();
         $this->factory()->create('another-user@example.test');

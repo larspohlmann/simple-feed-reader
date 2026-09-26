@@ -28,12 +28,13 @@ final class RunCallAttemptsTest extends TestCase
         self::assertSame('garbage', $callAttempts->lastInvalidReply());
     }
 
-    public function testRecordTransportFailureIncrementsAndReturnsTheNewCount(): void
+    public function testRecordTransportFailureCountsEachFailure(): void
     {
         $callAttempts = new RunCallAttempts();
 
-        self::assertSame(1, $callAttempts->recordTransportFailure());
-        self::assertSame(2, $callAttempts->recordTransportFailure());
+        $callAttempts->recordTransportFailure();
+        $callAttempts->recordTransportFailure();
+
         self::assertSame(2, $callAttempts->transportFailures());
     }
 

@@ -7,6 +7,7 @@ namespace App\Tests\Entity;
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedia;
 use App\Entity\EntryMedium;
+use App\Entity\Exception\IncompleteStoredMediaException;
 use PHPUnit\Framework\TestCase;
 
 final class EntryMediaTest extends TestCase
@@ -87,5 +88,84 @@ final class EntryMediaTest extends TestCase
             ['url' => 'https://cdn/x.mp3'],
             (new EntryAttachment('https://cdn/x.mp3'))->jsonSerialize(),
         );
+    }
+
+    public function testAStoredMediumNeedsAUrlAndAKind(): void
+    {
+        self::assertTrue(EntryMedium::isComplete($this->asStored(['url' => 'https://i/x.jpg', 'kind' => 'image'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['kind' => 'image'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['url' => 'https://i/x.jpg'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['url' => 42, 'kind' => 'image'])));
+    }
+
+    public function testAStoredAttachmentNeedsAUrl(): void
+    {
+        self::assertTrue(EntryAttachment::isComplete($this->asStored(['url' => 'https://cdn/x.mp3'])));
+        self::assertFalse(EntryAttachment::isComplete($this->asStored(['mimeType' => 'audio/mpeg'])));
+    }
+
+    /**
+     * @param array<string, mixed> $stored
+     *
+     * @return array<string, mixed>
+     */
+    private function asStored(array $stored): array
+    {
+        return $stored;
+    }
+
+    public function testACompleteStoredMediumRoundTripsItsDeclaredFields(): void
+    {
+        $medium = EntryMedium::fromStored([
+            'url' => 'https://v/clip.mp4',
+            'kind' => 'video',
+            'width' => 1280,
+            'height' => '720',
+            'previewImageUrl' => 'https://v/p.jpg',
+        ]);
+
+        self::assertSame('https://v/clip.mp4', $medium->url);
+        self::assertSame('video', $medium->kind);
+        self::assertSame(1280, $medium->width);
+        self::assertNull($medium->height);
+        self::assertSame('https://v/p.jpg', $medium->previewImageUrl);
+    }
+
+    public function testACompleteStoredAttachmentRoundTripsItsDeclaredFields(): void
+    {
+        $attachment = EntryAttachment::fromStored([
+            'url' => 'https://cdn/ep.mp3',
+            'mimeType' => 'audio/mpeg',
+            'durationInSeconds' => 3723,
+            'sizeInBytes' => '4200000',
+            'title' => 'Chapter two',
+        ]);
+
+        self::assertSame('https://cdn/ep.mp3', $attachment->url);
+        self::assertSame('audio/mpeg', $attachment->mimeType);
+        self::assertSame(3723, $attachment->durationInSeconds);
+        self::assertNull($attachment->sizeInBytes);
+        self::assertSame('Chapter two', $attachment->title);
+    }
+
+    public function testAnIncompleteStoredMediumIsRefusedRatherThanGivenAnEmptyUrl(): void
+    {
+        $this->expectException(IncompleteStoredMediaException::class);
+
+        EntryMedium::fromStored(['kind' => 'image']);
+    }
+
+    public function testAStoredMediumWithAUrlButNoKindIsRefused(): void
+    {
+        $this->expectException(IncompleteStoredMediaException::class);
+
+        EntryMedium::fromStored(['url' => 'https://i/x.jpg']);
+    }
+
+    public function testAnIncompleteStoredAttachmentIsRefusedRatherThanGivenAnEmptyUrl(): void
+    {
+        $this->expectException(IncompleteStoredMediaException::class);
+
+        EntryAttachment::fromStored(['mimeType' => 'audio/mpeg']);
     }
 }

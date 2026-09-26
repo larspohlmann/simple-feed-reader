@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\CallOutcome;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\Exception\RecordNotFoundException;
@@ -51,10 +52,12 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         );
         $finished->finish(
             'decoded text',
-            RecommendationRunLog::VERDICT_USABLE,
-            41_000,
-            'stop',
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+            new CallOutcome(
+                RecommendationRunLog::VERDICT_USABLE,
+                41_000,
+                new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+                'stop',
+            ),
         );
         $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'req-body-longer');
         $this->em->flush();
@@ -104,10 +107,12 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
         $done->finish(
             'finished text',
-            RecommendationRunLog::VERDICT_UNUSABLE,
-            7,
-            'length',
-            new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+            new CallOutcome(
+                RecommendationRunLog::VERDICT_UNUSABLE,
+                7,
+                new \DateTimeImmutable('2026-08-08T10:00:05Z'),
+                'length',
+            ),
         );
         $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
         $this->em->flush();

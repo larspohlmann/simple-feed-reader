@@ -43,8 +43,8 @@ final readonly class RecommendationTransportFailureRecorder
     {
         $this->checkpoint->guard($run);
 
-        $ceilingReached = $run->recordTransportFailure();
-        if ($ceilingReached) {
+        $run->recordTransportFailure();
+        if ($run->hasExhaustedTransportRetries()) {
             // The real per-call detail, not a hardcoded "could not be reached":
             // most transport failures are the provider refusing or truncating a
             // call it received, and one flat unreachable message hid a fixable

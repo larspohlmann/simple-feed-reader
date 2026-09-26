@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Entity\CallOutcome;
 use App\Entity\RecommendationRunLog;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
@@ -132,7 +133,10 @@ final class RecordedCall implements CompletionStreamObserver
 
     private function settlement(int $logId, string $verdict): CallSettlement
     {
-        return new CallSettlement($logId, $verdict, $this->wireBytes, $this->clock->now(), $this->finishReason);
+        return new CallSettlement(
+            $logId,
+            new CallOutcome($verdict, $this->wireBytes, $this->clock->now(), $this->finishReason),
+        );
     }
 
     private function resetLiveness(): void

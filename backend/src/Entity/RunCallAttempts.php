@@ -33,9 +33,9 @@ class RunCallAttempts
         $this->lastInvalidReply = $reply;
     }
 
-    public function recordTransportFailure(): int
+    public function recordTransportFailure(): void
     {
-        return ++$this->transportFailures;
+        $this->transportFailures++;
     }
 
     public function attempts(): int

@@ -66,6 +66,16 @@ final class RecordedCallTest extends DbTestCase
         self::assertNull($log->getErrorDetail());
     }
 
+    public function testFinishUsableWritesTheWireByteCount(): void
+    {
+        $call = $this->call();
+        $call->streamProgressed(new CompletionStreamProgress('partial answer', 4_096));
+
+        $call->finishUsable('the answer');
+
+        self::assertSame(4_096, $this->freshLog()->getWireBytes());
+    }
+
     public function testAbortAfterTransportFailureWritesFinishedAtErrorDetailAndTheTransportVerdict(): void
     {
         $call = $this->call();
