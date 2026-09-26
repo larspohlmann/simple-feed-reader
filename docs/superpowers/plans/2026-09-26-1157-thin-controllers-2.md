@@ -6484,3 +6484,35 @@ rules only as *CallableNode, and static calls were never checked (PR A F6)."
    - Never use `gh pr merge --auto`: it merges immediately on this repository.
    - If a check fails, stop and report. If phptramp fails, look at `composer show larspohlmann/phptramp` before you blame the diff.
    - After the merge, confirm with `gh issue view 1157 --json state` that #1157 closed. Do not close it by hand.
+
+## Execution rulings (implementer, pre-flight 2026-09-26)
+
+Planner rulings, relayed at hand-off:
+- Favicon lookup through `getById()`, with the detail "No such feed.": approved.
+- `MarkReadService` uses `getOneOwnedBy`: approved.
+- The F8 docblock trims: approved.
+- **Task 18 CHANGE:** do not flag every static call on a mapped class. A pure static helper such as `User::normalizeEmail` is fine in a controller. Flag a static call only when PHPStan's return type of that call is, or contains, a mapped entity class, because such a call is a disguised `new`. Keep `MethodCallableNode` and embeddables in scope. Fixtures cover three cases:
+  - `normalizeEmail` is allowed.
+  - A static factory returning an entity is reported.
+  - A static callable returning an entity is reported.
+
+Implementer rulings:
+- **F1 (Task 18):** implement the CHANGE with these four points.
+  1. A first-class callable's return type comes from `getOriginalNode()`. On the callable node itself, `$scope->getType()` is `mixed` for the 2nd and later items of an array literal.
+  2. Report a static call only when the called class is itself mapped **and** the return type contains a mapped class. Without that gate, `AdminUserJson::positionOrdered()` (`list<Subscription>`) is a false positive.
+  3. "Contains" means the return type with null removed, plus its iterable value type.
+  4. The static-call report gets its own message. Add a pure-static-helper fixture that must not report, and renumber the expected lines.
+
+  Update the Interfaces text, Step 2, the CLAUDE.md text, the commit message and the PR body to match. `src/Controller` must end with 0 findings.
+- **F3 (Task 18 Step 6):** the break test expects exactly one error, `Tag::setName(...)`. `User::normalizeEmail()` is not reported.
+- **F2 (Task 8) and F4 (Task 6):** wire changes outside D1/D3. PENDING the planner's ruling; do not start those tasks without it.
+- **F5 (Task 15):** use `AuditShard(1, 1)` so the `<= 1` → `< 1` mutant dies.
+- **F6 (Task 13):** the `||` → `&&` mutant in `CatalogFaviconSource` is equivalent, because `storeFavicon()` always sets both fields. Accept it and document it. No Infection ignore.
+- **F7 (Task 15):** add a test for `AuditFindingsFile::create()`'s unwritable branch, where the path is an existing directory.
+- **F8 (Task 11 Step 2):** fix the stated failure reason. `loadXML('')` throws a `ValueError`; the test still fails as required.
+- **F9 (Task 17):**
+  - Reword the new §7 sentence. `recordFailure()` still runs a whole-EntityManager flush; what is fixed is that the repository no longer flushes.
+  - Add `MailConnectionTesterTest` and `AdminMailControllerTest` to Step 4's test list.
+- **F10:** run `composer infection:diff` once after Task 15 as well as at Finishing, because moved code is mutated in full.
+- **F11 (Tasks 1 and 3):** use an existing shared test factory for users and tags if `tests/Support` has one. Otherwise accept the per-test helper, which is the established pattern.
+- **F12 (Task 8):** add one `unread=maybe` → 422 case.
