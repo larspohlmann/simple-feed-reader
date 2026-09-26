@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 use PhpParser\Node;
-use PhpParser\Node\Expr;
+use PhpParser\Node\Expr\CallLike;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
@@ -16,7 +16,7 @@ use PHPStan\Rules\Rule;
  * Thin-controller rule, expression half (#1157). A ?-> call also arrives as a MethodCall (F1); a first-class callable
  * arrives only as a *CallableNode, which the two ControllerMutatesNoEntityThrough*CallableRule siblings take.
  *
- * @implements Rule<Expr>
+ * @implements Rule<CallLike>
  */
 final readonly class ControllerMutatesNoEntityRule implements Rule
 {
@@ -26,7 +26,7 @@ final readonly class ControllerMutatesNoEntityRule implements Rule
 
     public function getNodeType(): string
     {
-        return Expr::class;
+        return CallLike::class;
     }
 
     public function processNode(Node $node, Scope $scope): array

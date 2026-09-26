@@ -131,8 +131,9 @@ Enforced mechanically by `composer check` and `composer md`:
   `composer stan`) — controllers carry no private method that does real work and
   take no `ObjectManager`/`ManagerRegistry`; the allow-list of permitted trivial
   helpers lives in the rule and only ever shrinks. Its sibling
-  **`ControllerMutatesNoEntityRule`** (and its two `…Through*CallableRule`
-  siblings) rejects, inside a controller, constructing a class Doctrine maps
+  **`ControllerMutatesNoEntityRule`** (with its siblings
+  `ControllerMutatesNoEntityThroughMethodCallableRule` and
+  `ControllerMutatesNoEntityThroughStaticCallableRule`) rejects, inside a controller, constructing a class Doctrine maps
   (`#[ORM\Entity]` or `#[ORM\Embeddable]`), calling a static method of one that
   returns a mapped class (a disguised `new`), and calling, or taking as a
   first-class callable, any of its methods other than `get*`/`is*`/`has*` and

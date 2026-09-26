@@ -5896,10 +5896,10 @@ git commit -m "refactor(#1157): MailDeliveryHealth flushes the failure log; the 
 > **Amended during execution** (planner's Task 18 CHANGE, implementer rulings F1/F3, and two gate findings). The
 > landed code in `tests/PhpStan/` supersedes the whole-file blocks below. What changed:
 > - A static call or static callable is reported only when the called class is mapped **and** its return type (null
->   removed, plus its iterable value type) contains a mapped class: a disguised construction. The return type comes
->   from the method reflection. `User::normalizeEmail()` and `AdminUserJson::positionOrdered()` are not reported.
+>   removed, plus its iterable value type) contains a mapped class: a disguised construction. `User::normalizeEmail()` and `AdminUserJson::positionOrdered()` are not reported.
+> - The return type comes from the method reflection's variants rather than `getOriginalNode()`; accepted as equivalent.
 > - `composer stan` rejects an `instanceof` on PHPStan's own node classes (`phpstanApi.instanceofAssumption`), so
->   the rule is split: `ControllerMutatesNoEntityRule` (`Rule<Expr>`: `New_`, `StaticCall`, `MethodCall`),
+>   the rule is split: `ControllerMutatesNoEntityRule` (`Rule<CallLike>`, as before: `New_`, `StaticCall`, `MethodCall`),
 >   `ControllerMutatesNoEntityThroughMethodCallableRule` and `ControllerMutatesNoEntityThroughStaticCallableRule`,
 >   all delegating to `ControllerEntityUse`. Each has its own test over the shared fixture, via the abstract
 >   `ControllerEntityUseRuleTestCase`; all three are registered in `phpstan.dist.neon`.
@@ -5923,7 +5923,7 @@ git commit -m "refactor(#1157): MailDeliveryHealth flushes the failure log; the 
   - `MethodCall`: a non-query call on a mapped receiver, as before. F1 still holds: a `?->` call is caught through its `MethodCall` pass, so `NullsafeMethodCall` stays unhandled.
   - New, `MethodCallableNode`: `$entity->setX(...)`. PHPStan 2.2.5 turns every first-class callable into its `*CallableNode` before any rule sees it (`NodeScopeResolver::processExprNode`), so a `Rule<CallLike>` never saw these.
   - New, `StaticCall` and `StaticMethodCallableNode`: a static call on a mapped class whose return type contains a mapped class, a disguised construction. A pure static helper such as `User::normalizeEmail()` stays allowed, and a static on an unmapped class (`AdminUserJson::positionOrdered()`) is out of scope.
-- The node type widens from `CallLike` to `Expr`, because the two `*CallableNode` classes extend `Expr` and are not `CallLike`.
+- The node type stays `CallLike`. The two `*CallableNode` classes extend `Expr` and are not `CallLike`, so each gets its own sibling rule.
 - The message and identifier of the construction and mutation errors are unchanged. The static-call error is new: `A controller calls <Class>::<method>(), a static method that returns an entity: a disguised construction. <advice>`, identifier `simpleFeedReader.thinController.entity`.
 - develop has no first-class callable and no static call on an entity class in `src/Controller`, so the widened rule adds no finding at HEAD. Step 5 proves that, and Step 6 proves that the new branches bite.
 
@@ -6389,8 +6389,9 @@ Restore by hand with the Edit tool: delete the three lines and the `EntryMedium`
 after:
 ```markdown
   helpers lives in the rule and only ever shrinks. Its sibling
-  **`ControllerMutatesNoEntityRule`** (and its two `…Through*CallableRule`
-  siblings) rejects, inside a controller, constructing a class Doctrine maps
+  **`ControllerMutatesNoEntityRule`** (with its siblings
+  `ControllerMutatesNoEntityThroughMethodCallableRule` and
+  `ControllerMutatesNoEntityThroughStaticCallableRule`) rejects, inside a controller, constructing a class Doctrine maps
   (`#[ORM\Entity]` or `#[ORM\Embeddable]`), calling a static method of one that
   returns a mapped class (a disguised `new`), and calling, or taking as a
   first-class callable, any of its methods other than `get*`/`is*`/`has*` and
