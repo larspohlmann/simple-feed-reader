@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RecommendationDebugLogJson;
+use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\RecommendationDebugLog;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @phpstan-import-type DebugLogRow from RecommendationDebugLog
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationDebugLogJsonTest extends TestCase
 {

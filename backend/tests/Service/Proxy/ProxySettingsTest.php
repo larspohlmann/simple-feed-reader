@@ -19,6 +19,17 @@ final class ProxySettingsTest extends TestCase
 {
     private const SECRET = 'test-master-secret-at-least-32-chars-long!!';
 
+    /**
+     * @return array{
+     *     enabled: bool, directFallback: bool, type: string, host: string, port: int,
+     *     username: string|null, remoteDns: bool, hasPassword: bool,
+     * }
+     */
+    private function viewOf(ProxySettings $settings): array
+    {
+        return ProxySettingsJson::from($settings->stored());
+    }
+
     public function testUpdateThenViewHidesSecretButFlagsThatOneIsStored(): void
     {
         $settings = $this->service($stored);
@@ -33,7 +44,7 @@ final class ProxySettingsTest extends TestCase
             password: 'sw0rdfish',
         ));
 
-        $view = ProxySettingsJson::from($settings->stored());
+        $view = $this->viewOf($settings);
         self::assertTrue($view['enabled']);
         self::assertTrue($view['directFallback']);
         self::assertSame('SOCKS5', $view['type']);
@@ -57,7 +68,7 @@ final class ProxySettingsTest extends TestCase
             username: 'user',
             password: 'sw0rdfish',
         ));
-        self::assertTrue(ProxySettingsJson::from($settings->stored())['hasPassword']);
+        self::assertTrue($this->viewOf($settings)['hasPassword']);
 
         $settings->update(new ProxySettingsRequest(
             enabled: false,
@@ -69,7 +80,7 @@ final class ProxySettingsTest extends TestCase
             removePassword: true,
         ));
 
-        $view = ProxySettingsJson::from($settings->stored());
+        $view = $this->viewOf($settings);
         self::assertFalse($view['hasPassword']);
         // The connection is applied alongside the clear: removing the password
         // is still a full-replace of the rest of the row.
@@ -95,7 +106,7 @@ final class ProxySettingsTest extends TestCase
             password: 'pw',
         ));
 
-        self::assertTrue(ProxySettingsJson::from($settings->stored())['remoteDns']);
+        self::assertTrue($this->viewOf($settings)['remoteDns']);
         self::assertSame('socks5h://proxy.example:1080', $settings->configuredProxy()?->dsn());
     }
 
@@ -103,7 +114,7 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
 
-        self::assertFalse(ProxySettingsJson::from($settings->stored())['remoteDns']);
+        self::assertFalse($this->viewOf($settings)['remoteDns']);
 
         $settings->update(new ProxySettingsRequest(
             enabled: true,

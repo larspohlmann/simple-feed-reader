@@ -23,6 +23,20 @@ final class GrafanaSettingsTest extends TestCase
 {
     private const SECRET = 'test-master-secret-at-least-32-chars-long!!';
 
+    /**
+     * @return array{
+     *     lokiPushUrl: string|null, lokiPushUrlDefault: string, lokiPushUrlEffective: string|null,
+     *     lokiUsername: string|null, grafanaUrl: string|null, grafanaUrlDefault: string,
+     *     grafanaUrlEffective: string|null, hasToken: bool, tokenHint: string, containerPresent: bool,
+     *     pyroscopePushUrl: string|null, pyroscopePushUrlDefault: string, pyroscopePushUrlEffective: string|null,
+     *     profilingEnabled: bool, profilingContainerPresent: bool, profilerAvailable: bool,
+     * }
+     */
+    private function viewOf(GrafanaSettings $settings): array
+    {
+        return GrafanaSettingsJson::from($settings->overview());
+    }
+
     public function testUpdateThenViewStoresOverridesAndHidesTheToken(): void
     {
         $settings = $this->service($stored);
@@ -34,7 +48,7 @@ final class GrafanaSettingsTest extends TestCase
             token: 'glc_secrettoken',
         ));
 
-        $view = GrafanaSettingsJson::from($settings->overview());
+        $view = $this->viewOf($settings);
         self::assertSame('https://cloud.example/loki/push', $view['lokiPushUrl']);
         self::assertSame('tenant42', $view['lokiUsername']);
         self::assertSame('https://cloud.example/grafana', $view['grafanaUrl']);
@@ -50,7 +64,7 @@ final class GrafanaSettingsTest extends TestCase
 
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://b.example', token: null));
 
-        $view = GrafanaSettingsJson::from($settings->overview());
+        $view = $this->viewOf($settings);
         self::assertTrue($view['hasToken']);
         self::assertSame('https://b.example', $view['grafanaUrl']);
         self::assertSame('glc_first', $settings->lokiToken());
@@ -60,11 +74,11 @@ final class GrafanaSettingsTest extends TestCase
     {
         $settings = $this->service($stored);
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://a.example', token: 'glc_first'));
-        self::assertTrue(GrafanaSettingsJson::from($settings->overview())['hasToken']);
+        self::assertTrue($this->viewOf($settings)['hasToken']);
 
         $settings->update(new GrafanaSettingsRequest(grafanaUrl: 'https://other.example', removeToken: true));
 
-        $view = GrafanaSettingsJson::from($settings->overview());
+        $view = $this->viewOf($settings);
         self::assertFalse($view['hasToken']);
         self::assertSame('https://other.example', $view['grafanaUrl']);
         self::assertNull($settings->lokiToken());
@@ -77,7 +91,7 @@ final class GrafanaSettingsTest extends TestCase
 
         $settings->update(new GrafanaSettingsRequest(token: 'glc_second', removeToken: true));
 
-        self::assertFalse(GrafanaSettingsJson::from($settings->overview())['hasToken']);
+        self::assertFalse($this->viewOf($settings)['hasToken']);
         self::assertNull($settings->lokiToken());
     }
 

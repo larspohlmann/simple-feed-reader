@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
+use App\Repository\RecommendationRunLogRepository;
 
 /**
- * @phpstan-type DebugLogRow array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
- *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
- *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final readonly class RecommendationDebugLog
 {

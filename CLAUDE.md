@@ -90,7 +90,7 @@ Non-negotiables:
 - **Errors are exceptions**, typed and namespaced next to their service
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's `src/Http/Problem/*Problems`
-  mapper; domain code never imports HTTP classes (`DomainKnowsNoHttpRule`).
+  mapper.
 - **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*` and
   Symfony's HttpFoundation and HTTP-exception classes, class names in strings
   included, in `Service`, `Repository`, `Entity`, `Enum`, `Exception` and `Pagination`.
