@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Http\MaintenanceTokenGuard;
 use App\Service\Maintenance\MaintenanceTick;
-use App\Service\Maintenance\MaintenanceTokenGuard;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;

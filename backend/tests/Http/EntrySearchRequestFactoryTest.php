@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Http;
 
 use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Exception\ValidationException;
+use App\Http\EntrySearchRequestFactory;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
-use App\Service\Search\EntrySearchRequestFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 

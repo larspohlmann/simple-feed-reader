@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Maintenance;
+namespace App\Tests\Http;
 
-use App\Service\Maintenance\MaintenanceTokenGuard;
+use App\Http\MaintenanceTokenGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
