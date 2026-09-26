@@ -25,22 +25,21 @@ final readonly class SlideshowMarkup
         }
 
         $list = $document->createElement('ol');
-        foreach ($slideshow->slides as $index => $slide) {
-            $list->appendChild($this->item($document, $slide, $index === 0));
+        foreach ($slideshow->slides as $slide) {
+            $list->appendChild($this->item($document, $slide));
         }
+        $this->loadFirstSlideEagerly($list);
         $figure->appendChild($list);
 
         return $figure;
     }
 
-    private function item(HTMLDocument $document, Slide $slide, bool $eager): Element
+    private function item(HTMLDocument $document, Slide $slide): Element
     {
         $image = $document->createElement('img');
         $image->setAttribute('src', $slide->imageUrl);
         $image->setAttribute('alt', $slide->alt);
-        // The first image loads at once; the rest wait so a 24-slide gallery is
-        // not 24 immediate requests.
-        $image->setAttribute('loading', $eager ? 'eager' : 'lazy');
+        $image->setAttribute('loading', 'lazy');
 
         $item = $document->createElement('li');
         $item->appendChild($image);
@@ -49,6 +48,11 @@ final readonly class SlideshowMarkup
         }
 
         return $item;
+    }
+
+    private function loadFirstSlideEagerly(Element $list): void
+    {
+        $list->querySelector('img')?->setAttribute('loading', 'eager');
     }
 
     /**
