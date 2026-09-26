@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Http;
+namespace App\Tests\Pagination;
 
-use App\Http\Exception\MalformedCursorException;
-use App\Http\RecommendationCursor;
+use App\Pagination\Exception\MalformedCursorException;
+use App\Pagination\RecommendationCursor;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCursorTest extends TestCase

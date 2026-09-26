@@ -7,7 +7,7 @@ namespace App\Service\Search;
 use App\Entity\User;
 use App\Enum\ListOrder;
 use App\Exception\ValidationException;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
 use Symfony\Component\HttpFoundation\Request;

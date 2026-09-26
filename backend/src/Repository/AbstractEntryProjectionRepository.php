@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Http;
+namespace App\Pagination;
 
-use App\Http\Exception\MalformedCursorException;
+use App\Pagination\Exception\MalformedCursorException;
 
 /**
  * Opaque keyset-pagination cursor for the for-you feed: base64url of

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Http;
+namespace App\Tests\Pagination;
 
-use App\Http\EntryCursor;
-use App\Http\Exception\MalformedCursorException;
+use App\Pagination\EntryCursor;
+use App\Pagination\Exception\MalformedCursorException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

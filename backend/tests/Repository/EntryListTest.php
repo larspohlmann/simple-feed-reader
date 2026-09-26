@@ -11,7 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\ListOrder;
-use App\Http\EntryCursor;
+use App\Pagination\EntryCursor;
 use App\Repository\DateOrderedPage;
 use App\Repository\DuplicateCollapseDql;
 use App\Repository\EntryListRepository;

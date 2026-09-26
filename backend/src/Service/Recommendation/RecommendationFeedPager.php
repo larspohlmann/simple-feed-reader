@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
-use App\Http\Exception\MalformedCursorException;
-use App\Http\RecommendationCursor;
+use App\Pagination\Exception\MalformedCursorException;
+use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
