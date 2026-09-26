@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SubscriptionRepository::class)]
 #[ORM\Table(name: 'subscription')]
 #[ORM\UniqueConstraint(name: 'uniq_subscription_user_feed', columns: ['user_id', 'feed_id'])]
-class Subscription
+class Subscription implements Positioned
 {
     use PersistedId;
 

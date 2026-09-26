@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: SubscriptionTagRepository::class)]
 #[ORM\Table(name: 'subscription_tag')]
-class SubscriptionTag
+class SubscriptionTag implements Positioned
 {
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Subscription::class, inversedBy: 'subscriptionTags')]
