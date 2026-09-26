@@ -73,29 +73,18 @@ class UserPasskey
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastUsedAt = null;
 
-    /**
-     * @param list<string> $transports
-     */
-    public function __construct(
-        User $user,
-        string $credentialId,
-        string $userHandle,
-        string $publicKey,
-        int $signatureCounter,
-        ?string $aaguid,
-        array $transports,
-        string $label,
-        \DateTimeImmutable $createdAt,
-    ) {
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
+    public function __construct(User $user, PasskeyRegistration $registration)
+    {
         $this->user = $user;
-        $this->credentialId = $credentialId;
-        $this->userHandle = $userHandle;
-        $this->publicKey = $publicKey;
-        $this->signatureCounter = $signatureCounter;
-        $this->aaguid = $aaguid;
-        $this->transports = $transports;
-        $this->label = $label;
-        $this->createdAt = $createdAt;
+        $this->credentialId = $registration->credentialId;
+        $this->userHandle = $registration->userHandle;
+        $this->publicKey = $registration->publicKey;
+        $this->signatureCounter = $registration->signatureCounter;
+        $this->aaguid = $registration->aaguid;
+        $this->transports = $registration->transports;
+        $this->label = $registration->label;
+        $this->createdAt = $registration->registeredAt;
     }
 
     public function getId(): ?int

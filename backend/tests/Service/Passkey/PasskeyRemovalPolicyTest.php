@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Passkey;
 
+use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserIdentityRepository;
@@ -94,14 +95,16 @@ final class PasskeyRemovalPolicyTest extends TestCase
     {
         return new UserPasskey(
             $this->user(null),
-            'Y3JlZC1hYmM',
-            'aGFuZGxl',
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Test key',
-            new \DateTimeImmutable(),
+            new PasskeyRegistration(
+                'Y3JlZC1hYmM',
+                'aGFuZGxl',
+                'cHVibGljLWtleQ',
+                0,
+                null,
+                [],
+                'Test key',
+                new \DateTimeImmutable(),
+            ),
         );
     }
 }

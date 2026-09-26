@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Dto\Passkey\RegisterPasskeyRequest;
+use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Service\Clock\NaiveUtcClock;
@@ -175,8 +176,7 @@ final readonly class AttestationVerifier
         $credentialId = Base64UrlSafe::encodeUnpadded($record->publicKeyCredentialId);
         self::guardCredentialIdFitsColumn($credentialId);
 
-        return new UserPasskey(
-            $user,
+        return new UserPasskey($user, new PasskeyRegistration(
             $credentialId,
             Base64UrlSafe::encodeUnpadded($record->userHandle),
             Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
@@ -185,7 +185,7 @@ final readonly class AttestationVerifier
             self::knownTransports($record->transports),
             $label,
             $this->clock->now(),
-        );
+        ));
     }
 
     /**

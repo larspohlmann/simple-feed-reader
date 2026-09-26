@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
+use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
@@ -89,14 +90,16 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
         $passkey = new UserPasskey(
             $owner,
-            credentialId: bin2hex(random_bytes(16)),
-            userHandle: bin2hex(random_bytes(16)),
-            publicKey: 'test-public-key',
-            signatureCounter: 0,
-            aaguid: null,
-            transports: [],
-            label: 'Test passkey',
-            createdAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            registration: new PasskeyRegistration(
+                credentialId: bin2hex(random_bytes(16)),
+                userHandle: bin2hex(random_bytes(16)),
+                publicKey: 'test-public-key',
+                signatureCounter: 0,
+                aaguid: null,
+                transports: [],
+                label: 'Test passkey',
+                registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            ),
         );
 
         $this->em()->persist($passkey);

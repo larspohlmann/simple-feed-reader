@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
@@ -702,14 +703,16 @@ final class PasskeyRegistrationTest extends ApiTestCase
     {
         $this->em()->persist(new UserPasskey(
             $user,
-            $credentialId,
-            $userHandle,
-            'cHVibGljLWtleQ',
-            0,
-            null,
-            [],
-            'Test key',
-            new \DateTimeImmutable(),
+            new PasskeyRegistration(
+                $credentialId,
+                $userHandle,
+                'cHVibGljLWtleQ',
+                0,
+                null,
+                [],
+                'Test key',
+                new \DateTimeImmutable(),
+            ),
         ));
         $this->em()->flush();
     }

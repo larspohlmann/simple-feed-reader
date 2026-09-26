@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Passkey;
 
+use App\Entity\PasskeyRegistration;
 use App\Entity\UserPasskey;
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\PasskeySignInAvailability;
@@ -101,14 +102,16 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         $owner = $this->factory()->create('passkey-owner@example.test');
         $this->em()->persist(new UserPasskey(
             $owner,
-            credentialId: bin2hex(random_bytes(16)),
-            userHandle: bin2hex(random_bytes(16)),
-            publicKey: 'test-public-key',
-            signatureCounter: 0,
-            aaguid: null,
-            transports: [],
-            label: 'Test passkey',
-            createdAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            registration: new PasskeyRegistration(
+                credentialId: bin2hex(random_bytes(16)),
+                userHandle: bin2hex(random_bytes(16)),
+                publicKey: 'test-public-key',
+                signatureCounter: 0,
+                aaguid: null,
+                transports: [],
+                label: 'Test passkey',
+                registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
+            ),
         ));
         $this->em()->flush();
         $this->factory()->create('another-user@example.test');
