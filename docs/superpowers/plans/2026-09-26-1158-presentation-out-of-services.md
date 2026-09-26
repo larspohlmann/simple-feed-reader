@@ -22,15 +22,15 @@
 
 | Task | PR | State |
 |---|---|---|
-| Task 0: Preflight | 1 | ⬜ not started |
-| Task 1: `AiReadiness` replaces `AiSettingsJson::isReady()` | 1 | ⬜ not started |
-| Task 2: Cursors and `MalformedCursorException` move to `App\Pagination` | 1 | ⬜ not started |
-| Task 3: OAuth HTTP helpers move to `App\Http\OAuth` | 1 | ⬜ not started |
-| Task 4: `MaintenanceTokenGuard`, `BackupDownloadResponseFactory`, `EntrySearchRequestFactory` move to `App\Http` | 1 | ⬜ not started |
-| Task 5: `RateLimitGuard::enforceForClient()` takes the client IP | 1 | ⬜ not started |
-| Task 6: `ServingHost` becomes an interface; `App\Http\RequestServingHost` implements it | 1 | ⬜ not started |
-| Task 7: `HtmlPageFetcher` asks `StatusReasonPhrases` instead of `Response` | 1 | ⬜ not started |
-| Task 8: Rule, step 1: Symfony HTTP forbidden in every domain namespace | 1 | ⬜ not started |
+| Task 0: Preflight | 1 | ✅ done |
+| Task 1: `AiReadiness` replaces `AiSettingsJson::isReady()` | 1 | ✅ done |
+| Task 2: Cursors and `MalformedCursorException` move to `App\Pagination` | 1 | ✅ done |
+| Task 3: OAuth HTTP helpers move to `App\Http\OAuth` | 1 | ✅ done |
+| Task 4: `MaintenanceTokenGuard`, `BackupDownloadResponseFactory`, `EntrySearchRequestFactory` move to `App\Http` | 1 | ✅ done |
+| Task 5: `RateLimitGuard::enforceForClient()` takes the client IP | 1 | ✅ done |
+| Task 6: `ServingHost` becomes an interface; `App\Http\RequestServingHost` implements it | 1 | ✅ done |
+| Task 7: `HtmlPageFetcher` asks `StatusReasonPhrases` instead of `Response` | 1 | ✅ done |
+| Task 8: Rule, step 1: Symfony HTTP forbidden in every domain namespace | 1 | ✅ done |
 | Task 9: `ForYouFeed` returns `ForYouFeedPage` | 2 | ⬜ not started |
 | Task 10: `RecommendationRunStatusResolver` returns `RecommendationRunStatus` | 2 | ⬜ not started |
 | Task 11: `RecommendationRunHistory` returns `RunHistoryOverview` / `RunHistoryMonthPage` | 2 | ⬜ not started |
@@ -5452,3 +5452,34 @@ git commit -m "refactor(#1158): no domain namespace may reference App\Http; CLAU
 ## Appendix C: what #1158 leaves to #1182
 
 Request DTOs taken by services, `toArray()` on service values, and the shared value types and enums without a home are tracked in #1182 (`gh issue view 1182`), which holds the inventory; nothing here implements them.
+
+## Execution rulings (PR 1)
+
+Made during execution, on the planner's pre-flight scan and the reviews. Each: what was decided, why, what it costs if wrong.
+
+- **F1:** Task 0 Step 6's `git switch -c` was skipped, because the branch was already cut with the plan commit and ancestry was verified instead. Cost if wrong: none.
+- **F2:** `AiReadinessTest` builds settings through `tests/Support/AiProviderSettingsFactory::build()`, since the helper already existed (DRY).
+- **F3:** Task 8's fixture names `\App\Http\EntryPage::class`, not the deleted `\App\Http\EntryCursor::class`. Task 17 inherits this.
+- **F4:** Task 8's negative fixture namespace is `App\Repository\Fixtures\Clean`, so the clean case proves something while the Service carve-out exists. Line numbers are unchanged.
+- **F5:** `src/Http/Exception/` was removed once Task 2 emptied it.
+- **F6:** The docblocks the plan edits (`RateLimitGuard::enforceForClient`, the `AiSettingsJson` class) were trimmed to at most 3 lines, per CLAUDE.md's comment rule. The `AiReadiness::of()` docblock states the verifiedAt invariant in 2 lines.
+- **F7:** The ≤3-parameter rule applies to methods, not DI constructors, so `HtmlPageFetcher` takes 5 constructor arguments.
+- **F8:** `RequestServingHost` is a split, not a rename. Its body is the old `ServingHost` verbatim.
+- **F9:** Task 8's real-tree break test ran three breaks, each restored by hand: HttpFoundation in `AiReadiness`, `App\Http` in `Pagination/EntryCursor`, and a Symfony class name in a string.
+- **F10:** Rewritten `use` blocks stay alphabetical.
+- **Batching:** Tasks 3 and 4 ran as one batch (two commits, one review), since both were pure moves.
+- **Final review and /simplify, taken:**
+  - `DomainKnowsNoHttpRule::references()` walks each namespace once, not twice.
+  - A null-IP `RateLimitGuard` test was added.
+  - `tests/Http/RequestServingHostTest` covers all three branches.
+- **Final review and /simplify, not taken:**
+  - Folding `AccessDeniedException` into the prefix list. It would widen the rule past R3.
+  - Owning the reason-phrase table as a constant. R4 approved the seam, and a copied table would duplicate Symfony's.
+  - Dropping `readonly` from `AiReadiness`. The Global Constraints mandate `final readonly`.
+  - The duplicated `SERVICES` constant. Task 17 deletes the carve-out.
+- **Deferred:** `SetupController::createAdmin`'s rate limit has no test. Infection's only escape is removing that `enforceForClient` call. The gap existed before this plan, and a test would live under `tests/Controller`, which both PRs keep frozen. It goes to a follow-up.
+- **Deferred to Task 17 / #1182:** rule gaps that no code in `src` uses today:
+  - group-`use` imports and namespace-alias imports (only unused or docblock-only ones escape);
+  - case-insensitive and interpolated class strings;
+  - an `*\Exceptions` segment, which the carve-out would miss (Task 17 deletes the carve-out);
+  - a `Security\Core\User\*` negative line in the fixture.
