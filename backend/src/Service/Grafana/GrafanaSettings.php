@@ -6,7 +6,6 @@ namespace App\Service\Grafana;
 
 use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Http\Admin\GrafanaSettingsJson;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Profiling\ProfileSampler;
@@ -43,10 +42,9 @@ class GrafanaSettings
     ) {
     }
 
-    /** @return array<string, mixed> */
-    public function view(): array
+    public function overview(): GrafanaSettingsOverview
     {
-        return GrafanaSettingsJson::from($this->settings(), $this->defaults, $this->sampler->isAvailable());
+        return new GrafanaSettingsOverview($this->settings(), $this->defaults, $this->sampler->isAvailable());
     }
 
     public function update(GrafanaSettingsRequest $request): void

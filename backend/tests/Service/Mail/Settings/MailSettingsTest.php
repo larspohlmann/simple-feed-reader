@@ -7,6 +7,7 @@ namespace App\Tests\Service\Mail\Settings;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Enum\MailEncryption;
+use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\MailFallback;
@@ -39,7 +40,7 @@ final class MailSettingsTest extends KernelTestCase
     {
         // The test env fallback is null://null, so mail derives to disabled.
         self::assertFalse($this->settings()->isSendingEnabled());
-        self::assertFalse($this->settings()->view()['hasPassword']);
+        self::assertFalse(MailSettingsJson::from($this->settings()->overview())['hasPassword']);
     }
 
     public function testUpdateStoresTheConnectionAndSealsThePassword(): void
@@ -55,7 +56,7 @@ final class MailSettingsTest extends KernelTestCase
             password: 'top-secret',
         ));
 
-        $view = $this->settings()->view();
+        $view = MailSettingsJson::from($this->settings()->overview());
         self::assertTrue($view['enabled']);
         self::assertSame('smtp.relay.test', $view['host']);
         self::assertTrue($view['hasPassword']);
@@ -77,11 +78,11 @@ final class MailSettingsTest extends KernelTestCase
     public function testResetToEnvironmentDeletesTheSavedRow(): void
     {
         $this->settings()->update(new MailSettingsRequest(host: 'smtp.relay.test', password: 'top-secret'));
-        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['hasSavedConfig']);
 
         $this->settings()->resetToEnvironment();
 
-        $view = $this->settings()->view();
+        $view = MailSettingsJson::from($this->settings()->overview());
         self::assertFalse($view['hasSavedConfig']);
         self::assertFalse($view['envFallbackConfigured']);
         self::assertNull($this->settings()->configuredTransport());
@@ -123,8 +124,8 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['enabled']);
-        self::assertTrue($this->settings()->view()['hasPassword']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['enabled']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['hasPassword']);
     }
 
     public function testUpdateAcceptsAnEnabledUnauthenticatedRelayWithNoUsername(): void
@@ -136,7 +137,7 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['enabled']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['enabled']);
     }
 
     public function testASavedFromAddressWinsOverTheEnvIdentity(): void
@@ -172,7 +173,7 @@ final class MailSettingsTest extends KernelTestCase
             password: null,
         ));
 
-        self::assertTrue($this->settings()->view()['hasSavedConfig']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['hasSavedConfig']);
     }
 
     public function testAnEnabledRowWithNoHostAndAUsernameIsRefusedForTheMissingTransportNotThePassword(): void
@@ -194,7 +195,7 @@ final class MailSettingsTest extends KernelTestCase
             username: null,
             password: 'topsecret',
         ));
-        self::assertTrue($this->settings()->view()['hasPassword']);
+        self::assertTrue(MailSettingsJson::from($this->settings()->overview())['hasPassword']);
 
         // A different host proves the remove-password update still applies the
         // connection edits carried in the same request, not only clears the secret.
@@ -204,8 +205,8 @@ final class MailSettingsTest extends KernelTestCase
             removePassword: true,
         ));
 
-        self::assertFalse($this->settings()->view()['hasPassword']);
-        self::assertSame('smtp.moved.test', $this->settings()->view()['host']);
+        self::assertFalse(MailSettingsJson::from($this->settings()->overview())['hasPassword']);
+        self::assertSame('smtp.moved.test', MailSettingsJson::from($this->settings()->overview())['host']);
     }
 
     public function testRemovingThePasswordOfAnEnabledAuthenticatedRowIsRejected(): void

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Proxy;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
+use App\Http\Admin\ProxySettingsJson;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Crypto\InstanceSecretCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
@@ -32,7 +33,7 @@ final class ProxySettingsTest extends TestCase
             password: 'sw0rdfish',
         ));
 
-        $view = $settings->view();
+        $view = ProxySettingsJson::from($settings->stored());
         self::assertTrue($view['enabled']);
         self::assertTrue($view['directFallback']);
         self::assertSame('SOCKS5', $view['type']);
@@ -56,7 +57,7 @@ final class ProxySettingsTest extends TestCase
             username: 'user',
             password: 'sw0rdfish',
         ));
-        self::assertTrue($settings->view()['hasPassword']);
+        self::assertTrue(ProxySettingsJson::from($settings->stored())['hasPassword']);
 
         $settings->update(new ProxySettingsRequest(
             enabled: false,
@@ -68,7 +69,7 @@ final class ProxySettingsTest extends TestCase
             removePassword: true,
         ));
 
-        $view = $settings->view();
+        $view = ProxySettingsJson::from($settings->stored());
         self::assertFalse($view['hasPassword']);
         // The connection is applied alongside the clear: removing the password
         // is still a full-replace of the rest of the row.
@@ -94,7 +95,7 @@ final class ProxySettingsTest extends TestCase
             password: 'pw',
         ));
 
-        self::assertTrue($settings->view()['remoteDns']);
+        self::assertTrue(ProxySettingsJson::from($settings->stored())['remoteDns']);
         self::assertSame('socks5h://proxy.example:1080', $settings->configuredProxy()?->dsn());
     }
 
@@ -102,7 +103,7 @@ final class ProxySettingsTest extends TestCase
     {
         $settings = $this->service($stored);
 
-        self::assertFalse($settings->view()['remoteDns']);
+        self::assertFalse(ProxySettingsJson::from($settings->stored())['remoteDns']);
 
         $settings->update(new ProxySettingsRequest(
             enabled: true,

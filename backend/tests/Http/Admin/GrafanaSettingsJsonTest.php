@@ -9,13 +9,14 @@ use App\Http\Admin\GrafanaSettingsJson;
 use App\Service\Crypto\SealedSecret;
 use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
+use App\Service\Grafana\GrafanaSettingsOverview;
 use PHPUnit\Framework\TestCase;
 
 final class GrafanaSettingsJsonTest extends TestCase
 {
     public function testNoRowFallsBackToDefaultsAndReportsContainerPresent(): void
     {
-        $payload = GrafanaSettingsJson::from(null, $this->defaults(), false);
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverview(null, $this->defaults(), false));
 
         self::assertNull($payload['lokiPushUrl']);
         self::assertSame('http://loki:3100/loki/api/v1/push', $payload['lokiPushUrlDefault']);
@@ -37,7 +38,7 @@ final class GrafanaSettingsJsonTest extends TestCase
             'wxyz',
         );
 
-        $payload = GrafanaSettingsJson::from($settings, $this->defaults(), false);
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverview($settings, $this->defaults(), false));
 
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrl']);
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrlEffective']);
@@ -49,7 +50,9 @@ final class GrafanaSettingsJsonTest extends TestCase
 
     public function testNoContainerWhenDefaultEmpty(): void
     {
-        $payload = GrafanaSettingsJson::from(null, new GrafanaEnvDefaults('', '', ''), false);
+        $payload = GrafanaSettingsJson::from(
+            new GrafanaSettingsOverview(null, new GrafanaEnvDefaults('', '', ''), false),
+        );
 
         self::assertFalse($payload['containerPresent']);
         self::assertNull($payload['lokiPushUrlEffective']);
@@ -64,7 +67,7 @@ final class GrafanaSettingsJsonTest extends TestCase
             'wxyz',
         );
 
-        $payload = GrafanaSettingsJson::from($settings, $this->defaults(), true);
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverview($settings, $this->defaults(), true));
 
         self::assertSame('http://custom:4040', $payload['pyroscopePushUrl']);
         self::assertSame('http://pyroscope:4040', $payload['pyroscopePushUrlDefault']);
@@ -76,7 +79,9 @@ final class GrafanaSettingsJsonTest extends TestCase
 
     public function testProfilingReportsAbsentContainerAndOffToggleWithoutARow(): void
     {
-        $payload = GrafanaSettingsJson::from(null, new GrafanaEnvDefaults('', '', ''), false);
+        $payload = GrafanaSettingsJson::from(
+            new GrafanaSettingsOverview(null, new GrafanaEnvDefaults('', '', ''), false),
+        );
 
         self::assertNull($payload['pyroscopePushUrlEffective']);
         self::assertFalse($payload['profilingContainerPresent']);

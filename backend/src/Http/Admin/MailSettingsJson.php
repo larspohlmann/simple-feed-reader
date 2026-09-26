@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Entity\MailServerSettings;
-use App\Service\Fetch\ProxyConfig;
-use App\Service\Mail\Settings\MailConnection;
+use App\Service\Mail\Settings\MailSettingsOverview;
 
 /**
  * The admin mail payload. The password never crosses the wire — only a
@@ -24,8 +22,11 @@ use App\Service\Mail\Settings\MailConnection;
 final readonly class MailSettingsJson
 {
     /** @return MailSettingsPayload */
-    public static function from(?MailServerSettings $settings, MailConnection $fallback, ?ProxyConfig $proxy): array
+    public static function from(MailSettingsOverview $overview): array
     {
+        $settings = $overview->saved;
+        $fallback = $overview->fallback;
+        $proxy = $overview->proxy;
         $connection = $settings?->connection() ?? $fallback;
 
         return [

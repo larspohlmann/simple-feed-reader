@@ -7,7 +7,6 @@ namespace App\Service\Mail\Settings;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
-use App\Http\Admin\MailSettingsJson;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
@@ -19,8 +18,6 @@ use Doctrine\ORM\EntityManagerInterface;
  * when no row exists. The rest of the app depends on this, never on the entity
  * directly, so "no row yet", the sealing, and the DB-or-env resolution all live
  * in one place.
- *
- * @phpstan-import-type MailSettingsPayload from MailSettingsJson
  */
 readonly class MailSettings
 {
@@ -33,10 +30,9 @@ readonly class MailSettings
     ) {
     }
 
-    /** @return MailSettingsPayload */
-    public function view(): array
+    public function overview(): MailSettingsOverview
     {
-        return MailSettingsJson::from(
+        return new MailSettingsOverview(
             $this->repository->findSingleton(),
             $this->fallback->connection(),
             $this->proxySettings->configuredProxy(),

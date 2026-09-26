@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Http\Admin\MailSettingsJson;
 use App\Http\MailDeliveryHealthJson;
 use App\Service\Mail\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailConnectionTester;
@@ -27,7 +28,7 @@ final readonly class AdminMailController
     #[Route('', name: 'api_admin_mail_get', methods: ['GET'])]
     public function get(): JsonResponse
     {
-        return new JsonResponse($this->settings->view());
+        return new JsonResponse(MailSettingsJson::from($this->settings->overview()));
     }
 
     #[Route('', name: 'api_admin_mail_update', methods: ['PUT'])]
@@ -35,7 +36,7 @@ final readonly class AdminMailController
     {
         $this->settings->update($request);
 
-        return new JsonResponse($this->settings->view());
+        return new JsonResponse(MailSettingsJson::from($this->settings->overview()));
     }
 
     #[Route('/test', name: 'api_admin_mail_test', methods: ['POST'])]
@@ -49,7 +50,7 @@ final readonly class AdminMailController
     {
         $this->settings->resetToEnvironment();
 
-        return new JsonResponse($this->settings->view());
+        return new JsonResponse(MailSettingsJson::from($this->settings->overview()));
     }
 
     #[Route('/errors', name: 'api_admin_mail_errors', methods: ['GET'])]

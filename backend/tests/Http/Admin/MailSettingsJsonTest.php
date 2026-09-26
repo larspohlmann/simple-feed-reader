@@ -11,6 +11,7 @@ use App\Http\Admin\MailSettingsJson;
 use App\Service\Crypto\SealedSecret;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\MailConnection;
+use App\Service\Mail\Settings\MailSettingsOverview;
 use PHPUnit\Framework\TestCase;
 
 final class MailSettingsJsonTest extends TestCase
@@ -33,7 +34,7 @@ final class MailSettingsJsonTest extends TestCase
             'useProxy' => false,
             'proxyConfigured' => false,
             'proxyLabel' => '',
-        ], MailSettingsJson::from(null, $fallback, null));
+        ], MailSettingsJson::from(new MailSettingsOverview(null, $fallback, null)));
     }
 
     public function testProxyAvailabilityIsExposedWhenAProxyIsConfigured(): void
@@ -41,7 +42,7 @@ final class MailSettingsJsonTest extends TestCase
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
         $proxy = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
 
-        $payload = MailSettingsJson::from(null, $fallback, $proxy);
+        $payload = MailSettingsJson::from(new MailSettingsOverview(null, $fallback, $proxy));
 
         self::assertTrue($payload['proxyConfigured']);
         self::assertSame('SOCKS5 · proxy.example:1080', $payload['proxyLabel']);
@@ -57,7 +58,7 @@ final class MailSettingsJsonTest extends TestCase
         );
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
 
-        $payload = MailSettingsJson::from($settings, $fallback, null);
+        $payload = MailSettingsJson::from(new MailSettingsOverview($settings, $fallback, null));
 
         self::assertArrayNotHasKey('passwordHint', $payload);
         self::assertTrue($payload['hasPassword']);
