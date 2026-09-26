@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Service\Subscription\SubscriptionTallies;
+
 /**
  * The sidebar poll's cheap payload (#720): every subscription's unread count
  * plus the three surface totals, and nothing else. It replaces the 137 KB
@@ -14,27 +16,32 @@ namespace App\Http;
 final class SubscriptionCountsJson
 {
     /**
-     * @param array<int, int>                               $unreadCounts subscription id => unread count
-     * @param array<int, int>                               $entryCounts  subscription id => entry count
-     * @param array{favorites: int, kept: int, viewed: int} $flags
-     *
      * @return array{
      *   subscriptions: list<array{id: int, unreadCount: int, entryCount: int}>,
      *   favoritesCount: int, keptCount: int, viewedCount: int
      * }
      */
-    public static function from(array $unreadCounts, array $entryCounts, array $flags): array
+    public static function from(SubscriptionTallies $tallies): array
     {
         $subscriptions = [];
-        foreach ($entryCounts as $id => $entryCount) {
-            $subscriptions[] = ['id' => $id, 'unreadCount' => $unreadCounts[$id] ?? 0, 'entryCount' => $entryCount];
+        foreach ($tallies->entryCounts as $id => $entryCount) {
+            $subscriptions[] = [
+                'id' => $id,
+                'unreadCount' => $tallies->unreadCounts[$id] ?? 0,
+                'entryCount' => $entryCount,
+            ];
         }
 
+        return ['subscriptions' => $subscriptions, ...self::surfaceTotals($tallies)];
+    }
+
+    /** @return array{favoritesCount: int, keptCount: int, viewedCount: int} */
+    public static function surfaceTotals(SubscriptionTallies $tallies): array
+    {
         return [
-            'subscriptions' => $subscriptions,
-            'favoritesCount' => $flags['favorites'],
-            'keptCount' => $flags['kept'],
-            'viewedCount' => $flags['viewed'],
+            'favoritesCount' => $tallies->flags['favorites'],
+            'keptCount' => $tallies->flags['kept'],
+            'viewedCount' => $tallies->flags['viewed'],
         ];
     }
 }

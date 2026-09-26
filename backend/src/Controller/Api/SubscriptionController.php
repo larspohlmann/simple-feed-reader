@@ -12,15 +12,16 @@ use App\Dto\Subscription\SubscribeRequest;
 use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Http\SubscribeOutcomeJson;
 use App\Http\SubscriptionCountsJson;
 use App\Http\SubscriptionJson;
-use App\Repository\EntryStateRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Service\Subscription\OwnedSubscriptions;
 use App\Service\Subscription\SubscriptionEditor;
 use App\Service\Subscription\SubscriptionService;
+use App\Service\Subscription\SubscriptionTallyReader;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
@@ -34,7 +35,7 @@ final readonly class SubscriptionController
         private SubscriptionService $subscriptions,
         private SubscriptionRepository $subscriptionRepo,
         private TagRepository $tags,
-        private EntryStateRepository $entryStates,
+        private SubscriptionTallyReader $tallies,
         private OwnedSubscriptions $ownedSubscriptions,
         private BulkSubscriptionUpdater $bulkUpdater,
         private SubscriptionEditor $editor,
@@ -44,24 +45,10 @@ final readonly class SubscriptionController
     #[Route('', name: 'api_subscriptions_list', methods: ['GET'])]
     public function list(#[CurrentUser] User $user): JsonResponse
     {
-        $rows = $this->subscriptionRepo->findForUserWithTags($user->requireId());
-        $counts = $this->entryStates->unreadCountsForUser($user->requireId());
-        $entryCounts = $this->subscriptionRepo->entryCountsForUser($user->requireId());
-        $flags = $this->entryStates->stateCountsForUser($user->requireId());
-
-        return new JsonResponse([
-            'subscriptions' => array_map(
-                static fn ($s) => SubscriptionJson::one(
-                    $s,
-                    $counts[$s->requireId()] ?? 0,
-                    $entryCounts[$s->requireId()] ?? 0,
-                ),
-                $rows,
-            ),
-            'favoritesCount' => $flags['favorites'],
-            'keptCount' => $flags['kept'],
-            'viewedCount' => $flags['viewed'],
-        ]);
+        return new JsonResponse(SubscriptionJson::list(
+            $this->subscriptionRepo->findForUserWithTags($user->requireId()),
+            $this->tallies->forUser($user->requireId()),
+        ));
     }
 
     /**
@@ -72,11 +59,7 @@ final readonly class SubscriptionController
     #[Route('/counts', name: 'api_subscriptions_counts', methods: ['GET'])]
     public function counts(#[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(SubscriptionCountsJson::from(
-            $this->entryStates->unreadCountsForUser($user->requireId()),
-            $this->subscriptionRepo->entryCountsForUser($user->requireId()),
-            $this->entryStates->stateCountsForUser($user->requireId()),
-        ));
+        return new JsonResponse(SubscriptionCountsJson::from($this->tallies->forUser($user->requireId())));
     }
 
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]
@@ -86,17 +69,7 @@ final readonly class SubscriptionController
         $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {
-            $payload = [
-                'candidates' => array_map(
-                    static fn ($c) => ['url' => $c->url, 'title' => $c->title, 'format' => $c->format],
-                    $outcome->candidates,
-                ),
-            ];
-            if (null !== $outcome->scrapeFailureReason) {
-                $payload['scrapeFailureReason'] = $outcome->scrapeFailureReason->value;
-            }
-
-            return new JsonResponse($payload);
+            return new JsonResponse(SubscribeOutcomeJson::candidates($outcome));
         }
 
         // A new subscription is no longer always worth 0 unread: discovery
