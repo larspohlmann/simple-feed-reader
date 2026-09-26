@@ -12,6 +12,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
+use App\Repository\OrphanedFeedRepository;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Service\Category\CategoryNormalizer;
@@ -123,7 +124,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 $clock,
                 new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             ),
-            new OrphanedFeedReclaimer($this->em),
+            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
             $this->em,
         );
     }

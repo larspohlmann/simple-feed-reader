@@ -44,23 +44,34 @@ final class MailSendFailureRepositoryTest extends DbTestCase
         self::assertSame([], $this->failures->recent(10));
     }
 
-    public function testAddPrunesToRetentionNewestFirst(): void
+    public function testAddKeepsEveryRowItWrites(): void
     {
-        for ($minute = 0; $minute < MailSendFailureRepository::RETENTION + 5; ++$minute) {
-            $stamp = sprintf('2026-09-06T10:%02d:00Z', $minute);
-            $this->failures->add($this->failure("user{$minute}@example.test", $stamp));
-        }
+        $this->fillFailures(MailSendFailureRepository::RETENTION + 1);
+
+        self::assertSame(MailSendFailureRepository::RETENTION + 1, $this->failures->countAll());
+    }
+
+    public function testPruneToRetentionKeepsTheNewest(): void
+    {
+        $this->fillFailures(MailSendFailureRepository::RETENTION + 5);
+
+        $this->failures->pruneToRetention();
 
         self::assertSame(MailSendFailureRepository::RETENTION, $this->failures->countAll());
-        // The five oldest were pruned; the newest survives.
         self::assertSame(
             'user' . (MailSendFailureRepository::RETENTION + 4) . '@example.test',
             $this->failures->recent(1)[0]->getRecipient(),
         );
-
         $retained = $this->failures->recent(MailSendFailureRepository::RETENTION);
-        // The oldest survivor is user5: user0..user4 were the ones pruned.
         self::assertSame('user5@example.test', $retained[MailSendFailureRepository::RETENTION - 1]->getRecipient());
+    }
+
+    private function fillFailures(int $count): void
+    {
+        for ($minute = 0; $minute < $count; ++$minute) {
+            $stamp = sprintf('2026-09-06T10:%02d:00Z', $minute);
+            $this->failures->add($this->failure("user{$minute}@example.test", $stamp));
+        }
     }
 
     private function failure(string $recipient, string $createdAt): MailSendFailure

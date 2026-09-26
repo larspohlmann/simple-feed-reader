@@ -556,7 +556,7 @@ services:
     # `public: true` here is only so `self::getContainer()->get(...)` can
     # fetch it, which the container refuses on a private service. Same
     # `autowire` caveat as the entries above.
-    App\Service\Backup\EntryBatchInserter:
+    App\Repository\EntryBatchInserter:
         autowire: true
         public: true
 

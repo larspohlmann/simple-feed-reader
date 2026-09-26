@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Backup;
+namespace App\Repository;
 
 use App\Enum\CommentsLoad;
 use App\Service\Backup\Dto\EntryLine;
@@ -10,21 +10,8 @@ use App\Service\Url\UrlNormalizer;
 use Doctrine\DBAL\Connection;
 
 /**
- * Multi-row INSERTs into `entry`, 500 rows per statement — the measured
- * 0.085 ms/row path (row-by-row through the ORM is 14× slower at restore
- * scale, see the spec appendix). Raw SQL by necessity.
- *
- * guid_hash travels IN the file because entryState lines address their entry
- * by (feedUrl, guidHash) and no Entry constructor runs here to recompute it.
- * url_hash goes the other way: it is a pure function of a field the file
- * already carries and is referenced by nothing, so it is recomputed here
- * rather than stored — carrying it would be derived data a format can never
- * drop (#556).
- *
- * The column list is spelled out once; values bind positionally per row.
- * Dates are formatted as the naive-UTC wall-clock strings Doctrine's
- * datetime_immutable type stores — every EntryLine date is already UTC
- * (LineField normalises on parse).
+ * Multi-row INSERTs into `entry`, 500 rows a statement: 14× faster than the ORM at restore scale (spec appendix).
+ * url_hash is recomputed, never read from the file (#556); dates bind as the naive-UTC strings Doctrine stores.
  */
 final readonly class EntryBatchInserter
 {

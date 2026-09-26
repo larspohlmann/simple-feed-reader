@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Repository\RecommendationCallRepository;
 use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionUsage;
 use App\Service\Recommendation\RecordedCall;
@@ -289,12 +290,13 @@ final class RecordedCallTest extends DbTestCase
 
     private function call(): RecordedCall
     {
-        $runId = $this->run->getId();
+        $runId = $this->run->requireId();
         $logId = $this->log->getId();
-        self::assertNotNull($runId);
         self::assertNotNull($logId);
 
-        return new RecordedCall($this->em->getConnection(), $this->clock, $runId, $logId);
+        $calls = new RecommendationCallRepository($this->em->getConnection());
+
+        return new RecordedCall($calls, $this->clock, $runId, $logId);
     }
 
     /**
@@ -305,10 +307,11 @@ final class RecordedCallTest extends DbTestCase
      */
     private function recordedCall(?int $logId): RecordedCall
     {
-        $runId = $this->run->getId();
-        self::assertNotNull($runId);
+        $runId = $this->run->requireId();
 
-        return new RecordedCall($this->em->getConnection(), $this->clock, $runId, $logId);
+        $calls = new RecommendationCallRepository($this->em->getConnection());
+
+        return new RecordedCall($calls, $this->clock, $runId, $logId);
     }
 
     /** @return array{promptTokens: int, completionTokens: int, reasoningTokens: int, cachedTokens: int, costNanoCredits: ?int} */

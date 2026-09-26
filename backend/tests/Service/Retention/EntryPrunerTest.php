@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Repository\RetentionRepository;
 use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
@@ -29,12 +30,17 @@ final class EntryPrunerTest extends DbTestCase
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->indexWriter = new RecordingSearchIndexWriter();
-        $this->pruner = new EntryPruner($this->em, $this->clock, $this->indexer());
+        $this->pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer());
     }
 
     private function indexer(): EntryIndexer
     {
         return new EntryIndexer($this->indexWriter, new NullLogger());
+    }
+
+    private function retention(): RetentionRepository
+    {
+        return new RetentionRepository($this->em);
     }
 
     private function daysAgo(int $days): \DateTimeImmutable
@@ -185,7 +191,7 @@ final class EntryPrunerTest extends DbTestCase
     {
         $feed = $this->feedWithEntries(30, $this->daysAgo(100));
         $failingWriter = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
-        $pruner = new EntryPruner($this->em, $this->clock, new EntryIndexer($failingWriter, new NullLogger()));
+        $pruner = new EntryPruner($this->retention(), $this->clock, new EntryIndexer($failingWriter, new NullLogger()));
 
         self::assertSame(10, $pruner->prune());
         self::assertEqualsCanonicalizing(
@@ -248,7 +254,7 @@ final class EntryPrunerTest extends DbTestCase
         // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
         // the boundary this test exercises.
         $cap = 22;
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $this->feedWithEntries($cap + 1, $this->daysAgo(1));
         $this->feedWithEntries($cap + 1, $this->daysAgo(1));
@@ -266,7 +272,7 @@ final class EntryPrunerTest extends DbTestCase
         // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
         // the boundary this test exercises.
         $cap = 22;
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $feed = $this->feedWithEntries($cap + 2, $this->daysAgo(1));
 
@@ -320,15 +326,15 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testProtectionAppliesAcrossUsers(): void
     {
-        $feed = new Feed('https://example.com/feed');
         $alice = new User('alice@example.com', $this->clock->now());
         $bob = new User('bob@example.com', $this->clock->now());
-        $this->em->persist($feed);
         $this->em->persist($alice);
         $this->em->persist($bob);
 
-        $shared = $this->persistEntry($feed, 'shared', $this->daysAgo(200));
-        $this->em->flush();
+        // Twenty recent filler entries hold the feed above the floor, so the
+        // shared entry below falls beyond the newest-twenty boundary.
+        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $shared = $this->seedEntry($feed, 'shared', $this->daysAgo(200));
 
         $aliceRead = new EntryState($alice, $shared);
         $aliceRead->setIsHidden(true);
@@ -339,7 +345,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->em->flush();
 
         self::assertSame(0, $this->pruner->prune());
-        self::assertCount(1, $this->findAllEntries($feed));
+        self::assertNotNull($this->findByGuid($feed, 'shared'));
     }
 
     public function testDeletingEntryRemovesItsStateRows(): void
@@ -393,7 +399,7 @@ final class EntryPrunerTest extends DbTestCase
         // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
         // the boundary this test exercises.
         $cap = 22;
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
@@ -426,7 +432,7 @@ final class EntryPrunerTest extends DbTestCase
         // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
         // the boundary this test exercises.
         $cap = 22;
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
@@ -457,7 +463,7 @@ final class EntryPrunerTest extends DbTestCase
         // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
         // the boundary this test exercises.
         $cap = 22;
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->em->persist($user);
@@ -485,7 +491,7 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testFeedAtOrUnderCapIsUntouched(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
 
         $feed = new Feed('https://example.com/feed');
         $this->em->persist($feed);
@@ -574,7 +580,7 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapBelowTheFloorIsClampedToTheFloor(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: 0);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 0);
 
         $feed = $this->feedWithEntries(25, $this->daysAgo(1));
 
@@ -584,7 +590,7 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testCapIsPerFeedNotGlobal(): void
     {
-        $pruner = new EntryPruner($this->em, $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
+        $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
 
         // Two feeds, each at the cap — globally 4 entries, but per-feed nothing
         // exceeds the cap, so a global cap would wrongly delete here.

@@ -9,6 +9,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
+use App\Repository\ReaderAuditRepository;
 use App\Service\Discussion\Discussion;
 use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
@@ -220,6 +221,6 @@ final class AuditSamplerTest extends DbTestCase
         /** @var Connection $connection */
         $connection = self::getContainer()->get(Connection::class);
 
-        return new AuditSampler($connection);
+        return new AuditSampler(new ReaderAuditRepository($connection));
     }
 }

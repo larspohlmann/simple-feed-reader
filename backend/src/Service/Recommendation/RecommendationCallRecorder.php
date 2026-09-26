@@ -6,8 +6,8 @@ namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
-use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -23,7 +23,7 @@ final readonly class RecommendationCallRecorder
     public function __construct(
         private EntityManagerInterface $entityManager,
         private RecommendationRunLogRepository $logs,
-        private Connection $connection,
+        private RecommendationCallRepository $calls,
         private ClockInterface $clock,
     ) {
     }
@@ -39,7 +39,7 @@ final readonly class RecommendationCallRecorder
         $log = $this->persistedLog($run, $phase, $batchNumber, $messages, $model);
 
         return new RecordedCall(
-            $this->connection,
+            $this->calls,
             $this->clock,
             $run->requireId(),
             $log->getId(),

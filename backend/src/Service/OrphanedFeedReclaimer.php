@@ -4,35 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service;
 
-use App\Entity\Feed;
-use App\Entity\Subscription;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Repository\OrphanedFeedRepository;
 
 /**
- * A feed nobody subscribes to is nobody's content: it costs storage, and the
- * refresh run would keep fetching it forever. This is the only place such a
- * feed is deleted, so the immediate path (last unsubscribe, user deletion)
- * and the sweep cannot drift apart.
- *
- * The no-subscriber condition is re-checked INSIDE the DELETE, not trusted
- * from the preceding SELECT: another user could subscribe in between, and
- * without the guard that subscription row would be silently taken by
- * `subscription.feed_id`'s ON DELETE CASCADE — a lost subscription, far worse
- * than a feed surviving one sweep. Correlating against `subscription` (a
- * different table from the DELETE target) is legal on both MySQL and SQLite.
- *
- * The feed's entries and their read state follow through the FK cascade on
- * `entry.feed_id` and `entry_state.entry_id`.
- *
- * Bulk DQL bypasses the unit of work, so a Feed the caller still holds is
- * stale once this returns; pass an id and don't touch the entity afterwards.
+ * The only place an unsubscribed feed is deleted, so the immediate path and the sweep cannot drift apart.
+ * Bulk DQL bypasses the unit of work: a Feed the caller still holds is stale afterwards, so pass an id.
  */
 final readonly class OrphanedFeedReclaimer
 {
     /** Same chunking as EntryPruner: keeps the IN() list off the parameter limit. */
     private const int DELETE_CHUNK_SIZE = 500;
 
-    public function __construct(private EntityManagerInterface $entityManager)
+    public function __construct(private OrphanedFeedRepository $orphans)
     {
     }
 
@@ -45,14 +28,7 @@ final readonly class OrphanedFeedReclaimer
     /** The safety net: every orphan currently in the database. */
     public function reclaimAll(): int
     {
-        /** @var list<int> $feedIds */
-        $feedIds = $this->entityManager->createQuery(sprintf(
-            'SELECT f.id FROM %s f WHERE %s',
-            Feed::class,
-            $this->hasNoSubscriberDql(),
-        ))->getSingleColumnResult();
-
-        return $this->deleteOrphans($feedIds);
+        return $this->deleteOrphans($this->orphans->orphanIds());
     }
 
     /**
@@ -66,27 +42,9 @@ final readonly class OrphanedFeedReclaimer
 
         $deleted = 0;
         foreach (array_chunk($feedIds, self::DELETE_CHUNK_SIZE) as $chunk) {
-            $affected = $this->entityManager->createQuery(sprintf(
-                'DELETE FROM %s f WHERE f.id IN (:feedIds) AND %s',
-                Feed::class,
-                $this->hasNoSubscriberDql(),
-            ))
-                ->setParameter('feedIds', $chunk)
-                ->execute();
-
-            // A DQL DELETE returns its affected-row count, but Doctrine types
-            // execute() as mixed; narrow it rather than blind-casting.
-            $deleted += \is_int($affected) ? $affected : 0;
+            $deleted += $this->orphans->deleteOrphansAmong($chunk);
         }
 
         return $deleted;
-    }
-
-    private function hasNoSubscriberDql(): string
-    {
-        return sprintf(
-            'NOT EXISTS (SELECT s.id FROM %s s WHERE s.feed = f)',
-            Subscription::class,
-        );
     }
 }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search\Membership;
 
+use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\SearchTermsPredicateBuilder;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\DatabaseSavedSearchMatcher;
 use App\Service\Search\Membership\EngineOrDatabaseSavedSearchMatcher;
 use App\Service\Search\Membership\IndexedSavedSearchMatcher;
 use App\Service\Search\SavedSearchTerm;

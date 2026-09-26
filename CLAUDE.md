@@ -82,6 +82,9 @@ Non-negotiables:
 - **Depend on interfaces, inject them.** No service locators in domain code, no
   `new` on a collaborator inside a method. Strategies get a tag + keyed locator
   (see `Service/Refresh/FeedBodyParser.php` for the pattern).
+- **Queries live in `src/Repository/`** — DQL, QueryBuilder, native SQL and
+  DBAL alike; services orchestrate and own the unit of work
+  ([docs/architecture.md](docs/architecture.md) §7, `QueriesLiveInRepositoriesRule`).
 - **Errors are exceptions**, typed and namespaced next to their service
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's `src/Http/Problem/*Problems`

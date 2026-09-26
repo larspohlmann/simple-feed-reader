@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Search\Membership;
+namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Repository\SearchTermsPredicateBuilder;
+use App\Service\Search\Membership\SavedSearchMatcher;
 use App\Service\Search\SavedSearchTerm;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;

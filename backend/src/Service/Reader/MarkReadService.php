@@ -4,29 +4,26 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Entity\Entry;
-use App\Entity\EntryState;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ValidationException;
+use App\Repository\EntryReadMarkRepository;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Repository\ReadMarking;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * "Mark all read until T" for a scope. Advances each affected subscription's
- * watermark to max(current, T) and — so entries a user had explicitly marked
- * unread also become read — flips the caller's existing EntryState rows in the
- * affected feeds whose effectiveDate <= T to isHidden=true. Sparse (no-row)
- * entries are covered by the watermark alone.
+ * "Mark all read until T" for a scope: advances each affected subscription's
+ * watermark and flips existing EntryState rows already marked unread.
  */
 final readonly class MarkReadService
 {
     public function __construct(
         private EntityManagerInterface $em,
+        private EntryReadMarkRepository $readMarks,
         private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
         private ClockInterface $clock,
@@ -49,28 +46,13 @@ final readonly class MarkReadService
             }
         }
 
-        // Atomic: the bulk read-flip and the watermark advance commit together,
-        // so a crash between them can't leave entries half-marked. Inside the
-        // transaction the DQL UPDATE participates rather than auto-committing, and
-        // wrapInTransaction() flushes the managed watermark changes before commit.
+        // Atomic: the read-flip joins the transaction, which flushes the watermark changes before it commits.
         $this->em->wrapInTransaction(function () use ($user, $feedIds, $until): void {
-            $this->em->createQuery(sprintf(
-                'UPDATE %s es SET es.isHidden = :true, es.hiddenAt = :now
-                 WHERE es.user = :user AND es.isHidden = :false
-                 AND es.entry IN (
-                     SELECT e.id FROM %s e
-                     WHERE e.feed IN (:feeds) AND e.effectiveDate <= :until
-                 )',
-                EntryState::class,
-                Entry::class,
-            ))
-                ->setParameter('true', true, Types::BOOLEAN)
-                ->setParameter('false', false, Types::BOOLEAN)
-                ->setParameter('now', $this->clock->now(), Types::DATETIME_IMMUTABLE)
-                ->setParameter('user', $user->getId())
-                ->setParameter('feeds', $feedIds)
-                ->setParameter('until', $until, Types::DATETIME_IMMUTABLE)
-                ->execute();
+            $this->readMarks->hideUnreadInFeedsUntil(
+                new ReadMarking($user->requireId(), $this->clock->now()),
+                $feedIds,
+                $until,
+            );
         });
     }
 

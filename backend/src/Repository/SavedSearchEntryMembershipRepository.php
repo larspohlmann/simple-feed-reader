@@ -7,7 +7,6 @@ namespace App\Repository;
 use App\Entity\SavedSearchEntry;
 use App\Service\Search\Membership\SavedSearchMembershipWriter;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Platforms\AbstractMySQLPlatform;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -62,7 +61,7 @@ final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository
     private function insertIgnoringStored(array $pairs, \DateTimeImmutable $matchedAt): int
     {
         $connection = $this->getEntityManager()->getConnection();
-        $conflictClause = $connection->getDatabasePlatform() instanceof AbstractMySQLPlatform ? 'IGNORE' : 'OR IGNORE';
+        $conflictClause = DatabasePlatform::isMySql($connection) ? 'IGNORE' : 'OR IGNORE';
 
         $parameters = [];
         foreach ($pairs as [$savedSearchId, $entryId]) {

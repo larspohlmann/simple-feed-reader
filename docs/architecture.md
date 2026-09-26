@@ -134,3 +134,30 @@ cheap, or to consciously accept the coupling.
       configurable, so it can resolve to a native deep link later.
 
 If every box is checked, the endpoint serves a native client unchanged.
+
+## 7. Where database access lives
+
+Every query lives in `backend/src/Repository/`: DQL, the ORM and DBAL query builders, native SQL and DBAL statements
+alike. Services orchestrate. They call repository methods and own the unit of work: `persist`, `remove`, `flush`,
+`clear`, `getReference`, `wrapInTransaction`. Decided in #1170.
+
+- **An entity's own repository** (`FeedRepository`, `EntryStateRepository`) holds the queries central to that entity.
+- **A concern repository** holds a pipeline that serves one concern or spans entities. It is a flat `final readonly`
+  class in `src/Repository/`, named for its concern (`RetentionRepository`, `ReadingHistoryRepository`,
+  `RecommendationCallRepository`). It injects `EntityManagerInterface`, or the DBAL `Connection` for raw SQL. It
+  returns entities, scalars or small row objects (`TitledEntry`); mapping those into domain values stays in the service.
+- **`*Query` names are taken.** `EntryQuery`, `ForYouFeedQuery` and `SavedSearchListQuery` are request value objects.
+  A class that runs queries is a `*Repository`, and there is no `Repository/Query/` subdirectory.
+- **Composition, not inheritance.** Shared query construction is an injected collaborator (`EntryScopePredicates`,
+  `DuplicateCollapseDql`), never an abstract base repository. `AbstractEntryProjectionRepository` is the last one
+  left; #1169 replaces it with a collaborator.
+- **No hidden side effects.** A write method does what its name says. `add()` does not prune, and should not need a
+  whole-EntityManager `flush()` that commits someone else's pending changes — `MailSendFailureRepository::add()` still
+  does, and is the one write left to fix.
+- **`src/Doctrine/`** (DQL functions, SQL walkers, schema listeners, driver middleware) extends the ORM itself and may
+  touch the connection.
+- **Controllers** follow the same rule. Their remaining `persist`/`flush` calls are #1157's to move into services.
+
+Enforced by `QueriesLiveInRepositoriesRule` (`backend/tests/PhpStan/`, run by `composer stan`). Outside `src/Repository`
+and `src/Doctrine`, no class may call `createQuery`, `createQueryBuilder`, `createNativeQuery` or `getConnection`. It
+also may not reference the DBAL `Connection`, an ORM or DBAL `QueryBuilder`, `Query` or `NativeQuery`.

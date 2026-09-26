@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup;
 
 use App\Entity\User;
+use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;

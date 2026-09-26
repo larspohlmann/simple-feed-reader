@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search\Membership;
+namespace App\Tests\Repository;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\SearchTermsPredicateBuilder;
-use App\Service\Search\Membership\DatabaseSavedSearchMatcher;
 use App\Service\Search\SavedSearchTerm;
 use App\Service\Search\SearchMode;
 use App\Service\Search\SearchTerms;

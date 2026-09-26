@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Repository\OrphanedFeedRepository;
 use App\Service\OrphanedFeedReclaimer;
 use App\Tests\DbTestCase;
 
@@ -21,7 +22,7 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
     {
         parent::setUp();
 
-        $this->reclaimer = new OrphanedFeedReclaimer($this->em);
+        $this->reclaimer = new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em));
     }
 
     public function testReclaimDeletesAFeedNobodySubscribesTo(): void

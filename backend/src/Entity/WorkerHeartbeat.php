@@ -40,9 +40,4 @@ class WorkerHeartbeat
     {
         return $this->touchedAt;
     }
-
-    public function touch(\DateTimeImmutable $when): void
-    {
-        $this->touchedAt = $when;
-    }
 }

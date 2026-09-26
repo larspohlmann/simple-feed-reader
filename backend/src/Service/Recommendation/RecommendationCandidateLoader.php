@@ -4,76 +4,37 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
-use App\Entity\Entry;
-use App\Entity\EntryState;
-use App\Entity\Subscription;
-use App\Repository\DuplicateCollapseDql;
-use App\Repository\EntryAliases;
-use App\Repository\SubscriptionDisplayTitle;
-use App\Service\Text\PlainText;
-use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\QueryBuilder;
+use App\Repository\RecommendationCandidateRepository;
 use Random\Engine\Mt19937;
 use Random\Randomizer;
 
-/**
- * Loads the pool of unread candidates the recommendation prompt picks from, and
- * re-resolves a checkpointed batch of entry ids back to prompt lines.
- *
- * Both share EntryRepository::rowQueryBuilder's subscription gate, including the per-user
- * customTitle override, so a retried batch names feeds as the first attempt did.
- * linesForIds() drops only the unread predicate, so a resumed run can retry its exact
- * snapshot even for an entry since read; it keeps the Subscription join, so an unsubscribed
- * feed still drops the entry. Only outright deletion is special-cased: silently dropped
- * rather than failing the batch.
- */
+/** Loads the candidate pool the recommendation prompt picks from, and re-resolves a checkpointed batch of ids. */
 final readonly class RecommendationCandidateLoader
 {
-    public function __construct(
-        private EntityManagerInterface $entityManager,
-        private DuplicateCollapseDql $collapse,
-    ) {
+    public function __construct(private RecommendationCandidateRepository $candidates)
+    {
     }
 
     /**
-     * Candidates, excluding anything the reader has favorited, kept, or viewed, in feeds
-     * the reader subscribes to, no older than the request's window (#386). Read (hidden)
-     * entries stay eligible. The newest $request->poolSize are returned in a randomized
-     * order seeded by $request->orderSeed, so batches sample the pool rather than cluster
-     * by recency (#344); the same seed always produces the same order.
+     * The newest $request->poolSize candidates in an order seeded by $request->orderSeed, so batches sample the pool
+     * rather than cluster by recency (#344); the same seed always gives the same order.
      *
      * @return list<PromptLine>
      */
     public function load(int $userId, CandidatePoolRequest $request): array
     {
-        $qb = $this->candidateQueryBuilder($userId)
-            ->leftJoin(EntryState::class, 'es', 'ON', 'es.entry = e AND es.user = :user')
-            ->orderBy('e.effectiveDate', 'DESC')
-            ->addOrderBy('e.id', 'DESC')
-            ->setParameter('since', $request->since)
-            ->setParameter('notInteracted', false, Types::BOOLEAN);
+        $lines = array_map(
+            PromptLine::of(...),
+            $this->candidates->newestPool($userId, $request->since, $request->poolSize),
+        );
 
-        $this->poolScope($qb, EntryAliases::primary());
-        $this->collapse->apply($qb, $this->poolScope(...), $userId);
-        $qb->setMaxResults($request->poolSize);
-
-        $lines = $this->linesFor($qb);
-
-        // shuffleArray() has no generic stub, so it widens the element type
-        // back to mixed; the @var restates the PromptLine list the return
-        // type promises -- shuffling reorders $lines, it cannot change what
-        // is in it.
-        /** @var list<PromptLine> $shuffled */
+        /** @var list<PromptLine> $shuffled shuffleArray() has no generic stub, so it widens to mixed */
         $shuffled = (new Randomizer(new Mt19937($request->orderSeed)))->shuffleArray($lines);
 
         return $shuffled;
     }
 
     /**
-     * Re-resolves a checkpointed batch of entry ids, dropping any id whose
-     * entry was pruned (deleted) since the snapshot was taken.
-     *
      * @param list<int> $entryIds
      *
      * @return array<int, PromptLine>
@@ -84,12 +45,9 @@ final readonly class RecommendationCandidateLoader
             return [];
         }
 
-        $qb = $this->candidateQueryBuilder($userId)
-            ->andWhere('e.id IN (:ids)')
-            ->setParameter('ids', $entryIds);
-
         $linesById = [];
-        foreach ($this->linesFor($qb) as $line) {
+        foreach ($this->candidates->forIds($userId, $entryIds) as $titled) {
+            $line = PromptLine::of($titled);
             $linesById[$line->entryId] = $line;
         }
 
@@ -97,10 +55,7 @@ final readonly class RecommendationCandidateLoader
     }
 
     /**
-     * Counts the present entries among $entryIds and the date span they cover, in one
-     * aggregate query scoped through the SAME subscription gate the candidate lines use —
-     * so a pruned or unsubscribed id drops out of the total and the range alike. Returns
-     * null when the id set resolves to nothing.
+     * Null when the ids resolve to nothing: pruned or unsubscribed ids drop out of the total and the range alike.
      *
      * @param list<int> $entryIds
      */
@@ -110,15 +65,7 @@ final readonly class RecommendationCandidateLoader
             return null;
         }
 
-        /** @var array{total: int, oldest: ?string, newest: ?string} $row */
-        $row = $this->candidateQueryBuilder($userId)
-            ->select('COUNT(e.id) AS total', 'MIN(e.effectiveDate) AS oldest', 'MAX(e.effectiveDate) AS newest')
-            ->andWhere('e.id IN (:ids)')
-            ->setParameter('ids', $entryIds)
-            ->getQuery()
-            ->getSingleResult();
-
-        return $this->hydrateSummary($row);
+        return $this->hydrateSummary($this->candidates->span($userId, $entryIds));
     }
 
     /**
@@ -136,74 +83,6 @@ final readonly class RecommendationCandidateLoader
             total: (int) $row['total'],
             oldest: (new \DateTimeImmutable($oldest))->format('Y-m-d'),
             newest: (new \DateTimeImmutable($newest))->format('Y-m-d'),
-        );
-    }
-
-    /**
-     * The pool's scope, shared by the outer query and DuplicateCollapseDql's inner
-     * semi-join so the two cannot drift and reopen a hole (#496). No read/unread
-     * filter: excluding caught-up entries emptied the pool and zeroed the run.
-     */
-    private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
-    {
-        $inner->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))
-            ->andWhere(\sprintf(
-                '(%1$s.isFavorite = :notInteracted OR %1$s.isFavorite IS NULL)'
-                . ' AND (%1$s.isKept = :notInteracted OR %1$s.isKept IS NULL)'
-                . ' AND (%1$s.isViewed = :notInteracted OR %1$s.isViewed IS NULL)',
-                $aliases->state,
-            ))
-            ->andWhere(\sprintf('%s.effectiveDate >= :since', $aliases->entry));
-    }
-
-    private function candidateQueryBuilder(int $userId): QueryBuilder
-    {
-        return $this->entityManager->createQueryBuilder()
-            ->select('e', 'f', 's.customTitle AS customTitle')
-            ->from(Entry::class, 'e')
-            ->join('e.feed', 'f')
-            ->join(Subscription::class, 's', 'ON', 's.feed = e.feed AND s.user = :user')
-            ->andWhere('s.includeInForYou = true')
-            ->setParameter('user', $userId);
-    }
-
-    /**
-     * @return list<PromptLine>
-     */
-    private function linesFor(QueryBuilder $qb): array
-    {
-        /** @var list<array<array-key, mixed>> $rows */
-        $rows = $qb->getQuery()->getResult();
-
-        return array_map(fn (array $row): PromptLine => $this->hydrateLine($row), $rows);
-    }
-
-    /**
-     * The joined 'f' select eagerly fetches the feed in the same query rather than
-     * lazy-loading it per row; because it is reachable via a to-one association from the
-     * root 'e', Doctrine folds it into the graph instead of giving it its own row index —
-     * only the Entry root and the optional scalar customTitle appear as row keys.
-     *
-     * @param array<array-key, mixed> $row a mixed DQL result: [0 => Entry, customTitle: ?string]
-     */
-    private function hydrateLine(array $row): PromptLine
-    {
-        /** @var Entry $entry */
-        $entry = $row[0];
-        $feed = $entry->getFeed();
-        $customTitle = $row['customTitle'];
-        $feedName = SubscriptionDisplayTitle::from(
-            \is_string($customTitle) ? $customTitle : null,
-            $feed->getTitle(),
-            $feed->getUrl(),
-        );
-
-        return new PromptLine(
-            entryId: $entry->requireId(),
-            title: $entry->getTitle(),
-            feedName: $feedName,
-            date: $entry->getEffectiveDate()->format('Y-m-d'),
-            description: PlainText::from($entry->getSummary() ?? $entry->getContentHtml()),
         );
     }
 }
