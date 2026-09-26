@@ -3750,3 +3750,20 @@ These are the issue items that no PHPStan rule can gate. Each one has a target t
 **4. Commands**
 - `Command/CheckCatalogUrlsCommand` → `Service/Catalog/CatalogUrlChecker`, which takes its path from `BundledCatalog`. #1165 already typed the failure as `Service/Catalog/Exception/BrokenCatalogUrlException`, thrown by `assertServesFeed()` (lines 108-130), which moves with it.
 - `Command/ReaderAuditCommand::execute:71` holds the file I/O and the sharding → `Service/ReaderAudit`.
+
+## Execution rulings (implementer, pre-flight 2026-09-26)
+
+- **F1 (Task 10 Steps 4–5):** PHPStan 2.2.5 passes every `?->` call to a `Rule<CallLike>` twice, once as `NullsafeMethodCall` and once as `MethodCall`. The rule therefore handles `MethodCall` only, the way PHPStan's `CallMethodsRule` does. A nullsafe call is still caught through its `MethodCall` pass, and fixture line 57 reports once.
+- **F2 (Task 8 Step 7):** drop the `git add -u src/Service/Catalog/CatalogFeedWriter.php` line, because `git rm` already stages the deletion.
+- **F3 (Task 9 Step 7.2):** under the break test, `composer stan` also reports PHPStan's `property.onlyWritten`, which makes 2 errors. The expected output is amended to match.
+- **F4 (Task 5 `testReorderGivesEachFeedItsIndex`):** first give both subscriptions starting positions other than their target index (e.g. 5 and 7), so the test cannot pass without the reorder.
+- **F5 (Tasks 4 and 5, mutation testing):**
+  - Write `'' === (string) $request->customTitle` without the cast, keeping the same behaviour, so it produces no equivalent mutant.
+  - Accept the ±1 mutants on `CREATE_SWEEP_BUDGET_SECONDS` and document them as equivalent (a budget change is not observable in tests).
+- **F6 (Task 10 rule scope):** accepted for PR A. The known blind spots and possible false positives go into the report for PR B or a follow-up. None occurs at HEAD.
+- **F7 (Task 3):** the "Interfaces" wording is wrong. `TagOrdering` does not consume `TagEditor`; only `TagController` uses both.
+- **F8 (Tasks 3 and 6):** CLAUDE.md says "delete on sight in code you touch". Where a controller method is rewritten, trim its docblock to 3 lines or fewer, keeping only what a reader would otherwise get wrong. Docblocks on untouched methods stay. No file under tests/Controller is edited.
+- **F9:** accepted. The repeated `user()`/`reload()` test helpers are a pre-existing pattern and a candidate follow-up (a shared trait).
+- **F10:** apply the comment bar. Drop the one-line `delete` comments in `TagEditor` and `CatalogCategoryEditor` unless the code would mislead without them.
+- **F11:** accepted. The `SavedSearchOutcome` private bool constructor is hidden behind named constructors.
+- **Planner:** the Task 10 Step 7 rewording of docs/architecture.md §7 is approved.
