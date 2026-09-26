@@ -843,7 +843,7 @@ final class AdminUserControllerTest extends WebTestCase
         $feed = new Feed('https://example.com/stale-fetcher.xml');
         $feed->setTitle('Stale Fetcher Weekly');
         $lastFetch = new \DateTimeImmutable('-10 days');
-        $feed->setLastFetchedAt($lastFetch);
+        $feed->recordSuccessfulFetch($lastFetch, 60);
         $em->persist($feed);
 
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-30 days'));

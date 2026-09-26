@@ -143,11 +143,6 @@ class Feed
         return $this->status;
     }
 
-    public function setStatus(FeedStatus $status): void
-    {
-        $this->status = $status;
-    }
-
     public function getSourceFormat(): string
     {
         return $this->sourceFormat;
@@ -163,19 +158,9 @@ class Feed
         return $this->fetchSchedule->getLastFetchedAt();
     }
 
-    public function setLastFetchedAt(?\DateTimeImmutable $lastFetchedAt): void
-    {
-        $this->fetchSchedule->setLastFetchedAt($lastFetchedAt);
-    }
-
     public function getLastSuccessfulFetchAt(): ?\DateTimeImmutable
     {
         return $this->fetchSchedule->getLastSuccessfulFetchAt();
-    }
-
-    public function setLastSuccessfulFetchAt(?\DateTimeImmutable $lastSuccessfulFetchAt): void
-    {
-        $this->fetchSchedule->setLastSuccessfulFetchAt($lastSuccessfulFetchAt);
     }
 
     public function getLastNewEntryAt(): ?\DateTimeImmutable
@@ -183,19 +168,9 @@ class Feed
         return $this->fetchSchedule->getLastNewEntryAt();
     }
 
-    public function setLastNewEntryAt(?\DateTimeImmutable $lastNewEntryAt): void
-    {
-        $this->fetchSchedule->setLastNewEntryAt($lastNewEntryAt);
-    }
-
     public function getNextFetchAt(): ?\DateTimeImmutable
     {
         return $this->fetchSchedule->getNextFetchAt();
-    }
-
-    public function setNextFetchAt(?\DateTimeImmutable $nextFetchAt): void
-    {
-        $this->fetchSchedule->setNextFetchAt($nextFetchAt);
     }
 
     public function getFetchIntervalMinutes(): int
@@ -203,19 +178,9 @@ class Feed
         return $this->fetchSchedule->getFetchIntervalMinutes();
     }
 
-    public function setFetchIntervalMinutes(int $minutes): void
-    {
-        $this->fetchSchedule->setFetchIntervalMinutes($minutes);
-    }
-
     public function getConsecutiveFailures(): int
     {
         return $this->fetchSchedule->getConsecutiveFailures();
-    }
-
-    public function setConsecutiveFailures(int $consecutiveFailures): void
-    {
-        $this->fetchSchedule->setConsecutiveFailures($consecutiveFailures);
     }
 
     public function getLastErrorMessage(): ?string
@@ -223,9 +188,38 @@ class Feed
         return $this->fetchSchedule->getLastErrorMessage();
     }
 
-    public function setLastErrorMessage(?string $lastErrorMessage): void
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordSuccessfulFetch(\DateTimeImmutable $fetchedAt, int $intervalMinutes): void
     {
-        $this->fetchSchedule->setLastErrorMessage($lastErrorMessage);
+        $this->status = FeedStatus::Active;
+        $this->fetchSchedule->recordSuccess($fetchedAt, $intervalMinutes);
+    }
+
+    public function recordNewEntries(\DateTimeImmutable $arrivedAt): void
+    {
+        $this->fetchSchedule->recordNewEntries($arrivedAt);
+    }
+
+    /**
+     * @throws \DateMalformedStringException
+     */
+    public function recordFailedFetch(\DateTimeImmutable $failedAt, string $message, int $backoffMinutes): void
+    {
+        $this->status = FeedStatus::Erroring;
+        $this->fetchSchedule->recordFailure($failedAt, $message, $backoffMinutes);
+    }
+
+    public function markGone(\DateTimeImmutable $failedAt, string $message): void
+    {
+        $this->status = FeedStatus::Gone;
+        $this->fetchSchedule->recordGone($failedAt, $message);
+    }
+
+    public function scheduleNextFetchAt(\DateTimeImmutable $nextFetchAt): void
+    {
+        $this->fetchSchedule->scheduleNextFetchAt($nextFetchAt);
     }
 
     public function getEtag(): ?string

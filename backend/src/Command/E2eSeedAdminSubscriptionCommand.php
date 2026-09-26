@@ -84,6 +84,9 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         $this->addArgument('email', InputArgument::OPTIONAL, 'Admin email', 'e2e-admin@example.com');
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
@@ -114,6 +117,9 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         return Command::SUCCESS;
     }
 
+    /**
+     * @throws \DateMalformedStringException
+     */
     private function ensureFixtureFeed(): Feed
     {
         $feed = $this->feeds->findOneBy(['url' => self::FIXTURE_FEED_URL]);
@@ -126,7 +132,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         $feed->setSourceFormat(SourceFormat::XML);
         // Already fetched, so the reader skips its post-onboarding refresh sweep
         // over a host that never answers.
-        $feed->setLastFetchedAt($this->clock->now());
+        $feed->recordSuccessfulFetch($this->clock->now(), $feed->getFetchIntervalMinutes());
 
         $this->em->persist($feed);
         $this->em->flush(); // assign an id before anything references it

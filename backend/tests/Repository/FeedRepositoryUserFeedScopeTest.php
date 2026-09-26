@@ -6,7 +6,6 @@ namespace App\Tests\Repository;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Enum\FeedStatus;
 use App\Repository\DueFeedCriteria;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
@@ -61,7 +60,7 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         $stranger = $factory->create('stranger@example.com');
 
         $feed = new Feed('https://example.com/gone.xml');
-        $feed->setStatus(FeedStatus::Gone);
+        $feed->markGone(new \DateTimeImmutable('2026-01-01T00:00:00Z'), 'HTTP 410 Gone');
         $this->em->persist($feed);
         $sub = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $this->em->persist($sub);

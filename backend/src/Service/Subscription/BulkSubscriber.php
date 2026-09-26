@@ -105,7 +105,7 @@ final readonly class BulkSubscriber
             // first fetch. Only on creation: a shared row another user already
             // has is not ours to retitle.
             $feed->setTitle($item->feedTitle);
-            $feed->setNextFetchAt($this->clock->now()); // due now → next refresh populates it
+            $feed->scheduleNextFetchAt($this->clock->now());
             $this->em->persist($feed);
         }
 

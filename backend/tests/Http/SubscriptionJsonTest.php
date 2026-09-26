@@ -156,7 +156,7 @@ final class SubscriptionJsonTest extends TestCase
         $feed->setTitle('Example Feed');
         $feed->setSiteUrl('https://example.com');
         $feed->setFaviconUrl('https://example.com/favicon.ico');
-        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-02-04T10:11:12Z'));
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-02-04T10:11:12Z'), 60);
         $sub = new Subscription($user, $feed, $now);
         $tag = new Tag($user, 'news');
         $tag->setColor('#ff8800');
@@ -231,10 +231,14 @@ final class SubscriptionJsonTest extends TestCase
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
         $user = new User('u@example.com', $now);
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setStatus(\App\Enum\FeedStatus::Erroring);
-        $feed->setLastSuccessfulFetchAt(new \DateTimeImmutable('2026-01-28T09:00:00Z'));
-        $feed->setConsecutiveFailures(4);
-        $feed->setLastErrorMessage('https://example.com/feed.xml: HTTP 500');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-01-28T09:00:00Z'), 60);
+        for ($attempt = 0; $attempt < 4; ++$attempt) {
+            $feed->recordFailedFetch(
+                new \DateTimeImmutable('2026-02-03T04:00:00Z'),
+                'https://example.com/feed.xml: HTTP 500',
+                60,
+            );
+        }
         $sub = new Subscription($user, $feed, $now);
 
         $shape = SubscriptionJson::one($sub);
@@ -258,7 +262,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testSerialisesTheStoredNextFetchTime(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setNextFetchAt(new \DateTimeImmutable('2026-02-04T11:00:00Z'));
+        $feed->scheduleNextFetchAt(new \DateTimeImmutable('2026-02-04T11:00:00Z'));
 
         self::assertSame(
             '2026-02-04T11:00:00+00:00',
@@ -269,7 +273,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testAGoneFeedReportsANullNextFetchTime(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setNextFetchAt(null);
+        $feed->markGone(new \DateTimeImmutable('2026-02-04T10:00:00Z'), 'HTTP 410 Gone');
 
         self::assertNull(SubscriptionJson::one($this->subscriptionTo($feed))['nextFetchAt']);
     }
@@ -277,7 +281,7 @@ final class SubscriptionJsonTest extends TestCase
     public function testSerialisesTheLastNewContentTime(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
-        $feed->setLastNewEntryAt(new \DateTimeImmutable('2026-02-04T10:00:00Z'));
+        $feed->recordNewEntries(new \DateTimeImmutable('2026-02-04T10:00:00Z'));
 
         self::assertSame(
             '2026-02-04T10:00:00+00:00',

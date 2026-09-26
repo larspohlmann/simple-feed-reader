@@ -15,6 +15,8 @@ use Symfony\Component\Clock\MockClock;
 
 final class FeedSchedulerTest extends TestCase
 {
+    private const string EARLIER = '2026-07-21 06:00:00';
+
     private MockClock $clock;
     private HostThrottle $hostThrottle;
     private FeedScheduler $scheduler;
@@ -29,7 +31,7 @@ final class FeedSchedulerTest extends TestCase
     public function testSuccessWithNewEntriesResetsIntervalToFloor(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes(120);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 120);
 
         $this->scheduler->recordSuccess($feed, 3);
 
@@ -42,7 +44,7 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-07-21 12:05:00', $feed->getNextFetchAt()?->format('Y-m-d H:i:s'));
 
-        $feed->setFetchIntervalMinutes(8);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 8);
         $this->scheduler->recordSuccess($feed, 1);
         self::assertSame(5, $feed->getFetchIntervalMinutes());
     }
@@ -59,7 +61,7 @@ final class FeedSchedulerTest extends TestCase
     public function testASuccessWithNoNewEntriesLeavesTheLastNewEntryTimeUntouched(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setLastNewEntryAt(new \DateTimeImmutable('2026-07-20 08:00:00'));
+        $feed->recordNewEntries(new \DateTimeImmutable('2026-07-20 08:00:00'));
 
         // A 200 that carried nothing new is a successful fetch, but not an
         // update: the "last new content" mark must not advance on it.
@@ -72,8 +74,7 @@ final class FeedSchedulerTest extends TestCase
     public function testAThrottleCostsTheFeedNothingButItsPlaceInTheQueue(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes(60);
-        $feed->setLastFetchedAt(new \DateTimeImmutable('2026-07-21 11:00:00'));
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 60);
 
         $this->scheduler->recordThrottled($feed, 90);
 
@@ -112,7 +113,7 @@ final class FeedSchedulerTest extends TestCase
         string $expectedNextFetch,
     ): void {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes($intervalMinutes);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), $intervalMinutes);
 
         $this->scheduler->recordThrottled($feed, $retryAfterSeconds);
 
@@ -122,7 +123,7 @@ final class FeedSchedulerTest extends TestCase
     public function testThrottlingRecordsAHostThrottleForTheWholeHost(): void
     {
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
-        $feed->setFetchIntervalMinutes(60);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
 
         $this->scheduler->recordThrottled($feed, 90);
 
@@ -132,7 +133,7 @@ final class FeedSchedulerTest extends TestCase
     public function testAThrottleWithNoNamedDelayRationsTheHostForTheFloorOnly(): void
     {
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
-        $feed->setFetchIntervalMinutes(120);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 120);
 
         $this->scheduler->recordThrottled($feed, null);
 
@@ -146,14 +147,14 @@ final class FeedSchedulerTest extends TestCase
     public function testQuietSuccessGrowsIntervalUpToCeiling(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes(60);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
 
         $this->scheduler->recordSuccess($feed, 0);
         self::assertSame(90, $feed->getFetchIntervalMinutes());
 
         // The grow-on-empty branch is capped at 2 h, so the first fetch after a
         // quiet spell cannot accumulate more than that (#643).
-        $feed->setFetchIntervalMinutes(300);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 300);
         $this->scheduler->recordSuccess($feed, 0);
         self::assertSame(120, $feed->getFetchIntervalMinutes());
     }
@@ -162,7 +163,7 @@ final class FeedSchedulerTest extends TestCase
     {
         foreach ([0, -120] as $corrupted) {
             $feed = new Feed('https://example.com/feed');
-            $feed->setFetchIntervalMinutes($corrupted);
+            $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), $corrupted);
 
             $this->scheduler->recordSuccess($feed, 0);
 
@@ -174,9 +175,7 @@ final class FeedSchedulerTest extends TestCase
     public function testSuccessClearsPreviousFailureState(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setConsecutiveFailures(5);
-        $feed->setLastErrorMessage('boom');
-        $feed->setStatus(FeedStatus::Erroring);
+        $this->failedTimes($feed, 5);
 
         $this->scheduler->recordSuccess($feed, 0);
 
@@ -188,7 +187,7 @@ final class FeedSchedulerTest extends TestCase
     public function testFailureBacksOffExponentially(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes(60);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
 
         $this->scheduler->recordFailure($feed, 'timeout');
 
@@ -206,8 +205,8 @@ final class FeedSchedulerTest extends TestCase
     public function testBackoffIsCappedAtSevenDays(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setFetchIntervalMinutes(1440);
-        $feed->setConsecutiveFailures(10);
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 1440);
+        $this->failedTimes($feed, 10);
 
         $this->scheduler->recordFailure($feed, 'still broken');
 
@@ -218,7 +217,7 @@ final class FeedSchedulerTest extends TestCase
     public function testThirtiethFailureMarksFeedGone(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $feed->setConsecutiveFailures(29);
+        $this->failedTimes($feed, 29);
 
         $this->scheduler->recordFailure($feed, 'the end');
 
@@ -248,12 +247,8 @@ final class FeedSchedulerTest extends TestCase
     }
 
     /**
-     * The #384 fix's core guarantee: only a fetch that actually delivered may
-     * advance lastSuccessfulFetchAt. recordFailure() and recordGone() still
-     * stamp lastFetchedAt — the manual-refresh cooldown and "has this feed
-     * ever been fetched" both need that — but a failed or gone attempt is not
-     * evidence about what the feed was serving, so lastSuccessfulFetchAt must
-     * stay untouched.
+     * #384: only a delivered fetch advances lastSuccessfulFetchAt; a failed or gone attempt
+     * still stamps lastFetchedAt, the manual-refresh cooldown, but not what the feed served.
      */
     public function testOnlyRecordSuccessAdvancesLastSuccessfulFetchAt(): void
     {
@@ -266,5 +261,12 @@ final class FeedSchedulerTest extends TestCase
         $this->scheduler->recordGone($gone, 'HTTP 410 Gone');
         self::assertNotNull($gone->getLastFetchedAt());
         self::assertNull($gone->getLastSuccessfulFetchAt());
+    }
+
+    private function failedTimes(Feed $feed, int $failures): void
+    {
+        for ($attempt = 0; $attempt < $failures; ++$attempt) {
+            $feed->recordFailedFetch(new \DateTimeImmutable(self::EARLIER), 'boom', 60);
+        }
     }
 }
