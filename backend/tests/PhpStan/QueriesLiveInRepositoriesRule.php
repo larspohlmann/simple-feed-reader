@@ -36,13 +36,8 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
         'Doctrine\\ORM\\QueryBuilder',
     ];
 
-    /** Seeded with every offender the day the rule landed; each #1170 task deletes its own, so it only shrinks. */
-    private const array ALLOW_LIST = [
-        'App\\Controller\\Api\\HealthController',
-        'App\\Service\\ReaderAudit\\AuditSampler',
-        'App\\Service\\ReaderAudit\\AuditUserResolver',
-        'App\\Service\\Worker\\Handler\\PurgeFailedMessagesHandler',
-    ];
+    /** Empty since #1170 moved the last query; an entry here must say why its class cannot use a repository. */
+    private const array ALLOW_LIST = [];
 
     /** @param list<string> $allowList fully qualified class names; overridable only for the rule's own test */
     public function __construct(private NodeFinder $finder, private array $allowList = self::ALLOW_LIST)

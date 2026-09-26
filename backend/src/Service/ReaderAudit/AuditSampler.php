@@ -4,27 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
-use Doctrine\DBAL\ArrayParameterType;
-use Doctrine\DBAL\Connection;
+use App\Repository\ReaderAuditRepository;
 
 /**
- * Draws the audit's article sample from one user's subscriptions, stratified so
- * every subscribed feed is represented: each feed contributes its own shuffled
- * candidates, and the round-robin hands out one article per feed before any
- * feed gets a second. A plain "ORDER BY random LIMIT 1000" over 31k entries
- * would spend most of the budget on the few feeds that publish most — exactly
- * the feeds whose cleaners already work.
- *
- * The shuffle is seeded in PHP, not by the database, so the same seed draws
- * the same sample on MySQL and SQLite and parallel shards can each recompute
- * the identical list without a shared file. That alone is not enough: the
- * refresh worker keeps ingesting during a sweep, so the caller also fixes a
- * cutoff instant, and every shard draws from the entries that existed when
- * the sweep began.
+ * Draws the audit sample stratified by feed: every feed gives one article before any gives a second. The shuffle is
+ * seeded in PHP, so every shard draws the same sample on MySQL and SQLite; the caller's cutoff fixes the entry set.
  */
 final readonly class AuditSampler
 {
-    public function __construct(private Connection $connection)
+    public function __construct(private ReaderAuditRepository $audit)
     {
     }
 
@@ -57,18 +45,8 @@ final readonly class AuditSampler
      */
     private function candidatesByFeed(int $userId, int $seed, \DateTimeImmutable $before): array
     {
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT s.feed_id AS feed_id, e.id AS entry_id
-               FROM subscription s
-               JOIN entry e ON e.feed_id = s.feed_id
-              WHERE s.user_id = :user AND e.url IS NOT NULL AND e.url <> \'\'
-                AND e.created_at < :before
-              ORDER BY s.feed_id, e.id',
-            ['user' => $userId, 'before' => $before->format('Y-m-d H:i:s')],
-        );
-
         $byFeed = [];
-        foreach ($rows as $row) {
+        foreach ($this->audit->candidateRows($userId, $before) as $row) {
             $byFeed[DatabaseValue::int($row['feed_id'])][] = DatabaseValue::int($row['entry_id']);
         }
 
@@ -111,20 +89,8 @@ final readonly class AuditSampler
      */
     private function detailsOf(array $entryIds, int $userId): array
     {
-        $rows = $this->connection->fetchAllAssociative(
-            'SELECT e.id, e.title, e.url, e.author, e.image_url, f.id AS feed_id,
-                    CASE WHEN e.body_is_opening_post THEN NULL ELSE e.content_html END AS article_content_html,
-                    f.title AS feed_title, f.url AS feed_url, s.id AS subscription_id
-               FROM entry e
-               JOIN feed f ON f.id = e.feed_id
-               JOIN subscription s ON s.feed_id = f.id AND s.user_id = :user
-              WHERE e.id IN (:ids)',
-            ['user' => $userId, 'ids' => $entryIds],
-            ['ids' => ArrayParameterType::INTEGER],
-        );
-
         $byId = [];
-        foreach ($rows as $row) {
+        foreach ($this->audit->detailRows($entryIds, $userId) as $row) {
             $entryId = DatabaseValue::int($row['id']);
             $byId[$entryId] = new SampledEntry(
                 entryId: $entryId,
