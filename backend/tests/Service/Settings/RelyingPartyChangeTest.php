@@ -6,15 +6,15 @@ namespace App\Tests\Service\Settings;
 
 use App\Dto\Admin\InstanceSettingsRequest;
 use App\Exception\ValidationException;
+use App\Http\RequestServingHost;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\RelyingPartyChange;
 use App\Service\Settings\RelyingPartyIdRule;
-use App\Service\Settings\ServingHost;
-use Symfony\Component\HttpFoundation\RequestStack;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class RelyingPartyChangeTest extends TestCase
 {
@@ -103,7 +103,7 @@ final class RelyingPartyChangeTest extends TestCase
             new EffectivePasskeyRelyingPartyId(),
             $this->createStub(UserPasskeyRepository::class),
             new RelyingPartyIdRule(),
-            new ServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
+            new RequestServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
         );
     }
 

@@ -123,6 +123,7 @@ services:
     App\Service\Refresh\RefreshRunnerInterface: '@App\Service\Refresh\RefreshRunner'
     App\Service\Discovery\FeedDiscoveryInterface: '@App\Service\Discovery\FeedDiscovery'
     App\Service\Reader\ArticleExtractorInterface: '@App\Service\Reader\ArticleExtractor'
+    App\Service\Settings\ServingHost: '@App\Http\RequestServingHost'
 
     # The reader's page repairs run as an ordered pipeline before readability
     # scores the page. The order is a real dependency, not a tag-collection
