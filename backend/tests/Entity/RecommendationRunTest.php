@@ -141,15 +141,22 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($run->progress()->attemptsExhausted);
     }
 
+    public function testAFreshRunHasNotExhaustedItsTransportRetries(): void
+    {
+        self::assertFalse($this->makeRun()->hasExhaustedTransportRetries());
+    }
+
     public function testThirdTransportFailureExhaustsTheSeparateCeiling(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
 
-        self::assertFalse($run->recordTransportFailure());
-        self::assertFalse($run->recordTransportFailure());
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+        self::assertFalse($run->hasExhaustedTransportRetries());
 
-        self::assertTrue($run->recordTransportFailure());
+        $run->recordTransportFailure();
+        self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
     /** Unusable-reply attempts and transport failures are separate counters:
@@ -162,9 +169,10 @@ final class RecommendationRunTest extends TestCase
 
         $run->recordInvalidReply('garbage');
         $run->recordInvalidReply('garbage');
+        $run->recordTransportFailure();
 
         self::assertFalse($run->progress()->attemptsExhausted);
-        self::assertFalse($run->recordTransportFailure());
+        self::assertFalse($run->hasExhaustedTransportRetries());
     }
 
     public function testRecordBatchWinnersResetsTransportFailuresToExactlyZero(): void
@@ -178,9 +186,11 @@ final class RecommendationRunTest extends TestCase
 
         // Exactly MAX_TRANSPORT_FAILURES (3) fresh failures are needed to
         // exhaust again — pins the reset at 0, not -1 or 1.
-        self::assertFalse($run->recordTransportFailure());
-        self::assertFalse($run->recordTransportFailure());
-        self::assertTrue($run->recordTransportFailure());
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+        self::assertFalse($run->hasExhaustedTransportRetries());
+        $run->recordTransportFailure();
+        self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
     public function testCompleteResetsTransportFailuresToExactlyZero(): void
@@ -193,6 +203,7 @@ final class RecommendationRunTest extends TestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
         self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
+        self::assertFalse($run->hasExhaustedTransportRetries());
     }
 
     public function testResumeResetsTransportFailuresToExactlyZero(): void
@@ -205,9 +216,11 @@ final class RecommendationRunTest extends TestCase
 
         $run->resume();
 
-        self::assertFalse($run->recordTransportFailure());
-        self::assertFalse($run->recordTransportFailure());
-        self::assertTrue($run->recordTransportFailure());
+        $run->recordTransportFailure();
+        $run->recordTransportFailure();
+        self::assertFalse($run->hasExhaustedTransportRetries());
+        $run->recordTransportFailure();
+        self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
     public function testRecordTransportFailureBeforeSnapshotThrows(): void

@@ -135,6 +135,7 @@ class RecommendationRun
     #[ORM\Embedded(class: RunThrottle::class, columnPrefix: false)]
     private RunThrottle $throttle;
 
+    /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(User $user, \DateTimeImmutable $createdAt)
     {
         $this->user = $user;
@@ -262,19 +263,17 @@ class RecommendationRun
         $this->callAttempts->recordInvalidReply($reply);
     }
 
-    /**
-     * Records one provider call that never produced a reply -- a transport
-     * failure, not an unusable one. Kept as its own counter, reset
-     * independently of `attempts`, so the "unusable reply" retry semantics
-     * are unaffected by an unrelated network blip.
-     *
-     * @return bool true once this failure has reached MAX_TRANSPORT_FAILURES
-     */
-    public function recordTransportFailure(): bool
+    /** A call that never produced a reply: its own counter, so a network blip spends no unusable-reply retry. */
+    public function recordTransportFailure(): void
     {
         $this->guardStatus(self::STATUS_RUNNING, 'recordTransportFailure');
 
-        return $this->callAttempts->recordTransportFailure() >= self::MAX_TRANSPORT_FAILURES;
+        $this->callAttempts->recordTransportFailure();
+    }
+
+    public function hasExhaustedTransportRetries(): bool
+    {
+        return $this->callAttempts->transportFailures() >= self::MAX_TRANSPORT_FAILURES;
     }
 
     public function getLastInvalidReply(): ?string
