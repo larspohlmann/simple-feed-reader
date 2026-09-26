@@ -151,9 +151,9 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
 - **Composition, not inheritance.** Shared query construction is an injected collaborator (`EntryScopePredicates`,
   `DuplicateCollapseDql`), never an abstract base repository. `AbstractEntryProjectionRepository` is the last one
   left; #1169 replaces it with a collaborator.
-- **No hidden side effects.** A write method does what its name says. `add()` does not prune, and should not need a
-  whole-EntityManager `flush()` that commits someone else's pending changes — `MailSendFailureRepository::add()` still
-  does, and is the one write left to fix.
+- **No hidden side effects.** A write method does what its name says. `add()` persists: it neither prunes nor runs a
+  whole-EntityManager `flush()` that would commit someone else's pending changes. The service that owns the unit of
+  work flushes, as `MailDeliveryHealth::recordFailure()` does for the mail-failure log.
 - **`src/Doctrine/`** (DQL functions, SQL walkers, schema listeners, driver middleware) extends the ORM itself and may
   touch the connection.
 - **Controllers** follow the same rule and go further: they hold no unit of work either. `ThinControllerRule` and
