@@ -67,7 +67,7 @@ final readonly class SavedSearchEntriesController
         EntryPageParameters $page = new EntryPageParameters(),
     ): JsonResponse {
         $userId = $user->requireId();
-        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
+        $savedSearch = $this->savedSearches->getOneForUser($userId, $id);
 
         $query = new SavedSearchListQuery(
             userId: $userId,
@@ -104,7 +104,7 @@ final readonly class SavedSearchEntriesController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkSavedSearchesReadRequest $request,
     ): JsonResponse {
-        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $user->requireId());
+        $savedSearch = $this->savedSearches->getOneForUser($user->requireId(), $id);
         $this->markRead->markOne($user, $savedSearch->requireId(), $request->until);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);

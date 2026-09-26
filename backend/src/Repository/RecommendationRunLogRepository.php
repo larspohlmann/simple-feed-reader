@@ -13,10 +13,7 @@ use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * Reads are shaped for the ~2 s debug poll: the list query hydrates no
- * LONGTEXT at all (sizes come from SQL LENGTH()), and only verdict-null
- * rows — the one call currently streaming — ship their partial text. Full
- * bodies load one row at a time via getOwned() when the user expands an
- * entry.
+ * LONGTEXT at all (sizes come from SQL LENGTH()).
  *
  * @phpstan-type DebugLogRow array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
  *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
@@ -139,14 +136,14 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $textById;
     }
 
-    public function getOwned(int $id, User $user): RecommendationRunLog
+    public function getOneForUser(User $user, int $logId): RecommendationRunLog
     {
         /** @var RecommendationRunLog|null $log */
         $log = $this->createQueryBuilder('l')
             ->join('l.run', 'r')
             ->where('l.id = :id')
             ->andWhere('r.user = :user')
-            ->setParameter('id', $id)
+            ->setParameter('id', $logId)
             ->setParameter('user', $user)
             ->getQuery()
             ->getOneOrNullResult();

@@ -43,6 +43,6 @@ final readonly class RecommendationDebugLogController
     #[Route('/{id}', name: 'api_recommendations_debug_log_entry', requirements: ['id' => '\d+'], methods: ['GET'])]
     public function entry(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        return new JsonResponse(RecommendationDebugLogJson::detail($this->logs->getOwned($id, $user)));
+        return new JsonResponse(RecommendationDebugLogJson::detail($this->logs->getOneForUser($user, $id)));
     }
 }

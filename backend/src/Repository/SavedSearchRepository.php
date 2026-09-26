@@ -53,11 +53,11 @@ class SavedSearchRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
-    public function getOneOwnedBy(int $id, int $userId): SavedSearch
+    public function getOneForUser(int $userId, int $savedSearchId): SavedSearch
     {
         /** @var SavedSearch|null $row */
         $row = $this->createQueryBuilder('savedSearch')
-            ->andWhere('savedSearch.id = :id')->setParameter('id', $id)
+            ->andWhere('savedSearch.id = :id')->setParameter('id', $savedSearchId)
             ->andWhere('savedSearch.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();

@@ -28,7 +28,7 @@ final readonly class EntryCommentsController
     #[Route('/{id}/comments', name: 'api_entries_comments', methods: ['GET'], requirements: ['id' => '\d+'])]
     public function comments(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $entry = $this->entryList->getOneSubscribedByUser($id, $user->requireId());
+        $entry = $this->entryList->getOneSubscribedForUser($user->requireId(), $id);
 
         $this->rateLimitGuard->enforceForUser($this->commentsLimiter, $user);
 

@@ -61,7 +61,7 @@ final readonly class FeedTagMove
             return null;
         }
 
-        return $this->tags->findOneOwnedBy($tagId, $userId)
+        return $this->tags->findOneForUser($userId, $tagId)
             ?? throw new InvalidSelectionException('The tag must be one of yours.');
     }
 

@@ -145,7 +145,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      *
      * @return list<EntryListRow>
      */
-    public function rowsByIdsForUser(array $entryIds, int $userId, ?int $limit = null): array
+    public function rowsByIdsForUser(int $userId, array $entryIds, ?int $limit = null): array
     {
         if ($entryIds === []) {
             return [];
@@ -173,7 +173,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      * IDOR gate as the list. Lets a deep link open an entry the current list
      * page does not contain.
      */
-    public function getOneRowForUser(int $entryId, int $userId): EntryListRow
+    public function getRowForUser(int $userId, int $entryId): EntryListRow
     {
         /** @var array<array-key, mixed>|null $row */
         $row = $this->rowQueryBuilder($userId)
@@ -196,7 +196,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      *
      * @return list<EntryListRow>
      */
-    public function siblingRowsForUser(string $urlHash, int $excludeEntryId, int $userId): array
+    public function siblingRowsForUser(int $userId, string $urlHash, int $excludeEntryId): array
     {
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $this->rowQueryBuilder($userId)
@@ -215,7 +215,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      * per-entry state writes. Returns a managed Entry (or null → 404).
      */
     #[WithSpan]
-    public function findOneSubscribedByUser(int $entryId, int $userId): ?Entry
+    public function findOneSubscribedForUser(int $userId, int $entryId): ?Entry
     {
         /** @var Entry|null $entry */
         $entry = $this->createQueryBuilder('e')
@@ -229,9 +229,9 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         return $entry;
     }
 
-    public function getOneSubscribedByUser(int $entryId, int $userId): Entry
+    public function getOneSubscribedForUser(int $userId, int $entryId): Entry
     {
-        return $this->findOneSubscribedByUser($entryId, $userId)
+        return $this->findOneSubscribedForUser($userId, $entryId)
             ?? throw new RecordNotFoundException('No such entry.');
     }
 

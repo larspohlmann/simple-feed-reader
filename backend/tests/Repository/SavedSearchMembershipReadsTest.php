@@ -261,13 +261,30 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         }
         $this->hide($readInWindow);
 
-        $ids = $this->repo()->unreadMemberIdsSince(
-            $climate->requireId(),
+        $ids = $this->repo()->unreadMemberIdsForUserSince(
             $this->user->requireId(),
+            $climate->requireId(),
             new \DateTimeImmutable('2026-07-08T00:00:00Z'),
         );
 
         self::assertSame([$newest->getId(), $inWindow->getId()], $ids);
+    }
+
+    public function testFindsTheReadersMatchesWhenReaderAndSearchIdsDiffer(): void
+    {
+        $this->search('decoy');
+        $climate = $this->search('climate');
+        $entry = $this->entry('z', '2026-07-10T00:00:00Z');
+        $this->member($climate, $entry);
+        self::assertNotSame($this->user->requireId(), $climate->requireId(), 'Equal ids would hide a swap.');
+
+        $ids = $this->repo()->unreadMemberIdsForUserSince(
+            $this->user->requireId(),
+            $climate->requireId(),
+            new \DateTimeImmutable('2026-07-08T00:00:00Z'),
+        );
+
+        self::assertSame([$entry->getId()], $ids);
     }
 
     /** @param list<SavedSearch> $searches */

@@ -27,7 +27,7 @@ final readonly class UserRefreshScope
         }
 
         if (null !== $tagId) {
-            $tag = $this->tags->getOneOwnedBy($tagId, $userId);
+            $tag = $this->tags->getOneForUser($userId, $tagId);
 
             return RefreshRequest::forUserTag($userId, $tag->requireId(), self::BUDGET_SECONDS);
         }

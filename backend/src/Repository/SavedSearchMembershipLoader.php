@@ -26,7 +26,7 @@ final readonly class SavedSearchMembershipLoader
             return [];
         }
 
-        $byEntryId = $this->memberships->savedSearchesByEntry($this->entryIdsOf($rows), $userId);
+        $byEntryId = $this->memberships->savedSearchesByEntry($userId, $this->entryIdsOf($rows));
 
         return array_map(
             fn (EntryListRow $row): EntryListRow => $this->enrich($row, $byEntryId),

@@ -40,7 +40,7 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         $older = $this->savedSearchWithMember($user, 'climate', $entry);
         $newer = $this->savedSearchWithMember($user, 'rocket', $entry);
 
-        $byEntry = $this->repository()->savedSearchesByEntry([$entry->requireId()], $user->requireId());
+        $byEntry = $this->repository()->savedSearchesByEntry($user->requireId(), [$entry->requireId()]);
 
         $pills = $byEntry[$entry->requireId()];
         self::assertSame([$newer->requireId(), $older->requireId()], array_column($pills, 'id'));
@@ -55,7 +55,7 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         $entry = $this->entry($this->feed());
         $this->savedSearchWithMember($stranger, 'climate', $entry);
 
-        $byEntry = $this->repository()->savedSearchesByEntry([$entry->requireId()], $owner->requireId());
+        $byEntry = $this->repository()->savedSearchesByEntry($owner->requireId(), [$entry->requireId()]);
 
         self::assertSame([], $byEntry);
     }

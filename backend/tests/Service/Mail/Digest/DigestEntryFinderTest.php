@@ -16,6 +16,7 @@ use App\Repository\EntryListRow;
 use App\Repository\SavedSearchEntryRepository;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SavedSearchMatchFixture;
 
 /**
  * DigestEntryFinder caps a saved search's unread-since matches for the digest
@@ -70,6 +71,26 @@ final class DigestEntryFinderTest extends DbTestCase
 
         self::assertSame([], $matches->entries);
         self::assertSame(0, $matches->totalCount);
+    }
+
+    public function testTheDigestWindowHoldsWhenTheUserAndSearchIdsDiffer(): void
+    {
+        $searches = new SavedSearchMatchFixture($this->em);
+        $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($stranger);
+        $reader = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->em->persist($reader);
+        $this->em->flush();
+        $searches->search($stranger, 'throwaway-one');
+        $searches->search($stranger, 'throwaway-two');
+        $readersSearch = $searches->search($reader, 'klima');
+        $readersEntry = $searches->member($reader, $readersSearch, new \DateTimeImmutable('2026-07-20T00:00:00Z'));
+        self::assertNotSame($reader->requireId(), $readersSearch->requireId(), 'Equal ids would hide a swap.');
+
+        $matches = $this->finder()->matchesSince($readersSearch, $reader->requireId(), $this->since);
+
+        self::assertSame(1, $matches->totalCount);
+        self::assertSame([$readersEntry->getId()], $this->ids($matches->entries));
     }
 
     private function member(string $effectiveDate): Entry

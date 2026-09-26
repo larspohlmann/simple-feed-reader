@@ -37,7 +37,7 @@ final class TracedServiceMethodsTest extends TestCase
         yield 'entries list' => [EntryListRepository::class, 'listForUser'];
         yield 'entries list, for-you feed' => [ForYouFeed::class, 'page'];
         yield 'entries list, for-you pager' => [RecommendationFeedPager::class, 'page'];
-        yield 'reader, ownership lookup' => [EntryListRepository::class, 'findOneSubscribedByUser'];
+        yield 'reader, ownership lookup' => [EntryListRepository::class, 'findOneSubscribedForUser'];
         yield 'reader, extraction' => [ArticleExtractor::class, 'extract'];
         yield 'reader, fetch' => [HtmlPageFetcher::class, 'fetch'];
         yield 'reader, normalise' => [FetchedPageNormalizer::class, 'normalize'];

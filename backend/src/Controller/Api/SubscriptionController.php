@@ -65,7 +65,7 @@ final readonly class SubscriptionController
     #[Route('', name: 'api_subscriptions_create', methods: ['POST'])]
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
-        $tags = $this->tags->findAllByIdsForUser($request->tagIds, $user->requireId());
+        $tags = $this->tags->findAllByIdsForUser($user->requireId(), $request->tagIds);
         $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {
@@ -86,7 +86,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSubscriptionRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
+        $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
 
         $this->editor->update($sub, $request);
 
@@ -104,7 +104,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MoveFeedToTagRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
+        $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
 
         $this->editor->moveToTag($sub, $request);
 
@@ -162,7 +162,7 @@ final readonly class SubscriptionController
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $subscription = $this->subscriptionRepo->getOneOwnedBy($id, $user->requireId());
+        $subscription = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
 
         $this->subscriptions->unsubscribe($subscription);
 

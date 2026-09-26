@@ -77,7 +77,7 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] TagFeedOrderRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
+        $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
         $this->ordering->orderFeeds($tag, $request);
 
@@ -90,7 +90,7 @@ final readonly class TagController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateTagRequest $request,
     ): JsonResponse {
-        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
+        $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
         $this->editor->update($tag, $request);
 
@@ -100,7 +100,7 @@ final readonly class TagController
     #[Route('/{id}', name: 'api_tags_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $tag = $this->tags->getOneOwnedBy($id, $user->requireId());
+        $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
         $this->editor->delete($tag);
 

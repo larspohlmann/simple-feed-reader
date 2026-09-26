@@ -72,7 +72,7 @@ final class EntryRowsByIdsTest extends DbTestCase
      */
     private function rowsByIds(array $ids): array
     {
-        $rows = $this->repo()->rowsByIdsForUser($ids, $this->user->requireId());
+        $rows = $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids);
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
     }
@@ -113,11 +113,11 @@ final class EntryRowsByIdsTest extends DbTestCase
             ['newest', 'middle'],
             array_map(
                 static fn ($row) => $row->entry->getGuid(),
-                $this->repo()->rowsByIdsForUser($ids, $this->user->requireId(), 2),
+                $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids, 2),
             ),
         );
         // No limit hydrates every given id.
-        self::assertCount(3, $this->repo()->rowsByIdsForUser($ids, $this->user->requireId()));
+        self::assertCount(3, $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids));
     }
 
     public function testDropsAnIdInAFeedTheUserDoesNotSubscribeTo(): void
@@ -147,7 +147,7 @@ final class EntryRowsByIdsTest extends DbTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        self::assertSame([], $this->repo()->rowsByIdsForUser([], $this->user->requireId()));
+        self::assertSame([], $this->repo()->rowsByIdsForUser($this->user->requireId(), []));
         self::assertSame([], $recorder->queries());
     }
 }

@@ -50,7 +50,7 @@ final readonly class ReaderAuditRepository
      *
      * @return list<array<string, mixed>>
      */
-    public function detailRows(array $entryIds, int $userId): array
+    public function detailRows(int $userId, array $entryIds): array
     {
         return $this->connection->fetchAllAssociative(
             'SELECT e.id, e.title, e.url, e.author, e.image_url, f.id AS feed_id,

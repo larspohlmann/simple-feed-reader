@@ -45,22 +45,22 @@ final class AiProviderSettingsRepositoryTest extends DbTestCase
         );
     }
 
-    public function testFindOwnedByIdReturnsARowTheUserOwns(): void
+    public function testFindOneForUserReturnsARowTheUserOwns(): void
     {
         $ownedId = $this->firstConfiguration->getId();
         self::assertNotNull($ownedId);
 
-        $found = $this->repository()->findOwnedById($this->first, $ownedId);
+        $found = $this->repository()->findOneForUser($this->first, $ownedId);
 
         self::assertSame($this->firstConfiguration, $found);
     }
 
-    public function testFindOwnedByIdReturnsNullForAnotherAccountsRow(): void
+    public function testFindOneForUserReturnsNullForAnotherAccountsRow(): void
     {
         $strangerId = $this->secondConfiguration->getId();
         self::assertNotNull($strangerId);
 
-        $found = $this->repository()->findOwnedById($this->second, $strangerId);
+        $found = $this->repository()->findOneForUser($this->second, $strangerId);
 
         self::assertNull($found);
     }

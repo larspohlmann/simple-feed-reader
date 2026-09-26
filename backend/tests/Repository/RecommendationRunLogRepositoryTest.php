@@ -149,7 +149,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         self::assertSame(1, $this->logs->countAttempts($currentRun, RecommendationRunLog::PHASE_BATCH, 1));
     }
 
-    public function testGetOwnedReturnsTheCallersRow(): void
+    public function testGetOneForUserReturnsTheCallersRow(): void
     {
         $mine = $this->fixtures->log(
             $this->fixtures->createRun($this->user),
@@ -162,10 +162,10 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $mineId = $mine->getId();
         self::assertNotNull($mineId);
 
-        self::assertSame($mine, $this->logs->getOwned($mineId, $this->user));
+        self::assertSame($mine, $this->logs->getOneForUser($this->user, $mineId));
     }
 
-    public function testGetOwnedRefusesAnotherUsersRow(): void
+    public function testGetOneForUserRefusesAnotherUsersRow(): void
     {
         $theirs = $this->fixtures->log(
             $this->fixtures->createRun($this->otherUser),
@@ -181,7 +181,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such debug log entry.');
 
-        $this->logs->getOwned($theirsId, $this->user);
+        $this->logs->getOneForUser($this->user, $theirsId);
     }
 
     public function testDeleteForUserLeavesOtherUsersRows(): void

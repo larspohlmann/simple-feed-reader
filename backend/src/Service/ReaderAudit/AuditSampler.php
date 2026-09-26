@@ -90,7 +90,7 @@ final readonly class AuditSampler
     private function detailsOf(array $entryIds, int $userId): array
     {
         $byId = [];
-        foreach ($this->audit->detailRows($entryIds, $userId) as $row) {
+        foreach ($this->audit->detailRows($userId, $entryIds) as $row) {
             $entryId = DatabaseValue::int($row['id']);
             $byId[$entryId] = new SampledEntry(
                 entryId: $entryId,

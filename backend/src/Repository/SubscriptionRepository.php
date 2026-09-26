@@ -69,19 +69,19 @@ class SubscriptionRepository extends ServiceEntityRepository
      * The user's subscriptions matching the given ids. Fewer results than ids
      * means one or more ids were invalid or belonged to another user.
      *
-     * @param list<int> $ids
+     * @param list<int> $subscriptionIds
      *
      * @return list<Subscription>
      */
-    public function findAllByIdsForUser(array $ids, int $userId): array
+    public function findAllByIdsForUser(int $userId, array $subscriptionIds): array
     {
-        if ([] === $ids) {
+        if ([] === $subscriptionIds) {
             return [];
         }
 
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
-            ->andWhere('s.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('s.id IN (:ids)')->setParameter('ids', $subscriptionIds)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getResult();
@@ -90,23 +90,17 @@ class SubscriptionRepository extends ServiceEntityRepository
     }
 
     /**
-     * The user's subscriptions matching the given ids, with their feed and tags
-     * eager-loaded (no N+1) — for a caller that will serialize the result, same
-     * as findForUserWithTags(). Fewer results than ids means one or more ids
-     * were invalid or belonged to another user, same as findAllByIdsForUser().
+     * Same as findAllByIdsForUser(), with the feed and tags eager-loaded for a
+     * caller that serializes the result. reorder() and bulkUnsubscribe() skip
+     * these joins because they only write through the ids, never serialize.
      *
-     * A separate method rather than adding the joins to findAllByIdsForUser():
-     * reorder() and bulkUnsubscribe() resolve the same ids only to write
-     * through them, never to serialize, so the extra joins would cost them a
-     * heavier query for nothing.
-     *
-     * @param list<int> $ids
+     * @param list<int> $subscriptionIds
      *
      * @return list<Subscription>
      */
-    public function findAllByIdsForUserWithAssociations(array $ids, int $userId): array
+    public function findAllByIdsForUserWithAssociations(int $userId, array $subscriptionIds): array
     {
-        if ([] === $ids) {
+        if ([] === $subscriptionIds) {
             return [];
         }
 
@@ -115,7 +109,7 @@ class SubscriptionRepository extends ServiceEntityRepository
             ->leftJoin('s.feed', 'f')->addSelect('f')
             ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
             ->leftJoin('st.tag', 't')->addSelect('t')
-            ->andWhere('s.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('s.id IN (:ids)')->setParameter('ids', $subscriptionIds)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getResult();
@@ -138,14 +132,14 @@ class SubscriptionRepository extends ServiceEntityRepository
         return null === $max ? 0 : (int) $max + 1;
     }
 
-    public function getOneOwnedBy(int $id, int $userId): Subscription
+    public function getOneForUser(int $userId, int $subscriptionId): Subscription
     {
         /** @var Subscription|null $row */
         $row = $this->createQueryBuilder('s')
             ->leftJoin('s.feed', 'f')->addSelect('f')
             ->leftJoin('s.subscriptionTags', 'st')->addSelect('st')
             ->leftJoin('st.tag', 't')->addSelect('t')
-            ->andWhere('s.id = :id')->setParameter('id', $id)
+            ->andWhere('s.id = :id')->setParameter('id', $subscriptionId)
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();

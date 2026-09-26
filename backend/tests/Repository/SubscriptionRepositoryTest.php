@@ -15,18 +15,18 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class SubscriptionRepositoryTest extends DbTestCase
 {
-    public function testGetOneOwnedByReturnsTheOwnersSubscription(): void
+    public function testGetOneForUserReturnsTheOwnersSubscription(): void
     {
         $owner = $this->userFactory()->create('subscription-owner@example.com');
         $subscription = $this->subscription($owner);
 
         self::assertSame(
             $subscription,
-            $this->repo()->getOneOwnedBy($subscription->requireId(), $owner->requireId()),
+            $this->repo()->getOneForUser($owner->requireId(), $subscription->requireId()),
         );
     }
 
-    public function testGetOneOwnedByRefusesAnotherUsersSubscription(): void
+    public function testGetOneForUserRefusesAnotherUsersSubscription(): void
     {
         $subscription = $this->subscription($this->userFactory()->create('subscription-owner@example.com'));
         $stranger = $this->userFactory()->create('subscription-stranger@example.com');
@@ -34,7 +34,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such subscription.');
 
-        $this->repo()->getOneOwnedBy($subscription->requireId(), $stranger->requireId());
+        $this->repo()->getOneForUser($stranger->requireId(), $subscription->requireId());
     }
 
     private function repo(): SubscriptionRepository

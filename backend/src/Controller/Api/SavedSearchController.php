@@ -65,7 +65,7 @@ final readonly class SavedSearchController
         #[MapRequestPayload] UpdateSavedSearchRequest $request,
     ): JsonResponse {
         $userId = $user->requireId();
-        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $userId);
+        $savedSearch = $this->savedSearches->getOneForUser($userId, $id);
 
         $this->editor->changeDigestInclusion($savedSearch, $request);
 
@@ -77,7 +77,7 @@ final readonly class SavedSearchController
     #[Route('/{id}', name: 'api_saved_searches_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $savedSearch = $this->savedSearches->getOneOwnedBy($id, $user->requireId());
+        $savedSearch = $this->savedSearches->getOneForUser($user->requireId(), $id);
 
         $this->editor->delete($savedSearch);
 

@@ -24,19 +24,19 @@ class TagRepository extends ServiceEntityRepository
      * The user's tags matching the given ids. Fewer results than ids means one
      * or more ids were invalid or belonged to another user.
      *
-     * @param list<int> $ids
+     * @param list<int> $tagIds
      *
      * @return list<Tag>
      */
-    public function findAllByIdsForUser(array $ids, int $userId): array
+    public function findAllByIdsForUser(int $userId, array $tagIds): array
     {
-        if ([] === $ids) {
+        if ([] === $tagIds) {
             return [];
         }
 
         /** @var list<Tag> $rows */
         $rows = $this->createQueryBuilder('t')
-            ->andWhere('t.id IN (:ids)')->setParameter('ids', $ids)
+            ->andWhere('t.id IN (:ids)')->setParameter('ids', $tagIds)
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getResult();
@@ -96,11 +96,11 @@ class TagRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult() > 0;
     }
 
-    public function findOneOwnedBy(int $id, int $userId): ?Tag
+    public function findOneForUser(int $userId, int $tagId): ?Tag
     {
         /** @var Tag|null $row */
         $row = $this->createQueryBuilder('t')
-            ->andWhere('t.id = :id')->setParameter('id', $id)
+            ->andWhere('t.id = :id')->setParameter('id', $tagId)
             ->andWhere('t.user = :userId')->setParameter('userId', $userId)
             ->getQuery()
             ->getOneOrNullResult();
@@ -108,9 +108,9 @@ class TagRepository extends ServiceEntityRepository
         return $row;
     }
 
-    public function getOneOwnedBy(int $id, int $userId): Tag
+    public function getOneForUser(int $userId, int $tagId): Tag
     {
-        return $this->findOneOwnedBy($id, $userId) ?? throw new RecordNotFoundException('No such tag.');
+        return $this->findOneForUser($userId, $tagId) ?? throw new RecordNotFoundException('No such tag.');
     }
 
     /**

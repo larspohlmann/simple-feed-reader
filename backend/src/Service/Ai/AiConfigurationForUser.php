@@ -29,7 +29,7 @@ final readonly class AiConfigurationForUser
      */
     public function require(User $user, int $id): AiProviderSettings
     {
-        return $this->repository->findOwnedById($user, $id)
+        return $this->repository->findOneForUser($user, $id)
             ?? throw new ConfigurationNotFoundException(sprintf('No AI configuration %d for this account.', $id));
     }
 }

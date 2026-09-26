@@ -93,7 +93,7 @@ final readonly class MarkReadService
             throw new ValidationException(['id' => ['An id is required when scope is "feed".']]);
         }
 
-        return $this->subscriptions->getOneOwnedBy($id, $userId);
+        return $this->subscriptions->getOneForUser($userId, $id);
     }
 
     private function requireTag(?int $id, int $userId): int
@@ -102,6 +102,6 @@ final readonly class MarkReadService
             throw new ValidationException(['id' => ['An id is required when scope is "tag".']]);
         }
 
-        return $this->tags->getOneOwnedBy($id, $userId)->requireId();
+        return $this->tags->getOneForUser($userId, $id)->requireId();
     }
 }
