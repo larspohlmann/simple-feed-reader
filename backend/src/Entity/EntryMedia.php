@@ -57,13 +57,17 @@ class EntryMedia
     /** @return list<EntryMedium> */
     public function getMedia(): array
     {
-        return array_map(EntryMedium::fromArray(...), $this->media ?? []);
+        $complete = array_filter($this->media ?? [], EntryMedium::isComplete(...));
+
+        return array_values(array_map(EntryMedium::fromStored(...), $complete));
     }
 
     /** @return list<EntryAttachment> */
     public function getAttachments(): array
     {
-        return array_map(EntryAttachment::fromArray(...), $this->attachments ?? []);
+        $complete = array_filter($this->attachments ?? [], EntryAttachment::isComplete(...));
+
+        return array_values(array_map(EntryAttachment::fromStored(...), $complete));
     }
 
     /**

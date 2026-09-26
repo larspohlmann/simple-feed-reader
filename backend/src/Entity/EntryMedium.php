@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Exception\IncompleteStoredMediaException;
+
 /**
  * One visual media item stored on an entry: an image or a video, with whatever
  * dimensions and poster the feed declared. `kind` is the string the API emits
@@ -21,18 +23,27 @@ final readonly class EntryMedium implements \JsonSerializable
     ) {
     }
 
-    /** @param array<string, mixed> $data */
-    public static function fromArray(array $data): self
+    /** @param array<string, mixed> $stored */
+    public static function isComplete(array $stored): bool
     {
-        $url = $data['url'] ?? null;
-        $kind = $data['kind'] ?? null;
-        $width = $data['width'] ?? null;
-        $height = $data['height'] ?? null;
-        $previewImageUrl = $data['previewImageUrl'] ?? null;
+        return \is_string($stored['url'] ?? null) && \is_string($stored['kind'] ?? null);
+    }
+
+    /** @param array<string, mixed> $stored */
+    public static function fromStored(array $stored): self
+    {
+        $url = $stored['url'] ?? null;
+        $kind = $stored['kind'] ?? null;
+        if (!\is_string($url) || !\is_string($kind)) {
+            throw new IncompleteStoredMediaException('A stored medium needs a url and a kind.');
+        }
+        $width = $stored['width'] ?? null;
+        $height = $stored['height'] ?? null;
+        $previewImageUrl = $stored['previewImageUrl'] ?? null;
 
         return new self(
-            \is_string($url) ? $url : '',
-            \is_string($kind) ? $kind : '',
+            $url,
+            $kind,
             \is_int($width) ? $width : null,
             \is_int($height) ? $height : null,
             \is_string($previewImageUrl) ? $previewImageUrl : null,

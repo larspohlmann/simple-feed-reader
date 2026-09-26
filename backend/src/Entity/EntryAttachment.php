@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Entity\Exception\IncompleteStoredMediaException;
+
 /**
  * One playable or downloadable enclosure stored on an entry — a podcast audio
  * file, a video, or another file. Everything but the URL is what the feed
@@ -20,17 +22,26 @@ final readonly class EntryAttachment implements \JsonSerializable
     ) {
     }
 
-    /** @param array<string, mixed> $data */
-    public static function fromArray(array $data): self
+    /** @param array<string, mixed> $stored */
+    public static function isComplete(array $stored): bool
     {
-        $url = $data['url'] ?? null;
-        $mimeType = $data['mimeType'] ?? null;
-        $durationInSeconds = $data['durationInSeconds'] ?? null;
-        $sizeInBytes = $data['sizeInBytes'] ?? null;
-        $title = $data['title'] ?? null;
+        return \is_string($stored['url'] ?? null);
+    }
+
+    /** @param array<string, mixed> $stored */
+    public static function fromStored(array $stored): self
+    {
+        $url = $stored['url'] ?? null;
+        if (!\is_string($url)) {
+            throw new IncompleteStoredMediaException('A stored attachment needs a url.');
+        }
+        $mimeType = $stored['mimeType'] ?? null;
+        $durationInSeconds = $stored['durationInSeconds'] ?? null;
+        $sizeInBytes = $stored['sizeInBytes'] ?? null;
+        $title = $stored['title'] ?? null;
 
         return new self(
-            \is_string($url) ? $url : '',
+            $url,
             \is_string($mimeType) ? $mimeType : null,
             \is_int($durationInSeconds) ? $durationInSeconds : null,
             \is_int($sizeInBytes) ? $sizeInBytes : null,
