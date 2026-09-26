@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
+use App\Dto\OAuth\OAuthCallbackAttempt;
 use App\Dto\OAuth\OAuthExchangeRequest;
-use App\Service\OAuth\Exception\InvalidOAuthStateException;
-use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\CallbackParameters;
+use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
 use App\Service\OAuth\FlowCookie;
+use App\Service\OAuth\OAuthCallback;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
 use App\Service\RateLimit\RateLimitGuard;
 use Psr\Cache\InvalidArgumentException;
-use Psr\Log\LoggerInterface;
 use Random\RandomException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -73,7 +73,7 @@ final class OAuthController
         private readonly OAuthProviderRegistry $providers,
         private readonly OAuthStateStore $stateStore,
         private readonly OAuthSignIn $signIn,
-        private readonly LoggerInterface $logger,
+        private readonly OAuthCallback $callback,
         private readonly RateLimitGuard $rateLimitGuard,
         private readonly RateLimiterFactoryInterface $oauthStartLimiter,
         private readonly FlowCookie $flowCookie,
@@ -130,13 +130,11 @@ final class OAuthController
     }
 
     /**
-     * Step 2: the provider sends the browser back. GET (Google, query string) and
-     * POST (Apple, form body — requesting a scope makes Apple require
-     * `response_mode=form_post`). Every failure leaves as a redirect to the SPA
-     * with an error code, never problem+json: the caller is a browser following a
-     * redirect chain, and a JSON body would strand it showing raw JSON.
+     * Step 2: the provider sends the browser back, by GET (Google) or by POST (Apple's form_post). Every failure
+     * is a redirect to the SPA with an error code, never problem+json: a browser mid-redirect would show raw JSON.
      *
      * @throws InvalidArgumentException
+     * @throws RandomException
      */
     #[Route(
         '/{provider}/callback',
@@ -146,59 +144,21 @@ final class OAuthController
     )]
     public function callback(string $provider, Request $request): RedirectResponse
     {
-        // Apple and Google both report a declined consent screen this way. It
-        // is the single most common non-success outcome and is not an error.
-        if (null !== CallbackParameters::read($request, 'error')) {
-            return $this->oauthRedirect->failure('access_denied');
-        }
-
-        $state = CallbackParameters::read($request, 'state');
-        $code = CallbackParameters::read($request, 'code');
-
-        if (null === $state || null === $code) {
-            return $this->oauthRedirect->failure('invalid_request');
-        }
-
-        // Read straight off the request; null when the browser sent none, which
-        // the store treats as a failed binding, not a reason to skip the check.
         $cookie = $request->cookies->get(self::FLOW_COOKIE);
-        $browserToken = \is_string($cookie) ? $cookie : null;
-        try {
-            $started = $this->stateStore->consume($state, $browserToken);
-        } catch (InvalidOAuthStateException) {
-            return $this->oauthRedirect->failure('invalid_state');
-        }
-
-        // A state replayed at another provider's callback is refused like a forged one.
-        if ($started->provider !== $provider) {
-            return $this->oauthRedirect->failure('invalid_state');
-        }
+        $attempt = new OAuthCallbackAttempt(
+            provider: $provider,
+            declined: null !== CallbackParameters::read($request, 'error'),
+            state: CallbackParameters::read($request, 'state'),
+            code: CallbackParameters::read($request, 'code'),
+            browserToken: \is_string($cookie) ? $cookie : null,
+        );
 
         try {
-            $identity = $this->providers->get($provider)
-                ->exchangeCode($code, $started->codeVerifier, $started->nonce);
-        } catch (OAuthFailedException $e) {
-            // The detail is for us. The user gets a code they can quote.
-            $this->logger->warning('OAuth exchange failed', [
-                'provider' => $provider,
-                'detail' => $e->logDetail,
-                'exception' => $e->getPrevious(),
-            ]);
-
-            return $this->oauthRedirect->failure('exchange_failed');
+            // The success redirect leaves the flow cookie set: the exchange one hop later needs the binding.
+            return $this->oauthRedirect->success($this->callback->complete($attempt));
+        } catch (OAuthCallbackRefusedException $refusal) {
+            return $this->oauthRedirect->failure($refusal->failure->value);
         }
-
-        // consume() refuses a null token, so reaching here proves the cookie was
-        // present and matched. Restated for the type checker.
-        \assert(null !== $browserToken);
-
-        // NOT cleared here, unlike every failure exit: the code minted below is
-        // bound to this value and the exchange needs it one hop later; clearing
-        // now would make every sign-in fail like a bad code. exchange() clears it.
-        // A suspended or pending user reaches here too and leaves with a working
-        // code — see OAuthSignIn::issueLoginCode() for why the status gate sits at
-        // the exchange.
-        return $this->oauthRedirect->success($this->signIn->issueLoginCode($identity, $browserToken));
     }
 
     /**
