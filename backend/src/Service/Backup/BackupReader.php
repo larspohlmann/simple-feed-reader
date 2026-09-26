@@ -29,28 +29,6 @@ final readonly class BackupReader
     public const int MAX_ENTRIES_PER_PART = 5000;
     public const int MAX_INFLATED_BYTES = 67_108_864;
 
-    private const array KIND_RANK = [
-        BackupSchema::KIND_HEADER => 0,
-        BackupSchema::KIND_ACCOUNT => 1,
-        BackupSchema::KIND_TAG => 2,
-        BackupSchema::KIND_SAVED_SEARCH => 3,
-        BackupSchema::KIND_FEED => 4,
-        BackupSchema::KIND_SUBSCRIPTION => 5,
-        BackupSchema::KIND_ENTRY => 6,
-        BackupSchema::KIND_ENTRY_STATE => 7,
-        BackupSchema::KIND_FOOTER => 8,
-    ];
-
-    /**
-     * Kinds that may appear at most once; every other known kind may repeat
-     * any number of times (including zero) while its rank holds.
-     */
-    private const array SINGLETON_KINDS = [
-        BackupSchema::KIND_HEADER,
-        BackupSchema::KIND_ACCOUNT,
-        BackupSchema::KIND_FOOTER,
-    ];
-
     private const array COUNTED_KINDS = [
         BackupSchema::KIND_TAG,
         BackupSchema::KIND_SAVED_SEARCH,
@@ -71,7 +49,7 @@ final readonly class BackupReader
     public function read(string $gzipBytes): \Generator
     {
         $lineNumber = 0;
-        $currentRank = -1;
+        $order = BackupLineOrder::beforeTheFirstLine();
         $counts = array_fill_keys(self::COUNTED_KINDS, 0);
         $accountSeen = false;
         $footerSeen = false;
@@ -96,11 +74,11 @@ final readonly class BackupReader
             $decoded = $this->decodeLine($line, $lineNumber);
             $kind = LineField::string($decoded, 'kind');
 
-            $currentRank = $this->assertOrdered($kind, -1 === $currentRank, $currentRank, $lineNumber);
+            $order = $order->admit($kind, $lineNumber);
 
             if (BackupSchema::KIND_HEADER === $kind) {
                 $this->assertKnownSchemaVersion($decoded);
-                $header = $this->assertCoherentHeader(BackupHeader::fromLine($decoded));
+                $header = BackupHeader::fromLine($decoded)->requireCoherent();
                 $guard = new BackupPartGuard($header);
                 yield $header;
                 continue;
@@ -148,7 +126,7 @@ final readonly class BackupReader
 
     /**
      * The grammar guarantees a header precedes every other line, so a null
-     * guard here means assertOrdered failed to do its job.
+     * guard here means BackupLineOrder failed to do its job.
      */
     private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
     {
@@ -168,40 +146,6 @@ final readonly class BackupReader
         if (!$accountSeen) {
             throw new InvalidBackupException('The backup is missing its account line.');
         }
-    }
-
-    private function assertCoherentHeader(BackupHeader $header): BackupHeader
-    {
-        if ($header->part < 0) {
-            throw new InvalidBackupException(sprintf('Header part %d is negative.', $header->part));
-        }
-
-        if ($header->isFoundation()) {
-            return $this->assertFoundationDeclaresPartsAndTotals($header);
-        }
-
-        return $this->assertEntryPartDeclaresNeither($header);
-    }
-
-    private function assertFoundationDeclaresPartsAndTotals(BackupHeader $header): BackupHeader
-    {
-        if (null === $header->parts || $header->parts < 1 || null === $header->totals) {
-            throw new InvalidBackupException('The foundation must declare its parts count and totals.');
-        }
-
-        return $header;
-    }
-
-    private function assertEntryPartDeclaresNeither(BackupHeader $header): BackupHeader
-    {
-        if (null !== $header->parts || null !== $header->totals) {
-            throw new InvalidBackupException(sprintf(
-                'Entry part %d must not declare parts or totals.',
-                $header->part,
-            ));
-        }
-
-        return $header;
     }
 
     /**
@@ -232,37 +176,6 @@ final readonly class BackupReader
     }
 
     /**
-     * Enforces the file grammar: the first line must be a header, kind ranks
-     * never move backwards, and a singleton kind (header/account/footer)
-     * cannot repeat.
-     */
-    private function assertOrdered(string $kind, bool $isFirstLine, int $currentRank, int $lineNumber): int
-    {
-        $newRank = self::KIND_RANK[$kind] ?? null;
-        if (null === $newRank) {
-            throw new InvalidBackupException(sprintf('Line %d has an unknown kind "%s".', $lineNumber, $kind));
-        }
-
-        if ($isFirstLine) {
-            if (BackupSchema::KIND_HEADER !== $kind) {
-                throw new InvalidBackupException('The first line must be a header.');
-            }
-
-            return $newRank;
-        }
-
-        if ($newRank < $currentRank) {
-            throw new InvalidBackupException(sprintf('Line %d is out of order.', $lineNumber));
-        }
-
-        if ($newRank === $currentRank && \in_array($kind, self::SINGLETON_KINDS, true)) {
-            throw new InvalidBackupException(sprintf('Line %d repeats the singleton kind "%s".', $lineNumber, $kind));
-        }
-
-        return $newRank;
-    }
-
-    /**
      * @param array<string, mixed> $decoded
      */
     private function toDto(string $kind, array $decoded): object
@@ -275,9 +188,9 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: read() handles header/footer, and assertOrdered
+            // Unreachable: read() handles header/footer, and BackupLineOrder
             // refuses any other kind. Stays only for match exhaustiveness.
-            default => throw new \LogicException(sprintf('assertOrdered accepted unknown kind "%s".', $kind)),
+            default => throw new \LogicException(sprintf('BackupLineOrder admitted unknown kind "%s".', $kind)),
         };
     }
 
