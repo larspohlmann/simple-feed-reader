@@ -37,6 +37,7 @@ use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
 use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\AttestationRejectedException;
@@ -192,6 +193,10 @@ final class ProblemContractTest extends KernelTestCase
                     . 'Resend the request with invalidateExistingPasskeys set to confirm.',
                 'invalidatedPasskeyCount' => 3,
             ],
+        ];
+        yield 'test digest unavailable, message withheld' => [
+            new TestDigestUnavailableException(),
+            ['type' => 'forbidden', 'title' => 'Forbidden', 'status' => 403],
         ];
         yield 'incomplete mail configuration' => [
             IncompleteMailConfigurationException::passwordMissing(),
