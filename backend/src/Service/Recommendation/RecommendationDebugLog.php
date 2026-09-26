@@ -21,6 +21,7 @@ final readonly class RecommendationDebugLog
     public function __construct(
         public array $rows,
         public array $streamingTextById,
+        /** @noinspection AutowireWrongClass Built with new, never autowired */
         public ?RecommendationRun $selectedRun,
         public array $retainedRuns,
     ) {
