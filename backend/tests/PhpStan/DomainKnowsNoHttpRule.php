@@ -83,12 +83,20 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     /** @return list<array{string, int}> every class name mentioned, in code or in a string, with its line */
     private function references(Namespace_ $namespace): array
     {
+        $nodes = $this->finder->find(
+            $namespace->stmts,
+            static fn (Node $node): bool => $node instanceof Name || $node instanceof String_,
+        );
+
         $references = [];
-        foreach ($this->finder->findInstanceOf($namespace->stmts, Name::class) as $name) {
-            $references[] = [$name->toString(), $name->getStartLine()];
-        }
-        foreach ($this->finder->findInstanceOf($namespace->stmts, String_::class) as $string) {
-            $references[] = [ltrim($string->value, '\\'), $string->getStartLine()];
+        foreach ($nodes as $node) {
+            if ($node instanceof Name) {
+                $references[] = [$node->toString(), $node->getStartLine()];
+                continue;
+            }
+            if ($node instanceof String_) {
+                $references[] = [ltrim($node->value, '\\'), $node->getStartLine()];
+            }
         }
 
         return $references;

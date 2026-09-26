@@ -8,7 +8,10 @@ use App\Entity\AiProviderSettings;
 
 final readonly class AiReadiness
 {
-    /** No verifiedAt term: chooseModel() is the only writer of `model` and stamps verifiedAt in the same call. */
+    /**
+     * No verifiedAt check: chooseModel() is the model's only writer and stamps
+     * verifiedAt; replaceConnection() clears the model.
+     */
     public static function of(?AiProviderSettings $settings): bool
     {
         return null !== $settings && $settings->hasModel();

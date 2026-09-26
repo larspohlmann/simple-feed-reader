@@ -55,6 +55,15 @@ final class RateLimitGuardTest extends TestCase
         }
     }
 
+    public function testEnforceForClientPassesANullIpThroughAsTheKey(): void
+    {
+        $factory = $this->factoryReturning($this->accepted());
+
+        $this->guard()->enforceForClient($factory, null);
+
+        $this->assertNull($factory->capturedKey);
+    }
+
     public function testEnforceForUserKeysOnTheUserId(): void
     {
         $factory = $this->factoryReturning($this->accepted());
