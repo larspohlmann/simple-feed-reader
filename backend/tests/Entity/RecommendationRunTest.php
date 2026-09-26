@@ -193,12 +193,14 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
-    public function testCompleteResetsTransportFailuresToExactlyZero(): void
+    public function testCompleteClearsExhaustedTransportRetries(): void
     {
         $run = $this->makeRun();
         $run->snapshot([[1]]);
         $run->recordTransportFailure();
         $run->recordTransportFailure();
+        $run->recordTransportFailure();
+        self::assertTrue($run->hasExhaustedTransportRetries());
 
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 

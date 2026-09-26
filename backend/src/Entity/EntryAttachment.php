@@ -22,7 +22,11 @@ final readonly class EntryAttachment implements \JsonSerializable
     ) {
     }
 
-    /** @param array<string, mixed> $stored */
+    /**
+     * @param array<string, mixed> $stored
+     *
+     * @phpstan-assert-if-true array{url: string, ...<mixed>} $stored
+     */
     public static function isComplete(array $stored): bool
     {
         return \is_string($stored['url'] ?? null);
@@ -31,10 +35,10 @@ final readonly class EntryAttachment implements \JsonSerializable
     /** @param array<string, mixed> $stored */
     public static function fromStored(array $stored): self
     {
-        $url = $stored['url'] ?? null;
-        if (!\is_string($url)) {
+        if (!self::isComplete($stored)) {
             throw new IncompleteStoredMediaException('A stored attachment needs a url.');
         }
+        $url = $stored['url'];
         $mimeType = $stored['mimeType'] ?? null;
         $durationInSeconds = $stored['durationInSeconds'] ?? null;
         $sizeInBytes = $stored['sizeInBytes'] ?? null;

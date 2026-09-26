@@ -23,7 +23,11 @@ final readonly class EntryMedium implements \JsonSerializable
     ) {
     }
 
-    /** @param array<string, mixed> $stored */
+    /**
+     * @param array<string, mixed> $stored
+     *
+     * @phpstan-assert-if-true array{url: string, kind: string, ...<mixed>} $stored
+     */
     public static function isComplete(array $stored): bool
     {
         return \is_string($stored['url'] ?? null) && \is_string($stored['kind'] ?? null);
@@ -32,11 +36,11 @@ final readonly class EntryMedium implements \JsonSerializable
     /** @param array<string, mixed> $stored */
     public static function fromStored(array $stored): self
     {
-        $url = $stored['url'] ?? null;
-        $kind = $stored['kind'] ?? null;
-        if (!\is_string($url) || !\is_string($kind)) {
+        if (!self::isComplete($stored)) {
             throw new IncompleteStoredMediaException('A stored medium needs a url and a kind.');
         }
+        $url = $stored['url'];
+        $kind = $stored['kind'];
         $width = $stored['width'] ?? null;
         $height = $stored['height'] ?? null;
         $previewImageUrl = $stored['previewImageUrl'] ?? null;

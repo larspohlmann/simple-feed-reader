@@ -177,14 +177,14 @@ final readonly class AttestationVerifier
         self::guardCredentialIdFitsColumn($credentialId);
 
         return new UserPasskey($user, new PasskeyRegistration(
-            $credentialId,
-            Base64UrlSafe::encodeUnpadded($record->userHandle),
-            Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
-            $record->counter,
-            self::aaguidOrNull($record->aaguid),
-            self::knownTransports($record->transports),
-            $label,
-            $this->clock->now(),
+            credentialId: $credentialId,
+            userHandle: Base64UrlSafe::encodeUnpadded($record->userHandle),
+            publicKey: Base64UrlSafe::encodeUnpadded($record->credentialPublicKey),
+            signatureCounter: $record->counter,
+            aaguid: self::aaguidOrNull($record->aaguid),
+            transports: self::knownTransports($record->transports),
+            label: $label,
+            registeredAt: $this->clock->now(),
         ));
     }
 

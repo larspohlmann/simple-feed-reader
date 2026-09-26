@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
-use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;
+use App\Tests\Support\PasskeyRegistrations;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
@@ -90,13 +90,9 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
         $passkey = new UserPasskey(
             $owner,
-            registration: new PasskeyRegistration(
+            registration: PasskeyRegistrations::any(
                 credentialId: bin2hex(random_bytes(16)),
                 userHandle: bin2hex(random_bytes(16)),
-                publicKey: 'test-public-key',
-                signatureCounter: 0,
-                aaguid: null,
-                transports: [],
                 label: 'Test passkey',
                 registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
             ),

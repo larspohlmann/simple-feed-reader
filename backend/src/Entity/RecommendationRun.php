@@ -263,7 +263,6 @@ class RecommendationRun
         $this->callAttempts->recordInvalidReply($reply);
     }
 
-    /** A call that never produced a reply: its own counter, so a network blip spends no unusable-reply retry. */
     public function recordTransportFailure(): void
     {
         $this->guardStatus(self::STATUS_RUNNING, 'recordTransportFailure');

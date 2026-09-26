@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\PinsPasskeyRelyingParty;
 use App\Tests\Support\TogglesPasskeySignIn;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -230,15 +230,11 @@ final class PasskeyListTest extends ApiTestCase
     ): UserPasskey {
         $passkey = new UserPasskey(
             $user,
-            new PasskeyRegistration(
-                $credentialId,
-                $userHandle,
-                'cHVibGljLWtleQ',
-                0,
-                null,
-                [],
-                $label,
-                $createdAt ?? new \DateTimeImmutable(),
+            PasskeyRegistrations::any(
+                credentialId: $credentialId,
+                userHandle: $userHandle,
+                label: $label,
+                registeredAt: $createdAt,
             ),
         );
         $this->em()->persist($passkey);

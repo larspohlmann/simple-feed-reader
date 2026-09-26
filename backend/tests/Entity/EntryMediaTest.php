@@ -92,16 +92,26 @@ final class EntryMediaTest extends TestCase
 
     public function testAStoredMediumNeedsAUrlAndAKind(): void
     {
-        self::assertTrue(EntryMedium::isComplete(['url' => 'https://i/x.jpg', 'kind' => 'image']));
-        self::assertFalse(EntryMedium::isComplete(['kind' => 'image']));
-        self::assertFalse(EntryMedium::isComplete(['url' => 'https://i/x.jpg']));
-        self::assertFalse(EntryMedium::isComplete(['url' => 42, 'kind' => 'image']));
+        self::assertTrue(EntryMedium::isComplete($this->asStored(['url' => 'https://i/x.jpg', 'kind' => 'image'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['kind' => 'image'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['url' => 'https://i/x.jpg'])));
+        self::assertFalse(EntryMedium::isComplete($this->asStored(['url' => 42, 'kind' => 'image'])));
     }
 
     public function testAStoredAttachmentNeedsAUrl(): void
     {
-        self::assertTrue(EntryAttachment::isComplete(['url' => 'https://cdn/x.mp3']));
-        self::assertFalse(EntryAttachment::isComplete(['mimeType' => 'audio/mpeg']));
+        self::assertTrue(EntryAttachment::isComplete($this->asStored(['url' => 'https://cdn/x.mp3'])));
+        self::assertFalse(EntryAttachment::isComplete($this->asStored(['mimeType' => 'audio/mpeg'])));
+    }
+
+    /**
+     * @param array<string, mixed> $stored
+     *
+     * @return array<string, mixed>
+     */
+    private function asStored(array $stored): array
+    {
+        return $stored;
     }
 
     public function testACompleteStoredMediumRoundTripsItsDeclaredFields(): void
@@ -143,6 +153,13 @@ final class EntryMediaTest extends TestCase
         $this->expectException(IncompleteStoredMediaException::class);
 
         EntryMedium::fromStored(['kind' => 'image']);
+    }
+
+    public function testAStoredMediumWithAUrlButNoKindIsRefused(): void
+    {
+        $this->expectException(IncompleteStoredMediaException::class);
+
+        EntryMedium::fromStored(['url' => 'https://i/x.jpg']);
     }
 
     public function testAnIncompleteStoredAttachmentIsRefusedRatherThanGivenAnEmptyUrl(): void
