@@ -73,8 +73,7 @@ final readonly class EntryScopePredicates
             case EntryView::Viewed:
                 $this->stateFlagIsSet($qb, $a, 'isViewed');
                 break;
-            case EntryView::All:
-            case EntryView::ForYou:
+            default:
                 break;
         }
     }
