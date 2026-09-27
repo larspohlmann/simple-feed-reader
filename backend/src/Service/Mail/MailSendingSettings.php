@@ -15,7 +15,7 @@ interface MailSendingSettings
     public function identity(): MailIdentity;
 
     /**
-     * The saved SMTP transport whether or not sending is enabled; null when none is saved.
+     * The saved SMTP transport whether or not sending is enabled; null when no host is saved.
      *
      * @throws SecretUnreadableException when its stored password cannot be opened
      */

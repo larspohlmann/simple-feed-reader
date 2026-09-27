@@ -48,19 +48,10 @@ final readonly class GrafanaSettingsRequest
                 self::blankToNull($this->pyroscopePushUrl),
                 $this->profilingEnabled,
             ),
-            $this->tokenChange(),
+            $this->removeToken
+                ? SecretChange::remove()
+                : SecretChange::fromSubmitted(self::blankToNull($this->token)),
         );
-    }
-
-    private function tokenChange(): SecretChange
-    {
-        if ($this->removeToken) {
-            return SecretChange::remove();
-        }
-
-        $token = self::blankToNull($this->token);
-
-        return null === $token ? SecretChange::keep() : SecretChange::replaceWith($token);
     }
 
     private static function blankToNull(?string $value): ?string

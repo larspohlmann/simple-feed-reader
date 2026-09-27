@@ -161,11 +161,7 @@ final class GrafanaSettingsTest extends TestCase
 
     private function effective(?GrafanaSettingsCache $cache = null): EffectiveGrafanaSettings
     {
-        return $this->effectiveGrafanaSettingsOverRepository(
-            $this->repository(),
-            new GrafanaEnvDefaults('', '', ''),
-            $cache,
-        );
+        return $this->effectiveGrafanaSettingsOverRepository($this->repository(), cache: $cache);
     }
 
     private function settings(

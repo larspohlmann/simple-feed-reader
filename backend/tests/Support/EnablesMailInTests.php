@@ -10,10 +10,8 @@ use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Seeds a `mail_server_settings` row with `enabled = true` and a blank host,
- * so EffectiveMailSettings::isSendingEnabled() reports true while mail falls
- * through to the null:// fallback transport, which collects messages instead
- * of sending them.
+ * Seeds an enabled `mail_server_settings` row with a blank host, so sending reports "on" while mail still falls
+ * through to the null:// fallback transport. Do not use this where "no mail row" is the state under test.
  */
 trait EnablesMailInTests
 {

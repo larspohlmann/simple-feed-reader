@@ -11,11 +11,6 @@ final class GrafanaApiKeyCiphers
 {
     public static function withTestSecret(): GrafanaApiKeyCipher
     {
-        return self::under(TestInstanceSecret::VALUE);
-    }
-
-    public static function under(string $secret): GrafanaApiKeyCipher
-    {
-        return new GrafanaApiKeyCipher(new InstanceSecretCipher($secret));
+        return new GrafanaApiKeyCipher(new InstanceSecretCipher(TestInstanceSecret::VALUE));
     }
 }

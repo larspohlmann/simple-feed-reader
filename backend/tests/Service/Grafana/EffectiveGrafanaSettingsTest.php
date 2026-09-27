@@ -9,8 +9,10 @@ use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
+use App\Service\Grafana\GrafanaSettingsCache;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class EffectiveGrafanaSettingsTest extends TestCase
 {
@@ -107,6 +109,29 @@ final class EffectiveGrafanaSettingsTest extends TestCase
         $settings->profilingEnabled();
         $settings->forgetStored();
         $settings->profilingEnabled();
+    }
+
+    public function testTheMemoKeepsServingTheOldValueUntilRefreshRereadsTheInvalidatedCache(): void
+    {
+        $cache = new GrafanaSettingsCache(new ArrayAdapter());
+        $repositoryBeforeSave = $this->createStub(GrafanaSettingsRepository::class);
+        $repositoryBeforeSave->method('findSingleton')->willReturn(null);
+        $worker = $this->effectiveGrafanaSettingsOverRepository($repositoryBeforeSave, cache: $cache);
+
+        self::assertFalse($worker->profilingEnabled());
+
+        $repositoryAfterSave = $this->createStub(GrafanaSettingsRepository::class);
+        $repositoryAfterSave->method('findSingleton')
+            ->willReturn($this->row(new GrafanaConnection(null, null, null, null, true)));
+        $adminSideAfterSave = $this->effectiveGrafanaSettingsOverRepository($repositoryAfterSave, cache: $cache);
+        $adminSideAfterSave->forgetStored();
+        self::assertTrue($adminSideAfterSave->profilingEnabled());
+
+        self::assertFalse($worker->profilingEnabled());
+
+        $worker->refresh();
+
+        self::assertTrue($worker->profilingEnabled());
     }
 
     private function row(GrafanaConnection $connection): GrafanaSettingsEntity

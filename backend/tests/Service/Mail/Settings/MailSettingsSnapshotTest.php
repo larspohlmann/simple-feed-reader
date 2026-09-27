@@ -30,7 +30,14 @@ final class MailSettingsSnapshotTest extends TestCase
 
         $snapshot = MailSettingsSnapshot::fromEntity($row);
 
-        self::assertEquals($connection, $snapshot->connection);
+        self::assertTrue($snapshot->connection->enabled);
+        self::assertSame('smtp.row.test', $snapshot->connection->host);
+        self::assertSame(465, $snapshot->connection->port);
+        self::assertSame('user', $snapshot->connection->username);
+        self::assertSame(MailEncryption::Tls, $snapshot->connection->encryption);
+        self::assertSame('a@row.test', $snapshot->connection->fromAddress);
+        self::assertSame('Row', $snapshot->connection->fromName);
+        self::assertTrue($snapshot->connection->useProxy);
         self::assertTrue($snapshot->hasPassword);
     }
 

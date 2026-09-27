@@ -40,7 +40,7 @@ final readonly class MailSettingsJson
             'hasPassword' => null !== $saved && $saved->hasPassword,
             'hasSavedConfig' => null !== $saved,
             'envFallbackConfigured' => $fallback->enabled,
-            'useProxy' => $saved?->connection->useProxy ?? false,
+            'useProxy' => null !== $saved && $saved->connection->useProxy,
             'proxyConfigured' => null !== $proxy,
             'proxyLabel' => null !== $proxy
                 ? \sprintf('%s · %s:%d', $proxy->type->value, $proxy->host, $proxy->port)

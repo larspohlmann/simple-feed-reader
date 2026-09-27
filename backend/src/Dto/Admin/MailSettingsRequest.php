@@ -62,16 +62,7 @@ final readonly class MailSettingsRequest
                 $this->fromName,
                 $this->useProxy,
             ),
-            $this->passwordChange(),
+            $this->removePassword ? SecretChange::remove() : SecretChange::fromSubmitted($this->password),
         );
-    }
-
-    private function passwordChange(): SecretChange
-    {
-        if ($this->removePassword) {
-            return SecretChange::remove();
-        }
-
-        return null === $this->password ? SecretChange::keep() : SecretChange::replaceWith($this->password);
     }
 }
