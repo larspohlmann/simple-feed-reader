@@ -24,8 +24,8 @@ final readonly class ReaderLeadImage
     public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $topPlacesLeadVisual): ?Element
     {
         $body = $document->body;
-        $leadUrl = $lead->url;
-        if ($body === null || $leadUrl === null || !AbsoluteHttpUrl::matches($leadUrl)) {
+        $leadUrl = AbsoluteHttpUrl::orNull($lead->url);
+        if ($body === null || $leadUrl === null) {
             return null;
         }
 
