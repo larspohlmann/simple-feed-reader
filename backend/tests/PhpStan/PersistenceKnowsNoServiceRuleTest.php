@@ -33,12 +33,12 @@ final class PersistenceKnowsNoServiceRuleTest extends RuleTestCase
                 [self::message('App\Enum\Fixtures', self::ACCOUNT_MAILER), 22],
                 [self::message(self::DOCTRINE, self::WORD_BOUNDARIES), 27],
                 [self::message(self::DOCTRINE, self::WORD_BOUNDARIES), 33],
-                [self::message(self::GAPS, self::SEALED_SECRET), 67],
-                [self::message(self::GAPS, self::WORD_BOUNDARIES), 67],
-                [self::message(self::GAPS, 'App\Service'), 68],
-                [self::message(self::GAPS, 'app\service\Mail\AccountMailer'), 74],
-                [self::message(self::GAPS, self::ACCOUNT_MAILER), 79],
-                [self::message(self::GAPS, 'App\Service\\'), 84],
+                [self::message(self::GAPS, self::SEALED_SECRET), 73],
+                [self::message(self::GAPS, self::WORD_BOUNDARIES), 73],
+                [self::message(self::GAPS, 'App\Service'), 74],
+                [self::message(self::GAPS, 'app\service\Mail\AccountMailer'), 80],
+                [self::message(self::GAPS, self::ACCOUNT_MAILER), 85],
+                [self::message(self::GAPS, 'App\Service\\'), 90],
             ],
         );
     }

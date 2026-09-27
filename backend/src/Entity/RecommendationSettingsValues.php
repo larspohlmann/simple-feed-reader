@@ -25,7 +25,7 @@ final readonly class RecommendationSettingsValues
         public RecommendationBatchSize $batchSize,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,
-        /** Written only by RecommendationSettingsWriter::storeProfile() (#493); read-only everywhere else. */
+        /** Written only by RecommendationSettingsWriter::storeProfile(); read-only everywhere else. */
         public ?string $profileText = null,
         public bool $showReasons = false,
     ) {

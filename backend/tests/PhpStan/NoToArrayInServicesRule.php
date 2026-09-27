@@ -18,8 +18,6 @@ use PHPStan\Rules\RuleErrorBuilder;
  */
 final readonly class NoToArrayInServicesRule implements Rule
 {
-    private const string SERVICE_NAMESPACE = 'app\\service\\';
-
     private const array RESPONSE_SHAPERS = ['toarray', 'jsonserialize'];
 
     public function getNodeType(): string
@@ -31,7 +29,8 @@ final readonly class NoToArrayInServicesRule implements Rule
     {
         $namespaceName = $scope->getNamespace() ?? '';
         $method = $node->name->toString();
-        if (!self::isService($namespaceName) || !\in_array(strtolower($method), self::RESPONSE_SHAPERS, true)) {
+        $isService = ClassNameReferences::isInAnyOf($namespaceName, ['App\\Service\\']);
+        if (!$isService || !\in_array(strtolower($method), self::RESPONSE_SHAPERS, true)) {
             return [];
         }
 
@@ -45,10 +44,5 @@ final readonly class NoToArrayInServicesRule implements Rule
                 ->identifier('simpleFeedReader.noToArrayInServices')
                 ->build(),
         ];
-    }
-
-    private static function isService(string $namespaceName): bool
-    {
-        return str_starts_with(strtolower($namespaceName) . '\\', self::SERVICE_NAMESPACE);
     }
 }

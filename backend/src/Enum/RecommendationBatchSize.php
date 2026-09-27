@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enum;
 
-/** How large each recommendation batch is packed, as a scale over the connection's automatic ceiling (#935). */
+/** How large each recommendation batch is packed, as a scale over the connection's automatic ceiling. */
 enum RecommendationBatchSize: string
 {
     case Small = 'small';

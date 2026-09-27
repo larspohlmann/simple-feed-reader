@@ -37,11 +37,17 @@ namespace App\Doctrine\Fixtures {
 
 namespace App\Service\Fixtures {
     use App\Entity\SealedSecret;
+    use App\Service\Mail\AccountMailer;
 
     final class ServicesMayKnowEntities
     {
         public function __construct(public SealedSecret $secret)
         {
+        }
+
+        public function mailer(): string
+        {
+            return AccountMailer::class;
         }
     }
 }

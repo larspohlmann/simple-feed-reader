@@ -70,14 +70,9 @@ final readonly class MaintenanceController
     }
 
     /**
-     * One call that runs both maintenance halves — refresh all due feeds, then
-     * start due recommendation runs and advance each active run one step — so a
-     * worker-less install drives everything from a single cron line (#346). It
-     * answers 200 with both halves' reports merged under `refresh` and
-     * `recommendations`; each half reports its own outcome as status (a refresh
-     * that came back busy or aborted still answers 200, its status in the body).
-     * The granular /maintenance/refresh keeps its 409/500 mapping for a caller
-     * that pings refresh alone.
+     * Runs refresh, then every sweep, from one cron line. Each half reports its own
+     * outcome as status — a refresh that came back busy or aborted still answers 200 —
+     * while /maintenance/refresh keeps its 409/500 mapping for a caller that pings it alone.
      */
     #[Route('/maintenance/tick', name: 'maintenance_tick', methods: ['POST'])]
     public function tick(Request $request): JsonResponse

@@ -81,12 +81,7 @@ final readonly class ClassNameReferences
                 || $node instanceof GroupUse,
         );
 
-        $groupUsePrefixIds = [];
-        foreach ($nodes as $node) {
-            if ($node instanceof GroupUse) {
-                $groupUsePrefixIds[] = spl_object_id($node->prefix);
-            }
-        }
+        $groupUsePrefixIds = self::groupUsePrefixIds($nodes);
 
         $names = [];
         foreach ($nodes as $node) {
@@ -97,6 +92,23 @@ final readonly class ClassNameReferences
         }
 
         return $names;
+    }
+
+    /**
+     * @param array<Node> $nodes
+     *
+     * @return list<int> a group import's prefix id, so its own Name is not counted again
+     */
+    private static function groupUsePrefixIds(array $nodes): array
+    {
+        $prefixIds = [];
+        foreach ($nodes as $node) {
+            if ($node instanceof GroupUse) {
+                $prefixIds[] = spl_object_id($node->prefix);
+            }
+        }
+
+        return $prefixIds;
     }
 
     /** @return list<array{string, int}> */
