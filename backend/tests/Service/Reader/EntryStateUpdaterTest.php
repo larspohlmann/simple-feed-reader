@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
+use App\Service\Reader\EntryStateChange;
 use App\Service\Reader\EntryStateUpdater;
 use App\Tests\DbTestCase;
 
@@ -56,13 +56,13 @@ final class EntryStateUpdaterTest extends DbTestCase
         return [$user, $target, $sibling];
     }
 
-    private function request(
+    private function change(
         ?bool $isHidden = null,
         ?bool $isFavorite = null,
         ?bool $isKept = null,
         ?bool $isViewed = null,
-    ): UpdateEntryStateRequest {
-        return new UpdateEntryStateRequest($isHidden, $isFavorite, $isKept, $isViewed);
+    ): EntryStateChange {
+        return new EntryStateChange($isHidden, $isFavorite, $isKept, $isViewed);
     }
 
     /**
@@ -110,7 +110,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         [$user, $target, $sibling] = $this->seedGroup();
         $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
 
-        $this->updater()->apply($user, $row, $this->request(isHidden: true));
+        $this->updater()->apply($user, $row, $this->change(isHidden: true));
 
         self::assertTrue($this->stateOf($user, $target)->isHidden());
         self::assertTrue($this->stateOf($user, $sibling)->isHidden());
@@ -121,7 +121,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         [$user, $target, $sibling] = $this->seedGroup();
         $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
 
-        $this->updater()->apply($user, $row, $this->request(isFavorite: true));
+        $this->updater()->apply($user, $row, $this->change(isFavorite: true));
 
         self::assertTrue($this->stateOf($user, $target)->isFavorite());
         self::assertFalse($this->stateOf($user, $sibling)->isFavorite());
@@ -133,7 +133,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         [$user, $target, $sibling] = $this->seedGroup();
         $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
 
-        $this->updater()->apply($user, $row, $this->request(isKept: true));
+        $this->updater()->apply($user, $row, $this->change(isKept: true));
 
         self::assertTrue($this->stateOf($user, $target)->isKept());
         self::assertFalse($this->stateOf($user, $sibling)->isKept());
@@ -144,9 +144,9 @@ final class EntryStateUpdaterTest extends DbTestCase
     {
         [$user, $target] = $this->seedGroup();
         $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
-        $this->updater()->apply($user, $row, $this->request(isFavorite: true, isKept: true));
+        $this->updater()->apply($user, $row, $this->change(isFavorite: true, isKept: true));
 
-        $this->updater()->apply($user, $row, $this->request(isFavorite: false, isKept: false));
+        $this->updater()->apply($user, $row, $this->change(isFavorite: false, isKept: false));
 
         self::assertFalse($this->stateOf($user, $target)->isFavorite());
         self::assertFalse($this->stateOf($user, $target)->isKept());
@@ -157,7 +157,7 @@ final class EntryStateUpdaterTest extends DbTestCase
         [$user, $target, $sibling] = $this->seedGroup();
         $row = $this->rows()->getRowForUser($user->requireId(), $target->requireId());
 
-        $this->updater()->apply($user, $row, $this->request(isViewed: true));
+        $this->updater()->apply($user, $row, $this->change(isViewed: true));
 
         self::assertTrue($this->stateOf($user, $target)->isViewed());
         self::assertTrue($this->stateOf($user, $sibling)->isViewed());
