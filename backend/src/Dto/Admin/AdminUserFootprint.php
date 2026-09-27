@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 /**
- * The JSON-ready shape of a {@see UserFootprint}: the same figures, with the
- * datetime formatted for the wire instead of left as a DateTimeImmutable.
- * Kept distinct from UserFootprint so the domain calculation (Service\Admin\
- * UserStatistics) never has to know about serialisation.
+ * The wire shape of a {@see \App\Service\Admin\UserFootprint}: the same figures, the datetime formatted for JSON.
  */
 final readonly class AdminUserFootprint
 {

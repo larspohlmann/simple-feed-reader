@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
-use App\Service\Auth\Exception\AccountNotActiveException;
-use App\Service\Auth\Exception\InvalidTokenException;
 use App\Repository\UserRepository;
 use App\Security\AccountStatusException;
 use App\Security\LoginUserChecker;
+use App\Service\Auth\Exception\AccountNotActiveException;
+use App\Service\Auth\Exception\InvalidTokenException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Random\RandomException;

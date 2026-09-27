@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Dto\OAuth\OAuthCallbackAttempt;
-use App\Dto\OAuth\OAuthIdentity;
-use App\Dto\OAuth\OAuthStartState;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
 use App\Service\OAuth\OAuthCallback;
+use App\Service\OAuth\OAuthCallbackAttempt;
 use App\Service\OAuth\OAuthCallbackFailure;
+use App\Service\OAuth\OAuthIdentity;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
+use App\Service\OAuth\OAuthStartState;
 use App\Service\OAuth\OAuthStateStore;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeOAuthProvider;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\Oidc;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\OAuth\OAuthIdentity;
 use Psr\Clock\ClockInterface;
 
 /**

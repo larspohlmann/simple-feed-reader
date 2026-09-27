@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Dto\OAuth;
+namespace App\Service\OAuth;
 
-/** What the provider's redirect brought back, as OAuthController::callback() read it off the request. */
 final readonly class OAuthCallbackAttempt
 {
     public function __construct(

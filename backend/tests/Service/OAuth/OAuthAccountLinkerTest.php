@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;
@@ -14,6 +13,7 @@ use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailSendingSettings;
 use App\Service\OAuth\OAuthAccountLinker;
+use App\Service\OAuth\OAuthIdentity;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;

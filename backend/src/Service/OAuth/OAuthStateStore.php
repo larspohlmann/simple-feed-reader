@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
-use App\Dto\OAuth\OAuthStartState;
 use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;

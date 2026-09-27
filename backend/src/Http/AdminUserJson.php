@@ -10,10 +10,10 @@ use App\Dto\Admin\AdminUserFootprint;
 use App\Dto\Admin\AdminUserLimits;
 use App\Dto\Admin\AdminUserSubscription;
 use App\Dto\Admin\AdminUserTag;
-use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Admin\UserFootprint;
 
 /**
  * The admin view of one account and of the approval queue.

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Controller\Api\OAuthController;
-use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserRepository;
+use App\Service\OAuth\OAuthIdentity;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\UserFactory;

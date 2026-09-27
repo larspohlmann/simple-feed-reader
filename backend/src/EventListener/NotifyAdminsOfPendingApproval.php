@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Dto\Mail\PendingApprovalNotice;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Service\Mail\AccountMailerInterface;
+use App\Service\Mail\PendingApprovalNotice;
 use App\Service\Settings\PublicBaseUrl;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

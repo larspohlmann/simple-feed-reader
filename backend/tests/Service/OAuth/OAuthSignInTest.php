@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\OAuth\OAuthIdentity;
 use App\Service\OAuth\OAuthSignIn;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;

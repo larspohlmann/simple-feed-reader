@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;

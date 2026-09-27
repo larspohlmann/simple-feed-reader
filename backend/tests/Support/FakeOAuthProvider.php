@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Dto\OAuth\OAuthIdentity;
 use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\OAuth\OAuthIdentity;
 use App\Service\OAuth\OAuthProviderInterface;
 
 /**
