@@ -11,28 +11,17 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
-use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Run\RecommendationBatchWave;
-use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
-use App\Service\Recommendation\Run\RecommendationProfileDistiller;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
-use App\Service\Recommendation\Run\RecommendationRunDeferral;
-use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
-use App\Service\Recommendation\Run\RecommendationTickCheckpoint;
-use App\Service\Recommendation\Run\RecommendationTransportFailureRecorder;
-use App\Service\Recommendation\Run\RecommendationWaveConcurrency;
 use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Run\TickLockKeepalive;
+use App\Service\Recommendation\Run\TickPhases;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Service\Worker\Handler\AdvanceRecommendationRunsHandler;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
@@ -552,53 +541,21 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Every RecommendationRunAdvancer collaborator except the EntityManager
-     * is the container's real, shared instance -- only the flush() that
-     * records the struggling run's failure is faked, never the healthy
-     * run's own provider call, prompt building or persistence.
+     * Only the advancer's own EntityManager fails its first flush: that is the struggling run's fail() write. The
+     * phases come from the container, so the healthy run banks through the real EntityManager.
      */
     private function advancerWithFlushFailingEntityManager(): RecommendationRunAdvancer
     {
-        // The finalizer shares this one decorator with the advancer, so the
-        // single first-flush failure lands on whichever run flushes first --
-        // the struggling run's fail()-recording write -- and the healthy run's
-        // later finalize flush (now inside RecommendationRunFinalizer) still
-        // reaches the real EntityManager, exactly as it did before #338 lifted
-        // finalize out of the advancer.
-        $entityManager = new FlushFailingEntityManager($this->em);
-
         return new RecommendationRunAdvancer(
             $this->runs(),
             self::getContainer()->get(LockFactory::class),
             self::getContainer()->get(AiProviderConfigurator::class),
             $this->connectionFactory(),
             self::getContainer()->get(ClockInterface::class),
+            new FlushFailingEntityManager($this->em),
             self::getContainer()->get(RecommendationSettingsResolver::class),
-            self::getContainer()->get(RecommendationCandidateLoader::class),
-            self::getContainer()->get(RecommendationHistoryLoader::class),
-            self::getContainer()->get(RecommendationPromptBuilder::class),
-            $entityManager,
-            self::getContainer()->get(RecommendationProfileDistiller::class),
-            self::getContainer()->get(RecommendationBatchWave::class),
-            self::getContainer()->get(RecommendationConsolidationResolver::class),
-            new RecommendationRunFinalizer(
-                self::getContainer()->get(EntryRepository::class),
-                $entityManager,
-                self::getContainer()->get(RecommendationSettingsResolver::class),
-                self::getContainer()->get(ClockInterface::class),
-            ),
             self::getContainer()->get(TickLockKeepalive::class),
-            new RecommendationRunDeferral(
-                self::getContainer()->get(RecommendationTickCheckpoint::class),
-                $entityManager,
-                self::getContainer()->get(ClockInterface::class),
-            ),
-            self::getContainer()->get(RecommendationWaveConcurrency::class),
-            new RecommendationTransportFailureRecorder(
-                self::getContainer()->get(RecommendationTickCheckpoint::class),
-                $entityManager,
-                self::getContainer()->get(ClockInterface::class),
-            ),
+            self::getContainer()->get(TickPhases::class),
         );
     }
 

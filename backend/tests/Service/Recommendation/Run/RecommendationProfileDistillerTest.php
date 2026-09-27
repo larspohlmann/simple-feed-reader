@@ -4,19 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Run\RecommendationProfileDistiller;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -33,6 +30,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationProfileDistillerTest extends DbTestCase
 {
+    use BuildsTickContexts;
+
     private User $user;
     private RecommendationRunFixtures $fixtures;
 
@@ -53,13 +52,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
     {
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
 
-        $outcome = $this->distiller()->distill(
-            $this->runInRunningState(),
-            $this->activeAiSettings(),
-            $this->userId(),
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $outcome = $this->distiller()->distill($this->tick($this->runInRunningState()));
 
         self::assertTrue($outcome->usable);
         self::assertSame('Likes Rust and homelab.', $outcome->profileText);
@@ -70,13 +63,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
     {
         $this->stubChatClient()->queueContent('not json');
 
-        $outcome = $this->distiller()->distill(
-            $this->runInRunningState(),
-            $this->activeAiSettings(),
-            $this->userId(),
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $outcome = $this->distiller()->distill($this->tick($this->runInRunningState()));
 
         self::assertFalse($outcome->usable);
         self::assertNull($outcome->profileText);
@@ -100,13 +87,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
 
         $this->expectException(RecommendationRunCancelledException::class);
-        $this->distiller()->distill(
-            $run,
-            $this->activeAiSettings(),
-            $this->userId(),
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $this->distiller()->distill($this->tick($run));
     }
 
     /**
@@ -122,13 +103,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->stubChatClient()->queueFailure(new \RuntimeException('gone'));
 
         try {
-            $this->distiller()->distill(
-                $run,
-                $this->activeAiSettings(),
-                $this->userId(),
-                $this->effectiveSettings(),
-                $this->plan(),
-            );
+            $this->distiller()->distill($this->tick($run));
             self::fail('The transport failure must propagate.');
         } catch (\RuntimeException) {
         }
@@ -152,13 +127,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $run = $this->runInRunningState();
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
 
-        $this->distiller()->distill(
-            $run,
-            $this->activeAiSettings(),
-            $this->userId(),
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $this->distiller()->distill($this->tick($run));
 
         $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
         self::assertNotNull($log);
@@ -171,13 +140,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
     {
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
 
-        $this->distiller()->distill(
-            $this->runInRunningState(),
-            $this->activeAiSettings(),
-            $this->userId(),
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $this->distiller()->distill($this->tick($this->runInRunningState()));
 
         $calls = $this->stubChatClient()->calls();
         self::assertCount(1, $calls);
@@ -191,32 +154,6 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->em->flush();
 
         return $run;
-    }
-
-    private function activeAiSettings(): AiProviderSettings
-    {
-        $settings = $this->user->getActiveAiProviderSettings();
-        self::assertNotNull($settings);
-
-        return $settings;
-    }
-
-    private function effectiveSettings(): EffectiveRecommendationSettings
-    {
-        /** @var RecommendationSettingsResolver $resolver */
-        $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
-
-        return $resolver->forUser($this->user);
-    }
-
-    private function plan(): RetryPlan
-    {
-        return RetryPlan::deferring();
-    }
-
-    private function userId(): int
-    {
-        return $this->user->requireId();
     }
 
     private function storedProfileText(): ?string

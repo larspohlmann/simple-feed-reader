@@ -14,23 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * The scheduled generation of "For you" (#333), shared by the worker's
- * StartDueRecommendationRuns handler and the maintenance cron endpoint.
- *
- * `startDueRuns()` is the worker's half — the ten-second AdvanceRecommendationRuns
- * sweep drives started runs to the finish there, so the worker only starts them.
- * `sweepOnce()` is the cron half: a worker-less install has no advance sweep, so
- * one call starts due runs and advances every active run one tick, each tick
- * sending a bounded wave of concurrent calls via TickDriver::Sweep, clamped by
- * effectiveCap() like a poll tick because this runs inside a bounded web request,
- * not a worker's long-lived process (#344). The advancer flushes once the wave
- * resolves, so a gateway-killed request still leaves committed progress to resume.
- *
- * While advancing runs it IS the install's driver, under its own liveness key
- * (#439) — unmarked, a browser polling the swept account once read a held lock
- * with no driver behind it and was told its healthy run had stalled. The key is
- * surrendered when the sweep ends, and on a killed request too, so a poll tick
- * between cron passes can still drive the run — the point of a worker-less install.
+ * Scheduled "For you" (#333): startDueRuns() for the worker; sweepOnce() for the cron, which also advances each
+ * active run one Sweep tick. While sweeping it holds its own liveness key (#439), surrendered when the sweep ends.
  */
 final readonly class ForYouSweep
 {

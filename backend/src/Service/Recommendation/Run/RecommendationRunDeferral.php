@@ -10,13 +10,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The deferral ending distillTick and consolidateTick share (#947): a 429
- * neither phase's driver will wait out records "retry not before now plus the
- * wait" and returns at once. No strike -- a deferral is a wait, not a
- * failure, unlike the transport-failure ceiling ProviderUnreachableException
- * and CredentialsRejectedException count against in RecommendationRunAdvancer.
- * Lifted out the same way RecommendationRunFinalizer was (#338): one more
- * ending, one more seam the tests drive independently.
+ * The ending of a 429 the tick will not wait out (#947): retry not before now plus the wait. A deferral is a wait,
+ * not a failure, so it strikes nothing against the transport-failure ceiling.
  */
 final readonly class RecommendationRunDeferral
 {

@@ -390,6 +390,12 @@ services:
         autowire: true
         public: true
 
+    # AdvanceRecommendationRunsHandlerTest builds an advancer by hand around the container's phases. The advancer
+    # is their only user, so without this the compiler would inline them away.
+    App\Service\Recommendation\Run\TickPhases:
+        autowire: true
+        public: true
+
     # Public so tests can drive poll()/current() directly against the real
     # advancer/repository/presence graph, the same seam RecommendationRun
     # AdvancerTest uses on advance() above -- useful for #311's worker-side

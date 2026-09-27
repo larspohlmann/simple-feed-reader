@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 /**
- * What RecommendationConsolidationResolver settled a consolidation call to, for
- * the advancer to write. Usable — or an all-pruned pool with nothing left to
- * consolidate — is the final ranked, deduped, reasoned list to finalize;
- * unusable holds the offending reply and the batch-score pool to degrade to,
- * for the advancer's cross-tick retry-or-degrade envelope, mirroring
- * ProfileDistillationOutcome. Transport failures never reach here: the resolver
- * throws them, as RecommendationProfileDistiller and RecommendationBatchWave do.
+ * What a consolidation call settled to: the final list, or the unusable reply ConsolidationPhase retries and the
+ * batch-score pool it degrades to (#493).
  */
 final readonly class ConsolidationOutcome
 {
@@ -42,10 +37,6 @@ final readonly class ConsolidationOutcome
         return new self(false, $fallbackPool, $reply);
     }
 
-    /**
-     * The reply the consolidation call could not use, for the advancer's
-     * retry-or-degrade envelope. Only an unusable outcome has one.
-     */
     public function requireUnusableReply(): string
     {
         return $this->unusableReply

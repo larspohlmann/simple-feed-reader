@@ -4,14 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-/**
- * What RecommendationProfileDistiller settled a distillation call to, for the
- * advancer's distillTick to write (#493). Usable carries the profile text the
- * resolver already cached on settings; unusable carries the offending reply,
- * for the advancer's cross-tick retry-or-degrade envelope, as
- * ConsolidationOutcome does. Transport failures never reach here: the resolver
- * throws them, as RecommendationConsolidationResolver does.
- */
+/** What a distillation call settled to: the profile text, or the unusable reply DistillationPhase retries (#493). */
 final readonly class ProfileDistillationOutcome
 {
     private function __construct(
@@ -31,10 +24,6 @@ final readonly class ProfileDistillationOutcome
         return new self(false, null, $reply);
     }
 
-    /**
-     * The reply the distillation call could not use, for the advancer's
-     * retry-or-degrade envelope. Only an unusable outcome has one.
-     */
     public function requireUnusableReply(): string
     {
         return $this->unusableReply
