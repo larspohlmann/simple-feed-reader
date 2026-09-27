@@ -63,7 +63,14 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'req-body-longer');
         $this->em->flush();
 
-        $rows = $this->logs->listForRun($this->user, $run->requireId());
+        $rows = array_map(
+            static fn (array $row): array => [
+                ...$row,
+                'createdAt' => $row['createdAt']->format(\DATE_ATOM),
+                'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
+            ],
+            $this->logs->listForRun($this->user, $run->requireId()),
+        );
 
         self::assertSame(
             [

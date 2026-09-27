@@ -6,12 +6,14 @@ namespace App\Http;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\Feed\RecommendationDebugLog;
 
 /**
- * Response shapes for the recommendation debug log (#309). The list shape is
- * poll-cheap by construction: bodies never ride along, only sizes — except
- * the one call still streaming, whose growing text IS the live view.
+ * Response shapes for the recommendation debug log (#309): poll-cheap, bodies never ride along, only sizes, except
+ * the one call still streaming, whose growing text is the live view.
+ *
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationDebugLogJson
 {
@@ -24,13 +26,27 @@ final class RecommendationDebugLogJson
         return [
             'entries' => array_map(
                 static fn (array $row): array => [
-                    ...$row,
+                    ...self::entry($row),
                     'streamingText' => $log->streamingTextById[$row['id']] ?? null,
                 ],
                 $log->rows,
             ),
             'run' => null === $log->selectedRun ? null : self::run($log->selectedRun),
             'runs' => array_map(self::choice(...), $log->retainedRuns),
+        ];
+    }
+
+    /**
+     * @param DebugLogRow $row
+     *
+     * @return array<string, mixed>
+     */
+    private static function entry(array $row): array
+    {
+        return [
+            ...$row,
+            'createdAt' => $row['createdAt']->format(\DATE_ATOM),
+            'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
         ];
     }
 

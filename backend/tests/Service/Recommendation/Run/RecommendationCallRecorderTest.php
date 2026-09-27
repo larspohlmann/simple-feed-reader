@@ -20,6 +20,9 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
+/**
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
+ */
 final class RecommendationCallRecorderTest extends DbTestCase
 {
     private User $user;
@@ -260,9 +263,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      * read names one; every test here drives a single run.
      *
     /**
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function logRows(): array
     {

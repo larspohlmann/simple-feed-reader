@@ -23,6 +23,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Against the real repository and entity manager, not mocks: start()'s job is
  * to decide between three existing-run states (none, active, failed) and a
  * mock would have to encode that decision itself instead of proving it.
+ *
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunStarterTest extends DbTestCase
 {
@@ -283,9 +285,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
     /**
     /**
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function logRowsOfLatestRun(): array
     {

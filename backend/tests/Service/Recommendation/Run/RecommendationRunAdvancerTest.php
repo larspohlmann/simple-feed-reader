@@ -55,6 +55,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Against the real repository, entity manager and lock factory, not mocks:
  * advance()'s job is to coordinate all of them, and a mock would have to
  * encode that coordination itself instead of proving it.
+ *
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunAdvancerTest extends DbTestCase
 {
@@ -3101,9 +3103,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * The log rows of the account's newest run. The log keeps ten runs
      * (#401), so a read has to name one; every test here drives a single run.
      *
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function logRowsOfLatestRun(): array
     {
@@ -3118,9 +3118,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * call first (#493), and it logs like every phase (#638); a test that
      * asserts on the batch calls its own scenario makes reads past that row.
      *
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function batchLogRowsOfLatestRun(): array
     {

@@ -17,7 +17,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @phpstan-type DebugLogRow array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
  *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
- *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}
+ *     createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable, errorDetail: ?string, finishReason: ?string}
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */
@@ -72,8 +72,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
                 'requestBytes' => (int) $row['requestBytes'],
                 'responseBytes' => (int) $row['responseBytes'],
                 'wireBytes' => $row['wireBytes'],
-                'createdAt' => $row['createdAt']->format(\DATE_ATOM),
-                'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
+                'createdAt' => $row['createdAt'],
+                'finishedAt' => $row['finishedAt'],
                 'errorDetail' => $row['errorDetail'],
                 'finishReason' => $row['finishReason'],
             ],

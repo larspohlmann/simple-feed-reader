@@ -38,6 +38,17 @@ final class RecommendationDebugLogJsonTest extends TestCase
         self::assertSame(7, $entries[0]['id']);
     }
 
+    public function testEachEntryCarriesItsTimesInAtomFormat(): void
+    {
+        $row = self::row(7);
+        $row['finishedAt'] = new \DateTimeImmutable('2026-08-09T10:00:05Z');
+
+        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLog([$row], [], null, []))['entries'][0];
+
+        self::assertSame('2026-08-09T10:00:00+00:00', $entry['createdAt']);
+        self::assertSame('2026-08-09T10:00:05+00:00', $entry['finishedAt']);
+    }
+
     /** @return DebugLogRow */
     private static function row(int $id): array
     {
@@ -51,7 +62,7 @@ final class RecommendationDebugLogJsonTest extends TestCase
             'requestBytes' => 10,
             'responseBytes' => 20,
             'wireBytes' => 30,
-            'createdAt' => '2026-08-09T10:00:00+00:00',
+            'createdAt' => new \DateTimeImmutable('2026-08-09T10:00:00Z'),
             'finishedAt' => null,
             'errorDetail' => null,
             'finishReason' => null,
