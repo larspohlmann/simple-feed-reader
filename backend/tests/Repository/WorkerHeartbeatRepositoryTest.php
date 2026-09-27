@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Repository;
 
 use App\Entity\WorkerHeartbeat;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 
 final class WorkerHeartbeatRepositoryTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     private const string AT = '2026-09-25 10:00:00';
     private const string LATER = '2026-09-25 10:00:30';
 
@@ -96,13 +98,5 @@ final class WorkerHeartbeatRepositoryTest extends DbTestCase
         self::assertIsString($touchedAt);
 
         return $touchedAt;
-    }
-
-    private function heartbeats(): WorkerHeartbeatRepository
-    {
-        /** @var WorkerHeartbeatRepository $heartbeats */
-        $heartbeats = self::getContainer()->get(WorkerHeartbeatRepository::class);
-
-        return $heartbeats;
     }
 }

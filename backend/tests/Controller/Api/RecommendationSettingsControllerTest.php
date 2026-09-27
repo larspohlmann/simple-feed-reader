@@ -6,10 +6,9 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Entity\WorkerHeartbeat;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Worker\RecommendationDriverKind;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -27,6 +26,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationSettingsControllerTest extends WebTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     private const string URI = '/api/me/ai/recommendations';
 
     /** @return array{0: array<string,string>, 1: User} */
@@ -504,15 +505,10 @@ final class RecommendationSettingsControllerTest extends WebTestCase
      */
     private function touchHeartbeatNow(string $name): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        /** @var WorkerHeartbeatRepository $repository */
-        $repository = $em->getRepository(WorkerHeartbeat::class);
-
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
-        $repository->touch($name, $clock->now());
+        $this->heartbeats()->touch($name, $clock->now());
     }
 
     public function testSaveAcceptsAnAllowedInterval(): void

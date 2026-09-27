@@ -10,14 +10,13 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Entity\WorkerHeartbeat;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Process\DetachedProcessLauncherInterface;
 use App\Service\Worker\RecommendationDriverKind;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingProcessLauncher;
 use App\Tests\Support\StubChatClient;
@@ -46,6 +45,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationRunControllerTest extends WebTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     /** Must match framework.rate_limiter.ai_recommendation_starts.limit in rate_limiter.yaml. */
     private const int START_BUDGET = 10;
 
@@ -179,15 +180,10 @@ final class RecommendationRunControllerTest extends WebTestCase
 
     private function touchHeartbeatNow(string $name): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        /** @var WorkerHeartbeatRepository $repository */
-        $repository = $em->getRepository(WorkerHeartbeat::class);
-
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
-        $repository->touch($name, $clock->now());
+        $this->heartbeats()->touch($name, $clock->now());
     }
 
     /** @return array<string, mixed> */

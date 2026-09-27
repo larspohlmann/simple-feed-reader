@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Entity\WorkerHeartbeat;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use Symfony\Component\Clock\MockClock;
 
 final class WorkerPresenceTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     public function testContainerWiringMarksAndReportsAlive(): void
     {
         /** @var WorkerPresence $presence */
@@ -31,7 +32,7 @@ final class WorkerPresenceTest extends DbTestCase
 
     public function testAFreshHeartbeatMeansAlive(): void
     {
-        $this->repository()->touch(
+        $this->heartbeats()->touch(
             RecommendationDriverKind::PersistentWorker->heartbeatName(),
             new \DateTimeImmutable('2026-08-07 11:59:40'),
         );
@@ -41,7 +42,7 @@ final class WorkerPresenceTest extends DbTestCase
 
     public function testTheHeartbeatIsAliveExactlyUpToTheEdgeOfTheWindow(): void
     {
-        $this->repository()->touch(
+        $this->heartbeats()->touch(
             RecommendationDriverKind::PersistentWorker->heartbeatName(),
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS),
         );
@@ -51,7 +52,7 @@ final class WorkerPresenceTest extends DbTestCase
 
     public function testOneSecondPastTheWindowIsDead(): void
     {
-        $this->repository()->touch(
+        $this->heartbeats()->touch(
             RecommendationDriverKind::PersistentWorker->heartbeatName(),
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS + 1),
         );
@@ -121,10 +122,10 @@ final class WorkerPresenceTest extends DbTestCase
 
     public function testTouchTwiceUpdatesTheOneRow(): void
     {
-        $this->repository()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:00'));
-        $this->repository()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:10'));
+        $this->heartbeats()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:00'));
+        $this->heartbeats()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:10'));
 
-        self::assertEquals(new \DateTimeImmutable('2026-08-07 11:00:10'), $this->repository()->findTouchedAt('x'));
+        self::assertEquals(new \DateTimeImmutable('2026-08-07 11:00:10'), $this->heartbeats()->findTouchedAt('x'));
     }
 
     /**
@@ -135,18 +136,18 @@ final class WorkerPresenceTest extends DbTestCase
      */
     public function testForgettingAHeartbeatThatWasNeverTouchedDoesNothing(): void
     {
-        $this->repository()->forget('never-touched');
+        $this->heartbeats()->forget('never-touched');
 
-        self::assertNull($this->repository()->findTouchedAt('never-touched'));
+        self::assertNull($this->heartbeats()->findTouchedAt('never-touched'));
     }
 
     public function testForgettingAHeartbeatRemovesItsRow(): void
     {
-        $this->repository()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:00'));
+        $this->heartbeats()->touch('x', new \DateTimeImmutable('2026-08-07 11:00:00'));
 
-        $this->repository()->forget('x');
+        $this->heartbeats()->forget('x');
 
-        self::assertNull($this->repository()->findTouchedAt('x'));
+        self::assertNull($this->heartbeats()->findTouchedAt('x'));
     }
 
     /**
@@ -157,7 +158,7 @@ final class WorkerPresenceTest extends DbTestCase
      */
     public function testALiveDrainerAloneCountsAsSomebodyDriving(): void
     {
-        $this->repository()->touch(
+        $this->heartbeats()->touch(
             RecommendationDriverKind::OnDemandDrainer->heartbeatName(),
             $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS),
         );
@@ -170,7 +171,7 @@ final class WorkerPresenceTest extends DbTestCase
     public function testAStaleHeartbeatOfEveryKindMeansNobodyIsDriving(): void
     {
         foreach (RecommendationDriverKind::cases() as $kind) {
-            $this->repository()->touch(
+            $this->heartbeats()->touch(
                 $kind->heartbeatName(),
                 $this->secondsBeforeNoon(WorkerPresence::FRESH_SECONDS + 1),
             );
@@ -186,7 +187,7 @@ final class WorkerPresenceTest extends DbTestCase
         $presence->mark(RecommendationDriverKind::OnDemandDrainer);
 
         self::assertNull(
-            $this->repository()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName()),
+            $this->heartbeats()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName()),
         );
     }
 
@@ -232,25 +233,17 @@ final class WorkerPresenceTest extends DbTestCase
     {
         $firstTouchedAt = new \DateTimeImmutable('2026-08-07 11:00:00');
         $secondTouchedAt = new \DateTimeImmutable('2026-08-07 11:30:00');
-        $this->repository()->touch('first-present', $firstTouchedAt);
-        $this->repository()->touch('second-present', $secondTouchedAt);
+        $this->heartbeats()->touch('first-present', $firstTouchedAt);
+        $this->heartbeats()->touch('second-present', $secondTouchedAt);
 
         self::assertEquals(
             ['first-present' => $firstTouchedAt, 'second-present' => $secondTouchedAt],
-            $this->repository()->findTouchedAtByNames(['first-present', 'second-present', 'absent']),
+            $this->heartbeats()->findTouchedAtByNames(['first-present', 'second-present', 'absent']),
         );
     }
 
     private function presenceAt(string $now): WorkerPresence
     {
-        return new WorkerPresence($this->repository(), new MockClock($now));
-    }
-
-    private function repository(): WorkerHeartbeatRepository
-    {
-        /** @var WorkerHeartbeatRepository $repository */
-        $repository = $this->em->getRepository(WorkerHeartbeat::class);
-
-        return $repository;
+        return new WorkerPresence($this->heartbeats(), new MockClock($now));
     }
 }

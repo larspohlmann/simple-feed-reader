@@ -9,10 +9,8 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\User;
-use App\Entity\WorkerHeartbeat;
 use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -47,6 +45,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
@@ -68,6 +67,7 @@ use Symfony\Component\Lock\LockFactory;
  */
 final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
     use SeedsUsers;
 
     private RecommendationRunFixtures $fixtures;
@@ -634,14 +634,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 new NullLogger(),
             ),
         );
-    }
-
-    private function heartbeats(): WorkerHeartbeatRepository
-    {
-        /** @var WorkerHeartbeatRepository $repository */
-        $repository = $this->em->getRepository(WorkerHeartbeat::class);
-
-        return $repository;
     }
 
     private function deleteAiSettingsFor(User $user): void

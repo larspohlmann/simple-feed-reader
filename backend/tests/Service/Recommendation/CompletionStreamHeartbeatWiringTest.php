@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
-use App\Entity\WorkerHeartbeat;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
 use App\Service\Recommendation\TickLockKeepalive;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\SweepStreamHeartbeat;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RefreshCountingLock;
 
 /**
@@ -28,6 +28,8 @@ use App\Tests\Support\RefreshCountingLock;
  */
 final class CompletionStreamHeartbeatWiringTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     public function testArmingTheKeepaliveThroughTheContainerRefreshesItsLock(): void
     {
         /** @var TickLockKeepalive $keepalive */
@@ -61,10 +63,6 @@ final class CompletionStreamHeartbeatWiringTest extends DbTestCase
 
     private function persistentWorkerTouchedAt(): ?\DateTimeImmutable
     {
-        $this->em->clear();
-        $heartbeat = $this->em->getRepository(WorkerHeartbeat::class)
-            ->find(RecommendationDriverKind::PersistentWorker->heartbeatName());
-
-        return $heartbeat?->getTouchedAt();
+        return $this->heartbeats()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName());
     }
 }
