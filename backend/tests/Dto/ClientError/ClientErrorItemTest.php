@@ -38,6 +38,25 @@ final class ClientErrorItemTest extends TestCase
         self::assertGreaterThan(0, $this->validator->validate($overLimit)->count());
     }
 
+    public function testToClientErrorCarriesEveryField(): void
+    {
+        $item = new ClientErrorItem('m', 's', 'k', 'u', 'r', 'b', 'a', 't');
+
+        self::assertSame(
+            [
+                'message' => 'm',
+                'stack' => 's',
+                'kind' => 'k',
+                'url' => 'u',
+                'route' => 'r',
+                'buildVersion' => 'b',
+                'userAgent' => 'a',
+                'at' => 't',
+            ],
+            get_object_vars($item->toClientError()),
+        );
+    }
+
     /** @return iterable<string, array{string, int}> */
     public static function maxLengthFieldProvider(): iterable
     {

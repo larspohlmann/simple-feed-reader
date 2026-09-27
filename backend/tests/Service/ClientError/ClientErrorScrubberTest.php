@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ClientError;
 
-use App\Dto\ClientError\ClientErrorItem;
+use App\Service\ClientError\ClientError;
 use App\Service\ClientError\ClientErrorScrubber;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -157,8 +157,8 @@ final class ClientErrorScrubberTest extends TestCase
         ?string $stack = null,
         ?string $url = null,
         ?string $route = '/reader',
-    ): ClientErrorItem {
-        return new ClientErrorItem(
+    ): ClientError {
+        return new ClientError(
             message: $message,
             stack: $stack,
             kind: 'Error',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\ClientError;
 
+use App\Service\ClientError\ClientError;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ClientErrorItem
@@ -27,5 +28,19 @@ final readonly class ClientErrorItem
         #[Assert\Length(max: 40)]
         public ?string $at = null,
     ) {
+    }
+
+    public function toClientError(): ClientError
+    {
+        return new ClientError(
+            message: $this->message,
+            stack: $this->stack,
+            kind: $this->kind,
+            url: $this->url,
+            route: $this->route,
+            buildVersion: $this->buildVersion,
+            userAgent: $this->userAgent,
+            at: $this->at,
+        );
     }
 }
