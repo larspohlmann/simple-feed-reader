@@ -2966,6 +2966,31 @@ EOF
 ```
 
 
+### Execution rulings (PR B)
+
+- **Preflight (opus scan, dry run on a scratch clone):**
+  - Tramp flagged `$driver` for 3 hops, so `tickActiveRun()` becomes `activeConnection(User): AiProviderSettings`, and `tick()` builds the `TickContext`.
+  - Finishing's mutation expectation becomes "≥ `minMsi`, every escaped mutant classed as equivalent or killed". B1 adds a test showing the first batch is marked started before its provider call.
+  - The planned test for the distillation request's `replyItemCount` 1 is dropped. The Distillation arm of `answerBoundTokens()` ignores the count, so 0, 1 and 2 build the same request.
+  - `ConsolidationOutcome`'s docblocks get the same rewrite as their twin `ProfileDistillationOutcome` (D15). `TickContextTest` gets a deletion check on `retryPlan()`.
+- **Zero-concurrency floor (B1f and the fix wave):** the old `max(1, $cap)` sat before the wave-concurrency cap, so it never applied. From wave 2 on, `cap()` still returned 0 and stalled the run. This was present before PR B, and the API cannot store 0.
+  - The fix puts the floor with the owners of the numbers: `RecommendationWaveConcurrency::cap()` and `BatchPhase::effectiveCap()` each return at least 1, and `waveSize()` is a plain min.
+  - The tests: a `cap()` unit test, a poll-path advancer test, and a worker two-tick regression test.
+  - Behaviour change: a concurrency ≤ 0 stored directly in the database no longer stalls wave 2 and later.
+- **Reviews:**
+  - The `BatchPhase` flush before the provider call stays. It lets a status poll see `first_batch_started` while the wave is still loading and packing.
+  - The `tick($run)` test helper had three copies and is now one trait, `BuildsTickContexts`.
+  - `RateLimitedCompletion`'s docblock now describes a blocking plan and a deferring plan, in transport terms.
+  - Rejected (`/simplify`):
+    - Dropping `WaveContext::$profile` (D19 carries a `PromptContext` there).
+    - A keyed locator for phase choice (the choice is ordered run-state predicates, not a key).
+    - A shared exception list for the halve pre-catch and the envelope (the envelope must tell the two apart).
+  - Carried to PR C:
+    - `linesInSnapshotOrder()` moves to `WaveBatch` in C5.
+    - C3 checks whether the Distillation/Consolidation retry-or-degrade skeleton still has two copies.
+- **Gates:** each tick now makes one extra read-only settings read, including a deferred tick that used to skip it.
+- **Real run:** run 125 as user 2 (`qwen/qwen3.7-flash`): completed, 6/6 batches, 0 transport failures, every call usable on attempt 1, dev log clean.
+
 ---
 
 # PR C — one answer budget, recorded calls without flags (`Refs #1162`)
