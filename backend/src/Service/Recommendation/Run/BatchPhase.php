@@ -63,10 +63,7 @@ final readonly class BatchPhase implements ProviderPhase
         $this->entityManager->flush();
     }
 
-    /**
-     * A run's first wave is one call, which warms the provider's prompt-prefix cache before the fan-out (#495);
-     * later waves take the driver's cap, the run's halved concurrency or the batches left, whichever is least.
-     */
+    /** Floors at 1 so a stored concurrency ≤ 0 cannot wedge the run (#344). */
     private function waveSize(TickContext $tick): int
     {
         $progress = $tick->run->progress();
@@ -74,9 +71,10 @@ final readonly class BatchPhase implements ProviderPhase
             return 1;
         }
 
+        $concurrency = min($this->effectiveCap($tick), $this->waveConcurrency->cap($tick->run, $tick->connection));
+
         return min(
-            $this->effectiveCap($tick),
-            $this->waveConcurrency->cap($tick->run, $tick->connection),
+            max(1, $concurrency),
             \count($tick->run->getCandidateBatches()) - $progress->nextBatchIndex,
         );
     }
@@ -84,10 +82,9 @@ final readonly class BatchPhase implements ProviderPhase
     private function effectiveCap(TickContext $tick): int
     {
         $connection = $tick->connection;
-        $cap = TickDriver::Worker === $tick->driver
+
+        return TickDriver::Worker === $tick->driver
             ? $connection->cappedBatchConcurrency()
             : min($connection->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
-
-        return max(1, $cap);
     }
 }

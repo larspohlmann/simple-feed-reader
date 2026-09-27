@@ -1376,13 +1376,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(2, $persisted->waveConcurrencyCap(4));
     }
 
-    /**
-     * A stored `batchConcurrency` of 0 is unreachable through the API's
-     * `Range(1..4)` validation, but a direct-DB value that low would
-     * otherwise floor `waveSize` at 0 and wedge the run: every tick flushes
-     * without resolving a batch, forever. `effectiveCap` floors at 1, so the
-     * tick still resolves one batch (#344 final review).
-     */
+    /** The API cannot store a batchConcurrency of 0; one written directly to the DB still must not wedge the run. */
     public function testZeroBatchConcurrencyStillAdvancesOneBatch(): void
     {
         $this->seedMultiBatchFixture();
@@ -1397,6 +1391,31 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame(1, $report->batchesDone);
         self::assertCount(2, $this->stubChatClient()->calls()); // the distill call, then this batch call
+    }
+
+    public function testZeroBatchConcurrencyStillAdvancesOneBatchPerWaveAfterTheFirst(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->queueDistillReply();
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        self::assertCount(3, $batches);
+        $this->setBatchConcurrency(0);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 80, 'reason' => 'floor']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        self::assertSame(2, $report->batchesDone);
+        self::assertCount(3, $this->stubChatClient()->calls()); // distill, the warm-up wave, then one floored call
     }
 
     public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
