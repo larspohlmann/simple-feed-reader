@@ -6,6 +6,7 @@ namespace App\Tests\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
+use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxyTestFailure;
@@ -43,7 +44,7 @@ final class ProxyConnectionTesterTest extends TestCase
 
     public function testReturnsNotConfiguredWhenNoProxyStored(): void
     {
-        $unconfigured = $this->storedProxy(null, ProxyPasswordCiphers::SECRET);
+        $unconfigured = $this->storedProxy(null, ProxyPasswordCiphers::withTestSecret());
         $tester = new ProxyConnectionTester($unconfigured, new MockHttpClient());
 
         $result = $tester->test();
@@ -147,7 +148,7 @@ final class ProxyConnectionTesterTest extends TestCase
      */
     public function testAnUnreadableStoredPasswordIsReportedRatherThanThrown(): void
     {
-        $afterRotation = $this->storedProxy($this->configuredRow(), self::ROTATED_SECRET);
+        $afterRotation = $this->storedProxy($this->configuredRow(), ProxyPasswordCiphers::under(self::ROTATED_SECRET));
 
         $result = (new ProxyConnectionTester($afterRotation, new MockHttpClient()))->test();
 
@@ -179,7 +180,7 @@ final class ProxyConnectionTesterTest extends TestCase
 
     private function configuredProxy(): StoredProxy
     {
-        return $this->storedProxy($this->configuredRow(), ProxyPasswordCiphers::SECRET);
+        return $this->storedProxy($this->configuredRow(), ProxyPasswordCiphers::withTestSecret());
     }
 
     private function configuredRow(): ProxyServerSettings
@@ -193,8 +194,8 @@ final class ProxyConnectionTesterTest extends TestCase
         return $row;
     }
 
-    private function storedProxy(?ProxyServerSettings $row, string $secret): StoredProxy
+    private function storedProxy(?ProxyServerSettings $row, ProxyPasswordCipher $cipher): StoredProxy
     {
-        return $this->storedProxyOver($row, ProxyPasswordCiphers::under($secret));
+        return $this->storedProxyOver($row, $cipher);
     }
 }

@@ -9,7 +9,7 @@ use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 
 final class ProxyPasswordCiphers
 {
-    public const string SECRET = 'test-master-secret-at-least-32-chars-long!!';
+    private const string SECRET = 'test-master-secret-at-least-32-chars-long!!';
 
     public static function withTestSecret(): ProxyPasswordCipher
     {
