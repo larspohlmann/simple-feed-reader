@@ -28,13 +28,13 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
      */
     private function fetcher(
         callable|iterable $responses,
-        ?ProxyConfig $resolvedProxy,
+        ?ProxyConfig $egressProxy,
         array $dnsOverrides = [],
     ): ConcurrentFeedFetcher {
         $resolver = $this->dns($dnsOverrides);
 
         $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn($resolvedProxy);
+        $egressProxySource->method('egressProxy')->willReturn($egressProxy);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
