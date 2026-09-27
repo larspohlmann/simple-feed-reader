@@ -2766,7 +2766,7 @@ Check the lines: `sed -n '134p;135p;136p;137p;138p;144p;149p;154p;159p' tests/Ph
 
 Run: `php bin/phpunit tests/PhpStan/DomainKnowsNoHttpRuleTest.php`
 Expected: FAIL. The diff lists the nine new expectations as missing and nothing else.
-OPEN QUESTION: if PHPStan's parser hands the rule a flattened `Use_` instead of the `GroupUse` node, the two line-135 expectations already pass here. Then drop the `GroupUse` branch from Step 3 and report it.
+SETTLED (PR A): PHPStan 2.2.5 hands the rule the `GroupUse` node intact, so the two line-135 expectations fail here and the `GroupUse` branch in Step 3 stays.
 
 - [ ] **Step 3: Implement**
 
@@ -2985,6 +2985,25 @@ git commit -m "refactor(#1182): domain code may not name a request DTO, and the 
 ```
 
 ---
+
+### Execution rulings (PR A)
+
+- **Preflight (opus scan):**
+  - Every task runs `infection:diff` in its own gates. The renames put stable logic under the diff for the first time. A8 and A9 pinned new defaults that tests used but never asserted: the catalog rows' `enabled`/`locked`, and the saved search's `wholeWord`/`phrase` (`SavedSearchDefinitionTest`).
+  - A12 adds a lowercase HTTP-class fixture line with a sixth deletion check, so the case-insensitive match on the exact class list is pinned.
+  - New values carry no docblock that only restates them (`DigestConfiguration`, `PasskeyAttestation`, `ClientError`, `CatalogFeedDetails`). Docblocks that state a rule stay.
+  - Other rulings: `AdminUserFootprint`'s docblock is one line, A3's stale test names are renamed, A6 builds its DTO through `SettingsRequests::instance()`, and every touched `use` block is sorted.
+- **A12:** PHPStan 2.2.5 passes the `GroupUse` node intact, so the branch stays. PhpStorm findings on the fixture's own violation lines are accepted, and so is the existing `RuleError` warning on `error()`.
+- **Final review:**
+  - For an `App\Dto` reference, the rule's message now names the #1182 remedy.
+  - A group import with a forbidden prefix reports each class once.
+  - `isHttp()` uses `array_any` with `strcasecmp`.
+  - Reorder parameters are `$ordered<Entity>Ids`.
+- **Kept, on purpose:**
+  - The rule does not read docblocks, because a docblock mention is not a reference.
+  - `groupedReferences()` keeps `array_values()`, because php-parser types `GroupUse::$uses` as an array, not a list.
+  - The name `TagMove`.
+  - The duplicated flag patch in `BulkSubscriptionUpdater` and `SubscriptionEditor` and the catalog reorder lookup were already there before this PR, and there are two copies of each. Both are watch items.
 
 ### Finishing PR A
 
