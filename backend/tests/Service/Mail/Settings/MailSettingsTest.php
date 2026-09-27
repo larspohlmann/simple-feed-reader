@@ -62,7 +62,7 @@ final class MailSettingsTest extends KernelTestCase
             fromAddress: 'noreply@reader.test',
             fromName: 'Reader',
             password: 'top-secret',
-        ));
+        )->toUpdate());
 
         $view = $this->view();
         self::assertTrue($view['enabled']);
@@ -77,15 +77,15 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testANullPasswordKeepsTheStoredSecret(): void
     {
-        $this->settings()->update(SettingsRequests::mail(host: 'h', password: 'keep-me'));
-        $this->settings()->update(SettingsRequests::mail(host: 'h2', password: null));
+        $this->settings()->update(SettingsRequests::mail(host: 'h', password: 'keep-me')->toUpdate());
+        $this->settings()->update(SettingsRequests::mail(host: 'h2', password: null)->toUpdate());
 
         self::assertSame('keep-me', $this->settings()->configuredTransport()?->password);
     }
 
     public function testResetToEnvironmentDeletesTheSavedRow(): void
     {
-        $this->settings()->update(SettingsRequests::mail(host: 'smtp.relay.test', password: 'top-secret'));
+        $this->settings()->update(SettingsRequests::mail(host: 'smtp.relay.test', password: 'top-secret')->toUpdate());
         $before = $this->view();
         self::assertTrue($before['hasSavedConfig']);
 
@@ -107,14 +107,14 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.relay.test',
             username: 'postbox',
             password: null,
-        ));
+        )->toUpdate());
     }
 
     public function testUpdateRejectsEnablingWithNoHostWhileTheEnvFallbackIsNull(): void
     {
         $this->expectExceptionObject(IncompleteMailConfigurationException::transportMissing());
 
-        $this->settings()->update(SettingsRequests::mail(enabled: true, host: ''));
+        $this->settings()->update(SettingsRequests::mail(enabled: true, host: '')->toUpdate());
     }
 
     public function testUpdateAcceptsAnEnabledAuthenticatedRowThatKeepsAStoredPassword(): void
@@ -124,14 +124,14 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.relay.test',
             username: 'postbox',
             password: 'top-secret',
-        ));
+        )->toUpdate());
 
         $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.relay.test',
             username: 'postbox',
             password: null,
-        ));
+        )->toUpdate());
 
         $view = $this->view();
         self::assertTrue($view['enabled']);
@@ -145,7 +145,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.relay.test',
             username: null,
             password: null,
-        ));
+        )->toUpdate());
 
         self::assertTrue($this->view()['enabled']);
     }
@@ -157,7 +157,7 @@ final class MailSettingsTest extends KernelTestCase
             fromAddress: 'saved@reader.test',
             fromName: 'Saved',
             password: 'p',
-        ));
+        )->toUpdate());
 
         $identity = $this->settings()->identity();
         self::assertSame('saved@reader.test', $identity->address);
@@ -166,7 +166,7 @@ final class MailSettingsTest extends KernelTestCase
 
     public function testARowWithABlankFromAddressFallsBackToTheEnvIdentity(): void
     {
-        $this->settings()->update(SettingsRequests::mail(host: 'h', fromAddress: '', password: 'p'));
+        $this->settings()->update(SettingsRequests::mail(host: 'h', fromAddress: '', password: 'p')->toUpdate());
 
         self::assertSame(
             self::getContainer()->get(MailFallback::class)->identity()->address,
@@ -181,7 +181,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.relay.test',
             username: 'postbox',
             password: null,
-        ));
+        )->toUpdate());
 
         self::assertTrue($this->view()['hasSavedConfig']);
     }
@@ -195,7 +195,7 @@ final class MailSettingsTest extends KernelTestCase
             host: '',
             username: 'postbox',
             password: null,
-        ));
+        )->toUpdate());
     }
 
     public function testRemovePasswordClearsTheStoredSecret(): void
@@ -204,7 +204,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.example.test',
             username: null,
             password: 'topsecret',
-        ));
+        )->toUpdate());
         $before = $this->view();
         self::assertTrue($before['hasPassword']);
 
@@ -214,7 +214,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.moved.test',
             username: null,
             removePassword: true,
-        ));
+        )->toUpdate());
 
         $view = $this->view();
         self::assertFalse($view['hasPassword']);
@@ -228,7 +228,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.example.test',
             username: 'alice',
             password: 'topsecret',
-        ));
+        )->toUpdate());
 
         $this->expectException(IncompleteMailConfigurationException::class);
 
@@ -237,14 +237,14 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.example.test',
             username: 'alice',
             removePassword: true,
-        ));
+        )->toUpdate());
     }
 
     public function testUseProxyIsRejectedWhenNoEgressProxyIsConfigured(): void
     {
         $this->expectException(IncompleteMailConfigurationException::class);
 
-        $this->settings()->update(SettingsRequests::mail(host: 'smtp.gmail.com', useProxy: true));
+        $this->settings()->update(SettingsRequests::mail(host: 'smtp.gmail.com', useProxy: true)->toUpdate());
     }
 
     public function testUseProxyIsPersistedWhenAProxyIsConfigured(): void
@@ -255,7 +255,7 @@ final class MailSettingsTest extends KernelTestCase
             host: 'smtp.gmail.com',
             useProxy: true,
             password: 'app-pw',
-        ));
+        )->toUpdate());
 
         self::assertTrue($this->repository()->findSingleton()?->usesProxy());
         self::assertTrue($this->settings()->configuredTransport()?->useProxy);

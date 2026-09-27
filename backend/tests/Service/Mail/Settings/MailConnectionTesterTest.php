@@ -75,7 +75,7 @@ final class MailConnectionTesterTest extends KernelTestCase
     {
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p'),
+            SettingsRequests::mail(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -96,7 +96,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -113,7 +113,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -157,7 +157,7 @@ final class MailConnectionTesterTest extends KernelTestCase
             password: 'p',
             fromAddress: 'from@x.test',
             useProxy: true,
-        ));
+        )->toUpdate());
 
         $result = $this->tester()->test();
 
@@ -198,7 +198,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
         $health = new InMemoryMailFailureRecorder();
 

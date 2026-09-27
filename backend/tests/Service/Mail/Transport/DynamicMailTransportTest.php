@@ -31,7 +31,7 @@ final class DynamicMailTransportTest extends KernelTestCase
     public function testWithARowItBuildsAnSmtpTransport(): void
     {
         self::getContainer()->get(MailSettings::class)->update(
-            SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'),
+            SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p')->toUpdate(),
         );
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
@@ -51,9 +51,9 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
         $fallback = $transport->activeTransport();
 
-        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p')->toUpdate());
         $first = $transport->activeTransport();
-        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2526, password: null));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2526, password: null)->toUpdate());
         $second = $transport->activeTransport();
 
         self::assertNotSame($fallback, $first);
@@ -99,7 +99,7 @@ final class DynamicMailTransportTest extends KernelTestCase
             username: 'alice',
             password: 'app-pw',
             useProxy: true,
-        ));
+        )->toUpdate());
 
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
@@ -133,7 +133,7 @@ final class DynamicMailTransportTest extends KernelTestCase
             host: 'smtp.relay.test',
             password: 'p',
             useProxy: false,
-        ));
+        )->toUpdate());
 
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
