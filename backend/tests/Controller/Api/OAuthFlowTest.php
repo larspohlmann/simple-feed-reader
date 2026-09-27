@@ -646,6 +646,7 @@ final class OAuthFlowTest extends WebTestCase
 
         $this->startFlow();
         $state = (string) $provider->lastState;
+        $genuine = $this->flowCookieValue();
 
         $this->client->request(
             'GET',
@@ -659,8 +660,11 @@ final class OAuthFlowTest extends WebTestCase
 
         // ...and the state was burned on the way, so the mismatch cannot be
         // used to probe a state and then spend it at the right callback.
+        // The refusal also cleared the binding, so restore it: only the burn can refuse this retry.
+        $this->replaceFlowCookie($genuine);
         $this->requestCallback(['state' => $state, 'code' => 'c']);
         self::assertStringContainsString('error=invalid_state', $this->location());
+        self::assertSame([], $provider->exchanges);
     }
 
     /**
