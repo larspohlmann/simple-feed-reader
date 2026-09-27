@@ -9,6 +9,7 @@ use App\Service\Backup\AccountRestorer;
 use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -20,6 +21,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class GoldenBackupRestoreTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     private const string CONFIRMATION = 'REPLACE';
 
     private function makeUser(string $email): User
@@ -46,19 +49,6 @@ final class GoldenBackupRestoreTest extends DbTestCase
         return $restorer;
     }
 
-    /**
-     * AccountRestorer::start() ends with AccountReset's clear(), which
-     * detaches the caller's User — the entries endpoint needs a managed one.
-     */
-    private function reloadUser(int $userId): User
-    {
-        $this->em->clear();
-        $user = $this->em->find(User::class, $userId);
-        self::assertInstanceOf(User::class, $user);
-
-        return $user;
-    }
-
     private function gzipOfFixture(string $directory, string $file): string
     {
         $path = __DIR__ . '/../../Fixtures/backup/' . $directory . '/' . $file;
@@ -79,7 +69,6 @@ final class GoldenBackupRestoreTest extends DbTestCase
     public function testRestoresACommittedBackupDirectory(string $directory): void
     {
         $user = $this->makeUser('golden-' . $directory . '@example.com');
-        $userId = $user->requireId();
 
         $started = $this->restorer()->start(
             $user,
@@ -91,7 +80,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
         self::assertSame(1, $started->subscriptions);
 
         $entriesResult = $this->entryPartRestorer()->load(
-            $this->reloadUser($userId),
+            $this->reload($user),
             $this->gzipOfFixture($directory, '001-entries.ndjson'),
         );
 

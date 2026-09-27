@@ -12,6 +12,7 @@ use App\Service\Recommendation\CompletionStreamProgress;
 use App\Service\Recommendation\CompletionUsage;
 use App\Service\Recommendation\RecordedCall;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -23,6 +24,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecordedCallTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     private User $user;
     private RecommendationRun $run;
     private RecommendationRunLog $log;
@@ -59,7 +62,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->finishUsable('the answer');
 
-        $log = $this->freshLog();
+        $log = $this->reload($this->log);
         self::assertSame('the answer', $log->getResponseText());
         self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
@@ -73,7 +76,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->finishUsable('the answer');
 
-        self::assertSame(4_096, $this->freshLog()->getWireBytes());
+        self::assertSame(4_096, $this->reload($this->log)->getWireBytes());
     }
 
     public function testAbortAfterTransportFailureWritesFinishedAtErrorDetailAndTheTransportVerdict(): void
@@ -82,7 +85,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->abortAfterTransportFailure('cURL error 28');
 
-        $log = $this->freshLog();
+        $log = $this->reload($this->log);
         self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertSame('cURL error 28', $log->getErrorDetail());
@@ -94,7 +97,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->abortAfterTransportFailure(null);
 
-        self::assertNull($this->freshLog()->getErrorDetail());
+        self::assertNull($this->reload($this->log)->getErrorDetail());
     }
 
     public function testASettledCallRecordsTheProvidersFinishReason(): void
@@ -104,7 +107,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->finishUsable('the answer');
 
-        self::assertSame('length', $this->freshLog()->getFinishReason());
+        self::assertSame('length', $this->reload($this->log)->getFinishReason());
     }
 
     /**
@@ -119,7 +122,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->abortAfterTransportFailure('cURL error 28');
 
-        self::assertSame('length', $this->freshLog()->getFinishReason());
+        self::assertSame('length', $this->reload($this->log)->getFinishReason());
     }
 
     public function testACallThatNeverHeardAFinishReasonRecordsNone(): void
@@ -128,7 +131,7 @@ final class RecordedCallTest extends DbTestCase
 
         $call->finishUsable('the answer');
 
-        self::assertNull($this->freshLog()->getFinishReason());
+        self::assertNull($this->reload($this->log)->getFinishReason());
     }
 
     public function testBanksTheProvidersUsageOntoTheRunWhenTheCallSettles(): void
@@ -363,18 +366,5 @@ final class RecordedCallTest extends DbTestCase
         );
 
         return (int) $value;
-    }
-
-    private function freshLog(): RecommendationRunLog
-    {
-        $this->em->clear();
-
-        $id = $this->log->getId();
-        self::assertNotNull($id);
-
-        /** @var RecommendationRunLog $log */
-        $log = $this->em->find(RecommendationRunLog::class, $id);
-
-        return $log;
     }
 }
