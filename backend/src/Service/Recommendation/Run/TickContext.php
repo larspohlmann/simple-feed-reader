@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 
@@ -33,5 +34,10 @@ final readonly class TickContext
     public function retryPlan(): RetryPlan
     {
         return $this->driver->retryPlan();
+    }
+
+    public function reasoning(): Reasoning
+    {
+        return Reasoning::preferredBy($this->connection);
     }
 }

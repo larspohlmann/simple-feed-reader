@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Recommendation\Run\TickContext;
 use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
@@ -36,6 +37,14 @@ final class TickContextTest extends TestCase
     {
         self::assertTrue($this->tick($this->connection(), TickDriver::Worker)->retryPlan()->blocks());
         self::assertFalse($this->tick($this->connection(), TickDriver::Sweep)->retryPlan()->blocks());
+    }
+
+    public function testTheConnectionDecidesWhetherTheCallMayReason(): void
+    {
+        $connection = $this->connection();
+        $connection->setSuppressReasoning(false);
+
+        self::assertSame(Reasoning::Allowed, $this->tick($connection, TickDriver::Poll)->reasoning());
     }
 
     private function tick(AiProviderSettings $connection, TickDriver $driver): TickContext

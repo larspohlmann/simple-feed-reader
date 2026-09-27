@@ -465,11 +465,8 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             'max_tokens' => $request->maxAnswerTokens,
         ];
 
-        if ($request->suppressReasoning) {
-            // OpenRouter's reasoning extension: fully disables the thinking
-            // phase, which ranking never needs (#323). An endpoint that does
-            // not know the field ignores an unknown top-level member; a strict
-            // one is why the flag is per-config rather than always on.
+        if (Reasoning::Suppressed === $request->reasoning) {
+            // OpenRouter's reasoning extension (#323); an endpoint that does not know the field ignores it.
             $payload['reasoning'] = ['effort' => 'none'];
         }
 

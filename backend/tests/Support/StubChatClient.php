@@ -8,6 +8,7 @@ use App\Service\Ai\Completion\ChatCompletionClient;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamObserver;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\ProviderConnection;
 
@@ -138,9 +139,8 @@ final class StubChatClient implements ChatCompletionClient
             // shape -- a batch call for the ranking, a dedup call for the
             // duplicate list -- rather than sharing one (#329).
             'responseSchemaName' => $request->responseSchema->name,
-            // Proves the advancer read the account's per-config preference into the
-            // request rather than hardcoding it (#323).
-            'suppressReasoning' => $request->suppressReasoning,
+            // Proves the connection's per-config preference reached the request (#323).
+            'suppressReasoning' => Reasoning::Suppressed === $request->reasoning,
         ];
 
         if (null !== $this->duringNextCall) {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 
 /**
@@ -114,25 +115,17 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * How many of the ranked winners the consolidation call takes — the largest
-     * shortlist whose whole call (profile + FAVORITES + the candidate lines,
-     * plus the reply and its reasoning headroom) fits the connection's context
-     * window, clamped between the floor and ceiling factors. A large-context
-     * connection recovers more of the good candidates the noisy batch filter
-     * under-scored; a small one is never handed a call it cannot answer.
+     * How many ranked winners the consolidation call takes: the largest shortlist whose whole call, reply and
+     * reasoning headroom included, fits the context window, clamped between the floor and ceiling factors.
      */
-    public function consolidationInputSize(
-        int $contextWindow,
-        RecommendationHistory $history,
-        ?string $profile,
-        int $picksLimit,
-        bool $suppressesReasoning,
-    ): int {
+    public function consolidationInputSize(PromptContext $context, Reasoning $reasoning): int
+    {
+        $contextWindow = $context->settings->packing->contextWindow;
+        $picksLimit = $context->settings->picksLimit;
         $descriptionLength = $this->descriptionLength($contextWindow);
-        $favoritesSection = $this->favoritesSection($history, $descriptionLength);
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
-            + $this->tokens((string) $profile)
-            + $this->tokens($favoritesSection);
+            + $this->tokens((string) $context->profile)
+            + $this->tokens($this->favoritesSection($context->history, $descriptionLength));
         $lineChars = $descriptionLength + self::CANDIDATE_LINE_FRAME_CHARS;
         $perCandidateInputTokens = intdiv($lineChars, self::CHARS_PER_TOKEN) + 1;
 
@@ -145,7 +138,7 @@ final class RecommendationPromptBuilder
                 + RecommendationAnswerBudget::outputBoundTokens(
                     $size,
                     RecommendationResponseSchema::Consolidation,
-                    $suppressesReasoning,
+                    $reasoning,
                 );
             if ($callTokens <= $contextWindow) {
                 return $size;
@@ -161,24 +154,16 @@ final class RecommendationPromptBuilder
      * @return list<array{role: string, content: string}>
      */
     public function batchMessages(
-        RecommendationHistory $history,
+        PromptContext $context,
         array $candidateLines,
-        EffectiveRecommendationSettings $settings,
-        ?string $profile,
         ?CandidatePoolSummary $poolSummary = null,
     ): array {
-        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-        $guidance = $settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE;
         $system = implode("\n\n", [
             RecommendationPromptText::BATCH_SYSTEM_ROLE,
-            $guidance,
+            $context->settings->guidancePrompt ?? RecommendationPromptText::DEFAULT_GUIDANCE,
             RecommendationPromptText::BATCH_OUTPUT_CONTRACT,
         ]);
-
-        $user = implode(
-            "\n\n",
-            $this->batchUserSections($history, $candidateLines, $descriptionLength, $profile, $poolSummary),
-        );
+        $user = implode("\n\n", $this->batchUserSections($context, $candidateLines, $poolSummary));
 
         return [
             ['role' => 'system', 'content' => $system],
@@ -187,29 +172,24 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * The batch user message: the not-yet-distilled PROFILE (when one is
-     * available), then FAVORITES only -- KEPT and VIEWED inform the profile
-     * the distillation phase writes, but the batch call itself never sees them
-     * -- then the global pool frame when one is present (#344 shuffles the
-     * pool into random batches, so each batch names the whole set's size and
-     * date span before its own local sample), then the candidate lines (#493).
+     * The profile when there is one, FAVORITES only (KEPT and VIEWED shape the profile, #493), the whole pool's
+     * frame (#344 shuffles the pool into random batches), then the candidates.
      *
      * @param list<PromptLine> $candidateLines
      *
      * @return list<string>
      */
     private function batchUserSections(
-        RecommendationHistory $history,
+        PromptContext $context,
         array $candidateLines,
-        int $descriptionLength,
-        ?string $profile,
         ?CandidatePoolSummary $poolSummary,
     ): array {
+        $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $sections = [];
-        if ($this->hasContent($profile)) {
-            $sections[] = "PROFILE:\n" . $profile;
+        if ($this->hasContent($context->profile)) {
+            $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($history, $descriptionLength);
+        $sections[] = $this->favoritesSection($context->history, $descriptionLength);
         $poolFrame = $this->poolFrameLine($poolSummary);
         if (null !== $poolFrame) {
             $sections[] = $poolFrame;
@@ -256,12 +236,8 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * The consolidation call carries the same profile+FAVORITES fidelity as
-     * the batch call -- KEPT and VIEWED never reach it, only the distillation
-     * phase reads the full history -- plus the ranked shortlist, rendered
-     * candidate-style so each line keeps the id a recommendation resolves
-     * back to an Entry (#493, Q6 correction: an earlier draft of this call
-     * re-sent the full history, which the packer never budgeted for).
+     * Profile and FAVORITES like the batch call, then the ranked shortlist rendered candidate-style, so each line
+     * keeps the id a recommendation resolves back to; a winner pruned since its batch is dropped (#493).
      *
      * @param list<array{id: int, score: int, reason: string}> $rankedPool
      * @param array<int, PromptLine>                           $linesById
@@ -270,31 +246,23 @@ final class RecommendationPromptBuilder
      *
      * @throws \LogicException if called with an empty pool
      */
-    public function consolidationMessages(
-        array $rankedPool,
-        array $linesById,
-        RecommendationHistory $history,
-        EffectiveRecommendationSettings $settings,
-        ?string $profile,
-    ): array {
+    public function consolidationMessages(PromptContext $context, array $rankedPool, array $linesById): array
+    {
         if ([] === $rankedPool) {
             throw new \LogicException('The consolidation phase requires at least one ranked winner.');
         }
 
-        $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-
-        // The shortlist in ranked order, with any winner whose line has since
-        // been pruned simply dropped.
+        $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $shortlistLines = array_values(array_filter(array_map(
             static fn (array $winner): ?PromptLine => $linesById[$winner['id']] ?? null,
             $rankedPool,
         )));
 
         $sections = [];
-        if ($this->hasContent($profile)) {
-            $sections[] = "PROFILE:\n" . $profile;
+        if ($this->hasContent($context->profile)) {
+            $sections[] = "PROFILE:\n" . $context->profile;
         }
-        $sections[] = $this->favoritesSection($history, $descriptionLength);
+        $sections[] = $this->favoritesSection($context->history, $descriptionLength);
         $sections[] = $this->candidateSection($shortlistLines, $descriptionLength);
 
         return [

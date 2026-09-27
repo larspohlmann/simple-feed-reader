@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Prompt;
 use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
@@ -42,7 +43,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             RecommendationAnswerBudget::outputBoundTokens(
                 45,
                 RecommendationResponseSchema::Consolidation,
-                suppressesReasoning: true,
+                reasoning: Reasoning::Suppressed,
             ),
             $request->maxAnswerTokens,
         );
@@ -65,14 +66,14 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         $full = RecommendationAnswerBudget::outputBoundTokens(
             45,
             RecommendationResponseSchema::Consolidation,
-            suppressesReasoning: false,
+            reasoning: Reasoning::Allowed,
         );
         self::assertSame($full, $request->maxAnswerTokens);
         self::assertGreaterThan(
             RecommendationAnswerBudget::outputBoundTokens(
                 45,
                 RecommendationResponseSchema::Consolidation,
-                suppressesReasoning: true,
+                reasoning: Reasoning::Suppressed,
             ),
             $full,
         );

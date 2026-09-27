@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Ai\Completion\Reasoning;
+
 /**
  * What the provider may spend answering, per phase. RecommendationPromptBuilder::packBatches() reserves this same
  * bound for a batch reply, so the packer and the provider cannot disagree.
@@ -80,33 +82,22 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * What the provider may spend on the whole output: the answer reserve plus
-     * a reasoning headroom sized by whether the connection suppresses
-     * reasoning. A connection that may reason gets the full headroom (#327); a
-     * suppressed one gets a reduced headroom, not none, since the hint does
-     * not stop a local model thinking and the answer reserve alone truncated
-     * it once batches grew (#493). The headroom is a ceiling, not a
-     * reservation — a model honouring the hint spends nothing on the unused
-     * room, and the wall clock and wire cap still stop a runaway either way.
+     * The answer bound plus a reasoning headroom. Suppression only shrinks the headroom: the hint does not stop a
+     * local model thinking (#493), and the headroom is a ceiling, not a reservation (#327).
      */
     public static function outputBoundTokens(
         int $replyItemCount,
         RecommendationResponseSchema $schema,
-        bool $suppressesReasoning,
+        Reasoning $reasoning,
     ): int {
-        return self::answerBoundTokens($replyItemCount, $schema)
-            + self::reasoningHeadroomTokens($suppressesReasoning);
+        return self::answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($reasoning);
     }
 
-    /**
-     * The reasoning headroom `outputBoundTokens()` adds — a fixed cost that does
-     * not scale with the reply's item count. Exposed so the consolidation sizer
-     * can reserve the same room against the context window it must fit within.
-     */
-    public static function reasoningHeadroomTokens(bool $suppressesReasoning): int
+    private static function reasoningHeadroomTokens(Reasoning $reasoning): int
     {
-        return $suppressesReasoning
-            ? self::SUPPRESSED_REASONING_HEADROOM_TOKENS
-            : self::REASONING_HEADROOM_TOKENS;
+        return match ($reasoning) {
+            Reasoning::Suppressed => self::SUPPRESSED_REASONING_HEADROOM_TOKENS,
+            Reasoning::Allowed => self::REASONING_HEADROOM_TOKENS,
+        };
     }
 }

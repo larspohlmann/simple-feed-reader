@@ -12,7 +12,6 @@ use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Completion\RateLimitedResult;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationPick;
 use App\Service\Recommendation\Prompt\RecommendationPickParser;
@@ -253,10 +252,8 @@ final readonly class RecommendationBatchWave
     private function batchMessages(WaveContext $wave, WaveBatch $waveBatch, ?string $lastInvalidReply): array
     {
         $messages = $this->promptBuilder->batchMessages(
-            $wave->history,
-            $this->linesInSnapshotOrder($waveBatch),
-            $wave->tick->settings,
-            $wave->profile,
+            $wave->prompt,
+            $waveBatch->linesInSnapshotOrder(),
             $wave->poolSummary,
         );
 
@@ -265,14 +262,6 @@ final readonly class RecommendationBatchWave
             $lastInvalidReply,
             RecommendationPromptText::CORRECTIVE,
         );
-    }
-
-    /** @return list<PromptLine> */
-    private function linesInSnapshotOrder(WaveBatch $waveBatch): array
-    {
-        $present = array_filter($waveBatch->ids, static fn (int $id): bool => isset($waveBatch->linesById[$id]));
-
-        return array_values(array_map(static fn (int $id): PromptLine => $waveBatch->linesById[$id], $present));
     }
 
     /**

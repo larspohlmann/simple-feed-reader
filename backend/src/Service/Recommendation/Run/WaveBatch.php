@@ -33,6 +33,14 @@ final readonly class WaveBatch
         return array_keys($this->linesById);
     }
 
+    /** @return list<PromptLine> */
+    public function linesInSnapshotOrder(): array
+    {
+        $present = array_filter($this->ids, fn (int $id): bool => isset($this->linesById[$id]));
+
+        return array_values(array_map(fn (int $id): PromptLine => $this->linesById[$id], $present));
+    }
+
     public function isFullyPruned(): bool
     {
         return [] === $this->linesById;

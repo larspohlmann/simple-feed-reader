@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Service\Recommendation\Prompt\CandidatePoolSummary;
-use App\Service\Recommendation\Prompt\RecommendationHistory;
+use App\Service\Recommendation\Prompt\PromptContext;
 
 final readonly class WaveContext
 {
@@ -14,8 +14,7 @@ final readonly class WaveContext
         public TickContext $tick,
         public array $batches,
         public ?CandidatePoolSummary $poolSummary,
-        public RecommendationHistory $history,
-        public ?string $profile,
+        public PromptContext $prompt,
     ) {
     }
 }

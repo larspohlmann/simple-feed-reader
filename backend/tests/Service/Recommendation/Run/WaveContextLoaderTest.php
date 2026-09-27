@@ -50,7 +50,7 @@ final class WaveContextLoaderTest extends DbTestCase
         self::assertSame([$ids[2], $ids[3]], $wave->batches[0]->ids);
         self::assertEqualsCanonicalizing([$ids[4], $ids[5]], $wave->batches[1]->validIds());
         self::assertSame(6, $wave->poolSummary?->total);
-        self::assertSame('Likes Rust.', $wave->profile);
+        self::assertSame('Likes Rust.', $wave->prompt->profile);
         self::assertSame($run, $wave->tick->run);
     }
 

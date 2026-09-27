@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRunLog;
 use App\Service\Recommendation\Prompt\ConsolidationParseResult;
+use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
@@ -38,15 +39,12 @@ final readonly class RecommendationConsolidationResolver
     public function resolve(TickContext $tick): ConsolidationOutcome
     {
         $run = $tick->run;
-        $settings = $tick->settings;
-        $history = $this->historyLoader->load($tick->userId(), $settings);
-        $inputSize = $this->promptBuilder->consolidationInputSize(
-            $settings->packing->contextWindow,
-            $history,
+        $prompt = new PromptContext(
+            $this->historyLoader->load($tick->userId(), $tick->settings),
+            $tick->settings,
             $run->getProfileText(),
-            $settings->picksLimit,
-            $tick->connection->suppressesReasoning(),
         );
+        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, $tick->reasoning());
         $pool = $this->ranker->cutForConsolidation($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
@@ -56,13 +54,7 @@ final readonly class RecommendationConsolidationResolver
         }
 
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
-            $this->promptBuilder->consolidationMessages(
-                $pool,
-                $linesById,
-                $history,
-                $settings,
-                $run->getProfileText(),
-            ),
+            $this->promptBuilder->consolidationMessages($prompt, $pool, $linesById),
             $run->getLastInvalidReply(),
             RecommendationPromptText::CONSOLIDATION_CORRECTIVE,
         );
