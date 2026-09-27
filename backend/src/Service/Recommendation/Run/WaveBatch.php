@@ -7,11 +7,8 @@ namespace App\Service\Recommendation\Run;
 use App\Service\Recommendation\Prompt\PromptLine;
 
 /**
- * One batch of the frozen plan in a provider wave (#344): its plan position,
- * its snapshot-order entry ids, and the prompt lines those ids still resolve
- * to. A batch pruned to nothing since the snapshot has an empty `linesById` and
- * resolves as an empty winner set with no provider call — the per-batch form of
- * providerTick's all-pruned short-circuit.
+ * One batch of the frozen plan in a wave (#344): its plan position, its snapshot-order ids, and the prompt lines
+ * those ids still resolve to. A batch pruned to nothing resolves to no winners without a provider call.
  */
 final readonly class WaveBatch
 {

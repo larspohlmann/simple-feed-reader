@@ -7,24 +7,8 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Three per-connection knobs a recommendation run consults, not read together or
- * by one collaborator: `slowModel` picks the timeout profile
- * (ProviderConnectionFactory::timeoutsFor()) and the lock TTL a tick reserves;
- * `batchConcurrency` sizes one tick's wave (RecommendationRunAdvancer::effectiveCap());
- * `maxBatchSize` is the per-connection cap RecommendationSettingsResolver::batchCeilingFor()
- * reads, null meaning the shared default stands (#445). They share one question —
- * how a run should drive this connection — not a caller.
- *
- * `suppressReasoning` answers a related but different question, what one call asks
- * the provider to do (RecommendationCompletionRequestFactory), and stays on
- * AiProviderSettings so it doesn't blur that line.
- *
- * Embedded into AiProviderSettings rather than three of its own columns: PHPMD's
- * field-count ceiling there is a proxy for a real seam — these three arrived as
- * separate features (#344, #433, #445) but answer the one question above. An
- * embeddable groups them without the join or lifecycle a separate entity would
- * add; column names stay unprefixed so the table is unchanged (see FetchSchedule
- * for the same move on Feed).
+ * How a run drives this connection: `slowModel` picks the timeout profile and the lock TTL, `batchConcurrency`
+ * sizes a tick's wave (BatchPhase::effectiveCap()), `maxBatchSize` caps a batch (null keeps the default, #445).
  */
 #[ORM\Embeddable]
 class RunTuning

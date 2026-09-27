@@ -3164,6 +3164,37 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame([], $persisted->getWinners());
     }
 
+    public function testAStatusPollDuringTheFirstBatchCallSeesTheFirstBatchStarted(): void
+    {
+        $this->seedMultiBatchFixture();
+        $run = $this->startSnapshotAndDistill();
+        $runId = $run->requireId();
+        self::assertFalse($this->persistedFirstBatchStarted($runId));
+
+        $startedDuringTheCall = null;
+        $this->stubChatClient()->duringNextCall(function () use ($runId, &$startedDuringTheCall): void {
+            $startedDuringTheCall = $this->persistedFirstBatchStarted($runId);
+        });
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $run->getCandidateBatches()[0][0], 'score' => 90, 'reason' => 'r1']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $this->advancer()->advance($this->user);
+
+        self::assertTrue($startedDuringTheCall);
+    }
+
+    private function persistedFirstBatchStarted(int $runId): bool
+    {
+        $started = $this->em->getConnection()->fetchOne(
+            'SELECT first_batch_started FROM recommendation_run WHERE id = ?',
+            [$runId],
+        );
+        self::assertIsNumeric($started);
+
+        return 1 === (int) $started;
+    }
+
     private function runRepository(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $runs */

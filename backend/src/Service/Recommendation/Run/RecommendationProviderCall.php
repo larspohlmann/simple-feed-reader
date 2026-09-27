@@ -4,28 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
 use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\RateLimitedCompletion;
-use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\ProviderConnectionFactory;
 
 /**
- * One recorded provider call for the single-call phases -- distillation and consolidation
- * (#493). Opens the connection and runs the completion; it exists rather than a bare
- * ChatCompletionClient call for the failure path: it settles the debug row on any error
- * before unwinding.
- *
- * RecommendationCallRecorder::begin() persisted that row the moment the request went out
- * (#309); a verdict left null reads to the debug panel as "still streaming" forever. The
- * exception is always re-thrown unchanged, so the advancer still tells a transport failure
- * (touches the run's ceiling) apart from an unreadable key (fails the run permanently)
- * purely by type -- forSettings() decrypting the stored key runs inside this same try, so
- * an unreadable key never leaves the row stuck either.
- *
- * The batch phase settles many rows over one wave via its own
- * RecommendationBatchWave::completeRound(); this collaborator serves only the phases that
- * make exactly one recorded call.
+ * One recorded provider call for the single-call phases (#493). Any failure, an unreadable key included, settles the
+ * debug row before it propagates unchanged: an unsettled row reads as "still streaming" forever (#309).
  */
 final readonly class RecommendationProviderCall
 {
@@ -35,18 +20,14 @@ final readonly class RecommendationProviderCall
     ) {
     }
 
-    public function complete(
-        AiProviderSettings $settings,
-        CompletionRequest $request,
-        RecordedCall $recordedCall,
-        RetryPlan $plan,
-    ): string {
+    public function complete(TickContext $tick, CompletionRequest $request, RecordedCall $recordedCall): string
+    {
         try {
             return $this->completion->complete(
-                $this->connections->forSettings($settings),
+                $this->connections->forSettings($tick->connection),
                 $request,
                 $recordedCall,
-                $plan,
+                $tick->retryPlan(),
             );
         } catch (\Throwable $e) {
             $recordedCall->abortAfterTransportFailure($e->getMessage());

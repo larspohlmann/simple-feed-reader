@@ -4,35 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
 use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 
 /**
- * The distillation phase's single provider call (#493). Once a run starts, before any
- * batch is scored, one call over the reader's full weighted history -- favorites, kept,
- * viewed -- produces a short preference profile that every later phase reads instead of
- * that history. Mirrors RecommendationConsolidationResolver: it loads what the call needs,
- * calls the provider, parses the reply, settles the debug row it opened, and hands back a
- * ProfileDistillationOutcome for the advancer's distillTick to write. It never touches the
- * run's persisted progress and never retries on its own.
- *
- * A usable reply is cached on RecommendationSettings via storeProfile(), which is what
- * makes the profile survive past this run, for an account that skips distillation on a
- * later one (#493). An unusable reply resolves to the offending reply so the advancer can
- * retry next tick or degrade once attempts run out -- the profile prompt has no pool to
- * fall back to the way consolidation falls back to the batch-scored pool, so a degraded
- * run simply proceeds without one. A transport failure throws, exactly as in the
- * consolidation resolver, and the advancer folds it into the run's ceiling.
+ * The distillation phase's one provider call (#493): the reader's full history in, a short profile out, cached on
+ * the settings row so a later run can skip it. It never touches the run's progress.
  */
 final readonly class RecommendationProfileDistiller
 {
@@ -48,17 +31,12 @@ final readonly class RecommendationProfileDistiller
     ) {
     }
 
-    public function distill(
-        RecommendationRun $run,
-        AiProviderSettings $settings,
-        int $userId,
-        EffectiveRecommendationSettings $effectiveSettings,
-        RetryPlan $plan,
-    ): ProfileDistillationOutcome {
-        $history = $this->historyLoader->load($userId, $effectiveSettings);
-
+    public function distill(TickContext $tick): ProfileDistillationOutcome
+    {
+        $run = $tick->run;
+        $history = $this->historyLoader->load($tick->userId(), $tick->settings);
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
-            $this->promptBuilder->distillMessages($history, $effectiveSettings),
+            $this->promptBuilder->distillMessages($history, $tick->settings),
             $run->getLastInvalidReply(),
             RecommendationPromptText::DISTILL_CORRECTIVE,
         );
@@ -68,14 +46,18 @@ final readonly class RecommendationProfileDistiller
             RecommendationRunLog::PHASE_DISTILL,
             null,
             $messages,
-            $settings->getModel() ?? '',
+            $tick->model(),
         );
 
         $content = $this->providerCall->complete(
-            $settings,
-            $this->requestFactory->create($settings, $messages, 1, RecommendationResponseSchema::Distillation),
+            $tick,
+            $this->requestFactory->create(
+                $tick->connection,
+                $messages,
+                1,
+                RecommendationResponseSchema::Distillation,
+            ),
             $recordedCall,
-            $plan,
         );
 
         $result = $this->profileParser->parse($content);

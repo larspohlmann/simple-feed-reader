@@ -10,10 +10,11 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\ConsolidationOutcome;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
+use App\Service\Recommendation\Run\TickContext;
+use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
@@ -253,14 +254,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             'duplicates' => [],
         ], \JSON_THROW_ON_ERROR));
 
-        $this->resolver()->resolve(
-            $run,
-            $this->activeAiSettings(),
-            $this->userId(),
-            50,
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        $this->resolver()->resolve($this->tick($run));
 
         $calls = $this->stubChatClient()->calls();
         self::assertCount(1, $calls);
@@ -339,19 +333,12 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
     private function resolveConsolidation(RecommendationRun $run): ConsolidationOutcome
     {
-        return $this->resolver()->resolve(
-            $run,
-            $this->activeAiSettings(),
-            $this->userId(),
-            50,
-            $this->effectiveSettings(),
-            $this->plan(),
-        );
+        return $this->resolver()->resolve($this->tick($run));
     }
 
-    private function plan(): RetryPlan
+    private function tick(RecommendationRun $run): TickContext
     {
-        return RetryPlan::deferring();
+        return new TickContext($run, $this->activeAiSettings(), $this->effectiveSettings(), TickDriver::Poll);
     }
 
     private function idOf(Entry $entry): int
@@ -373,11 +360,6 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
 
         return $resolver->forUser($this->user);
-    }
-
-    private function userId(): int
-    {
-        return $this->user->requireId();
     }
 
     private function resolver(): RecommendationConsolidationResolver

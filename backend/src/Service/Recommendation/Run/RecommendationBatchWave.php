@@ -75,14 +75,13 @@ final readonly class RecommendationBatchWave
      * @throws \App\Service\Ai\Exception\RetryableProviderException
      * @throws ProviderRateLimitedException
      */
-    public function resolve(
-        RecommendationRun $run,
-        AiProviderSettings $settings,
-        EffectiveRecommendationSettings $effectiveSettings,
-        int $userId,
-        int $waveSize,
-        RetryPlan $plan,
-    ): BatchWaveResult {
+    public function resolve(TickContext $tick, int $waveSize): BatchWaveResult
+    {
+        $run = $tick->run;
+        $settings = $tick->connection;
+        $effectiveSettings = $tick->settings;
+        $userId = $tick->userId();
+        $plan = $tick->retryPlan();
         $waveBatches = $this->waveBatches($run, $userId, $waveSize);
         $poolSummary = $this->candidateLoader->summarize($userId, $this->allCandidateIds($run));
         $history = $this->historyLoader->load($userId, $effectiveSettings);
