@@ -7,6 +7,7 @@ namespace App\Tests\Service\Mail\Digest;
 use App\Dto\Me\UpdateDigestRequest;
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\DigestFormat;
@@ -22,7 +23,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testItAppliesAllFourSettings(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
 
         $enablement->applyTo($prefs, new UpdateDigestRequest(
@@ -42,7 +43,7 @@ final class DigestEnablementTest extends TestCase
     public function testFirstOffToOnTransitionSeedsDigestLastSentAtToNow(): void
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
-        $enablement = new DigestEnablement(new MockClock($now));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock($now)));
         $prefs = $this->preferences();
         self::assertFalse($prefs->isDigestEnabled());
         self::assertNull($prefs->getDigestLastSentAt());
@@ -60,7 +61,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testANonTransitioningEnabledWriteDoesNotMoveDigestLastSentAt(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
         $prefs->setDigestEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
@@ -79,7 +80,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testAnAlreadyDisabledWriteThatStaysDisabledDoesNotSeed(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
         self::assertFalse($prefs->isDigestEnabled());
         self::assertNull($prefs->getDigestLastSentAt());
@@ -98,7 +99,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testDisablingDoesNotSeedOrClearDigestLastSentAt(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
         $prefs->setDigestEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
@@ -118,7 +119,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testReenablingAfterDisableDoesNotReseedBecauseLastSentAtIsAlreadySet(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
         $prefs->setDigestEnabled(false);
         // Simulates an account that already received at least one digest before
@@ -141,7 +142,7 @@ final class DigestEnablementTest extends TestCase
     public function testANonUtcClockIsNormalisedToNaiveUtcBeforeSeeding(): void
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
-        $enablement = new DigestEnablement($clock);
+        $enablement = new DigestEnablement(new NaiveUtcClock($clock));
         $prefs = $this->preferences();
 
         $enablement->applyTo($prefs, new UpdateDigestRequest(
@@ -160,7 +161,7 @@ final class DigestEnablementTest extends TestCase
 
     public function testApplyToSetsTheDigestFormat(): void
     {
-        $enablement = new DigestEnablement(new MockClock('2026-08-28T12:00:00Z'));
+        $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
 
         $enablement->applyTo($prefs, new UpdateDigestRequest(

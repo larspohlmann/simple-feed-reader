@@ -13,6 +13,7 @@ use App\Service\Mail\Digest\DigestPageGroup;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
@@ -28,7 +29,11 @@ final class DigestHtmlRendererTest extends TestCase
 
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
-        return new DigestHtmlRenderer(DigestTwigEnvironment::withTranslator($translator), $links);
+        return new DigestHtmlRenderer(
+            DigestTwigEnvironment::withTranslator($translator),
+            $links,
+            new MockClock('2026-08-30T12:00:00Z'),
+        );
     }
 
     private function card(string $title, ?string $imageUrl): DigestEntry
@@ -111,6 +116,16 @@ final class DigestHtmlRendererTest extends TestCase
         $html = $this->renderer()->render(new DigestPage([], 22), new DigestImageSet([], []), 'en');
 
         self::assertStringContainsString('22 new entries', $html);
+    }
+
+    public function testTheHeaderIsDatedByTheInjectedClock(): void
+    {
+        $html = $this->renderer()->render(new DigestPage([], 1), new DigestImageSet([], []), 'en');
+
+        $clockDay = (new \IntlDateFormatter('en', \IntlDateFormatter::FULL, \IntlDateFormatter::NONE, 'UTC'))
+            ->format(new \DateTimeImmutable('2026-08-30T12:00:00Z'));
+        self::assertIsString($clockDay);
+        self::assertStringContainsString($clockDay, $html);
     }
 
     public function testGroupHeadingShowsTermAndItsCount(): void
