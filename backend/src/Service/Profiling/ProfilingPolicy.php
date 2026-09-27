@@ -4,12 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling;
 
-use App\Service\Grafana\GrafanaSettings;
-
 final readonly class ProfilingPolicy
 {
     public function __construct(
-        private GrafanaSettings $settings,
+        private ProfilingConfigSource $config,
         private ProfileSampler $sampler,
         private PyroscopeEndpoint $endpoint,
     ) {
@@ -21,8 +19,9 @@ final readonly class ProfilingPolicy
             return false;
         }
         try {
-            return $this->settings->profilingEnabled() && null !== $this->endpoint->pushUrl();
+            return $this->config->profilingEnabled() && null !== $this->endpoint->pushUrl();
         } catch (\Throwable) {
+            // Unreadable config means profiling is off: this runs on every request and must never fail one.
             return false;
         }
     }

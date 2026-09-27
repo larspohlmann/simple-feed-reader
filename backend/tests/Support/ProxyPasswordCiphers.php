@@ -9,11 +9,9 @@ use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 
 final class ProxyPasswordCiphers
 {
-    private const string SECRET = 'test-master-secret-at-least-32-chars-long!!';
-
     public static function withTestSecret(): ProxyPasswordCipher
     {
-        return self::under(self::SECRET);
+        return self::under(TestInstanceSecret::VALUE);
     }
 
     public static function under(string $secret): ProxyPasswordCipher

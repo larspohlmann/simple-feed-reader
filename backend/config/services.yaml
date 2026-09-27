@@ -290,6 +290,8 @@ services:
 
     App\Service\Profiling\PyroscopeEndpoint: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
 
+    App\Service\Profiling\ProfilingConfigSource: '@App\Service\Grafana\EffectiveGrafanaSettings'
+
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 
     App\Service\Logging\Loki\SpoolLokiSink:

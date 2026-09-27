@@ -79,11 +79,9 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 900
 
-            # The Grafana singleton row (#1012), so the profiling toggle check
-            # on every request and the Loki/Pyroscope endpoint reads stop
-            # querying the database on the hot path. GrafanaSettings forgets the
-            # entry on every admin save, so this lifetime is only a backstop for
-            # an entry whose invalidation was somehow lost.
+            # The Grafana singleton row (#1012), so the profiling toggle check on
+            # every request and the Loki/Pyroscope endpoint reads stop querying
+            # the database. EffectiveGrafanaSettings forgets it on every admin save.
             grafana.settings.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 300

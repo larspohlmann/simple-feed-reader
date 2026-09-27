@@ -8,7 +8,7 @@ use App\Service\Logging\Loki\LokiEndpoint;
 
 final readonly class SettingsLokiEndpoint implements LokiEndpoint
 {
-    public function __construct(private GrafanaSettings $settings)
+    public function __construct(private EffectiveGrafanaSettings $settings)
     {
     }
 

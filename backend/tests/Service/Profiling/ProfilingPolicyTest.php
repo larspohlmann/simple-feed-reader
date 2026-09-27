@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Profiling;
 
-use App\Service\Grafana\GrafanaSettings;
 use App\Service\Profiling\CollapsedProfile;
 use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfilingConfigSource;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeEndpoint;
 use PHPUnit\Framework\TestCase;
@@ -20,48 +20,58 @@ final class ProfilingPolicyTest extends TestCase
         self::assertTrue($policy->isEnabled());
     }
 
-    public function testDisabledWhenTheSamplerIsUnavailableAndSettingsAreNeverConsulted(): void
+    public function testDisabledWhenTheSamplerIsUnavailableAndTheConfigIsNeverRead(): void
     {
-        $settings = $this->createMock(GrafanaSettings::class);
-        $settings->expects($this->never())->method('profilingEnabled');
-        $policy = new ProfilingPolicy($settings, $this->sampler(false), $this->endpoint('http://pyroscope:4040'));
+        $config = $this->createMock(ProfilingConfigSource::class);
+        $config->expects(self::never())->method('profilingEnabled');
+        $policy = new ProfilingPolicy($config, $this->sampler(false), $this->endpoint('http://pyroscope:4040'));
 
         self::assertFalse($policy->isEnabled());
     }
 
     public function testDisabledWhenOnButThePushUrlIsNull(): void
     {
-        $policy = $this->policy(available: true, enabled: true, url: null);
+        self::assertFalse($this->policy(available: true, enabled: true, url: null)->isEnabled());
+    }
+
+    public function testDisabledWhenOffEvenWithAPushUrl(): void
+    {
+        self::assertFalse($this->policy(available: true, enabled: false, url: 'http://pyroscope:4040')->isEnabled());
+    }
+
+    public function testAConfigThatCannotBeReadMeansProfilingIsOff(): void
+    {
+        $config = $this->createStub(ProfilingConfigSource::class);
+        $config->method('profilingEnabled')->willThrowException(new \RuntimeException('database gone'));
+        $policy = new ProfilingPolicy($config, $this->sampler(true), $this->endpoint('http://pyroscope:4040'));
 
         self::assertFalse($policy->isEnabled());
     }
 
-    public function testDisabledWhenSettingsThrow(): void
+    public function testAPushUrlThatCannotBeReadMeansProfilingIsOff(): void
     {
-        $policy = new ProfilingPolicy($this->throwingSettings(), $this->sampler(true), $this->endpoint(null));
+        $endpoint = new class implements PyroscopeEndpoint {
+            public function pushUrl(): ?string
+            {
+                throw new \RuntimeException('cache gone');
+            }
+        };
+        $policy = new ProfilingPolicy($this->config(true), $this->sampler(true), $endpoint);
 
         self::assertFalse($policy->isEnabled());
     }
 
     private function policy(bool $available, bool $enabled, ?string $url): ProfilingPolicy
     {
-        return new ProfilingPolicy($this->settings($enabled), $this->sampler($available), $this->endpoint($url));
+        return new ProfilingPolicy($this->config($enabled), $this->sampler($available), $this->endpoint($url));
     }
 
-    private function settings(bool $enabled): GrafanaSettings
+    private function config(bool $enabled): ProfilingConfigSource
     {
-        $settings = $this->createStub(GrafanaSettings::class);
-        $settings->method('profilingEnabled')->willReturn($enabled);
+        $config = $this->createStub(ProfilingConfigSource::class);
+        $config->method('profilingEnabled')->willReturn($enabled);
 
-        return $settings;
-    }
-
-    private function throwingSettings(): GrafanaSettings
-    {
-        $settings = $this->createStub(GrafanaSettings::class);
-        $settings->method('profilingEnabled')->willThrowException(new \RuntimeException('boom'));
-
-        return $settings;
+        return $config;
     }
 
     private function sampler(bool $available): ProfileSampler

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\RequestProfilingListener;
-use App\Service\Grafana\GrafanaSettings;
 use App\Service\Logging\TraceContext;
 use App\Service\Profiling\CollapsedProfile;
 use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfilingConfigSource;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint;
@@ -173,7 +173,7 @@ final class RequestProfilingListenerTest extends TestCase
         ?string $traceId,
         ?string $spanId,
     ): RequestProfilingListener {
-        $policy = new ProfilingPolicy($this->settings($enabled), $this->policySampler(), $this->endpoint());
+        $policy = new ProfilingPolicy($this->profilingConfig($enabled), $this->policySampler(), $this->endpoint());
 
         $trace = $this->createStub(TraceContext::class);
         $trace->method('traceId')->willReturn($traceId);
@@ -202,12 +202,12 @@ final class RequestProfilingListenerTest extends TestCase
         };
     }
 
-    private function settings(bool $enabled): GrafanaSettings
+    private function profilingConfig(bool $enabled): ProfilingConfigSource
     {
-        $settings = $this->createStub(GrafanaSettings::class);
-        $settings->method('profilingEnabled')->willReturn($enabled);
+        $profilingConfig = $this->createStub(ProfilingConfigSource::class);
+        $profilingConfig->method('profilingEnabled')->willReturn($enabled);
 
-        return $settings;
+        return $profilingConfig;
     }
 
     private function policySampler(): ProfileSampler
