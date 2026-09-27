@@ -47,7 +47,7 @@ final class WarmCatalogFaviconsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $limit = $this->limitOption($input);
+        $limit = ConsoleOption::limit($input);
 
         // --force resets freshness ONCE, up front, then warming proceeds through
         // the normal window so each row leaves the due set as it is re-warmed —
@@ -105,15 +105,5 @@ final class WarmCatalogFaviconsCommand extends Command
     private function report(SymfonyStyle $io, int $warmed, int $failed, int $remaining): void
     {
         $io->writeln(\sprintf('  %d warmed, %d failed, %d remaining', $warmed, $failed, $remaining));
-    }
-
-    private function limitOption(InputInterface $input): ?int
-    {
-        $value = $input->getOption('limit');
-        if (!\is_string($value) || '' === trim($value) || !ctype_digit(trim($value))) {
-            return null;
-        }
-
-        return max(1, (int) $value);
     }
 }

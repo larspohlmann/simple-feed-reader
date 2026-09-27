@@ -53,15 +53,15 @@ final class RefreshFeedsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $budget = $this->intOption($input, 'budget');
+        $budget = ConsoleOption::wholeNumber($input, 'budget');
         if ($budget === null || $budget < 1) {
             $io->error('The --budget option must be a positive integer number of seconds.');
 
             return Command::INVALID;
         }
 
-        $feedId = $this->intOption($input, 'feed');
-        $userId = $this->intOption($input, 'user');
+        $feedId = ConsoleOption::wholeNumber($input, 'feed');
+        $userId = ConsoleOption::wholeNumber($input, 'user');
 
         $request = match (true) {
             $feedId !== null => RefreshRequest::forFeed($feedId, $budget),
@@ -92,16 +92,6 @@ final class RefreshFeedsCommand extends Command
         }
 
         return Command::SUCCESS;
-    }
-
-    private function intOption(InputInterface $input, string $name): ?int
-    {
-        $value = $input->getOption($name);
-        if (!\is_string($value) || !ctype_digit($value)) {
-            return null;
-        }
-
-        return (int) $value;
     }
 
     private function allDueRequest(InputInterface $input, int $budget): RefreshRequest

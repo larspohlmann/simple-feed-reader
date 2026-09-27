@@ -40,7 +40,7 @@ final class CheckCatalogUrlsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $report = $this->checker->check($this->limit($input));
+        $report = $this->checker->check(ConsoleOption::limit($input));
 
         if ($report->isHealthy()) {
             $io->success(\sprintf('All %d catalog URLs still serve a feed.', $report->checked));
@@ -56,15 +56,5 @@ final class CheckCatalogUrlsCommand extends Command
         ));
 
         return Command::FAILURE;
-    }
-
-    private function limit(InputInterface $input): ?int
-    {
-        $value = $input->getOption('limit');
-        if (!\is_string($value) || !ctype_digit($value)) {
-            return null;
-        }
-
-        return max(1, (int) $value);
     }
 }

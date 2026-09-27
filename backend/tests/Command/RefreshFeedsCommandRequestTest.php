@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Command;
 
+use App\Command\Exception\MalformedOptionException;
 use App\Command\RefreshFeedsCommand;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
@@ -52,6 +53,18 @@ final class RefreshFeedsCommandRequestTest extends TestCase
 
         self::assertSame(3, $request->userId);
         self::assertNull($request->feedId);
+    }
+
+    public function testAMalformedFeedIdIsRefusedInsteadOfRefreshingEveryDueFeed(): void
+    {
+        $runner = new FakeRefreshRunner(RefreshReport::busy());
+
+        try {
+            (new CommandTester(new RefreshFeedsCommand($runner)))->execute(['--budget' => '45', '--feed' => 'abc']);
+            self::fail('A malformed --feed must be refused, not read as "every due feed".');
+        } catch (MalformedOptionException) {
+            self::assertSame([], $runner->requests);
+        }
     }
 
     /** @param array<string, string|bool> $input */
