@@ -135,7 +135,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] BulkUpdateSubscriptionsRequest $request,
     ): JsonResponse {
-        $changed = $this->bulkUpdater->apply($request, $user->requireId());
+        $changed = $this->bulkUpdater->apply($request->toChange(), $user->requireId());
 
         return new JsonResponse([
             'subscriptions' => array_map(

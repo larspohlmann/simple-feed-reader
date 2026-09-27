@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
-use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Exception\InvalidSelectionException;
+use App\Service\Subscription\BulkSubscriptionChange;
 use App\Service\Subscription\BulkSubscriptionUpdater;
 use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use App\Exception\InvalidSelectionException;
 
 final class BulkSubscriptionUpdaterTest extends KernelTestCase
 {
@@ -73,7 +73,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $changed = $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$first->requireId(), $second->requireId()],
                 addTagIds: [$tech->requireId()],
             ),
@@ -94,7 +94,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 addTagIds: [$tech->requireId()],
             ),
@@ -116,7 +116,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$first->requireId()],
                 addTagIds: [$tech->requireId()],
             ),
@@ -140,7 +140,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$tagged->requireId()],
                 removeTagIds: [$tech->requireId()],
             ),
@@ -163,7 +163,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 includeInAllItems: false,
             ),
@@ -192,7 +192,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $this->em->flush();
 
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 includeInAllItems: true,
                 includeInForYou: false,
@@ -219,7 +219,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 addTagIds: [$tech->requireId()],
                 removeTagIds: [$tech->requireId()],
@@ -237,7 +237,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 addTagIds: [$tech->requireId(), $tech->requireId()],
             ),
@@ -255,7 +255,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(
+            new BulkSubscriptionChange(
                 subscriptionIds: [$subscription->requireId()],
                 addTagIds: [$foreignTag->requireId()],
             ),
@@ -272,7 +272,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
-            new BulkUpdateSubscriptionsRequest(subscriptionIds: [$foreign->requireId()]),
+            new BulkSubscriptionChange(subscriptionIds: [$foreign->requireId()]),
             $mine->requireId(),
         );
     }

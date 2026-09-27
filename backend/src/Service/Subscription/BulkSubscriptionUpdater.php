@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
-use App\Dto\Subscription\BulkUpdateSubscriptionsRequest;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Exception\InvalidSelectionException;
 use App\Repository\TagRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Exception\InvalidSelectionException;
 
 /**
  * Applies one tag and flag change across many subscriptions in a single
@@ -38,23 +37,23 @@ final readonly class BulkSubscriptionUpdater
     /**
      * @return list<Subscription> the changed subscriptions, in request order
      */
-    public function apply(BulkUpdateSubscriptionsRequest $request, int $userId): array
+    public function apply(BulkSubscriptionChange $change, int $userId): array
     {
-        $this->assertNoContradictoryTagChange($request);
+        $this->assertNoContradictoryTagChange($change);
 
-        $addTagIds = $this->assertOwnedTagIds($request->addTagIds, $userId);
-        $removeTagIds = $this->assertOwnedTagIds($request->removeTagIds, $userId);
+        $addTagIds = $this->assertOwnedTagIds($change->addTagIds, $userId);
+        $removeTagIds = $this->assertOwnedTagIds($change->removeTagIds, $userId);
         // The eager variant: the controller serializes every changed
         // subscription's feed and tags into the response, and the plain
         // resolve() leaves both lazy — up to 500 extra SELECTs for one request.
-        $byId = $this->ownedSubscriptions->resolveWithAssociations($request->subscriptionIds, $userId);
+        $byId = $this->ownedSubscriptions->resolveWithAssociations($change->subscriptionIds, $userId);
 
         $changed = [];
-        foreach ($request->subscriptionIds as $subscriptionId) {
+        foreach ($change->subscriptionIds as $subscriptionId) {
             $subscription = $byId[$subscriptionId];
             $tagIds = $this->resultingTagIds($subscription, $addTagIds, $removeTagIds);
             $this->tagSync->sync($subscription, $tagIds, $userId);
-            $this->applyFlags($subscription, $request);
+            $this->applyFlags($subscription, $change);
             $changed[] = $subscription;
         }
 
@@ -63,9 +62,9 @@ final readonly class BulkSubscriptionUpdater
         return $changed;
     }
 
-    private function assertNoContradictoryTagChange(BulkUpdateSubscriptionsRequest $request): void
+    private function assertNoContradictoryTagChange(BulkSubscriptionChange $change): void
     {
-        if ([] === array_intersect($request->addTagIds, $request->removeTagIds)) {
+        if ([] === array_intersect($change->addTagIds, $change->removeTagIds)) {
             return;
         }
 
@@ -115,13 +114,13 @@ final readonly class BulkSubscriptionUpdater
         return array_values(array_diff(array_unique([...$current, ...$addTagIds]), $removeTagIds));
     }
 
-    private function applyFlags(Subscription $subscription, BulkUpdateSubscriptionsRequest $request): void
+    private function applyFlags(Subscription $subscription, BulkSubscriptionChange $change): void
     {
-        if (null !== $request->includeInAllItems) {
-            $subscription->setIncludeInAllItems($request->includeInAllItems);
+        if (null !== $change->includeInAllItems) {
+            $subscription->setIncludeInAllItems($change->includeInAllItems);
         }
-        if (null !== $request->includeInForYou) {
-            $subscription->setIncludeInForYou($request->includeInForYou);
+        if (null !== $change->includeInForYou) {
+            $subscription->setIncludeInForYou($change->includeInForYou);
         }
     }
 }

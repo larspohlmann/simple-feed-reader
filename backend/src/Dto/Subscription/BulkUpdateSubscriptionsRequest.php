@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
+use App\Service\Subscription\BulkSubscriptionChange;
 use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -39,5 +40,16 @@ final readonly class BulkUpdateSubscriptionsRequest
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
     ) {
+    }
+
+    public function toChange(): BulkSubscriptionChange
+    {
+        return new BulkSubscriptionChange(
+            subscriptionIds: $this->subscriptionIds,
+            addTagIds: $this->addTagIds,
+            removeTagIds: $this->removeTagIds,
+            includeInAllItems: $this->includeInAllItems,
+            includeInForYou: $this->includeInForYou,
+        );
     }
 }
