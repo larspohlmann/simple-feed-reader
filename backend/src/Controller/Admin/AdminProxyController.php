@@ -34,7 +34,7 @@ final readonly class AdminProxyController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] ProxySettingsRequest $request,
     ): JsonResponse {
-        $this->settings->update($request);
+        $this->settings->update($request->toUpdate());
 
         return new JsonResponse(ProxySettingsJson::from($this->settings->current()));
     }

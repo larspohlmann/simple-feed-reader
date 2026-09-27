@@ -149,7 +149,7 @@ final class MailConnectionTesterTest extends KernelTestCase
             type: 'SOCKS5',
             host: '127.0.0.1',
             port: 1,
-        ));
+        )->toUpdate());
         $this->settings()->update(SettingsRequests::mail(
             enabled: true,
             host: 'smtp.gmail.com',

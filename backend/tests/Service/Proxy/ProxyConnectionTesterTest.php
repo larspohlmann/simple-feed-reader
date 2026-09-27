@@ -175,7 +175,7 @@ final class ProxyConnectionTesterTest extends TestCase
                 port: 1080,
                 username: 'user',
                 password: 'pw',
-            ),
+            )->toUpdate(),
         );
 
         $rotatedCipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::ROTATED_SECRET));
@@ -219,7 +219,7 @@ final class ProxyConnectionTesterTest extends TestCase
             port: 1080,
             username: 'user',
             password: 'pw',
-        ));
+        )->toUpdate());
 
         return $settings;
     }

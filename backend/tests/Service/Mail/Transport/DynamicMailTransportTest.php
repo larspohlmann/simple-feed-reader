@@ -93,7 +93,7 @@ final class DynamicMailTransportTest extends KernelTestCase
             type: 'SOCKS5',
             host: 'proxy.example',
             port: 1080,
-        ));
+        )->toUpdate());
         self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.gmail.com',
             username: 'alice',

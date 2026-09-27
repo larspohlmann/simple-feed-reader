@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Proxy;
 
-use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyServerSettings;
-use App\Enum\ProxyType;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Fetch\ProxyConfig;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
@@ -31,7 +29,7 @@ readonly class ProxySettings
         return ProxySettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new ProxyServerSettings());
     }
 
-    public function update(ProxySettingsRequest $request): void
+    public function update(ProxySettingsUpdate $update): void
     {
         $settings = $this->repository->findSingleton();
 
@@ -40,17 +38,7 @@ readonly class ProxySettings
             $this->em->persist($settings);
         }
 
-        $connection = $this->connectionFrom($request);
-
-        if ($request->removePassword) {
-            $settings->applyWithoutPassword($connection);
-            $settings->clearStoredPassword();
-        } elseif (null === $request->password) {
-            $settings->applyWithoutPassword($connection);
-        } else {
-            $settings->apply($connection, $this->cipher->seal($request->password));
-        }
-
+        $this->apply($update, $settings);
         $this->em->flush();
     }
 
@@ -68,11 +56,21 @@ readonly class ProxySettings
         return null !== $settings && $settings->isEnabled() ? $this->proxyFrom($settings) : null;
     }
 
-    /**
-     * Built from a row already in hand, so a caller that had to load the row to
-     * read the enable switch does not pay for a second lookup and a second
-     * password decryption to reach the same connection.
-     */
+    private function apply(ProxySettingsUpdate $update, ProxyServerSettings $settings): void
+    {
+        $replacement = $update->password->replacement();
+        if (null !== $replacement) {
+            $settings->apply($update->connection, $this->cipher->seal($replacement));
+
+            return;
+        }
+
+        $settings->applyWithoutPassword($update->connection);
+        if ($update->password->isRemoval()) {
+            $settings->clearStoredPassword();
+        }
+    }
+
     private function proxyFrom(?ProxyServerSettings $settings): ?ProxyConfig
     {
         if (null === $settings || '' === $settings->getHost()) {
@@ -87,19 +85,6 @@ readonly class ProxySettings
             $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
             $settings->isDirectFallback(),
             $settings->isRemoteDns(),
-        );
-    }
-
-    private function connectionFrom(ProxySettingsRequest $request): ProxyConnection
-    {
-        return new ProxyConnection(
-            $request->enabled,
-            $request->directFallback,
-            ProxyType::from($request->type),
-            $request->host,
-            $request->port,
-            '' === $request->username ? null : $request->username,
-            $request->remoteDns,
         );
     }
 }

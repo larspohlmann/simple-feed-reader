@@ -56,7 +56,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: 'user',
             password: 'sw0rdfish',
-        ));
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertTrue($view['enabled']);
@@ -81,7 +81,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: 'user',
             password: 'sw0rdfish',
-        ));
+        )->toUpdate());
         self::assertTrue($this->viewOf($settings)['hasPassword']);
 
         $settings->update(SettingsRequests::proxy(
@@ -92,7 +92,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: 'user',
             removePassword: true,
-        ));
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertFalse($view['hasPassword']);
@@ -118,7 +118,7 @@ final class ProxySettingsTest extends TestCase
             username: null,
             remoteDns: true,
             password: 'pw',
-        ));
+        )->toUpdate());
 
         self::assertTrue($this->viewOf($settings)['remoteDns']);
         self::assertSame('socks5h://proxy.example:1080', $settings->configuredProxy()?->dsn());
@@ -138,7 +138,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: null,
             password: 'pw',
-        ));
+        )->toUpdate());
 
         self::assertSame('socks5://proxy.example:1080', $settings->configuredProxy()?->dsn());
     }
@@ -154,7 +154,7 @@ final class ProxySettingsTest extends TestCase
             port: 1,
             username: null,
             password: 'sw0rdfish',
-        ));
+        )->toUpdate());
 
         $settings->update(SettingsRequests::proxy(
             enabled: false,
@@ -164,7 +164,7 @@ final class ProxySettingsTest extends TestCase
             port: 2,
             username: null,
             password: null,
-        ));
+        )->toUpdate());
 
         $egress = $settings->configuredProxy();
         self::assertNotNull($egress);
@@ -184,7 +184,7 @@ final class ProxySettingsTest extends TestCase
             port: 1,
             username: null,
             password: 'pw123456',
-        ));
+        )->toUpdate());
 
         self::assertNull($settings->egressProxy());
         self::assertNotNull($settings->configuredProxy());
@@ -214,7 +214,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: null,
             password: 'pw123456',
-        ));
+        )->toUpdate());
     }
 
     public function testDirectFallbackSurvivesTheRoundTrip(): void
@@ -228,7 +228,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: null,
             password: 'pw123456',
-        ));
+        )->toUpdate());
 
         $egress = $settings->configuredProxy();
         self::assertNotNull($egress);
