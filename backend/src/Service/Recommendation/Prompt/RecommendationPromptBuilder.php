@@ -80,7 +80,7 @@ final class RecommendationPromptBuilder
         EffectiveRecommendationSettings $settings,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-        $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $favoritesSection = $this->favoritesSection($history, $descriptionLength);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
         $responseReserve = RecommendationAnswerBudget::answerBoundTokens(
@@ -129,7 +129,7 @@ final class RecommendationPromptBuilder
         bool $suppressesReasoning,
     ): int {
         $descriptionLength = $this->descriptionLength($contextWindow);
-        $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $favoritesSection = $this->favoritesSection($history, $descriptionLength);
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
             + $this->tokens((string) $profile)
             + $this->tokens($favoritesSection);
@@ -209,7 +209,7 @@ final class RecommendationPromptBuilder
         if ($this->hasContent($profile)) {
             $sections[] = "PROFILE:\n" . $profile;
         }
-        $sections[] = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $sections[] = $this->favoritesSection($history, $descriptionLength);
         $poolFrame = $this->poolFrameLine($poolSummary);
         if (null !== $poolFrame) {
             $sections[] = $poolFrame;
@@ -294,7 +294,7 @@ final class RecommendationPromptBuilder
         if ($this->hasContent($profile)) {
             $sections[] = "PROFILE:\n" . $profile;
         }
-        $sections[] = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
+        $sections[] = $this->favoritesSection($history, $descriptionLength);
         $sections[] = $this->candidateSection($shortlistLines, $descriptionLength);
 
         return [
@@ -400,10 +400,15 @@ final class RecommendationPromptBuilder
     private function historySections(RecommendationHistory $history, int $descriptionLength): string
     {
         return implode("\n\n", [
-            $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength),
+            $this->favoritesSection($history, $descriptionLength),
             $this->historySection('KEPT (newest first):', $history->kept, $descriptionLength),
             $this->historySection('VIEWED (newest first):', $history->viewed, $descriptionLength),
         ]);
+    }
+
+    private function favoritesSection(RecommendationHistory $history, int $descriptionLength): string
+    {
+        return $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
     }
 
     /**
