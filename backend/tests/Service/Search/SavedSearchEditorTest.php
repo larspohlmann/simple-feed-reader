@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search;
 
-use App\Dto\SavedSearch\CreateSavedSearchRequest;
-use App\Dto\SavedSearch\UpdateSavedSearchRequest;
 use App\Entity\SavedSearch;
+use App\Service\Search\SavedSearchDefinition;
 use App\Service\Search\SavedSearchEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -21,7 +20,7 @@ final class SavedSearchEditorTest extends DbTestCase
     {
         $user = $this->user('search-saver@example.com');
 
-        $outcome = $this->editor()->save($user, new CreateSavedSearchRequest('climate change'));
+        $outcome = $this->editor()->save($user, new SavedSearchDefinition('climate change'));
 
         self::assertTrue($outcome->isNew);
         $id = $outcome->savedSearch->requireId();
@@ -31,9 +30,9 @@ final class SavedSearchEditorTest extends DbTestCase
     public function testSavingAnAlreadySavedTermReturnsTheExistingRow(): void
     {
         $user = $this->user('search-resaver@example.com');
-        $first = $this->editor()->save($user, new CreateSavedSearchRequest('punk', true));
+        $first = $this->editor()->save($user, new SavedSearchDefinition('punk', true));
 
-        $again = $this->editor()->save($user, new CreateSavedSearchRequest('punk', true));
+        $again = $this->editor()->save($user, new SavedSearchDefinition('punk', true));
 
         self::assertFalse($again->isNew);
         self::assertSame($first->savedSearch->requireId(), $again->savedSearch->requireId());
@@ -42,11 +41,11 @@ final class SavedSearchEditorTest extends DbTestCase
     public function testChangeDigestInclusionPersists(): void
     {
         $savedSearch = $this->editor()
-            ->save($this->user('search-digest@example.com'), new CreateSavedSearchRequest('opera'))
+            ->save($this->user('search-digest@example.com'), new SavedSearchDefinition('opera'))
             ->savedSearch;
         $wanted = !$savedSearch->isIncludeInDigest();
 
-        $this->editor()->changeDigestInclusion($savedSearch, new UpdateSavedSearchRequest($wanted));
+        $this->editor()->changeDigestInclusion($savedSearch, $wanted);
 
         self::assertSame($wanted, $this->reload($savedSearch)->isIncludeInDigest());
     }
@@ -54,7 +53,7 @@ final class SavedSearchEditorTest extends DbTestCase
     public function testDeleteRemovesTheRow(): void
     {
         $savedSearch = $this->editor()
-            ->save($this->user('search-deleter@example.com'), new CreateSavedSearchRequest('jazz'))
+            ->save($this->user('search-deleter@example.com'), new SavedSearchDefinition('jazz'))
             ->savedSearch;
         $id = $savedSearch->requireId();
 

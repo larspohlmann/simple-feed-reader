@@ -49,7 +49,7 @@ final readonly class SavedSearchController
         #[MapRequestPayload] CreateSavedSearchRequest $request,
     ): JsonResponse {
         $userId = $user->requireId();
-        $outcome = $this->editor->save($user, $request);
+        $outcome = $this->editor->save($user, $request->toDefinition());
         $savedSearch = $outcome->savedSearch;
 
         return new JsonResponse(
@@ -67,7 +67,7 @@ final readonly class SavedSearchController
         $userId = $user->requireId();
         $savedSearch = $this->savedSearches->getOneForUser($userId, $id);
 
-        $this->editor->changeDigestInclusion($savedSearch, $request);
+        $this->editor->changeDigestInclusion($savedSearch, $request->includeInDigest);
 
         return new JsonResponse(
             ['savedSearch' => SavedSearchJson::one($savedSearch, $this->tallies->forOne($savedSearch, $userId))],
