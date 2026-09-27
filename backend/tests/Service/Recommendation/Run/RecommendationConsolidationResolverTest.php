@@ -10,6 +10,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Run\ConsolidationOutcome;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Tests\DbTestCase;
@@ -208,6 +209,20 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $this->resolveConsolidation($run);
 
         self::assertSame(['unusable'], $this->verdictsOf($run));
+    }
+
+    public function testACancellationDuringTheProviderCallStopsBeforeReturningAnUnusableOutcome(): void
+    {
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $run = $this->runWithWinners([['id' => $this->idOf($entry), 'score' => 500, 'reason' => '']]);
+        $this->stubChatClient()->duringNextCall(function () use ($run): void {
+            $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
+            $this->em->flush();
+        });
+        $this->stubChatClient()->queueContent('not json');
+
+        $this->expectException(RecommendationRunCancelledException::class);
+        $this->resolveConsolidation($run);
     }
 
     /**

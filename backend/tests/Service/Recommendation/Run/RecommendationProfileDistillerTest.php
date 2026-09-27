@@ -108,6 +108,19 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->distiller()->distill($this->tick($run));
     }
 
+    public function testACancellationDuringTheProviderCallStopsBeforeReturningAnUnusableOutcome(): void
+    {
+        $run = $this->runInRunningState();
+        $this->stubChatClient()->duringNextCall(function () use ($run): void {
+            $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
+            $this->em->flush();
+        });
+        $this->stubChatClient()->queueContent('not json');
+
+        $this->expectException(RecommendationRunCancelledException::class);
+        $this->distiller()->distill($this->tick($run));
+    }
+
     /**
      * A transport failure has to abort the log row it opened, not merely
      * propagate — a verdict left null forever reads to the debug panel as
