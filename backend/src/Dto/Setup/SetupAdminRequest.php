@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Setup;
 
+use App\Service\Auth\PasswordPolicy;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class SetupAdminRequest
@@ -14,7 +15,7 @@ final readonly class SetupAdminRequest
         #[Assert\Length(max: 180)]
         public string $email = '',
         #[Assert\NotBlank]
-        #[Assert\Length(min: 12, max: 4096)]
+        #[Assert\Length(min: PasswordPolicy::MINIMUM_LENGTH, max: PasswordPolicy::MAXIMUM_LENGTH)]
         public string $password = '',
         #[Assert\NotBlank]
         public string $secret = '',

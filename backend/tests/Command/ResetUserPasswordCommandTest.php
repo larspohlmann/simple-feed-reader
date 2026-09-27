@@ -67,4 +67,35 @@ final class ResetUserPasswordCommandTest extends DbTestCase
         self::assertSame(Command::FAILURE, $tester->getStatusCode());
         self::assertStringContainsString('No account', $tester->getDisplay());
     }
+
+    public function testAPromptedPasswordOfTwelveCharactersIsSet(): void
+    {
+        $hasher = $this->hasher();
+        (new UserFactory($this->em, $hasher))->create('prompted@example.com', password: 'the-old-password');
+
+        $tester = $this->tester();
+        $tester->setInputs(['twelve-chars']);
+        $tester->execute(['email' => 'prompted@example.com']);
+
+        self::assertSame(Command::SUCCESS, $tester->getStatusCode());
+        $user = $this->repository()->findOneByEmail('prompted@example.com');
+        self::assertNotNull($user);
+        self::assertTrue($hasher->isPasswordValid($user, 'twelve-chars'));
+    }
+
+    public function testAPromptedPasswordOfElevenCharactersIsRefused(): void
+    {
+        $hasher = $this->hasher();
+        (new UserFactory($this->em, $hasher))->create('too-short@example.com', password: 'the-old-password');
+
+        $tester = $this->tester();
+        $tester->setInputs(['eleven-char']);
+        $tester->execute(['email' => 'too-short@example.com']);
+
+        self::assertSame(Command::INVALID, $tester->getStatusCode());
+        self::assertStringContainsString('at least 12 characters', $tester->getDisplay());
+        $user = $this->repository()->findOneByEmail('too-short@example.com');
+        self::assertNotNull($user);
+        self::assertTrue($hasher->isPasswordValid($user, 'the-old-password'));
+    }
 }

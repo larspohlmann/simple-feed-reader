@@ -6,6 +6,7 @@ namespace App\Command;
 
 use App\Repository\UserRepository;
 use App\Service\Auth\BootstrapAdminProvisioner;
+use App\Service\Auth\PasswordPolicy;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -29,8 +30,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class CreateAdminCommand extends Command
 {
-    private const int MINIMUM_PASSWORD_LENGTH = 12;
-
     public function __construct(
         private readonly UserRepository $users,
         private readonly BootstrapAdminProvisioner $provisioner,
@@ -55,10 +54,12 @@ final class CreateAdminCommand extends Command
             return Command::FAILURE;
         }
 
-        $answer = $io->askHidden('Administrator password (min 12 characters)');
+        $answer = $io->askHidden(
+            \sprintf('Administrator password (min %d characters)', PasswordPolicy::MINIMUM_LENGTH),
+        );
         $password = \is_string($answer) ? $answer : '';
-        if (mb_strlen($password) < self::MINIMUM_PASSWORD_LENGTH) {
-            $io->error('The password must be at least 12 characters.');
+        if (!PasswordPolicy::isLongEnough($password)) {
+            $io->error(\sprintf('The password must be at least %d characters.', PasswordPolicy::MINIMUM_LENGTH));
 
             return Command::INVALID;
         }
