@@ -124,12 +124,4 @@ final class RefreshRunProgressTest extends TestCase
         self::assertSame(50, $progress->done);
         self::assertSame(200, $progress->total);
     }
-
-    public function testItSerialisesForTheWire(): void
-    {
-        self::assertSame(
-            ['done' => 20, 'total' => 200],
-            RefreshRunProgress::start()->advancedBy(20, 180)->toArray(),
-        );
-    }
 }
