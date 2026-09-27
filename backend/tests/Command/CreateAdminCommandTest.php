@@ -78,5 +78,6 @@ final class CreateAdminCommandTest extends DbTestCase
 
         self::assertSame(Command::INVALID, $tester->getStatusCode());
         self::assertFalse($this->repository()->hasAnyAdmin());
+        self::assertStringContainsString('at least 12 characters', $tester->getDisplay());
     }
 }

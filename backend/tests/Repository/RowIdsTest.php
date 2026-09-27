@@ -16,11 +16,11 @@ final class RowIdsTest extends DbTestCase
 {
     public function testSelectedByReadsExactlyTheMatchingRows(): void
     {
-        $this->store('a@example.test', 'b@example.test');
+        [$a, $b] = $this->store('a@example.test', 'b@example.test');
 
         $ids = $this->rowIds()->selectedBy($this->idsOf('a@example.test', 'b@example.test'));
 
-        self::assertCount(2, $ids);
+        self::assertEqualsCanonicalizing([$a->requireId(), $b->requireId()], $ids);
     }
 
     public function testDeleteRemovesExactlyTheNamedRows(): void
@@ -48,17 +48,23 @@ final class RowIdsTest extends DbTestCase
         self::assertSame([], $recorder->queriesMatching('delete from mail_send_failure'));
     }
 
-    private function store(string ...$recipients): void
+    /** @return list<MailSendFailure> */
+    private function store(string ...$recipients): array
     {
+        $failures = [];
         foreach ($recipients as $recipient) {
-            $this->failures()->add(new MailSendFailure(
+            $failure = new MailSendFailure(
                 MailKind::Digest,
                 $recipient,
                 'SMTP transport failed',
                 new \DateTimeImmutable('2026-09-06T10:00:00Z'),
-            ));
+            );
+            $this->failures()->add($failure);
+            $failures[] = $failure;
         }
         $this->em->flush();
+
+        return $failures;
     }
 
     private function idsOf(string ...$recipients): QueryBuilder
