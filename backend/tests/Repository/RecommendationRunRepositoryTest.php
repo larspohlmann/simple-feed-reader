@@ -6,6 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
@@ -21,7 +22,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     }
 
     #[DataProvider('activeStatuses')]
-    public function testHasActiveRunIsTrueWhileARunIsActive(string $status): void
+    public function testHasActiveRunIsTrueWhileARunIsActive(RunStatus $status): void
     {
         $user = $this->user('active@example.com');
         $this->persistRun($user, $status);
@@ -30,7 +31,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     }
 
     #[DataProvider('terminalStatuses')]
-    public function testHasActiveRunIsFalseOnceTheOnlyRunHasEnded(string $status): void
+    public function testHasActiveRunIsFalseOnceTheOnlyRunHasEnded(RunStatus $status): void
     {
         $user = $this->user('terminal@example.com');
         $this->persistRun($user, $status);
@@ -39,22 +40,22 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{RunStatus}>
      */
     public static function activeStatuses(): iterable
     {
-        yield 'pending' => [RecommendationRun::STATUS_PENDING];
-        yield 'running' => [RecommendationRun::STATUS_RUNNING];
+        yield 'pending' => [RunStatus::Pending];
+        yield 'running' => [RunStatus::Running];
     }
 
     /**
-     * @return iterable<string, array{string}>
+     * @return iterable<string, array{RunStatus}>
      */
     public static function terminalStatuses(): iterable
     {
-        yield 'completed' => [RecommendationRun::STATUS_COMPLETED];
-        yield 'cancelled' => [RecommendationRun::STATUS_CANCELLED];
-        yield 'failed' => [RecommendationRun::STATUS_FAILED];
+        yield 'completed' => [RunStatus::Completed];
+        yield 'cancelled' => [RunStatus::Cancelled];
+        yield 'failed' => [RunStatus::Failed];
     }
 
     public function testFindActiveForUserReturnsTheRunningRun(): void
@@ -62,9 +63,9 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         $userA = $this->user('a@example.com');
         $userB = $this->user('b@example.com');
 
-        $this->persistRun($userA, RecommendationRun::STATUS_COMPLETED);
-        $runningRun = $this->persistRun($userA, RecommendationRun::STATUS_RUNNING);
-        $this->persistRun($userB, RecommendationRun::STATUS_FAILED);
+        $this->persistRun($userA, RunStatus::Completed);
+        $runningRun = $this->persistRun($userA, RunStatus::Running);
+        $this->persistRun($userB, RunStatus::Failed);
 
         self::assertSame($runningRun->getId(), $this->runs()->findActiveForUser($userA)?->getId());
         self::assertNull($this->runs()->findActiveForUser($userB));
@@ -73,7 +74,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     public function testFindActiveForUserAlsoReturnsAPendingRun(): void
     {
         $userA = $this->user('a@example.com');
-        $pendingRun = $this->persistRun($userA, RecommendationRun::STATUS_PENDING);
+        $pendingRun = $this->persistRun($userA, RunStatus::Pending);
 
         self::assertSame($pendingRun->getId(), $this->runs()->findActiveForUser($userA)?->getId());
     }
@@ -81,8 +82,8 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     public function testFindLatestForUserReturnsTheNewestRunByInsertOrder(): void
     {
         $userB = $this->user('b@example.com');
-        $this->persistRun($userB, RecommendationRun::STATUS_COMPLETED);
-        $failedRun = $this->persistRun($userB, RecommendationRun::STATUS_FAILED);
+        $this->persistRun($userB, RunStatus::Completed);
+        $failedRun = $this->persistRun($userB, RunStatus::Failed);
 
         self::assertSame($failedRun->getId(), $this->runs()->findLatestForUser($userB)?->getId());
     }
@@ -100,7 +101,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         $user = $this->user('many@example.com');
         $ids = [];
         for ($i = 0; $i < 12; $i++) {
-            $ids[] = $this->persistRun($user, RecommendationRun::STATUS_RUNNING)->getId();
+            $ids[] = $this->persistRun($user, RunStatus::Running)->getId();
         }
 
         $swept = array_map(
@@ -120,23 +121,23 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         return $repository;
     }
 
-    private function persistRun(User $user, string $status): RecommendationRun
+    private function persistRun(User $user, RunStatus $status): RecommendationRun
     {
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
 
-        if ($status !== RecommendationRun::STATUS_PENDING) {
+        if ($status !== RunStatus::Pending) {
             $run->snapshot([[1]]);
         }
 
-        if ($status === RecommendationRun::STATUS_COMPLETED) {
+        if ($status === RunStatus::Completed) {
             $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
-        if ($status === RecommendationRun::STATUS_FAILED) {
+        if ($status === RunStatus::Failed) {
             $run->fail('boom', new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
-        if ($status === RecommendationRun::STATUS_CANCELLED) {
+        if ($status === RunStatus::Cancelled) {
             $run->cancel(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 

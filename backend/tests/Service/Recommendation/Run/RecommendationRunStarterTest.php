@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -119,7 +120,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertNotNull($run);
         self::assertSame('openrouter.ai', $run->getProviderHost());
         self::assertSame('x-ai/grok-4-fast', $run->getModel());
-        self::assertSame(RecommendationRun::STATUS_PENDING, $report->status);
+        self::assertSame(RunStatus::Pending->value, $report->status);
     }
 
     public function testRestampsAResumedRunWithTheProviderItWillNowCall(): void
@@ -253,7 +254,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
         $report = $this->starter()->resume($this->user);
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertSame(RunStatus::Running->value, $report->status);
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
         $this->em->clear();
         self::assertCount(1, $this->logRowsOfLatestRun());

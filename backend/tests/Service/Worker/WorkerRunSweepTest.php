@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\RecommendationRun;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
@@ -85,7 +86,7 @@ final class WorkerRunSweepTest extends DbTestCase
         foreach ([$first, $second] as $user) {
             $run = $this->runs()->findActiveForUser($user);
             self::assertNotNull($run);
-            self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+            self::assertSame(RunStatus::Running, $run->getStatus());
         }
     }
 

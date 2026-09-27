@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\CallOutcome;
-use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -144,7 +144,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         );
         $run = $payload['run'];
         self::assertIsArray($run);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $run['status']);
+        self::assertSame(RunStatus::Pending->value, $run['status']);
         self::assertSame(0, $run['attempts']);
     }
 

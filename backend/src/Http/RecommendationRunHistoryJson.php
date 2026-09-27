@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Recommendation\Feed\HistoryMonth;
 use App\Service\Recommendation\Feed\RunHistoryMonthPage;
@@ -82,7 +81,7 @@ final class RecommendationRunHistoryJson
 
         return [
             'id' => $run['id'],
-            'status' => $run['status'],
+            'status' => $run['status']->value,
             'providerHost' => $run['providerHost'],
             'model' => $run['model'],
             'createdAt' => $run['createdAt']->format(\DateTimeInterface::ATOM),
@@ -108,7 +107,7 @@ final class RecommendationRunHistoryJson
      */
     private static function completionOf(array $run): ?\DateTimeImmutable
     {
-        if (!\in_array($run['status'], RecommendationRun::TERMINAL_STATUSES, true)) {
+        if (!$run['status']->isTerminal()) {
             return null;
         }
 

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunTimingRepository;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -61,10 +61,6 @@ final readonly class RecommendationEtaEstimator
 
     private function isInFlight(RecommendationRunReport $report): bool
     {
-        return \in_array(
-            $report->status,
-            [RecommendationRun::STATUS_RUNNING, RecommendationRun::STATUS_PENDING],
-            true,
-        );
+        return RunStatus::tryFrom($report->status)?->isActive() ?? false;
     }
 }

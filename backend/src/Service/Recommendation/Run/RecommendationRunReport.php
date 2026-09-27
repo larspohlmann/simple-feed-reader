@@ -66,7 +66,7 @@ final readonly class RecommendationRunReport
         $progress = $run->progress();
 
         return new self(
-            $run->getStatus(),
+            $run->getStatus()->value,
             $progress->batchesTotal,
             $progress->batchesDone,
             $run->getError(),

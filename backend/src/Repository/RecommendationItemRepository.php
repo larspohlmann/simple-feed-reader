@@ -6,9 +6,9 @@ namespace App\Repository;
 
 use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
-use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Pagination\RecommendationCursor;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
@@ -152,7 +152,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
             ->andWhere('s.includeInForYou = true')
             ->andWhere($this->notDedupedByNewerRunDql())
             ->setParameter('user', $userId)
-            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED);
+            ->setParameter('completed', RunStatus::Completed);
     }
 
     /**

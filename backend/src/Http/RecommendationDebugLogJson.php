@@ -44,7 +44,7 @@ final class RecommendationDebugLogJson
     {
         return [
             'id' => $run->getId(),
-            'status' => $run->getStatus(),
+            'status' => $run->getStatus()->value,
             'createdAt' => $run->getCreatedAt()->format(\DATE_ATOM),
         ];
     }
@@ -53,7 +53,7 @@ final class RecommendationDebugLogJson
     private static function run(RecommendationRun $run): array
     {
         return [
-            'status' => $run->getStatus(),
+            'status' => $run->getStatus()->value,
             'error' => $run->getError(),
             'attempts' => $run->getAttempts(),
             'maxAttempts' => RecommendationRun::MAX_ATTEMPTS,

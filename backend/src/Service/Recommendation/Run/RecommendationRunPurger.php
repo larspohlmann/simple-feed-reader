@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
@@ -30,8 +29,7 @@ final readonly class RecommendationRunPurger
     public function purge(User $user): void
     {
         $latest = $this->runs->findLatestForUser($user);
-        $active = [RecommendationRun::STATUS_PENDING, RecommendationRun::STATUS_RUNNING];
-        if (null !== $latest && \in_array($latest->getStatus(), $active, true)) {
+        if (null !== $latest && $latest->getStatus()->isActive()) {
             throw new RecommendationRunActiveException();
         }
 

@@ -10,6 +10,7 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
@@ -682,7 +683,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $em->clear();
         $run = $em->getRepository(RecommendationRun::class)->findOneBy(['user' => $user], ['id' => 'DESC']);
         self::assertInstanceOf(RecommendationRun::class, $run);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame(RunStatus::Failed, $run->getStatus());
         self::assertSame('The AI provider is no longer configured.', $run->getError());
     }
 

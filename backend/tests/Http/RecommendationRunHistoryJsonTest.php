@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
-use App\Entity\RecommendationRun;
+use App\Enum\RunStatus;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Recommendation\Feed\HistoryMonth;
@@ -37,7 +37,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
     public function testAnUnfinishedRunHasNoDuration(): void
     {
-        $row = $this->row(['status' => RecommendationRun::STATUS_RUNNING, 'completedAt' => null]);
+        $row = $this->row(['status' => RunStatus::Running, 'completedAt' => null]);
 
         $payload = self::monthPage('2026-08', [$row], null);
 
@@ -54,7 +54,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
     public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
     {
         $row = $this->row([
-            'status' => RecommendationRun::STATUS_RUNNING,
+            'status' => RunStatus::Running,
             'completedAt' => new \DateTimeImmutable('2026-08-16 09:12:47'),
         ]);
 
@@ -67,7 +67,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
     public function testAPendingRunReportsNoCompletionEither(): void
     {
         $row = $this->row([
-            'status' => RecommendationRun::STATUS_PENDING,
+            'status' => RunStatus::Pending,
             'completedAt' => new \DateTimeImmutable('2026-08-16 09:12:47'),
         ]);
 
@@ -84,11 +84,11 @@ final class RecommendationRunHistoryJsonTest extends TestCase
      */
     public function testEveryTerminalStatusReportsWhenItEnded(): void
     {
-        foreach ([RecommendationRun::STATUS_FAILED, RecommendationRun::STATUS_CANCELLED] as $status) {
+        foreach ([RunStatus::Failed, RunStatus::Cancelled] as $status) {
             $payload = self::monthPage('2026-08', [$this->row(['status' => $status])], null);
 
-            self::assertSame('2026-08-16T09:12:47+00:00', $payload['runs'][0]['completedAt'], $status);
-            self::assertSame(47, $payload['runs'][0]['durationSeconds'], $status);
+            self::assertSame('2026-08-16T09:12:47+00:00', $payload['runs'][0]['completedAt'], $status->value);
+            self::assertSame(47, $payload['runs'][0]['durationSeconds'], $status->value);
         }
     }
 
@@ -203,7 +203,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
         /** @var HistoryRow $row */
         $row = [
             'id' => 42,
-            'status' => RecommendationRun::STATUS_COMPLETED,
+            'status' => RunStatus::Completed,
             'providerHost' => 'openrouter.ai',
             'model' => 'x-ai/grok-4-fast',
             'createdAt' => new \DateTimeImmutable('2026-08-16 09:12:00'),

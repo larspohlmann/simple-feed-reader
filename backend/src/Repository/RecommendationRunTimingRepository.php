@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -72,7 +73,7 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
             ->from(RecommendationRun::class, 'r')
             ->andWhere('r.user = :user')->setParameter('user', $user)
             ->andWhere('r.status = :completed')
-            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED)
+            ->setParameter('completed', RunStatus::Completed)
             ->orderBy('r.id', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
