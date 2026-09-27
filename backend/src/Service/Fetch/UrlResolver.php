@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Url\AbsoluteHttpUrl;
 
 /**
  * Resolves a reference against the URL it was found in — a Location header
@@ -30,7 +31,7 @@ final class UrlResolver
 
     public static function resolve(string $baseUrl, string $location): string
     {
-        if (preg_match('#^https?://#i', $location) === 1) {
+        if (AbsoluteHttpUrl::matches($location)) {
             return $location;
         }
 

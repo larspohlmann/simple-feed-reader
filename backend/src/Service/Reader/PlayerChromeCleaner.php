@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -152,7 +153,7 @@ final readonly class PlayerChromeCleaner
 
     private function isEmptied(Element $wrapper): bool
     {
-        return LeadingEngagementRules::collapse($wrapper->textContent) === ''
+        return Whitespace::collapse($wrapper->textContent) === ''
             && !array_any(
                 self::MEDIA_TAGS,
                 static fn (string $tag): bool => $wrapper->getElementsByTagName($tag)->length > 0,

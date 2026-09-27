@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnection;
+use App\Service\Fetch\ResponseHeader;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -334,7 +335,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
      */
     private function retryAfterSeconds(ResponseInterface $response): ?int
     {
-        $header = $response->getHeaders(false)['retry-after'][0] ?? null;
+        $header = ResponseHeader::first($response, 'retry-after');
 
         return null !== $header && ctype_digit($header) ? (int) $header : null;
     }

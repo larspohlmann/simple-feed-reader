@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Text\Whitespace;
 use Dom\Element;
 
 final class LeadingEngagementBlocks
@@ -24,7 +25,7 @@ final class LeadingEngagementBlocks
                 continue;
             }
 
-            $text = LeadingEngagementRules::collapse($element->textContent);
+            $text = Whitespace::collapse($element->textContent);
             if ($text !== '') {
                 $blocks[] = new LeadingBlock($element, $text);
             }
@@ -64,8 +65,8 @@ final class LeadingEngagementBlocks
         $times = $element->getElementsByTagName('time');
 
         return $times->length === 1
-            && LeadingEngagementRules::collapse($element->textContent)
-                === LeadingEngagementRules::collapse($times->item(0)?->textContent);
+            && Whitespace::collapse($element->textContent)
+                === Whitespace::collapse($times->item(0)?->textContent);
     }
 
     private static function hasFigureAncestor(Element $element): bool

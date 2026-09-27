@@ -6,15 +6,18 @@ namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Reader\Paywall\AccessDeclaration;
 use App\Service\Reader\Paywall\SchemaOrgAccess;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SchemaOrgAccessTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testABooleanFalseOnTheArticleNodeDeclaresAPaywall(): void
     {
         $html = $this->page('{"@type":"NewsArticle","headline":"x","isAccessibleForFree":false}');
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testTheStringFalseUnderHasPartDeclaresAPaywall(): void
@@ -25,21 +28,21 @@ final class SchemaOrgAccessTest extends TestCase
             . '"isAccessibleForFree":"False"}}',
         );
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testTheSchemaOrgFalseUrlDeclaresAPaywall(): void
     {
         $html = $this->page('{"@type":"Article","isAccessibleForFree":"http://schema.org/False"}');
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testATrueWithNoFalseDeclaresFreeAccess(): void
     {
         $html = $this->page('{"@type":"Article","isAccessibleForFree":true}');
 
-        self::assertSame(AccessDeclaration::Free, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Free, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAFalseInAnyBlockWinsOverATrueInAnother(): void
@@ -47,21 +50,21 @@ final class SchemaOrgAccessTest extends TestCase
         $html = $this->page('{"@type":"WebPage","isAccessibleForFree":true}')
             . $this->page('{"@type":"Article","isAccessibleForFree":false}');
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAPageWithoutTheKeyDeclaresNothing(): void
     {
         $html = $this->page('{"@type":"Article","headline":"Free as in beer"}');
 
-        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAGraphIsWalkedToTheNestedNode(): void
     {
         $html = $this->page('{"@graph":[{"@type":"WebSite"},{"@type":"Article","isAccessibleForFree":false}]}');
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAnUnparseableBlockIsSkippedAndTheNextOneDecides(): void
@@ -69,21 +72,29 @@ final class SchemaOrgAccessTest extends TestCase
         $html = $this->page('{not json')
             . $this->page('{"@type":"Article","isAccessibleForFree":false}');
 
-        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Paywalled, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAnOrdinaryScriptIsNotReadAsJsonLd(): void
     {
-        $html = '<script>var a = {"isAccessibleForFree": false};</script>';
+        $html = '<script>{"@type":"Article","isAccessibleForFree":false}</script>';
 
-        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($this->document($html)));
+    }
+
+    public function testReadsOnlyTheScriptsTheJsonLdSelectorMatches(): void
+    {
+        $html = '<html><head><script type="application/ld+json; charset=utf-8">{"isAccessibleForFree":false}'
+            . '</script></head><body></body></html>';
+
+        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     public function testAnUnknownStringValueDeclaresNothing(): void
     {
         $html = $this->page('{"@type":"Article","isAccessibleForFree":"maybe"}');
 
-        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($html));
+        self::assertSame(AccessDeclaration::Undeclared, SchemaOrgAccess::declaredIn($this->document($html)));
     }
 
     private function page(string $jsonLd): string

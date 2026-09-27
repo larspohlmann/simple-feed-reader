@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Text\Whitespace;
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -35,7 +37,8 @@ final readonly class LeadFigureCaptions
 
     public function captionFor(?string $leadUrl): ?string
     {
-        if ($leadUrl === null || $leadUrl === '' || preg_match('#^https?://#i', $leadUrl) !== 1) {
+        $leadUrl = AbsoluteHttpUrl::orNull($leadUrl);
+        if ($leadUrl === null) {
             return null;
         }
 
@@ -73,7 +76,7 @@ final readonly class LeadFigureCaptions
             return null;
         }
 
-        $caption = trim((string) preg_replace('/\s+/', ' ', $captionElement->textContent ?? ''));
+        $caption = Whitespace::collapse($captionElement->textContent);
 
         return $caption !== '' ? ['url' => $source, 'caption' => $caption] : null;
     }

@@ -37,6 +37,14 @@ final class EntryCursorTest extends TestCase
         self::assertStringNotContainsString('|', $encoded);
     }
 
+    public function testEncodesTheInstantAndIdAsUnpaddedBase64Url(): void
+    {
+        self::assertSame(
+            'MjAyNi0wMS0wMVQwMDowMDowMCswMDowMHwxMg',
+            EntryCursor::encode(new \DateTimeImmutable('2026-01-01T00:00:00Z'), 12),
+        );
+    }
+
     /** @return iterable<string, array{string}> */
     public static function malformedCursors(): iterable
     {

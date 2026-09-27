@@ -35,6 +35,13 @@ final class SlideCaptionResolverTest extends TestCase
         self::assertSame('Only this', (new SlideCaptionResolver())->resolve($slide)->text);
     }
 
+    public function testCollapsesANoBreakSpaceInTheCaption(): void
+    {
+        $slide = $this->slide('<li class="swiper-slide">Head&nbsp;&nbsp;line&nbsp;</li>');
+
+        self::assertSame('Head line', (new SlideCaptionResolver())->resolve($slide)->text);
+    }
+
     public function testHasNoLinkForRelativeOrMissingHref(): void
     {
         $slide = $this->slide('<li class="swiper-slide"><a href="/local">Text</a></li>');
@@ -53,6 +60,13 @@ final class SlideCaptionResolverTest extends TestCase
         );
 
         self::assertSame('https://example.com/real', (new SlideCaptionResolver())->resolve($slide)->link);
+    }
+
+    public function testTakesALinkWithAnUpperCaseScheme(): void
+    {
+        $slide = $this->slide('<li class="swiper-slide"><a href="HTTPS://example.com/upper">Upper</a></li>');
+
+        self::assertSame('HTTPS://example.com/upper', (new SlideCaptionResolver())->resolve($slide)->link);
     }
 
     public function testEmptyWhenSlideHasNoText(): void

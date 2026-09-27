@@ -70,7 +70,7 @@ final readonly class RedirectFollower
 
     private function redirectTarget(ResponseInterface $response, string $url): string
     {
-        $location = $this->header($response, 'location');
+        $location = ResponseHeader::first($response, 'location');
         $response->cancel();
         if ($location === null) {
             throw new RedirectChainException(sprintf('%s: redirect without Location', $url));
@@ -80,15 +80,6 @@ final readonly class RedirectFollower
             return UrlResolver::resolve($url, $location);
         } catch (FetchException $e) {
             throw new RedirectChainException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
-        }
-    }
-
-    private function header(ResponseInterface $response, string $name): ?string
-    {
-        try {
-            return $response->getHeaders(false)[$name][0] ?? null;
-        } catch (ExceptionInterface) {
-            return null;
         }
     }
 }

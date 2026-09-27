@@ -144,6 +144,15 @@ final class CatalogDocumentTest extends TestCase
         ]));
     }
 
+    public function testAnUpperCaseSchemeIsAnHttpFeedUrl(): void
+    {
+        $document = $this->parser()->parse($this->opml([
+            '<outline type="rss" text="Upper" xmlUrl="HTTPS://example.com/upper.xml"/>',
+        ]));
+
+        self::assertSame('HTTPS://example.com/upper.xml', $document->categories[0]->feeds[0]->url);
+    }
+
     public function testATopLevelFeedIsRejected(): void
     {
         $this->expectException(InvalidCatalogDocumentException::class);

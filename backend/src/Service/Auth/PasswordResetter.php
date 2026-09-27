@@ -6,6 +6,7 @@ namespace App\Service\Auth;
 
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -38,7 +39,7 @@ final readonly class PasswordResetter
      */
     public function generateAndSet(User $user): string
     {
-        $plain = rtrim(strtr(base64_encode(random_bytes(self::GENERATED_LENGTH)), '+/', '-_'), '=');
+        $plain = Base64UrlSafe::encodeUnpadded(random_bytes(self::GENERATED_LENGTH));
         $this->setPassword($user, $plain);
 
         return $plain;

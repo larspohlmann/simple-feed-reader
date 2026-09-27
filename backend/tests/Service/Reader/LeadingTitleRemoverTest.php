@@ -46,6 +46,17 @@ final class LeadingTitleRemoverTest extends TestCase
         self::assertStringNotContainsString('<h1>', $result);
     }
 
+    public function testNormalizesMultibyteCase(): void
+    {
+        // strtolower leaves non-ASCII bytes untouched; only mb_strtolower
+        // folds "Ü" to "ü" so the umlaut headline matches its candidate.
+        $content = '<div><h1>ÜBERSCHRIFT</h1><p>Body.</p></div>';
+
+        $result = $this->removeFrom($content, ['überschrift']);
+
+        self::assertStringNotContainsString('<h1>', $result);
+    }
+
     public function testKeepsHeadingThatDoesNotMatch(): void
     {
         $content = '<div><h2>A Real Section</h2><p>Body.</p></div>';

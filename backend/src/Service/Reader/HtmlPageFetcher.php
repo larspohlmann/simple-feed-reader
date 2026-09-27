@@ -10,6 +10,7 @@ use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Text\Whitespace;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -159,7 +160,7 @@ final readonly class HtmlPageFetcher
         $head = mb_substr($html, 0, self::SNIPPET_SCAN_LENGTH);
         $withoutCode = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $head) ?? $head;
         $withoutTags = preg_replace('/<[^>]+>/', ' ', $withoutCode) ?? $withoutCode;
-        $text = LeadingEngagementRules::collapse(
+        $text = Whitespace::collapse(
             html_entity_decode($withoutTags, \ENT_QUOTES | \ENT_HTML5, 'UTF-8'),
         );
         if ($text === '') {

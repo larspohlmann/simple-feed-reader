@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -23,8 +24,8 @@ final readonly class ReaderLeadImage
     public function restore(HTMLDocument $document, LeadImageCandidate $lead, bool $topPlacesLeadVisual): ?Element
     {
         $body = $document->body;
-        $leadUrl = $lead->url;
-        if ($body === null || $leadUrl === null || preg_match('#^https?://#i', $leadUrl) !== 1) {
+        $leadUrl = AbsoluteHttpUrl::orNull($lead->url);
+        if ($body === null || $leadUrl === null) {
             return null;
         }
 

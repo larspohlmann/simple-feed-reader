@@ -225,11 +225,50 @@ final class NavigationChromeTrimmerTest extends TestCase
         self::assertStringContainsString('d.test/a', $this->trimmed($html));
     }
 
+    public function testKeepsAMenuListBetweenAParagraphAtExactlyTheThresholdAndALaterOne(): void
+    {
+        // The first paragraph meets SUBSTANTIAL_PROSE_LENGTH exactly (120), so
+        // it — not the longer paragraph after the list — is the real anchor.
+        // A one-under match would skip it and anchor on the later paragraph
+        // instead, wrongly treating the list between them as a leading menu.
+        $paragraphAtThreshold = str_repeat('x', 120);
+        $menu = $this->fourLinkMenu();
+        $html = '<div><p>' . $paragraphAtThreshold . '</p>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListWhenTheFirstParagraphIsShortInCharactersButLongInBytes(): void
+    {
+        // 65 "ü" characters is 130 bytes but only 65 characters — a real
+        // prose-threshold miss, so the anchor is the later ASCII paragraph
+        // and the list between the two is still a leading masthead menu. A
+        // byte count would wrongly read the "ü" paragraph itself as
+        // substantial and anchor there instead, keeping the menu.
+        $shortMultibyteParagraph = str_repeat('ü', 65);
+        $menu = $this->fourLinkMenu();
+        $html = '<div><p>' . $shortMultibyteParagraph . '</p>' . $menu . '<p>' . self::PROSE . '</p></div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
     public function testRemovesALeadingMenuListAtExactlyTheLinkTextRatioThreshold(): void
     {
         // Each item is "AAA" (link) + "BB" (plain): 12 link chars of 20 total,
         // exactly the 0.6 LINK_TEXT_RATIO threshold — still chrome.
         $list = $this->fourItemList('BB');
+        $html = '<div>' . $list . '</div>';
+
+        self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
+    }
+
+    public function testRemovesALeadingMenuListAtExactlyTheLinkTextRatioThresholdWithMultibyteText(): void
+    {
+        // Each item is "AAA" (link) + "üü" (plain, 2 bytes per character): 12
+        // link chars of 20 characters total, exactly the 0.6 threshold by
+        // character count — still chrome. A byte count would read 28 total
+        // and wrongly drop below the threshold.
+        $list = $this->fourItemList('üü');
         $html = '<div>' . $list . '</div>';
 
         self::assertStringNotContainsString('d.test/a', $this->trimmed($html));

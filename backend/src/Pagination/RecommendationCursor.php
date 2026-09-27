@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Pagination;
 
 use App\Pagination\Exception\MalformedCursorException;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 
 /**
  * Opaque keyset-pagination cursor for the for-you feed: base64url of
@@ -24,7 +25,7 @@ final readonly class RecommendationCursor
     {
         $raw = $runId . '|' . $position;
 
-        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+        return Base64UrlSafe::encodeUnpadded($raw);
     }
 
     /** @throws MalformedCursorException */

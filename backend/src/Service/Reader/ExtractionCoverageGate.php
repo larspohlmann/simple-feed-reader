@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Text\Whitespace;
 
 /**
  * Guards against a confident-but-wrong extraction. Readability sometimes picks
@@ -99,6 +100,6 @@ final readonly class ExtractionCoverageGate
             ? html_entity_decode(strip_tags($html))
             : (string) $body->textContent;
 
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
+        return Whitespace::collapse($text);
     }
 }

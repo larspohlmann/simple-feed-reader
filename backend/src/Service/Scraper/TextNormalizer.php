@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
-/** Cleans text extracted from scraped HTML (soft hyphens, run-on whitespace). */
+use App\Service\Text\Whitespace;
+
 final class TextNormalizer
 {
     public static function normalize(string $text): string
     {
-        $text = str_replace("\u{00AD}", '', $text);
-
-        return trim((string) preg_replace('/\s+/u', ' ', $text));
+        return Whitespace::collapse(str_replace("\u{00AD}", '', $text));
     }
 }

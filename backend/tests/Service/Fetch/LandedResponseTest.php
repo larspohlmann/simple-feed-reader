@@ -11,7 +11,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class LandedResponseTest extends TestCase
 {
-    public function testReadsTheFirstValueOfAResponseHeader(): void
+    public function testHeaderDelegatesToResponseHeader(): void
     {
         $client = new MockHttpClient(new MockResponse('', [
             'response_headers' => ['content-type' => ['text/html; charset=gbk']],
@@ -19,20 +19,6 @@ final class LandedResponseTest extends TestCase
         $response = $client->request('GET', 'https://example.com/');
 
         $landed = new LandedResponse('https://example.com/', 200, $response);
-
-        self::assertSame('text/html; charset=gbk', $landed->header('content-type'));
-        self::assertNull($landed->header('x-missing'));
-    }
-
-    public function testReadsAHeaderOfAFailedResponseWithoutThrowing(): void
-    {
-        $client = new MockHttpClient(new MockResponse('', [
-            'http_code' => 404,
-            'response_headers' => ['content-type' => ['text/html; charset=gbk']],
-        ]));
-        $response = $client->request('GET', 'https://example.com/');
-
-        $landed = new LandedResponse('https://example.com/', 404, $response);
 
         self::assertSame('text/html; charset=gbk', $landed->header('content-type'));
     }

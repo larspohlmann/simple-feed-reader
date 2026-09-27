@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Image\DeclaredImage;
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 
 /**
@@ -36,7 +37,7 @@ final class HeroImageSelector
 
     public function select(?DeclaredImage $candidate, string $bodyHtml): ?DeclaredImage
     {
-        if ($candidate === null || preg_match('#^https?://#i', $candidate->url) !== 1) {
+        if ($candidate === null || !AbsoluteHttpUrl::matches($candidate->url)) {
             return null;
         }
 

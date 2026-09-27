@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Scraper\Layer;
 
 use App\Service\Fetch\PageUrls;
+use App\Service\Html\JsonLd;
 use App\Service\Scraper\JsonLdArticles;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -23,16 +24,8 @@ final class JsonLdLayer implements ScrapeLayerInterface
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {
         $articles = new JsonLdArticles(new PageUrls($baseUrl));
-        foreach ($doc->querySelectorAll('script[type="application/ld+json"]') as $script) {
-            try {
-                $decoded = json_decode($script->textContent ?? '', true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException) {
-                continue;
-            }
-            if (!\is_array($decoded)) {
-                continue;
-            }
-            $articles->collect($decoded);
+        foreach (JsonLd::scriptsIn($doc) as $script) {
+            $articles->collect(JsonLd::decode($script));
             if ($articles->isFull()) {
                 break;
             }

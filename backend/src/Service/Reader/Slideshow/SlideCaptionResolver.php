@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow;
 
+use App\Service\Text\Whitespace;
+use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;
@@ -22,7 +24,7 @@ final readonly class SlideCaptionResolver
 
     private function visibleText(Element $slide): string
     {
-        return trim((string) preg_replace('/\s+/', ' ', $this->collectText($slide)));
+        return Whitespace::collapse($this->collectText($slide));
     }
 
     /** Script and style text is not visible, so it never belongs in a caption. */
@@ -52,7 +54,7 @@ final readonly class SlideCaptionResolver
     {
         foreach ($this->anchors($slide) as $anchor) {
             $href = $anchor->getAttribute('href');
-            if ($href !== null && (str_starts_with($href, 'http://') || str_starts_with($href, 'https://'))) {
+            if ($href !== null && AbsoluteHttpUrl::matches($href)) {
                 return $href;
             }
         }

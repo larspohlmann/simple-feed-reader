@@ -6,6 +6,7 @@ namespace App\Pagination;
 
 use App\Exception\ValidationException;
 use App\Pagination\Exception\MalformedCursorException;
+use ParagonIE\ConstantTime\Base64UrlSafe;
 
 /**
  * Opaque keyset-pagination cursor for the entry list: base64url of
@@ -54,7 +55,7 @@ final readonly class EntryCursor
     {
         $raw = $sortInstant->format(\DateTimeInterface::ATOM) . '|' . $id;
 
-        return rtrim(strtr(base64_encode($raw), '+/', '-_'), '=');
+        return Base64UrlSafe::encodeUnpadded($raw);
     }
 
     /** @throws MalformedCursorException */

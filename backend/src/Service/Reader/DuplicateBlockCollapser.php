@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -108,6 +109,6 @@ final readonly class DuplicateBlockCollapser
 
     private function normalize(string $text): string
     {
-        return mb_strtolower(trim((string) preg_replace('/\s+/u', ' ', $text)));
+        return mb_strtolower(Whitespace::collapse($text));
     }
 }

@@ -318,6 +318,24 @@ final class LeadingEngagementCleanerTest extends TestCase
         self::assertStringContainsString('Hamburg/Norderstedt', $clean);
     }
 
+    public function testKeepsAnImageLinkThatCarriesVisibleTextInsideALeadingHeader(): void
+    {
+        // An image plus a visible label is a real link, not an image-only
+        // badge — the image alone is what marks a masthead promo (#627). The
+        // label is a full sentence so it is neither a navigation label (too
+        // long) nor prose (entirely link text), leaving isBadgeLink as the
+        // only thing that decides this link's fate.
+        $html = '<div><article><header><div><p>'
+            . '<a href="https://x.test/subscribe">'
+            . '<img src="https://x.test/img/bell.png" alt="Bell">' . self::PROSE . '</a>'
+            . '</p></div></header><section><p>' . self::PROSE . '</p></section></article></div>';
+
+        $clean = $this->clean($html, null);
+
+        self::assertStringContainsString('bell.png', $clean);
+        self::assertStringContainsString('Hamburg/Norderstedt', $clean);
+    }
+
     public function testRemovesLeadingDecorativeIconImagesButKeepsTheHero(): void
     {
         $html = '<div>'

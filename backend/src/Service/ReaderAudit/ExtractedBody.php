@@ -6,7 +6,7 @@ namespace App\Service\ReaderAudit;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\LeadingEngagementBlocks;
-use App\Service\Reader\LeadingEngagementRules;
+use App\Service\Text\Whitespace;
 use Dom\Element;
 
 /**
@@ -49,7 +49,7 @@ final readonly class ExtractedBody
         $body = $document->body;
 
         return new self(
-            text: LeadingEngagementRules::collapse($body->textContent),
+            text: Whitespace::collapse($body->textContent),
             blocks: self::blocks($body),
             links: self::links($body),
             imageSources: self::imageSources($body),
@@ -128,7 +128,7 @@ final readonly class ExtractedBody
 
     private static function linkOf(Element $link): BodyLink
     {
-        return new BodyLink((string) $link->getAttribute('href'), LeadingEngagementRules::collapse($link->textContent));
+        return new BodyLink((string) $link->getAttribute('href'), Whitespace::collapse($link->textContent));
     }
 
     /** @return list<string> */

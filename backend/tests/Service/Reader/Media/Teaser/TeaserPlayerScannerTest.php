@@ -4,30 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Teaser;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class TeaserPlayerScannerTest extends TestCase
 {
+    use ParsesHtml;
+
     private TeaserPlayerScanner $scanner;
 
     protected function setUp(): void
     {
         $this->scanner = new TeaserPlayerScanner(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
-    }
-
-    private function document(string $html): HTMLDocument
-    {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-
-        return $document;
     }
 
     /** A block that pairs a player with its own still, a headline and a link is an inline media teaser. */
@@ -46,7 +39,20 @@ final class TeaserPlayerScannerTest extends TestCase
         self::assertSame('https://x.test/clip.webxxl.mp4', $found[0]->mediaUrl);
         self::assertSame('https://x.test/still.jpg', $found[0]->posterUrl);
         self::assertSame('https://x.test/related.html', $found[0]->linkUrl);
-        // Whitespace runs are collapsed and the ends trimmed.
+        self::assertSame('Kicker — The headline', $found[0]->caption);
+    }
+
+    public function testCollapsesANoBreakSpaceInTheCaption(): void
+    {
+        $html = '<body><div class="block">'
+            . '<picture><img src="https://x.test/still.jpg"></picture>'
+            . '<div data-v="https://x.test/clip.webxxl.mp4"></div>'
+            . '<a href="https://x.test/related.html">Kicker&nbsp;—&nbsp;The&nbsp;headline</a>'
+            . '</div></body>';
+
+        $found = $this->scanner->scan($this->document($html), 'https://x.test/article-100.html');
+
+        self::assertCount(1, $found);
         self::assertSame('Kicker — The headline', $found[0]->caption);
     }
 

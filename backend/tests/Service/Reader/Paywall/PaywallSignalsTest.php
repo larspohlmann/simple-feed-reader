@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Paywall\PaywallSignals;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PaywallSignalsTest extends TestCase
@@ -64,13 +66,18 @@ final class PaywallSignalsTest extends TestCase
     {
         $premium = '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>';
 
-        self::assertFalse(PaywallSignals::isPreview('', null));
-        self::assertTrue(PaywallSignals::isPreview($premium, null));
+        self::assertFalse(PaywallSignals::isPreview($this->rawPage(''), null));
+        self::assertTrue(PaywallSignals::isPreview($this->rawPage($premium), null));
     }
 
     private function isPreview(string $html): bool
     {
-        return PaywallSignals::isPreview($html, HtmlDocumentParser::parseOrNull($html));
+        return PaywallSignals::isPreview($this->rawPage($html), HtmlDocumentParser::parseOrNull($html));
+    }
+
+    private function rawPage(string $html): HTMLDocument
+    {
+        return RawPage::parse($html, 'https://example.test/')->document;
     }
 
     private function page(string $body, ?string $jsonLd = null): string

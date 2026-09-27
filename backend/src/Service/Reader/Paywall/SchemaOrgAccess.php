@@ -4,55 +4,32 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Paywall;
 
+use App\Service\Html\JsonLd;
+use Dom\HTMLDocument;
+
 /**
  * The publisher's own paywall declaration: schema.org `isAccessibleForFree`,
- * the markup Google documents for paywalled content. Read from the raw source
- * because FetchedPageNormalizer strips every <script> before the shared parse.
+ * the markup Google documents for paywalled content. Read from the raw page,
+ * because FetchedPageNormalizer strips every <script> from the normalized one.
  */
 final readonly class SchemaOrgAccess
 {
-    private const string JSON_LD_PATTERN = '#<script\b[^>]*application/ld\+json[^>]*>(.*?)</script\s*>#is';
     private const string KEY = 'isAccessibleForFree';
 
-    public static function declaredIn(string $html): AccessDeclaration
+    public static function declaredIn(HTMLDocument $rawDocument): AccessDeclaration
     {
-        $declaration = AccessDeclaration::Undeclared;
-        preg_match_all(self::JSON_LD_PATTERN, $html, $blocks);
-        foreach ($blocks[1] as $json) {
-            $decoded = json_decode(trim($json), true);
-            if (!\is_array($decoded)) {
-                continue;
-            }
-            foreach (self::declarationsIn($decoded) as $accessibleForFree) {
-                if (!$accessibleForFree) {
+        $sawDeclaration = false;
+        foreach (JsonLd::scriptsIn($rawDocument) as $script) {
+            foreach (JsonLd::nodesIn(JsonLd::decode($script)) as $node) {
+                $declared = self::asBoolean($node[self::KEY] ?? null);
+                if ($declared === false) {
                     return AccessDeclaration::Paywalled;
                 }
-                $declaration = AccessDeclaration::Free;
+                $sawDeclaration = $sawDeclaration || $declared === true;
             }
         }
 
-        return $declaration;
-    }
-
-    /**
-     * @param array<mixed> $node
-     *
-     * @return list<bool> every isAccessibleForFree in the tree, as a boolean
-     */
-    private static function declarationsIn(array $node): array
-    {
-        $declarations = [];
-        $declared = self::asBoolean($node[self::KEY] ?? null);
-        if ($declared !== null) {
-            $declarations[] = $declared;
-        }
-        foreach ($node as $child) {
-            if (\is_array($child)) {
-                array_push($declarations, ...self::declarationsIn($child));
-            }
-        }
-
-        return $declarations;
+        return $sawDeclaration ? AccessDeclaration::Free : AccessDeclaration::Undeclared;
     }
 
     private static function asBoolean(mixed $value): ?bool

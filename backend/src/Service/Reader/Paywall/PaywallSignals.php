@@ -16,9 +16,9 @@ use Dom\HTMLDocument;
  */
 final readonly class PaywallSignals
 {
-    public static function isPreview(string $html, ?HTMLDocument $normalized): bool
+    public static function isPreview(HTMLDocument $rawDocument, ?HTMLDocument $normalized): bool
     {
-        return match (SchemaOrgAccess::declaredIn($html)) {
+        return match (SchemaOrgAccess::declaredIn($rawDocument)) {
             AccessDeclaration::Paywalled => true,
             AccessDeclaration::Free => false,
             AccessDeclaration::Undeclared => $normalized !== null && self::gatedInBody($normalized),

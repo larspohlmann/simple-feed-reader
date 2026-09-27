@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Url\AbsoluteHttpUrl;
 
 /**
  * The URL context of one page, bound once and asked many times.
@@ -64,7 +65,7 @@ final readonly class PageUrls
             return null;
         }
 
-        return 1 === preg_match('#^https?://#i', $resolved) ? $resolved : null;
+        return AbsoluteHttpUrl::orNull($resolved);
     }
 
     /** Whether a resolved URL leads back to the page itself, trailing slash aside. */

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;
@@ -85,7 +86,7 @@ final readonly class LeadingEngagementCleaner
     private function isBadgeLink(Element $link): bool
     {
         return $link->getElementsByTagName('img')->length >= 1
-            && LeadingEngagementRules::collapse($link->textContent) === '';
+            && Whitespace::collapse($link->textContent) === '';
     }
 
     /** Bare decorative icons (more-articles, enlarge, share glyphs) in the head region. */
@@ -171,7 +172,7 @@ final readonly class LeadingEngagementCleaner
     private function isRemainder(Element $element): bool
     {
         return $element->localName === 'hr'
-            || (LeadingEngagementRules::collapse($element->textContent) === '' && !$this->hasMedia($element));
+            || (Whitespace::collapse($element->textContent) === '' && !$this->hasMedia($element));
     }
 
     /** The element itself or any descendant: a bare <img> has no text and no children. */

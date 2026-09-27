@@ -26,14 +26,9 @@ final class RecommendationCursorTest extends TestCase
         self::assertStringNotContainsString('|', $encoded);
     }
 
-    public function testEncodeStripsBase64Padding(): void
+    public function testEncodesThePairAsUnpaddedBase64Url(): void
     {
-        // "1|12" is 4 raw bytes, which base64-encodes with trailing '=' padding
-        // that rtrim() must strip — unlike "1|1" above, whose 3 raw bytes
-        // happen to need no padding at all and so cannot exercise the rtrim.
-        $encoded = RecommendationCursor::encode(1, 12);
-        self::assertStringNotContainsString('=', $encoded);
-        self::assertSame($encoded, rawurlencode($encoded));
+        self::assertSame('MXwxMg', RecommendationCursor::encode(1, 12));
     }
 
     public function testDecodeRejectsTheEmptyString(): void
