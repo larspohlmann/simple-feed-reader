@@ -34,7 +34,7 @@ final readonly class RecommendationCallRecorder
             $this->calls,
             $this->clock,
             $run->requireId(),
-            $log->getId(),
+            $log->requireId(),
         );
     }
 

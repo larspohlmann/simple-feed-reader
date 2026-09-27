@@ -158,23 +158,6 @@ final class RecordedCallTest extends DbTestCase
         ], $this->runTotals());
     }
 
-    public function testBanksTheUsageWithTheDebugSwitchOff(): void
-    {
-        $call = $this->recordedCall(logId: null);
-
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
-            promptTokens: 10,
-            completionTokens: 2,
-            reasoningTokens: 0,
-            cachedTokens: 0,
-            costNanoCredits: 5000,
-        )));
-        $call->finishUsable('{}');
-
-        self::assertSame(10, $this->runTotals()['promptTokens']);
-        self::assertSame(5000, $this->runTotals()['costNanoCredits']);
-    }
-
     public function testBanksTheUsageOfACallThatFailedInTransport(): void
     {
         $call = $this->recordedCall(logId: 7);
@@ -193,7 +176,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testLeavesTheCostNullWhenTheProviderReportedNone(): void
     {
-        $call = $this->recordedCall(logId: null);
+        $call = $this->recordedCall(logId: 7);
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 40,
@@ -314,13 +297,8 @@ final class RecordedCallTest extends DbTestCase
         return new RecordedCall($calls, $this->clock, $runId, $logId);
     }
 
-    /**
-     * Unlike call(), $logId is not the real log row's id: these tests exist
-     * to prove bankUsage() runs before the $logId guard, so an arbitrary
-     * value that is null exactly when the caller wants "debug off" serves
-     * that better than the fixture's own log, whose id is real either way.
-     */
-    private function recordedCall(?int $logId): RecordedCall
+    /** Unlike call(), $logId is not the real log row's id: an arbitrary one is enough for these tests. */
+    private function recordedCall(int $logId): RecordedCall
     {
         $runId = $this->run->requireId();
 

@@ -51,7 +51,7 @@ final class RecordedCall implements CompletionStreamObserver
         private readonly RecommendationCallRepository $calls,
         private readonly ClockInterface $clock,
         private readonly int $runId,
-        private readonly ?int $logId,
+        private readonly int $logId,
     ) {
         // The interval is armed at begin() time: begin() already persisted
         // everything worth persisting at time zero, so the first checkpoint
@@ -72,11 +72,6 @@ final class RecordedCall implements CompletionStreamObserver
         $this->lastCheckpointAt = $now;
 
         $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
-
-        if (null === $this->logId) {
-            return;
-        }
-
         $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
     }
 
@@ -96,10 +91,6 @@ final class RecordedCall implements CompletionStreamObserver
         $this->resetLiveness();
         $this->bankUsage();
 
-        if (null === $this->logId) {
-            return;
-        }
-
         $this->calls->settleTransportFailure(
             $this->settlement($this->logId, CallVerdict::TransportFailed),
             $errorDetail,
@@ -110,10 +101,6 @@ final class RecordedCall implements CompletionStreamObserver
     {
         $this->resetLiveness();
         $this->bankUsage();
-
-        if (null === $this->logId) {
-            return;
-        }
 
         $this->calls->settleAnswered($this->settlement($this->logId, $verdict), $content);
     }
@@ -131,7 +118,7 @@ final class RecordedCall implements CompletionStreamObserver
         $this->calls->recordStreamedChars($this->runId, 0);
     }
 
-    /** Runs before the debug guard in both callers: a spend record must not depend on the debug switch (#409). */
+    /** Called from both settle paths: a spend record must not depend on which one settles the call (#409). */
     private function bankUsage(): void
     {
         $usage = $this->usage;
