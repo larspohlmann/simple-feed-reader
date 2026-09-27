@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Passkey;
 
+use App\Service\Passkey\PasskeyAttestation;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -32,5 +33,10 @@ final readonly class RegisterPasskeyRequest
         #[Assert\Length(max: 100)]
         public string $label = '',
     ) {
+    }
+
+    public function toAttestation(): PasskeyAttestation
+    {
+        return new PasskeyAttestation(handle: $this->handle, credential: $this->credential, label: $this->label);
     }
 }

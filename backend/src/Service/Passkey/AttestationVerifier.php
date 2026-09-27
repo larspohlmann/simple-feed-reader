@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Passkey;
 
-use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\PasskeyRegistration;
 use App\Entity\User;
 use App\Entity\UserPasskey;
@@ -65,13 +64,13 @@ final readonly class AttestationVerifier
     /**
      * @throws InvalidArgumentException
      */
-    public function verifyAndStore(User $user, RegisterPasskeyRequest $request): UserPasskey
+    public function verifyAndStore(User $user, PasskeyAttestation $attestation): UserPasskey
     {
-        $challenge = $this->challengeStore->consume($request->handle);
+        $challenge = $this->challengeStore->consume($attestation->handle);
         $this->guardOwnership($user, $challenge);
 
-        $credentialRecord = $this->check($user, $challenge, $request->credential);
-        $passkey = $this->passkeyFrom($user, $credentialRecord, $request->label);
+        $credentialRecord = $this->check($user, $challenge, $attestation->credential);
+        $passkey = $this->passkeyFrom($user, $credentialRecord, $attestation->label);
 
         $this->persist($user, $passkey);
 
