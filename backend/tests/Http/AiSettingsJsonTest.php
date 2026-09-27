@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
-use App\Service\Recommendation\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase

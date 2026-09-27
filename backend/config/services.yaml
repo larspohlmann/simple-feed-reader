@@ -183,7 +183,7 @@ services:
     App\Service\Ai\Completion\CompletionStreamHeartbeat: '@App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat'
     App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat:
         arguments:
-            $lockKeepalive: '@App\Service\Recommendation\TickLockKeepalive'
+            $lockKeepalive: '@App\Service\Recommendation\Run\TickLockKeepalive'
             $workerLiveness: '@App\Service\Worker\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'

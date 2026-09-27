@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\FeedAnnotationVisibility;
-use App\Service\Recommendation\ForYouFeedPage;
+use App\Service\Recommendation\Feed\FeedAnnotationVisibility;
+use App\Service\Recommendation\Feed\ForYouFeedPage;
 
 final class RecommendationFeedJson
 {

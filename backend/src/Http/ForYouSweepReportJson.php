@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\ForYouSweepReport;
+use App\Service\Recommendation\Run\ForYouSweepReport;
 
 final class ForYouSweepReportJson
 {

@@ -11,8 +11,8 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\FeedAnnotationVisibility;
-use App\Service\Recommendation\ForYouFeedPage;
+use App\Service\Recommendation\Feed\FeedAnnotationVisibility;
+use App\Service\Recommendation\Feed\ForYouFeedPage;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase

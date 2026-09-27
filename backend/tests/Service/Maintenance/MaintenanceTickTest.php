@@ -38,7 +38,7 @@ use App\Service\Mail\MailCapability;
 use App\Service\Maintenance\MaintenanceSweeps;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\OrphanedFeedReclaimer;
-use App\Service\Recommendation\ForYouSweep;
+use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRunner;
 use App\Service\Retention\EntryPruner;

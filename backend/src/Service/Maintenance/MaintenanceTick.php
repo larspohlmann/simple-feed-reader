@@ -7,7 +7,7 @@ namespace App\Service\Maintenance;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
-use App\Service\Recommendation\ForYouSweep;
+use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;

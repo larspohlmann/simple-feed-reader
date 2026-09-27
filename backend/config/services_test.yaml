@@ -84,7 +84,7 @@ services:
     # production caller arrives with the settings API in a later task, so
     # until then the compiler would inline it away and the test container
     # could not fetch it. Same `autowire` caveat as above.
-    App\Service\Recommendation\RecommendationSettingsResolver:
+    App\Service\Recommendation\Settings\RecommendationSettingsResolver:
         autowire: true
         public: true
 
@@ -94,7 +94,7 @@ services:
     # prompt-building task later on this branch, so until then the compiler
     # would inline it away and the test container could not fetch it. Same
     # `autowire` caveat as above.
-    App\Service\Recommendation\RecommendationHistoryLoader:
+    App\Service\Recommendation\Prompt\RecommendationHistoryLoader:
         autowire: true
         public: true
 
@@ -102,7 +102,7 @@ services:
     # directly to prove the unread/subscribed filter and the pruned-id drop.
     # Same "no production caller yet" caveat as RecommendationHistoryLoader
     # above.
-    App\Service\Recommendation\RecommendationCandidateLoader:
+    App\Service\Recommendation\Prompt\RecommendationCandidateLoader:
         autowire: true
         public: true
 
@@ -371,7 +371,7 @@ services:
     # only production caller arrives with the "for you" endpoint in a later
     # task, so until then the compiler would inline it away and the test
     # container could not fetch it. Same `autowire` caveat as above.
-    App\Service\Recommendation\RecommendationRunStarter:
+    App\Service\Recommendation\Run\RecommendationRunStarter:
         autowire: true
         public: true
 
@@ -386,7 +386,7 @@ services:
     # RecommendationRunAdvancerTest drives advance() directly to prove the
     # lock, the snapshot-phase batching and the zero-candidate completion. Same
     # "no production caller yet" caveat as RecommendationRunStarter above.
-    App\Service\Recommendation\RecommendationRunAdvancer:
+    App\Service\Recommendation\Run\RecommendationRunAdvancer:
         autowire: true
         public: true
 
@@ -395,7 +395,7 @@ services:
     # AdvancerTest uses on advance() above -- useful for #311's worker-side
     # tests still to come on this branch, which have no HTTP route to go
     # through at all.
-    App\Service\Recommendation\RecommendationPollDriver:
+    App\Service\Recommendation\Run\RecommendationPollDriver:
         autowire: true
         public: true
 
@@ -406,7 +406,7 @@ services:
     # task, so until then the compiler would inline it away and the test
     # container could not fetch it. Same `autowire` caveat as the entries
     # above.
-    App\Service\Recommendation\DueRecommendationRunFinder:
+    App\Service\Recommendation\Run\DueRecommendationRunFinder:
         autowire: true
         public: true
 
@@ -418,7 +418,7 @@ services:
     # a later task, so until then the compiler would inline it away and the
     # test container could not fetch it. Same `autowire` caveat as the
     # entries above.
-    App\Service\Recommendation\ForYouSweep:
+    App\Service\Recommendation\Run\ForYouSweep:
         autowire: true
         public: true
 
@@ -479,7 +479,7 @@ services:
     # composite fans out to. `self::getContainer()->get(...)` refuses a
     # private service, so all three need the same public override as the
     # entries above. Test environment only — production keeps them private.
-    App\Service\Recommendation\TickLockKeepalive:
+    App\Service\Recommendation\Run\TickLockKeepalive:
         autowire: true
         public: true
 

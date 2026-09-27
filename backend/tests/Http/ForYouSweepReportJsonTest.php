@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\ForYouSweepReportJson;
-use App\Service\Recommendation\ForYouSweepReport;
+use App\Service\Recommendation\Run\ForYouSweepReport;
 use PHPUnit\Framework\TestCase;
 
 final class ForYouSweepReportJsonTest extends TestCase

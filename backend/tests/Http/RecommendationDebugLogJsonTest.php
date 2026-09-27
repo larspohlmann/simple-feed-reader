@@ -6,7 +6,7 @@ namespace App\Tests\Http;
 
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\RecommendationDebugLog;
+use App\Service\Recommendation\Feed\RecommendationDebugLog;
 use PHPUnit\Framework\TestCase;
 
 /**

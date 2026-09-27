@@ -6,7 +6,7 @@ namespace App\Service\Maintenance;
 
 use App\Service\Image\ImageVerificationReport;
 use App\Service\Mail\Digest\DigestSweepReport;
-use App\Service\Recommendation\ForYouSweepReport;
+use App\Service\Recommendation\Run\ForYouSweepReport;
 use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
 
 /** The tick's sweeps that flush through the default EntityManager, which an aborted refresh leaves closed. */

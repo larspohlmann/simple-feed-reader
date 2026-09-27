@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\ReadingActivityJson;
 use App\Service\Reading\ReadingActivityCounter;
-use App\Service\Recommendation\ViewerTimeZone;
+use App\Service\Recommendation\Feed\ViewerTimeZone;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

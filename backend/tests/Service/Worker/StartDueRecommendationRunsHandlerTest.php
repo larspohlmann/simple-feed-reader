@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\RecommendationSettingsWriter;
+use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 use App\Service\Worker\Handler\StartDueRecommendationRunsHandler;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use App\Tests\DbTestCase;

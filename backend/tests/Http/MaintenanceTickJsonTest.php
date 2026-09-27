@@ -10,7 +10,7 @@ use App\Service\Logging\Loki\LokiSpoolReport;
 use App\Service\Mail\Digest\DigestSweepReport;
 use App\Service\Maintenance\MaintenanceSweeps;
 use App\Service\Maintenance\MaintenanceTickReport;
-use App\Service\Recommendation\ForYouSweepReport;
+use App\Service\Recommendation\Run\ForYouSweepReport;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
 use PHPUnit\Framework\TestCase;

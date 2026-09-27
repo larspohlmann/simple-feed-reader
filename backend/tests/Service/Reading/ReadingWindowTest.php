@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reading;
 
 use App\Service\Reading\ReadingWindow;
-use App\Service\Recommendation\ViewerTimeZone;
+use App\Service\Recommendation\Feed\ViewerTimeZone;
 use PHPUnit\Framework\TestCase;
 
 /**
