@@ -14,32 +14,19 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Domain code returns typed values and throws typed exceptions; src/Http shapes them (#1158), and a controller hands a
- * service a value, never a request DTO (#1182). Strings, group imports and namespace aliases count too.
+ * Entities, enums and the ORM extensions sit below the services, so what they share with a service lives with them
+ * (docs/architecture.md §8, #1182).
  *
  * @implements Rule<FileNode>
  */
-final readonly class DomainKnowsNoHttpRule implements Rule
+final readonly class PersistenceKnowsNoServiceRule implements Rule
 {
-    private const array DOMAIN_NAMESPACES = [
-        'App\\Pagination\\',
-        'App\\Service\\',
-        'App\\Repository\\',
-        'App\\Entity\\',
-        'App\\Enum\\',
-        'App\\Exception\\',
-    ];
+    private const array PERSISTENCE_NAMESPACES = ['App\\Entity\\', 'App\\Enum\\', 'App\\Doctrine\\'];
 
-    private const string LET_HTTP_SHAPE_IT
-        = 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
+    private const string MOVE_THE_VALUE_DOWN
+        = 'Move the shared value to App\\Entity, App\\Enum or App\\Doctrine (docs/architecture.md §8).';
 
-    private const array REMEDIES = [
-        'App\\Dto\\' => 'Take the service value the request DTO builds, not the DTO (#1182).',
-        'App\\Http\\' => self::LET_HTTP_SHAPE_IT,
-        'Symfony\\Component\\HttpFoundation\\' => self::LET_HTTP_SHAPE_IT,
-        'Symfony\\Component\\HttpKernel\\Exception\\' => self::LET_HTTP_SHAPE_IT,
-        'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException' => self::LET_HTTP_SHAPE_IT,
-    ];
+    private const array REMEDIES = ['App\\Service\\' => self::MOVE_THE_VALUE_DOWN];
 
     private ClassNameReferences $references;
 
@@ -67,7 +54,7 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     private function errorsIn(Namespace_ $namespace): array
     {
         $namespaceName = $namespace->name?->toString() ?? '';
-        if (!ClassNameReferences::isInAnyOf($namespaceName, self::DOMAIN_NAMESPACES)) {
+        if (!ClassNameReferences::isInAnyOf($namespaceName, self::PERSISTENCE_NAMESPACES)) {
             return [];
         }
 
@@ -80,12 +67,12 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     private static function error(string $namespaceName, ForbiddenReference $reference): IdentifierRuleError
     {
         return RuleErrorBuilder::message(sprintf(
-            'Domain code must not know HTTP: %s references %s. %s',
+            'Persistence code must not know a service: %s references %s. %s',
             $namespaceName,
             $reference->name,
             self::REMEDIES[$reference->matchedRule],
         ))
-            ->identifier('simpleFeedReader.domainKnowsNoHttp')
+            ->identifier('simpleFeedReader.persistenceKnowsNoService')
             ->line($reference->line)
             ->build();
     }
