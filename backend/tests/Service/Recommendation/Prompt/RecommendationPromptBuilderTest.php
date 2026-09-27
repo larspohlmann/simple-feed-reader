@@ -145,7 +145,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     /**
      * A sanity check for the ordinary, cap-bound case: at a generous context
-     * window the batch cap (the default maximumBatchSize of 45) binds before
+     * window the batch cap (the default maximumBatchSize of 100) binds before
      * either the old or the new token formula does, so a 200-candidate pool
      * packs into the minimum the cap allows either way. This does not exercise
      * the reserve/history-budget swap — see
@@ -222,7 +222,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // the budget does. A window of 8192 (as this test used before the cap
         // existed) fits all 35 in one batch, so the window was shrunk instead
         // of the candidate count grown, keeping the split budget-driven rather
-        // than cap-driven. The window is raised by the constant reserve (1600)
+        // than cap-driven. The window is raised by the constant reserve (2250)
         // to keep the same budget now that the reserve no longer scales with
         // picksLimit.
         $candidateCount = 35;
@@ -494,7 +494,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheRubricAsksForExactValuesOnAThousandPointScale(): void
     {
         $system = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
         )[0]['content'];
 
@@ -515,7 +515,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheBatchPromptNeverAsksForACandidateToBeLeftOut(): void
     {
         $system = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
         )[0]['content'];
 
@@ -536,7 +536,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         $user = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             $candidateLines,
         )[1]['content'];
 
@@ -549,7 +549,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $summary = new CandidatePoolSummary(total: 2000, oldest: '2026-01-15', newest: '2026-08-09');
 
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             $candidateLines,
             $summary,
         );
@@ -567,7 +567,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testBatchMessagesOmitsThePoolFrameLineWhenNoSummaryIsPassed(): void
     {
         $messages = $this->builder->batchMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
         );
 
@@ -742,7 +742,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsExactlyAtTheMinimumBatchSizeWhenTheBudgetOverflowsEarly(): void
     {
-        // Window 3125 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3125 (raised by the constant reserve of 2250) with picksLimit 1
         // makes the budget just 1 token, so every candidate after the first
         // overflows it; only the >= MINIMUM_BATCH_SIZE guard decides where each
         // batch actually ends.
@@ -758,7 +758,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingResetsUsedTokensExactlyAtEachSplitBoundary(): void
     {
-        // Window 3189 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3189 (raised by the constant reserve of 2250) with picksLimit 1
         // puts the budget exactly one token below where the 11th candidate line
         // would land: a one-token error in either the starting or the
         // post-split reset of $used shifts the split point.
@@ -774,9 +774,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3195 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3195 (raised by the constant reserve of 2250) with picksLimit 1
         // makes the budget land exactly on the 10-candidate boundary (shifted down
-        // one candidate due to the new responseReserve = 45 * 1 instead of 40 * 1):
+        // one candidate versus the old flat per-pick multiplier, now that RecommendationAnswerBudget's
+        // floor and ANSWER_BOUND_PERCENT bound decide responseReserve):
         // used+lineTokens equals the budget for the 11th candidate, so the
         // strict `>` (not `>=`) leaves it in the first batch, and a sign error
         // in subtracting the history tokens shifts the split.
@@ -823,12 +824,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * With the default 45-candidate cap, responseReserve's `intdiv(..., 100)`
-     * is pinned at the MINIMUM_ANSWER_TOKENS floor regardless of the exact
-     * divisor, masking an off-by-one there. A larger cap (200, via
-     * maximumBatchSize) pushes the raw quotient well above the floor, so a
-     * 100 -> 101 or 100 -> 99 divisor shifts responseReserve enough to move
-     * the batch boundary at this window.
+     * A maximumBatchSize of 200 keeps RecommendationAnswerBudget's `expected` well above the
+     * MINIMUM_ANSWER_TOKENS floor, so a wrong ANSWER_BOUND_PERCENT/100 divisor would shift the split.
      */
     public function testResponseReserveDivisorIsExactlyOneHundred(): void
     {
@@ -1006,7 +1003,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)]; // 6 pruned since its batch ran
 
         $messages = $this->builder->consolidationMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             $pool,
             $lines,
         );
@@ -1025,7 +1022,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         $this->expectExceptionMessage('The consolidation phase requires at least one ranked winner.');
 
         $this->builder->consolidationMessages(
-            new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null),
+            $this->defaultContext(),
             [],
             [],
         );
@@ -1045,6 +1042,12 @@ final class RecommendationPromptBuilderTest extends TestCase
     private function emptyHistory(): RecommendationHistory
     {
         return new RecommendationHistory(favorites: [], kept: [], viewed: []);
+    }
+
+    /** A generous window, no profile, and no history — the baseline context tests reach for by default. */
+    private function defaultContext(): PromptContext
+    {
+        return new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null);
     }
 
     private function settings(

@@ -13,14 +13,9 @@ use App\Service\Ai\Completion\Reasoning;
 final readonly class RecommendationAnswerBudget
 {
     /**
-     * What one scored pick costs in the reply: id, score, and the dominant
-     * prose `reason`. Measured — the largest full-batch reply ran 12068
-     * characters for 43 items, ~70 tokens each. packBatches() subtracts it
-     * from the context window, so too high splits the pool into needless
-     * batches and too low crowds out the answer (was 40 until #437). Kept
-     * separate from the runaway slack: reusing it as both once made the
-     * packer read the inflation as real cost (a 13000-token window went from
-     * 12 batches of 45 to 50 of 10).
+     * What one scored consolidation pick costs in the reply: id, score, and the dominant prose
+     * `reason`, ~70 tokens measured (#437). consolidationInputSize() subtracts it when sizing the
+     * shortlist against the context window, so too high shrinks the shortlist and too low crowds out the answer.
      */
     private const int TOKENS_PER_PICK = 70;
 
