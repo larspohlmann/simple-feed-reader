@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
-use App\Dto\Subscription\MoveFeedToTagRequest;
-use App\Dto\Subscription\ReorderSubscriptionsRequest;
-use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Ordering\PositionReorderer;
@@ -23,35 +20,36 @@ final readonly class SubscriptionEditor
     ) {
     }
 
-    public function update(Subscription $subscription, UpdateSubscriptionRequest $request): void
+    public function update(Subscription $subscription, SubscriptionChange $change): void
     {
-        $subscription->setCustomTitle('' === $request->customTitle ? null : $request->customTitle);
-        $this->tagSync->sync($subscription, $request->tagIds, $subscription->getUser()->requireId());
-        $this->applyFlags($subscription, $request);
+        $subscription->setCustomTitle('' === $change->customTitle ? null : $change->customTitle);
+        $this->tagSync->sync($subscription, $change->tagIds, $subscription->getUser()->requireId());
+        $this->applyFlags($subscription, $change);
         $this->entityManager->flush();
     }
 
-    public function moveToTag(Subscription $subscription, MoveFeedToTagRequest $request): void
+    public function moveToTag(Subscription $subscription, TagMove $move): void
     {
-        $this->feedTagMove->move($subscription, $request);
+        $this->feedTagMove->move($subscription, $move);
         $this->entityManager->flush();
     }
 
-    public function reorder(User $user, ReorderSubscriptionsRequest $request): void
+    /** @param list<int> $subscriptionIds the untagged feeds in their new order */
+    public function reorder(User $user, array $subscriptionIds): void
     {
         $this->reorderer->reorder(
-            $request->subscriptionIds,
-            $this->ownedSubscriptions->resolve($request->subscriptionIds, $user->requireId()),
+            $subscriptionIds,
+            $this->ownedSubscriptions->resolve($subscriptionIds, $user->requireId()),
         );
     }
 
-    private function applyFlags(Subscription $subscription, UpdateSubscriptionRequest $request): void
+    private function applyFlags(Subscription $subscription, SubscriptionChange $change): void
     {
-        if (null !== $request->includeInAllItems) {
-            $subscription->setIncludeInAllItems($request->includeInAllItems);
+        if (null !== $change->includeInAllItems) {
+            $subscription->setIncludeInAllItems($change->includeInAllItems);
         }
-        if (null !== $request->includeInForYou) {
-            $subscription->setIncludeInForYou($request->includeInForYou);
+        if (null !== $change->includeInForYou) {
+            $subscription->setIncludeInForYou($change->includeInForYou);
         }
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
+use App\Service\Subscription\SubscriptionChange;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class UpdateSubscriptionRequest
@@ -17,5 +18,15 @@ final readonly class UpdateSubscriptionRequest
         public ?bool $includeInAllItems = null,
         public ?bool $includeInForYou = null,
     ) {
+    }
+
+    public function toChange(): SubscriptionChange
+    {
+        return new SubscriptionChange(
+            customTitle: $this->customTitle,
+            tagIds: $this->tagIds,
+            includeInAllItems: $this->includeInAllItems,
+            includeInForYou: $this->includeInForYou,
+        );
     }
 }

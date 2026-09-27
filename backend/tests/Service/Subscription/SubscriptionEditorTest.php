@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
-use App\Dto\Subscription\MoveFeedToTagRequest;
-use App\Dto\Subscription\ReorderSubscriptionsRequest;
-use App\Dto\Subscription\UpdateSubscriptionRequest;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Subscription\SubscriptionChange;
 use App\Service\Subscription\SubscriptionEditor;
+use App\Service\Subscription\TagMove;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
@@ -28,7 +27,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setCustomTitle('Old');
         $this->em->flush();
 
-        $this->editor()->update($subscription, new UpdateSubscriptionRequest(''));
+        $this->editor()->update($subscription, new SubscriptionChange(''));
 
         self::assertNull($this->reload($subscription)->getCustomTitle());
     }
@@ -38,12 +37,12 @@ final class SubscriptionEditorTest extends DbTestCase
         $user = $this->user('title-keep@example.com');
         $subscription = $this->subscription($user, 'https://keep.editor.example.com/rss');
 
-        $this->editor()->update($subscription, new UpdateSubscriptionRequest('Mine'));
+        $this->editor()->update($subscription, new SubscriptionChange('Mine'));
 
         self::assertSame('Mine', $this->reload($subscription)->getCustomTitle());
     }
 
-    public function testUpdateLeavesFlagsTheRequestOmits(): void
+    public function testUpdateLeavesFlagsTheChangeOmits(): void
     {
         $user = $this->user('flags-keep@example.com');
         $subscription = $this->subscription($user, 'https://flags-keep.editor.example.com/rss');
@@ -51,14 +50,14 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setIncludeInForYou(false);
         $this->em->flush();
 
-        $this->editor()->update($subscription, new UpdateSubscriptionRequest(null));
+        $this->editor()->update($subscription, new SubscriptionChange(null));
 
         $reloaded = $this->reload($subscription);
         self::assertFalse($reloaded->isIncludeInAllItems());
         self::assertFalse($reloaded->isIncludeInForYou());
     }
 
-    public function testUpdateAppliesFlagsTheRequestCarries(): void
+    public function testUpdateAppliesFlagsTheChangeCarries(): void
     {
         $user = $this->user('flags-set@example.com');
         $subscription = $this->subscription($user, 'https://flags-set.editor.example.com/rss');
@@ -66,7 +65,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setIncludeInForYou(true);
         $this->em->flush();
 
-        $this->editor()->update($subscription, new UpdateSubscriptionRequest(null, [], false, false));
+        $this->editor()->update($subscription, new SubscriptionChange(null, [], false, false));
 
         $reloaded = $this->reload($subscription);
         self::assertFalse($reloaded->isIncludeInAllItems());
@@ -79,7 +78,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $tag = $this->tag($user, 'Synced');
         $subscription = $this->subscription($user, 'https://sync.editor.example.com/rss');
 
-        $this->editor()->update($subscription, new UpdateSubscriptionRequest(null, [$tag->requireId()]));
+        $this->editor()->update($subscription, new SubscriptionChange(null, [$tag->requireId()]));
 
         self::assertSame(['Synced'], $this->tagNames($this->reload($subscription)));
     }
@@ -93,7 +92,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->addTag($news);
         $this->em->flush();
 
-        $this->editor()->moveToTag($subscription, new MoveFeedToTagRequest($news->requireId(), $tech->requireId()));
+        $this->editor()->moveToTag($subscription, new TagMove($news->requireId(), $tech->requireId()));
 
         self::assertSame(['Tech'], $this->tagNames($this->reload($subscription)));
     }
@@ -107,7 +106,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $second->setPosition(7);
         $this->em->flush();
 
-        $this->editor()->reorder($user, new ReorderSubscriptionsRequest([$second->requireId(), $first->requireId()]));
+        $this->editor()->reorder($user, [$second->requireId(), $first->requireId()]);
 
         self::assertSame(1, $this->reload($first)->getPosition());
         self::assertSame(0, $this->reload($second)->getPosition());
