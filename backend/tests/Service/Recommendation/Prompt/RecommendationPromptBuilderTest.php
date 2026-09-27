@@ -340,6 +340,43 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertLessThanOrEqual(300, $large);
     }
 
+    public function testALongerProfileShrinksTheConsolidationShortlist(): void
+    {
+        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+
+        $short = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+        $long = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
+            Reasoning::Suppressed,
+        );
+
+        self::assertLessThan($short, $long);
+    }
+
+    public function testMoreFavoritesShrinkTheConsolidationShortlist(): void
+    {
+        $few = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $many = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, 'Fav', 100), range(1, 40)),
+            kept: [],
+            viewed: [],
+        );
+
+        $withFew = $this->builder->consolidationInputSize(
+            new PromptContext($few, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+        $withMany = $this->builder->consolidationInputSize(
+            new PromptContext($many, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+
+        self::assertLessThan($withFew, $withMany);
+    }
+
     /**
      * A huge window means the token budget never binds, so only the cap splits
      * the pool. Small halves the 100 automatic ceiling and Large doubles it, so
