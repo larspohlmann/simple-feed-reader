@@ -6,8 +6,6 @@ namespace App\Entity;
 
 use App\Enum\MailEncryption;
 use App\Repository\MailServerSettingsRepository;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**

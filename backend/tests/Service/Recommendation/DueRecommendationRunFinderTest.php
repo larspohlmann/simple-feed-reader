@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Entity\RecommendationRun;
+use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\DueRecommendationRunFinder;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
@@ -41,12 +41,12 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $writer->save($user, new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

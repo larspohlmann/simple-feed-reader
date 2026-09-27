@@ -6,7 +6,7 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\Preferences;
 use App\Entity\User;
-use App\Service\Mail\Digest\DigestCadence;
+use App\Enum\DigestCadence;
 use App\Service\Mail\Digest\DigestSchedule;
 use PHPUnit\Framework\TestCase;
 

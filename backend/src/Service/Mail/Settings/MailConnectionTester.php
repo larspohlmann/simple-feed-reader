@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
-use App\Entity\MailKind;
 use App\Entity\User;
+use App\Enum\MailKind;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\MailSendingSettings;

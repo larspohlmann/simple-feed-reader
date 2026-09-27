@@ -7,15 +7,14 @@ namespace App\Tests\Command;
 use App\Command\RecommendationDrainCommand;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\ProviderTimeouts;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Worker\SweepStreamHeartbeat;
 use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
@@ -23,8 +22,8 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
 use App\Tests\Support\LockLostAfterFirstRefreshStore;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\StubChatClient;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\StubChatClient;
 use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
 use Psr\Log\NullLogger;
@@ -424,12 +423,12 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: self::TWO_BATCH_ENTRY_COUNT,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail;
 
-use App\Entity\MailKind;
 use App\Entity\MailSendFailure;
+use App\Enum\MailKind;
 use App\Repository\MailSendFailureRepository;
 use App\Service\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;

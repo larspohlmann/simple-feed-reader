@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
-use App\Service\Reader\MagazineStyle;
+use App\Enum\MagazineStyle;
 
 /**
  * The account's own settings, exactly once per backup.

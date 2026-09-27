@@ -12,8 +12,10 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -24,15 +26,12 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderTimeouts;
-use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\CompletionStreamHeartbeat;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationResponseSchema;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
@@ -193,12 +192,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             lookbackDays: 5,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
@@ -2855,7 +2854,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * of silently making these tests single-batch.
      */
     private function seedMultiBatchFixture(
-        int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+        int $picksLimit = RecommendationSettings::DEFAULT_PICKS_LIMIT,
     ): void {
         $this->seedReadyAiSettings($this->user);
 
@@ -2894,11 +2893,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $candidatePoolSize,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
             batchSize: RecommendationBatchSize::Medium,
@@ -2929,7 +2928,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
         $this->em->flush();
 
-        $this->persistSettings($entryCount, EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT);
+        $this->persistSettings($entryCount, RecommendationSettings::DEFAULT_PICKS_LIMIT);
     }
 
     /**

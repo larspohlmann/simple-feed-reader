@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Command;
 
+use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Service\Proxy\ProxyConnection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Proxy\Crypto;
 
+use App\Entity\SealedSecret;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Crypto\SecretBinding;
 
 /** The instance-wide proxy password; its own binding keeps it apart from every other sealed secret. */

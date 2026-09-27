@@ -7,9 +7,10 @@ namespace App\Tests\Service\Recommendation;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Recommendation\RecommendationBatchSize;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationHistoryLoader;
 use App\Service\Recommendation\RecommendationPackingSettings;
@@ -211,7 +212,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             keptCap: $keptCap,
             viewedCap: $viewedCap,
             candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             packing: new RecommendationPackingSettings(
                 contextWindow: 32768,

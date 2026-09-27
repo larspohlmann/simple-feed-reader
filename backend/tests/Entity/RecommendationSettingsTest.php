@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Enum\RecommendationBatchSize;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsTest extends TestCase

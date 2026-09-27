@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
@@ -20,7 +21,6 @@ use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailSendingSettings;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;

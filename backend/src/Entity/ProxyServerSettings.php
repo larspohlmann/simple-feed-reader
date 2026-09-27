@@ -6,8 +6,6 @@ namespace App\Entity;
 
 use App\Enum\ProxyType;
 use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Proxy\ProxyConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**

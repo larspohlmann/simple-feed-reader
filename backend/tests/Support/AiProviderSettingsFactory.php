@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\SealedSecret;
 use App\Entity\User;
-use App\Service\Crypto\SealedSecret;
 
 /**
  * Builds an AiProviderSettings with the dummy sealed key and hint that every

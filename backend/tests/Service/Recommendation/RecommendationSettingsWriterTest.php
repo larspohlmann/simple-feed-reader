@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -71,7 +71,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             keptCap: 20,
             viewedCap: 30,
             candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
@@ -107,7 +107,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             keptCap: 20,
             viewedCap: 30,
             candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
@@ -138,7 +138,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             keptCap: 20,
             viewedCap: 30,
             candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,

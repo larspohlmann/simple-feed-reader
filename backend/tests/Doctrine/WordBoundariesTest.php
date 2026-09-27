@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Search;
+namespace App\Tests\Doctrine;
 
-use App\Service\Search\WordBoundaries;
+use App\Doctrine\WordBoundaries;
 use PHPUnit\Framework\TestCase;
 
 final class WordBoundariesTest extends TestCase
@@ -19,12 +19,7 @@ final class WordBoundariesTest extends TestCase
         self::assertSame('punk', WordBoundaries::normalize('punk'));
     }
 
-    /**
-     * One character in, one space out. The SQL side emits a REPLACE per
-     * character and cannot collapse runs, so this side must not either — the
-     * two normalizations are compared against each other, and a tidier
-     * version here would stop "E--Mail" from matching itself.
-     */
+    /** The SQL side cannot collapse runs, so this side must not either, or "E--Mail" stops matching itself. */
     public function testDoesNotCollapseTheRunsItCreates(): void
     {
         self::assertSame('E  Mail', WordBoundaries::normalize('E--Mail'));

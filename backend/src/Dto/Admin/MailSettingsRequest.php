@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
 use App\Http\FullReplacePayload;
 use App\Service\Crypto\SecretChange;
-use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettingsUpdate;
 use Symfony\Component\Validator\Constraints as Assert;
 

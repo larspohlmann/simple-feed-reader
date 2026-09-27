@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Settings;
 
 use App\Entity\InstanceSetting;
+use App\Entity\InstanceSettingsUpdate;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\QueryRecorder;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

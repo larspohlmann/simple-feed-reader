@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\GrafanaSettingsRepository;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Grafana\GrafanaConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**

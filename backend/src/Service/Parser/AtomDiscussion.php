@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use App\Service\Url\AbsoluteHttpUrl;
 
 final class AtomDiscussion

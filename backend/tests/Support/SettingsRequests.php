@@ -8,10 +8,10 @@ use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Dto\Admin\InstanceSettingsRequest;
 use App\Dto\Admin\MailSettingsRequest;
 use App\Dto\Admin\ProxySettingsRequest;
+use App\Entity\MailConnection;
+use App\Entity\ProxyConnection;
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
-use App\Service\Mail\Settings\MailConnection;
-use App\Service\Proxy\ProxyConnection;
 
 /**
  * The settings requests require every setting; these carry the old defaults so a test names only what it is about.

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
+use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 
 final readonly class MailSettingsSnapshot

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Discussion;
+namespace App\Tests\Entity;
 
+use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use PHPUnit\Framework\TestCase;
 
 final class DiscussionTest extends TestCase

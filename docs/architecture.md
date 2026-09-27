@@ -167,3 +167,24 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
 Enforced by `QueriesLiveInRepositoriesRule` (`backend/tests/PhpStan/`, run by `composer stan`). Outside `src/Repository`
 and `src/Doctrine`, no class may call `createQuery`, `createQueryBuilder`, `createNativeQuery` or `getConnection`. It
 also may not reference the DBAL `Connection`, an ORM or DBAL `QueryBuilder`, `Query` or `NativeQuery`.
+
+## 8. Where shared values live
+
+A value or enum that more than one layer uses lives at the lowest layer that uses it, so an entity, an enum or an ORM
+extension never imports a service. Decided in #1182.
+
+- **`App\Entity`** holds what an entity stores, embeds or returns, next to the embeddables: `SealedSecret`,
+  `Discussion`, the proxy, mail and Grafana connection values, `InstanceSettingsUpdate`, `RecommendationSettingsValues`,
+  and the recommendation defaults as constants on `RecommendationSettings`.
+- **`App\Enum`** holds the enums an entity or a repository uses, or several `Service/*` modules share (`FeedStatus`,
+  `ListOrder`, `DigestCadence`, `MagazineStyle`, `MailKind`, `RecommendationBatchSize`…). It does not fold into
+  `App\Entity`: several of its enums never touch an entity. An enum whose lowest user is one `Service/*` module stays
+  in that module, even when a controller, DTO, mapper or command reads it too (`ScrapeFallback`, `SocksReplyCode`,
+  `CatalogImportMode`, `CommentsStatus`).
+- **`App\Doctrine`** holds what the ORM extensions share with the query and search code: `WordBoundaries`.
+- **`App\Dto`** is HTTP input. A controller turns a request DTO into a service value (`$request->toUpdate()`,
+  `->toChange()`) or passes a plain field; no domain class imports `App\Dto`.
+
+Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
+`DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code), both in `backend/tests/PhpStan/` and run by
+`composer stan`.

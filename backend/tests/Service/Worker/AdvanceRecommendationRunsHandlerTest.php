@@ -8,7 +8,9 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\EntryRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -16,8 +18,6 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationBatchWave;
 use App\Service\Recommendation\RecommendationCandidateLoader;
 use App\Service\Recommendation\RecommendationConsolidationResolver;
@@ -29,7 +29,6 @@ use App\Service\Recommendation\RecommendationRunDeferral;
 use App\Service\Recommendation\RecommendationRunFinalizer;
 use App\Service\Recommendation\RecommendationRunStarter;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationTickCheckpoint;
 use App\Service\Recommendation\RecommendationTransportFailureRecorder;
 use App\Service\Recommendation\RecommendationWaveConcurrency;
@@ -749,12 +748,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $entryCount,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: 200000,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

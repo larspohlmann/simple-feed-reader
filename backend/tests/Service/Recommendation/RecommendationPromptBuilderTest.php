@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\RecommendationSettings;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\CandidatePoolSummary;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\PromptLine;
-use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationHistory;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptBuilder;
@@ -1003,7 +1004,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             keptCap: 40,
             viewedCap: 80,
             candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
             packing: new RecommendationPackingSettings(
                 contextWindow: $contextWindow,

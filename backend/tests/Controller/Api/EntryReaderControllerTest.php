@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionResult;
 use App\Tests\Support\FakeArticleExtractor;

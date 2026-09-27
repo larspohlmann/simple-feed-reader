@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * No row = all defaults (see EffectiveRecommendationSettings); the row exists
+ * No row = all defaults (the DEFAULT_ constants below); the row exists
  * only once the user saves the settings form.
  */
 #[ORM\Entity(repositoryClass: RecommendationSettingsRepository::class)]
@@ -20,6 +18,13 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\UniqueConstraint(name: 'uniq_recommendation_settings_user', columns: ['user_id'])]
 class RecommendationSettings
 {
+    public const int DEFAULT_FAVORITES_CAP = 40;
+    public const int DEFAULT_KEPT_CAP = 40;
+    public const int DEFAULT_VIEWED_CAP = 80;
+    public const int DEFAULT_CANDIDATE_POOL_SIZE = 500;
+    public const int DEFAULT_LOOKBACK_DAYS = 2;
+    public const int DEFAULT_PICKS_LIMIT = 50;
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
@@ -41,27 +46,27 @@ class RecommendationSettings
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $profileText = null;
 
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP])]
-    private int $favoritesCap = EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP;
+    #[ORM\Column(options: ['default' => self::DEFAULT_FAVORITES_CAP])]
+    private int $favoritesCap = self::DEFAULT_FAVORITES_CAP;
 
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_KEPT_CAP])]
-    private int $keptCap = EffectiveRecommendationSettings::DEFAULT_KEPT_CAP;
+    #[ORM\Column(options: ['default' => self::DEFAULT_KEPT_CAP])]
+    private int $keptCap = self::DEFAULT_KEPT_CAP;
 
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP])]
-    private int $viewedCap = EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP;
+    #[ORM\Column(options: ['default' => self::DEFAULT_VIEWED_CAP])]
+    private int $viewedCap = self::DEFAULT_VIEWED_CAP;
 
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE])]
-    private int $candidatePoolSize = EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE;
+    #[ORM\Column(options: ['default' => self::DEFAULT_CANDIDATE_POOL_SIZE])]
+    private int $candidatePoolSize = self::DEFAULT_CANDIDATE_POOL_SIZE;
 
     /**
      * How many days back a run's candidate pool reaches (#386). The cap in
      * candidatePoolSize applies inside this window.
      */
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS])]
-    private int $lookbackDays = EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS;
+    #[ORM\Column(options: ['default' => self::DEFAULT_LOOKBACK_DAYS])]
+    private int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS;
 
-    #[ORM\Column(options: ['default' => EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT])]
-    private int $picksLimit = EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT;
+    #[ORM\Column(options: ['default' => self::DEFAULT_PICKS_LIMIT])]
+    private int $picksLimit = self::DEFAULT_PICKS_LIMIT;
 
     #[ORM\Column(nullable: true)]
     private ?int $contextWindow = null;

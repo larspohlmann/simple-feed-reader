@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaSettingsCache;
 use App\Service\Grafana\GrafanaSettingsSnapshot;
 use PHPUnit\Framework\TestCase;

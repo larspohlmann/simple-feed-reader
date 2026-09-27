@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Proxy;
 
+use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
+use App\Entity\SealedSecret;
 use App\Enum\ProxyType;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\ProxySettingsSnapshot;
 use PHPUnit\Framework\TestCase;
 

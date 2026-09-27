@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
+use App\Enum\DigestFormat;
 use App\Service\Mail\MailSendingSettings;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;

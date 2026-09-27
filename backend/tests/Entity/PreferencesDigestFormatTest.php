@@ -6,7 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\Preferences;
 use App\Entity\User;
-use App\Service\Mail\Digest\DigestFormat;
+use App\Enum\DigestFormat;
 use PHPUnit\Framework\TestCase;
 
 final class PreferencesDigestFormatTest extends TestCase

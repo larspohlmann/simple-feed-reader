@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Me;
 
-use App\Service\Reader\MagazineStyle;
+use App\Enum\MagazineStyle;
 
 /**
  * Its own request, not a field on UpdatePreferencesRequest: folding it in would

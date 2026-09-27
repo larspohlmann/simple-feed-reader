@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings;
 use App\Repository\GrafanaSettingsRepository;
-use App\Service\Grafana\GrafanaConnection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

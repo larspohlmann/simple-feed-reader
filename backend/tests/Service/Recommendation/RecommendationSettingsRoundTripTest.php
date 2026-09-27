@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation;
 
+use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -17,16 +17,16 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
 {
     private function values(
         ?int $autoGenerateIntervalHours,
-        int $lookbackDays = EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+        int $lookbackDays = RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
     ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             lookbackDays: $lookbackDays,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

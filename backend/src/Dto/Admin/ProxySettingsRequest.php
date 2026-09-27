@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
 use App\Http\FullReplacePayload;
 use App\Service\Crypto\SecretChange;
-use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\ProxySettingsUpdate;
 use Symfony\Component\Validator\Constraints as Assert;
 

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http;
 
+use App\Entity\RecommendationSettings;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationSettingsBounds;
 
@@ -37,11 +38,11 @@ final class RecommendationSettingsJson
             ],
             'expertDefaults' => [
                 'guidancePrompt' => null,
-                'favoritesCap' => EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-                'keptCap' => EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-                'viewedCap' => EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-                'candidatePoolSize' => EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-                'picksLimit' => EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+                'favoritesCap' => RecommendationSettings::DEFAULT_FAVORITES_CAP,
+                'keptCap' => RecommendationSettings::DEFAULT_KEPT_CAP,
+                'viewedCap' => RecommendationSettings::DEFAULT_VIEWED_CAP,
+                'candidatePoolSize' => RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+                'picksLimit' => RecommendationSettings::DEFAULT_PICKS_LIMIT,
                 'batchSize' => RecommendationBatchSize::Medium->value,
                 'contextWindow' => null,
             ],

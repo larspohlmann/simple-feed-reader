@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Account;
 
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
+use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
-use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestConfiguration;
-use App\Service\Mail\Digest\DigestFormat;
-use App\Service\Reader\MagazineStyle;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;

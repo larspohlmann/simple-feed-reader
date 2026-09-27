@@ -2,12 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Crypto;
+namespace App\Entity;
 
-/**
- * A secret at rest. Without INSTANCE_SECRET_KEY the ciphertext is noise. The
- * three byte strings are base64 so one migration serves MySQL and SQLite.
- */
+/** A secret at rest. The three byte strings are base64, so one column type serves MySQL and SQLite. */
 final readonly class SealedSecret
 {
     public function __construct(

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
+use App\Doctrine\WordBoundaries;
+
 /**
  * Builds the LIKE pattern for one search term.
  *

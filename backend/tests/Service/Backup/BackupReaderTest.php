@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup;
 
+use App\Enum\MagazineStyle;
 use App\Service\Backup\BackupReader;
 use App\Service\Backup\Dto\AccountLine;
-use App\Service\Reader\MagazineStyle;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;

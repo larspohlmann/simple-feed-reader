@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail;
 
-use App\Entity\MailKind;
+use App\Enum\MailKind;
 use App\Repository\MailSendFailureRepository;
 use App\Service\Mail\MailDeliveryHealth;
 use App\Tests\DbTestCase;

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use PHPUnit\Framework\TestCase;
 
 final class EntryTest extends TestCase

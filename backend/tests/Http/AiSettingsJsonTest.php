@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use PHPUnit\Framework\TestCase;
 

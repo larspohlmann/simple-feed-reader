@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\RecommendationSettings;
+use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationPromptText;
@@ -119,12 +120,12 @@ final class RecommendationSettingsJsonTest extends TestCase
     ): EffectiveRecommendationSettings {
         return new EffectiveRecommendationSettings(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             packing: new RecommendationPackingSettings(
                 contextWindow: EffectiveRecommendationSettings::FALLBACK_CONTEXT_WINDOW,
                 contextWindowSource: 'fallback',

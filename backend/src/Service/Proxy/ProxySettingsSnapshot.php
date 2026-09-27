@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Proxy;
 
+use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 
 final readonly class ProxySettingsSnapshot

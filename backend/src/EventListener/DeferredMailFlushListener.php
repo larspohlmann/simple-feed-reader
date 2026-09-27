@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Entity\MailKind;
+use App\Enum\MailKind;
 use App\Service\Mail\DeferredMailer;
 use App\Service\Mail\MailFailureRecorder;
 use Psr\Log\LoggerInterface;

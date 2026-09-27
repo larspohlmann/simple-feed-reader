@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Http\FullReplacePayload;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Service\Settings\RelyingPartyIdChoice;
 use Symfony\Component\Validator\Constraints as Assert;
 

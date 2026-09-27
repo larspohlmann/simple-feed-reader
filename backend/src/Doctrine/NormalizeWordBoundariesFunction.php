@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Doctrine;
 
-use App\Service\Search\WordBoundaries;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 use Doctrine\ORM\Query\AST\Functions\FunctionNode;
 use Doctrine\ORM\Query\AST\Node;

@@ -2,13 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Enum;
+namespace App\Service\Fetch;
 
-/**
- * The REP field a SOCKS5 server sends back for a CONNECT request (RFC 1928
- * §6). curl surfaces the raw byte and nothing else, so this is the only place
- * that knows what those numbers mean.
- */
+/** The REP byte of a SOCKS5 CONNECT reply (RFC 1928 §6). curl surfaces only the number; this knows its meaning. */
 enum SocksReplyCode: int
 {
     case GeneralFailure = 1;
@@ -35,11 +31,7 @@ enum SocksReplyCode: int
         };
     }
 
-    /**
-     * Whether a proxy that cannot resolve host names would answer with this
-     * code. It has no way to say "I do not do DNS", so it reports the name it
-     * was handed as unreachable, or rejects the address type outright.
-     */
+    /** A proxy cannot say "I do not do DNS": it reports the name as unreachable or rejects the address type. */
     public function canMeanTheProxyDoesNotResolveNames(): bool
     {
         return self::HostUnreachable === $this || self::AddressTypeNotSupported === $this;

@@ -16,12 +16,6 @@ namespace App\Service\Recommendation;
  */
 final readonly class EffectiveRecommendationSettings
 {
-    public const int DEFAULT_FAVORITES_CAP = 40;
-    public const int DEFAULT_KEPT_CAP = 40;
-    public const int DEFAULT_VIEWED_CAP = 80;
-    public const int DEFAULT_CANDIDATE_POOL_SIZE = 500;
-    public const int DEFAULT_LOOKBACK_DAYS = 2;
-    public const int DEFAULT_PICKS_LIMIT = 50;
     public const int FALLBACK_CONTEXT_WINDOW = 32768;
 
     public function __construct(

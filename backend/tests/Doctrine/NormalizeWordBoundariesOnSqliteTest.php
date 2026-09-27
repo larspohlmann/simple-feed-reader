@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Doctrine;
 
-use App\Service\Search\WordBoundaries;
+use App\Doctrine\WordBoundaries;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Platforms\SQLitePlatform;
 

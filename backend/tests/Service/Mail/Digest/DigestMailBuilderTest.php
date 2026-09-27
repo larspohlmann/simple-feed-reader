@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\User;
+use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
-use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedderInterface;

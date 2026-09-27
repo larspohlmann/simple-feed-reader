@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
+use App\Entity\Discussion;
 use App\Entity\EntryDiscussion;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use PHPUnit\Framework\TestCase;
 
 final class EntryDiscussionTest extends TestCase

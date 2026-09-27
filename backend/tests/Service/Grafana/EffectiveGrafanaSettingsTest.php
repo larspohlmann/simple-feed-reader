@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
-use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
-use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsCache;
+use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

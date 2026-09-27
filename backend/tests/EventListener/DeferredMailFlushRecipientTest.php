@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\EventListener;
 
-use App\Entity\MailKind;
+use App\Enum\MailKind;
 use App\EventListener\DeferredMailFlushListener;
 use App\Service\Mail\DeferredMailer;
 use App\Tests\Support\InMemoryMailFailureRecorder;

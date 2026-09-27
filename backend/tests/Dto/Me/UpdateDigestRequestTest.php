@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Me;
 
 use App\Dto\Me\UpdateDigestRequest;
-use App\Service\Mail\Digest\DigestCadence;
-use App\Service\Mail\Digest\DigestFormat;
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
 use PHPUnit\Framework\TestCase;
 
 final class UpdateDigestRequestTest extends TestCase

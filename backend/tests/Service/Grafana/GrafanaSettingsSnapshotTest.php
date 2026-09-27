@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Grafana\GrafanaConnection;
+use App\Entity\SealedSecret;
 use App\Service\Grafana\GrafanaSettingsSnapshot;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;

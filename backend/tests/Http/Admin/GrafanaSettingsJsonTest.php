@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Http\Admin;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings;
+use App\Entity\SealedSecret;
 use App\Http\Admin\GrafanaSettingsJson;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Grafana\GrafanaConnection;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettingsOverview;
 use App\Service\Grafana\GrafanaSettingsSnapshot;

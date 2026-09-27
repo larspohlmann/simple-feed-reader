@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
-use App\Enum\ScrapeFallback;
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;

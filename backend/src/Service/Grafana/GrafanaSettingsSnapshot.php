@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Crypto\SealedSecret;
+use App\Entity\SealedSecret;
 
 /**
  * The Grafana row as plain values, for the admin page, the runtime reads and GrafanaSettingsCache. The cache entry is

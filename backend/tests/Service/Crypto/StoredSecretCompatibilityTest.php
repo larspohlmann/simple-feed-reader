@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Crypto;
 
+use App\Entity\SealedSecret;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use PHPUnit\Framework\TestCase;

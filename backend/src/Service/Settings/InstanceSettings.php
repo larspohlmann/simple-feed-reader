@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Settings;
 
 use App\Entity\InstanceSetting;
+use App\Entity\InstanceSettingsUpdate;
 use App\Repository\InstanceSettingRepository;
 use Doctrine\ORM\EntityManagerInterface;
 

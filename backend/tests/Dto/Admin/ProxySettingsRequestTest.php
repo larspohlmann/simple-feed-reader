@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\ProxySettingsRequest;
+use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
 use App\Service\Crypto\SecretChange;
-use App\Service\Proxy\ProxyConnection;
 use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
