@@ -215,9 +215,9 @@ docker compose exec -T php bin/console dbal:run-sql "SELECT id, status FROM reco
 ```
 Expected: the second query prints no row. If a run is active, let it finish (step 4) before starting one; never write SQL to end it.
 
-3. Start a run (a dev-stack token for this account, typed nowhere; `lexik:jwt:generate-token` prints it on its last line):
+3. Start a run (a dev-stack token for this account, typed nowhere; `lexik:jwt:generate-token` prints it on the line starting with eyJ; a blank line follows it):
 ```bash
-TOKEN=$(docker compose exec -T php bin/console lexik:jwt:generate-token "$EMAIL" | tail -n 1 | tr -d '[:space:]')
+TOKEN=$(docker compose exec -T php bin/console lexik:jwt:generate-token "$EMAIL" | grep -E '^eyJ' | tr -d '[:space:]')
 curl -sk -X POST https://localhost:8443/api/recommendations/runs -H "Authorization: Bearer $TOKEN" | jq '{status, batchesTotal, batchesDone}'
 ```
 Expected: `"status": "pending"`. If the command prints anything but a token, start the run from the For You view's "Get recommendations" button on `http://localhost:4200` instead.
