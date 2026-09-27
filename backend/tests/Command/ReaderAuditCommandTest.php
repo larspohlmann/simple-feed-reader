@@ -19,12 +19,6 @@ use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
-/**
- * These paths never fetch a page: a malformed number is refused before the
- * sampler runs, and the fixtures below give every other option a single,
- * unambiguous candidate so no test needs the network the reader pipeline
- * would otherwise reach for.
- */
 final class ReaderAuditCommandTest extends DbTestCase
 {
     private function tester(): CommandTester
@@ -53,6 +47,33 @@ final class ReaderAuditCommandTest extends DbTestCase
         $this->em->flush();
 
         return $entry;
+    }
+
+    /** @return list<Entry> */
+    private function subscribedEntries(string $email, int $count): array
+    {
+        $feed = new Feed('https://cli.example.com/feed-' . uniqid('', true));
+        $this->em->persist($feed);
+        $user = new User($email, new \DateTimeImmutable());
+        $this->em->persist($user);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
+
+        $entries = [];
+        for ($i = 0; $i < $count; ++$i) {
+            $entry = new Entry(
+                $feed,
+                'guid-' . uniqid('', true),
+                'https://cli.example.com/article-' . $i,
+                'An article',
+                new \DateTimeImmutable('-1 hour'),
+                new \DateTimeImmutable('-1 hour'),
+            );
+            $this->em->persist($entry);
+            $entries[] = $entry;
+        }
+        $this->em->flush();
+
+        return $entries;
     }
 
     public function testAMalformedLimitExitsBeforeAnyFetch(): void
@@ -105,7 +126,43 @@ final class ReaderAuditCommandTest extends DbTestCase
         unlink($outPath);
     }
 
-    public function testABlankBeforeOptionFallsBackToNowRatherThanAnExplicitCutoff(): void
+    public function testABlankShardWithTwoShardsSelectsHalfNotNone(): void
+    {
+        $entries = $this->subscribedEntries('audit-shard@example.com', 2);
+
+        $extractor = new FakeArticleExtractor();
+        $extractor->willReturn(ExtractionResult::ok(
+            'https://cli.example.com/article-0',
+            'An article',
+            null,
+            null,
+            '<p>Body.</p>',
+            null,
+        ));
+        self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
+
+        $outPath = sys_get_temp_dir() . '/reader-audit-shard-' . uniqid('', true) . '.jsonl';
+        $entryIds = array_map(static fn (Entry $entry): string => (string) $entry->requireId(), $entries);
+
+        $tester = $this->tester();
+        $exitCode = $tester->execute([
+            '--entries' => implode(',', $entryIds),
+            '--shards' => '2',
+            '--shard' => ' ',
+            '--out' => $outPath,
+        ]);
+
+        self::assertSame(Command::SUCCESS, $exitCode);
+        self::assertCount(
+            1,
+            $extractor->calls,
+            'A blank --shard must fall back to index 0, which keeps one of every two, not none.',
+        );
+
+        unlink($outPath);
+    }
+
+    public function testAnExplicitBeforeCutoffExcludesLaterEntries(): void
     {
         $this->subscribedEntry('audit-before@example.com');
 
