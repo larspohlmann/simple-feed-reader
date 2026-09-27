@@ -38,14 +38,12 @@ final readonly class MailConnectionTester
     public function test(): MailTestResult
     {
         try {
-            $resolved = $this->settings->configuredTransport();
+            $transport = $this->effectiveTransport($this->settings->configuredTransport());
         } catch (SecretUnreadableException $e) {
             // A config guard, not a failed send: nothing was ever attempted,
             // so the health log stays untouched.
             return MailTestResult::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
         }
-
-        $transport = $this->effectiveTransport($resolved);
         $recipient = $this->actingAdminEmail();
 
         if (null === $transport || null === $recipient) {

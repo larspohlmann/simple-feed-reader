@@ -4,12 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
-use App\Entity\ProxyServerSettings;
 use App\Entity\User;
-use App\Enum\ProxyType;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Proxy\ProxyConnection;
 use App\Tests\Support\ApiTestCase;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -178,6 +175,31 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertNotSame('not_configured', $body['reason']);
     }
 
+    public function testTheMailTestReportsAnUnreadableProxyPasswordInsteadOfFailing(): void
+    {
+        $this->em()->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $this->em()->flush();
+        $admin = $this->admin();
+
+        $this->requestWithJsonBody('PUT', $admin, $this->mailBody([
+            'enabled' => true,
+            'host' => 'smtp.gmail.com',
+            'username' => 'alice',
+            'password' => 'app-pw',
+            'fromAddress' => 'from@example.com',
+            'useProxy' => true,
+        ]));
+        self::assertResponseIsSuccessful();
+
+        $this->requestAs($admin, 'POST', self::MAIL . '/test');
+
+        self::assertResponseIsSuccessful();
+        self::assertSame(
+            ['ok' => false, 'reason' => 'Stored secret material is not valid base64.'],
+            $this->payload($this->client),
+        );
+    }
+
     public function testAdminCanResetToTheEnvironmentConfiguration(): void
     {
         $admin = $this->admin();
@@ -303,12 +325,7 @@ final class AdminMailControllerTest extends ApiTestCase
 
     public function testAnUnreadableProxyPasswordDoesNotBreakTheMailPage(): void
     {
-        $proxy = new ProxyServerSettings();
-        $proxy->apply(
-            new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
-            new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
-        );
-        $this->em()->persist($proxy);
+        $this->em()->persist(UnreadableProxyPasswordRows::enabledWithUnreadablePassword());
         $this->em()->flush();
         $admin = $this->admin();
 

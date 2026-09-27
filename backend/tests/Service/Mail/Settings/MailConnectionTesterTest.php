@@ -14,6 +14,7 @@ use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SettingsRequests;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -164,6 +165,30 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         self::assertFalse($result->ok);
         self::assertNotSame(MailTestFailure::NotConfigured, $result->failure);
+    }
+
+    public function testAnUnreadableProxyPasswordIsReportedRatherThanThrown(): void
+    {
+        $this->authenticateAsAdmin();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $entityManager->flush();
+        $this->settings()->update(SettingsRequests::mail(
+            enabled: true,
+            host: 'smtp.gmail.com',
+            username: 'u',
+            password: 'p',
+            fromAddress: 'from@x.test',
+            useProxy: true,
+        )->toUpdate());
+        $health = new InMemoryMailFailureRecorder();
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame(MailTestFailure::SecretUnreadable, $result->failure);
+        self::assertSame('Stored secret material is not valid base64.', $result->detail);
+        self::assertSame([], $health->recordedFailures());
     }
 
     /** A sendmail transport piped to the 'false' binary attempts a real send

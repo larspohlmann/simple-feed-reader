@@ -14,6 +14,7 @@ use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
 use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -121,6 +122,25 @@ final class DynamicMailTransportTest extends KernelTestCase
         $this->expectException(TransportException::class);
         $this->expectExceptionMessage(
             'The mail configuration is incomplete: Mail is set to use the egress proxy, but no proxy is configured.',
+        );
+        self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
+    }
+
+    public function testAProxiedRowWhoseProxyPasswordIsUnreadableSurfacesAsATransportFailure(): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
+            self::getContainer()->get(MailPasswordCipher::class)->seal('app-pw'),
+        );
+        $em->persist($row);
+        $em->flush();
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage(
+            'The stored proxy password is unreadable: Stored secret material is not valid base64.',
         );
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }

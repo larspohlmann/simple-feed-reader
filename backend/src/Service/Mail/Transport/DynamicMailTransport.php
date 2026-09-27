@@ -68,6 +68,8 @@ final class DynamicMailTransport implements TransportInterface
             // was removed. Surfaced as a transport failure so the send path degrades
             // the way a dead relay already does, not as an HTTP 422 in a worker.
             throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), 0, $e);
+        } catch (SecretUnreadableException $e) {
+            throw new TransportException('The stored proxy password is unreadable: ' . $e->getMessage(), 0, $e);
         }
         $this->cachedSignature = $signature;
 
