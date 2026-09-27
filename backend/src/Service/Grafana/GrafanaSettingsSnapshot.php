@@ -8,47 +8,26 @@ use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Service\Crypto\SealedSecret;
 
 /**
- * A cache-safe copy of the Grafana singleton row. GrafanaSettingsCache stores
- * this across requests so the per-request profiling, Loki and Pyroscope reads
- * stop hitting the database. It carries only column values — no Doctrine
- * association — so it survives serialisation, and its array form is flat
- * scalars so a stored entry from an earlier release either reads back or is
- * rejected as a miss (a cache entry is never a source of truth; the row is).
+ * The Grafana row as plain values, for the admin page, the runtime reads and GrafanaSettingsCache. The array form is
+ * flat scalars, so an entry from an earlier release either reads back or is rejected as a miss.
  */
 final readonly class GrafanaSettingsSnapshot
 {
     public function __construct(
-        private GrafanaConnection $connection,
-        private SealedSecret $sealedToken,
-        private string $tokenHint,
+        public GrafanaConnection $connection,
+        public SealedSecret $sealedToken,
+        public string $tokenHint,
     ) {
     }
 
     public static function fromEntity(GrafanaSettingsEntity $entity): self
     {
-        return new self(
-            new GrafanaConnection(
-                $entity->getLokiPushUrlOverride(),
-                $entity->getLokiUsername(),
-                $entity->getGrafanaUrlOverride(),
-                $entity->getPyroscopePushUrlOverride(),
-                $entity->isProfilingEnabled(),
-            ),
-            $entity->getSealedToken(),
-            $entity->getTokenHint(),
-        );
+        return new self($entity->connection(), $entity->getSealedToken(), $entity->getTokenHint());
     }
 
-    public function toEntity(): GrafanaSettingsEntity
+    public function hasToken(): bool
     {
-        $entity = new GrafanaSettingsEntity();
-        if ('' === $this->sealedToken->ciphertext) {
-            $entity->applyWithoutToken($this->connection);
-        } else {
-            $entity->apply($this->connection, $this->sealedToken, $this->tokenHint);
-        }
-
-        return $entity;
+        return '' !== $this->sealedToken->ciphertext;
     }
 
     /** @return array<string, string|bool|int|null> */

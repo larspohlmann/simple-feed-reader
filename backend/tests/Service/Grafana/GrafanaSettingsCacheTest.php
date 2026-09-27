@@ -23,8 +23,8 @@ final class GrafanaSettingsCacheTest extends TestCase
             return $this->enabledSnapshot();
         };
 
-        self::assertTrue($cache->remember($loader)->toEntity()->isProfilingEnabled());
-        self::assertTrue($cache->remember($loader)->toEntity()->isProfilingEnabled());
+        self::assertTrue($cache->remember($loader)->connection->profilingEnabled);
+        self::assertTrue($cache->remember($loader)->connection->profilingEnabled);
         self::assertSame(1, $loads);
     }
 

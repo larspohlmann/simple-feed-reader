@@ -81,6 +81,17 @@ class GrafanaSettings
         return $this->pyroscopePushUrl;
     }
 
+    public function connection(): GrafanaConnection
+    {
+        return new GrafanaConnection(
+            $this->lokiPushUrl,
+            $this->lokiUsername,
+            $this->grafanaUrl,
+            $this->pyroscopePushUrl,
+            $this->profilingEnabled,
+        );
+    }
+
     public function hasToken(): bool
     {
         return '' !== $this->tokenCiphertext;

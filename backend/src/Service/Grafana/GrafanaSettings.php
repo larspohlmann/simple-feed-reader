@@ -11,26 +11,9 @@ use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Profiling\ProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * Reads and writes the instance-wide Grafana row, defaulting to the env values
- * the installer writes for the local container when no row exists. The push
- * handler resolves its endpoint through here, so "no row", the env fallback and
- * the token sealing all live in one place.
- *
- * `class`, not `readonly`: settings() memoises the resolved row so a Loki
- * flush reading pushUrl/username/token in a row issues one lookup instead of
- * three (mirrors App\Service\Settings\InstanceSettings). The memo is a plain
- * field — request-scoped under PHP-FPM. The row itself is read through
- * GrafanaSettingsCache, so a warm request answers profiling/Loki/Pyroscope from
- * the shared pool without a query (#1012). update() forgets that pool so a read
- * after a write sees the new value; refresh() clears only the memo, which the
- * long-running worker calls on its periodic toggle re-check to pick up an
- * admin save from the web process. Not marked `final`: SettingsLokiEndpointTest
- * stubs this class.
- */
 class GrafanaSettings
 {
-    private ?GrafanaSettingsEntity $memoisedSettings = null;
+    private ?GrafanaSettingsSnapshot $memoisedSettings = null;
 
     public function __construct(
         private readonly GrafanaSettingsRepository $repository,
@@ -78,48 +61,45 @@ class GrafanaSettings
 
     public function effectiveLokiPushUrl(): ?string
     {
-        $override = $this->settings()->getLokiPushUrlOverride();
-
-        return $override ?? ('' === $this->defaults->lokiPushUrl ? null : $this->defaults->lokiPushUrl);
+        return $this->settings()->connection->lokiPushUrl ?? $this->defaultOrNull($this->defaults->lokiPushUrl);
     }
 
     public function effectivePyroscopePushUrl(): ?string
     {
-        return $this->settings()->getPyroscopePushUrlOverride()
-            ?? ('' === $this->defaults->pyroscopePushUrl ? null : $this->defaults->pyroscopePushUrl);
+        return $this->settings()->connection->pyroscopePushUrl
+            ?? $this->defaultOrNull($this->defaults->pyroscopePushUrl);
     }
 
     public function profilingEnabled(): bool
     {
-        return $this->settings()->isProfilingEnabled();
+        return $this->settings()->connection->profilingEnabled;
     }
 
     public function lokiUsername(): ?string
     {
-        return $this->settings()->getLokiUsername();
+        return $this->settings()->connection->lokiUsername;
     }
 
     public function lokiToken(): ?string
     {
         $settings = $this->settings();
 
-        return $settings->hasToken() ? $this->cipher->open($settings->getSealedToken()) : null;
+        return $settings->hasToken() ? $this->cipher->open($settings->sealedToken) : null;
     }
 
-    /**
-     * Never persisted: a fresh GrafanaSettings stands in for the no-row case,
-     * and the entity a cache hit rebuilds is detached. update() above has its
-     * own findSingleton()-then-persist path and never reads through this memo
-     * or the cache.
-     */
-    private function settings(): GrafanaSettingsEntity
+    private function settings(): GrafanaSettingsSnapshot
     {
-        return $this->memoisedSettings ??= $this->cache->remember($this->loadSingleton(...))->toEntity();
+        return $this->memoisedSettings ??= $this->cache->remember($this->loadSingleton(...));
     }
 
     private function loadSingleton(): GrafanaSettingsSnapshot
     {
         return GrafanaSettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new GrafanaSettingsEntity());
+    }
+
+    private function defaultOrNull(string $default): ?string
+    {
+        return '' === $default ? null : $default;
     }
 
     private function connectionFrom(GrafanaSettingsRequest $request): GrafanaConnection
