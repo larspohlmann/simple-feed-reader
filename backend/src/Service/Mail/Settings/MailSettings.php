@@ -30,10 +30,11 @@ readonly class MailSettings
 
     public function overview(): MailSettingsOverview
     {
+        $saved = $this->repository->findSingleton();
         $proxy = $this->proxySettings->current();
 
         return new MailSettingsOverview(
-            $this->repository->findSingleton(),
+            null === $saved ? null : MailSettingsSnapshot::fromEntity($saved),
             $this->fallback->connection(),
             $proxy->isConfigured() ? $proxy->connection : null,
         );

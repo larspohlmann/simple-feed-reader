@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
-use App\Entity\MailServerSettings;
 use App\Service\Proxy\ProxyConnection;
 
 final readonly class MailSettingsOverview
 {
     public function __construct(
-        /** @noinspection AutowireWrongClass Built with new, never autowired */
-        public ?MailServerSettings $saved,
+        public ?MailSettingsSnapshot $saved,
         public MailConnection $fallback,
         public ?ProxyConnection $proxy,
     ) {
