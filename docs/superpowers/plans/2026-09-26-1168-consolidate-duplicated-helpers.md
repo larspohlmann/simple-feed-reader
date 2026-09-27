@@ -3647,3 +3647,13 @@ Start a Monitor on `gh pr checks <PR> --watch --fail-fast`. When it exits 0, run
 - [ ] **Step 6: Verify the issue closed**
 
 `gh issue view 1168 --json state --jq .state`. Expected: `CLOSED`, closed by the merge. Do not close it by hand. If it is still open, check the merged PR's body for the `Closes #1168` line and report.
+
+### Execution rulings (PR A)
+
+- **Preflight (opus scan):** A3's selector deletion check fails the two `JsonLdTest` tests, `testReadsOnlyTheScriptsTheJsonLdSelectorMatches` and `ScriptEmbedSourceTest`; `testAnOrdinaryScriptIsNotReadAsJsonLd` got a valid-JSON body so it can fail too. The raw-page wiring check targets `testTrustsAPremiumDeclarationEvenWithoutAGatedBlock`. The `EntryCursor` pin uses id 12 (28 bytes, padded). The `document()` test helper became the `tests/Support/ParsesHtml` trait, used by four test classes. `composer require … --minimal-changes` kept v3.1.3.
+- **A1:** `NavigationChromeTrimmer::linkTextRatio()` reuses `BlockText::linkTextLength()`, which is identical once both collapse through `Whitespace`.
+- **A3:** `ScriptEmbedSource` pins the case-insensitive JSON-LD skip. Deliberate change 3, corrected by probe: `SchemaOrgAccess` no longer reads JSON-LD inside HTML comments, `<template>` or raw-text elements such as `<textarea>`; JSON-LD inside `<noscript>` is still read.
+- **A5:** `LandedResponseTest` keeps one delegation test; the header cases live in `ResponseHeaderTest`.
+- **Fix wave:** `$rawPage` (the `HTMLDocument`) is `$rawDocument`; `SchemaOrgAccess::declaredIn()` returns on the first `false` again; `JsonLd::scriptsIn()` is lazy; the lead-image guards use `AbsoluteHttpUrl::orNull()`; `PaywallSignalsTest` parses through `RawPage`. Nine of ten escaped mutants on touched lines got pins; the tenth (`LeadingEngagementBlocks`, `?->` after a `length === 1` guard) is equivalent.
+- **Accepted:** PhpStorm HTML-injection WARNINGs on test fixture literals. Skipped: `CatalogFaviconFetcher::assertAllowedType` reads the whole header map; `SearchTerms::collapseWhitespace` shares its constant with two sibling regexes.
+- **Follow-up candidates (planner):** adopt `ParsesHtml` across the remaining reader tests; split `JsonLd`'s array walk or move `ResponseHeader` if a non-JSON-LD or third unrelated consumer appears.
