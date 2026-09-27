@@ -20,7 +20,7 @@ use App\Service\Passkey\PasskeySignInAvailability;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
@@ -31,7 +31,6 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * AssertionVerifier's own unit-level coverage (#624 Task 10). The full
@@ -49,6 +48,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class AssertionVerifierTest extends KernelTestCase
 {
     use PinsPasskeyRelyingParty;
+    use SeedsUsers;
 
     private const string RELYING_PARTY_ID = 'example.test';
     private const string ORIGIN = 'https://example.test';
@@ -70,7 +70,7 @@ final class AssertionVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('login@example.test');
+        $user = $this->user('login@example.test');
         $enrolled = $this->enrol($user, signCount: 3);
 
         $now = new \DateTimeImmutable('2026-08-29T09:00:00Z');
@@ -133,7 +133,7 @@ final class AssertionVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('wrong-response-type@example.test');
+        $user = $this->user('wrong-response-type@example.test');
         $enrolled = $this->enrol($user, signCount: 0);
         $handle = $this->issueLoginChallenge($enrolled->challenge);
 
@@ -152,7 +152,7 @@ final class AssertionVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('clone-victim@example.test');
+        $user = $this->user('clone-victim@example.test');
         $enrolled = $this->enrol($user, signCount: 5);
         $handle = $this->issueLoginChallenge($enrolled->challenge);
         $credential = PasskeyFixtures::assertion(
@@ -191,14 +191,6 @@ final class AssertionVerifierTest extends KernelTestCase
         }
 
         self::fail(\sprintf('No warning log record contains "%s".', $needle));
-    }
-
-    private function createUser(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em(), $hasher))->create($email);
     }
 
     private function em(): EntityManagerInterface

@@ -21,18 +21,11 @@ use App\Service\Account\AccountReset;
 use App\Service\Recommendation\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class AccountResetTest extends DbTestCase
 {
-    private function makeUser(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
+    use SeedsUsers;
 
     private function reset(): AccountReset
     {
@@ -49,7 +42,7 @@ final class AccountResetTest extends DbTestCase
      */
     private function seedAccount(string $email): array
     {
-        $user = $this->makeUser($email);
+        $user = $this->user($email);
         $feed = new Feed('https://reset.example/' . $email);
         $this->em->persist($feed);
         $tag = new Tag($user, 'Mine');

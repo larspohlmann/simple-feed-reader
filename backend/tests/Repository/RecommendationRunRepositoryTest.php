@@ -8,10 +8,13 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 final class RecommendationRunRepositoryTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testHasActiveRunIsFalseOnAnEmptyTable(): void
     {
         self::assertFalse($this->runs()->hasActiveRun());
@@ -20,7 +23,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     #[DataProvider('activeStatuses')]
     public function testHasActiveRunIsTrueWhileARunIsActive(string $status): void
     {
-        $user = $this->persistUser('active@example.com');
+        $user = $this->user('active@example.com');
         $this->persistRun($user, $status);
 
         self::assertTrue($this->runs()->hasActiveRun());
@@ -29,7 +32,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     #[DataProvider('terminalStatuses')]
     public function testHasActiveRunIsFalseOnceTheOnlyRunHasEnded(string $status): void
     {
-        $user = $this->persistUser('terminal@example.com');
+        $user = $this->user('terminal@example.com');
         $this->persistRun($user, $status);
 
         self::assertFalse($this->runs()->hasActiveRun());
@@ -56,8 +59,8 @@ final class RecommendationRunRepositoryTest extends DbTestCase
 
     public function testFindActiveForUserReturnsTheRunningRun(): void
     {
-        $userA = $this->persistUser('a@example.com');
-        $userB = $this->persistUser('b@example.com');
+        $userA = $this->user('a@example.com');
+        $userB = $this->user('b@example.com');
 
         $this->persistRun($userA, RecommendationRun::STATUS_COMPLETED);
         $runningRun = $this->persistRun($userA, RecommendationRun::STATUS_RUNNING);
@@ -69,7 +72,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
 
     public function testFindActiveForUserAlsoReturnsAPendingRun(): void
     {
-        $userA = $this->persistUser('a@example.com');
+        $userA = $this->user('a@example.com');
         $pendingRun = $this->persistRun($userA, RecommendationRun::STATUS_PENDING);
 
         self::assertSame($pendingRun->getId(), $this->runs()->findActiveForUser($userA)?->getId());
@@ -77,7 +80,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
 
     public function testFindLatestForUserReturnsTheNewestRunByInsertOrder(): void
     {
-        $userB = $this->persistUser('b@example.com');
+        $userB = $this->user('b@example.com');
         $this->persistRun($userB, RecommendationRun::STATUS_COMPLETED);
         $failedRun = $this->persistRun($userB, RecommendationRun::STATUS_FAILED);
 
@@ -94,7 +97,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
      */
     public function testTheSweepSetIsBoundedAndTakesTheOldestRunsFirst(): void
     {
-        $user = $this->persistUser('many@example.com');
+        $user = $this->user('many@example.com');
         $ids = [];
         for ($i = 0; $i < 12; $i++) {
             $ids[] = $this->persistRun($user, RecommendationRun::STATUS_RUNNING)->getId();
@@ -115,15 +118,6 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         $repository = $this->em->getRepository(RecommendationRun::class);
 
         return $repository;
-    }
-
-    private function persistUser(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     private function persistRun(User $user, string $status): RecommendationRun
