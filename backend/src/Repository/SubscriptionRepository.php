@@ -16,7 +16,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  */
 class SubscriptionRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
         parent::__construct($registry, Subscription::class);
     }
@@ -117,19 +117,11 @@ class SubscriptionRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /**
-     * The next append position in the untagged "Feeds" list: one past the user's
-     * current max (0 when they have none).
-     */
     public function nextPositionForUser(int $userId): int
     {
-        $max = $this->createQueryBuilder('s')
-            ->select('MAX(s.position)')
-            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $max ? 0 : (int) $max + 1;
+        return $this->nextPosition->in(
+            $this->createQueryBuilder('s')->andWhere('s.user = :userId')->setParameter('userId', $userId),
+        );
     }
 
     public function getOneForUser(int $userId, int $subscriptionId): Subscription

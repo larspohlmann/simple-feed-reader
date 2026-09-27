@@ -15,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class CatalogFeedRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
         parent::__construct($registry, CatalogFeed::class);
     }
@@ -117,13 +117,9 @@ class CatalogFeedRepository extends ServiceEntityRepository
 
     public function nextPositionInCategory(int $categoryId): int
     {
-        $max = $this->createQueryBuilder('f')
-            ->select('MAX(f.position)')
-            ->andWhere('f.category = :category')->setParameter('category', $categoryId)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $max ? 0 : (int) $max + 1;
+        return $this->nextPosition->in(
+            $this->createQueryBuilder('f')->andWhere('f.category = :category')->setParameter('category', $categoryId),
+        );
     }
 
     private function needingFaviconQueryBuilder(CatalogFaviconDueCriteria $criteria): QueryBuilder

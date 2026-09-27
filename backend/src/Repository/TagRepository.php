@@ -15,7 +15,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  */
 class TagRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
         parent::__construct($registry, Tag::class);
     }
@@ -63,19 +63,11 @@ class TagRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /**
-     * The next append position for a new tag: one past the user's current max
-     * (0 when they have none).
-     */
     public function nextPositionForUser(int $userId): int
     {
-        $max = $this->createQueryBuilder('t')
-            ->select('MAX(t.position)')
-            ->andWhere('t.user = :userId')->setParameter('userId', $userId)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $max ? 0 : (int) $max + 1;
+        return $this->nextPosition->in(
+            $this->createQueryBuilder('t')->andWhere('t.user = :userId')->setParameter('userId', $userId),
+        );
     }
 
     /**
