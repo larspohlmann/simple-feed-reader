@@ -58,7 +58,7 @@ final readonly class MeController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateLocaleRequest $request,
     ): JsonResponse {
-        $this->preferences->changeLocale($user, $request);
+        $this->preferences->changeLocale($user, $request->locale);
 
         return new JsonResponse($this->profile->of($user));
     }
@@ -72,7 +72,7 @@ final readonly class MeController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdatePreferencesRequest $request,
     ): JsonResponse {
-        $this->preferences->changeScrapeFallback($user, $request);
+        $this->preferences->changeScrapeFallback($user, $request->scrapeFallbackEnabled);
 
         return new JsonResponse($this->profile->of($user));
     }
@@ -83,7 +83,7 @@ final readonly class MeController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateMagazineStyleRequest $request,
     ): JsonResponse {
-        $this->preferences->changeMagazineStyle($user, $request);
+        $this->preferences->changeMagazineStyle($user, $request->magazineStyle);
 
         return new JsonResponse($this->profile->of($user));
     }
@@ -97,7 +97,7 @@ final readonly class MeController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateDigestRequest $request,
     ): JsonResponse {
-        $this->preferences->changeDigest($user, $request);
+        $this->preferences->changeDigest($user, $request->toConfiguration());
 
         return new JsonResponse($this->profile->of($user));
     }

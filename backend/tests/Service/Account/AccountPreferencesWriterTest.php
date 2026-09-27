@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Account;
 
-use App\Dto\Me\UpdateDigestRequest;
-use App\Dto\Me\UpdateLocaleRequest;
-use App\Dto\Me\UpdateMagazineStyleRequest;
-use App\Dto\Me\UpdatePreferencesRequest;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Reader\MagazineStyle;
 use App\Tests\DbTestCase;
@@ -26,7 +23,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
     {
         $user = $this->user('prefs-locale@example.com');
 
-        $this->writer()->changeLocale($user, new UpdateLocaleRequest(SupportedLocale::GERMAN));
+        $this->writer()->changeLocale($user, SupportedLocale::GERMAN);
 
         self::assertSame(SupportedLocale::GERMAN, $this->reload($user)->getLocale());
     }
@@ -36,7 +33,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
         $user = $this->user('prefs-scrape@example.com');
         $wanted = !$user->getPreferences()->isScrapeFallbackEnabled();
 
-        $this->writer()->changeScrapeFallback($user, new UpdatePreferencesRequest($wanted));
+        $this->writer()->changeScrapeFallback($user, $wanted);
 
         self::assertSame($wanted, $this->reload($user)->getPreferences()->isScrapeFallbackEnabled());
     }
@@ -48,7 +45,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
             ? MagazineStyle::Boxed
             : MagazineStyle::Airy;
 
-        $this->writer()->changeMagazineStyle($user, new UpdateMagazineStyleRequest($wanted));
+        $this->writer()->changeMagazineStyle($user, $wanted);
 
         self::assertSame($wanted, $this->reload($user)->getPreferences()->getMagazineStyle());
     }
@@ -59,7 +56,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->changeDigest(
             $user,
-            new UpdateDigestRequest(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
+            new DigestConfiguration(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
         );
 
         $preferences = $this->reload($user)->getPreferences();

@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Account;
 
-use App\Dto\Me\UpdateDigestRequest;
-use App\Dto\Me\UpdateLocaleRequest;
-use App\Dto\Me\UpdateMagazineStyleRequest;
-use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
+use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Passkey\PasskeyOffer;
+use App\Service\Reader\MagazineStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class AccountPreferencesWriter
@@ -22,27 +20,27 @@ final readonly class AccountPreferencesWriter
     ) {
     }
 
-    public function changeLocale(User $user, UpdateLocaleRequest $request): void
+    public function changeLocale(User $user, string $locale): void
     {
-        $user->setLocale($request->locale);
+        $user->setLocale($locale);
         $this->entityManager->flush();
     }
 
-    public function changeScrapeFallback(User $user, UpdatePreferencesRequest $request): void
+    public function changeScrapeFallback(User $user, bool $scrapeFallbackEnabled): void
     {
-        $user->getPreferences()->setScrapeFallbackEnabled($request->scrapeFallbackEnabled);
+        $user->getPreferences()->setScrapeFallbackEnabled($scrapeFallbackEnabled);
         $this->entityManager->flush();
     }
 
-    public function changeMagazineStyle(User $user, UpdateMagazineStyleRequest $request): void
+    public function changeMagazineStyle(User $user, MagazineStyle $magazineStyle): void
     {
-        $user->getPreferences()->setMagazineStyle($request->magazineStyle);
+        $user->getPreferences()->setMagazineStyle($magazineStyle);
         $this->entityManager->flush();
     }
 
-    public function changeDigest(User $user, UpdateDigestRequest $request): void
+    public function changeDigest(User $user, DigestConfiguration $configuration): void
     {
-        $this->digestEnablement->applyTo($user->getPreferences(), $request);
+        $this->digestEnablement->applyTo($user->getPreferences(), $configuration);
         $this->entityManager->flush();
     }
 

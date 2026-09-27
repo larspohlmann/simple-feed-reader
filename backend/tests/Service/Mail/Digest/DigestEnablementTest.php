@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Dto\Me\UpdateDigestRequest;
 use App\Entity\Preferences;
 use App\Entity\User;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Mail\Digest\DigestFormat;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +26,7 @@ final class DigestEnablementTest extends TestCase
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Weekly,
             sendHour: 9,
@@ -48,7 +48,7 @@ final class DigestEnablementTest extends TestCase
         self::assertFalse($prefs->isDigestEnabled());
         self::assertNull($prefs->getDigestLastSentAt());
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -67,7 +67,7 @@ final class DigestEnablementTest extends TestCase
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $prefs->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Weekly,
             sendHour: 10,
@@ -85,7 +85,7 @@ final class DigestEnablementTest extends TestCase
         self::assertFalse($prefs->isDigestEnabled());
         self::assertNull($prefs->getDigestLastSentAt());
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: false,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -105,7 +105,7 @@ final class DigestEnablementTest extends TestCase
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $prefs->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: false,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -128,7 +128,7 @@ final class DigestEnablementTest extends TestCase
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $prefs->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -145,7 +145,7 @@ final class DigestEnablementTest extends TestCase
         $enablement = new DigestEnablement(new NaiveUtcClock($clock));
         $prefs = $this->preferences();
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -164,7 +164,7 @@ final class DigestEnablementTest extends TestCase
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
         $prefs = $this->preferences();
 
-        $enablement->applyTo($prefs, new UpdateDigestRequest(
+        $enablement->applyTo($prefs, new DigestConfiguration(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
