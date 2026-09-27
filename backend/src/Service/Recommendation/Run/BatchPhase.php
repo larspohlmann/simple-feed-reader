@@ -15,6 +15,7 @@ final readonly class BatchPhase implements ProviderPhase
     public const int POLL_MAX_CONCURRENCY = 2;
 
     public function __construct(
+        private WaveContextLoader $waves,
         private RecommendationBatchWave $batchWave,
         private RecommendationWaveConcurrency $waveConcurrency,
         private EntityManagerInterface $entityManager,
@@ -38,7 +39,7 @@ final readonly class BatchPhase implements ProviderPhase
     private function resolveWave(TickContext $tick): BatchWaveResult
     {
         try {
-            $result = $this->batchWave->resolve($tick, $this->waveSize($tick));
+            $result = $this->batchWave->resolve($this->waves->load($tick, $this->waveSize($tick)));
         } catch (ProviderRateLimitedException | RetryableProviderException $e) {
             $this->waveConcurrency->halve($tick->run, $tick->connection);
 
