@@ -10,17 +10,16 @@ use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\TickContext;
-use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Run\WaveBatch;
 use App\Service\Recommendation\Run\WaveContextLoader;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\SeedsUsers;
 
 final class WaveContextLoaderTest extends DbTestCase
 {
+    use BuildsTickContexts;
     use SeedsUsers;
 
     private User $owner;
@@ -55,7 +54,7 @@ final class WaveContextLoaderTest extends DbTestCase
         self::assertSame($run, $wave->tick->run);
     }
 
-    public function testAnEntryPrunedSinceTheSnapshotLeavesItsBatchButNotThePlan(): void
+    public function testAnEntryPrunedSinceTheSnapshotKeepsItsIdButLosesItsLineAndItsPlaceInThePool(): void
     {
         $ids = $this->entryIds(2);
         $run = $this->runWithPlan([[$ids[0], $ids[1]]]);
@@ -88,16 +87,6 @@ final class WaveContextLoaderTest extends DbTestCase
         $this->em->flush();
 
         return $run;
-    }
-
-    private function tick(RecommendationRun $run): TickContext
-    {
-        $connection = $this->owner->getActiveAiProviderSettings();
-        self::assertNotNull($connection);
-        /** @var RecommendationSettingsResolver $settings */
-        $settings = self::getContainer()->get(RecommendationSettingsResolver::class);
-
-        return new TickContext($run, $connection, $settings->forUser($this->owner), TickDriver::Worker);
     }
 
     private function loader(): WaveContextLoader

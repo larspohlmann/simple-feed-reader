@@ -1418,6 +1418,31 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertCount(3, $this->stubChatClient()->calls()); // distill, the warm-up wave, then one floored call
     }
 
+    public function testZeroBatchConcurrencyStillAdvancesOneBatchPerPollWaveAfterTheFirst(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Poll);
+        $this->queueDistillReply();
+        $this->advancer()->advance($this->user, TickDriver::Poll);
+        $batches = $this->activeRun()->getCandidateBatches();
+        self::assertCount(3, $batches);
+        $this->setBatchConcurrency(0);
+
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Poll);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[1][0], 'score' => 80, 'reason' => 'floor']],
+        ], \JSON_THROW_ON_ERROR));
+
+        $report = $this->advancer()->advance($this->user, TickDriver::Poll);
+
+        self::assertSame(2, $report->batchesDone);
+        self::assertCount(3, $this->stubChatClient()->calls());
+    }
+
     public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
     {
         $this->seedReadyAiSettings($this->user);

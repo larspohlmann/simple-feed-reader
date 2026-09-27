@@ -64,7 +64,6 @@ final readonly class BatchPhase implements ProviderPhase
         $this->entityManager->flush();
     }
 
-    /** Floors at 1 so a stored concurrency ≤ 0 cannot wedge the run (#344). */
     private function waveSize(TickContext $tick): int
     {
         $progress = $tick->run->progress();
@@ -72,20 +71,21 @@ final readonly class BatchPhase implements ProviderPhase
             return 1;
         }
 
-        $concurrency = min($this->effectiveCap($tick), $this->waveConcurrency->cap($tick->run, $tick->connection));
-
         return min(
-            max(1, $concurrency),
+            $this->effectiveCap($tick),
+            $this->waveConcurrency->cap($tick->run, $tick->connection),
             \count($tick->run->getCandidateBatches()) - $progress->nextBatchIndex,
         );
     }
 
+    /** Never below 1, like the wave cap: a directly stored concurrency ≤ 0 would wedge the run (#344). */
     private function effectiveCap(TickContext $tick): int
     {
         $connection = $tick->connection;
-
-        return TickDriver::Worker === $tick->driver
+        $cap = TickDriver::Worker === $tick->driver
             ? $connection->cappedBatchConcurrency()
             : min($connection->batchConcurrency(), self::POLL_MAX_CONCURRENCY);
+
+        return max(1, $cap);
     }
 }

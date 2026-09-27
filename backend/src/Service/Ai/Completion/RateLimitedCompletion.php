@@ -9,14 +9,8 @@ use App\Service\Ai\ProviderConnection;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Wraps the concurrent chat client with the run's rate-limit policy (#947). For
- * a blocking plan (the worker) it waits and re-fires only the still-rate-limited
- * calls, up to the plan's retries and total-wait budget; a call retried to
- * exhaustion keeps its RetryableProviderException. For a deferring plan (poll,
- * sweep) it never waits and returns the deferral for the advancer to record.
- *
- * It re-fires the limited subset rather than the whole wave, so a paid provider
- * is not re-billed for the calls that already answered.
+ * Applies a RetryPlan to rate-limited calls (#947): a blocking plan waits and re-fires only the still-limited calls,
+ * so a paid provider is not re-billed for those that answered; a deferring plan never waits, it returns the deferral.
  */
 final readonly class RateLimitedCompletion
 {

@@ -17,6 +17,6 @@ final readonly class RecommendationWaveConcurrency
 
     public function cap(RecommendationRun $run, AiProviderSettings $settings): int
     {
-        return $run->waveConcurrencyCap($settings->cappedBatchConcurrency());
+        return max(1, $run->waveConcurrencyCap($settings->cappedBatchConcurrency()));
     }
 }

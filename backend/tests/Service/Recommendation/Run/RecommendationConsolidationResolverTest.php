@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
@@ -13,11 +12,8 @@ use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\ConsolidationOutcome;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
-use App\Service\Recommendation\Run\TickContext;
-use App\Service\Recommendation\Run\TickDriver;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\BuildsTickContexts;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
@@ -34,6 +30,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RecommendationConsolidationResolverTest extends DbTestCase
 {
+    use BuildsTickContexts;
+
     private User $user;
     private RecommendationRunFixtures $fixtures;
 
@@ -336,30 +334,9 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         return $this->resolver()->resolve($this->tick($run));
     }
 
-    private function tick(RecommendationRun $run): TickContext
-    {
-        return new TickContext($run, $this->activeAiSettings(), $this->effectiveSettings(), TickDriver::Poll);
-    }
-
     private function idOf(Entry $entry): int
     {
         return $entry->requireId();
-    }
-
-    private function activeAiSettings(): AiProviderSettings
-    {
-        $settings = $this->user->getActiveAiProviderSettings();
-        self::assertNotNull($settings);
-
-        return $settings;
-    }
-
-    private function effectiveSettings(): EffectiveRecommendationSettings
-    {
-        /** @var RecommendationSettingsResolver $resolver */
-        $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
-
-        return $resolver->forUser($this->user);
     }
 
     private function resolver(): RecommendationConsolidationResolver

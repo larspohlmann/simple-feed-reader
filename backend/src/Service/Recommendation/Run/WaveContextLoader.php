@@ -36,12 +36,7 @@ final readonly class WaveContextLoader
         return array_merge(...$run->getCandidateBatches());
     }
 
-    /**
-     * One linesForIds() round trip for the whole wave, split back per batch; an entry pruned since the snapshot
-     * is simply absent from its batch's lines.
-     *
-     * @return list<WaveBatch>
-     */
+    /** @return list<WaveBatch> */
     private function nextBatches(TickContext $tick, int $waveSize): array
     {
         $startIndex = $tick->run->progress()->nextBatchIndex;

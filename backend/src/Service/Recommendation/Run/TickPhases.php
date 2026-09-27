@@ -49,7 +49,6 @@ final readonly class TickPhases
         };
     }
 
-    /** A rate limit defers the run; a transport failure strikes it once and still propagates. */
     private function advanceWithinTheEnvelope(ProviderPhase $phase, TickContext $tick): RecommendationRunReport
     {
         try {

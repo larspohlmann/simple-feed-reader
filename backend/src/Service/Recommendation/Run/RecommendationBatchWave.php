@@ -76,8 +76,6 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * A fully pruned batch resolves free to no winners; every other batch is a pending position.
-     *
      * @param list<WaveBatch> $waveBatches
      *
      * @return array{0: array<int, list<array{id: int, score: int, reason: string}>>, 1: list<int>}
@@ -115,8 +113,6 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * One round: a recorded call per pending batch, each with its own corrective tail, read concurrently.
-     *
      * @param non-empty-list<int> $pending         positions into the wave still awaiting a usable reply
      * @param array<int, string>  $correctiveReply each position's own last invalid reply
      *
