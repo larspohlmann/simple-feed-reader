@@ -20,12 +20,12 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\FeedScheduler;
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Ingest\EntryCategoryWriter;
@@ -180,8 +180,8 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             }
         };
 
-        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
@@ -192,7 +192,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $concurrency,
             $hostConcurrency,
             'TestAgent/1.0',
-            $proxyEgressResolver,
+            $egressProxySource,
             new FetchRetryPolicy($urlGuard),
         );
     }

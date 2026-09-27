@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Command;
 
+use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
-use App\Service\Fetch\ProxyConfig;
-use App\Service\Fetch\ProxyEgressResolver;
+use App\Service\Proxy\ProxyConnection;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -21,7 +22,7 @@ final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
     /**
      * @param array<int, array<string, mixed>> $recordedOptions
      */
-    private function tester(array &$recordedOptions, ?ProxyEgressResolver $resolverStub = null): CommandTester
+    private function tester(array &$recordedOptions): CommandTester
     {
         self::bootKernel();
 
@@ -36,23 +37,28 @@ final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
         );
 
         self::getContainer()->set('catalog.rot_check.http_client', $client);
-        if (null !== $resolverStub) {
-            self::getContainer()->set(ProxyEgressResolver::class, $resolverStub);
-        }
 
         $application = new Application(self::$kernel ?? self::bootKernel());
 
         return new CommandTester($application->find('app:catalog:check-urls'));
     }
 
-    public function testRequestCarriesTheProxyOptionWhenTheResolverReturnsOne(): void
+    private function enableAnEgressProxy(): void
     {
-        $proxyConfig = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null);
-        $resolverStub = $this->createStub(ProxyEgressResolver::class);
-        $resolverStub->method('resolve')->willReturn($proxyConfig);
+        $proxy = new ProxyServerSettings();
+        $proxy->applyWithoutPassword(new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, null));
 
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($proxy);
+        $entityManager->flush();
+    }
+
+    public function testRequestCarriesTheProxyOptionWhenAnEgressProxyIsEnabled(): void
+    {
         $recordedOptions = [];
-        $tester = $this->tester($recordedOptions, $resolverStub);
+        $tester = $this->tester($recordedOptions);
+        $this->enableAnEgressProxy();
+
         $tester->execute(['--limit' => '1']);
 
         self::assertSame(0, $tester->getStatusCode());
@@ -61,10 +67,11 @@ final class CheckCatalogUrlsCommandProxyTest extends KernelTestCase
         self::assertSame('socks5://proxy.example:1080', $recordedOptions[0]['proxy']);
     }
 
-    public function testRequestCarriesNoProxyOptionWhenTheResolverReturnsNull(): void
+    public function testRequestCarriesNoProxyOptionWithoutAnEgressProxy(): void
     {
         $recordedOptions = [];
         $tester = $this->tester($recordedOptions);
+
         $tester->execute(['--limit' => '1']);
 
         self::assertSame(0, $tester->getStatusCode());

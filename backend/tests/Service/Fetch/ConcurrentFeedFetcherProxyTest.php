@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Enum\ProxyType;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FetchRetryPolicy;
+use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ProxyConfig;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Crypto\Exception\SecretUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -33,8 +33,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
     ): ConcurrentFeedFetcher {
         $resolver = $this->dns($dnsOverrides);
 
-        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willReturn($resolvedProxy);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn($resolvedProxy);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
@@ -45,7 +45,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             4,
             100,
             'TestAgent/1.0',
-            $proxyEgressResolver,
+            $egressProxySource,
             new FetchRetryPolicy($urlGuard),
         );
     }
@@ -83,8 +83,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
     /**
      * The sweep's `remaining` only decrements on a yielded outcome, so letting
-     * the resolver's failure escape would strand the whole run rather than
-     * report it. Every feed comes back failed instead.
+     * the egress source's failure escape would strand the whole run rather
+     * than report it. Every feed comes back failed instead.
      */
     public function testAnUnreadableProxyPasswordFailsEveryFeedInsteadOfAbortingTheSweep(): void
     {
@@ -94,8 +94,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willThrowException(
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willThrowException(
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
         $urlGuard = new UrlGuard($this->dns(), new IpValidator());
@@ -106,7 +106,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             4,
             100,
             'TestAgent/1.0',
-            $proxyEgressResolver,
+            $egressProxySource,
             new FetchRetryPolicy($urlGuard),
         );
 
@@ -122,7 +122,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         self::assertSame([], $seen, 'nothing may go out while the egress is unusable');
     }
 
-    public function testEnabledResolverProxiesPlainTickets(): void
+    public function testEnabledEgressProxyProxiesPlainTickets(): void
     {
         $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
         /** @var list<array<string, mixed>> $seenOptions */
@@ -219,7 +219,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
     }
 
-    public function testDirectWhenResolverReturnsNull(): void
+    public function testDirectWhenEgressProxyReturnsNull(): void
     {
         /** @var list<array<string, mixed>> $seenOptions */
         $seenOptions = [];

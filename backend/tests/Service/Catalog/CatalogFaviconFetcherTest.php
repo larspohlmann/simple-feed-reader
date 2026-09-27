@@ -8,10 +8,10 @@ use App\Service\Catalog\CatalogFaviconFetcher;
 use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
+use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
-use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -47,17 +47,17 @@ final class CatalogFaviconFetcherTest extends TestCase
         };
 
         return new CatalogFaviconFetcher(
-            new FailoverRequestSender($client, $this->noProxyResolver()),
+            new FailoverRequestSender($client, $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
     }
 
-    private function noProxyResolver(): ProxyEgressResolver
+    private function noEgressProxy(): EgressProxySource
     {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
-        return $resolver;
+        return $egressProxySource;
     }
 
     public function testReturnsTheBytesAndContentTypeOfAnImageResponse(): void

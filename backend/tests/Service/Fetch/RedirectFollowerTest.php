@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -26,8 +26,8 @@ final class RedirectFollowerTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
+        $proxy = $this->createStub(EgressProxySource::class);
+        $proxy->method('egressProxy')->willReturn(null);
 
         return new RedirectFollower(
             new FailoverRequestSender(new MockHttpClient($responses), $proxy),

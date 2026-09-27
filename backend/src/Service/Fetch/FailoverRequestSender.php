@@ -34,7 +34,7 @@ final readonly class FailoverRequestSender
 {
     public function __construct(
         private HttpClientInterface $httpClient,
-        private ProxyEgressResolver $proxyEgressResolver,
+        private EgressProxySource $egressProxySource,
     ) {
     }
 
@@ -74,7 +74,7 @@ final readonly class FailoverRequestSender
     private function resolveProxy(): ?ProxyConfig
     {
         try {
-            return $this->proxyEgressResolver->resolve();
+            return $this->egressProxySource->egressProxy();
         } catch (SecretUnreadableException $e) {
             throw new TransportException(
                 sprintf('The instance egress proxy is unusable: %s', $e->getMessage()),

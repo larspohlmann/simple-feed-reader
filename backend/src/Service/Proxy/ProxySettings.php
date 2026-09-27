@@ -6,16 +6,10 @@ namespace App\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Fetch\ProxyConfig;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * Reads and writes the instance-wide proxy row, defaulting to "not configured"
- * when no row exists. The rest of the app depends on this, never on the entity
- * or repository directly, so "no row yet" and the sealing both live in one place.
- */
-readonly class ProxySettings
+final readonly class ProxySettings
 {
     public function __construct(
         private ProxyServerSettingsRepository $repository,
@@ -42,20 +36,6 @@ readonly class ProxySettings
         $this->em->flush();
     }
 
-    /** The stored connection regardless of the enable switch — the tester probes this. */
-    public function configuredProxy(): ?ProxyConfig
-    {
-        return $this->proxyFrom($this->repository->findSingleton());
-    }
-
-    /** The connection only when it is turned on — the fetch paths resolve this. */
-    public function egressProxy(): ?ProxyConfig
-    {
-        $settings = $this->repository->findSingleton();
-
-        return null !== $settings && $settings->isEnabled() ? $this->proxyFrom($settings) : null;
-    }
-
     private function apply(ProxySettingsUpdate $update, ProxyServerSettings $settings): void
     {
         $replacement = $update->password->replacement();
@@ -69,22 +49,5 @@ readonly class ProxySettings
         if ($update->password->isRemoval()) {
             $settings->clearStoredPassword();
         }
-    }
-
-    private function proxyFrom(?ProxyServerSettings $settings): ?ProxyConfig
-    {
-        if (null === $settings || '' === $settings->getHost()) {
-            return null;
-        }
-
-        return new ProxyConfig(
-            $settings->getType(),
-            $settings->getHost(),
-            $settings->getPort(),
-            $settings->getUsername(),
-            $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
-            $settings->isDirectFallback(),
-            $settings->isRemoteDns(),
-        );
     }
 }

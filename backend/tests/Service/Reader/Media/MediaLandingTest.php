@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\MediaLanding;
@@ -37,8 +37,8 @@ final class MediaLandingTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
+        $proxy = $this->createStub(EgressProxySource::class);
+        $proxy->method('egressProxy')->willReturn(null);
 
         return new MediaLanding(
             new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),

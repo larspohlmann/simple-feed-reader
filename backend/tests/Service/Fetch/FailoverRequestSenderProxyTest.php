@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Enum\ProxyType;
+use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\ProxyConfig;
-use App\Service\Fetch\ProxyEgressResolver;
-use App\Service\Crypto\Exception\SecretUnreadableException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -28,7 +28,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
 
         $sender
             ->send('GET', 'https://page.example', $this->guarded(), ['timeout' => 7.0])
@@ -51,7 +51,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -78,7 +78,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -100,7 +100,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('blocked', ['http_code' => 403]);
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy(directFallback: false)));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy(directFallback: false)));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -121,7 +121,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/moved']]);
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -149,7 +149,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturnOnConsecutiveCalls($failedResponse, $okResponse);
 
-        $sender = new FailoverRequestSender($httpClient, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -173,14 +173,14 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturnOnConsecutiveCalls($refusedResponse, $okResponse);
 
-        $sender = new FailoverRequestSender($httpClient, $this->resolver($this->proxy()));
+        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()));
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
         self::assertSame(200, $status);
     }
 
-    public function testNullResolverIsByteForByteTheCurrentLoop(): void
+    public function testNullEgressProxyIsByteForByteTheCurrentLoop(): void
     {
         $calls = [];
         $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
@@ -188,7 +188,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->resolver(null));
+        $sender = new FailoverRequestSender($client, $this->egressProxy(null));
 
         $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -204,7 +204,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('', ['error' => 'proxy down']);
         });
-        $sender = new FailoverRequestSender($client, $this->resolver($this->proxy(directFallback: false)));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy(directFallback: false)));
 
         $this->expectException(TransportExceptionInterface::class);
 
@@ -231,11 +231,11 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willThrowException(
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willThrowException(
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
-        $sender = new FailoverRequestSender($client, $resolver);
+        $sender = new FailoverRequestSender($client, $egressProxySource);
 
         $this->expectException(TransportExceptionInterface::class);
 
@@ -246,12 +246,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
         }
     }
 
-    private function resolver(?ProxyConfig $config): ProxyEgressResolver
+    private function egressProxy(?ProxyConfig $config): EgressProxySource
     {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn($config);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn($config);
 
-        return $resolver;
+        return $egressProxySource;
     }
 
     private function proxy(bool $directFallback = true): ProxyConfig

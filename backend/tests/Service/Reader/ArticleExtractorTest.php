@@ -9,9 +9,9 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
@@ -100,7 +100,7 @@ final class ArticleExtractorTest extends TestCase
         };
 
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
@@ -127,12 +127,12 @@ final class ArticleExtractorTest extends TestCase
         );
     }
 
-    private function noProxyResolver(): ProxyEgressResolver
+    private function noEgressProxy(): EgressProxySource
     {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
-        return $resolver;
+        return $egressProxySource;
     }
 
     private function bodyCleaner(): ReaderBodyCleaner
@@ -492,7 +492,7 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
+            new FailoverRequestSender(new MockHttpClient(), $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');

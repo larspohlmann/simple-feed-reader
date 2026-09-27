@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -14,7 +15,6 @@ use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -52,8 +52,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
             }
         };
 
-        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
@@ -64,7 +64,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             $concurrency,
             $hostConcurrency,
             'TestAgent/1.0',
-            $proxyEgressResolver,
+            $egressProxySource,
             new FetchRetryPolicy($urlGuard),
         );
     }

@@ -6,21 +6,22 @@ namespace App\Service\Mail\Transport;
 
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\ResolvedMailTransport;
-use App\Service\Proxy\ProxySettings;
+use App\Service\Proxy\ConfiguredProxySource;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/** Builds the active mail transport, so sends and the tester agree on what would send:
- *  a resolved row becomes the plain EsmtpTransport, or the curl proxy transport when the
- *  row routes mail through the configured proxy (independent of the feed-egress switch);
- *  no row falls back to the env DSN. */
+/**
+ * Builds the active mail transport: a resolved row becomes an EsmtpTransport, or the
+ * curl proxy transport when it routes through the configured proxy; no row falls back
+ * to the env DSN.
+ */
 final readonly class ActiveMailTransportFactory
 {
     public function __construct(
-        private ProxySettings $proxySettings,
+        private ConfiguredProxySource $proxySource,
         private HttpClientInterface $httpClient,
     ) {
     }
@@ -34,7 +35,7 @@ final readonly class ActiveMailTransportFactory
             return EsmtpTransportBuilder::from($resolved, $dispatcher, $logger);
         }
 
-        $proxy = $this->proxySettings->configuredProxy();
+        $proxy = $this->proxySource->configuredProxy();
         if (null === $proxy) {
             throw IncompleteMailConfigurationException::proxyMissing();
         }

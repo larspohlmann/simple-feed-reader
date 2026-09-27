@@ -5,27 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
-use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
+use App\Enum\ProxyType;
+use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\ProxyConnectionTester;
-use App\Service\Proxy\ProxySettings;
 use App\Service\Proxy\ProxyTestFailure;
-use App\Tests\Support\SettingsRequests;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Service\Proxy\StoredProxy;
+use App\Tests\Support\ProxyPasswordCiphers;
+use App\Tests\Support\StoredProxies;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-/**
- * ProxySettings is `final readonly` and cannot be doubled by PHPUnit — its own
- * test suite (ProxySettingsTest) works around this by driving a real instance
- * through a stubbed repository, and this test follows the same pattern rather
- * than mocking ProxySettings directly.
- */
 final class ProxyConnectionTesterTest extends TestCase
 {
-    private const string SECRET = 'test-master-secret-at-least-32-chars-long!!';
+    use StoredProxies;
+
     private const string ROTATED_SECRET = 'a-DIFFERENT-master-secret-at-least-32-chars!';
 
     public function testReturnsEgressIpOnSuccessAndRoutesThroughTheProxy(): void
@@ -38,7 +32,7 @@ final class ProxyConnectionTesterTest extends TestCase
                 return new MockResponse('203.0.113.7');
             }
         );
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -49,7 +43,8 @@ final class ProxyConnectionTesterTest extends TestCase
 
     public function testReturnsNotConfiguredWhenNoProxyStored(): void
     {
-        $tester = new ProxyConnectionTester($this->unconfiguredSettings(), new MockHttpClient());
+        $unconfigured = $this->storedProxy(null, ProxyPasswordCiphers::SECRET);
+        $tester = new ProxyConnectionTester($unconfigured, new MockHttpClient());
 
         $result = $tester->test();
 
@@ -62,7 +57,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $client = new MockHttpClient(static function (): MockResponse {
             return new MockResponse('', ['error' => 'Failed to connect via proxy']);
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -81,7 +76,7 @@ final class ProxyConnectionTesterTest extends TestCase
                 return new MockResponse('203.0.113.7');
             }
         );
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $tester->test();
 
@@ -97,7 +92,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $client = new MockHttpClient(static function (): MockResponse {
             return new MockResponse('nope', ['http_code' => 404]);
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -111,7 +106,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $client = new MockHttpClient(static function (): MockResponse {
             return new MockResponse('nope', ['http_code' => 300]);
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -125,7 +120,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $client = new MockHttpClient(static function (): MockResponse {
             return new MockResponse(str_repeat('9', 2000) . "\n");
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -138,7 +133,7 @@ final class ProxyConnectionTesterTest extends TestCase
         $client = new MockHttpClient(static function (): MockResponse {
             return new MockResponse(" 203.0.113.7 \n");
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -147,39 +142,13 @@ final class ProxyConnectionTesterTest extends TestCase
     }
 
     /**
-     * Diagnosing exactly this is what the Test button is for: the row was sealed
-     * under one master secret and is being read under another (a rotated
-     * INSTANCE_SECRET_KEY, or a dump restored onto a fresh instance), so it reports
-     * the unreadable secret rather than crashing the endpoint.
+     * The row was sealed under one master secret and is read under another (a rotated INSTANCE_SECRET_KEY, or a
+     * dump restored onto a fresh instance). Diagnosing that is what the Test button is for, so it must not throw.
      */
     public function testAnUnreadableStoredPasswordIsReportedRatherThanThrown(): void
     {
-        $stored = null;
-        $repository = $this->createStub(ProxyServerSettingsRepository::class);
-        $repository->method('findSingleton')->willReturnCallback(static function () use (&$stored) {
-            return $stored;
-        });
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(static function (object $entity) use (&$stored): void {
-            if ($entity instanceof ProxyServerSettings) {
-                $stored = $entity;
-            }
-        });
+        $afterRotation = $this->storedProxy($this->configuredRow(), self::ROTATED_SECRET);
 
-        (new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET))))->update(
-            SettingsRequests::proxy(
-                enabled: true,
-                directFallback: true,
-                type: 'SOCKS5',
-                host: 'proxy.example',
-                port: 1080,
-                username: 'user',
-                password: 'pw',
-            )->toUpdate(),
-        );
-
-        $rotatedCipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::ROTATED_SECRET));
-        $afterRotation = new ProxySettings($repository, $em, $rotatedCipher);
         $result = (new ProxyConnectionTester($afterRotation, new MockHttpClient()))->test();
 
         self::assertFalse($result->ok);
@@ -199,7 +168,7 @@ final class ProxyConnectionTesterTest extends TestCase
                 'error' => 'cannot complete SOCKS5 connection to api.ipify.org. (4)',
             ]);
         });
-        $tester = new ProxyConnectionTester($this->configuredSettings(), $client);
+        $tester = new ProxyConnectionTester($this->configuredProxy(), $client);
 
         $result = $tester->test();
 
@@ -208,42 +177,24 @@ final class ProxyConnectionTesterTest extends TestCase
         self::assertStringContainsString('does not resolve host names', (string) $result->detail);
     }
 
-    private function configuredSettings(): ProxySettings
+    private function configuredProxy(): StoredProxy
     {
-        $settings = $this->settings();
-        $settings->update(SettingsRequests::proxy(
-            enabled: false,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: 'user',
-            password: 'pw',
-        )->toUpdate());
-
-        return $settings;
+        return $this->storedProxy($this->configuredRow(), ProxyPasswordCiphers::SECRET);
     }
 
-    private function unconfiguredSettings(): ProxySettings
+    private function configuredRow(): ProxyServerSettings
     {
-        return $this->settings();
+        $row = new ProxyServerSettings();
+        $row->apply(
+            new ProxyConnection(false, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
+            ProxyPasswordCiphers::withTestSecret()->seal('pw'),
+        );
+
+        return $row;
     }
 
-    private function settings(): ProxySettings
+    private function storedProxy(?ProxyServerSettings $row, string $secret): StoredProxy
     {
-        $stored = null;
-        $repository = $this->createStub(ProxyServerSettingsRepository::class);
-        $repository->method('findSingleton')->willReturnCallback(static function () use (&$stored) {
-            return $stored;
-        });
-
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(static function (object $entity) use (&$stored): void {
-            if ($entity instanceof ProxyServerSettings) {
-                $stored = $entity;
-            }
-        });
-
-        return new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET)));
+        return $this->storedProxyOver($row, ProxyPasswordCiphers::under($secret));
     }
 }

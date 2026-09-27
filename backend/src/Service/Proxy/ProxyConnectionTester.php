@@ -11,10 +11,9 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Probes the SAVED proxy connection by fetching a fixed IP-echo endpoint through
- * it, so the admin can confirm the egress is in effect and see which IP the
- * world sees. Uses configuredProxy() (not egressProxy()) so the admin can test
- * before flipping the enable switch on.
+ * Probes the SAVED proxy by fetching a fixed IP-echo endpoint through it. Uses
+ * configuredProxy() (not egressProxy()) so the admin can test before flipping
+ * the enable switch on.
  */
 final readonly class ProxyConnectionTester
 {
@@ -24,7 +23,7 @@ final readonly class ProxyConnectionTester
     private const int MAX_BYTES = 1024;
 
     public function __construct(
-        private ProxySettings $settings,
+        private ConfiguredProxySource $proxySource,
         private HttpClientInterface $httpClient,
     ) {
     }
@@ -32,7 +31,7 @@ final readonly class ProxyConnectionTester
     public function test(): ProxyTestResult
     {
         try {
-            $proxy = $this->settings->configuredProxy();
+            $proxy = $this->proxySource->configuredProxy();
         } catch (SecretUnreadableException $e) {
             // Diagnosing exactly this is what the Test button is for, so it
             // reports the unreadable secret rather than crashing on it.

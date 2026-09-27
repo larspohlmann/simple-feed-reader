@@ -31,7 +31,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly int $concurrency,
         private readonly int $hostConcurrency,
         private readonly string $userAgent,
-        private readonly ProxyEgressResolver $proxyEgressResolver,
+        private readonly EgressProxySource $egressProxySource,
         private readonly FetchRetryPolicy $retryPolicy,
     ) {
         // A cap below one opens no requests at all, and the engine would report
@@ -58,7 +58,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     public function fetchAll(iterable $tickets): \Generator
     {
         try {
-            $batchProxy = $this->proxyEgressResolver->resolve();
+            $batchProxy = $this->egressProxySource->egressProxy();
         } catch (SecretUnreadableException $e) {
             // The proxy is enabled but its stored password cannot be opened, so
             // no feed in this batch can be reached. Report that per feed instead

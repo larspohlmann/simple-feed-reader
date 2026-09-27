@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
-use App\Service\Fetch\ProxyEgressResolver;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -18,10 +18,10 @@ final class FailoverRequestSenderTest extends TestCase
 
     private function sender(MockHttpClient $client): FailoverRequestSender
     {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
-        return new FailoverRequestSender($client, $resolver);
+        return new FailoverRequestSender($client, $egressProxySource);
     }
 
     public function testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders(): void

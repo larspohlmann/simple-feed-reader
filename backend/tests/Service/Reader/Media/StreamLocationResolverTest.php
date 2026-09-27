@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\ArticleMedia;
@@ -53,8 +53,8 @@ final class StreamLocationResolverTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
+        $proxy = $this->createStub(EgressProxySource::class);
+        $proxy->method('egressProxy')->willReturn(null);
         $providers = new EmbedProviders([new YouTubeEmbedProvider()]);
 
         return new StreamLocationResolver(

@@ -6,8 +6,8 @@ namespace App\Service\Catalog;
 
 use App\Service\Catalog\Exception\BrokenCatalogUrlException;
 use App\Service\Fetch\EgressOptions;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\ProxyConfig;
-use App\Service\Fetch\ProxyEgressResolver;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -19,7 +19,7 @@ final readonly class CatalogUrlChecker
         private HttpClientInterface $httpClient,
         private BundledCatalog $bundled,
         private string $userAgent,
-        private ProxyEgressResolver $proxyEgressResolver,
+        private EgressProxySource $egressProxySource,
     ) {
     }
 
@@ -27,7 +27,7 @@ final readonly class CatalogUrlChecker
     {
         $feeds = $this->feedsToCheck($limit);
         // Once per sweep: the instance proxy cannot change mid-run, and each read costs a row lookup and a decryption.
-        $proxy = $this->proxyEgressResolver->resolve();
+        $proxy = $this->egressProxySource->egressProxy();
 
         $broken = [];
         foreach ($feeds as $feed) {

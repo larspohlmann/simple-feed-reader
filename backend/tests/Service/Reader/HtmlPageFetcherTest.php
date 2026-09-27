@@ -6,9 +6,9 @@ namespace App\Tests\Service\Reader;
 
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
@@ -43,7 +43,7 @@ final class HtmlPageFetcherTest extends TestCase
 
         return new HtmlPageFetcher(
             new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+                new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
                 new UrlGuard($resolver, new IpValidator()),
             ),
             new MetaRefreshTarget(),
@@ -53,12 +53,12 @@ final class HtmlPageFetcherTest extends TestCase
         );
     }
 
-    private function noProxyResolver(): ProxyEgressResolver
+    private function noEgressProxy(): EgressProxySource
     {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
+        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource->method('egressProxy')->willReturn(null);
 
-        return $resolver;
+        return $egressProxySource;
     }
 
     private static function metaRefresh(string $target): string
