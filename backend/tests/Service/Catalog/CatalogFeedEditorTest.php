@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Catalog;
 
-use App\Dto\Admin\CatalogFeedRequest;
-use App\Dto\Admin\ReorderRequest;
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Service\Catalog\CatalogFeedDetails;
 use App\Service\Catalog\CatalogFeedEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -21,9 +20,13 @@ final class CatalogFeedEditorTest extends DbTestCase
     public function testCreateAppendsAFeedToItsCategoryWithEveryField(): void
     {
         $category = $this->category('feed_editor_create');
-        $first = $this->editor()->create($this->request($category, 'https://first.feed-editor.example.com/rss'));
+        $first = $this->editor()->create($this->details($category, 'https://first.feed-editor.example.com/rss'));
 
-        $second = $this->editor()->create(new CatalogFeedRequest(
+        $reloadedFirst = $this->reload($first);
+        self::assertTrue($reloadedFirst->isEnabled());
+        self::assertTrue($reloadedFirst->isLocked());
+
+        $second = $this->editor()->create(new CatalogFeedDetails(
             $category->requireId(),
             'Second',
             'https://second.feed-editor.example.com/rss',
@@ -49,7 +52,7 @@ final class CatalogFeedEditorTest extends DbTestCase
     public function testCreateCanLockAFeed(): void
     {
         $category = $this->category('feed_editor_locked');
-        $feed = $this->editor()->create(new CatalogFeedRequest(
+        $feed = $this->editor()->create(new CatalogFeedDetails(
             $category->requireId(),
             'Locked',
             'https://locked.feed-editor.example.com/rss',
@@ -63,9 +66,9 @@ final class CatalogFeedEditorTest extends DbTestCase
     {
         $from = $this->category('feed_editor_from');
         $to = $this->category('feed_editor_to');
-        $feed = $this->editor()->create($this->request($from, 'https://before.feed-editor.example.com/rss'));
+        $feed = $this->editor()->create($this->details($from, 'https://before.feed-editor.example.com/rss'));
 
-        $this->editor()->update($feed, new CatalogFeedRequest(
+        $this->editor()->update($feed, new CatalogFeedDetails(
             $to->requireId(),
             'After',
             'https://after.feed-editor.example.com/rss',
@@ -87,17 +90,17 @@ final class CatalogFeedEditorTest extends DbTestCase
     public function testUpdateRefusesAnUnknownCategory(): void
     {
         $feed = $this->editor()->create(
-            $this->request($this->category('feed_editor_orphan'), 'https://orphan.feed-editor.example.com/rss'),
+            $this->details($this->category('feed_editor_orphan'), 'https://orphan.feed-editor.example.com/rss'),
         );
 
         $this->expectException(RecordNotFoundException::class);
-        $this->editor()->update($feed, new CatalogFeedRequest(999999, 'T', 'https://x.feed-editor.example.com/rss'));
+        $this->editor()->update($feed, new CatalogFeedDetails(999999, 'T', 'https://x.feed-editor.example.com/rss'));
     }
 
     public function testDeleteRemovesTheFeed(): void
     {
         $feed = $this->editor()->create(
-            $this->request($this->category('feed_editor_delete'), 'https://doomed.feed-editor.example.com/rss'),
+            $this->details($this->category('feed_editor_delete'), 'https://doomed.feed-editor.example.com/rss'),
         );
         $id = $feed->requireId();
 
@@ -110,10 +113,10 @@ final class CatalogFeedEditorTest extends DbTestCase
     public function testReorderGivesEachFeedItsIndex(): void
     {
         $category = $this->category('feed_editor_order');
-        $first = $this->editor()->create($this->request($category, 'https://a.feed-editor.example.com/rss'));
-        $second = $this->editor()->create($this->request($category, 'https://b.feed-editor.example.com/rss'));
+        $first = $this->editor()->create($this->details($category, 'https://a.feed-editor.example.com/rss'));
+        $second = $this->editor()->create($this->details($category, 'https://b.feed-editor.example.com/rss'));
 
-        $this->editor()->reorder(new ReorderRequest([$second->requireId(), $first->requireId()]));
+        $this->editor()->reorder([$second->requireId(), $first->requireId()]);
 
         self::assertSame(1, $this->reload($first)->getPosition());
         self::assertSame(0, $this->reload($second)->getPosition());
@@ -136,8 +139,8 @@ final class CatalogFeedEditorTest extends DbTestCase
         return $category;
     }
 
-    private function request(CatalogCategory $category, string $url): CatalogFeedRequest
+    private function details(CatalogCategory $category, string $url): CatalogFeedDetails
     {
-        return new CatalogFeedRequest($category->requireId(), 'Title', $url);
+        return new CatalogFeedDetails($category->requireId(), 'Title', $url);
     }
 }

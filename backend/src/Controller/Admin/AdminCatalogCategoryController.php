@@ -36,7 +36,7 @@ final readonly class AdminCatalogCategoryController
     public function create(#[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
         return new JsonResponse(
-            ['category' => AdminCatalogJson::category($this->editor->create($request))],
+            ['category' => AdminCatalogJson::category($this->editor->create($request->toDetails()))],
             Response::HTTP_CREATED,
         );
     }
@@ -44,7 +44,7 @@ final readonly class AdminCatalogCategoryController
     #[Route('/reorder', name: 'api_admin_catalog_category_reorder', methods: ['PATCH'])]
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
-        $this->editor->reorder($request);
+        $this->editor->reorder($request->ids);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -53,7 +53,7 @@ final readonly class AdminCatalogCategoryController
     public function update(int $id, #[MapRequestPayload] CatalogCategoryRequest $request): JsonResponse
     {
         $category = $this->categories->getById($id);
-        $this->editor->update($category, $request);
+        $this->editor->update($category, $request->toDetails());
 
         return new JsonResponse(['category' => AdminCatalogJson::category($category)]);
     }
