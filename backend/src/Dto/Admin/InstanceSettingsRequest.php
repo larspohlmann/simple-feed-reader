@@ -6,6 +6,7 @@ namespace App\Dto\Admin;
 
 use App\Http\FullReplacePayload;
 use App\Service\Settings\InstanceSettingsUpdate;
+use App\Service\Settings\RelyingPartyIdChoice;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -45,6 +46,14 @@ final readonly class InstanceSettingsRequest
             passkeyRpId: $this->passkeyRpId,
             passkeyRpName: $this->passkeyRpName,
             passkeySignInEnabled: $this->passkeySignInEnabled,
+        );
+    }
+
+    public function toRelyingPartyIdChoice(): RelyingPartyIdChoice
+    {
+        return new RelyingPartyIdChoice(
+            passkeyRpId: $this->passkeyRpId,
+            invalidateExistingPasskeys: $this->invalidateExistingPasskeys,
         );
     }
 }

@@ -61,6 +61,16 @@ final class InstanceSettingsRequestTest extends TestCase
         self::assertTrue($update->passkeySignInEnabled);
     }
 
+    public function testToRelyingPartyIdChoiceCarriesTheIdAndTheConfirmation(): void
+    {
+        $request = SettingsRequests::instance(passkeyRpId: 'example.com', invalidateExistingPasskeys: true);
+
+        self::assertSame(
+            ['passkeyRpId' => 'example.com', 'invalidateExistingPasskeys' => true],
+            get_object_vars($request->toRelyingPartyIdChoice()),
+        );
+    }
+
     private static function withRelyingParty(?string $passkeyRpId, ?string $passkeyRpName): InstanceSettingsRequest
     {
         return SettingsRequests::instance(passkeyRpId: $passkeyRpId, passkeyRpName: $passkeyRpName);

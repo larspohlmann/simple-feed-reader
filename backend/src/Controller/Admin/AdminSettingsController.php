@@ -33,7 +33,7 @@ final readonly class AdminSettingsController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] InstanceSettingsRequest $request,
     ): JsonResponse {
-        $this->relyingPartyChange->guardAndInvalidatePasskeysIfChanged($request);
+        $this->relyingPartyChange->guardAndInvalidatePasskeysIfChanged($request->toRelyingPartyIdChoice());
         $this->settings->update($request->toUpdate());
 
         return new JsonResponse($this->settingsJson->current());
