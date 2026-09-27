@@ -13,7 +13,7 @@ final class AdminUserLimitsJson
     {
         return [
             'status' => $user->getStatus()->value,
-            'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            'trialEndsAt' => TrialEndJson::of($user),
         ];
     }
 
