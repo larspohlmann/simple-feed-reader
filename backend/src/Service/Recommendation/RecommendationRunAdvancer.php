@@ -17,7 +17,7 @@ use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -316,7 +316,7 @@ final class RecommendationRunAdvancer
 
         try {
             $result = $this->batchWave->resolve($run, $settings, $effectiveSettings, $userId, $waveSize, $plan);
-        } catch (RecommendationRunRateLimitedException $e) {
+        } catch (ProviderRateLimitedException $e) {
             $this->waveConcurrency->halve($run, $settings);
 
             return $this->deferral->defer($run, $e);
@@ -434,7 +434,7 @@ final class RecommendationRunAdvancer
 
         try {
             $outcome = $this->distiller->distill($run, $settings, $userId, $effectiveSettings, $plan);
-        } catch (RecommendationRunRateLimitedException $e) {
+        } catch (ProviderRateLimitedException $e) {
             return $this->deferral->defer($run, $e);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
             $this->transportFailures->record($run, $settings, $e->getMessage());
@@ -494,7 +494,7 @@ final class RecommendationRunAdvancer
                 $effectiveSettings,
                 $plan,
             );
-        } catch (RecommendationRunRateLimitedException $e) {
+        } catch (ProviderRateLimitedException $e) {
             return $this->deferral->defer($run, $e);
         } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
             $this->transportFailures->record($run, $settings, $e->getMessage());

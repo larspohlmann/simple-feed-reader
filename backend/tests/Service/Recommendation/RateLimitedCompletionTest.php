@@ -10,7 +10,7 @@ use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\CompletionRequest;
 use App\Service\Recommendation\ConcurrentCompletion;
-use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\RateLimitedCompletion;
@@ -206,7 +206,7 @@ final class RateLimitedCompletionTest extends TestCase
         $chat->queueFailure(new RetryableProviderException(429, 8));
         $clock = $this->newClock();
 
-        $this->expectException(RecommendationRunRateLimitedException::class);
+        $this->expectException(ProviderRateLimitedException::class);
 
         (new RateLimitedCompletion($chat, $clock))->complete(
             $this->connection(),

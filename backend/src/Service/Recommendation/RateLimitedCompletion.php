@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Service\Ai\ProviderConnection;
-use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -35,7 +35,7 @@ final readonly class RateLimitedCompletion
         $result = $this->completeMany($connection, [new ConcurrentCompletion($request, $observer)], $plan);
 
         if ($result->isDeferred()) {
-            throw new RecommendationRunRateLimitedException($result->deferSeconds);
+            throw new ProviderRateLimitedException($result->deferSeconds);
         }
 
         $outcome = $result->outcomes[0];

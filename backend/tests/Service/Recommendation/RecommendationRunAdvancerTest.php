@@ -1254,7 +1254,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * A 429 met by a poll tick's fan-out wave must defer rather than strike
      * (#947): the poll driver's plan never blocks, so RateLimitedCompletion
      * reports the wave as deferred on its first call. The wave settles its
-     * recorded rows and throws RecommendationRunRateLimitedException, the
+     * recorded rows and throws ProviderRateLimitedException, the
      * advancer halves the run's wave concurrency and defers via
      * RecommendationRunDeferral -- no transport-failure strike, and nothing
      * from the fan-out wave banks; only the warm-up batch (0) is done.
@@ -1336,6 +1336,44 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(4, $report->batchesDone);              // whole wave banked
         self::assertSame(0, $this->activeRun()->getTransportFailures());
         self::assertSame(2, $this->activeRun()->waveConcurrencyCap(4)); // halved once
+    }
+
+    public function testAWorkerBatchWaveStillRateLimitedAfterItsRetriesHalvesAndCountsATransportFailure(): void
+    {
+        $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
+        $this->setBatchConcurrency(4);
+        $this->starter()->start($this->user);
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $this->queueDistillReply();
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+        $batches = $this->activeRun()->getCandidateBatches();
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->advancer()->advance($this->user, TickDriver::Worker);
+
+        $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'two']],
+        ], \JSON_THROW_ON_ERROR));
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $batches[3][0], 'score' => 93, 'reason' => 'three']],
+        ], \JSON_THROW_ON_ERROR));
+        for ($retry = 0; $retry < 3; $retry++) {
+            $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
+        }
+
+        try {
+            $this->advancer()->advance($this->user, TickDriver::Worker);
+            self::fail('A rate limit that outlasts the retries must propagate.');
+        } catch (RetryableProviderException) {
+        }
+
+        $this->em->clear();
+        $persisted = $this->activeRun();
+        self::assertSame(1, $persisted->progress()->batchesDone);
+        self::assertSame(1, $persisted->getTransportFailures());
+        self::assertSame(2, $persisted->waveConcurrencyCap(4));
     }
 
     /**
@@ -2226,7 +2264,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * The consolidation phase's own copy of the #947 deferral catch, parallel
      * to distillTick's -- testAPollDistillTickDefersOnA429WithoutStrikingOrCalling
      * proves that one, but nothing in the suite drove a 429 through
-     * consolidateTick's identical `catch (RecommendationRunRateLimitedException)`
+     * consolidateTick's identical `catch (ProviderRateLimitedException)`
      * block. A poll tick never blocks: the 429 must defer the run -- record
      * "retry not before", keep the run RUNNING and still in the consolidation
      * phase -- rather than burn a transport-failure strike or finalize on the

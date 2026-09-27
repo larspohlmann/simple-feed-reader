@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
 
 /**
  * The batch phase's concurrent fan-out (#344): one tick resolves a wave of
@@ -27,7 +27,7 @@ use App\Service\Recommendation\Exception\RecommendationRunRateLimitedException;
  * blocking plan retries in-tick and may still resolve the round, only
  * flagging rateLimitObserved for the caller to halve concurrency; the poll and
  * sweep drivers' deferring plan settles the round's rows and throws
- * RecommendationRunRateLimitedException, which is not the atomic-wave
+ * ProviderRateLimitedException, which is not the atomic-wave
  * transport failure -- the caller defers the run rather than striking it.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList")
@@ -56,7 +56,7 @@ final readonly class RecommendationBatchWave
      * @throws \App\Service\Ai\Exception\ProviderUnreachableException
      * @throws \App\Service\Ai\Exception\CredentialsRejectedException
      * @throws \App\Service\Ai\Exception\RetryableProviderException
-     * @throws RecommendationRunRateLimitedException
+     * @throws ProviderRateLimitedException
      */
     public function resolve(
         RecommendationRun $run,
@@ -204,7 +204,7 @@ final readonly class RecommendationBatchWave
      * RateLimitedCompletion. A transport failure is the atomic-wave rule (see
      * guardWaveTransport): settle every call and throw. A deferred result
      * settles every call as rate-limited and throws
-     * RecommendationRunRateLimitedException instead (#947). On success it
+     * ProviderRateLimitedException instead (#947). On success it
      * hands each reply back keyed by batch position, alongside whether this
      * round observed a 429, for the caller to parse, settle and accumulate.
      *
@@ -264,7 +264,7 @@ final readonly class RecommendationBatchWave
                 $recordedCall->abortAfterTransportFailure('Provider rate limited; deferring.');
             }
 
-            throw new RecommendationRunRateLimitedException($result->deferSeconds);
+            throw new ProviderRateLimitedException($result->deferSeconds);
         }
 
         $outcomes = $result->outcomes;
