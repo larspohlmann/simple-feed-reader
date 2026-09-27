@@ -9,6 +9,7 @@ use App\Entity\SavedSearch;
 final readonly class SavedSearchOutcome
 {
     private function __construct(
+        /** @noinspection AutowireWrongClass Built with new, never autowired */
         public SavedSearch $savedSearch,
         public bool $isNew,
     ) {
