@@ -550,14 +550,9 @@ final class AccountRestorerTest extends DbTestCase
         $subscriptionTag = reset($subscriptionTags);
         self::assertInstanceOf(SubscriptionTag::class, $subscriptionTag);
 
-        // A ManyToOne association loads lazily: without touching it here, the
-        // caller's later getUrl() call would try to initialize this proxy for
-        // the first time AFTER the source account's own feed row was deleted
-        // to force the target's rows to build fresh from the file — and find
-        // nothing to load. Touching it now, while the row still exists, bakes
-        // the value into the object so it survives that deletion detached.
         $feed = $subscription->getFeed();
-        $feed->getUrl();
+        // Load it now: the round-trip test deletes every feed row before it reads this one.
+        $this->em->initializeObject($feed);
 
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
