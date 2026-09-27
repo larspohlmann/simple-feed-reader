@@ -15,6 +15,8 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
@@ -2769,10 +2771,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $rows = $this->logRowsOfLatestRun();
         self::assertSame(
             [
-                ['distill', null, 'usable'],
-                ['batch', 1, 'usable'],
-                ['batch', 2, 'usable'],
-                ['consolidate', null, 'usable'],
+                [CallPhase::Distill, null, CallVerdict::Usable],
+                [CallPhase::Batch, 1, CallVerdict::Usable],
+                [CallPhase::Batch, 2, CallVerdict::Usable],
+                [CallPhase::Consolidate, null, CallVerdict::Usable],
             ],
             array_map(
                 static fn (array $row): array => [$row['phase'], $row['batchNumber'], $row['verdict']],
@@ -2806,7 +2808,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // (#638); this scenario is about the batch calls, so read only those.
         $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
-        self::assertSame(['unusable', 'usable'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
         self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
         self::assertStringContainsString(
             'Your previous reply was not usable.',
@@ -2827,7 +2829,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $rows = $this->batchLogRowsOfLatestRun();
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
@@ -2867,7 +2869,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $rows = $this->batchLogRowsOfLatestRun();
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertNotNull($log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
@@ -3124,7 +3126,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         return array_values(array_filter(
             $this->logRowsOfLatestRun(),
-            static fn (array $row): bool => RecommendationRunLog::PHASE_BATCH === $row['phase'],
+            static fn (array $row): bool => CallPhase::Batch === $row['phase'],
         ));
     }
 

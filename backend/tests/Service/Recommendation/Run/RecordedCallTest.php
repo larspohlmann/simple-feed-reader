@@ -7,6 +7,8 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\CompletionUsage;
@@ -44,7 +46,7 @@ final class RecordedCallTest extends DbTestCase
 
         $this->log = new RecommendationRunLog(
             $this->run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'the request',
@@ -64,7 +66,7 @@ final class RecordedCallTest extends DbTestCase
 
         $log = $this->reload($this->log);
         self::assertSame('the answer', $log->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
+        self::assertSame(CallVerdict::Usable, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertNull($log->getErrorDetail());
     }
@@ -86,7 +88,7 @@ final class RecordedCallTest extends DbTestCase
         $call->abortAfterTransportFailure('cURL error 28');
 
         $log = $this->reload($this->log);
-        self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
+        self::assertSame(CallVerdict::TransportFailed, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertSame('cURL error 28', $log->getErrorDetail());
     }

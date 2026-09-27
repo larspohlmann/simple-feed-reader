@@ -7,6 +7,8 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Completion\CompletionRequest;
@@ -73,7 +75,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $rows = $this->logRows();
         self::assertCount(1, $rows);
-        self::assertSame('batch', $rows[0]['phase']);
+        self::assertSame(CallPhase::Batch, $rows[0]['phase']);
         self::assertSame(2, $rows[0]['batchNumber']);
         self::assertSame(1, $rows[0]['attempt']);
         self::assertNull($rows[0]['verdict']);
@@ -126,7 +128,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $log = $this->freshLog($logId);
         self::assertSame('{"recommendations": []}', $log->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
+        self::assertSame(CallVerdict::Usable, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         $freshRun = $this->em->find(RecommendationRun::class, $this->run->getId());
         self::assertSame(0, $freshRun?->getStreamedChars());
@@ -143,7 +145,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $log = $this->freshLog($logId);
         self::assertSame('cut off', $log->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
+        self::assertSame(CallVerdict::TransportFailed, $log->getVerdict());
         self::assertSame(9_001, $log->getWireBytes());
         self::assertSame('cURL error 28', $log->getErrorDetail());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
@@ -168,7 +170,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $log = $this->freshLog($logId);
         self::assertSame('', $log->getResponseText());
         self::assertSame(1_900_000, $log->getWireBytes());
-        self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
+        self::assertSame(CallVerdict::TransportFailed, $log->getVerdict());
     }
 
     /**
@@ -219,7 +221,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->em->persist($otherRun);
         $otherLog = new RecommendationRunLog(
             $otherRun,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'other request',
@@ -237,7 +239,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $connection->update('recommendation_run', ['streamed_chars' => 777], ['id' => $otherRunId]);
         $connection->update(
             'recommendation_run_log',
-            ['response_text' => 'other original text', 'verdict' => RecommendationRunLog::VERDICT_USABLE],
+            ['response_text' => 'other original text', 'verdict' => CallVerdict::Usable->value],
             ['id' => $otherLogId],
         );
 
@@ -255,7 +257,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $otherLog = $this->em->find(RecommendationRunLog::class, $otherLogId);
         self::assertNotNull($otherLog);
         self::assertSame('other original text', $otherLog->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $otherLog->getVerdict());
+        self::assertSame(CallVerdict::Usable, $otherLog->getVerdict());
     }
 
     /**

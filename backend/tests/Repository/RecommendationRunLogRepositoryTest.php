@@ -7,6 +7,8 @@ namespace App\Tests\Repository;
 use App\Entity\CallOutcome;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -44,7 +46,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $run = $this->fixtures->createRun($this->user);
         $finished = $this->fixtures->log(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'req-body-a',
@@ -54,13 +56,13 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             $finished,
             'decoded text',
             new CallOutcome(
-                RecommendationRunLog::VERDICT_USABLE,
+                CallVerdict::Usable,
                 41_000,
                 new \DateTimeImmutable('2026-08-08T10:00:05Z'),
                 'stop',
             ),
         );
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'req-body-longer');
+        $this->fixtures->log($run, CallPhase::Consolidate, null, 1, 'req-body-longer');
         $this->em->flush();
 
         $rows = array_map(
@@ -77,10 +79,10 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                 [
                     'id' => $finished->getId(),
                     'runId' => $run->getId(),
-                    'phase' => 'batch',
+                    'phase' => CallPhase::Batch,
                     'batchNumber' => 1,
                     'attempt' => 1,
-                    'verdict' => 'usable',
+                    'verdict' => CallVerdict::Usable,
                     'requestBytes' => \strlen('req-body-a'),
                     'responseBytes' => \strlen('decoded text'),
                     'wireBytes' => 41_000,
@@ -92,7 +94,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
                 [
                     'id' => $rows[1]['id'],
                     'runId' => $run->getId(),
-                    'phase' => 'consolidate',
+                    'phase' => CallPhase::Consolidate,
                     'batchNumber' => null,
                     'attempt' => 1,
                     'verdict' => null,
@@ -112,18 +114,18 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     public function testStreamingTextReturnsOnlyVerdictlessRows(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $done = $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
         $this->fixtures->settleLog(
             $done,
             'finished text',
             new CallOutcome(
-                RecommendationRunLog::VERDICT_UNUSABLE,
+                CallVerdict::Unusable,
                 7,
                 new \DateTimeImmutable('2026-08-08T10:00:05Z'),
                 'length',
             ),
         );
-        $streaming = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 2, 1, 'r');
+        $streaming = $this->fixtures->log($run, CallPhase::Batch, 2, 1, 'r');
         $this->em->flush();
 
         $streamingId = $streaming->getId();
@@ -137,32 +139,32 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     public function testCountAttemptsMatchesOnBatchNumberIsNullForTheConsolidationPhase(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 1, 'r');
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 2, 'r');
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->fixtures->log($run, CallPhase::Consolidate, null, 1, 'r');
+        $this->fixtures->log($run, CallPhase::Consolidate, null, 2, 'r');
+        $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
         $this->em->flush();
 
-        self::assertSame(2, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_CONSOLIDATE, null));
-        self::assertSame(1, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 1));
-        self::assertSame(0, $this->logs->countAttempts($run, RecommendationRunLog::PHASE_BATCH, 2));
+        self::assertSame(2, $this->logs->countAttempts($run, CallPhase::Consolidate, null));
+        self::assertSame(1, $this->logs->countAttempts($run, CallPhase::Batch, 1));
+        self::assertSame(0, $this->logs->countAttempts($run, CallPhase::Batch, 2));
     }
 
     public function testCountAttemptsIsScopedToTheRunNotTheUser(): void
     {
         $earlierRun = $this->fixtures->createRun($this->user);
-        $this->fixtures->log($earlierRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->fixtures->log($earlierRun, CallPhase::Batch, 1, 1, 'r');
         $currentRun = $this->fixtures->createRun($this->user);
-        $this->fixtures->log($currentRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->fixtures->log($currentRun, CallPhase::Batch, 1, 1, 'r');
         $this->em->flush();
 
-        self::assertSame(1, $this->logs->countAttempts($currentRun, RecommendationRunLog::PHASE_BATCH, 1));
+        self::assertSame(1, $this->logs->countAttempts($currentRun, CallPhase::Batch, 1));
     }
 
     public function testGetOneForUserReturnsTheCallersRow(): void
     {
         $mine = $this->fixtures->log(
             $this->fixtures->createRun($this->user),
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'r',
@@ -178,7 +180,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $theirs = $this->fixtures->log(
             $this->fixtures->createRun($this->otherUser),
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'r',
@@ -196,9 +198,9 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     public function testDeleteForUserLeavesOtherUsersRows(): void
     {
         $run = $this->fixtures->createRun($this->user);
-        $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
         $otherRun = $this->fixtures->createRun($this->otherUser);
-        $kept = $this->fixtures->log($otherRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
+        $kept = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'r');
         $this->em->flush();
         $keptId = $kept->getId();
         self::assertNotNull($keptId);

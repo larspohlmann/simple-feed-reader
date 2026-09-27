@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
 use App\Enum\RunStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -31,7 +32,7 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
     }
 
     /**
-     * @return list<array{runId: int, phase: string, spanSeconds: float, batchCount: int}>
+     * @return list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}>
      */
     public function completedRunPhaseSpans(User $user, int $limit): array
     {
@@ -40,7 +41,7 @@ final class RecommendationRunTimingRepository extends ServiceEntityRepository
             return [];
         }
 
-        /** @var list<array{runId: int|string, phase: string, startedAt: string, finishedAt: string,
+        /** @var list<array{runId: int|string, phase: CallPhase, startedAt: string, finishedAt: string,
          *     batchCount: int|string}> $rows */
         $rows = $this->getEntityManager()->createQuery(
             'SELECT IDENTITY(l.run) AS runId, l.phase AS phase,'

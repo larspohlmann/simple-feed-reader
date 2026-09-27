@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Enum\CallPhase;
 
 /**
  * The average wall-clock cost of each recommendation phase, learned from an
@@ -33,7 +33,7 @@ final readonly class PhaseDurations
      * third. Null means no run qualified; the caller must then fall back to no
      * estimate, not a fabricated one.
      *
-     * @param list<array{runId: int, phase: string, spanSeconds: float, batchCount: int}> $spans
+     * @param list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}> $spans
      */
     public static function fromCompletedRunSpans(array $spans): ?self
     {
@@ -78,9 +78,9 @@ final readonly class PhaseDurations
      */
     private static function runDurations(array $phases): ?array
     {
-        $distill = $phases[RecommendationRunLog::PHASE_DISTILL] ?? null;
-        $batch = $phases[RecommendationRunLog::PHASE_BATCH] ?? null;
-        $consolidate = $phases[RecommendationRunLog::PHASE_CONSOLIDATE] ?? null;
+        $distill = $phases[CallPhase::Distill->value] ?? null;
+        $batch = $phases[CallPhase::Batch->value] ?? null;
+        $consolidate = $phases[CallPhase::Consolidate->value] ?? null;
         if (null === $distill || null === $batch || null === $consolidate || $batch['batchCount'] < 1) {
             return null;
         }
@@ -89,7 +89,7 @@ final readonly class PhaseDurations
     }
 
     /**
-     * @param list<array{runId: int, phase: string, spanSeconds: float, batchCount: int}> $spans
+     * @param list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}> $spans
      *
      * @return array<int, array<string, array{spanSeconds: float, batchCount: int}>>
      */
@@ -97,7 +97,7 @@ final readonly class PhaseDurations
     {
         $byRun = [];
         foreach ($spans as $span) {
-            $byRun[$span['runId']][$span['phase']] = [
+            $byRun[$span['runId']][$span['phase']->value] = [
                 'spanSeconds' => $span['spanSeconds'],
                 'batchCount' => $span['batchCount'],
             ];

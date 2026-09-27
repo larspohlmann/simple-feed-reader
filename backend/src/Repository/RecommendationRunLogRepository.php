@@ -7,6 +7,8 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -15,8 +17,8 @@ use Doctrine\Persistence\ManagerRegistry;
  * Reads are shaped for the ~2 s debug poll: the list query hydrates no
  * LONGTEXT at all (sizes come from SQL LENGTH()).
  *
- * @phpstan-type DebugLogRow array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
- *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
+ * @phpstan-type DebugLogRow array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
+ *     verdict: ?CallVerdict, requestBytes: int, responseBytes: int, wireBytes: int,
  *     createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable, errorDetail: ?string, finishReason: ?string}
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
@@ -31,8 +33,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     /** @return list<DebugLogRow> */
     public function listForRun(User $user, int $runId): array
     {
-        /** @var list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-         *     verdict: ?string, requestBytes: int|string, responseBytes: int|string,
+        /** @var list<array{id: int, runId: int, phase: CallPhase, batchNumber: ?int, attempt: int,
+         *     verdict: ?CallVerdict, requestBytes: int|string, responseBytes: int|string,
          *     wireBytes: int, createdAt: \DateTimeImmutable, finishedAt: ?\DateTimeImmutable,
          *     errorDetail: ?string, finishReason: ?string}> $rows */
         $rows = $this->createQueryBuilder('l')
@@ -87,7 +89,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      * number — the dedup phase has no batch number, and SQL `= NULL` never
      * matches, so that case needs an explicit `IS NULL`.
      */
-    public function countAttempts(RecommendationRun $run, string $phase, ?int $batchNumber): int
+    public function countAttempts(RecommendationRun $run, CallPhase $phase, ?int $batchNumber): int
     {
         $qb = $this->createQueryBuilder('l')
             ->select('COUNT(l.id)')

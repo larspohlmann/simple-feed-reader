@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
@@ -197,7 +198,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         $this->resolveConsolidation($run);
 
-        self::assertSame(['usable'], $this->verdictsOf($run));
+        self::assertSame([CallVerdict::Usable], $this->verdictsOf($run));
     }
 
     public function testAnUnusableReplySettlesItsCallAsUnusable(): void
@@ -208,7 +209,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
         $this->resolveConsolidation($run);
 
-        self::assertSame(['unusable'], $this->verdictsOf($run));
+        self::assertSame([CallVerdict::Unusable], $this->verdictsOf($run));
     }
 
     public function testACancellationDuringTheProviderCallStopsBeforeReturningAnUnusableOutcome(): void
@@ -251,7 +252,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $rows = $logs->listForRun($this->user, $run->requireId());
 
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         self::assertSame('gone', $rows[0]['errorDetail']);
     }
 
@@ -380,7 +381,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         return $entry->requireId();
     }
 
-    /** @return list<?string> */
+    /** @return list<?CallVerdict> */
     private function verdictsOf(RecommendationRun $run): array
     {
         /** @var RecommendationRunLogRepository $logs */

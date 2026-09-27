@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Enum\CallPhase;
 use App\Service\Recommendation\Run\PhaseDurations;
 use PHPUnit\Framework\TestCase;
 
@@ -16,12 +16,12 @@ final class PhaseDurationsTest extends TestCase
         // consolidate 30s. Run 2: distill 20s, batch phase 30s over 2 batches
         // (15s/batch), consolidate 50s.
         $durations = PhaseDurations::fromCompletedRunSpans([
-            $this->span(1, RecommendationRunLog::PHASE_DISTILL, 10.0, 0),
-            $this->span(1, RecommendationRunLog::PHASE_BATCH, 40.0, 4),
-            $this->span(1, RecommendationRunLog::PHASE_CONSOLIDATE, 30.0, 0),
-            $this->span(2, RecommendationRunLog::PHASE_DISTILL, 20.0, 0),
-            $this->span(2, RecommendationRunLog::PHASE_BATCH, 30.0, 2),
-            $this->span(2, RecommendationRunLog::PHASE_CONSOLIDATE, 50.0, 0),
+            $this->span(1, CallPhase::Distill, 10.0, 0),
+            $this->span(1, CallPhase::Batch, 40.0, 4),
+            $this->span(1, CallPhase::Consolidate, 30.0, 0),
+            $this->span(2, CallPhase::Distill, 20.0, 0),
+            $this->span(2, CallPhase::Batch, 30.0, 2),
+            $this->span(2, CallPhase::Consolidate, 50.0, 0),
         ]);
 
         self::assertNotNull($durations);
@@ -33,9 +33,9 @@ final class PhaseDurationsTest extends TestCase
     public function testPredictedTotalWeightsEachRemainingBatch(): void
     {
         $durations = PhaseDurations::fromCompletedRunSpans([
-            $this->span(1, RecommendationRunLog::PHASE_DISTILL, 10.0, 0),
-            $this->span(1, RecommendationRunLog::PHASE_BATCH, 40.0, 4),
-            $this->span(1, RecommendationRunLog::PHASE_CONSOLIDATE, 30.0, 0),
+            $this->span(1, CallPhase::Distill, 10.0, 0),
+            $this->span(1, CallPhase::Batch, 40.0, 4),
+            $this->span(1, CallPhase::Consolidate, 30.0, 0),
         ]);
 
         self::assertNotNull($durations);
@@ -47,8 +47,8 @@ final class PhaseDurationsTest extends TestCase
     {
         // The only run has no consolidate row, so nothing can be averaged.
         $durations = PhaseDurations::fromCompletedRunSpans([
-            $this->span(1, RecommendationRunLog::PHASE_DISTILL, 10.0, 0),
-            $this->span(1, RecommendationRunLog::PHASE_BATCH, 40.0, 4),
+            $this->span(1, CallPhase::Distill, 10.0, 0),
+            $this->span(1, CallPhase::Batch, 40.0, 4),
         ]);
 
         self::assertNull($durations);
@@ -60,9 +60,9 @@ final class PhaseDurationsTest extends TestCase
     }
 
     /**
-     * @return array{runId: int, phase: string, spanSeconds: float, batchCount: int}
+     * @return array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}
      */
-    private function span(int $runId, string $phase, float $spanSeconds, int $batchCount): array
+    private function span(int $runId, CallPhase $phase, float $spanSeconds, int $batchCount): array
     {
         return ['runId' => $runId, 'phase' => $phase, 'spanSeconds' => $spanSeconds, 'batchCount' => $batchCount];
     }

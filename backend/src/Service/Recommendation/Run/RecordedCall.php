@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\CallOutcome;
-use App\Entity\RecommendationRunLog;
+use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamObserver;
@@ -82,12 +82,12 @@ final class RecordedCall implements CompletionStreamObserver
 
     public function finishUsable(string $content): void
     {
-        $this->finish($content, RecommendationRunLog::VERDICT_USABLE);
+        $this->finish($content, CallVerdict::Usable);
     }
 
     public function finishUnusable(string $content): void
     {
-        $this->finish($content, RecommendationRunLog::VERDICT_UNUSABLE);
+        $this->finish($content, CallVerdict::Unusable);
     }
 
     /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */
@@ -101,12 +101,12 @@ final class RecordedCall implements CompletionStreamObserver
         }
 
         $this->calls->settleTransportFailure(
-            $this->settlement($this->logId, RecommendationRunLog::VERDICT_TRANSPORT_FAILED),
+            $this->settlement($this->logId, CallVerdict::TransportFailed),
             $errorDetail,
         );
     }
 
-    private function finish(string $content, string $verdict): void
+    private function finish(string $content, CallVerdict $verdict): void
     {
         $this->resetLiveness();
         $this->bankUsage();
@@ -118,7 +118,7 @@ final class RecordedCall implements CompletionStreamObserver
         $this->calls->settleAnswered($this->settlement($this->logId, $verdict), $content);
     }
 
-    private function settlement(int $logId, string $verdict): CallSettlement
+    private function settlement(int $logId, CallVerdict $verdict): CallSettlement
     {
         return new CallSettlement(
             $logId,

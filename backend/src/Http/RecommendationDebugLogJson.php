@@ -45,6 +45,8 @@ final class RecommendationDebugLogJson
     {
         return [
             ...$row,
+            'phase' => $row['phase']->value,
+            'verdict' => $row['verdict']?->value,
             'createdAt' => $row['createdAt']->format(\DATE_ATOM),
             'finishedAt' => $row['finishedAt']?->format(\DATE_ATOM),
         ];
@@ -85,10 +87,10 @@ final class RecommendationDebugLogJson
     {
         return [
             'id' => $log->getId(),
-            'phase' => $log->getPhase(),
+            'phase' => $log->getPhase()->value,
             'batchNumber' => $log->getBatchNumber(),
             'attempt' => $log->getAttempt(),
-            'verdict' => $log->getVerdict(),
+            'verdict' => $log->getVerdict()?->value,
             'requestBody' => $log->getRequestBody(),
             'responseText' => $log->getResponseText(),
             'wireBytes' => $log->getWireBytes(),

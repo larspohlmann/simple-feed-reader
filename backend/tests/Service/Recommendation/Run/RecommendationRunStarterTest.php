@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
@@ -227,7 +228,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->em->persist($run);
         $this->em->persist(new RecommendationRunLog(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             $requestBody,
@@ -246,7 +247,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->em->persist($failed);
         $this->em->persist(new RecommendationRunLog(
             $failed,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'kept request',
