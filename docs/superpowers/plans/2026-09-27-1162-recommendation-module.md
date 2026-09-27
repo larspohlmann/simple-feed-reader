@@ -1171,6 +1171,24 @@ EOF
 The body must contain no "close", "closes", "fix", "fixes", "resolve" or "resolves".
 
 
+### Execution rulings (PR A)
+
+- **Preflight (opus scan, dry run on a scratch clone):**
+  - A3 Step 3's first grep filters with `(\\|;)`, because namespace lines are expected hits.
+  - A1b Step 7's second grep is `^use App\\Service\\Recommendation`.
+  - A1b adds `ProviderRateLimitedExceptionTest`, which pins the message and `waitSeconds()`.
+  - Pure moves and A1b's renames trim no docblock (D6). The comment bar applies only to the three docblocks A1 writes.
+  - `MeilisearchIndex`'s slash-path mention of the chat client goes stale; it is carried to #1171.
+- **A1:** one extra advancer test covers the only path where a worker wave is still rate-limited after its retries: the wave halves and counts a transport failure. Infection had flagged the untested `RetryableProviderException` arm. The test's empty `catch` follows the suite's existing pattern.
+- **Final review and /simplify:**
+  - The moves left import blocks interleaved. The fix wave sorts the file-level `use` block of every PHP file the branch changed (19 files, order only).
+  - `CompletionStreamHeartbeatWiringTest` stays under `Ai/Completion`: it is a container-wiring test across modules, and the move map placed it there.
+  - `RecommendationEtaEstimator` and `PhaseDurations` stay in `Run`, as D3's map puts them. Whether they belong in `Feed` goes to the planner.
+  - `Service/Reading` imports `Recommendation\Feed\ViewerTimeZone`, a pre-existing coupling carried to #1169.
+  - `RateLimitedCompletion`'s class docblock still speaks of drivers, a rewording carried to PR B/C.
+- **Gates:** the MySQL leg runs without `TEST_TOKEN`, because the dev `feedreader` user cannot create `feedreader_test<token>`, and the container leg shares no database with the native runs. The real run's token is the output line matching `^eyJ`: `lexik:jwt:generate-token` ends with a blank line, so `tail -n 1` yields an empty token and a 401.
+- **Real run:** run 124 as user 2 (`qwen/qwen3.7-flash`) completed with 6/6 batches, 0 transport failures, every call usable on attempt 1, and no new warning in the dev log.
+
 ---
 
 # PR B — one tick context, one envelope, one wave context (`Refs #1162`)
