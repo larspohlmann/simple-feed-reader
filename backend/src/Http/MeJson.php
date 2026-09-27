@@ -29,7 +29,7 @@ final class MeJson
             'status' => $user->getStatus()->value,
             'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'locale' => $user->getLocale(),
-            'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            'trialEndsAt' => TrialEndJson::of($user),
             'mail' => ['enabled' => $mailEnabled],
             'emailVerified' => $user->isEmailVerified(),
             'preferences' => [

@@ -13,6 +13,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Tester\ApplicationTester;
 use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Lock\LockFactory;
 
@@ -87,11 +88,15 @@ final class RefreshFeedsCommandTest extends DbTestCase
         $lock->release();
     }
 
-    public function testInvalidBudgetIsRejected(): void
+    public function testAMalformedBudgetIsReportedAndRefused(): void
     {
-        $tester = $this->tester();
-        $exitCode = $tester->execute(['--budget' => 'not-a-number']);
+        $application = new Application(self::$kernel ?? self::bootKernel());
+        $application->setAutoExit(false);
+        $tester = new ApplicationTester($application);
+
+        $exitCode = $tester->run(['command' => 'app:feeds:refresh', '--budget' => 'not-a-number']);
 
         self::assertSame(Command::INVALID, $exitCode);
+        self::assertStringContainsString('"not-a-number" is not', $tester->getDisplay());
     }
 }

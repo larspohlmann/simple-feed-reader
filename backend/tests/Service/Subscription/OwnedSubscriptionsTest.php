@@ -8,12 +8,15 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Subscription\OwnedSubscriptions;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use App\Exception\InvalidSelectionException;
 
 final class OwnedSubscriptionsTest extends KernelTestCase
 {
+    use SeedsUsers;
+
     private EntityManagerInterface $em;
     private OwnedSubscriptions $owned;
 
@@ -26,14 +29,6 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $owned = self::getContainer()->get(OwnedSubscriptions::class);
         self::assertInstanceOf(OwnedSubscriptions::class, $owned);
         $this->owned = $owned;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($user);
-
-        return $user;
     }
 
     private function subscription(User $user, string $url): Subscription

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth;
 
+use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -98,6 +99,27 @@ final class AltchaServiceTest extends TestCase
         $payload = $this->payloadFor($number, $challenge->salt, $challenge->challenge, $challenge->signature);
 
         self::assertTrue($this->service->verify($payload));
+    }
+
+    public function testRequireSolvedRefusesAnUnsolvedChallengeOnTheAltchaField(): void
+    {
+        try {
+            $this->service->requireSolved('garbage');
+            self::fail('An unsolved challenge must be refused.');
+        } catch (ValidationException $refusal) {
+            self::assertSame(['altcha' => ['The anti-spam challenge was not solved correctly.']], $refusal->errors);
+        }
+    }
+
+    public function testRequireSolvedSpendsACorrectSolution(): void
+    {
+        $challenge = $this->service->createChallenge();
+        $number = $this->solve($challenge->salt, $challenge->maxNumber, $challenge->challenge);
+        $payload = $this->payloadFor($number, $challenge->salt, $challenge->challenge, $challenge->signature);
+
+        $this->service->requireSolved($payload);
+
+        self::assertFalse($this->service->verify($payload), 'a solution that passed must be claimed against replay');
     }
 
     public function testRejectsAWrongNumber(): void

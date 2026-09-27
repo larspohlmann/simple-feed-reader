@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Entity;
 
-use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\PasskeyRegistrations;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class UserPasskeyTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testACredentialRoundTripsThroughTheDatabase(): void
     {
         $user = $this->user('passkey-owner@example.test');
@@ -176,14 +176,6 @@ final class UserPasskeyTest extends DbTestCase
         $this->em->clear();
 
         self::assertSame(0, $this->repository()->countAll());
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function repository(): UserPasskeyRepository

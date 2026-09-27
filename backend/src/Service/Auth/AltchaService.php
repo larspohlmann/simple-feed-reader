@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Auth;
 
+use App\Exception\ValidationException;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -135,6 +136,17 @@ final readonly class AltchaService
         }
 
         return $this->claimOnce($signature);
+    }
+
+    /**
+     * @throws ValidationException
+     * @throws InvalidArgumentException
+     */
+    public function requireSolved(string $payload): void
+    {
+        if (!$this->verify($payload)) {
+            throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
+        }
     }
 
     /**

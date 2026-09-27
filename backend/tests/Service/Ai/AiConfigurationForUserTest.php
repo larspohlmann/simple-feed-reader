@@ -10,18 +10,11 @@ use App\Service\Ai\AiConfigurationForUser;
 use App\Service\Ai\Exception\ConfigurationNotFoundException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class AiConfigurationForUserTest extends DbTestCase
 {
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
+    use SeedsUsers;
 
     private function persistConfiguration(User $user): AiProviderSettings
     {

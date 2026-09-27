@@ -10,25 +10,18 @@ use App\Entity\User;
 use App\Repository\SubscriptionCountsByUserId;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionCountsByUserIdTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private function counts(): SubscriptionCountsByUserId
     {
         $counts = self::getContainer()->get(SubscriptionCountsByUserId::class);
         self::assertInstanceOf(SubscriptionCountsByUserId::class, $counts);
 
         return $counts;
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function feed(string $url): Feed

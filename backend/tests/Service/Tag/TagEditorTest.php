@@ -13,11 +13,14 @@ use App\Entity\User;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\TagEditor;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SeedsUsers;
 
 final class TagEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+    use SeedsUsers;
+
     public function testCreateAppendsTheTagAfterTheUsersExistingOnes(): void
     {
         $user = $this->user('tag-creator@example.com');
@@ -99,14 +102,6 @@ final class TagEditorTest extends DbTestCase
         return $editor;
     }
 
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
-
     private function taggedSubscription(User $user, Tag $tag): Subscription
     {
         $feed = new Feed('https://tag-editor.example.com/rss');
@@ -117,15 +112,5 @@ final class TagEditorTest extends DbTestCase
         $this->em->flush();
 
         return $subscription;
-    }
-
-    private function reload(Tag $tag): Tag
-    {
-        $id = $tag->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(Tag::class, $id);
-        self::assertInstanceOf(Tag::class, $reloaded);
-
-        return $reloaded;
     }
 }

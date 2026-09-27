@@ -25,6 +25,7 @@ use App\Service\Search\SavedSearchSlug;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BackupFieldDeclarations;
 use App\Tests\Support\FullyPopulatedAccount;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -41,6 +42,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AccountRestorerTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     private const string ONE_URL = 'https://one.example/feed.xml';
     private const string TWO_URL = 'https://two.example/feed.xml';
     private const string FOUNDATION_FEED_URL = 'https://foundation.example/feed.xml';
@@ -335,15 +338,6 @@ final class AccountRestorerTest extends DbTestCase
         return (int) $value;
     }
 
-    private function reloadUser(int $userId): User
-    {
-        $this->em->clear();
-        $user = $this->em->find(User::class, $userId);
-        self::assertInstanceOf(User::class, $user);
-
-        return $user;
-    }
-
     /** @return list<Subscription> */
     private function subscriptionsOf(int $userId): array
     {
@@ -384,7 +378,7 @@ final class AccountRestorerTest extends DbTestCase
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
 
-        $result = $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         self::assertSame(2, $result->tags);
         self::assertSame(2, $result->savedSearches);
@@ -393,7 +387,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(0, $result->feeds);
         self::assertSame(2, $result->subscriptions);
 
-        $restored = $this->reloadUser($userId);
+        $restored = $this->reload($user);
         self::assertSame('de', $restored->getLocale());
         self::assertTrue($restored->getPreferences()->isScrapeFallbackEnabled());
 
@@ -425,7 +419,7 @@ final class AccountRestorerTest extends DbTestCase
         $userId = $user->requireId();
         $gzip = $this->backupOf($user);
 
-        $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         $this->em->clear();
         $restored = $this->em->getRepository(SavedSearch::class)
@@ -463,14 +457,13 @@ final class AccountRestorerTest extends DbTestCase
         $sourceRows = $this->fixtureRowsOf($source);
 
         $target = $this->users->create('drift-target@example.com');
-        $targetId = $target->requireId();
         $this->deleteEveryFeed();
 
-        $this->restorer()->start($this->reloadUser($targetId), $foundation, 'REPLACE');
+        $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
         foreach ($entryParts as $entryPart) {
-            $this->entryPartRestorer()->load($this->reloadUser($targetId), $entryPart);
+            $this->entryPartRestorer()->load($this->reload($target), $entryPart);
         }
-        $targetRows = $this->fixtureRowsOf($this->reloadUser($targetId));
+        $targetRows = $this->fixtureRowsOf($this->reload($target));
 
         $this->assertFieldsRoundTripped(User::class, $sourceRows['user'], $targetRows['user']);
         $this->assertFieldsRoundTripped(Preferences::class, $sourceRows['preferences'], $targetRows['preferences']);
@@ -550,14 +543,9 @@ final class AccountRestorerTest extends DbTestCase
         $subscriptionTag = reset($subscriptionTags);
         self::assertInstanceOf(SubscriptionTag::class, $subscriptionTag);
 
-        // A ManyToOne association loads lazily: without touching it here, the
-        // caller's later getUrl() call would try to initialize this proxy for
-        // the first time AFTER the source account's own feed row was deleted
-        // to force the target's rows to build fresh from the file — and find
-        // nothing to load. Touching it now, while the row still exists, bakes
-        // the value into the object so it survives that deletion detached.
         $feed = $subscription->getFeed();
-        $feed->getUrl();
+        // Load it now: the round-trip test deletes every feed row before it reads this one.
+        $this->em->initializeObject($feed);
 
         $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
@@ -663,7 +651,7 @@ final class AccountRestorerTest extends DbTestCase
         $before = $this->subscriptionShapes($userId);
         $this->deleteEveryFeed();
 
-        $result = $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         self::assertSame(2, $result->feeds);
         self::assertSame(2, $result->subscriptions);
@@ -692,7 +680,6 @@ final class AccountRestorerTest extends DbTestCase
     public function testAFeedRowAnotherUserReadsIsNotModified(): void
     {
         $user = $this->seededUser('shared-feed@example.com');
-        $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $feedId = $this->scalarInt('SELECT id FROM feed WHERE url = ?', [self::ONE_URL]);
         $this->em->clear();
@@ -704,7 +691,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-03 10:00:00')));
         $this->em->flush();
 
-        $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         $this->em->clear();
         $after = $this->em->find(Feed::class, $feedId);
@@ -721,7 +708,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->em->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
         $this->em->clear();
 
-        $result = $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $result = $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         self::assertSame(1, $result->feeds);
         self::assertSame(2, $result->subscriptions);
@@ -743,7 +730,7 @@ final class AccountRestorerTest extends DbTestCase
         $targetId = $target->requireId();
 
         try {
-            $this->restorer()->start($this->reloadUser($targetId), $gzip, 'REPLACE');
+            $this->restorer()->start($this->reload($target), $gzip, 'REPLACE');
             self::fail('The restore accepted a backup that does not fit the account.');
         } catch (BackupDoesNotFitException) {
             // Expected — and nothing may have been deleted by now.
@@ -762,7 +749,7 @@ final class AccountRestorerTest extends DbTestCase
         $gzip = $this->backupOf($user);
 
         try {
-            $this->restorer()->start($this->reloadUser($userId), $gzip, null);
+            $this->restorer()->start($this->reload($user), $gzip, null);
             self::fail('The restore ran without the REPLACE confirmation.');
         } catch (ValidationException $e) {
             self::assertArrayHasKey('confirm', $e->errors);
@@ -810,8 +797,8 @@ final class AccountRestorerTest extends DbTestCase
         $before = $this->subscriptionShapes($userId);
         $this->deleteEveryFeed();
 
-        $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
-        $second = $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+        $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
+        $second = $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
         // The second run finds every shared row already in place, so it
         // re-creates only what the wipe removed.
@@ -824,7 +811,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM feed'));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$userId]));
         self::assertSame($before, $this->subscriptionShapes($userId));
-        self::assertSame('de', $this->reloadUser($userId)->getLocale());
+        self::assertSame('de', $this->reload($user)->getLocale());
     }
 
     /**
@@ -855,11 +842,11 @@ final class AccountRestorerTest extends DbTestCase
         $entryParts = $this->entryPartsOf($user);
         $this->deleteEveryFeed();
 
-        $this->restorer()->start($this->reloadUser($userId), $foundation, 'REPLACE');
+        $this->restorer()->start($this->reload($user), $foundation, 'REPLACE');
         $entriesCreated = 0;
         $entryStatesCreated = 0;
         foreach ($entryParts as $entryPart) {
-            $result = $this->entryPartRestorer()->load($this->reloadUser($userId), $entryPart);
+            $result = $this->entryPartRestorer()->load($this->reload($user), $entryPart);
             $entriesCreated += $result->entries;
             $entryStatesCreated += $result->entryStates;
         }
@@ -901,7 +888,7 @@ final class AccountRestorerTest extends DbTestCase
         $gzip = $this->withoutTheFirstFeedLine($this->backupOf($user));
 
         try {
-            $this->restorer()->start($this->reloadUser($userId), $gzip, 'REPLACE');
+            $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
             self::fail('The restore accepted a subscription whose feed the file never declares.');
         } catch (InvalidBackupException) {
             // Expected — and nothing may have been deleted by now.

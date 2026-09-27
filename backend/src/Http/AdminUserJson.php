@@ -63,7 +63,7 @@ final class AdminUserJson
                 'feedsCount' => $feedCounts[$user->getId()] ?? 0,
                 'tagsCount' => $tagCounts[$user->getId()] ?? 0,
                 'lastLoginAt' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
-                'trialEndsAt' => $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+                'trialEndsAt' => TrialEndJson::of($user),
                 'maxSubscriptions' => $user->getMaxSubscriptions(),
             ],
             $users,
@@ -112,7 +112,7 @@ final class AdminUserJson
     public static function limits(User $user): AdminUserLimits
     {
         return new AdminUserLimits(
-            trialEndsAt: $user->getTrialEndsAt()?->format(\DateTimeInterface::ATOM),
+            trialEndsAt: TrialEndJson::of($user),
             maxSubscriptions: $user->getMaxSubscriptions(),
         );
     }

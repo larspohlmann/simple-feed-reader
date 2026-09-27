@@ -14,11 +14,12 @@ use App\Exception\InvalidSelectionException;
 use App\Repository\TagRepository;
 use App\Service\Tag\TagOrdering;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class TagOrderingTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testReorderGivesEachTagItsIndexAndReturnsThemInThatOrder(): void
     {
         $user = $this->user('tag-orderer@example.com');
@@ -81,14 +82,6 @@ final class TagOrderingTest extends DbTestCase
         self::assertInstanceOf(TagOrdering::class, $ordering);
 
         return $ordering;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function tag(User $user, string $name, int $position): Tag

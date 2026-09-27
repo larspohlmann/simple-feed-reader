@@ -25,6 +25,7 @@ use App\Service\Backup\RestoreEntryLoaderFactory;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
@@ -32,6 +33,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class EntryPartRestorerTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     private const string FEED_URL = 'https://entry-part.example/feed.xml';
 
     private UserFactory $users;
@@ -135,7 +138,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testARetriedPartCreatesNothingAndFailsNothing(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $gzip = $this->entryPart([
             $this->entryLine('a'),
             $this->entryStateLine('a', isFavorite: true),
@@ -144,7 +146,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $restorer->load($user, $gzip);
         $this->em->clear();
 
-        $second = $restorer->load($this->reloadUser($userId), $gzip);
+        $second = $restorer->load($this->reload($user), $gzip);
 
         self::assertSame(0, $second->entries);
         self::assertSame(0, $second->entryStates);
@@ -156,7 +158,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnEntryTheSchedulerAlreadyFetchedIsKeptAndStillGetsItsState(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'Scheduler Title');
         $this->em->flush();
@@ -166,7 +167,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $this->entryStateLine('a', isFavorite: true),
         ]);
 
-        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entries);
         self::assertSame(1, $result->entryStates);
@@ -174,7 +175,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $entry = $this->findEntry('a');
         self::assertNotNull($entry);
         self::assertSame('Scheduler Title', $entry->getTitle());
-        $state = $this->stateFor($this->reloadUser($userId), $entry);
+        $state = $this->stateFor($this->reload($user), $entry);
         self::assertNotNull($state);
         self::assertTrue($state->isFavorite());
     }
@@ -182,7 +183,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnExistingStateRowIsLeftUntouched(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
@@ -192,13 +192,13 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $gzip = $this->entryPart([$this->entryStateLine('a', isFavorite: true)]);
 
-        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entryStates);
         $this->em->clear();
         $entry = $this->findEntry('a');
         self::assertNotNull($entry);
-        $reloaded = $this->stateFor($this->reloadUser($userId), $entry);
+        $reloaded = $this->stateFor($this->reload($user), $entry);
         self::assertNotNull($reloaded);
         self::assertFalse($reloaded->isFavorite());
     }
@@ -206,7 +206,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAFeedAnotherAccountReadsGetsNoNewEntries(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $stranger = $this->users->create($this->nextEmail());
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-02 00:00:00')));
@@ -214,7 +213,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $gzip = $this->entryPart([$this->entryLine('a')]);
 
-        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entries);
         $this->em->clear();
@@ -265,7 +264,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testItRefusesAPartThatWouldBreachTheAccountEntryCeiling(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
         $this->makeEntry($feed, 'existing-b', 'B');
@@ -275,20 +273,19 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->expectException(BackupDoesNotFitException::class);
 
-        $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+        $this->restorer(accountEntryCeiling: 2)->load($this->reload($user), $gzip);
     }
 
     public function testAPartThatExactlyFillsTheAccountEntryCeilingIsAccepted(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
         $this->em->flush();
 
         $gzip = $this->entryPart([$this->entryLine('new')]);
 
-        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reload($user), $gzip);
 
         self::assertSame(1, $result->entries);
     }
@@ -296,7 +293,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAPartReimportingAlreadyPresentEntriesFitsUnderTheCeiling(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');
@@ -304,7 +300,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $gzip = $this->entryPart([$this->entryLine('a'), $this->entryLine('b')]);
 
-        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer(accountEntryCeiling: 2)->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entries);
     }
@@ -312,7 +308,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testTheCeilingCountsOnlyTheGenuinelyNewEntriesOfAPart(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
         $this->em->flush();
@@ -325,14 +320,13 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->expectException(BackupDoesNotFitException::class);
 
-        $this->restorer(accountEntryCeiling: 2)->load($this->reloadUser($userId), $gzip);
+        $this->restorer(accountEntryCeiling: 2)->load($this->reload($user), $gzip);
     }
 
     public function testTheCeilingSumsTheNewEntriesOfEveryFeedThePartNames(): void
     {
         $secondFeedUrl = 'https://second.example/feed.xml';
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $this->subscribeTo($user, $secondFeedUrl);
 
         $gzip = $this->entryPart([
@@ -342,14 +336,13 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->expectException(BackupDoesNotFitException::class);
 
-        $this->restorer(accountEntryCeiling: 1)->load($this->reloadUser($userId), $gzip);
+        $this->restorer(accountEntryCeiling: 1)->load($this->reload($user), $gzip);
     }
 
     public function testItLoadsTheEntriesOfEveryFeedThePartNames(): void
     {
         $secondFeedUrl = 'https://second.example/feed.xml';
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $this->subscribeTo($user, $secondFeedUrl);
 
         $gzip = $this->entryPart([
@@ -357,7 +350,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $this->entryLine('b', feedUrl: $secondFeedUrl),
         ]);
 
-        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(2, $result->entries);
         $this->em->clear();
@@ -368,7 +361,6 @@ final class EntryPartRestorerTest extends DbTestCase
     public function testAnEntryStateFollowingAnAlreadyStatedOneInTheSamePartIsStillCreated(): void
     {
         $user = $this->subscribedUser(self::FEED_URL);
-        $userId = $user->requireId();
         $feed = $this->feedByUrl(self::FEED_URL);
         $entryA = $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');
@@ -383,13 +375,13 @@ final class EntryPartRestorerTest extends DbTestCase
             $this->entryStateLine('b', isFavorite: true),
         ]);
 
-        $result = $this->restorer()->load($this->reloadUser($userId), $gzip);
+        $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(1, $result->entryStates);
         $this->em->clear();
         $entryB = $this->findEntry('b');
         self::assertNotNull($entryB);
-        $stateB = $this->stateFor($this->reloadUser($userId), $entryB);
+        $stateB = $this->stateFor($this->reload($user), $entryB);
         self::assertNotNull($stateB);
         self::assertTrue($stateB->isFavorite());
     }
@@ -525,15 +517,6 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertNotNull($state);
 
         return $state;
-    }
-
-    private function reloadUser(int $userId): User
-    {
-        $this->em->clear();
-        $user = $this->em->find(User::class, $userId);
-        self::assertInstanceOf(User::class, $user);
-
-        return $user;
     }
 
     /**

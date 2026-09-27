@@ -14,7 +14,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class CatalogCategoryRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
         parent::__construct($registry, CatalogCategory::class);
     }
@@ -74,11 +74,6 @@ class CatalogCategoryRepository extends ServiceEntityRepository
 
     public function nextPosition(): int
     {
-        $max = $this->createQueryBuilder('c')
-            ->select('MAX(c.position)')
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $max ? 0 : (int) $max + 1;
+        return $this->nextPosition->in($this->createQueryBuilder('c'));
     }
 }

@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Entity\WorkerHeartbeat;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\SweepStreamHeartbeat;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use Symfony\Component\Clock\MockClock;
 
 /**
@@ -18,6 +17,8 @@ use Symfony\Component\Clock\MockClock;
  */
 final class SweepStreamHeartbeatTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+
     public function testItWritesNothingUntilASweepArmsIt(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');
@@ -135,17 +136,11 @@ final class SweepStreamHeartbeatTest extends DbTestCase
 
     private function presence(MockClock $clock): WorkerPresence
     {
-        /** @var WorkerHeartbeatRepository $heartbeats */
-        $heartbeats = self::getContainer()->get(WorkerHeartbeatRepository::class);
-
-        return new WorkerPresence($heartbeats, $clock);
+        return new WorkerPresence($this->heartbeats(), $clock);
     }
 
     private function touchedAt(RecommendationDriverKind $kind): ?\DateTimeImmutable
     {
-        $this->em->clear();
-        $heartbeat = $this->em->getRepository(WorkerHeartbeat::class)->find($kind->heartbeatName());
-
-        return $heartbeat?->getTouchedAt();
+        return $this->heartbeats()->findTouchedAt($kind->heartbeatName());
     }
 }

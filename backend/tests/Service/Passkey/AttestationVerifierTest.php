@@ -11,11 +11,9 @@ use App\Service\Passkey\Exception\AttestationRejectedException;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
-use App\Tests\Support\UserFactory;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Tests\Support\SeedsUsers;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Uid\Uuid;
 
 /**
@@ -28,6 +26,7 @@ use Symfony\Component\Uid\Uuid;
 final class AttestationVerifierTest extends KernelTestCase
 {
     use PinsPasskeyRelyingParty;
+    use SeedsUsers;
 
     private const string RELYING_PARTY_ID = 'example.test';
     private const string ORIGIN = 'https://example.test';
@@ -43,7 +42,7 @@ final class AttestationVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('wrong-shape@example.test');
+        $user = $this->user('wrong-shape@example.test');
         $enrolled = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
             self::ORIGIN,
@@ -82,7 +81,7 @@ final class AttestationVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('no-handle@example.test');
+        $user = $this->user('no-handle@example.test');
         $fixture = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
             self::ORIGIN,
@@ -114,7 +113,7 @@ final class AttestationVerifierTest extends KernelTestCase
     {
         self::bootKernel();
         $this->pinRelyingParty(self::RELYING_PARTY_ID, 'Example Reader', self::ORIGIN);
-        $user = $this->createUser('real-aaguid@example.test');
+        $user = $this->user('real-aaguid@example.test');
         $aaguid = random_bytes(16);
         $fixture = PasskeyFixtures::attestation(
             self::RELYING_PARTY_ID,
@@ -132,22 +131,6 @@ final class AttestationVerifierTest extends KernelTestCase
         );
 
         self::assertSame(Uuid::fromBinary($aaguid)->toRfc4122(), $stored->getAaguid());
-    }
-
-    private function createUser(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em(), $hasher))->create($email);
-    }
-
-    private function em(): EntityManagerInterface
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-
-        return $em;
     }
 
     private function issueRegistrationChallenge(string $challenge, User $user, string $userHandle): string

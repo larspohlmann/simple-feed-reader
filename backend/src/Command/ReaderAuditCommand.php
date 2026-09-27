@@ -74,7 +74,7 @@ final class ReaderAuditCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $userId = $this->users->resolve($this->option($input, 'user'));
+        $userId = $this->users->resolve(ConsoleOption::text($input, 'user'));
         $sample = $this->articlesToAudit($input, $userId);
         $mine = (new AuditShard($this->number($input, 'shard'), $this->number($input, 'shards')))->pick($sample);
 
@@ -86,8 +86,8 @@ final class ReaderAuditCommand extends Command
             \count($mine),
         ));
 
-        $file = AuditFindingsFile::create((string) $this->option($input, 'out'));
-        $link = new ReaderLink((string) $this->option($input, 'base-url'));
+        $file = AuditFindingsFile::create((string) ConsoleOption::text($input, 'out'));
+        $link = new ReaderLink((string) ConsoleOption::text($input, 'base-url'));
 
         $io->progressStart(\count($mine));
         $flagged = 0;
@@ -107,7 +107,7 @@ final class ReaderAuditCommand extends Command
     /** @return list<SampledEntry> */
     private function articlesToAudit(InputInterface $input, int $userId): array
     {
-        $named = $this->option($input, 'entries');
+        $named = ConsoleOption::text($input, 'entries');
         if ($named !== null) {
             return $this->sampler->pick(array_map(intval(...), explode(',', $named)), $userId);
         }
@@ -117,19 +117,12 @@ final class ReaderAuditCommand extends Command
             $this->number($input, 'limit'),
             $this->number($input, 'per-feed'),
             $this->number($input, 'seed'),
-            new \DateTimeImmutable($this->option($input, 'before') ?? 'now'),
+            new \DateTimeImmutable(ConsoleOption::text($input, 'before') ?? 'now'),
         ));
-    }
-
-    private function option(InputInterface $input, string $name): ?string
-    {
-        $value = $input->getOption($name);
-
-        return \is_string($value) && $value !== '' ? $value : null;
     }
 
     private function number(InputInterface $input, string $name): int
     {
-        return (int) ($this->option($input, $name) ?? '0');
+        return ConsoleOption::wholeNumber($input, $name) ?? 0;
     }
 }

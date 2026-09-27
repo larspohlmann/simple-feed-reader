@@ -6,7 +6,7 @@ namespace App\Service\Mail\Digest;
 
 use App\Dto\Me\UpdateDigestRequest;
 use App\Entity\Preferences;
-use Symfony\Component\Clock\ClockInterface;
+use App\Service\Clock\NaiveUtcClock;
 
 /**
  * Applies a digest configuration write, including the one piece of business
@@ -20,7 +20,7 @@ use Symfony\Component\Clock\ClockInterface;
 final readonly class DigestEnablement
 {
     public function __construct(
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
@@ -35,7 +35,7 @@ final readonly class DigestEnablement
         $preferences->setDigestFormat($request->format);
 
         if ($this->isFirstEnable($wasEnabled, $request->enabled, $preferences)) {
-            $preferences->setDigestLastSentAt($this->nowAsNaiveUtc());
+            $preferences->setDigestLastSentAt($this->clock->now());
         }
     }
 
@@ -44,11 +44,5 @@ final readonly class DigestEnablement
         return false === $wasEnabled
             && true === $isNowEnabled
             && null === $preferences->getDigestLastSentAt();
-    }
-
-    /** Doctrine persists naive wall-clock values, so a non-UTC clock must be normalised first. */
-    private function nowAsNaiveUtc(): \DateTimeImmutable
-    {
-        return $this->clock->now()->setTimezone(new \DateTimeZone('UTC'));
     }
 }

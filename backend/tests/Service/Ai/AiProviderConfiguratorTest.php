@@ -21,9 +21,8 @@ use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubModelCatalog;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Against the real repository and entity manager, not mocks: the account id is
@@ -34,13 +33,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AiProviderConfiguratorTest extends DbTestCase
 {
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
+    use SeedsUsers;
 
     /** @param list<string|ModelDescriptor>|\Throwable|\Closure(ProviderCredentials): list<string|ModelDescriptor> $models */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator

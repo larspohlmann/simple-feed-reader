@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Auth;
 
+use App\Service\Auth\PasswordPolicy;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class RegisterRequest
@@ -31,10 +32,8 @@ final readonly class RegisterRequest
             match: false,
         )]
         public string $email = '',
-        // 12 chars with no composition rules: length beats character classes,
-        // and the passphrase people actually remember is the one they keep.
         #[Assert\NotBlank]
-        #[Assert\Length(min: 12, max: 4096)]
+        #[Assert\Length(min: PasswordPolicy::MINIMUM_LENGTH, max: PasswordPolicy::MAXIMUM_LENGTH)]
         public string $password = '',
         #[Assert\NotBlank(message: 'Complete the anti-spam challenge.')]
         public string $altcha = '',

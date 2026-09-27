@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Repository;
 
-use App\Entity\User;
 use App\Repository\RecommendationRunHistoryRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\MonthWindow;
 use App\Service\Recommendation\ViewerTimeZone;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 
 final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testReturnsOnlyTheRunsInsideTheMonthWindow(): void
     {
-        $user = $this->persistUser('half-open-window@example.com');
+        $user = $this->user('half-open-window@example.com');
 
         $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-07-31 23:00:00'));
         $augustStart = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 00:00:00'));
@@ -34,7 +36,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     public function testABerlinViewersAugustExcludesTheRunThatPrintsAsSeptember(): void
     {
-        $user = $this->persistUser('berlin-boundary@example.com');
+        $user = $this->user('berlin-boundary@example.com');
         // A control run safely inside the month, so the assertions below prove
         // the window is correctly PLACED (this one is kept) and not merely
         // correctly ordered (the boundary run alone would also pass an empty
@@ -59,7 +61,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     public function testReadsOneRowMoreThanTheLimitSoTheCallerCanTellThereIsAnother(): void
     {
-        $user = $this->persistUser('over-read@example.com');
+        $user = $this->user('over-read@example.com');
 
         $runCount = RecommendationRunHistoryRepository::HISTORY_LIMIT + 3;
         $fixtures = $this->fixtures();
@@ -75,7 +77,7 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     public function testPagesBackwardsFromTheCursor(): void
     {
-        $user = $this->persistUser('cursor@example.com');
+        $user = $this->user('cursor@example.com');
 
         $ids = [];
         for ($minute = 0; $minute < 5; $minute++) {
@@ -93,8 +95,8 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     public function testNeverReturnsAnotherAccountsRuns(): void
     {
-        $user = $this->persistUser('page-scope-mine@example.com');
-        $otherUser = $this->persistUser('page-scope-theirs@example.com');
+        $user = $this->user('page-scope-mine@example.com');
+        $otherUser = $this->user('page-scope-theirs@example.com');
 
         $mine = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-05 00:00:00'));
         $this->fixtures()->persistRunAt($otherUser, new \DateTimeImmutable('2026-08-05 00:00:00'));
@@ -107,8 +109,8 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
 
     public function testTheSpendTimelineCarriesEveryRunOfTheAccountAndNoOther(): void
     {
-        $user = $this->persistUser('spend-timeline-mine@example.com');
-        $otherUser = $this->persistUser('spend-timeline-theirs@example.com');
+        $user = $this->user('spend-timeline-mine@example.com');
+        $otherUser = $this->user('spend-timeline-theirs@example.com');
 
         $older = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-01 00:00:00'));
         $newer = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-02 00:00:00'));
@@ -133,15 +135,6 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
         $repository = self::getContainer()->get(RecommendationRunHistoryRepository::class);
 
         return $repository;
-    }
-
-    private function persistUser(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     private function fixtures(): RecommendationRunFixtures

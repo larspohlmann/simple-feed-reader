@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
-use App\Entity\User;
-use App\Repository\UserRepository;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -19,6 +18,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class LastLoginStampTest extends WebTestCase
 {
+    use ReloadsEntities;
+
     private KernelBrowser $client;
 
     protected function setUp(): void
@@ -36,25 +37,10 @@ final class LastLoginStampTest extends WebTestCase
         return new UserFactory($em, $hasher);
     }
 
-    private function reload(int $id): User
-    {
-        /** @var UserRepository $users */
-        $users = self::getContainer()->get(UserRepository::class);
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->clear();
-
-        $user = $users->find($id);
-        self::assertInstanceOf(User::class, $user);
-
-        return $user;
-    }
-
     public function testAPasswordLoginStampsTheAccount(): void
     {
         $user = $this->factory()->create('signs-in@example.com', 'correct-horse-battery');
         self::assertNull($user->getLastLoginAt());
-        $id = $user->requireId();
 
         $this->client->request(
             'POST',
@@ -67,13 +53,12 @@ final class LastLoginStampTest extends WebTestCase
         );
 
         self::assertResponseIsSuccessful();
-        self::assertNotNull($this->reload($id)->getLastLoginAt());
+        self::assertNotNull($this->reload($user)->getLastLoginAt());
     }
 
     public function testAFailedPasswordLoginLeavesTheAccountUnstamped(): void
     {
         $user = $this->factory()->create('wrong-pass@example.com', 'correct-horse-battery');
-        $id = $user->requireId();
 
         $this->client->request(
             'POST',
@@ -86,6 +71,6 @@ final class LastLoginStampTest extends WebTestCase
         );
 
         self::assertResponseStatusCodeSame(401);
-        self::assertNull($this->reload($id)->getLastLoginAt());
+        self::assertNull($this->reload($user)->getLastLoginAt());
     }
 }

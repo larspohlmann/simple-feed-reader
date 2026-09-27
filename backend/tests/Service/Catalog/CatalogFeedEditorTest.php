@@ -12,9 +12,12 @@ use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Catalog\CatalogFeedEditor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ReloadsEntities;
 
 final class CatalogFeedEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     public function testCreateAppendsAFeedToItsCategoryWithEveryField(): void
     {
         $category = $this->category('feed_editor_create');
@@ -136,15 +139,5 @@ final class CatalogFeedEditorTest extends DbTestCase
     private function request(CatalogCategory $category, string $url): CatalogFeedRequest
     {
         return new CatalogFeedRequest($category->requireId(), 'Title', $url);
-    }
-
-    private function reload(CatalogFeed $feed): CatalogFeed
-    {
-        $id = $feed->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(CatalogFeed::class, $id);
-        self::assertInstanceOf(CatalogFeed::class, $reloaded);
-
-        return $reloaded;
     }
 }

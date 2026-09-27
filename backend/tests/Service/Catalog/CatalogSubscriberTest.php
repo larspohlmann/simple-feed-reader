@@ -8,31 +8,23 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Entity\Feed;
 use App\Entity\Tag;
-use App\Entity\User;
 use App\Enum\SourceFormat;
 use App\Repository\FeedRepository;
 use App\Service\Catalog\CatalogSubscriber;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class CatalogSubscriberTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private function em(): EntityManagerInterface
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
         return $em;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em(), $hasher))->create($email);
     }
 
     /** @return array{0: CatalogFeed, 1: CatalogFeed, 2: CatalogFeed} */

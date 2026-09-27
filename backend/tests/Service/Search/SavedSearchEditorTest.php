@@ -7,14 +7,16 @@ namespace App\Tests\Service\Search;
 use App\Dto\SavedSearch\CreateSavedSearchRequest;
 use App\Dto\SavedSearch\UpdateSavedSearchRequest;
 use App\Entity\SavedSearch;
-use App\Entity\User;
 use App\Service\Search\SavedSearchEditor;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SeedsUsers;
 
 final class SavedSearchEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+    use SeedsUsers;
+
     public function testSavingANewTermCreatesItWithItsSlug(): void
     {
         $user = $this->user('search-saver@example.com');
@@ -68,23 +70,5 @@ final class SavedSearchEditorTest extends DbTestCase
         self::assertInstanceOf(SavedSearchEditor::class, $editor);
 
         return $editor;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
-
-    private function reload(SavedSearch $savedSearch): SavedSearch
-    {
-        $id = $savedSearch->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(SavedSearch::class, $id);
-        self::assertInstanceOf(SavedSearch::class, $reloaded);
-
-        return $reloaded;
     }
 }

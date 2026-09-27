@@ -7,19 +7,19 @@ namespace App\Tests\Service\Subscription;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Entity\User;
 use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\TagStyle;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class BulkSubscriberTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private function em(): EntityManagerInterface
     {
         $em = self::getContainer()->get(EntityManagerInterface::class);
@@ -34,14 +34,6 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertInstanceOf(BulkSubscriber::class, $subscriber);
 
         return $subscriber;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em(), $hasher))->create($email);
     }
 
     public function testSubscribesEachItemOnceAndTagsItUnderItsCategory(): void

@@ -14,24 +14,16 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 class SubscriptionTagRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
         parent::__construct($registry, SubscriptionTag::class);
     }
 
-    /**
-     * The next append position for a feed newly added to this tag: one past the
-     * tag's current max (0 when the tag has no feeds yet).
-     */
     public function nextPositionForTag(Tag $tag): int
     {
-        $max = $this->createQueryBuilder('st')
-            ->select('MAX(st.position)')
-            ->andWhere('st.tag = :tag')->setParameter('tag', $tag)
-            ->getQuery()
-            ->getSingleScalarResult();
-
-        return null === $max ? 0 : (int) $max + 1;
+        return $this->nextPosition->in(
+            $this->createQueryBuilder('st')->andWhere('st.tag = :tag')->setParameter('tag', $tag),
+        );
     }
 
     /**

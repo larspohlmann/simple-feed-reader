@@ -26,6 +26,7 @@ use App\Service\Worker\Message\SendDueDigests;
 use App\Tests\DbTestCase;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SavedSearchMatchFixture;
+use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Log\NullLogger;
@@ -47,6 +48,8 @@ use Symfony\Component\Clock\MockClock;
  */
 final class SendDueDigestsHandlerTest extends DbTestCase
 {
+    use SeedsDigestReaders;
+
     private const string NOW = '2026-08-28T09:30:00Z';
 
     public function testFiringWithNoDueAccountsCompletesWithoutThrowing(): void
@@ -63,7 +66,7 @@ final class SendDueDigestsHandlerTest extends DbTestCase
 
     public function testFiringSendsTheDigestForADueVerifiedAccount(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user);
         $search = (new SavedSearchMatchFixture($this->em))
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
@@ -107,17 +110,6 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);
-    }
-
-    private function user(): User
-    {
-        $email = 'digest-' . uniqid('', true) . '@example.com';
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-        $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-
-        return $user;
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */

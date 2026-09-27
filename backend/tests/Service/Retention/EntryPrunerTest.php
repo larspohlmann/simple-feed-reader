@@ -11,6 +11,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RetentionRepository;
+use App\Repository\RowIds;
 use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
@@ -40,7 +41,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function retention(): RetentionRepository
     {
-        return new RetentionRepository($this->em);
+        return new RetentionRepository($this->em, new RowIds($this->em));
     }
 
     private function daysAgo(int $days): \DateTimeImmutable

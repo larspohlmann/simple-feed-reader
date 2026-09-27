@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Refresh\ContentChangeMarker;
 use App\Tests\Support\RecordingLogger;
 use PHPUnit\Framework\TestCase;
@@ -80,7 +81,7 @@ final class ContentChangeMarkerTest extends TestCase
     {
         $logger = new RecordingLogger();
 
-        (new ContentChangeMarker($this->projectDir, $this->clock, $logger))->markChanged();
+        (new ContentChangeMarker($this->projectDir, new NaiveUtcClock($this->clock), $logger))->markChanged();
 
         self::assertSame([], $logger->records);
     }
@@ -91,7 +92,7 @@ final class ContentChangeMarkerTest extends TestCase
         file_put_contents($file, 'x');
         $logger = new RecordingLogger();
 
-        (new ContentChangeMarker($file, $this->clock, $logger))->markChanged();
+        (new ContentChangeMarker($file, new NaiveUtcClock($this->clock), $logger))->markChanged();
 
         self::assertCount(1, $logger->records);
         self::assertStringContainsString('{directory}', $logger->records[0]['message']);
@@ -104,14 +105,14 @@ final class ContentChangeMarkerTest extends TestCase
         $file = $this->projectDir . '/a-file-not-a-tree';
         file_put_contents($file, 'x');
 
-        (new ContentChangeMarker($file, $this->clock, new NullLogger()))->markChanged();
+        (new ContentChangeMarker($file, new NaiveUtcClock($this->clock), new NullLogger()))->markChanged();
 
         $this->expectNotToPerformAssertions();
     }
 
     private function marker(): ContentChangeMarker
     {
-        return new ContentChangeMarker($this->projectDir, $this->clock, new NullLogger());
+        return new ContentChangeMarker($this->projectDir, new NaiveUtcClock($this->clock), new NullLogger());
     }
 
     private function markerPath(): string

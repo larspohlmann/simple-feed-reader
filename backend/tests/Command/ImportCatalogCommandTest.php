@@ -86,6 +86,21 @@ final class ImportCatalogCommandTest extends DbTestCase
         self::assertSame(1, $tester->getStatusCode());
     }
 
+    public function testAWhitespaceOnlyFileFallsBackToTheShippedDocument(): void
+    {
+        $tester = $this->tester();
+        $tester->execute(['--file' => '   ']);
+
+        self::assertSame(0, $tester->getStatusCode());
+
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $catalog = self::getContainer()->get(BundledCatalog::class);
+        self::assertInstanceOf(BundledCatalog::class, $catalog);
+
+        self::assertCount($catalog->document()->feedCount(), $em->getRepository(CatalogFeed::class)->findAll());
+    }
+
     public function testAnUnknownModeIsAnErrorAndImportsNothing(): void
     {
         $tester = $this->tester();

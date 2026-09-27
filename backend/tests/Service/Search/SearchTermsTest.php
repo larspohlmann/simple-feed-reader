@@ -174,6 +174,14 @@ final class SearchTermsTest extends TestCase
         self::assertSame(['climate change'], $terms->terms);
     }
 
+    public function testAPhraseCollapsesANoBreakSpaceAndATabToSingleSpaces(): void
+    {
+        $terms = SearchTerms::fromInput("\"daft\u{00A0}punk\tremix\"");
+
+        self::assertTrue($terms->isPhrase);
+        self::assertSame(['daft punk remix'], $terms->terms);
+    }
+
     public function testAnUnquotedQueryIsNotAPhrase(): void
     {
         $terms = SearchTerms::fromInput('climate change');

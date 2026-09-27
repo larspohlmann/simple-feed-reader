@@ -10,12 +10,15 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\BulkSubscriptionUpdater;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use App\Exception\InvalidSelectionException;
 
 final class BulkSubscriptionUpdaterTest extends KernelTestCase
 {
+    use SeedsUsers;
+
     private EntityManagerInterface $em;
     private BulkSubscriptionUpdater $updater;
 
@@ -28,14 +31,6 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $updater = self::getContainer()->get(BulkSubscriptionUpdater::class);
         self::assertInstanceOf(BulkSubscriptionUpdater::class, $updater);
         $this->updater = $updater;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($user);
-
-        return $user;
     }
 
     private function tag(User $user, string $name, int $position): Tag

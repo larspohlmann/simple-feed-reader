@@ -105,11 +105,9 @@ final class ImportCatalogCommand extends Command
     /** The document named by --file, or the one this release ships. */
     private function document(InputInterface $input): ParsedCatalog
     {
-        $path = $input->getOption('file');
+        $path = ConsoleOption::text($input, 'file');
 
-        return \is_string($path) && '' !== $path
-            ? $this->read($path)
-            : $this->bundled->document();
+        return $path === null ? $this->bundled->document() : $this->read($path);
     }
 
     private function read(string $path): ParsedCatalog

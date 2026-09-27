@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
+use Psr\Clock\ClockInterface;
 use Twig\Environment;
 
 /**
@@ -21,6 +22,7 @@ final readonly class DigestHtmlRenderer
     public function __construct(
         private Environment $twig,
         private DigestLinkBuilder $links,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -72,7 +74,7 @@ final readonly class DigestHtmlRenderer
     {
         $formatter = new \IntlDateFormatter($locale, \IntlDateFormatter::FULL, \IntlDateFormatter::NONE, 'UTC');
 
-        return (string) $formatter->format(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
+        return (string) $formatter->format($this->clock->now());
     }
 
     private function when(?\DateTimeImmutable $publishedAt, \IntlDateFormatter $dateFormatter): string

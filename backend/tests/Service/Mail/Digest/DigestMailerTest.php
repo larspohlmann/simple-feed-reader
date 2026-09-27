@@ -23,6 +23,7 @@ use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Service\Mail\Settings\MailSettings;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
@@ -62,7 +63,11 @@ final class DigestMailerTest extends TestCase
             new DigestPageBuilder(),
             $embedder,
             new DigestTextRenderer($translator),
-            new DigestHtmlRenderer(DigestTwigEnvironment::withTranslator($translator), $links),
+            new DigestHtmlRenderer(
+                DigestTwigEnvironment::withTranslator($translator),
+                $links,
+                new MockClock('2026-08-30T12:00:00Z'),
+            ),
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),

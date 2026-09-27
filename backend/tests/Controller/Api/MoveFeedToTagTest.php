@@ -8,15 +8,16 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class MoveFeedToTagTest extends WebTestCase
 {
+    use SeedsUsers;
+
     public function testMovePlacesTheFeedAtTheDropIndexInTheTargetTag(): void
     {
         $client = self::createClient();
@@ -86,14 +87,6 @@ final class MoveFeedToTagTest extends WebTestCase
         self::assertInstanceOf(EntityManagerInterface::class, $em);
 
         return $em;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em(), $hasher))->create($email);
     }
 
     /** @return array<string, string> */

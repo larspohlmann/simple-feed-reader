@@ -166,7 +166,11 @@ final class SendTestDigestTest extends DbTestCase
             new DigestPageBuilder(),
             $embedder,
             new DigestTextRenderer($translator),
-            new DigestHtmlRenderer(DigestTwigEnvironment::withTranslator($translator), $links),
+            new DigestHtmlRenderer(
+                DigestTwigEnvironment::withTranslator($translator),
+                $links,
+                new MockClock('2026-08-30T12:00:00Z'),
+            ),
             $links,
             new DigestBrandLogo(\dirname(__DIR__, 4)),
             $this->mailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),

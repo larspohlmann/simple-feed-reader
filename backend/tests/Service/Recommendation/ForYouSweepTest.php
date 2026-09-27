@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationBatchSize;
@@ -23,16 +22,19 @@ use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\SweepStreamHeartbeat;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\ThrowingClock;
-use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class ForYouSweepTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -57,14 +59,6 @@ final class ForYouSweepTest extends DbTestCase
         $repository = $this->em->getRepository(RecommendationRun::class);
 
         return $repository;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function setCadence(User $user, int $hours): void
@@ -251,10 +245,8 @@ final class ForYouSweepTest extends DbTestCase
         // The row itself, read fresh: the mark this pass did make carries the
         // throwing clock's own instant, which any freshness question would
         // call stale for reasons that have nothing to do with the cleanup.
-        $this->em->clear();
         self::assertNull(
-            $this->em->getRepository(WorkerHeartbeat::class)
-                ->find(RecommendationDriverKind::CronSweep->heartbeatName()),
+            $this->heartbeats()->findTouchedAt(RecommendationDriverKind::CronSweep->heartbeatName()),
         );
     }
 
@@ -282,10 +274,8 @@ final class ForYouSweepTest extends DbTestCase
         // Byte for byte what the hook does after the `finally` has done it.
         $this->presence()->forget(RecommendationDriverKind::CronSweep);
 
-        $this->em->clear();
         self::assertNull(
-            $this->em->getRepository(WorkerHeartbeat::class)
-                ->find(RecommendationDriverKind::CronSweep->heartbeatName()),
+            $this->heartbeats()->findTouchedAt(RecommendationDriverKind::CronSweep->heartbeatName()),
         );
         self::assertFalse($this->presence()->isAnybodyDrivingRecommendationRuns());
     }
@@ -297,7 +287,7 @@ final class ForYouSweepTest extends DbTestCase
      */
     private function sweepMarkingWith(ClockInterface $clock): ForYouSweep
     {
-        $presence = new WorkerPresence($this->em->getRepository(WorkerHeartbeat::class), $clock);
+        $presence = new WorkerPresence($this->heartbeats(), $clock);
 
         return new ForYouSweep(
             $this->service(DueRecommendationRunFinder::class),

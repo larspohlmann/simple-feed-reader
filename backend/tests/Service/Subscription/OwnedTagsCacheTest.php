@@ -8,11 +8,14 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\OwnedTagsCache;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class OwnedTagsCacheTest extends KernelTestCase
 {
+    use SeedsUsers;
+
     private EntityManagerInterface $em;
     private OwnedTagsCache $cache;
 
@@ -25,14 +28,6 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $cache = self::getContainer()->get(OwnedTagsCache::class);
         self::assertInstanceOf(OwnedTagsCache::class, $cache);
         $this->cache = $cache;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($user);
-
-        return $user;
     }
 
     private function tag(User $user, string $name): Tag

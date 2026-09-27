@@ -20,7 +20,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationItemRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
         parent::__construct($registry, RecommendationItem::class);
     }
@@ -125,32 +125,16 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
-    /**
-     * Two-step (select ids, then delete) rather than a DELETE with a
-     * subquery: portable across both suite dialects and trivially testable,
-     * same shape as RecommendationRunLogRepository::deleteForUser().
-     */
     public function deleteForUser(User $user): void
     {
-        /** @var list<int> $ids */
-        $ids = array_column(
+        $ids = $this->rowIds->selectedBy(
             $this->createQueryBuilder('i')
-                ->select('i.id AS id')
                 ->join('i.run', 'r')
                 ->where('r.user = :user')
-                ->setParameter('user', $user)
-                ->getQuery()
-                ->getArrayResult(),
-            'id',
+                ->setParameter('user', $user),
         );
 
-        if ([] === $ids) {
-            return;
-        }
-
-        $this->getEntityManager()->createQuery(
-            'DELETE FROM App\Entity\RecommendationItem i WHERE i.id IN (:ids)',
-        )->setParameter('ids', $ids)->execute();
+        $this->rowIds->delete(RecommendationItem::class, $ids);
     }
 
     /** The for-you feed's row set: completed runs of this user, entries still

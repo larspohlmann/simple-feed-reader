@@ -24,9 +24,9 @@ use App\Tests\Support\LockKeyExpiringBeforeEveryRefreshStore;
 use App\Tests\Support\LockLostAfterFirstRefreshStore;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
-use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
@@ -35,10 +35,11 @@ use Symfony\Component\Console\Tester\CommandTester;
 use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\Store\DoctrineDbalStore;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RecommendationDrainCommandTest extends DbTestCase
 {
+    use SeedsUsers;
+
     /**
      * candidatePoolSize 20 with the connection's per-batch ceiling forced to
      * 10 makes packBatches produce exactly two batches of 10 (see
@@ -435,14 +436,6 @@ final class RecommendationDrainCommandTest extends DbTestCase
         ));
         $this->em->persist($settings);
         $this->em->flush();
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function runs(): RecommendationRunRepository

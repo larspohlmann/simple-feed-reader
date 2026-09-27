@@ -10,8 +10,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 /**
  * SubscriptionRepository's positioning seed (nextPositionForUser()) and its
@@ -22,6 +21,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class SubscriptionPositionAndCountsTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private SubscriptionRepository $repository;
 
     protected function setUp(): void
@@ -30,14 +31,6 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         /** @var SubscriptionRepository $repository */
         $repository = $this->em->getRepository(Subscription::class);
         $this->repository = $repository;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function feed(string $url): Feed

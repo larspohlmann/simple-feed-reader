@@ -50,7 +50,7 @@ final class ReaderAuditReportCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $pattern = $this->option($input, 'in');
+        $pattern = ConsoleOption::text($input, 'in') ?? '';
         $paths = glob($pattern) ?: [];
         if ($paths === []) {
             $io->error(\sprintf('No sweep files match %s — run app:reader:audit first.', $pattern));
@@ -59,8 +59,8 @@ final class ReaderAuditReportCommand extends Command
         }
 
         $findings = AuditFindings::fromJsonlFiles($paths);
-        $reportPath = $this->option($input, 'out');
-        $report = new AuditReportHtml((int) $this->option($input, 'top'));
+        $reportPath = ConsoleOption::text($input, 'out') ?? '';
+        $report = new AuditReportHtml(ConsoleOption::wholeNumber($input, 'top') ?? 0);
         file_put_contents($reportPath, $report->render($findings, $this->clock->now()->format('Y-m-d H:i')));
 
         $this->printSummary($io, $findings);
@@ -93,13 +93,6 @@ final class ReaderAuditReportCommand extends Command
             ];
         }
         $io->table(['score', 'feed', 'article', 'open in the reader'], $worst);
-    }
-
-    private function option(InputInterface $input, string $name): string
-    {
-        $value = $input->getOption($name);
-
-        return \is_string($value) ? $value : '';
     }
 
     /**

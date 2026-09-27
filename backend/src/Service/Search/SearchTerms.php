@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Exception\ValidationException;
+use App\Service\Text\Whitespace;
 
 /**
  * The terms a search runs on, parsed from one raw query string.
@@ -80,7 +81,7 @@ final readonly class SearchTerms
         self::assertLengthIsUsable($trimmed);
 
         if ($mode->isPhrase()) {
-            return new self([self::collapseWhitespace($trimmed)], isWholeWord: false, isPhrase: true);
+            return new self([Whitespace::collapse($trimmed)], isWholeWord: false, isPhrase: true);
         }
 
         return self::split($trimmed, $mode->isWholeWord());
@@ -108,14 +109,9 @@ final readonly class SearchTerms
         }
 
         $inner = mb_substr($trimmed, 1, mb_strlen($trimmed) - 2);
-        $phrase = self::collapseWhitespace(str_replace(self::DOUBLE_QUOTE, ' ', $inner));
+        $phrase = Whitespace::collapse(str_replace(self::DOUBLE_QUOTE, ' ', $inner));
 
         return $phrase === '' ? null : $phrase;
-    }
-
-    private static function collapseWhitespace(string $value): string
-    {
-        return trim((string) preg_replace('/' . self::WHITESPACE . '+/u', ' ', $value));
     }
 
     private static function stripSurroundingWhitespace(string $input): string

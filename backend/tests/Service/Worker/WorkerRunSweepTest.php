@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\RecommendationRun;
-use App\Entity\User;
-use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
-use App\Repository\WorkerHeartbeatRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\RecommendationRunAdvancer;
 use App\Service\Recommendation\RecommendationRunStarter;
@@ -18,14 +15,14 @@ use App\Service\Worker\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
+use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
-use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The shared worker-regime sweep (#371). Its coordination behavior --
@@ -37,6 +34,9 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class WorkerRunSweepTest extends DbTestCase
 {
+    use ProvidesWorkerHeartbeats;
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -190,11 +190,7 @@ final class WorkerRunSweepTest extends DbTestCase
 
     private function touchedAt(): ?\DateTimeImmutable
     {
-        $this->em->clear();
-
-        return $this->em->getRepository(WorkerHeartbeat::class)
-            ->find(RecommendationDriverKind::PersistentWorker->heartbeatName())
-            ?->getTouchedAt();
+        return $this->heartbeats()->findTouchedAt(RecommendationDriverKind::PersistentWorker->heartbeatName());
     }
 
     private function chatClient(): StubChatClient
@@ -203,14 +199,6 @@ final class WorkerRunSweepTest extends DbTestCase
         $client = self::getContainer()->get(StubChatClient::class);
 
         return $client;
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function runs(): RecommendationRunRepository
@@ -264,18 +252,6 @@ final class WorkerRunSweepTest extends DbTestCase
         return $advancer;
     }
 
-    /**
-     * Through the EntityManager rather than the container: the repository has
-     * a single referrer (WorkerPresence), and the compiler inlines
-     * single-reference private services away.
-     */
-    private function heartbeats(): WorkerHeartbeatRepository
-    {
-        /** @var WorkerHeartbeatRepository $repository */
-        $repository = $this->em->getRepository(WorkerHeartbeat::class);
-
-        return $repository;
-    }
     /**
      * A heartbeat over the same presence the sweep marks with. It only ever
      * writes while a completion is streaming, and nothing in these tests

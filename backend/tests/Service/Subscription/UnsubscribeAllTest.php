@@ -16,11 +16,14 @@ use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\SeedsUsers;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class UnsubscribeAllTest extends KernelTestCase
 {
+    use SeedsUsers;
+
     private EntityManagerInterface $em;
     private SubscriptionService $subscriptions;
 
@@ -33,14 +36,6 @@ final class UnsubscribeAllTest extends KernelTestCase
         $service = self::getContainer()->get(SubscriptionService::class);
         self::assertInstanceOf(SubscriptionService::class, $service);
         $this->subscriptions = $service;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($user);
-
-        return $user;
     }
 
     private function subscribe(User $user, Feed $feed): Subscription
