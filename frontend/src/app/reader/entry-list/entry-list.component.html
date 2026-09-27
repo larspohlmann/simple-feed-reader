@@ -251,7 +251,7 @@
           <app-caught-up-illustration />
         }
         {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
-        @if (!catalogEmpty()) {
+        @if (suggestFeeds()) {
           <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>
         }
       }
