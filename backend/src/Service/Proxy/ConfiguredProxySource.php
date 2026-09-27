@@ -10,7 +10,7 @@ use App\Service\Fetch\ProxyConfig;
 interface ConfiguredProxySource
 {
     /**
-     * The saved proxy whether or not feed egress is switched on: the tester and proxied mail read this.
+     * The saved proxy whether or not feed egress is switched on.
      *
      * @throws SecretUnreadableException when its stored password cannot be opened
      */
