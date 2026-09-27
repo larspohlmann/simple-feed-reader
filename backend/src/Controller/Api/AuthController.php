@@ -8,7 +8,6 @@ use App\Dto\Auth\PasswordResetConfirmRequest;
 use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
-use App\Exception\ValidationException;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
@@ -70,9 +69,7 @@ final readonly class AuthController
         // an oracle, since only requests that reached the mailer would count.
         $this->rateLimitGuard->enforceForClient($this->registrationLimiter, $httpRequest->getClientIp());
 
-        if (!$this->altcha->verify($request->altcha)) {
-            throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
-        }
+        $this->altcha->requireSolved($request->altcha);
 
         $this->registration->register($request->email, $request->password, $request->locale);
 
@@ -106,9 +103,7 @@ final readonly class AuthController
         // register().
         $this->rateLimitGuard->enforceForClient($this->passwordResetRequestLimiter, $httpRequest->getClientIp());
 
-        if (!$this->altcha->verify($request->altcha)) {
-            throw new ValidationException(['altcha' => ['The anti-spam challenge was not solved correctly.']]);
-        }
+        $this->altcha->requireSolved($request->altcha);
 
         $this->registration->requestPasswordReset($request->email);
 
