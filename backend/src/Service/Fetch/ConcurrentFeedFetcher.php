@@ -14,11 +14,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Fetches many feeds at once over Symfony's multiplexing HTTP client.
- *
- * The refresh sweep is network-wait-bound — measured at 5.37 s of waiting across
- * 24 feeds against 0.4 s of parsing — so the requests overlap while the caller
- * still processes results one at a time.
+ * Fetches many feeds at once over Symfony's multiplexing HTTP client; the refresh
+ * sweep is network-wait-bound, so requests overlap while the caller still
+ * processes results one at a time.
  */
 final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
