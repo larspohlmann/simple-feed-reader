@@ -3618,10 +3618,10 @@ Planner ruling on D16. Two changes that meet in `consolidationInputSize()`, so o
 Nothing on the wire changes and every prompt stays byte-identical: `testBatchMessagesReturnsTheExactRoleContentStructure`, `testConsolidationMessagesReturnsTheExactRoleContentStructure` and `testDistillMessagesReturnsTheExactRoleContentStructure` pin the text, the `consolidationInputSize` tests pin the sizing, `RecommendationRunAdvancerTest` pins `max_tokens` and the `suppressReasoning` hint of a real batch call, and `OpenAiCompatibleChatClientTest` pins the `reasoning: {effort: none}` body member.
 
 **Files:**
-- Create: `src/Service/Ai/Completion/Reasoning.php`, `src/Service/Recommendation/Prompt/PromptContext.php`; `tests/Service/Ai/Completion/ReasoningTest.php`
+- Create: `src/Service/Ai/Completion/Reasoning.php`, `src/Service/Recommendation/Prompt/PromptContext.php`; `tests/Service/Ai/Completion/ReasoningTest.php`, `tests/Service/Recommendation/Run/WaveBatchTest.php`
 - Modify: `src/Service/Ai/Completion/CompletionRequest.php` (rewritten), `OpenAiCompatibleChatClient.php` (one line)
 - Modify: `src/Service/Recommendation/Prompt/RecommendationAnswerBudget.php` (two methods), `RecommendationCompletionRequestFactory.php` (rewritten), `RecommendationPromptBuilder.php` (four methods)
-- Modify: `src/Service/Recommendation/Run/TickContext.php` (`reasoning()`), `WaveContext.php` (rewritten), `WaveContextLoader.php` (`load()`), `RecommendationBatchWave.php` (`batchMessages()`), `RecommendationConsolidationResolver.php` (`resolve()`)
+- Modify: `src/Service/Recommendation/Run/TickContext.php` (`reasoning()`), `WaveContext.php` (rewritten), `WaveContextLoader.php` (`load()`), `WaveBatch.php` (`linesInSnapshotOrder()`), `RecommendationBatchWave.php` (`batchMessages()`; `linesInSnapshotOrder()` and the `PromptLine` import go), `RecommendationConsolidationResolver.php` (`resolve()`)
 - Modify: `tests/Support/StubChatClient.php` (one line)
 - Test: `tests/Service/Ai/Completion/OpenAiCompatibleChatClientTest.php`, `RateLimitedCompletionTest.php`; `tests/Service/Recommendation/Prompt/RecommendationCompletionRequestFactoryTest.php`, `RecommendationPromptBuilderTest.php`; `tests/Service/Recommendation/Run/RecommendationRunAdvancerTest.php`, `TickContextTest.php`, `WaveContextLoaderTest.php`
 
@@ -3633,6 +3633,7 @@ Nothing on the wire changes and every prompt stays byte-identical: `testBatchMes
   - `final readonly class App\Service\Recommendation\Prompt\PromptContext { public RecommendationHistory $history; public EffectiveRecommendationSettings $settings; public ?string $profile }`.
   - `RecommendationPromptBuilder::batchMessages(PromptContext $context, array $candidateLines, ?CandidatePoolSummary $poolSummary = null): array`, `consolidationMessages(PromptContext $context, array $rankedPool, array $linesById): array`, `consolidationInputSize(PromptContext $context, Reasoning $reasoning): int`. `distillMessages(RecommendationHistory, EffectiveRecommendationSettings)` and `packBatches()` keep their two and three parameters.
   - `TickContext::reasoning(): Reasoning`. `WaveContext(TickContext $tick, array $batches, ?CandidatePoolSummary $poolSummary, PromptContext $prompt)`: `history` and `profile` move into `$prompt`.
+  - `WaveBatch::linesInSnapshotOrder(): list<PromptLine>`: the batch's prompt lines in snapshot order, pruned entries skipped. `RecommendationBatchWave::linesInSnapshotOrder(WaveBatch)` is gone.
   - `StubChatClient` still records `suppressReasoning` as a bool, so every assertion on it stays.
 
 - [ ] **Step 1: Write the failing tests**
@@ -3773,16 +3774,43 @@ perl -pi -e 's/(new CompletionRequest\(.*), false\);/$1, Reasoning::Allowed);/; 
 perl -0pi -e 's/(new JsonSchema\(\x27s\x27, \[\x27type\x27 => \x27object\x27\]\),\n\s+)false,/$1Reasoning::Allowed,/' tests/Service/Ai/Completion/RateLimitedCompletionTest.php
 git grep -c "Reasoning::" -- tests/Service/Ai/Completion/OpenAiCompatibleChatClientTest.php tests/Service/Ai/Completion/RateLimitedCompletionTest.php
 ```
-Expected: `3` (`request()`, `suppressingRequest()`, the runaway test's request) and `1`. Both tests share the `Reasoning` namespace; no import.
+Expected: `3` (`request()`, `suppressingRequest()`, the runaway test's request) and `1`. Add `use App\Service\Ai\Completion\Reasoning;` to both: in `OpenAiCompatibleChatClientTest` directly after `use App\Service\Ai\Completion\OpenAiCompatibleChatClient;`, in `RateLimitedCompletionTest` between `use App\Service\Ai\Completion\RateLimitedCompletion;` and `use App\Service\Ai\Completion\RetryPlan;`.
 
 `tests/Service/Recommendation/Run/WaveContextLoaderTest.php`: `self::assertSame('Likes Rust.', $wave->profile);` becomes `self::assertSame('Likes Rust.', $wave->prompt->profile);`.
 
 `tests/Support/StubChatClient.php`: `'suppressReasoning' => $request->suppressReasoning,` becomes `'suppressReasoning' => Reasoning::Suppressed === $request->reasoning,`; add `use App\Service\Ai\Completion\Reasoning;` in sorted place.
 
+`tests/Service/Recommendation/Run/WaveBatchTest.php`:
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Recommendation\Run;
+
+use App\Service\Recommendation\Prompt\PromptLine;
+use App\Service\Recommendation\Run\WaveBatch;
+use PHPUnit\Framework\TestCase;
+
+final class WaveBatchTest extends TestCase
+{
+    public function testItsLinesFollowTheSnapshotOrderAndSkipAPrunedEntry(): void
+    {
+        $three = new PromptLine(3, 'Three', 'F', 'D', null);
+        $one = new PromptLine(1, 'One', 'F', 'D', null);
+        $batch = new WaveBatch(0, [3, 2, 1], [1 => $one, 3 => $three]);
+
+        self::assertSame([$three, $one], $batch->linesInSnapshotOrder());
+    }
+}
+```
+`linesById` is keyed in the loader's order, not the snapshot's, and entry 2 is pruned. So the assertion pins the snapshot order, the skip and the list keys. `assertSame` compares keys, so `[0 => $three, 2 => $one]` fails.
+
 - [ ] **Step 2: Run the tests to verify they fail**
 
 Run: `php bin/phpunit tests/Service/Ai tests/Service/Recommendation`
-Expected: FAIL: `Class "App\Service\Ai\Completion\Reasoning" not found` and `Class "App\Service\Recommendation\Prompt\PromptContext" not found`.
+Expected: FAIL: `Class "App\Service\Ai\Completion\Reasoning" not found`, `Class "App\Service\Recommendation\Prompt\PromptContext" not found`, and `Call to undefined method App\Service\Recommendation\Run\WaveBatch::linesInSnapshotOrder()`.
+(`WaveBatchTest` is under `tests/Service/Recommendation`, so the Step 2 command already runs it.)
 
 - [ ] **Step 3: Implement the transport side**
 
@@ -3908,7 +3936,6 @@ namespace App\Service\Recommendation\Prompt;
 
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 
-/** What the batch and consolidation prompts read: the reader's history, the settings, the run's distilled profile. */
 final readonly class PromptContext
 {
     public function __construct(
@@ -4106,7 +4133,21 @@ with
         );
 ```
 
-`src/Service/Recommendation/Run/RecommendationBatchWave.php`, in `batchMessages()`, replace
+`src/Service/Recommendation/Run/WaveBatch.php`: after `validIds()`, add
+```php
+
+    /** @return list<PromptLine> */
+    public function linesInSnapshotOrder(): array
+    {
+        $present = array_filter($this->ids, fn (int $id): bool => isset($this->linesById[$id]));
+
+        return array_values(array_map(fn (int $id): PromptLine => $this->linesById[$id], $present));
+    }
+```
+(`WaveBatch` already imports `PromptLine`. The closures read `$this`, so they are not `static`.)
+
+`src/Service/Recommendation/Run/RecommendationBatchWave.php`:
+- In `batchMessages()`, replace
 ```php
         $messages = $this->promptBuilder->batchMessages(
             $wave->history,
@@ -4120,10 +4161,23 @@ with
 ```php
         $messages = $this->promptBuilder->batchMessages(
             $wave->prompt,
-            $this->linesInSnapshotOrder($waveBatch),
+            $waveBatch->linesInSnapshotOrder(),
             $wave->poolSummary,
         );
 ```
+- Delete
+```php
+    /** @return list<PromptLine> */
+    private function linesInSnapshotOrder(WaveBatch $waveBatch): array
+    {
+        $present = array_filter($waveBatch->ids, static fn (int $id): bool => isset($waveBatch->linesById[$id]));
+
+        return array_values(array_map(static fn (int $id): PromptLine => $waveBatch->linesById[$id], $present));
+    }
+
+```
+(the blank line after it included, so `asWinners()`'s docblock follows `batchMessages()` after one blank line).
+- Delete `use App\Service\Recommendation\Prompt\PromptLine;`. The wave has no other use of it.
 
 `src/Service/Recommendation/Run/RecommendationConsolidationResolver.php`:
 - Add `use App\Service\Recommendation\Prompt\PromptContext;` before `use App\Service\Recommendation\Prompt\PromptLine;`.
@@ -4170,7 +4224,7 @@ bin/console cache:clear && bin/console cache:warmup
 php bin/phpunit tests/Service/Ai tests/Service/Recommendation tests/Service/Worker
 git grep -n "suppressesReasoning\|->suppressReasoning" -- src/Service/Ai/Completion src/Service/Recommendation tests/Support
 ```
-Expected: PASS; the grep prints nothing (`AiProviderSettings::suppressesReasoning()`, the entity's stored setting, is read only by `Reasoning::preferredBy()` and the admin paths).
+Expected: PASS; the grep prints only `src/Service/Ai/Completion/Reasoning.php`'s `preferredBy()` line.
 
 - [ ] **Step 7: Deletion checks**
 
@@ -4178,6 +4232,7 @@ Restore each by hand.
 1. In `RecommendationAnswerBudget::reasoningHeadroomTokens()`, swap the two arms. Expected: `RecommendationCompletionRequestFactoryTest::testAConnectionThatMayReasonKeepsTheFullReasoningHeadroom` and `testConsolidationInputSizeFloorsOnATightContext` fail.
 2. In `Reasoning::preferredBy()`, return `self::Allowed`. Expected: `ReasoningTest::testAConnectionSuppressesReasoningByDefault` and `RecommendationRunAdvancerTest::testBatchTickRecordsWinnersAndAdvances` (its batch call must carry the suppress hint) fail.
 3. In `batchUserSections()`, render FAVORITES before the profile. Expected: `testBatchMessagesReturnsTheExactRoleContentStructure` fails.
+4. In `WaveBatch::linesInSnapshotOrder()`, drop the `array_values(...)` wrapper. Expected: `WaveBatchTest::testItsLinesFollowTheSnapshotOrderAndSkipAPrunedEntry` fails (keys `0, 2`). Then map over `$this->linesById` instead of `$present`. Expected: the same test fails (order `[$one, $three]`).
 
 - [ ] **Step 8: Gates and commit**
 
@@ -4318,7 +4373,6 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
-/** One provider call's messages, and the reply they ask for: how many items, in which schema. */
 final readonly class CallPrompt
 {
     /** @param list<array{role: string, content: string}> $messages */
@@ -4570,7 +4624,7 @@ with
             $recordedCall = $this->callRecorder->begin($tick->run, CallSlot::batch($waveBatch->index + 1), $request);
             $calls[] = new ConcurrentCompletion($request, $recordedCall);
 ```
-- Delete `use App\Entity\RecommendationRunLog;`; add `use App\Service\Recommendation\Prompt\CallPrompt;` before `use App\Service\Recommendation\Prompt\PromptLine;`.
+- Delete `use App\Entity\RecommendationRunLog;`; add `use App\Service\Recommendation\Prompt\CallPrompt;` before `use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;`.
 
 `src/Service/Recommendation/Run/TickContext.php`: delete `model()` and the blank line after it.
 
