@@ -17,8 +17,10 @@ final readonly class RowIds
     /** @return list<int> */
     public function selectedBy(QueryBuilder $query): array
     {
+        $alias = $query->getRootAliases()[0];
+
         /** @var list<int> $ids */
-        $ids = array_column($query->getQuery()->getArrayResult(), 'id');
+        $ids = array_column($query->select(sprintf('%s.id AS id', $alias))->getQuery()->getArrayResult(), 'id');
 
         return $ids;
     }

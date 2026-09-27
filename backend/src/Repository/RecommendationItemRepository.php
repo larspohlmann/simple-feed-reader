@@ -129,7 +129,6 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     {
         $ids = $this->rowIds->selectedBy(
             $this->createQueryBuilder('i')
-                ->select('i.id AS id')
                 ->join('i.run', 'r')
                 ->where('r.user = :user')
                 ->setParameter('user', $user),

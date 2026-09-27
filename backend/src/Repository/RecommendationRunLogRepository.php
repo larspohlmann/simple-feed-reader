@@ -176,7 +176,6 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     private function idsForUser(User $user, ?array $keptRunIds): array
     {
         $query = $this->createQueryBuilder('l')
-            ->select('l.id AS id')
             ->join('l.run', 'r')
             ->where('r.user = :user')
             ->setParameter('user', $user);

@@ -70,7 +70,6 @@ final class RowIdsTest extends DbTestCase
     private function idsOf(string ...$recipients): QueryBuilder
     {
         return $this->em->createQueryBuilder()
-            ->select('f.id AS id')
             ->from(MailSendFailure::class, 'f')
             ->andWhere('f.recipient IN (:recipients)')
             ->setParameter('recipients', $recipients);

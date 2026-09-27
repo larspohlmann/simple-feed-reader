@@ -54,7 +54,6 @@ final class MailSendFailureRepository extends ServiceEntityRepository
     {
         $ids = $this->rowIds->selectedBy(
             $this->createQueryBuilder('f')
-                ->select('f.id AS id')
                 ->orderBy('f.createdAt', 'DESC')
                 ->addOrderBy('f.id', 'DESC'),
         );
