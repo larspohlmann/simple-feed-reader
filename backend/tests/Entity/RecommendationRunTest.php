@@ -387,6 +387,24 @@ final class RecommendationRunTest extends TestCase
         $run->recordProfile('Likes Rust.');
     }
 
+    public function testMarkFirstBatchStartedBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->markFirstBatchStarted();
+    }
+
+    public function testCancelAfterAlreadyCompletedThrows(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        $this->expectException(\LogicException::class);
+        $run->cancel(new \DateTimeImmutable('2026-08-07T10:00:01Z'));
+    }
+
     public function testRecordProfileResetsAttemptsToExactlyZero(): void
     {
         $run = $this->runInRunningState();
