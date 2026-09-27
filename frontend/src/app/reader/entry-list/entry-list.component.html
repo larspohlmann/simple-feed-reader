@@ -247,6 +247,9 @@
       } @else if (selection().kind === 'saved-searches' && savedSearchCount() === 0) {
         {{ 'reader.savedSearchesEmpty' | transloco }}
       } @else {
+        @if (selection().unread) {
+          <app-caught-up-illustration />
+        }
         {{ (selection().unread ? 'reader.allCaughtUp' : 'reader.nothingHere') | transloco }}
         @if (!catalogEmpty()) {
           <a routerLink="/discover">{{ 'discover.browseCatalog' | transloco }}</a>

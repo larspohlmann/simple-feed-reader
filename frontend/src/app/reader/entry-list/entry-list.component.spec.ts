@@ -900,6 +900,40 @@ describe('EntryListComponent', () => {
     expect(empty.querySelector('a')).not.toBeNull();
   });
 
+  describe('the caught-up illustration (#1198)', () => {
+    it('sits in the empty state of an unread selection', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      const empty = el.querySelector('.empty')!;
+
+      expect(empty.textContent).toContain("You're all caught up.");
+      expect(empty.querySelector('app-caught-up-illustration')).not.toBeNull();
+    });
+
+    it('stays out of the "Nothing here yet." state', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'all', id: null, unread: false },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+    });
+
+    it('stays out of an unread search that matches nothing', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'search', id: null, unread: true, term: 'angular' },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+    });
+  });
+
   it('emits loadMore from the fallback button and markAllRead', () => {
     const f = mount({ hasMore: true });
     let more = 0,

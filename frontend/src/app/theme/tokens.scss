@@ -27,6 +27,11 @@
   --code-built-in: #e36209;
   --code-tag: #22863a;
   --code-meta: #005cc5;
+
+  /* Caught-up mascot (#1198): illustration colours, fixed like the syntax palette. */
+  --mascot-face: #173b33;
+  --mascot-blush: #f4a6b4;
+  --mascot-chopsticks: #c98f5a;
 }
 
 :root[data-theme='dark'] {
@@ -46,6 +51,11 @@
   --code-built-in: #88c0d0;
   --code-tag: #bf616a;
   --code-meta: #5e81ac;
+
+  /* Caught-up mascot (#1198). */
+  --mascot-face: #10261f;
+  --mascot-blush: #e0939f;
+  --mascot-chopsticks: #a8774d;
 }
 
 @include brightness.theme-steps('light', graphite.$light);

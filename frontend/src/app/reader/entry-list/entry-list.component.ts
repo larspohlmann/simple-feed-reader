@@ -29,6 +29,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { CaughtUpIllustrationComponent } from '../caught-up-illustration/caught-up-illustration.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
 import { groupByRun, RunGroup } from '../for-you-runs';
@@ -127,6 +128,7 @@ export interface TitleCount {
     TagGlyphComponent,
     FaviconComponent,
     EntryRowComponent,
+    CaughtUpIllustrationComponent,
     RecommendationStripComponent,
     RunHeaderComponent,
     EntryHeroComponent,
