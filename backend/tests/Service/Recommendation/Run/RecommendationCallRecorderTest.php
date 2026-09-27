@@ -264,7 +264,6 @@ final class RecommendationCallRecorderTest extends DbTestCase
      * The rows of the run under test. The log keeps ten runs (#401), so a
      * read names one; every test here drives a single run.
      *
-    /**
      * @return list<DebugLogRow>
      */
     private function logRows(): array

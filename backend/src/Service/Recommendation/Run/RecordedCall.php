@@ -92,7 +92,7 @@ final class RecordedCall implements CompletionStreamObserver
         $this->bankUsage();
 
         $this->calls->settleTransportFailure(
-            $this->settlement($this->logId, CallVerdict::TransportFailed),
+            $this->settlement(CallVerdict::TransportFailed),
             $errorDetail,
         );
     }
@@ -102,13 +102,13 @@ final class RecordedCall implements CompletionStreamObserver
         $this->resetLiveness();
         $this->bankUsage();
 
-        $this->calls->settleAnswered($this->settlement($this->logId, $verdict), $content);
+        $this->calls->settleAnswered($this->settlement($verdict), $content);
     }
 
-    private function settlement(int $logId, CallVerdict $verdict): CallSettlement
+    private function settlement(CallVerdict $verdict): CallSettlement
     {
         return new CallSettlement(
-            $logId,
+            $this->logId,
             new CallOutcome($verdict, $this->wireBytes, $this->clock->now(), $this->finishReason),
         );
     }
@@ -118,7 +118,6 @@ final class RecordedCall implements CompletionStreamObserver
         $this->calls->recordStreamedChars($this->runId, 0);
     }
 
-    /** Called from both settle paths: a spend record must not depend on which one settles the call (#409). */
     private function bankUsage(): void
     {
         $usage = $this->usage;

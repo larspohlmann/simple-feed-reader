@@ -65,14 +65,31 @@ final class RecommendationDebugLogJsonTest extends TestCase
         self::assertSame('transport-failed', $entry['verdict']);
     }
 
+    /**
+     * assertNull() alone cannot tell a nullsafe read apart from a plain one:
+     * reading ->value straight off null still yields null, only with a
+     * warning, so the mutant has to be caught by the warning itself.
+     */
     public function testDetailOfAStillStreamingCallHasNoVerdict(): void
     {
         $user = new User('detail-json@example.test', new \DateTimeImmutable());
         $run = new RecommendationRun($user, new \DateTimeImmutable());
         $log = new RecommendationRunLog($run, CallPhase::Batch, 1, 1, 'req', new \DateTimeImmutable());
 
-        $detail = RecommendationDebugLogJson::detail($log);
+        $warningRaised = false;
+        set_error_handler(static function () use (&$warningRaised): bool {
+            $warningRaised = true;
 
+            return true;
+        }, E_WARNING);
+
+        try {
+            $detail = RecommendationDebugLogJson::detail($log);
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertFalse($warningRaised, 'Reading a null verdict must raise no warning.');
         self::assertNull($detail['verdict']);
     }
 

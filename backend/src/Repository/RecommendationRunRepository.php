@@ -17,18 +17,6 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
-    /**
-     * What "active" means for a recommendation run, in one place: no query
-     * below may drift from the others about which statuses still need
-     * ticking. activeStatusQuery() carries it to all three.
-     *
-     * @var list<RunStatus>
-     */
-    private const array ACTIVE_STATUSES = [
-        RunStatus::Pending,
-        RunStatus::Running,
-    ];
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, RecommendationRun::class);
@@ -42,7 +30,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     private function activeStatusQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('r')
-            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES);
+            ->andWhere('r.status IN (:active)')->setParameter('active', RunStatus::active());
     }
 
     /**

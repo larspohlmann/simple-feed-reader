@@ -138,7 +138,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksTheProvidersUsageOntoTheRunWhenTheCallSettles(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 1200,
@@ -160,7 +160,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksTheUsageOfACallThatFailedInTransport(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
             promptTokens: 900,
@@ -176,7 +176,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testLeavesTheCostNullWhenTheProviderReportedNone(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 40,
@@ -193,7 +193,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksOneCallOnceHoweverManySettlePathsReachIt(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
             promptTokens: 900,
@@ -211,7 +211,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksNothingWhenTheProviderSentNoUsageAtAll(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop'));
         $call->finishUsable('{}');
@@ -231,7 +231,7 @@ final class RecordedCallTest extends DbTestCase
      */
     public function testBanksTwoCallsUsageAsASumNotAnOverwrite(): void
     {
-        $first = $this->recordedCall(logId: 7);
+        $first = $this->call();
         $first->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 1000,
             completionTokens: 200,
@@ -241,7 +241,7 @@ final class RecordedCallTest extends DbTestCase
         )));
         $first->finishUsable('{}');
 
-        $second = $this->recordedCall(logId: 8);
+        $second = $this->call();
         $second->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 400,
             completionTokens: 90,
@@ -270,7 +270,7 @@ final class RecordedCallTest extends DbTestCase
      */
     public function testKeepsTheUsageSeenBeforeALaterReportArrivesWithoutIt(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 500,
@@ -289,18 +289,7 @@ final class RecordedCallTest extends DbTestCase
     private function call(): RecordedCall
     {
         $runId = $this->run->requireId();
-        $logId = $this->log->getId();
-        self::assertNotNull($logId);
-
-        $calls = new RecommendationCallRepository($this->em->getConnection());
-
-        return new RecordedCall($calls, $this->clock, $runId, $logId);
-    }
-
-    /** Unlike call(), $logId is not the real log row's id: an arbitrary one is enough for these tests. */
-    private function recordedCall(int $logId): RecordedCall
-    {
-        $runId = $this->run->requireId();
+        $logId = $this->log->requireId();
 
         $calls = new RecommendationCallRepository($this->em->getConnection());
 

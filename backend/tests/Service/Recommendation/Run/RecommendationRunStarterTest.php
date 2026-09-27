@@ -285,7 +285,6 @@ final class RecommendationRunStarterTest extends DbTestCase
     }
 
     /**
-    /**
      * @return list<DebugLogRow>
      */
     private function logRowsOfLatestRun(): array

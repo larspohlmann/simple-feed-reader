@@ -86,8 +86,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     /**
      * How many attempts a given call has already recorded, so the caller can
      * number the next one. Scoped to the run (not the user), phase and batch
-     * number — the dedup phase has no batch number, and SQL `= NULL` never
-     * matches, so that case needs an explicit `IS NULL`.
+     * number — distill and consolidate have no batch number, and SQL `= NULL`
+     * never matches, so that case needs an explicit `IS NULL`.
      */
     public function countAttempts(RecommendationRun $run, CallPhase $phase, ?int $batchNumber): int
     {

@@ -323,7 +323,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Fix #311: RecommendationRun::fail() accepts STATUS_PENDING precisely so
+     * Fix #311: RecommendationRun::fail() accepts RunStatus::Pending precisely so
      * a run that never got as far as freezing a candidate pool can still end
      * in a terminal state. Before this fix, that classification lived only
      * in AdvanceRecommendationRunsHandler, so a poll-only install left a

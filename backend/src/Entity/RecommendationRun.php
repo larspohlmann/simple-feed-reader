@@ -390,7 +390,7 @@ class RecommendationRun
      */
     public function fail(string $error, \DateTimeImmutable $when): void
     {
-        $this->guardStatusOneOf([RunStatus::Pending, RunStatus::Running], 'fail');
+        $this->guardStatusOneOf(RunStatus::active(), 'fail');
 
         $this->terminate(RunStatus::Failed, $when);
         $this->error = $error;
@@ -410,7 +410,7 @@ class RecommendationRun
      */
     public function cancel(\DateTimeImmutable $when): void
     {
-        $this->guardStatusOneOf([RunStatus::Pending, RunStatus::Running], 'cancel');
+        $this->guardStatusOneOf(RunStatus::active(), 'cancel');
 
         $this->terminate(RunStatus::Cancelled, $when);
     }

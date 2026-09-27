@@ -27,4 +27,17 @@ enum RunStatus: string
     {
         return !$this->isTerminal();
     }
+
+    /** @return list<self> */
+    public static function active(): array
+    {
+        $active = [];
+        foreach (self::cases() as $status) {
+            if ($status->isActive()) {
+                $active[] = $status;
+            }
+        }
+
+        return $active;
+    }
 }
