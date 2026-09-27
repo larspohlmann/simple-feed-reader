@@ -25,6 +25,7 @@ use App\Service\Mail\Settings\MailSettings;
 use App\Tests\DbTestCase;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SavedSearchMatchFixture;
+use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
@@ -47,6 +48,8 @@ use Symfony\Component\Mailer\Exception\TransportException;
  */
 final class SendDueDigestsTest extends DbTestCase
 {
+    use SeedsDigestReaders;
+
     private const string NOW = '2026-08-28T09:30:00Z';
     private const string OCCURRENCE = '2026-08-28T08:00:00Z';
 
@@ -259,24 +262,6 @@ final class SendDueDigestsTest extends DbTestCase
         $settings->method('isSendingEnabled')->willReturn($enabled);
 
         return new MailCapability($settings);
-    }
-
-    private function verifiedUser(): User
-    {
-        $user = $this->unverifiedUser();
-        $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-
-        return $user;
-    }
-
-    private function unverifiedUser(): User
-    {
-        $email = \sprintf('digest-%s@example.com', uniqid('', true));
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */

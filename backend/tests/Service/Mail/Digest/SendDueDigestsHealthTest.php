@@ -25,6 +25,7 @@ use App\Service\Mail\Settings\MailSettings;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
+use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use Symfony\Component\Clock\MockClock;
@@ -39,6 +40,8 @@ use Psr\Log\NullLogger;
  */
 final class SendDueDigestsHealthTest extends DbTestCase
 {
+    use SeedsDigestReaders;
+
     private const string NOW = '2026-08-28T09:30:00Z';
 
     private SavedSearchRepository&Stub $savedSearches;
@@ -62,7 +65,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     public function testAFailedDigestSendIsRecorded(): void
     {
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
@@ -81,7 +84,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
     {
         $this->health->recordFailure(MailKind::Digest, 'old@example.test', 'earlier outage');
 
-        $user = $this->user();
+        $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
@@ -119,17 +122,6 @@ final class SendDueDigestsHealthTest extends DbTestCase
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);
-    }
-
-    private function user(): User
-    {
-        $email = 'reader-' . uniqid('', true) . '@example.test';
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-        $user->markEmailVerified(new \DateTimeImmutable('2026-07-02T00:00:00Z'));
-
-        return $user;
     }
 
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
