@@ -809,6 +809,26 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
+     * Below the 1024-token floor the provider may spend the floor plus half (RecommendationAnswerBudget), and the
+     * packer reserves exactly that: 3865 - 1500 overhead - 1536 bound - 709 profile and favorites = 120 tokens.
+     */
+    public function testTheBatchReplyReserveIsTheProvidersAnswerBound(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 129),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(3865, 1, maximumBatchSize: 50),
+        );
+
+        self::assertSame([20, 10], array_map('count', $batches));
+    }
+
+    /**
      * The distillation call is the one place the model sees the full,
      * three-section history: the batch and consolidation calls only ever see
      * the not-yet-distilled PROFILE plus FAVORITES (#493).

@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt;
 
 /**
- * What the provider is allowed to spend answering, per phase — split out of
- * RecommendationPromptBuilder (#493) to keep that class under PHPMD's
- * method-count and complexity ceilings now it renders three prompt shapes
- * (batch, distillation, consolidation). Three of its numeric constants are
- * duplicated here rather than couple the classes for three integers.
+ * What the provider may spend answering, per phase. RecommendationPromptBuilder::packBatches() reserves this same
+ * bound for a batch reply, so the packer and the provider cannot disagree.
  */
 final readonly class RecommendationAnswerBudget
 {
@@ -25,12 +22,7 @@ final readonly class RecommendationAnswerBudget
      */
     private const int TOKENS_PER_PICK = 70;
 
-    /**
-     * Duplicated from RecommendationPromptBuilder on purpose: its packBatches()
-     * uses it for the packing budget, a different computation from the provider
-     * bound here, and coupling two classes for one integer costs more than the
-     * duplication (#493).
-     */
+    /** A score-only batch pick, `{"id":123,"score":843}`: about a fifth of a reasoned one (#493). */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
     /** The answer reserve for the distillation reply. One `{"profile": "..."}` string of at most
@@ -38,19 +30,11 @@ final readonly class RecommendationAnswerBudget
     private const int PROFILE_ANSWER_TOKENS = 1200;
 
     /**
-     * How much room over the estimate the provider is given. The estimate is
-     * a mean, and a long reply is not a runaway to truncate into one that
-     * cannot parse; half again covers the spread yet stays an order of
-     * magnitude below the 33800 tokens that let a looping model run an hour.
-     * Duplicated from RecommendationPromptBuilder for the same reason as
-     * TOKENS_PER_SCORE_PICK (#493).
+     * Half again over the mean estimate: a long reply is not a runaway to truncate into one that cannot parse, and
+     * the bound stays an order of magnitude below the 33800 tokens that let a looping model run an hour.
      */
     private const int ANSWER_BOUND_PERCENT = 150;
 
-    /**
-     * Duplicated from RecommendationPromptBuilder's own copy for the same
-     * reason as TOKENS_PER_SCORE_PICK (#493).
-     */
     private const int MINIMUM_ANSWER_TOKENS = 1024;
 
     /**

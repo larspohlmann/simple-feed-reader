@@ -17,15 +17,6 @@ final class RecommendationPromptBuilder
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
-    /**
-     * What one score-only pick costs in a batch reply: `{"id":123,"score":843}`, no prose --
-     * about a fifth of a reason-bearing pick, so packBatches fits more candidates per batch
-     * and the run makes fewer calls (#493). Also lives on RecommendationAnswerBudget, which
-     * prices the reply bound, a different computation; coupling the two for one shared
-     * integer would cost more than the duplication.
-     */
-    private const int TOKENS_PER_SCORE_PICK = 15;
-
     /** What packBatches assumes the not-yet-distilled profile block will cost, so it can budget the
      *  batch prompt before the distillation phase has run. An estimate on purpose — the real profile
      *  is bounded to roughly this by DISTILL_ROLE's word cap (#493). */
@@ -50,21 +41,6 @@ final class RecommendationPromptBuilder
      */
     private const int CANDIDATE_LINE_FRAME_CHARS = 90;
 
-    /**
-     * How much room over the estimate the provider is actually given. The estimate is a
-     * mean; a reply that runs long is not a runaway and must not be truncated into one that
-     * cannot parse. Half again covers the spread and still leaves the ceiling an order of
-     * magnitude below the 33800 tokens that let a looping model generate for an hour.
-     * Duplicated on RecommendationAnswerBudget for the same reason as TOKENS_PER_SCORE_PICK
-     * (#493).
-     */
-    private const int ANSWER_BOUND_PERCENT = 150;
-
-    /**
-     * Duplicated on RecommendationAnswerBudget for the same reason as
-     * TOKENS_PER_SCORE_PICK (#493).
-     */
-    private const int MINIMUM_ANSWER_TOKENS = 1024;
     private const int MINIMUM_BATCH_SIZE = 10;
 
     /**
@@ -104,19 +80,13 @@ final class RecommendationPromptBuilder
         EffectiveRecommendationSettings $settings,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
-        // The batch call sees the not-yet-distilled profile plus FAVORITES only
-        // (RecommendationRunAdvancer builds the distillation profile from the
-        // full three-section history before the batch phase ever runs), so the
-        // packer budgets for that shape rather than the full history (#493).
         $favoritesSection = $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
-        // The reply scores one line per candidate, so its size is bounded by
-        // the batch cap, not by the final list size. The batch reply is
-        // score-only (id + score, no reason), so it is charged the score-only
-        // rate rather than the reason-bearing pick rate (#493).
-        $responseReserve = intdiv($cap * self::TOKENS_PER_SCORE_PICK * self::ANSWER_BOUND_PERCENT, 100);
-        $responseReserve = max(self::MINIMUM_ANSWER_TOKENS, $responseReserve);
+        $responseReserve = RecommendationAnswerBudget::answerBoundTokens(
+            $cap,
+            RecommendationResponseSchema::BatchScore,
+        );
         $budget = $settings->packing->contextWindow - self::FIXED_OVERHEAD_TOKENS - $responseReserve - $historyTokens;
 
         $batches = [];
