@@ -28,7 +28,7 @@ final readonly class SubscriptionEditor
         $this->entityManager->flush();
     }
 
-    public function moveToTag(Subscription $subscription, TagMove $move): void
+    public function moveToTag(Subscription $subscription, FeedMove $move): void
     {
         $this->feedTagMove->move($subscription, $move);
         $this->entityManager->flush();
