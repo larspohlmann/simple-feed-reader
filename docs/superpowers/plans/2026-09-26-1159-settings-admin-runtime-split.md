@@ -5608,3 +5608,21 @@ On a failure:
 
 Run: `gh issue view 1159 --json state --jq .state`
 Expected: `CLOSED`. Do not close it by hand. If it is still open, report it: the merge did not carry the keyword.
+
+### Execution rulings (PR A)
+
+- **Preflight (opus scan):**
+  - A3 extracts `tests/Support/ProxyPasswordCiphers` and the `StoredProxies` trait for the cipher and stub-repository scaffolding, used by `ProxySettingsTest`, `ProxyConnectionTesterTest` and `StoredProxyTest`.
+  - The stale "resolver" names in the perl'd tests are renamed by hand; the DNS `$resolver` for `UrlGuard` stays.
+  - Added deletion checks: the old mail proxy guard (PUT answers 500), the snapshot's `hasPassword`, `SecretChange::keep()`, and `StoredProxy`'s host guard.
+  - A2 pins that an empty password still replaces the stored one.
+  - A1's wire test also calls `POST /api/admin/mail/reset`, and the fresh-database mail GET asserts `proxyConfigured: false` with an empty label.
+- **Docblock trims (planner ruling):** the class docblocks of `ProxyServerSettings`, `MailSettings`, `ProxyConnectionTester`, `ActiveMailTransportFactory`, `FailoverRequestSender`, `ConcurrentFeedFetcher` and `RefreshRunnerConcurrentFetchTest` are three lines or fewer.
+- **Fix wave:**
+  - The stub-repository helper takes a `ProxyPasswordCipher`.
+  - One `NoEgressProxy` trait replaces the null `EgressProxySource` stub copies.
+  - `$resolvedProxy`/`$proxy` stubs are now `$egressProxy`.
+  - `FailoverRequestSender::resolveProxy()` is renamed.
+  - `ConfiguredProxySource`'s docblock no longer lists its callers.
+- **Accepted:** the `ProxySettings::apply()` early `return` mutant is equivalent. Falling through re-applies the same connection, and a replacement can never also be a removal.
+- **For PR B:** `GrafanaSettingsTest` holds a fourth copy of the test secret; fold it into `ProxyPasswordCiphers` or a sibling when B1/B3 rewrite that file.
