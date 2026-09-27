@@ -91,9 +91,11 @@ Non-negotiables:
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
   Map a new one to HTTP by adding an arm to its module's `src/Http/Problem/*Problems`
   mapper.
-- **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*` and
-  Symfony's HttpFoundation and HTTP-exception classes, class names in strings
-  included, in `Service`, `Repository`, `Entity`, `Enum`, `Exception` and `Pagination`.
+- **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*`,
+  anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
+  class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
+  `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
+  (`$request->toChange()`) or a plain field, never the DTO (#1182).
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
   typed value, or the git history beats a sentence about the code — reach for
   those first, and prefer them even when a comment would be easy. Write a
