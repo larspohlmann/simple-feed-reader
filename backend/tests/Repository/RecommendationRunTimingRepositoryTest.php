@@ -14,6 +14,9 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
+use Doctrine\DBAL\Schema\Schema;
+use DoctrineMigrations\Version20260925090000;
+use Psr\Log\NullLogger;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RecommendationRunTimingRepositoryTest extends DbTestCase
@@ -90,6 +93,54 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
 
         self::assertSame([$newer->getId()], array_values(array_unique(array_column($spans, 'runId'))));
         self::assertSame(9.0, $spans[0]['spanSeconds']);
+    }
+
+    public function testDeletingRetiredDedupRowsRestoresTheEtaRead(): void
+    {
+        $run = $this->completedRun();
+        $this->finishedLog($run, CallPhase::Distill, null, '10:00:00', '10:00:10');
+        $this->em->flush();
+
+        $connection = $this->em->getConnection();
+        $connection->insert('recommendation_run_log', [
+            'run_id' => $run->requireId(),
+            'phase' => 'dedup',
+            'attempt' => 1,
+            'request_body' => 'dedup-req',
+            'response_text' => 'dedup-resp',
+            'wire_bytes' => 0,
+            'created_at' => '2026-08-08 10:00:20',
+            'finished_at' => '2026-08-08 10:00:25',
+        ]);
+        $this->em->clear();
+
+        try {
+            $this->timings->completedRunPhaseSpans($this->user, 10);
+            self::fail('Expected a ValueError while the dedup row survives.');
+        } catch (\ValueError $exception) {
+            self::assertStringContainsString('dedup', $exception->getMessage());
+        }
+
+        // Migration classes are deliberately excluded from Composer's
+        // autoloader (see doctrine_migrations.yaml), so this test loads the
+        // one file it needs to drive directly.
+        require_once dirname(__DIR__, 2) . '/migrations/Version20260925090000.php';
+        $migration = new Version20260925090000($connection, new NullLogger());
+        $migration->up(new Schema());
+        foreach ($migration->getSql() as $query) {
+            $connection->executeStatement($query->getStatement());
+        }
+        $this->em->clear();
+
+        $spans = array_map(
+            static fn (array $span): array => [...$span, 'phase' => $span['phase']->value],
+            $this->timings->completedRunPhaseSpans($this->user, 10),
+        );
+
+        self::assertSame(
+            [['runId' => $run->getId(), 'phase' => 'distill', 'spanSeconds' => 10.0, 'batchCount' => 0]],
+            $spans,
+        );
     }
 
     private function completedRun(?User $user = null): RecommendationRun
