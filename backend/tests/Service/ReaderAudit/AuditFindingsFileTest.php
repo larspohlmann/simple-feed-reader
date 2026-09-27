@@ -43,8 +43,8 @@ final class AuditFindingsFileTest extends TestCase
 
         $written = (string) file_get_contents($this->path());
         self::assertSame(
-            json_encode($first->toArray(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n"
-            . json_encode($second->toArray(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n",
+            json_encode($first->toFindingsFileRecord(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n"
+            . json_encode($second->toFindingsFileRecord(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE) . "\n",
             $written,
         );
         self::assertStringContainsString('"title":"Café"', $written);

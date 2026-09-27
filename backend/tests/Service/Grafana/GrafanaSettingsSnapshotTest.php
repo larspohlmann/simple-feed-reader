@@ -42,7 +42,7 @@ final class GrafanaSettingsSnapshotTest extends TestCase
         self::assertEquals(new GrafanaConnection(null, null, null, null, false), $snapshot->connection);
     }
 
-    public function testARowWithATokenSurvivesTheArrayRoundTrip(): void
+    public function testARowWithATokenSurvivesTheCacheEntryRoundTrip(): void
     {
         $snapshot = new GrafanaSettingsSnapshot(
             new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example', null, true),
@@ -50,14 +50,14 @@ final class GrafanaSettingsSnapshotTest extends TestCase
             'oken',
         );
 
-        self::assertEquals($snapshot, GrafanaSettingsSnapshot::fromArrayOrNull($snapshot->toArray()));
+        self::assertEquals($snapshot, GrafanaSettingsSnapshot::fromCacheEntryOrNull($snapshot->toCacheEntry()));
     }
 
-    public function testATokenlessRowSurvivesTheArrayRoundTripWithoutGainingAToken(): void
+    public function testATokenlessRowSurvivesTheCacheEntryRoundTripWithoutGainingAToken(): void
     {
         $snapshot = GrafanaSettingsSnapshot::fromEntity(new GrafanaSettingsEntity());
 
-        $rebuilt = GrafanaSettingsSnapshot::fromArrayOrNull($snapshot->toArray());
+        $rebuilt = GrafanaSettingsSnapshot::fromCacheEntryOrNull($snapshot->toCacheEntry());
 
         self::assertEquals($snapshot, $rebuilt);
         self::assertFalse($rebuilt?->hasToken());
@@ -66,7 +66,7 @@ final class GrafanaSettingsSnapshotTest extends TestCase
     #[DataProvider('malformedEntries')]
     public function testAMalformedEntryIsRejectedAsAMiss(mixed $stored): void
     {
-        self::assertNull(GrafanaSettingsSnapshot::fromArrayOrNull($stored));
+        self::assertNull(GrafanaSettingsSnapshot::fromCacheEntryOrNull($stored));
     }
 
     /** @return iterable<string, array{mixed}> */

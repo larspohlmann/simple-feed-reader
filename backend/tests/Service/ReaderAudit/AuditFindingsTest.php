@@ -130,6 +130,16 @@ final class AuditFindingsTest extends TestCase
         self::assertSame(2, $restored->markers[0]->weight);
     }
 
+    public function testTheFindingsFileRecordMapsEachMarkerToItsOwnRecord(): void
+    {
+        $finding = $this->finding(7, 11, 'Ein Feed', [$this->marker('body_short', 2, 'EdgeBoilerplateTrimmer')]);
+
+        self::assertSame(
+            [['code' => 'body_short', 'weight' => 2, 'suspect' => 'EdgeBoilerplateTrimmer', 'detail' => 'detail']],
+            $finding->toFindingsFileRecord()['markers'],
+        );
+    }
+
     public function testCountsHowManyOfTheAuditedArticlesWereExtractedAtAll(): void
     {
         $failed = new AuditFinding(2, 11, 'A', 'T', 'u', 'l', false, [], []);
@@ -192,7 +202,7 @@ final class AuditFindingsTest extends TestCase
     {
         $path = (string) tempnam(sys_get_temp_dir(), 'audit');
         $this->files[] = $path;
-        $encode = static fn (AuditFinding $f): string => json_encode($f->toArray(), \JSON_THROW_ON_ERROR);
+        $encode = static fn (AuditFinding $f): string => json_encode($f->toFindingsFileRecord(), \JSON_THROW_ON_ERROR);
         $lines = array_map($encode, $findings);
         file_put_contents($path, $lines === [] ? '' : implode("\n", $lines) . "\n");
 

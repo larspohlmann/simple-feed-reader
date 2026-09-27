@@ -155,7 +155,7 @@ final class AuditReportHtmlTest extends TestCase
     private function render(array $findings, int $maxCandidates = 300): string
     {
         $this->file = (string) tempnam(sys_get_temp_dir(), 'audit');
-        $encode = static fn (AuditFinding $f): string => json_encode($f->toArray(), \JSON_THROW_ON_ERROR);
+        $encode = static fn (AuditFinding $f): string => json_encode($f->toFindingsFileRecord(), \JSON_THROW_ON_ERROR);
         $lines = array_map($encode, $findings);
         file_put_contents($this->file, implode("\n", $lines) . "\n");
 
