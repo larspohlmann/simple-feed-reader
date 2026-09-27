@@ -8,79 +8,34 @@ use App\Command\Exception\MalformedOptionException;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Entity\User;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionResult;
 use App\Service\ReaderAudit\DatabaseValue;
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeArticleExtractor;
+use App\Tests\Support\SeedsUsers;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 final class ReaderAuditCommandTest extends DbTestCase
 {
-    private function tester(): CommandTester
+    use SeedsUsers;
+
+    /** @var list<string> */
+    private array $filesToDelete = [];
+
+    protected function tearDown(): void
     {
-        $application = new Application(self::$kernel ?? self::bootKernel());
-
-        return new CommandTester($application->find('app:reader:audit'));
-    }
-
-    private function subscribedEntry(string $email): Entry
-    {
-        $feed = new Feed('https://cli.example.com/feed-' . uniqid('', true));
-        $this->em->persist($feed);
-        $user = new User($email, new \DateTimeImmutable());
-        $this->em->persist($user);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
-        $entry = new Entry(
-            $feed,
-            'guid-' . uniqid('', true),
-            'https://cli.example.com/article',
-            'An article',
-            new \DateTimeImmutable('-1 hour'),
-            new \DateTimeImmutable('-1 hour'),
-        );
-        $this->em->persist($entry);
-        $this->em->flush();
-
-        return $entry;
-    }
-
-    /** @return list<Entry> */
-    private function subscribedEntries(string $email, int $count): array
-    {
-        $feed = new Feed('https://cli.example.com/feed-' . uniqid('', true));
-        $this->em->persist($feed);
-        $user = new User($email, new \DateTimeImmutable());
-        $this->em->persist($user);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
-
-        $entries = [];
-        for ($i = 0; $i < $count; ++$i) {
-            $entry = new Entry(
-                $feed,
-                'guid-' . uniqid('', true),
-                'https://cli.example.com/article-' . $i,
-                'An article',
-                new \DateTimeImmutable('-1 hour'),
-                new \DateTimeImmutable('-1 hour'),
-            );
-            $this->em->persist($entry);
-            $entries[] = $entry;
+        foreach ($this->filesToDelete as $path) {
+            @unlink($path);
         }
-        $this->em->flush();
-
-        return $entries;
     }
 
     public function testAMalformedLimitExitsBeforeAnyFetch(): void
     {
-        $user = new User('audit-malformed@example.com', new \DateTimeImmutable());
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->user('audit-malformed@example.com');
 
         $extractor = new FakeArticleExtractor();
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
@@ -97,20 +52,12 @@ final class ReaderAuditCommandTest extends DbTestCase
 
     public function testAnAbsentUserFallsBackToTheWidestSubscriberAndBlankShardOptionsFallBackToZero(): void
     {
-        $entry = $this->subscribedEntry('audit-widest@example.com');
+        $entry = $this->subscribedEntries('audit-widest@example.com', 1)[0];
 
-        $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
-            'https://cli.example.com/article',
-            'An article',
-            null,
-            null,
-            '<p>Body.</p>',
-            null,
-        ));
+        $extractor = $this->extractorReturningOk((string) $entry->getUrl());
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
 
-        $outPath = sys_get_temp_dir() . '/reader-audit-widest-' . uniqid('', true) . '.jsonl';
+        $outPath = $this->outputPath('widest');
 
         $tester = $this->tester();
         $exitCode = $tester->execute([
@@ -121,27 +68,17 @@ final class ReaderAuditCommandTest extends DbTestCase
         ]);
 
         self::assertSame(Command::SUCCESS, $exitCode);
-        self::assertContains('https://cli.example.com/article', $extractor->calls);
-
-        unlink($outPath);
+        self::assertContains($entry->getUrl(), $extractor->calls);
     }
 
     public function testABlankShardWithTwoShardsSelectsHalfNotNone(): void
     {
         $entries = $this->subscribedEntries('audit-shard@example.com', 2);
 
-        $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
-            'https://cli.example.com/article-0',
-            'An article',
-            null,
-            null,
-            '<p>Body.</p>',
-            null,
-        ));
+        $extractor = $this->extractorReturningOk('https://cli.example.com/article-0');
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
 
-        $outPath = sys_get_temp_dir() . '/reader-audit-shard-' . uniqid('', true) . '.jsonl';
+        $outPath = $this->outputPath('shard');
         $entryIds = array_map(static fn (Entry $entry): string => (string) $entry->requireId(), $entries);
 
         $tester = $this->tester();
@@ -158,18 +95,16 @@ final class ReaderAuditCommandTest extends DbTestCase
             $extractor->calls,
             'A blank --shard must fall back to index 0, which keeps one of every two, not none.',
         );
-
-        unlink($outPath);
     }
 
     public function testAnExplicitBeforeCutoffExcludesLaterEntries(): void
     {
-        $this->subscribedEntry('audit-before@example.com');
+        $this->subscribedEntries('audit-before@example.com', 1);
 
         $extractor = new FakeArticleExtractor();
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
 
-        $outPath = sys_get_temp_dir() . '/reader-audit-before-' . uniqid('', true) . '.jsonl';
+        $outPath = $this->outputPath('before');
 
         $tester = $this->tester();
         $exitCode = $tester->execute([
@@ -184,18 +119,16 @@ final class ReaderAuditCommandTest extends DbTestCase
             $extractor->calls,
             'The entry was created after 2020-01-01, so an honoured cutoff excludes it.',
         );
-
-        unlink($outPath);
     }
 
     public function testABlankPerFeedOptionFallsBackToZeroRatherThanSamplingOne(): void
     {
-        $this->subscribedEntry('audit-per-feed@example.com');
+        $this->subscribedEntries('audit-per-feed@example.com', 1);
 
         $extractor = new FakeArticleExtractor();
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
 
-        $outPath = sys_get_temp_dir() . '/reader-audit-per-feed-' . uniqid('', true) . '.jsonl';
+        $outPath = $this->outputPath('per-feed');
 
         $tester = $this->tester();
         $exitCode = $tester->execute([
@@ -206,13 +139,11 @@ final class ReaderAuditCommandTest extends DbTestCase
 
         self::assertSame(Command::SUCCESS, $exitCode);
         self::assertSame([], $extractor->calls, 'A per-feed cap of zero draws nothing, not one article per feed.');
-
-        unlink($outPath);
     }
 
     public function testABlankOutOptionIsReportedAsUnwritableInsteadOfATypeError(): void
     {
-        $entry = $this->subscribedEntry('audit-blank-out@example.com');
+        $entry = $this->subscribedEntries('audit-blank-out@example.com', 1)[0];
 
         $extractor = new FakeArticleExtractor();
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
@@ -233,20 +164,12 @@ final class ReaderAuditCommandTest extends DbTestCase
 
     public function testABlankBaseUrlFallsBackToAnEmptyOrigin(): void
     {
-        $entry = $this->subscribedEntry('audit-blank-base@example.com');
+        $entry = $this->subscribedEntries('audit-blank-base@example.com', 1)[0];
 
-        $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
-            'https://cli.example.com/article',
-            'An article',
-            null,
-            null,
-            '<p>Body.</p>',
-            null,
-        ));
+        $extractor = $this->extractorReturningOk((string) $entry->getUrl());
         self::getContainer()->set(ArticleExtractorInterface::class, $extractor);
 
-        $outPath = sys_get_temp_dir() . '/reader-audit-blank-base-' . uniqid('', true) . '.jsonl';
+        $outPath = $this->outputPath('blank-base');
 
         $tester = $this->tester();
         $exitCode = $tester->execute([
@@ -262,7 +185,54 @@ final class ReaderAuditCommandTest extends DbTestCase
         /** @var array<string, mixed> $row */
         $row = json_decode($line, true, 512, \JSON_THROW_ON_ERROR);
         self::assertStringStartsWith('/?subscription=', DatabaseValue::string($row['readerLink']));
+    }
 
-        unlink($outPath);
+    private function tester(): CommandTester
+    {
+        $application = new Application(self::$kernel ?? self::bootKernel());
+
+        return new CommandTester($application->find('app:reader:audit'));
+    }
+
+    /** @return list<Entry> */
+    private function subscribedEntries(string $email, int $count): array
+    {
+        $feed = new Feed('https://cli.example.com/feed-' . uniqid('', true));
+        $this->em->persist($feed);
+        $user = $this->user($email);
+        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
+
+        $entries = [];
+        for ($i = 0; $i < $count; ++$i) {
+            $entry = new Entry(
+                $feed,
+                'guid-' . uniqid('', true),
+                'https://cli.example.com/article-' . $i,
+                'An article',
+                new \DateTimeImmutable('-1 hour'),
+                new \DateTimeImmutable('-1 hour'),
+            );
+            $this->em->persist($entry);
+            $entries[] = $entry;
+        }
+        $this->em->flush();
+
+        return $entries;
+    }
+
+    private function extractorReturningOk(string $url): FakeArticleExtractor
+    {
+        $extractor = new FakeArticleExtractor();
+        $extractor->willReturn(ExtractionResult::ok($url, 'An article', null, null, '<p>Body.</p>', null));
+
+        return $extractor;
+    }
+
+    private function outputPath(string $label): string
+    {
+        $path = sys_get_temp_dir() . '/reader-audit-' . $label . '-' . uniqid('', true) . '.jsonl';
+        $this->filesToDelete[] = $path;
+
+        return $path;
     }
 }

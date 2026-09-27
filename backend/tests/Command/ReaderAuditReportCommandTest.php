@@ -23,44 +23,39 @@ final class ReaderAuditReportCommandTest extends TestCase
         }
     }
 
-    private function findingsFile(): string
+    /** @return array<string, mixed> */
+    private function row(int $entryId): array
     {
-        $path = sys_get_temp_dir() . '/reader-audit-report-' . uniqid('', true) . '.jsonl';
-        $row = [
-            'entryId' => 1,
+        return [
+            'entryId' => $entryId,
             'feedId' => 1,
             'feedTitle' => 'Example Feed',
-            'title' => 'An article',
-            'sourceUrl' => 'https://example.com/article',
-            'readerLink' => 'http://localhost:4200/?subscription=1&entry=1-an-article',
+            'title' => 1 === $entryId ? 'An article' : 'Article ' . $entryId,
+            'sourceUrl' => 'https://example.com/article-' . $entryId,
+            'readerLink' => 'http://localhost:4200/?subscription=1&entry=' . $entryId,
             'extracted' => true,
             'markers' => [['code' => 'leading_link_list', 'weight' => 3, 'suspect' => 'cleaner', 'detail' => 'x']],
             'metrics' => [],
         ];
-        file_put_contents($path, json_encode($row, \JSON_THROW_ON_ERROR) . "\n");
-        $this->filesToDelete[] = $path;
+    }
 
-        return $path;
+    private function findingsFile(): string
+    {
+        return $this->writeFindings([$this->row(1)]);
     }
 
     private function threeFlaggedFindingsFile(): string
     {
+        return $this->writeFindings(array_map($this->row(...), range(1, 3)));
+    }
+
+    /** @param list<array<string, mixed>> $rows */
+    private function writeFindings(array $rows): string
+    {
         $path = sys_get_temp_dir() . '/reader-audit-report-' . uniqid('', true) . '.jsonl';
         $lines = '';
-        for ($entryId = 1; $entryId <= 3; ++$entryId) {
-            $lines .= json_encode([
-                'entryId' => $entryId,
-                'feedId' => 1,
-                'feedTitle' => 'Example Feed',
-                'title' => 'Article ' . $entryId,
-                'sourceUrl' => 'https://example.com/article-' . $entryId,
-                'readerLink' => 'http://localhost:4200/?subscription=1&entry=' . $entryId,
-                'extracted' => true,
-                'markers' => [
-                    ['code' => 'leading_link_list', 'weight' => 3, 'suspect' => 'cleaner', 'detail' => 'x'],
-                ],
-                'metrics' => [],
-            ], \JSON_THROW_ON_ERROR) . "\n";
+        foreach ($rows as $row) {
+            $lines .= json_encode($row, \JSON_THROW_ON_ERROR) . "\n";
         }
         file_put_contents($path, $lines);
         $this->filesToDelete[] = $path;
@@ -76,25 +71,29 @@ final class ReaderAuditReportCommandTest extends TestCase
         return $path;
     }
 
+    private function tickingClock(): TickingClock
+    {
+        return new TickingClock(new \DateTimeImmutable('2026-02-03T04:05:00Z'), 0);
+    }
+
     public function testTheReportIsWrittenWithTheClockedTimestampAndTheChosenTopCount(): void
     {
-        $clock = new TickingClock(new \DateTimeImmutable('2026-02-03T04:05:00Z'), 0);
         $out = $this->outputPath();
 
-        $tester = new CommandTester(new ReaderAuditReportCommand($clock));
+        $tester = new CommandTester(new ReaderAuditReportCommand($this->tickingClock()));
         $exitCode = $tester->execute(['--in' => $this->findingsFile(), '--out' => $out, '--top' => '1']);
 
         self::assertSame(Command::SUCCESS, $exitCode);
         $html = file_get_contents($out) ?: '';
         self::assertStringContainsString('2026-02-03 04:05', $html);
+        self::assertStringContainsString('Candidates (1 worst of 1 flagged)', $html);
     }
 
     public function testAMalformedTopIsRefusedBeforeTheReportIsWritten(): void
     {
-        $clock = new TickingClock(new \DateTimeImmutable('2026-02-03T04:05:00Z'), 0);
         $out = $this->outputPath();
 
-        $tester = new CommandTester(new ReaderAuditReportCommand($clock));
+        $tester = new CommandTester(new ReaderAuditReportCommand($this->tickingClock()));
 
         try {
             $tester->execute(['--in' => $this->findingsFile(), '--out' => $out, '--top' => 'abc']);
@@ -106,10 +105,9 @@ final class ReaderAuditReportCommandTest extends TestCase
 
     public function testABlankTopOptionFallsBackToZeroCandidatesRatherThanOneOrAllButOne(): void
     {
-        $clock = new TickingClock(new \DateTimeImmutable('2026-02-03T04:05:00Z'), 0);
         $out = $this->outputPath();
 
-        $tester = new CommandTester(new ReaderAuditReportCommand($clock));
+        $tester = new CommandTester(new ReaderAuditReportCommand($this->tickingClock()));
         $exitCode = $tester->execute(['--in' => $this->threeFlaggedFindingsFile(), '--out' => $out, '--top' => ' ']);
 
         self::assertSame(Command::SUCCESS, $exitCode);
@@ -119,9 +117,7 @@ final class ReaderAuditReportCommandTest extends TestCase
 
     public function testABlankInOptionFallsBackToAnEmptyPatternInsteadOfATypeError(): void
     {
-        $clock = new TickingClock(new \DateTimeImmutable('2026-02-03T04:05:00Z'), 0);
-
-        $tester = new CommandTester(new ReaderAuditReportCommand($clock));
+        $tester = new CommandTester(new ReaderAuditReportCommand($this->tickingClock()));
         $exitCode = $tester->execute(['--in' => ' ', '--out' => $this->outputPath()]);
 
         self::assertSame(Command::FAILURE, $exitCode);

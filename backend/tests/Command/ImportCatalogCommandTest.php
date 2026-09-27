@@ -86,11 +86,6 @@ final class ImportCatalogCommandTest extends DbTestCase
         self::assertSame(1, $tester->getStatusCode());
     }
 
-    /**
-     * `ConsoleOption::text()` reads a whitespace-only value as absent, same as
-     * blank: a `--file` of spaces falls back to the shipped document instead
-     * of failing to read a path made only of spaces.
-     */
     public function testAWhitespaceOnlyFileFallsBackToTheShippedDocument(): void
     {
         $tester = $this->tester();
