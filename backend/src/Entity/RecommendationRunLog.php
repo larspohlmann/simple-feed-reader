@@ -26,6 +26,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_recommendation_run_log_run', columns: ['run_id'])]
 class RecommendationRunLog
 {
+    use PersistedId;
+
     public const string PHASE_BATCH = 'batch';
     public const string PHASE_DISTILL = 'distill';
     public const string PHASE_CONSOLIDATE = 'consolidate';
@@ -175,15 +177,5 @@ class RecommendationRunLog
     public function getFinishReason(): ?string
     {
         return $this->finishReason;
-    }
-
-    /** The final decoded text replaces whatever partial state the checkpoints wrote. */
-    public function finish(string $responseText, CallOutcome $outcome): void
-    {
-        $this->responseText = $responseText;
-        $this->verdict = $outcome->verdict;
-        $this->wireBytes = $outcome->wireBytes;
-        $this->finishReason = $outcome->finishReason;
-        $this->finishedAt = $outcome->finishedAt;
     }
 }

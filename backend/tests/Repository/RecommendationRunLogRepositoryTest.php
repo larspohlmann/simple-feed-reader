@@ -50,7 +50,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             'req-body-a',
             new \DateTimeImmutable('2026-08-08T10:00:00Z'),
         );
-        $finished->finish(
+        $this->fixtures->settleLog(
+            $finished,
             'decoded text',
             new CallOutcome(
                 RecommendationRunLog::VERDICT_USABLE,
@@ -105,7 +106,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->user);
         $done = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'r');
-        $done->finish(
+        $this->fixtures->settleLog(
+            $done,
             'finished text',
             new CallOutcome(
                 RecommendationRunLog::VERDICT_UNUSABLE,

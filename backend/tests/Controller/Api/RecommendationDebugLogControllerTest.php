@@ -78,7 +78,8 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             'req a',
             new \DateTimeImmutable('2026-08-08T10:00:00Z'),
         );
-        $finished->finish(
+        $this->fixtures()->settleLog(
+            $finished,
             'done text',
             new CallOutcome(
                 RecommendationRunLog::VERDICT_USABLE,
@@ -277,7 +278,8 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
         $log = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
-        $log->finish(
+        $this->fixtures()->settleLog(
+            $log,
             'res',
             new CallOutcome(
                 RecommendationRunLog::VERDICT_USABLE,

@@ -104,14 +104,16 @@ final class RecommendationRunTimingRepositoryTest extends DbTestCase
         string $startedAt,
         string $finishedAt,
     ): void {
-        $this->fixtures->log(
+        $log = $this->fixtures->log(
             $run,
             $phase,
             $batchNumber,
             1,
             'req',
             new \DateTimeImmutable('2026-08-08T' . $startedAt . 'Z'),
-        )->finish(
+        );
+        $this->fixtures->settleLog(
+            $log,
             'reply',
             new CallOutcome(
                 RecommendationRunLog::VERDICT_USABLE,
