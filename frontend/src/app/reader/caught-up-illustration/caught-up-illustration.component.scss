@@ -1,7 +1,7 @@
 :host {
   display: flex;
   justify-content: center;
-  margin-bottom: var(--space-4);
+  margin: calc(var(--space-7) * 2) 0 var(--space-4);
 }
 
 svg {
