@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
-use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\ProviderConnection;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

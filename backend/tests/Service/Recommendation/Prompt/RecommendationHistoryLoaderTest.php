@@ -11,8 +11,8 @@ use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
+use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use App\Tests\DbTestCase;
 

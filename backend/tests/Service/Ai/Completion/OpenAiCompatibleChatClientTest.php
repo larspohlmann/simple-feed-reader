@@ -4,13 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\Completion;
 
-use App\Service\Ai\Exception\CredentialsRejectedException;
-use App\Service\Ai\Exception\ProviderRunawayException;
-use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderConnection;
-use App\Service\Ai\ProviderCredentials;
-use App\Service\Ai\ProviderTimeouts;
 use App\Service\Ai\Completion\CompletionBodyDecoder;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\CompletionRequest;
@@ -21,6 +14,13 @@ use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\JsonSchema;
 use App\Service\Ai\Completion\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\OpenAiCompatibleChatClient;
+use App\Service\Ai\Exception\CredentialsRejectedException;
+use App\Service\Ai\Exception\ProviderRunawayException;
+use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderTimeouts;
 use App\Tests\Support\CountingCompletionStreamHeartbeat;
 use App\Tests\Support\NullCompletionStreamHeartbeat;
 use App\Tests\Support\ResponseCapturingHttpClient;

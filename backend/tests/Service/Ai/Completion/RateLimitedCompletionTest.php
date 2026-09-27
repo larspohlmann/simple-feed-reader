@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\Completion;
 
-use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderConnection;
-use App\Service\Ai\ProviderCredentials;
-use App\Service\Ai\ProviderTimeouts;
 use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\ConcurrentCompletion;
-use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Completion\JsonSchema;
 use App\Service\Ai\Completion\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Completion\RetryPlan;
+use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\ProviderTimeouts;
 use App\Tests\Support\StubChatClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;

@@ -8,8 +8,8 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\Recommendation\Feed\RecommendationForYouSummary;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Service\Recommendation\Feed\RecommendationRunStatus;
+use App\Service\Recommendation\Run\RecommendationRunReport;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunStatusJsonTest extends TestCase

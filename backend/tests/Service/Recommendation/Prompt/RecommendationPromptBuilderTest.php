@@ -7,12 +7,12 @@ namespace App\Tests\Service\Recommendation\Prompt;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Prompt\CandidatePoolSummary;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationHistory;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
+use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

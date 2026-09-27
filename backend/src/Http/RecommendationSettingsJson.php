@@ -6,8 +6,8 @@ namespace App\Http;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 use App\Service\Recommendation\Settings\RecommendationSettingsBounds;
 
 /**
