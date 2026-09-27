@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -14,14 +14,13 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 
 final class FailoverRequestSenderTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const array DUAL_STACK = ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34'];
 
     private function sender(MockHttpClient $client): FailoverRequestSender
     {
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
-        return new FailoverRequestSender($client, $egressProxySource);
+        return new FailoverRequestSender($client, $this->noEgressProxy());
     }
 
     public function testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders(): void

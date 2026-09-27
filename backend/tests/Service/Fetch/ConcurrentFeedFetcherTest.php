@@ -6,7 +6,6 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -17,6 +16,7 @@ use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -25,6 +25,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class ConcurrentFeedFetcherTest extends TestCase
 {
+    use NoEgressProxy;
+
     /**
      * Every host in these tests resolves to one public address unless
      * $dnsOverrides says otherwise; the SSRF rules themselves are covered by
@@ -52,9 +54,6 @@ final class ConcurrentFeedFetcherTest extends TestCase
             }
         };
 
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new ConcurrentFeedFetcher(
@@ -64,7 +63,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             $concurrency,
             $hostConcurrency,
             'TestAgent/1.0',
-            $egressProxySource,
+            $this->noEgressProxy(),
             new FetchRetryPolicy($urlGuard),
         );
     }

@@ -6,7 +6,6 @@ namespace App\Tests\Service\Reader;
 
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
@@ -15,12 +14,15 @@ use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HtmlPageFetcherTest extends TestCase
 {
+    use NoEgressProxy;
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -51,14 +53,6 @@ final class HtmlPageFetcherTest extends TestCase
             'TestAgent/1.0',
             new SymfonyStatusReasonPhrases(),
         );
-    }
-
-    private function noEgressProxy(): EgressProxySource
-    {
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
-        return $egressProxySource;
     }
 
     private static function metaRefresh(string $target): string

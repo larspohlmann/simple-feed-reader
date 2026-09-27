@@ -9,7 +9,6 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
@@ -70,12 +69,15 @@ use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class ArticleExtractorTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
 
     /**
@@ -125,14 +127,6 @@ final class ArticleExtractorTest extends TestCase
             new TeaserPlayerScanner($this->urlKind()),
             $this->articleReadability(),
         );
-    }
-
-    private function noEgressProxy(): EgressProxySource
-    {
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
-        return $egressProxySource;
     }
 
     private function bodyCleaner(): ReaderBodyCleaner

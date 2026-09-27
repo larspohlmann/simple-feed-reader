@@ -6,7 +6,6 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
@@ -16,6 +15,7 @@ use App\Service\Fetch\HttpFeedFetcher;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -23,6 +23,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HttpFeedFetcherTest extends TestCase
 {
+    use NoEgressProxy;
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -43,9 +45,6 @@ final class HttpFeedFetcherTest extends TestCase
             }
         };
 
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new HttpFeedFetcher(new ConcurrentFeedFetcher(
@@ -55,7 +54,7 @@ final class HttpFeedFetcherTest extends TestCase
             1,
             100,
             'TestAgent/1.0',
-            $egressProxySource,
+            $this->noEgressProxy(),
             new FetchRetryPolicy($urlGuard),
         ));
     }

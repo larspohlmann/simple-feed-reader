@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\Sibling;
 
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
@@ -20,12 +19,15 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class SiblingMediaExtenderTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const string PAGE = '<html><body><script>self.__next_f.push([1,"'
         . '{\\"config\\":{\\"isPriority\\":\\"$undefined\\",\\"content\\":\\"taktik-analyse-video-100\\",'
         . '\\"startImage\\":{\\"layouts\\":{\\"1920x1080\\":\\"https://a.test/assets/taktik~1920x1080\\"}}}},'
@@ -51,10 +53,11 @@ final class SiblingMediaExtenderTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(EgressProxySource::class);
-        $proxy->method('egressProxy')->willReturn(null);
         $landing = new MediaLanding(
-            new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+            new RedirectFollower(
+                new FailoverRequestSender($client, $this->noEgressProxy()),
+                new UrlGuard($dns, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
 

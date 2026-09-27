@@ -8,11 +8,11 @@ use App\Service\Catalog\CatalogFaviconFetcher;
 use App\Service\Catalog\Exception\FaviconRejectedException;
 use App\Service\Catalog\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
-use App\Service\Fetch\EgressProxySource;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -20,6 +20,8 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class CatalogFaviconFetcherTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const string ICON_URL = 'https://www.theverge.com/favicon.ico';
 
     /**
@@ -50,14 +52,6 @@ final class CatalogFaviconFetcherTest extends TestCase
             new FailoverRequestSender($client, $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
-    }
-
-    private function noEgressProxy(): EgressProxySource
-    {
-        $egressProxySource = $this->createStub(EgressProxySource::class);
-        $egressProxySource->method('egressProxy')->willReturn(null);
-
-        return $egressProxySource;
     }
 
     public function testReturnsTheBytesAndContentTypeOfAnImageResponse(): void
