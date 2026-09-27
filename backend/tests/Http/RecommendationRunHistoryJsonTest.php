@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationRun;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\HistoryMonth;
-use App\Service\Recommendation\RunHistoryMonthPage;
-use App\Service\Recommendation\RunHistoryOverview;
+use App\Service\Recommendation\Feed\HistoryMonth;
+use App\Service\Recommendation\Feed\RunHistoryMonthPage;
+use App\Service\Recommendation\Feed\RunHistoryOverview;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

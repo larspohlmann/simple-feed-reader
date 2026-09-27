@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
-use App\Service\Recommendation\MonthWindow;
+use App\Service\Recommendation\Feed\MonthWindow;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;

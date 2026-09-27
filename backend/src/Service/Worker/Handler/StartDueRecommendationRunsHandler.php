@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Worker\Handler;
 
-use App\Service\Recommendation\ForYouSweep;
+use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

@@ -10,8 +10,8 @@ use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Recommendation\RecommendationRunAdvancer;
-use App\Service\Recommendation\TickDriver;
+use App\Service\Recommendation\Run\RecommendationRunAdvancer;
+use App\Service\Recommendation\Run\TickDriver;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Recommendation\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 
 /**
  * Counts the transport's pings. The production implementation decides for

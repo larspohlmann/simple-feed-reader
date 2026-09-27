@@ -6,9 +6,9 @@ namespace App\Controller\Api;
 
 use App\Entity\User;
 use App\Http\RecommendationRunHistoryJson;
-use App\Service\Recommendation\MonthWindow;
-use App\Service\Recommendation\RecommendationRunHistory;
-use App\Service\Recommendation\ViewerTimeZone;
+use App\Service\Recommendation\Feed\MonthWindow;
+use App\Service\Recommendation\Feed\RecommendationRunHistory;
+use App\Service\Recommendation\Feed\ViewerTimeZone;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;

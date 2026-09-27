@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Kernel;
 use App\Service\Mail\DeferredMailer;
 use App\Service\Process\DetachedProcessLauncherInterface;
-use App\Service\Recommendation\RecommendationDrainSpawner;
+use App\Service\Recommendation\Run\RecommendationDrainSpawner;
 use App\Service\Worker\RecommendationDriverKind;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\Support\RecordingProcessLauncher;

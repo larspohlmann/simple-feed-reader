@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
-use App\Service\Recommendation\RecommendationDebugLog;
+use App\Service\Recommendation\Feed\RecommendationDebugLog;
 
 /**
  * Response shapes for the recommendation debug log (#309). The list shape is

@@ -9,7 +9,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\ModelCatalog;
 use App\Service\Ai\ProviderCredentials;
-use App\Service\Recommendation\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;

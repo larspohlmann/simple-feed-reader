@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
-use App\Service\Recommendation\RecommendationPackingSettings;
-use App\Service\Recommendation\RecommendationPromptText;
+use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
+use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase

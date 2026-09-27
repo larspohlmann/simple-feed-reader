@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Recommendation\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\SharedLockInterface;
 

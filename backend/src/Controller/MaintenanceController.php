@@ -9,7 +9,7 @@ use App\Http\MaintenanceTickJson;
 use App\Http\MaintenanceTokenGuard;
 use App\Http\RefreshReportJson;
 use App\Service\Maintenance\MaintenanceTick;
-use App\Service\Recommendation\ForYouSweep;
+use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\RecommendationRunStatus;
+use App\Service\Recommendation\Feed\RecommendationRunStatus;
 
 /**
  * The wire shape every /api/recommendations/runs* action returns: the run

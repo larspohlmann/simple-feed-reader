@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\HistoryMonth;
-use App\Service\Recommendation\RunHistoryMonthPage;
-use App\Service\Recommendation\RunHistoryOverview;
+use App\Service\Recommendation\Feed\HistoryMonth;
+use App\Service\Recommendation\Feed\RunHistoryMonthPage;
+use App\Service\Recommendation\Feed\RunHistoryOverview;
 
 /**
  * The wire shape of the run history (#409): the overview card (the account's

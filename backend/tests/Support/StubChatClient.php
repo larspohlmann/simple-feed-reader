@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Service\Ai\Completion\ChatCompletionClient;
+use App\Service\Ai\Completion\CompletionOutcome;
+use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\CompletionStreamObserver;
 use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\ProviderConnection;
-use App\Service\Recommendation\ChatCompletionClient;
-use App\Service\Recommendation\CompletionOutcome;
-use App\Service\Recommendation\CompletionRequest;
-use App\Service\Recommendation\CompletionStreamObserver;
 
 /**
  * Records every complete() call and answers with a queued response, so

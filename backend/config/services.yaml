@@ -168,7 +168,7 @@ services:
         arguments:
             $repository: '%github_release_repository%'
     App\Service\Ai\ModelCatalog: '@App\Service\Ai\OpenAiCompatibleCatalog'
-    App\Service\Recommendation\ChatCompletionClient: '@App\Service\Recommendation\OpenAiCompatibleChatClient'
+    App\Service\Ai\Completion\ChatCompletionClient: '@App\Service\Ai\Completion\OpenAiCompatibleChatClient'
     # The transport pings one heartbeat per chunk and must not learn how many
     # things care (#433, #444), so the interface resolves to a composite whose
     # two members are wired explicitly here -- the one place the indirection
@@ -180,10 +180,10 @@ services:
     # called by name from the advancer and from the sweep, not through the
     # interface. Which of the two beats first is the composite's own rule and
     # lives in its beat() -- these arguments only say which member is which.
-    App\Service\Recommendation\CompletionStreamHeartbeat: '@App\Service\Recommendation\CompositeCompletionStreamHeartbeat'
-    App\Service\Recommendation\CompositeCompletionStreamHeartbeat:
+    App\Service\Ai\Completion\CompletionStreamHeartbeat: '@App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat'
+    App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat:
         arguments:
-            $lockKeepalive: '@App\Service\Recommendation\TickLockKeepalive'
+            $lockKeepalive: '@App\Service\Recommendation\Run\TickLockKeepalive'
             $workerLiveness: '@App\Service\Worker\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
