@@ -87,12 +87,15 @@ final readonly class RecommendationConsolidationResolver
         );
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
-        $recordedCall->settle($content, $result->usable);
-        $this->checkpoint->guard($run);
-
         if (!$result->usable) {
+            $recordedCall->finishUnusable($content);
+            $this->checkpoint->guard($run);
+
             return ConsolidationOutcome::unusable($content, $pool);
         }
+
+        $recordedCall->finishUsable($content);
+        $this->checkpoint->guard($run);
 
         return ConsolidationOutcome::finalizeWith(self::rankedFromReply($result));
     }

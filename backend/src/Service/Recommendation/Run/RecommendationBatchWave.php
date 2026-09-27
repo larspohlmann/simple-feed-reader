@@ -56,12 +56,13 @@ final readonly class RecommendationBatchWave
             $pending = [];
             foreach ($roundResult['replies'] as $position => $reply) {
                 $result = $this->parser->parse($reply['content'], $wave->batches[$position]->validIds());
-                $reply['call']->settle($reply['content'], $result->usable);
                 if ($result->usable) {
+                    $reply['call']->finishUsable($reply['content']);
                     $winners[$position] = self::asWinners($result->picks);
 
                     continue;
                 }
+                $reply['call']->finishUnusable($reply['content']);
                 $correctiveReply[$position] = $reply['content'];
                 $pending[] = $position;
             }

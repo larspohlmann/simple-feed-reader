@@ -145,7 +145,7 @@ final class RecordedCallTest extends DbTestCase
             cachedTokens: 1100,
             costNanoCredits: 41_230_000,
         )));
-        $call->settle('{}', true);
+        $call->finishUsable('{}');
 
         self::assertSame([
             'promptTokens' => 1200,
@@ -167,7 +167,7 @@ final class RecordedCallTest extends DbTestCase
             cachedTokens: 0,
             costNanoCredits: 5000,
         )));
-        $call->settle('{}', true);
+        $call->finishUsable('{}');
 
         self::assertSame(10, $this->runTotals()['promptTokens']);
         self::assertSame(5000, $this->runTotals()['costNanoCredits']);
@@ -200,7 +200,7 @@ final class RecordedCallTest extends DbTestCase
             cachedTokens: 0,
             costNanoCredits: null,
         )));
-        $call->settle('{}', true);
+        $call->finishUsable('{}');
 
         self::assertSame(40, $this->runTotals()['promptTokens']);
         self::assertNull($this->runTotals()['costNanoCredits']);
@@ -229,7 +229,7 @@ final class RecordedCallTest extends DbTestCase
         $call = $this->recordedCall(logId: 7);
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop'));
-        $call->settle('{}', true);
+        $call->finishUsable('{}');
 
         self::assertSame(0, $this->runTotals()['promptTokens']);
         self::assertNull($this->runTotals()['costNanoCredits']);
@@ -254,7 +254,7 @@ final class RecordedCallTest extends DbTestCase
             cachedTokens: 300,
             costNanoCredits: 10_000,
         )));
-        $first->settle('{}', true);
+        $first->finishUsable('{}');
 
         $second = $this->recordedCall(logId: 8);
         $second->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
@@ -264,7 +264,7 @@ final class RecordedCallTest extends DbTestCase
             cachedTokens: 20,
             costNanoCredits: 3_000,
         )));
-        $second->settle('{}', true);
+        $second->finishUsable('{}');
 
         self::assertSame([
             'promptTokens' => 1400,
@@ -295,7 +295,7 @@ final class RecordedCallTest extends DbTestCase
             costNanoCredits: 7_000,
         )));
         $call->streamProgressed(new CompletionStreamProgress('{}', 200));
-        $call->settle('{}', true);
+        $call->finishUsable('{}');
 
         self::assertSame(500, $this->runTotals()['promptTokens']);
         self::assertSame(7000, $this->runTotals()['costNanoCredits']);

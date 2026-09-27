@@ -61,13 +61,15 @@ final readonly class RecommendationProfileDistiller
         );
 
         $result = $this->profileParser->parse($content);
-        $recordedCall->settle($content, $result->usable);
-        $this->checkpoint->guard($run);
-
         if (!$result->usable) {
+            $recordedCall->finishUnusable($content);
+            $this->checkpoint->guard($run);
+
             return ProfileDistillationOutcome::unusable($content);
         }
 
+        $recordedCall->finishUsable($content);
+        $this->checkpoint->guard($run);
         $profile = $result->profile
             ?? throw new \LogicException('A usable profile parse result has no profile text.');
         $this->settingsWriter->storeProfile($run->getUser(), $profile);

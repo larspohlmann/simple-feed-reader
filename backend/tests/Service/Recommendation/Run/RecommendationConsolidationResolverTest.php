@@ -184,6 +184,32 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         ));
     }
 
+    public function testAUsableReplySettlesItsCallAsUsable(): void
+    {
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $id = $this->idOf($entry);
+        $run = $this->runWithWinners([['id' => $id, 'score' => 500, 'reason' => '']]);
+        $this->stubChatClient()->queueContent(json_encode([
+            'recommendations' => [['id' => $id, 'score' => 600, 'reason' => 'Fits.']],
+            'duplicates' => [],
+        ], \JSON_THROW_ON_ERROR));
+
+        $this->resolveConsolidation($run);
+
+        self::assertSame(['usable'], $this->verdictsOf($run));
+    }
+
+    public function testAnUnusableReplySettlesItsCallAsUnusable(): void
+    {
+        [$entry] = $this->fixtures->seedFeedWithEntries($this->user, 1);
+        $run = $this->runWithWinners([['id' => $this->idOf($entry), 'score' => 500, 'reason' => '']]);
+        $this->stubChatClient()->queueContent('not json');
+
+        $this->resolveConsolidation($run);
+
+        self::assertSame(['unusable'], $this->verdictsOf($run));
+    }
+
     /**
      * A transport failure has to abort the log row it opened, not merely
      * propagate — a verdict left null forever reads to the debug panel as
@@ -337,6 +363,15 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     private function idOf(Entry $entry): int
     {
         return $entry->requireId();
+    }
+
+    /** @return list<?string> */
+    private function verdictsOf(RecommendationRun $run): array
+    {
+        /** @var RecommendationRunLogRepository $logs */
+        $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return array_column($logs->listForRun($this->user, $run->requireId()), 'verdict');
     }
 
     private function resolver(): RecommendationConsolidationResolver
