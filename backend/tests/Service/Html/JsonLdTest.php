@@ -20,7 +20,7 @@ final class JsonLdTest extends TestCase
             . '<body><script type="application/ld+json">[{"d":4}]</script></body></html>',
         );
 
-        $scripts = JsonLd::scriptsIn($document);
+        $scripts = iterator_to_array(JsonLd::scriptsIn($document));
 
         self::assertCount(2, $scripts);
         self::assertSame(['a' => 1], JsonLd::decode($scripts[0]));
@@ -42,11 +42,11 @@ final class JsonLdTest extends TestCase
 
     public function testABlockThatIsNotAJsonObjectOrArrayDecodesToNothing(): void
     {
-        $scripts = JsonLd::scriptsIn($this->document(
+        $scripts = iterator_to_array(JsonLd::scriptsIn($this->document(
             '<script type="application/ld+json">{not json</script>'
             . '<script type="application/ld+json">"a string"</script>'
             . '<script type="application/ld+json">42</script>',
-        ));
+        )));
 
         self::assertSame([[], [], []], array_map(JsonLd::decode(...), $scripts));
     }

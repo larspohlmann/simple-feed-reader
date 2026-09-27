@@ -11,15 +11,10 @@ final class JsonLd
 {
     private const string SCRIPT_SELECTOR = 'script[type="application/ld+json"]';
 
-    /** @return list<Element> */
-    public static function scriptsIn(HTMLDocument $document): array
+    /** @return iterable<Element> */
+    public static function scriptsIn(HTMLDocument $document): iterable
     {
-        $scripts = [];
-        foreach ($document->querySelectorAll(self::SCRIPT_SELECTOR) as $script) {
-            $scripts[] = $script;
-        }
-
-        return $scripts;
+        yield from $document->querySelectorAll(self::SCRIPT_SELECTOR);
     }
 
     public static function isScript(Element $script): bool
