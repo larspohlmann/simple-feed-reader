@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
@@ -15,7 +16,6 @@ use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\PasskeyAttestationFixture;
 use App\Tests\Support\PasskeyFixtures;

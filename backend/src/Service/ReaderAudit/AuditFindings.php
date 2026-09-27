@@ -35,7 +35,7 @@ final readonly class AuditFindings
             foreach (file($path, \FILE_IGNORE_NEW_LINES | \FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
                 /** @var array<string, mixed> $row */
                 $row = json_decode($line, true, 512, \JSON_THROW_ON_ERROR);
-                $finding = AuditFinding::fromArray($row);
+                $finding = AuditFinding::fromFindingsFileRecord($row);
                 $byEntry[$finding->entryId] = $finding;
             }
         }

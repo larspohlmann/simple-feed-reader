@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Repository\RecommendationSettingsRepository;
 use Doctrine\ORM\EntityManagerInterface;

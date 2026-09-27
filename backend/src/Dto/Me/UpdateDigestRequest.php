@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Dto\Me;
 
-use App\Service\Mail\Digest\DigestCadence;
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestConfiguration;
-use App\Service\Mail\Digest\DigestFormat;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**

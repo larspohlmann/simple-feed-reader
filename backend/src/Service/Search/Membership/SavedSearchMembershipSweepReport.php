@@ -17,7 +17,7 @@ final readonly class SavedSearchMembershipSweepReport
     /**
      * @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool}
      */
-    public function toArray(): array
+    public function toLogContext(): array
     {
         return [
             'searchesSwept' => $this->searchesSwept,

@@ -52,7 +52,7 @@ final readonly class RefreshRunStore
     public function save(RefreshRequest $request, RefreshRunProgress $progress): void
     {
         $item = $this->refreshRunCache->getItem($this->keyFor($request));
-        $item->set($progress->toArray());
+        $item->set(['done' => $progress->done, 'total' => $progress->total]);
         $item->expiresAfter(self::LIFETIME_SECONDS);
         $this->refreshRunCache->save($item);
     }

@@ -9,8 +9,8 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\InvalidSelectionException;
+use App\Service\Subscription\FeedMove;
 use App\Service\Subscription\FeedTagMove;
-use App\Service\Subscription\TagMove;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
@@ -27,7 +27,7 @@ final class FeedTagMoveTest extends DbTestCase
         $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, new TagMove($news->requireId(), $tech->requireId(), 1));
+        $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 1));
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($x, $tech));
@@ -45,7 +45,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, new TagMove($news->requireId(), $tech->requireId()));
+        $this->move($moved, new FeedMove($news->requireId(), $tech->requireId()));
         $this->em->flush();
 
         self::assertSame(2, $this->joinPosition($moved, $tech));
@@ -60,7 +60,7 @@ final class FeedTagMoveTest extends DbTestCase
         $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0], [$tech, 2]]);
 
-        $this->move($moved, new TagMove($news->requireId(), $tech->requireId(), 0));
+        $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 0));
         $this->em->flush();
 
         self::assertSame(0, $this->joinPosition($moved, $tech));
@@ -76,7 +76,7 @@ final class FeedTagMoveTest extends DbTestCase
         $tech = $this->tag($user, 'Tech');
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, new TagMove($news->requireId(), $tech->requireId(), 0));
+        $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 0));
         $this->em->flush();
 
         self::assertSame(['Tech'], $this->tagNames($moved));
@@ -90,7 +90,7 @@ final class FeedTagMoveTest extends DbTestCase
         $second = $this->untaggedSubscription($user, 'https://b.example.com/rss', 1);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, new TagMove($news->requireId(), null, 1));
+        $this->move($moved, new FeedMove($news->requireId(), null, 1));
         $this->em->flush();
 
         self::assertTrue($moved->getTags()->isEmpty());
@@ -107,7 +107,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
-        $this->move($moved, new TagMove($news->requireId(), $tech->requireId(), 99));
+        $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 99));
         $this->em->flush();
 
         self::assertSame(1, $this->joinPosition($moved, $tech));
@@ -120,7 +120,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$tech, 1]]);
 
-        $this->move($moved, new TagMove($tech->requireId(), $tech->requireId(), 0));
+        $this->move($moved, new FeedMove($tech->requireId(), $tech->requireId(), 0));
         $this->em->flush();
 
         self::assertSame(1, $this->joinPosition($moved, $tech));
@@ -135,10 +135,10 @@ final class FeedTagMoveTest extends DbTestCase
         $moved = $this->untaggedSubscription($user, 'https://m.example.com/rss', 0);
 
         $this->expectException(InvalidSelectionException::class);
-        $this->move($moved, new TagMove(null, $foreignTag->requireId(), 0));
+        $this->move($moved, new FeedMove(null, $foreignTag->requireId(), 0));
     }
 
-    private function move(Subscription $subscription, TagMove $move): void
+    private function move(Subscription $subscription, FeedMove $move): void
     {
         $service = self::getContainer()->get(FeedTagMove::class);
         self::assertInstanceOf(FeedTagMove::class, $service);

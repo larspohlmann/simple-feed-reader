@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Proxy;
 
+use App\Entity\ProxyConnection;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
-use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxyTestFailure;
 use App\Service\Proxy\StoredProxy;

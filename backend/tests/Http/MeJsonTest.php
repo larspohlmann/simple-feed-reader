@@ -6,8 +6,8 @@ namespace App\Tests\Http;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
+use App\Enum\DigestCadence;
 use App\Http\MeJson;
-use App\Service\Mail\Digest\DigestCadence;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 

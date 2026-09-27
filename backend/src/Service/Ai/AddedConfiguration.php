@@ -16,6 +16,7 @@ final readonly class AddedConfiguration
 {
     /** @param list<string> $modelIds */
     public function __construct(
+        /** @noinspection AutowireWrongClass Built with new, never autowired */
         public AiProviderSettings $configuration,
         public array $modelIds,
     ) {

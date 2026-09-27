@@ -25,6 +25,6 @@ final readonly class SweepSavedSearchMembershipsHandler
     public function __invoke(SweepSavedSearchMemberships $message): void
     {
         $report = $this->sweep->sweep(SweepBudget::seconds(self::BUDGET_SECONDS));
-        $this->logger->info('Worker saved-search membership sweep finished.', ['report' => $report->toArray()]);
+        $this->logger->info('Worker saved-search membership sweep finished.', ['report' => $report->toLogContext()]);
     }
 }

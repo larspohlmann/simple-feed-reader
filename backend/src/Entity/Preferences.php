@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
+use App\Enum\MagazineStyle;
 use App\Repository\PreferencesRepository;
-use App\Service\Mail\Digest\DigestCadence;
-use App\Service\Mail\Digest\DigestFormat;
-use App\Service\Reader\MagazineStyle;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Crypto;
 
+use App\Entity\SealedSecret;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Crypto\SecretBinding;
 use PHPUnit\Framework\TestCase;
 

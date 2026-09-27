@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
-use App\Entity\MailKind;
 use App\Entity\MailSendFailure;
+use App\Enum\MailKind;
 use App\Http\MailDeliveryHealthJson;
 use PHPUnit\Framework\TestCase;
 

@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Http\Admin\ProxySettingsJson;
+use App\Http\Admin\ProxyTestResultJson;
 use App\Http\FullReplacePayload;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxySettings;
@@ -42,6 +43,6 @@ final readonly class AdminProxyController
     #[Route('/test', name: 'api_admin_proxy_test', methods: ['POST'])]
     public function test(ProxyConnectionTester $tester): JsonResponse
     {
-        return new JsonResponse($tester->test()->toArray());
+        return new JsonResponse(ProxyTestResultJson::from($tester->test()));
     }
 }

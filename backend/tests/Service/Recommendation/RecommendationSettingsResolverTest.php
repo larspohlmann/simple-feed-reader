@@ -6,13 +6,12 @@ namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationPackingSettings;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -70,8 +69,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
             favoritesCap: 10,
             keptCap: 20,
             viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            candidatePoolSize: 400,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
@@ -86,7 +85,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertSame(10, $effective->favoritesCap);
         self::assertSame(20, $effective->keptCap);
         self::assertSame(30, $effective->viewedCap);
-        self::assertSame(500, $effective->candidatePoolSize);
+        self::assertSame(400, $effective->candidatePoolSize);
         self::assertSame(50, $effective->picksLimit);
         self::assertSame(65536, $effective->packing->contextWindow);
         self::assertSame('user', $effective->packing->contextWindowSource);
@@ -203,12 +202,12 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
+            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

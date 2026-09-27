@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Service\Crypto\SecretChange;
 
 final readonly class GrafanaSettingsUpdate

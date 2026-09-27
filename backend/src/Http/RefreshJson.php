@@ -31,7 +31,7 @@ final class RefreshJson
 
         return [
             'status' => $report->status,
-            'progress' => $tracked->progress->toArray(),
+            'progress' => ['done' => $tracked->progress->done, 'total' => $tracked->progress->total],
             'fetched' => $report->fetched,
             'notModified' => $report->notModified,
             'failed' => $report->failed,

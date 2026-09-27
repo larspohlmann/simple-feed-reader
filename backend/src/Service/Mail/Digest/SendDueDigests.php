@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Entity\MailKind;
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Enum\MailKind;
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailFailureRecorder;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Recommendation;
 
-use App\Service\Recommendation\RecommendationBatchSize;
-use App\Service\Recommendation\RecommendationSettingsValues;
+use App\Entity\RecommendationSettingsValues;
+use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
+use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\InvalidArgumentException;

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Settings;
 
+use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
+use App\Entity\SealedSecret;
 use App\Enum\MailEncryption;
-use App\Service\Crypto\SealedSecret;
-use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettingsSnapshot;
 use PHPUnit\Framework\TestCase;
 

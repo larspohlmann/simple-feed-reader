@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]

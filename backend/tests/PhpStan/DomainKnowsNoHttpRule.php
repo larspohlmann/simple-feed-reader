@@ -5,12 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 use PhpParser\Node;
-use PhpParser\Node\InterpolatedStringPart;
-use PhpParser\Node\Name;
-use PhpParser\Node\Scalar\String_;
-use PhpParser\Node\Stmt\GroupUse;
 use PhpParser\Node\Stmt\Namespace_;
-use PhpParser\Node\UseItem;
 use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\FileNode;
@@ -35,19 +30,22 @@ final readonly class DomainKnowsNoHttpRule implements Rule
         'App\\Exception\\',
     ];
 
-    private const array HTTP_PREFIXES = [
-        'App\\Dto\\',
-        'App\\Http\\',
-        'Symfony\\Component\\HttpFoundation\\',
-        'Symfony\\Component\\HttpKernel\\Exception\\',
+    private const string LET_HTTP_SHAPE_IT
+        = 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
+
+    private const array REMEDIES = [
+        'App\\Dto\\' => 'Take the service value the request DTO builds, not the DTO (#1182).',
+        'App\\Http\\' => self::LET_HTTP_SHAPE_IT,
+        'Symfony\\Component\\HttpFoundation\\' => self::LET_HTTP_SHAPE_IT,
+        'Symfony\\Component\\HttpKernel\\Exception\\' => self::LET_HTTP_SHAPE_IT,
+        'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException' => self::LET_HTTP_SHAPE_IT,
     ];
 
-    private const array HTTP_CLASSES = [
-        'Symfony\\Component\\Security\\Core\\Exception\\AccessDeniedException',
-    ];
+    private ClassNameReferences $references;
 
-    public function __construct(private NodeFinder $finder)
+    public function __construct(NodeFinder $finder)
     {
+        $this->references = new ClassNameReferences($finder, array_keys(self::REMEDIES));
     }
 
     public function getNodeType(): string
@@ -58,7 +56,7 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     public function processNode(Node $node, Scope $scope): array
     {
         $errors = [];
-        foreach ($this->finder->findInstanceOf($node->getNodes(), Namespace_::class) as $namespace) {
+        foreach ($this->references->namespacesIn($node) as $namespace) {
             $errors = [...$errors, ...$this->errorsIn($namespace)];
         }
 
@@ -69,120 +67,26 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     private function errorsIn(Namespace_ $namespace): array
     {
         $namespaceName = $namespace->name?->toString() ?? '';
-        if (!self::startsWithAny($namespaceName, self::DOMAIN_NAMESPACES)) {
+        if (!ClassNameReferences::isInAnyOf($namespaceName, self::DOMAIN_NAMESPACES)) {
             return [];
         }
 
-        $errors = [];
-        foreach ($this->references($namespace) as [$reference, $line]) {
-            if (self::isHttp($reference)) {
-                $errors[] = self::error($namespaceName, $reference, $line);
-            }
-        }
-
-        return $errors;
-    }
-
-    /** @return list<array{string, int}> every class or namespace name mentioned, in code or in a string */
-    private function references(Namespace_ $namespace): array
-    {
-        $nodes = $this->finder->find(
-            $namespace->stmts,
-            static fn (Node $node): bool => $node instanceof Name
-                || $node instanceof String_
-                || $node instanceof InterpolatedStringPart
-                || $node instanceof GroupUse,
+        return array_map(
+            static fn (ForbiddenReference $reference): IdentifierRuleError => self::error($namespaceName, $reference),
+            $this->references->forbiddenIn($namespace),
         );
-
-        $groupUsePrefixIds = [];
-        foreach ($nodes as $node) {
-            if ($node instanceof GroupUse) {
-                $groupUsePrefixIds[] = spl_object_id($node->prefix);
-            }
-        }
-
-        $references = [];
-        foreach ($nodes as $node) {
-            if ($node instanceof Name && \in_array(spl_object_id($node), $groupUsePrefixIds, true)) {
-                continue;
-            }
-            $references = [...$references, ...self::referencesIn($node)];
-        }
-
-        return $references;
     }
 
-    /** @return list<array{string, int}> */
-    private static function referencesIn(Node $node): array
-    {
-        if ($node instanceof GroupUse) {
-            return self::groupedReferences($node);
-        }
-        if ($node instanceof Name) {
-            return [[$node->toString(), $node->getStartLine()]];
-        }
-        if ($node instanceof String_ || $node instanceof InterpolatedStringPart) {
-            return [[ltrim($node->value, '\\'), $node->getStartLine()]];
-        }
-
-        return [];
-    }
-
-    /** @return list<array{string, int}> a group import names each class by its prefix and its own tail */
-    private static function groupedReferences(GroupUse $groupUse): array
-    {
-        return array_values(array_map(
-            static fn (UseItem $use): array => [
-                $groupUse->prefix->toString() . '\\' . $use->name->toString(),
-                $use->getStartLine(),
-            ],
-            $groupUse->uses,
-        ));
-    }
-
-    private static function isHttp(string $reference): bool
-    {
-        return array_any(self::HTTP_CLASSES, static fn (string $class): bool => 0 === strcasecmp($class, $reference))
-            || self::startsWithAny($reference, self::HTTP_PREFIXES);
-    }
-
-    /**
-     * Case-insensitive, as PHP names are. The appended separator lets a bare namespace, as an alias import names it,
-     * match its own prefix.
-     *
-     * @param list<string> $prefixes
-     */
-    private static function startsWithAny(string $name, array $prefixes): bool
-    {
-        $subject = strtolower($name) . '\\';
-        foreach ($prefixes as $prefix) {
-            if (str_starts_with($subject, strtolower($prefix))) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static function error(string $namespaceName, string $reference, int $line): IdentifierRuleError
+    private static function error(string $namespaceName, ForbiddenReference $reference): IdentifierRuleError
     {
         return RuleErrorBuilder::message(sprintf(
             'Domain code must not know HTTP: %s references %s. %s',
             $namespaceName,
-            $reference,
-            self::remedyFor($reference),
+            $reference->name,
+            self::REMEDIES[$reference->matchedRule],
         ))
             ->identifier('simpleFeedReader.domainKnowsNoHttp')
-            ->line($line)
+            ->line($reference->line)
             ->build();
-    }
-
-    private static function remedyFor(string $reference): string
-    {
-        if (self::startsWithAny($reference, ['App\\Dto\\'])) {
-            return 'Take the service value the request DTO builds, not the DTO (#1182).';
-        }
-
-        return 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
     }
 }

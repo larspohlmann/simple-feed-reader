@@ -8,9 +8,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Subscription\FeedMove;
 use App\Service\Subscription\SubscriptionChange;
 use App\Service\Subscription\SubscriptionEditor;
-use App\Service\Subscription\TagMove;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
@@ -92,7 +92,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->addTag($news);
         $this->em->flush();
 
-        $this->editor()->moveToTag($subscription, new TagMove($news->requireId(), $tech->requireId()));
+        $this->editor()->moveToTag($subscription, new FeedMove($news->requireId(), $tech->requireId()));
 
         self::assertSame(['Tech'], $this->tagNames($this->reload($subscription)));
     }

@@ -20,7 +20,7 @@ final readonly class CleanupMarker
     }
 
     /** @return array{code: string, weight: int, suspect: string, detail: string} */
-    public function toArray(): array
+    public function toFindingsFileRecord(): array
     {
         return [
             'code' => $this->code,
@@ -31,7 +31,7 @@ final readonly class CleanupMarker
     }
 
     /** @param array{code: string, weight: int, suspect: string, detail: string} $row */
-    public static function fromArray(array $row): self
+    public static function fromFindingsFileRecord(array $row): self
     {
         return new self($row['code'], $row['weight'], $row['suspect'], $row['detail']);
     }

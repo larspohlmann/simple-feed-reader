@@ -58,7 +58,7 @@ Pyroscope, for viewing app logs, traces and profiles.
 | `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
-| `backend/src/Entity`, `Repository`, `Doctrine` | Persistence |
+| `backend/src/Entity`, `Enum`, `Repository`, `Doctrine` | Persistence; `Entity`, `Enum` and `Doctrine` also hold the values and enums that cross a layer ([docs/architecture.md](docs/architecture.md) §8) |
 | `backend/tests/**` | Mirrors `src/`; `tests/E2e/` is the black-box suite |
 | `frontend/src/app/reader`, `settings`, `admin`, `core`, `theme` | SPA feature areas |
 | `docs/superpowers/plans/` | The implementation plans this project is built from |
@@ -95,7 +95,18 @@ Non-negotiables:
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
   `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
-  (`$request->toChange()`) or a plain field, never the DTO (#1182).
+  (`$request->toChange()`) or a plain field, never the DTO (#1182). Services build no
+  response arrays either: a `src/Http/*Json` mapper shapes every response, and a value
+  that serialises for a store names the method after it (`toLogContext()`,
+  `toCacheEntry()`). `NoToArrayInServicesRule` rejects `toArray()` and `jsonSerialize()`
+  in `App\Service`.
+- **Shared values have one home.** A value or enum that an entity, an enum or an ORM
+  extension uses lives with them, so persistence never imports a service: `App\Entity`
+  for what an entity stores, embeds, takes or returns, `App\Enum` for enums an entity or
+  a repository uses, `App\Doctrine` for the persistence plumbing the ORM extensions
+  share. Module enums, including ones several `Service/*` modules share, stay in their
+  owning module for now ([docs/architecture.md](docs/architecture.md) §8,
+  `PersistenceKnowsNoServiceRule`).
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
   typed value, or the git history beats a sentence about the code — reach for
   those first, and prefer them even when a comment would be easy. Write a

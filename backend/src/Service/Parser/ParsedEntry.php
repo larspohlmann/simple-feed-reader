@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
-use App\Service\Discussion\Discussion;
+use App\Entity\Discussion;
 
 /** @SuppressWarnings("PHPMD.ExcessiveParameterList") a pure data carrier: one parameter per parsed field. */
 final readonly class ParsedEntry

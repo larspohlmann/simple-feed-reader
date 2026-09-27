@@ -6,11 +6,11 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestEnablement;
-use App\Service\Mail\Digest\DigestFormat;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 

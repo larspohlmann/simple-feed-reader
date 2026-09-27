@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\Preferences;
+use App\Enum\DigestCadence;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**

@@ -116,22 +116,4 @@ final readonly class RecommendationRunReport
             firstBatchStarted: $this->firstBatchStarted,
         );
     }
-
-    /**
-     * @return array{status: string, batchesTotal: ?int, batchesDone: int, error: ?string, background: bool,
-     *     waitingForLock: bool, streamedChars: int, firstBatchStarted: bool}
-     */
-    public function toArray(): array
-    {
-        return [
-            'status' => $this->status,
-            'batchesTotal' => $this->batchesTotal,
-            'batchesDone' => $this->batchesDone,
-            'error' => $this->error,
-            'background' => $this->background,
-            'waitingForLock' => $this->waitingForLock,
-            'streamedChars' => $this->streamedChars,
-            'firstBatchStarted' => $this->firstBatchStarted,
-        ];
-    }
 }

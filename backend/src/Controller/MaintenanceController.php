@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Http\ForYouSweepReportJson;
+use App\Http\MaintenanceTickJson;
 use App\Http\MaintenanceTokenGuard;
+use App\Http\RefreshReportJson;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshReport;
@@ -47,7 +50,7 @@ final readonly class MaintenanceController
             default => Response::HTTP_OK,
         };
 
-        return new JsonResponse($report->toArray(), $status);
+        return new JsonResponse(RefreshReportJson::report($report), $status);
     }
 
     /**
@@ -63,18 +66,13 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        return new JsonResponse($this->forYouSweep->sweepOnce()->toArray());
+        return new JsonResponse(ForYouSweepReportJson::report($this->forYouSweep->sweepOnce()));
     }
 
     /**
-     * One call that runs both maintenance halves — refresh all due feeds, then
-     * start due recommendation runs and advance each active run one step — so a
-     * worker-less install drives everything from a single cron line (#346). It
-     * answers 200 with both halves' reports merged under `refresh` and
-     * `recommendations`; each half reports its own outcome as status (a refresh
-     * that came back busy or aborted still answers 200, its status in the body).
-     * The granular /maintenance/refresh keeps its 409/500 mapping for a caller
-     * that pings refresh alone.
+     * Runs refresh, then every sweep, from one cron line. Each half reports its own
+     * outcome as status — a refresh that came back busy or aborted still answers 200 —
+     * while /maintenance/refresh keeps its 409/500 mapping for a caller that pings it alone.
      */
     #[Route('/maintenance/tick', name: 'maintenance_tick', methods: ['POST'])]
     public function tick(Request $request): JsonResponse
@@ -84,6 +82,6 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        return new JsonResponse($this->maintenanceTick->run()->toArray());
+        return new JsonResponse(MaintenanceTickJson::report($this->maintenanceTick->run()));
     }
 }

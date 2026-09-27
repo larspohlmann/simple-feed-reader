@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
+use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Service\Crypto\SealedSecret;
+use App\Entity\SealedSecret;
 
 /**
- * The Grafana row as plain values, for the admin page, the runtime reads and GrafanaSettingsCache. The array form is
+ * The Grafana row as plain values, for the admin page, the runtime reads and GrafanaSettingsCache. The cache entry is
  * flat scalars, so an entry from an earlier release either reads back or is rejected as a miss.
  */
 final readonly class GrafanaSettingsSnapshot
@@ -31,7 +32,7 @@ final readonly class GrafanaSettingsSnapshot
     }
 
     /** @return array<string, string|bool|int|null> */
-    public function toArray(): array
+    public function toCacheEntry(): array
     {
         return [
             'lokiPushUrl' => $this->connection->lokiPushUrl,
@@ -47,7 +48,7 @@ final readonly class GrafanaSettingsSnapshot
         ];
     }
 
-    public static function fromArrayOrNull(mixed $stored): ?self
+    public static function fromCacheEntryOrNull(mixed $stored): ?self
     {
         if (!\is_array($stored)) {
             return null;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
+use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;

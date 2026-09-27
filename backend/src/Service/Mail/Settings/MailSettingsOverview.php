@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
-use App\Service\Proxy\ProxyConnection;
+use App\Entity\MailConnection;
+use App\Entity\ProxyConnection;
 
 final readonly class MailSettingsOverview
 {

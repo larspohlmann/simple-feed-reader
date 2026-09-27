@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\RecommendationSettings;
 use App\Entity\User;
+use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
 
 /**
@@ -36,14 +38,14 @@ final readonly class RecommendationSettingsResolver
         return new EffectiveRecommendationSettings(
             guidancePrompt: $row?->values()->guidancePrompt,
             profileText: $row?->values()->profileText,
-            favoritesCap: $row?->values()->favoritesCap ?? EffectiveRecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: $row?->values()->keptCap ?? EffectiveRecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: $row?->values()->viewedCap ?? EffectiveRecommendationSettings::DEFAULT_VIEWED_CAP,
+            favoritesCap: $row?->values()->favoritesCap ?? RecommendationSettings::DEFAULT_FAVORITES_CAP,
+            keptCap: $row?->values()->keptCap ?? RecommendationSettings::DEFAULT_KEPT_CAP,
+            viewedCap: $row?->values()->viewedCap ?? RecommendationSettings::DEFAULT_VIEWED_CAP,
             candidatePoolSize: $row?->values()->candidatePoolSize
-                ?? EffectiveRecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+                ?? RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             lookbackDays: $row?->values()->lookbackDays
-                ?? EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: $row?->values()->picksLimit ?? EffectiveRecommendationSettings::DEFAULT_PICKS_LIMIT,
+                ?? RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+            picksLimit: $row?->values()->picksLimit ?? RecommendationSettings::DEFAULT_PICKS_LIMIT,
             packing: new RecommendationPackingSettings(
                 contextWindow: $window,
                 contextWindowSource: $source,

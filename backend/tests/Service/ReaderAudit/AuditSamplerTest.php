@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Repository\ReaderAuditRepository;
-use App\Service\Discussion\Discussion;
 use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
 use App\Service\ReaderAudit\SampledEntry;

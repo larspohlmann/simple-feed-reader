@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Doctrine;
 
-use App\Service\Search\WordBoundaries;
 use Doctrine\DBAL\Driver\Connection;
 use Doctrine\DBAL\Driver\Middleware\AbstractDriverMiddleware;
 use SensitiveParameter;

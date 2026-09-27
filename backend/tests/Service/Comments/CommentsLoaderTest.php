@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Comments;
 
+use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsLoader;
 use App\Service\Comments\CommentsStatus;
 use App\Service\Comments\EntryComment;
-use App\Service\Discussion\Discussion;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcherInterface;

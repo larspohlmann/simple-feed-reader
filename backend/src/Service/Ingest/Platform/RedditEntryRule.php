@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ingest\Platform;
 
+use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Discussion\Discussion;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Url\AbsoluteHttpUrl;
 

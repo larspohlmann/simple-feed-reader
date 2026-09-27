@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\MailConnection;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

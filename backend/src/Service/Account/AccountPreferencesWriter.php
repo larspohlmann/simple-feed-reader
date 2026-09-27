@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Account;
 
 use App\Entity\User;
+use App\Enum\MagazineStyle;
 use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestEnablement;
 use App\Service\Passkey\PasskeyOffer;
-use App\Service\Reader\MagazineStyle;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class AccountPreferencesWriter

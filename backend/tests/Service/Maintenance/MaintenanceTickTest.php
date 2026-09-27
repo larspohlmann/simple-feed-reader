@@ -28,12 +28,14 @@ use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Logging\Loki\LokiClient;
+use App\Service\Logging\Loki\LokiSpoolReport;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
+use App\Service\Maintenance\MaintenanceSweeps;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Recommendation\ForYouSweep;
@@ -69,56 +71,16 @@ final class MaintenanceTickTest extends DbTestCase
         $tick = self::getContainer()->get(MaintenanceTick::class);
         self::assertInstanceOf(MaintenanceTick::class, $tick);
 
-        $report = $tick->run()->toArray();
+        $report = $tick->run();
 
-        // The refresh half always carries a status; the recommendations half
-        // always carries the three sweep counts; the digests half always
-        // carries the three sweep counts too (#636). Exact values are not
-        // asserted: the shared test database may hold rows from other
-        // classes, so this proves the shape, not a fixed count.
-        self::assertArrayHasKey('status', $report['refresh']);
-        self::assertIsInt($report['recommendations']['startedRuns']);
-        self::assertIsInt($report['recommendations']['advancedRuns']);
-        self::assertIsInt($report['recommendations']['activeRuns']);
-        self::assertArrayNotHasKey('skipped', $report['recommendations']);
-        self::assertIsInt($report['digests']['considered']);
-        self::assertIsInt($report['digests']['sent']);
-        self::assertIsInt($report['digests']['skippedEmpty']);
-        self::assertArrayNotHasKey('skipped', $report['digests']);
-        self::assertIsInt($report['logShipping']['shipped']);
-        self::assertIsInt($report['logShipping']['failed']);
-        self::assertIsInt($report['imageVerification']['measured']);
-        self::assertIsInt($report['imageVerification']['kept']);
-        self::assertIsInt($report['imageVerification']['dropped']);
-        self::assertIsInt($report['imageVerification']['retried']);
-        self::assertArrayNotHasKey('skipped', $report['imageVerification']);
-        self::assertIsInt($report['savedSearchMemberships']['entriesScanned']);
-        self::assertIsBool($report['savedSearchMemberships']['caughtUp']);
-        self::assertArrayNotHasKey('skipped', $report['savedSearchMemberships']);
+        // The shared test database may hold other classes' rows: this proves the sweeps ran, not their counts.
+        self::assertFalse($report->refresh->isAborted());
+        self::assertFalse($report->sweeps->skipped);
     }
 
     /**
-     * The scenario RefreshReport::isAborted() exists for: a failed flush closes
-     * the shared EntityManager (RefreshRunner's own doc), so calling the sweep
-     * against it would throw EntityManagerClosed. RefreshRunner and
-     * MaintenanceTick are both `final`, so this suite cannot mock either one
-     * (no dg/bypass-finals) — instead this reproduces the abort exactly as
-     * RefreshRunnerTest does: RefreshRunner takes EntityManagerInterface, an
-     * interface, so a stub that throws on flush() forces a genuine `aborted`
-     * status deterministically. MaintenanceTick is then built by hand around
-     * that runner and the container's real ForYouSweep, proving the guard
-     * routes to the skip branch instead of calling sweepOnce(). It cannot
-     * reproduce the literal EntityManagerClosed throw — that needs the shared
-     * default EntityManager itself to be swappable, and it is not (only the
-     * fetcher and a few other collaborators are made public for tests) — so
-     * the proof here is behavioural: the recommendations half comes back
-     * `skipped` rather than run, which is only possible if the sweep was never
-     * called. The digest sweep (#636) is proven the same way, but harder: it
-     * is also `final readonly`, so it is built by hand around a
-     * `PreferencesRepository` stub whose `findWithDigestEnabled()` throws --
-     * if `MaintenanceTick` ever called `SendDueDigests::run()` on the aborted
-     * path, that throw would surface as a test failure instead of the fixed
-     * skipped marker.
+     * An aborted refresh closed the shared EntityManager, so the sweeps must not run; the throwing
+     * PreferencesRepository stub fails this test if SendDueDigests::run() is ever reached on that path.
      */
     public function testSkipsTheRecommendationSweepWhenRefreshAborts(): void
     {
@@ -249,47 +211,10 @@ final class MaintenanceTickTest extends DbTestCase
             $clock,
         );
 
-        $report = $tick->run()->toArray();
+        $report = $tick->run();
 
-        self::assertSame('aborted', $report['refresh']['status']);
-        self::assertSame(
-            [
-                'startedRuns' => 0,
-                'advancedRuns' => 0,
-                'activeRuns' => 0,
-                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
-            ],
-            $report['recommendations'],
-        );
-        self::assertSame(
-            [
-                'considered' => 0,
-                'sent' => 0,
-                'skippedEmpty' => 0,
-                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
-            ],
-            $report['digests'],
-        );
-        self::assertSame(
-            [
-                'measured' => 0,
-                'kept' => 0,
-                'dropped' => 0,
-                'retried' => 0,
-                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
-            ],
-            $report['imageVerification'],
-        );
-        self::assertSame(
-            [
-                'searchesSwept' => 0,
-                'entriesScanned' => 0,
-                'matchesInserted' => 0,
-                'caughtUp' => false,
-                'skipped' => 'refresh aborted: the shared EntityManager is unusable this tick',
-            ],
-            $report['savedSearchMemberships'],
-        );
-        self::assertSame(['shipped' => 0, 'failed' => 0], $report['logShipping']);
+        self::assertTrue($report->refresh->isAborted());
+        self::assertEquals(MaintenanceSweeps::skippedAfterAbortedRefresh(), $report->sweeps);
+        self::assertEquals(new LokiSpoolReport(0, 0), $report->logShipping);
     }
 }

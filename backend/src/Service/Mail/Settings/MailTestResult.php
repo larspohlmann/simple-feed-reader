@@ -22,10 +22,4 @@ final readonly class MailTestResult
     {
         return new self(false, $failure, $detail);
     }
-
-    /** @return array{ok: bool, reason: string|null} */
-    public function toArray(): array
-    {
-        return ['ok' => $this->ok, 'reason' => $this->detail ?? $this->failure?->value];
-    }
 }

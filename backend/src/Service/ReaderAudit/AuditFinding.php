@@ -45,7 +45,7 @@ final readonly class AuditFinding
     }
 
     /** @return array<string, mixed> */
-    public function toArray(): array
+    public function toFindingsFileRecord(): array
     {
         return [
             'entryId' => $this->entryId,
@@ -55,14 +55,14 @@ final readonly class AuditFinding
             'sourceUrl' => $this->sourceUrl,
             'readerLink' => $this->readerLink,
             'extracted' => $this->extracted,
-            'markers' => array_map(static fn (CleanupMarker $m): array => $m->toArray(), $this->markers),
+            'markers' => array_map(static fn (CleanupMarker $m): array => $m->toFindingsFileRecord(), $this->markers),
             'metrics' => $this->metrics,
             'score' => $this->score(),
         ];
     }
 
     /** @param array<string, mixed> $row */
-    public static function fromArray(array $row): self
+    public static function fromFindingsFileRecord(array $row): self
     {
         /** @var list<array{code: string, weight: int, suspect: string, detail: string}> $markers */
         $markers = $row['markers'];
@@ -77,7 +77,7 @@ final readonly class AuditFinding
             sourceUrl: DatabaseValue::string($row['sourceUrl']),
             readerLink: DatabaseValue::string($row['readerLink']),
             extracted: (bool) $row['extracted'],
-            markers: array_map(CleanupMarker::fromArray(...), $markers),
+            markers: array_map(CleanupMarker::fromFindingsFileRecord(...), $markers),
             metrics: $metrics,
         );
     }

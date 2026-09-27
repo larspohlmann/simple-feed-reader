@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\InstanceSettingRepository;
-use App\Service\Settings\InstanceSettingsUpdate;
 use Doctrine\ORM\Mapping as ORM;
 
 /**

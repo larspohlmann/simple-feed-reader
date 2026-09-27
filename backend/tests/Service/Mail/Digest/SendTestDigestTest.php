@@ -6,13 +6,13 @@ namespace App\Tests\Service\Mail\Digest;
 
 use App\Entity\SavedSearch;
 use App\Entity\User;
+use App\Enum\DigestFormat;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
-use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;

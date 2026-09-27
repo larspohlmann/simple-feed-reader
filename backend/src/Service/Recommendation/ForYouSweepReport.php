@@ -16,16 +16,4 @@ final readonly class ForYouSweepReport
         public int $activeRuns,
     ) {
     }
-
-    /**
-     * @return array{startedRuns: int, advancedRuns: int, activeRuns: int}
-     */
-    public function toArray(): array
-    {
-        return [
-            'startedRuns' => $this->startedRuns,
-            'advancedRuns' => $this->advancedRuns,
-            'activeRuns' => $this->activeRuns,
-        ];
-    }
 }

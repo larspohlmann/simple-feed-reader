@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
-use App\Service\Subscription\TagMove;
+use App\Service\Subscription\FeedMove;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -24,8 +24,8 @@ final readonly class MoveFeedToTagRequest
     ) {
     }
 
-    public function toMove(): TagMove
+    public function toMove(): FeedMove
     {
-        return new TagMove(fromTagId: $this->fromTagId, toTagId: $this->toTagId, position: $this->position);
+        return new FeedMove(fromTagId: $this->fromTagId, toTagId: $this->toTagId, position: $this->position);
     }
 }

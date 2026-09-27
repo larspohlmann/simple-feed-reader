@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Crypto;
 
+use App\Entity\SealedSecret;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 

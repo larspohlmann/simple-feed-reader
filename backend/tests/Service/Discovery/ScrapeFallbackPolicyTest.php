@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Entity\User;
-use App\Enum\ScrapeFallback;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
+use App\Service\Discovery\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use PHPUnit\Framework\TestCase;
 

@@ -64,10 +64,4 @@ final readonly class RefreshRunProgress
         // a bar that lurches forward for no reason the user can see.
         return new self($done, max($this->total, $done + $remaining));
     }
-
-    /** @return array{done: int, total: int} */
-    public function toArray(): array
-    {
-        return ['done' => $this->done, 'total' => $this->total];
-    }
 }

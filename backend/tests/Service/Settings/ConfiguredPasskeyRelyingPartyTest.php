@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Settings;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Http\RequestServingHost;
 use App\Service\Settings\ConfiguredPasskeyRelyingParty;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\FixedPublicBaseUrl;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;

@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Http\Admin;
 
+use App\Entity\MailConnection;
+use App\Entity\ProxyConnection;
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
 use App\Http\Admin\MailSettingsJson;
-use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettingsOverview;
 use App\Service\Mail\Settings\MailSettingsSnapshot;
-use App\Service\Proxy\ProxyConnection;
 use PHPUnit\Framework\TestCase;
 
 final class MailSettingsJsonTest extends TestCase

@@ -52,7 +52,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
 
         self::assertSame(
             ['searchesSwept' => 1, 'entriesScanned' => 2, 'matchesInserted' => 1, 'caughtUp' => true],
-            $report->toArray(),
+            $report->toLogContext(),
         );
         self::assertSame([[$hit->getId(), $miss->getId()]], array_column($matcher->calls, 'candidates'));
         self::assertSame($miss->getId(), $this->markOf($search));

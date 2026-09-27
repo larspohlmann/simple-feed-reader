@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
+use App\Enum\DigestCadence;
+use App\Enum\DigestFormat;
+
 final readonly class DigestConfiguration
 {
     public function __construct(

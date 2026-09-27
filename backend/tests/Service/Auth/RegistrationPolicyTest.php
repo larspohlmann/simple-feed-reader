@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Enum\UserStatus;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailSendingSettings;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\SealedSecret;
 use App\Entity\User;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\RecommendationResponseSchema;

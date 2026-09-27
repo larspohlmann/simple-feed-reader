@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Entity\MailKind;
 use App\Entity\Preferences;
 use App\Entity\User;
+use App\Enum\DigestCadence;
+use App\Enum\MailKind;
 use App\Repository\EntryListRepository;
 use App\Repository\MailSendFailureRepository;
 use App\Repository\PreferencesRepository;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchRepository;
-use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;

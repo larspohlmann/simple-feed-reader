@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Enum\RecommendationBatchSize;
+
 /**
  * The inputs RecommendationPromptBuilder reads to size a batch: the resolved
  * context window, its source, the reader's batch-size choice, and the

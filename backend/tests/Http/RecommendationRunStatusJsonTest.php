@@ -110,6 +110,70 @@ final class RecommendationRunStatusJsonTest extends TestCase
         self::assertSame(42, $forYou['newestRunId']);
     }
 
+    public function testItSendsTheRunReportFieldsInTheirWireOrder(): void
+    {
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
+            RecommendationRunReport::busy()->waitingForLock(),
+            $this->emptySummary(),
+            new \DateTimeImmutable('2026-08-09T10:00:00'),
+            null,
+        ));
+
+        self::assertSame(
+            [
+                'status' => 'busy',
+                'batchesTotal' => null,
+                'batchesDone' => 0,
+                'error' => null,
+                'background' => false,
+                'waitingForLock' => true,
+                'streamedChars' => 0,
+                'firstBatchStarted' => false,
+                'elapsedSeconds' => null,
+                'etaSeconds' => null,
+                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+            ],
+            $json,
+        );
+    }
+
+    /**
+     * M6: distinct values on every same-typed neighbour pair the report above
+     * leaves at null/0/false, so a field swap in the mapper fails here.
+     */
+    public function testItSendsADistinctRunReportInTheirWireOrder(): void
+    {
+        $startedAt = new \DateTimeImmutable('2026-08-09T10:00:00');
+        $run = new RecommendationRun($this->user(), $startedAt);
+        $run->snapshot([[1], [2], [3]]);
+        $run->recordBatchWinners([]);
+        $run->fail('boom', $startedAt);
+
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
+            RecommendationRunReport::fromRun($run),
+            $this->emptySummary(),
+            $startedAt->modify('+90 seconds'),
+            42,
+        ));
+
+        self::assertSame(
+            [
+                'status' => 'failed',
+                'batchesTotal' => 5,
+                'batchesDone' => 1,
+                'error' => 'boom',
+                'background' => false,
+                'waitingForLock' => false,
+                'streamedChars' => 0,
+                'firstBatchStarted' => true,
+                'elapsedSeconds' => 90,
+                'etaSeconds' => 42,
+                'forYou' => ['itemCount' => 0, 'totalCount' => 0, 'generatedAt' => null, 'newestRunId' => null],
+            ],
+            $json,
+        );
+    }
+
     private function user(): User
     {
         return new User('eta@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));

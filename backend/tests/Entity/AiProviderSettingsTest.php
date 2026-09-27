@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Entity;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\SealedSecret;
 use App\Entity\User;
-use App\Service\Crypto\SealedSecret;
 use PHPUnit\Framework\TestCase;
 
 final class AiProviderSettingsTest extends TestCase

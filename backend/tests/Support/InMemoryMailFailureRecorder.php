@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\MailKind;
+use App\Enum\MailKind;
 use App\Service\Mail\MailFailureRecorder;
 
 /** A MailFailureRecorder that captures calls in memory, for tests (#882). */

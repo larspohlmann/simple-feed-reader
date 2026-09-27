@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Settings;
 
-use App\Entity\MailKind;
+use App\Enum\MailKind;
 use App\Service\Mail\MailFailureRecorder;
 use App\Service\Mail\Settings\EffectiveMailSettings;
 use App\Service\Mail\Settings\MailConnectionTester;

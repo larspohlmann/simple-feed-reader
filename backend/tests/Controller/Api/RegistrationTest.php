@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\AltchaService;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\AltchaSolver;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\EnablesMailInTests;

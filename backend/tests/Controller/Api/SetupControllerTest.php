@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Api;
 
+use App\Entity\InstanceSettingsUpdate;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserRepository;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\TogglesPasskeySignIn;
 use App\Tests\Support\UserFactory;

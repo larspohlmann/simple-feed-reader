@@ -13,17 +13,4 @@ final readonly class ImageVerificationReport
         public int $retried,
     ) {
     }
-
-    /**
-     * @return array{measured: int, kept: int, dropped: int, retried: int}
-     */
-    public function toArray(): array
-    {
-        return [
-            'measured' => $this->measured,
-            'kept' => $this->kept,
-            'dropped' => $this->dropped,
-            'retried' => $this->retried,
-        ];
-    }
 }

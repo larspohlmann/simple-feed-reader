@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery;
 
-use App\Enum\ScrapeFallback;
 use App\Service\Discovery\ScrapeFailureReason;
+use App\Service\Discovery\ScrapeFallback;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;

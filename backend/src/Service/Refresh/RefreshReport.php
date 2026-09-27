@@ -85,7 +85,7 @@ final readonly class RefreshReport
      * @return array{status: string, total: int, fetched: int, notModified: int,
      *     failed: int, throttled: int, skippedForBudget: int, remaining: int, pruned: int}
      */
-    public function toArray(): array
+    public function toLogContext(): array
     {
         return [
             'status' => $this->status,

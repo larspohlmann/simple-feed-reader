@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery;
 
-use App\Enum\ScrapeFallback;
+use App\Service\Discovery\ScrapeFallback;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

@@ -15,6 +15,7 @@ final readonly class SubscribeOutcome
      * @param int                 $unreadCount the entries the subscribe stored; nobody has read a feed just added
      */
     private function __construct(
+        /** @noinspection AutowireWrongClass Built with new, never autowired */
         public ?Subscription $subscription,
         public array $candidates,
         public ?ScrapeFailureReason $scrapeFailureReason = null,

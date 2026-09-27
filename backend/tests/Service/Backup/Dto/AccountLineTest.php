@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Backup\Dto;
 
+use App\Enum\MagazineStyle;
 use App\Service\Backup\Dto\AccountLine;
-use App\Service\Reader\MagazineStyle;
 use PHPUnit\Framework\TestCase;
 
 final class AccountLineTest extends TestCase

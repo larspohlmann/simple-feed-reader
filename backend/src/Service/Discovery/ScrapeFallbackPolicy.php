@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Entity\User;
-use App\Enum\ScrapeFallback;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 
 /**

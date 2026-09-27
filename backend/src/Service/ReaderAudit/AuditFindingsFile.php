@@ -34,7 +34,7 @@ final readonly class AuditFindingsFile
 
     public function append(AuditFinding $finding): void
     {
-        $line = json_encode($finding->toArray(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
+        $line = json_encode($finding->toFindingsFileRecord(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
         fwrite($this->handle, $line . "\n");
     }
 

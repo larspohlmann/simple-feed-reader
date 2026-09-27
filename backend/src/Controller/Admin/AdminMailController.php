@@ -6,6 +6,7 @@ namespace App\Controller\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
 use App\Http\Admin\MailSettingsJson;
+use App\Http\Admin\MailTestResultJson;
 use App\Http\FullReplacePayload;
 use App\Http\MailDeliveryHealthJson;
 use App\Service\Mail\MailDeliveryHealth;
@@ -44,7 +45,7 @@ final readonly class AdminMailController
     #[Route('/test', name: 'api_admin_mail_test', methods: ['POST'])]
     public function test(MailConnectionTester $tester): JsonResponse
     {
-        return new JsonResponse($tester->test()->toArray());
+        return new JsonResponse(MailTestResultJson::from($tester->test()));
     }
 
     #[Route('/reset', name: 'api_admin_mail_reset', methods: ['POST'])]

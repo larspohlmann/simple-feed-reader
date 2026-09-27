@@ -28,13 +28,13 @@ final readonly class GrafanaSettingsCache
     public function remember(callable $loadFromDatabase): GrafanaSettingsSnapshot
     {
         $item = $this->grafanaSettingsCache->getItem(self::KEY);
-        $cached = $item->isHit() ? GrafanaSettingsSnapshot::fromArrayOrNull($item->get()) : null;
+        $cached = $item->isHit() ? GrafanaSettingsSnapshot::fromCacheEntryOrNull($item->get()) : null;
         if (null !== $cached) {
             return $cached;
         }
 
         $snapshot = $loadFromDatabase();
-        $item->set($snapshot->toArray());
+        $item->set($snapshot->toCacheEntry());
         $item->expiresAfter(self::LIFETIME_SECONDS);
         $this->grafanaSettingsCache->save($item);
 
