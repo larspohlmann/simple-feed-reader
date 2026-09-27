@@ -6,36 +6,21 @@ namespace App\Service\Recommendation\Prompt;
 
 use App\Entity\AiProviderSettings;
 use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\Reasoning;
 
-/**
- * Builds the CompletionRequest both provider phases send. Both ask the same
- * question -- what to send, and how much the model may spend on the whole
- * output -- so the output bound is derived in one place. A phase that built
- * its own request could pair a batch prompt with someone else's token ceiling,
- * and the symptom would be a truncated reply rather than an obvious error.
- */
+/** Builds every phase's request, so a prompt and its output bound are always derived together. */
 final readonly class RecommendationCompletionRequestFactory
 {
-    /**
-     * @param list<array{role: string, content: string}> $messages
-     * @param int                                        $replyItemCount items the reply must cover
-     */
-    public function create(
-        AiProviderSettings $settings,
-        array $messages,
-        int $replyItemCount,
-        RecommendationResponseSchema $responseSchema,
-    ): CompletionRequest {
+    public function create(AiProviderSettings $connection, CallPrompt $prompt): CompletionRequest
+    {
+        $reasoning = Reasoning::preferredBy($connection);
+
         return new CompletionRequest(
-            $settings->getModel() ?? '',
-            $messages,
-            RecommendationAnswerBudget::outputBoundTokens(
-                $replyItemCount,
-                $responseSchema,
-                $settings->suppressesReasoning(),
-            ),
-            $responseSchema->toJsonSchema(),
-            $settings->suppressesReasoning(),
+            $connection->getModel() ?? '',
+            $prompt->messages,
+            RecommendationAnswerBudget::outputBoundTokens($prompt->replyItemCount, $prompt->schema, $reasoning),
+            $prompt->schema->toJsonSchema(),
+            $reasoning,
         );
     }
 }

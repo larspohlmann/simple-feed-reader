@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\RecommendationRun;
@@ -14,6 +15,8 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Repository\CallSettlement;
+use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -131,8 +134,7 @@ final readonly class RecommendationRunFixtures
         $user->setActiveAiProviderSettings(null);
     }
 
-    /** Not flushed: callers batch several rows (often a `finish()` on top of
-     *  each) before the one flush that makes them all visible together. */
+    /** Not flushed: callers batch several rows before the one flush that makes them all visible together. */
     public function createRun(User $user): RecommendationRun
     {
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
@@ -203,6 +205,17 @@ final readonly class RecommendationRunFixtures
         $this->em->persist($log);
 
         return $log;
+    }
+
+    /** Settles the row the way RecordedCall does, through the DBAL writer, then re-reads the managed entity. */
+    public function settleLog(RecommendationRunLog $log, string $responseText, CallOutcome $outcome): void
+    {
+        $this->em->flush();
+        (new RecommendationCallRepository($this->em->getConnection()))->settleAnswered(
+            new CallSettlement($log->requireId(), $outcome),
+            $responseText,
+        );
+        $this->em->refresh($log);
     }
 
     /**

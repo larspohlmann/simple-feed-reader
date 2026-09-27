@@ -71,11 +71,29 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         self::assertNull($this->storedProfileText());
     }
 
+    public function testAUsableReplySettlesItsCallAsUsable(): void
+    {
+        $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
+        $run = $this->runInRunningState();
+
+        $this->distiller()->distill($this->tick($run));
+
+        self::assertSame(['usable'], $this->verdictsOf($run));
+    }
+
+    public function testAnUnusableReplySettlesItsCallAsUnusable(): void
+    {
+        $this->stubChatClient()->queueContent('not json');
+        $run = $this->runInRunningState();
+
+        $this->distiller()->distill($this->tick($run));
+
+        self::assertSame(['unusable'], $this->verdictsOf($run));
+    }
+
     /**
-     * A tick already inside the provider call cannot be interrupted, but the
-     * checkpoint after settle() must still stop it from writing a profile for
-     * a run the user cancelled while the call was in flight — otherwise a
-     * cancelled run keeps quietly advancing.
+     * A tick inside the provider call cannot be interrupted, but the checkpoint after the call settles must stop it
+     * writing a profile for a run the user cancelled meanwhile.
      */
     public function testACancellationDuringTheProviderCallStopsBeforeWritingTheProfile(): void
     {
@@ -85,6 +103,19 @@ final class RecommendationProfileDistillerTest extends DbTestCase
             $this->em->flush();
         });
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
+
+        $this->expectException(RecommendationRunCancelledException::class);
+        $this->distiller()->distill($this->tick($run));
+    }
+
+    public function testACancellationDuringTheProviderCallStopsBeforeReturningAnUnusableOutcome(): void
+    {
+        $run = $this->runInRunningState();
+        $this->stubChatClient()->duringNextCall(function () use ($run): void {
+            $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
+            $this->em->flush();
+        });
+        $this->stubChatClient()->queueContent('not json');
 
         $this->expectException(RecommendationRunCancelledException::class);
         $this->distiller()->distill($this->tick($run));
@@ -154,6 +185,15 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->em->flush();
 
         return $run;
+    }
+
+    /** @return list<?string> */
+    private function verdictsOf(RecommendationRun $run): array
+    {
+        /** @var RecommendationRunLogRepository $logs */
+        $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
+
+        return array_column($logs->listForRun($this->user, $run->requireId()), 'verdict');
     }
 
     private function storedProfileText(): ?string

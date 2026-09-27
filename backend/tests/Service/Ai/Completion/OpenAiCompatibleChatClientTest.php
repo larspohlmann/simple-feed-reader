@@ -14,6 +14,7 @@ use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\JsonSchema;
 use App\Service\Ai\Completion\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\OpenAiCompatibleChatClient;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -51,12 +52,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     private function request(): CompletionRequest
     {
-        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), false);
+        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), Reasoning::Allowed);
     }
 
     private function suppressingRequest(): CompletionRequest
     {
-        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), true);
+        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), Reasoning::Suppressed);
     }
 
     private function schema(): JsonSchema
@@ -720,7 +721,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             \JSON_THROW_ON_ERROR,
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
-        $request = new CompletionRequest('m', $this->messages(), 512, $this->schema(), true);
+        $request = new CompletionRequest('m', $this->messages(), 512, $this->schema(), Reasoning::Suppressed);
 
         self::assertSame(
             'That provider answered with more than 4096 bytes.',

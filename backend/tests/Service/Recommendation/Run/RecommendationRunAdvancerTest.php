@@ -19,6 +19,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -827,7 +828,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             RecommendationAnswerBudget::outputBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
-                suppressesReasoning: true,
+                reasoning: Reasoning::Suppressed,
             ),
             $batchCall['maxAnswerTokens'],
         );

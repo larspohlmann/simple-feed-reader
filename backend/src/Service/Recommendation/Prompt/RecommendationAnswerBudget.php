@@ -4,33 +4,22 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Ai\Completion\Reasoning;
+
 /**
- * What the provider is allowed to spend answering, per phase — split out of
- * RecommendationPromptBuilder (#493) to keep that class under PHPMD's
- * method-count and complexity ceilings now it renders three prompt shapes
- * (batch, distillation, consolidation). Three of its numeric constants are
- * duplicated here rather than couple the classes for three integers.
+ * What the provider may spend answering, per phase. RecommendationPromptBuilder::packBatches() reserves this same
+ * bound for a batch reply, so the packer and the provider cannot disagree.
  */
 final readonly class RecommendationAnswerBudget
 {
     /**
-     * What one scored pick costs in the reply: id, score, and the dominant
-     * prose `reason`. Measured — the largest full-batch reply ran 12068
-     * characters for 43 items, ~70 tokens each. packBatches() subtracts it
-     * from the context window, so too high splits the pool into needless
-     * batches and too low crowds out the answer (was 40 until #437). Kept
-     * separate from the runaway slack: reusing it as both once made the
-     * packer read the inflation as real cost (a 13000-token window went from
-     * 12 batches of 45 to 50 of 10).
+     * What one scored consolidation pick costs in the reply: id, score, and the dominant prose
+     * `reason`, ~70 tokens measured (#437). consolidationInputSize() subtracts it when sizing the
+     * shortlist against the context window, so too high shrinks the shortlist and too low crowds out the answer.
      */
     private const int TOKENS_PER_PICK = 70;
 
-    /**
-     * Duplicated from RecommendationPromptBuilder on purpose: its packBatches()
-     * uses it for the packing budget, a different computation from the provider
-     * bound here, and coupling two classes for one integer costs more than the
-     * duplication (#493).
-     */
+    /** A score-only batch pick, `{"id":123,"score":843}`: about a fifth of a reasoned one (#493). */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
     /** The answer reserve for the distillation reply. One `{"profile": "..."}` string of at most
@@ -38,19 +27,11 @@ final readonly class RecommendationAnswerBudget
     private const int PROFILE_ANSWER_TOKENS = 1200;
 
     /**
-     * How much room over the estimate the provider is given. The estimate is
-     * a mean, and a long reply is not a runaway to truncate into one that
-     * cannot parse; half again covers the spread yet stays an order of
-     * magnitude below the 33800 tokens that let a looping model run an hour.
-     * Duplicated from RecommendationPromptBuilder for the same reason as
-     * TOKENS_PER_SCORE_PICK (#493).
+     * Half again over the mean estimate: a long reply is not a runaway to truncate into one that cannot parse, and
+     * the bound stays an order of magnitude below the 33800 tokens that let a looping model run an hour.
      */
     private const int ANSWER_BOUND_PERCENT = 150;
 
-    /**
-     * Duplicated from RecommendationPromptBuilder's own copy for the same
-     * reason as TOKENS_PER_SCORE_PICK (#493).
-     */
     private const int MINIMUM_ANSWER_TOKENS = 1024;
 
     /**
@@ -96,33 +77,22 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * What the provider may spend on the whole output: the answer reserve plus
-     * a reasoning headroom sized by whether the connection suppresses
-     * reasoning. A connection that may reason gets the full headroom (#327); a
-     * suppressed one gets a reduced headroom, not none, since the hint does
-     * not stop a local model thinking and the answer reserve alone truncated
-     * it once batches grew (#493). The headroom is a ceiling, not a
-     * reservation — a model honouring the hint spends nothing on the unused
-     * room, and the wall clock and wire cap still stop a runaway either way.
+     * The answer bound plus a reasoning headroom. Suppression only shrinks the headroom: the hint does not stop a
+     * local model thinking (#493), and the headroom is a ceiling, not a reservation (#327).
      */
     public static function outputBoundTokens(
         int $replyItemCount,
         RecommendationResponseSchema $schema,
-        bool $suppressesReasoning,
+        Reasoning $reasoning,
     ): int {
-        return self::answerBoundTokens($replyItemCount, $schema)
-            + self::reasoningHeadroomTokens($suppressesReasoning);
+        return self::answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($reasoning);
     }
 
-    /**
-     * The reasoning headroom `outputBoundTokens()` adds — a fixed cost that does
-     * not scale with the reply's item count. Exposed so the consolidation sizer
-     * can reserve the same room against the context window it must fit within.
-     */
-    public static function reasoningHeadroomTokens(bool $suppressesReasoning): int
+    private static function reasoningHeadroomTokens(Reasoning $reasoning): int
     {
-        return $suppressesReasoning
-            ? self::SUPPRESSED_REASONING_HEADROOM_TOKENS
-            : self::REASONING_HEADROOM_TOKENS;
+        return match ($reasoning) {
+            Reasoning::Suppressed => self::SUPPRESSED_REASONING_HEADROOM_TOKENS,
+            Reasoning::Allowed => self::REASONING_HEADROOM_TOKENS,
+        };
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 
@@ -25,8 +26,11 @@ final readonly class WaveContextLoader
             $tick,
             $this->nextBatches($tick, $waveSize),
             $this->candidateLoader->summarize($tick->userId(), self::wholePlanIds($run)),
-            $this->historyLoader->load($tick->userId(), $tick->settings),
-            $run->getProfileText(),
+            new PromptContext(
+                $this->historyLoader->load($tick->userId(), $tick->settings),
+                $tick->settings,
+                $run->getProfileText(),
+            ),
         );
     }
 

@@ -15,7 +15,7 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * The stream observer for one recorded provider call (#309). Not readonly: its one piece of state is when it last
- * checkpointed. `$logId` null means debug is off — liveness is still kept, the transcript is not.
+ * checkpointed.
  */
 final class RecordedCall implements CompletionStreamObserver
 {
@@ -88,22 +88,6 @@ final class RecordedCall implements CompletionStreamObserver
     public function finishUnusable(string $content): void
     {
         $this->finish($content, RecommendationRunLog::VERDICT_UNUSABLE);
-    }
-
-    /**
-     * Settles this call with the parser's verdict on $content: usable banks
-     * it as the answer, unusable records it as the invalid reply the next
-     * retry corrects against.
-     */
-    public function settle(string $content, bool $usable): void
-    {
-        if ($usable) {
-            $this->finishUsable($content);
-
-            return;
-        }
-
-        $this->finishUnusable($content);
     }
 
     /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */

@@ -5,14 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationRunLog;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Completion\RateLimitedResult;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\ProviderConnectionFactory;
-use App\Service\Recommendation\Prompt\PromptLine;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationPick;
 use App\Service\Recommendation\Prompt\RecommendationPickParser;
@@ -56,12 +55,13 @@ final readonly class RecommendationBatchWave
             $pending = [];
             foreach ($roundResult['replies'] as $position => $reply) {
                 $result = $this->parser->parse($reply['content'], $wave->batches[$position]->validIds());
-                $reply['call']->settle($reply['content'], $result->usable);
                 if ($result->usable) {
+                    $reply['call']->finishUsable($reply['content']);
                     $winners[$position] = self::asWinners($result->picks);
 
                     continue;
                 }
+                $reply['call']->finishUnusable($reply['content']);
                 $correctiveReply[$position] = $reply['content'];
                 $pending[] = $position;
             }
@@ -126,22 +126,12 @@ final readonly class RecommendationBatchWave
         foreach ($pending as $position) {
             $waveBatch = $wave->batches[$position];
             $messages = $this->batchMessages($wave, $waveBatch, $correctiveReply[$position] ?? null);
-            $recordedCall = $this->callRecorder->begin(
-                $tick->run,
-                RecommendationRunLog::PHASE_BATCH,
-                $waveBatch->index + 1,
-                $messages,
-                $tick->model(),
+            $request = $this->requestFactory->create(
+                $tick->connection,
+                new CallPrompt($messages, \count($waveBatch->validIds()), RecommendationResponseSchema::BatchScore),
             );
-            $calls[] = new ConcurrentCompletion(
-                $this->requestFactory->create(
-                    $tick->connection,
-                    $messages,
-                    \count($waveBatch->validIds()),
-                    RecommendationResponseSchema::BatchScore,
-                ),
-                $recordedCall,
-            );
+            $recordedCall = $this->callRecorder->begin($tick->run, CallSlot::batch($waveBatch->index + 1), $request);
+            $calls[] = new ConcurrentCompletion($request, $recordedCall);
             $recordedCalls[] = $recordedCall;
         }
 
@@ -252,10 +242,8 @@ final readonly class RecommendationBatchWave
     private function batchMessages(WaveContext $wave, WaveBatch $waveBatch, ?string $lastInvalidReply): array
     {
         $messages = $this->promptBuilder->batchMessages(
-            $wave->history,
-            $this->linesInSnapshotOrder($waveBatch),
-            $wave->tick->settings,
-            $wave->profile,
+            $wave->prompt,
+            $waveBatch->linesInSnapshotOrder(),
             $wave->poolSummary,
         );
 
@@ -264,14 +252,6 @@ final readonly class RecommendationBatchWave
             $lastInvalidReply,
             RecommendationPromptText::CORRECTIVE,
         );
-    }
-
-    /** @return list<PromptLine> */
-    private function linesInSnapshotOrder(WaveBatch $waveBatch): array
-    {
-        $present = array_filter($waveBatch->ids, static fn (int $id): bool => isset($waveBatch->linesById[$id]));
-
-        return array_values(array_map(static fn (int $id): PromptLine => $waveBatch->linesById[$id], $present));
     }
 
     /**

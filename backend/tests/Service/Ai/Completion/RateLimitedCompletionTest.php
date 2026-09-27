@@ -9,6 +9,7 @@ use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\JsonSchema;
 use App\Service\Ai\Completion\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\RateLimitedCompletion;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\RetryableProviderException;
@@ -38,7 +39,7 @@ final class RateLimitedCompletionTest extends TestCase
             [['role' => 'user', 'content' => 'x']],
             2048,
             new JsonSchema('s', ['type' => 'object']),
-            false,
+            Reasoning::Allowed,
         );
     }
 

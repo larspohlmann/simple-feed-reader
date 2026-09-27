@@ -9,7 +9,11 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
+use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamProgress;
+use App\Service\Ai\Completion\JsonSchema;
+use App\Service\Ai\Completion\Reasoning;
+use App\Service\Recommendation\Run\CallSlot;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -60,10 +64,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         $this->recorder->begin(
             $this->run,
-            RecommendationRunLog::PHASE_BATCH,
-            2,
-            [['role' => 'user', 'content' => 'hi']],
-            'm',
+            CallSlot::batch(2),
+            $this->request([['role' => 'user', 'content' => 'hi']]),
         );
 
         $rows = $this->logRows();
@@ -80,7 +82,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointsAreThrottledToTheInterval(): void
     {
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
 
         $call->streamProgressed(new CompletionStreamProgress('He', 40));
@@ -98,7 +100,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointUpdatesTheLivenessCounter(): void
     {
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
 
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('He', 1_234));
@@ -112,7 +114,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testFinishUsableStoresTextVerdictAndResetsLiveness(): void
     {
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('partial', 7_000));
@@ -129,7 +131,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testAbortKeepsThePartialTextWithTransportVerdictAndTheTransportMessage(): void
     {
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
@@ -152,7 +154,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
     {
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
 
         // Inside the checkpoint interval on purpose: no write has happened,
@@ -179,12 +181,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         [$otherRunId, $otherLogId] = $this->seedOtherUsersRunAndLog();
 
-        $call = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgress('mine', 50));
         $call->finishUsable('final mine');
 
-        $abortCall = $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 2, [], 'm');
+        $abortCall = $this->recorder->begin($this->run, CallSlot::batch(2), $this->request([]));
         $this->clock->modify('+3 seconds');
         $abortCall->streamProgressed(new CompletionStreamProgress('cut', 60));
         $abortCall->abortAfterTransportFailure('connection reset');
@@ -194,8 +196,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testASecondBeginForTheSamePhaseCountsTheAttempt(): void
     {
-        $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm')->finishUnusable('bad');
-        $this->recorder->begin($this->run, RecommendationRunLog::PHASE_BATCH, 1, [], 'm');
+        $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]))->finishUnusable('bad');
+        $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
 
         $rows = $this->logRows();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
@@ -265,6 +267,18 @@ final class RecommendationCallRecorderTest extends DbTestCase
     private function logRows(): array
     {
         return $this->logs()->listForRun($this->user, $this->run->requireId());
+    }
+
+    /** @param list<array{role: string, content: string}> $messages */
+    private function request(array $messages): CompletionRequest
+    {
+        return new CompletionRequest(
+            'm',
+            $messages,
+            1024,
+            new JsonSchema('test', ['type' => 'object']),
+            Reasoning::Allowed,
+        );
     }
 
     private function logs(): RecommendationRunLogRepository

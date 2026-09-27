@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationProfileParser;
@@ -41,33 +41,23 @@ final readonly class RecommendationProfileDistiller
             RecommendationPromptText::DISTILL_CORRECTIVE,
         );
 
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_DISTILL,
-            null,
-            $messages,
-            $tick->model(),
+        $request = $this->requestFactory->create(
+            $tick->connection,
+            new CallPrompt($messages, 1, RecommendationResponseSchema::Distillation),
         );
-
-        $content = $this->providerCall->complete(
-            $tick,
-            $this->requestFactory->create(
-                $tick->connection,
-                $messages,
-                1,
-                RecommendationResponseSchema::Distillation,
-            ),
-            $recordedCall,
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlot::distillation(), $request);
+        $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->profileParser->parse($content);
-        $recordedCall->settle($content, $result->usable);
-        $this->checkpoint->guard($run);
-
         if (!$result->usable) {
+            $recordedCall->finishUnusable($content);
+            $this->checkpoint->guard($run);
+
             return ProfileDistillationOutcome::unusable($content);
         }
 
+        $recordedCall->finishUsable($content);
+        $this->checkpoint->guard($run);
         $profile = $result->profile
             ?? throw new \LogicException('A usable profile parse result has no profile text.');
         $this->settingsWriter->storeProfile($run->getUser(), $profile);

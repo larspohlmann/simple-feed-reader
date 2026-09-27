@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\ConsolidationParseResult;
+use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
@@ -38,15 +39,12 @@ final readonly class RecommendationConsolidationResolver
     public function resolve(TickContext $tick): ConsolidationOutcome
     {
         $run = $tick->run;
-        $settings = $tick->settings;
-        $history = $this->historyLoader->load($tick->userId(), $settings);
-        $inputSize = $this->promptBuilder->consolidationInputSize(
-            $settings->packing->contextWindow,
-            $history,
+        $prompt = new PromptContext(
+            $this->historyLoader->load($tick->userId(), $tick->settings),
+            $tick->settings,
             $run->getProfileText(),
-            $settings->picksLimit,
-            $tick->connection->suppressesReasoning(),
         );
+        $inputSize = $this->promptBuilder->consolidationInputSize($prompt, $tick->reasoning());
         $pool = $this->ranker->cutForConsolidation($this->ranker->ranked($run->getWinners()), $inputSize);
         $linesById = $this->candidateLoader->linesForIds($tick->userId(), array_column($pool, 'id'));
         $pool = self::stillPresent($pool, $linesById);
@@ -56,43 +54,28 @@ final readonly class RecommendationConsolidationResolver
         }
 
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
-            $this->promptBuilder->consolidationMessages(
-                $pool,
-                $linesById,
-                $history,
-                $settings,
-                $run->getProfileText(),
-            ),
+            $this->promptBuilder->consolidationMessages($prompt, $pool, $linesById),
             $run->getLastInvalidReply(),
             RecommendationPromptText::CONSOLIDATION_CORRECTIVE,
         );
 
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_CONSOLIDATE,
-            null,
-            $messages,
-            $tick->model(),
+        $request = $this->requestFactory->create(
+            $tick->connection,
+            new CallPrompt($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
-
-        $content = $this->providerCall->complete(
-            $tick,
-            $this->requestFactory->create(
-                $tick->connection,
-                $messages,
-                \count($pool),
-                RecommendationResponseSchema::Consolidation,
-            ),
-            $recordedCall,
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlot::consolidation(), $request);
+        $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
-        $recordedCall->settle($content, $result->usable);
-        $this->checkpoint->guard($run);
-
         if (!$result->usable) {
+            $recordedCall->finishUnusable($content);
+            $this->checkpoint->guard($run);
+
             return ConsolidationOutcome::unusable($content, $pool);
         }
+
+        $recordedCall->finishUsable($content);
+        $this->checkpoint->guard($run);
 
         return ConsolidationOutcome::finalizeWith(self::rankedFromReply($result));
     }

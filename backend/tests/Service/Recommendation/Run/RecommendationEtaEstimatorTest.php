@@ -133,12 +133,12 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         int $spanSeconds,
     ): void {
         $base = new \DateTimeImmutable('2026-08-07T09:00:00Z');
-        $this->fixtures->log($run, $phase, $batchNumber, 1, 'req', $base->modify("+{$startOffset} seconds"))
-            ->finish('reply', new CallOutcome(
-                RecommendationRunLog::VERDICT_USABLE,
-                0,
-                $base->modify('+' . ($startOffset + $spanSeconds) . ' seconds'),
-                'stop',
-            ));
+        $log = $this->fixtures->log($run, $phase, $batchNumber, 1, 'req', $base->modify("+{$startOffset} seconds"));
+        $this->fixtures->settleLog($log, 'reply', new CallOutcome(
+            RecommendationRunLog::VERDICT_USABLE,
+            0,
+            $base->modify('+' . ($startOffset + $spanSeconds) . ' seconds'),
+            'stop',
+        ));
     }
 }

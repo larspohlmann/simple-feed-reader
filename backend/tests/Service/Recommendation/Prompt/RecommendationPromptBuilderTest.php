@@ -6,7 +6,9 @@ namespace App\Tests\Service\Recommendation\Prompt;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
+use App\Service\Ai\Completion\Reasoning;
 use App\Service\Recommendation\Prompt\CandidatePoolSummary;
+use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationHistory;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
@@ -143,7 +145,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     /**
      * A sanity check for the ordinary, cap-bound case: at a generous context
-     * window the batch cap (the default maximumBatchSize of 45) binds before
+     * window the batch cap (the default maximumBatchSize of 100) binds before
      * either the old or the new token formula does, so a 200-candidate pool
      * packs into the minimum the cap allows either way. This does not exercise
      * the reserve/history-budget swap — see
@@ -220,7 +222,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // the budget does. A window of 8192 (as this test used before the cap
         // existed) fits all 35 in one batch, so the window was shrunk instead
         // of the candidate count grown, keeping the split budget-driven rather
-        // than cap-driven. The window is raised by the constant reserve (1600)
+        // than cap-driven. The window is raised by the constant reserve (2250)
         // to keep the same budget now that the reserve no longer scales with
         // picksLimit.
         $candidateCount = 35;
@@ -292,8 +294,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         // A 1M-token context easily holds 6 × picksLimit lines plus the reply,
         // so the ceiling (CONSOLIDATION_MAX_INPUT_FACTOR × picksLimit) binds.
-        $size = $this->builder
-            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+        $size = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
 
         self::assertSame(300, $size);
     }
@@ -310,8 +314,10 @@ final class RecommendationPromptBuilderTest extends TestCase
         // window for any shortlist above the floor, so the call falls back to
         // the floor (CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit) — a small
         // connection is never handed a consolidation call it cannot answer.
-        $size = $this->builder
-            ->consolidationInputSize(32768, $history, 'A profile.', 50, suppressesReasoning: false);
+        $size = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(32768, 50), 'A profile.'),
+            Reasoning::Allowed,
+        );
 
         self::assertSame(100, $size);
     }
@@ -320,14 +326,55 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
 
-        $small = $this->builder
-            ->consolidationInputSize(60000, $history, 'A profile.', 50, suppressesReasoning: true);
-        $large = $this->builder
-            ->consolidationInputSize(1_000_000, $history, 'A profile.', 50, suppressesReasoning: true);
+        $small = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+        $large = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(1_000_000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
 
         self::assertGreaterThan($small, $large);
         self::assertGreaterThanOrEqual(100, $small);
         self::assertLessThanOrEqual(300, $large);
+    }
+
+    public function testALongerProfileShrinksTheConsolidationShortlist(): void
+    {
+        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+
+        $short = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+        $long = $this->builder->consolidationInputSize(
+            new PromptContext($history, $this->settings(60000, 50), str_repeat('Likes Rust. ', 400)),
+            Reasoning::Suppressed,
+        );
+
+        self::assertLessThan($short, $long);
+    }
+
+    public function testMoreFavoritesShrinkTheConsolidationShortlist(): void
+    {
+        $few = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $many = new RecommendationHistory(
+            favorites: array_map(static fn (int $id): PromptLine => self::line($id, 'Fav', 100), range(1, 40)),
+            kept: [],
+            viewed: [],
+        );
+
+        $withFew = $this->builder->consolidationInputSize(
+            new PromptContext($few, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+        $withMany = $this->builder->consolidationInputSize(
+            new PromptContext($many, $this->settings(60000, 50), 'A profile.'),
+            Reasoning::Suppressed,
+        );
+
+        self::assertLessThan($withFew, $withMany);
     }
 
     /**
@@ -416,12 +463,13 @@ final class RecommendationPromptBuilderTest extends TestCase
         $candidateLines = [self::line(7, 'Candidate seven', 10)];
 
         $settingsWithGuidance = $this->settings(32768, 100, 'Focus on cats.');
-        $withGuidance = $this->builder->batchMessages($history, $candidateLines, $settingsWithGuidance, null);
-        $withoutGuidance = $this->builder->batchMessages(
-            $history,
+        $withGuidance = $this->builder->batchMessages(
+            new PromptContext($history, $settingsWithGuidance, null),
             $candidateLines,
-            $this->settings(32768, 100),
-            null,
+        );
+        $withoutGuidance = $this->builder->batchMessages(
+            new PromptContext($history, $this->settings(32768, 100), null),
+            $candidateLines,
         );
 
         $system = $withGuidance[0]['content'];
@@ -446,10 +494,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheRubricAsksForExactValuesOnAThousandPointScale(): void
     {
         $system = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
-            $this->settings(32768, 100),
-            null,
         )[0]['content'];
 
         self::assertStringContainsString('from 0 to 1000', $system);
@@ -469,10 +515,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheBatchPromptNeverAsksForACandidateToBeLeftOut(): void
     {
         $system = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
-            $this->settings(32768, 100),
-            null,
         )[0]['content'];
 
         self::assertStringContainsString('never leave a candidate out', $system);
@@ -492,10 +536,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         $user = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            $this->defaultContext(),
             $candidateLines,
-            $this->settings(32768, 100),
-            null,
         )[1]['content'];
 
         self::assertStringContainsString('CANDIDATES (17 posts — return 17 objects, one per line):', $user);
@@ -507,10 +549,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         $summary = new CandidatePoolSummary(total: 2000, oldest: '2026-01-15', newest: '2026-08-09');
 
         $messages = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            $this->defaultContext(),
             $candidateLines,
-            $this->settings(32768, 100),
-            null,
             $summary,
         );
 
@@ -527,10 +567,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testBatchMessagesOmitsThePoolFrameLineWhenNoSummaryIsPassed(): void
     {
         $messages = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            $this->defaultContext(),
             [self::line(7, 'Candidate seven', 10)],
-            $this->settings(32768, 100),
-            null,
         );
 
         self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
@@ -556,10 +594,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         $candidateLines = [self::line(10, 'Candidate A', 10), self::line(11, 'Candidate B', 10)];
 
         $messages = $this->builder->batchMessages(
-            $history,
+            new PromptContext($history, $this->settings(32768, 100), 'Likes homelab and Rust.'),
             $candidateLines,
-            $this->settings(32768, 100),
-            'Likes homelab and Rust.',
         );
 
         $user = $messages[1]['content'];
@@ -581,10 +617,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         $messages = $this->builder->batchMessages(
-            $history,
+            new PromptContext($history, $this->settings(32768, 100), null),
             [self::line(3, 'Candidate', 10)],
-            $this->settings(32768, 100),
-            null,
         );
 
         self::assertStringNotContainsString('PROFILE', $messages[1]['content']);
@@ -640,7 +674,10 @@ final class RecommendationPromptBuilderTest extends TestCase
         ];
         $settings = $this->settings(32768, 3);
 
-        $messages = $this->builder->batchMessages($history, $candidateLines, $settings, 'Likes homelab.');
+        $messages = $this->builder->batchMessages(
+            new PromptContext($history, $settings, 'Likes homelab.'),
+            $candidateLines,
+        );
 
         $expectedSystem = implode("\n\n", [
             RecommendationPromptText::BATCH_SYSTEM_ROLE,
@@ -671,10 +708,13 @@ final class RecommendationPromptBuilderTest extends TestCase
         $exactly120 = str_repeat('é', 120);
         $exactly121 = str_repeat('é', 121);
 
-        $messages = $this->builder->batchMessages($this->emptyHistory(), [
-            new PromptLine(1, 'Boundary120', 'F', 'D', $exactly120),
-            new PromptLine(2, 'Boundary121', 'F', 'D', $exactly121),
-        ], $this->settings(8192, 10), null);
+        $messages = $this->builder->batchMessages(
+            new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
+            [
+                new PromptLine(1, 'Boundary120', 'F', 'D', $exactly120),
+                new PromptLine(2, 'Boundary121', 'F', 'D', $exactly121),
+            ],
+        );
 
         $user = $messages[1]['content'];
         self::assertStringContainsString("- [1] Boundary120 — F — D — {$exactly120}\n", $user);
@@ -693,10 +733,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         $expectedTruncated = mb_substr($description, 0, 120) . '…';
 
         $messages = $this->builder->batchMessages(
-            $this->emptyHistory(),
+            new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
             [new PromptLine(9, 'Varying', 'F', 'D', $description)],
-            $this->settings(8192, 10),
-            null,
         );
 
         self::assertStringContainsString("- [9] Varying — F — D — {$expectedTruncated}", $messages[1]['content']);
@@ -704,7 +742,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsExactlyAtTheMinimumBatchSizeWhenTheBudgetOverflowsEarly(): void
     {
-        // Window 3125 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3125 (raised by the constant reserve of 2250) with picksLimit 1
         // makes the budget just 1 token, so every candidate after the first
         // overflows it; only the >= MINIMUM_BATCH_SIZE guard decides where each
         // batch actually ends.
@@ -720,7 +758,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingResetsUsedTokensExactlyAtEachSplitBoundary(): void
     {
-        // Window 3189 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3189 (raised by the constant reserve of 2250) with picksLimit 1
         // puts the budget exactly one token below where the 11th candidate line
         // would land: a one-token error in either the starting or the
         // post-split reset of $used shifts the split point.
@@ -736,9 +774,10 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3195 (raised by the constant reserve of 1600) with picksLimit 1
+        // Window 3195 (raised by the constant reserve of 2250) with picksLimit 1
         // makes the budget land exactly on the 10-candidate boundary (shifted down
-        // one candidate due to the new responseReserve = 45 * 1 instead of 40 * 1):
+        // one candidate versus the old flat per-pick multiplier, now that RecommendationAnswerBudget's
+        // floor and ANSWER_BOUND_PERCENT bound decide responseReserve):
         // used+lineTokens equals the budget for the 11th candidate, so the
         // strict `>` (not `>=`) leaves it in the first batch, and a sign error
         // in subtracting the history tokens shifts the split.
@@ -785,12 +824,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * With the default 45-candidate cap, responseReserve's `intdiv(..., 100)`
-     * is pinned at the MINIMUM_ANSWER_TOKENS floor regardless of the exact
-     * divisor, masking an off-by-one there. A larger cap (200, via
-     * maximumBatchSize) pushes the raw quotient well above the floor, so a
-     * 100 -> 101 or 100 -> 99 divisor shifts responseReserve enough to move
-     * the batch boundary at this window.
+     * A maximumBatchSize of 200 keeps RecommendationAnswerBudget's `expected` well above the
+     * MINIMUM_ANSWER_TOKENS floor, so a wrong ANSWER_BOUND_PERCENT/100 divisor would shift the split.
      */
     public function testResponseReserveDivisorIsExactlyOneHundred(): void
     {
@@ -806,6 +841,26 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         self::assertSame([23, 23, 23, 23, 8], array_map('count', $batches));
+    }
+
+    /**
+     * Below the 1024-token floor the provider may spend the floor plus half (RecommendationAnswerBudget), and the
+     * packer reserves exactly that: 3865 - 1500 overhead - 1536 bound - 709 profile and favorites = 120 tokens.
+     */
+    public function testTheBatchReplyReserveIsTheProvidersAnswerBound(): void
+    {
+        $candidates = array_map(
+            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            range(100, 129),
+        );
+
+        $batches = $this->builder->packBatches(
+            $candidates,
+            $this->emptyHistory(),
+            $this->settings(3865, 1, maximumBatchSize: 50),
+        );
+
+        self::assertSame([20, 10], array_map('count', $batches));
     }
 
     /**
@@ -873,11 +928,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         $messages = $this->builder->consolidationMessages(
+            new PromptContext($history, $this->settings(32768, 100), 'Likes Rust.'),
             $pool,
             $lines,
-            $history,
-            $this->settings(32768, 100),
-            'Likes Rust.',
         );
 
         // Anchored to "PROFILE:\n" + the text, not merely both present, so a
@@ -912,11 +965,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
 
         $messages = $this->builder->consolidationMessages(
+            new PromptContext($history, $this->settings(32768, 100), 'Likes Rust.'),
             $pool,
             $lines,
-            $history,
-            $this->settings(32768, 100),
-            'Likes Rust.',
         );
 
         $expectedSystem = RecommendationPromptText::CONSOLIDATION_ROLE
@@ -952,11 +1003,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)]; // 6 pruned since its batch ran
 
         $messages = $this->builder->consolidationMessages(
+            $this->defaultContext(),
             $pool,
             $lines,
-            $this->emptyHistory(),
-            $this->settings(32768, 100),
-            null,
         );
 
         self::assertStringContainsString(
@@ -972,7 +1021,11 @@ final class RecommendationPromptBuilderTest extends TestCase
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('The consolidation phase requires at least one ranked winner.');
 
-        $this->builder->consolidationMessages([], [], $this->emptyHistory(), $this->settings(32768, 100), null);
+        $this->builder->consolidationMessages(
+            $this->defaultContext(),
+            [],
+            [],
+        );
     }
 
     private static function line(int $id, string $title, int $descriptionChars): PromptLine
@@ -989,6 +1042,12 @@ final class RecommendationPromptBuilderTest extends TestCase
     private function emptyHistory(): RecommendationHistory
     {
         return new RecommendationHistory(favorites: [], kept: [], viewed: []);
+    }
+
+    /** A generous window, no profile, and no history — the baseline context tests reach for by default. */
+    private function defaultContext(): PromptContext
+    {
+        return new PromptContext($this->emptyHistory(), $this->settings(32768, 100), null);
     }
 
     private function settings(
