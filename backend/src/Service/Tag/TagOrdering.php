@@ -22,29 +22,29 @@ final readonly class TagOrdering
     }
 
     /**
-     * @param list<int> $tagIds the user's tags in their new order
+     * @param list<int> $orderedTagIds
      *
      * @return list<Tag>
      */
-    public function reorder(User $user, array $tagIds): array
+    public function reorder(User $user, array $orderedTagIds): array
     {
         $byId = $this->ownedTagsById($user);
-        $this->exactSet->assertPermutation($tagIds, array_keys($byId), 'tagIds must list exactly your tags.');
-        $this->reorderer->reorder($tagIds, $byId);
+        $this->exactSet->assertPermutation($orderedTagIds, array_keys($byId), 'tagIds must list exactly your tags.');
+        $this->reorderer->reorder($orderedTagIds, $byId);
 
-        return array_map(static fn (int $id): Tag => $byId[$id], $tagIds);
+        return array_map(static fn (int $id): Tag => $byId[$id], $orderedTagIds);
     }
 
-    /** @param list<int> $subscriptionIds the tag's feeds in their new order */
-    public function orderFeeds(Tag $tag, array $subscriptionIds): void
+    /** @param list<int> $orderedSubscriptionIds */
+    public function orderFeeds(Tag $tag, array $orderedSubscriptionIds): void
     {
         $joinsBySubscriptionId = $this->subscriptionTags->forTagBySubscriptionId($tag);
         $this->exactSet->assertPermutation(
-            $subscriptionIds,
+            $orderedSubscriptionIds,
             array_keys($joinsBySubscriptionId),
             "subscriptionIds must list exactly this tag's feeds.",
         );
-        $this->reorderer->reorder($subscriptionIds, $joinsBySubscriptionId);
+        $this->reorderer->reorder($orderedSubscriptionIds, $joinsBySubscriptionId);
     }
 
     /** @return array<int, Tag> */

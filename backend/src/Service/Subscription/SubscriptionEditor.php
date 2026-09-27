@@ -34,12 +34,12 @@ final readonly class SubscriptionEditor
         $this->entityManager->flush();
     }
 
-    /** @param list<int> $subscriptionIds the untagged feeds in their new order */
-    public function reorder(User $user, array $subscriptionIds): void
+    /** @param list<int> $orderedSubscriptionIds */
+    public function reorder(User $user, array $orderedSubscriptionIds): void
     {
         $this->reorderer->reorder(
-            $subscriptionIds,
-            $this->ownedSubscriptions->resolve($subscriptionIds, $user->requireId()),
+            $orderedSubscriptionIds,
+            $this->ownedSubscriptions->resolve($orderedSubscriptionIds, $user->requireId()),
         );
     }
 

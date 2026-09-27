@@ -94,8 +94,18 @@ final readonly class DomainKnowsNoHttpRule implements Rule
                 || $node instanceof GroupUse,
         );
 
+        $groupUsePrefixIds = [];
+        foreach ($nodes as $node) {
+            if ($node instanceof GroupUse) {
+                $groupUsePrefixIds[] = spl_object_id($node->prefix);
+            }
+        }
+
         $references = [];
         foreach ($nodes as $node) {
+            if ($node instanceof Name && \in_array(spl_object_id($node), $groupUsePrefixIds, true)) {
+                continue;
+            }
             $references = [...$references, ...self::referencesIn($node)];
         }
 
@@ -132,7 +142,7 @@ final readonly class DomainKnowsNoHttpRule implements Rule
 
     private static function isHttp(string $reference): bool
     {
-        return \in_array(strtolower($reference), array_map(strtolower(...), self::HTTP_CLASSES), true)
+        return array_any(self::HTTP_CLASSES, static fn (string $class): bool => 0 === strcasecmp($class, $reference))
             || self::startsWithAny($reference, self::HTTP_PREFIXES);
     }
 
@@ -157,13 +167,22 @@ final readonly class DomainKnowsNoHttpRule implements Rule
     private static function error(string $namespaceName, string $reference, int $line): IdentifierRuleError
     {
         return RuleErrorBuilder::message(sprintf(
-            'Domain code must not know HTTP: %s references %s. '
-            . 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).',
+            'Domain code must not know HTTP: %s references %s. %s',
             $namespaceName,
             $reference,
+            self::remedyFor($reference),
         ))
             ->identifier('simpleFeedReader.domainKnowsNoHttp')
             ->line($line)
             ->build();
+    }
+
+    private static function remedyFor(string $reference): string
+    {
+        if (self::startsWithAny($reference, ['App\\Dto\\'])) {
+            return 'Take the service value the request DTO builds, not the DTO (#1182).';
+        }
+
+        return 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
     }
 }

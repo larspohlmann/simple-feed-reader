@@ -136,6 +136,7 @@ namespace App\Service\Fixtures\Gaps {
     use Symfony\Component\HttpFoundation as Foundation;
     use App\Http as HttpLayer;
     use App\Dto\Tag\CreateTagRequest;
+    use App\Dto\{Tag\UpdateTagRequest, Subscription\MoveFeedToTagRequest};
 
     final class KnowsHttpThroughTheGaps
     {

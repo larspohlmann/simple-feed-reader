@@ -47,14 +47,14 @@ final readonly class CatalogFeedEditor
         $this->entityManager->flush();
     }
 
-    /** @param list<int> $orderedIds */
-    public function reorder(array $orderedIds): void
+    /** @param list<int> $orderedFeedIds */
+    public function reorder(array $orderedFeedIds): void
     {
         $byId = [];
-        foreach ($orderedIds as $id) {
+        foreach ($orderedFeedIds as $id) {
             $byId[$id] = $this->feeds->getById($id);
         }
-        $this->reorderer->reorder($orderedIds, $byId);
+        $this->reorderer->reorder($orderedFeedIds, $byId);
     }
 
     private function applyEditableFields(CatalogFeed $feed, CatalogFeedDetails $details): void

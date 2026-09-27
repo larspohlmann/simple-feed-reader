@@ -47,13 +47,13 @@ final readonly class CatalogCategoryEditor
         $this->entityManager->flush();
     }
 
-    /** @param list<int> $orderedIds */
-    public function reorder(array $orderedIds): void
+    /** @param list<int> $orderedCategoryIds */
+    public function reorder(array $orderedCategoryIds): void
     {
         $byId = [];
-        foreach ($orderedIds as $id) {
+        foreach ($orderedCategoryIds as $id) {
             $byId[$id] = $this->categories->getById($id);
         }
-        $this->reorderer->reorder($orderedIds, $byId);
+        $this->reorderer->reorder($orderedCategoryIds, $byId);
     }
 }

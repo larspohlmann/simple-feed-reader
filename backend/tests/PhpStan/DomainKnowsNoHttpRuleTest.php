@@ -60,22 +60,23 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
                 [self::message(self::GAPS, 'Symfony\Component\HttpFoundation'), 136],
                 [self::message(self::GAPS, 'App\Http'), 137],
                 [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 138],
-                [self::message(self::GAPS, 'app\http\RecommendationFeedJson'), 144],
-                [self::message(self::GAPS, 'app\http\EntryPage'), 149],
-                [self::message(self::GAPS, 'App\Http\\'), 154],
-                [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 159],
-                [self::message(self::GAPS, strtolower(self::ACCESS_DENIED)), 164],
+                [self::message(self::GAPS, 'App\Dto\Tag\UpdateTagRequest'), 139],
+                [self::message(self::GAPS, 'App\Dto\Subscription\MoveFeedToTagRequest'), 139],
+                [self::message(self::GAPS, 'app\http\RecommendationFeedJson'), 145],
+                [self::message(self::GAPS, 'app\http\EntryPage'), 150],
+                [self::message(self::GAPS, 'App\Http\\'), 155],
+                [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 160],
+                [self::message(self::GAPS, strtolower(self::ACCESS_DENIED)), 165],
             ],
         );
     }
 
     private static function message(string $namespaceName, string $reference): string
     {
-        return sprintf(
-            'Domain code must not know HTTP: %s references %s. '
-            . 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).',
-            $namespaceName,
-            $reference,
-        );
+        $remedy = str_starts_with(strtolower($reference), 'app\dto\\')
+            ? 'Take the service value the request DTO builds, not the DTO (#1182).'
+            : 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
+
+        return sprintf('Domain code must not know HTTP: %s references %s. %s', $namespaceName, $reference, $remedy);
     }
 }
