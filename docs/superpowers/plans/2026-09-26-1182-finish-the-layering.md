@@ -5979,6 +5979,37 @@ Expected: `git status --short var` prints nothing (the scripts stay out of the c
 
 ---
 
+### Execution rulings (PR B)
+
+- **Planner, after PR A:**
+  - `TagMove` is renamed `FeedMove`, in its own commit, and `toMove()` stays.
+  - `applyFlags` is written twice and stays a watch item.
+  - The catalog reorder lookup plus `TagOrdering::ownedTagsById()` make three copies, so they go to #1169.
+- **B8 (planner, replacing the draft):**
+  - `ClassNameReferences` is the one shared collector, and both rules use it unchanged. It owns every way PHP names a class: use and group use with prefix de-duplication, aliases and the alias separator, FQ names, class-name strings including interpolated parts, and the case fold. It returns `ForbiddenReference(name, line, matchedRule)`.
+  - Each rule keeps its remedy as a `REMEDIES` const map, looked up by the matched rule. `remedyFor()` is gone. There is no abstract base rule until a third rule appears.
+  - `DomainKnowsNoHttpRuleTest` and its fixture stay byte-unchanged; that is the proof the extraction is faithful. Each rule builds its collector in its constructor, because the unchanged test constructs the rule from a `NodeFinder`.
+  - `PersistenceKnowsNoServiceRule` has fixture lines, each with a deletion check, for a group import (one report per class), a lower-case name, an aliased import, and a real `App\Service` reference inside `App\Service`, which must not be reported.
+- **B9 docs (planner):** §8 and the CLAUDE.md bullet claim only what `PersistenceKnowsNoServiceRule` enforces:
+  - `App\Entity` holds the values an entity stores, embeds, takes or returns.
+  - `App\Enum` holds the enums an entity or repository uses.
+  - `App\Doctrine` holds the persistence plumbing.
+  - Module enums stay in their module, and no enum moved beyond D1.
+  - #1169 records the enums shared across modules (`TickDriver`, `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`), `SupportedLocale`, the nine repository→Service imports, and `App\Doctrine` in `DomainKnowsNoHttpRule`.
+- **Preflight:**
+  - B6 keeps PR A's CLAUDE.md wording.
+  - The B9 script sorts every touched `use` block, skips `tests/PhpStan`, and compares against the merge base.
+  - Restating docblocks are dropped, and `MaintenanceTick`'s history docblock is trimmed to its one invariant.
+- **Mutation-driven additions:**
+  - A pin on the digest handler's log line.
+  - The findings file's marker records are asserted as arrays.
+  - A pin on `RecommendationSettingsValues::$showReasons = false`.
+  - The resolver's candidate-pool override is exercised with 400.
+- **Rejected:**
+  - A shared PHPStan Collector pass for the two rules. Revisit when a third rule appears.
+  - A named serialiser for the refresh-run `{done, total}` record. The wire and the store are separate contracts.
+  - A convention note on `NoToArrayInServicesRule`, since its name-based ban is the right depth.
+
 ### Finishing PR B
 
 1. **Branch-wide gates**, all green:
