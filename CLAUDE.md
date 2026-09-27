@@ -95,7 +95,11 @@ Non-negotiables:
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
   `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
-  (`$request->toChange()`) or a plain field, never the DTO (#1182).
+  (`$request->toChange()`) or a plain field, never the DTO (#1182). Services build no
+  response arrays either: a `src/Http/*Json` mapper shapes every response, and a value
+  that serialises for a store names the method after it (`toLogContext()`,
+  `toCacheEntry()`). `NoToArrayInServicesRule` rejects `toArray()` and `jsonSerialize()`
+  in `App\Service`.
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
   typed value, or the git history beats a sentence about the code — reach for
   those first, and prefer them even when a comment would be easy. Write a

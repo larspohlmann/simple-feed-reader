@@ -33,6 +33,10 @@ services:
         tags:
             - phpstan.rules.rule
     -
+        class: App\Tests\PhpStan\NoToArrayInServicesRule
+        tags:
+            - phpstan.rules.rule
+    -
         class: App\Tests\PhpStan\EntityIdCoercionRule
         tags:
             - phpstan.rules.rule
