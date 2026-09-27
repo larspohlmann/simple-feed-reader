@@ -8,6 +8,7 @@ use App\Dto\Auth\PasswordResetConfirmRequest;
 use App\Dto\Auth\PasswordResetRequest;
 use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
+use App\Http\AltchaChallengeJson;
 use App\Service\Auth\AltchaService;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
@@ -52,7 +53,7 @@ final readonly class AuthController
     #[Route('/altcha-challenge', name: 'api_auth_altcha_challenge', methods: ['GET'])]
     public function altchaChallenge(): JsonResponse
     {
-        return new JsonResponse($this->altcha->createChallenge()->toArray());
+        return new JsonResponse(AltchaChallengeJson::from($this->altcha->createChallenge()));
     }
 
     /**
