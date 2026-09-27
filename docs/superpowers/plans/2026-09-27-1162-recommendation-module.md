@@ -4685,6 +4685,31 @@ EOF
 ```
 
 
+### Execution rulings (PR C)
+
+- **Preflight:** a read-only scan against the post-A/B tree, no dry run. Every anchor still matched.
+  - C5 Step 1 adds a `Reasoning` import to two tests in `Ai/Completion`.
+  - C5 also moves `linesInSnapshotOrder()` to `WaveBatch`, pinned by `WaveBatchTest`. This is the B-f2 carry-forward. C6's import is re-anchored after it.
+  - `PromptContext` and `CallPrompt` get no class docblocks.
+- **D11 is the only behaviour change.**
+  - For batch caps ≤ 68 (the Small batch size, below a ceiling of 138), the batch reply reserve rises by up to 512 tokens, to 1536. That shrinks each batch by about 10 lines, so a large pool gains several batches.
+  - At the default cap of 100 the reserve is unchanged, at 2250.
+  - Distillation still passes `replyItemCount` 1. The Distillation arm ignores the count, so the budget is byte-identical and its two ±1 mutants are equivalent.
+- **Tasks:**
+  - C3's split left the guard on the unusable branch untested, so d48da877 adds a cancellation test for it in both the distiller and the resolver.
+  - The resolver's guard on the usable branch is already caught by an advancer test.
+  - 03068346 adds two tests to kill `consolidationInputSize()`'s term mutants: a longer profile and more FAVORITES each shrink the shortlist.
+  - C6 deletes two `TickContext::model()` tests, so the suite goes from 6370 to 6369.
+- **Reviews:**
+  - `TickContext::reasoning()` stays (D18). `Reasoning::preferredBy()` is the single mapping.
+  - The `finishUsable()`/`finishUnusable()` branch at three call sites stays (D12). Each side does different work, and `settle(bool)` was a flag parameter.
+  - The `settleLog()` fixture keeps its refresh, so the entity stays true to the row the production path wrote.
+  - The fix wave corrects stale test comments and the `TOKENS_PER_PICK` docblock (its reader is `consolidationInputSize()`), and extracts one `PromptContext` test helper.
+  - Carried to #1171: the remaining stale narrative in `RecommendationPromptBuilderTest` comments.
+- **Watch item (C3):** the Distillation/Consolidation retry-or-degrade skeleton keeps two copies. The shared logic is `InvalidReplyRetry`, and a helper would bring back D12's bool dispatch.
+- **Real run:** run 126 as user 2 completed 6/6 with 0 transport failures, and distill was usable on attempt 1. One warning: consolidate attempt 1 ran away repeating entry ids until the provider ended it (`finish_reason` error). Attempt 2 was usable. The request parameters match run 125. The confirmation run 127 was clean: 6/6, every call usable on attempt 1.
+- **Gates:** the MySQL leg runs without `TEST_TOKEN`, and never two at once.
+
 ---
 
 # PR E — run states as enums, debug-log rows as values (`Closes #1162`)
