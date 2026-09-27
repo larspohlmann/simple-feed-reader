@@ -107,4 +107,60 @@ final class GrafanaSettingsRequestTest extends TestCase
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
+
+    public function testToUpdateCarriesTheOverridesAndTheProfilingSwitch(): void
+    {
+        $update = SettingsRequests::grafana(
+            lokiPushUrl: 'http://loki:3100/push',
+            lokiUsername: 'tenant42',
+            grafanaUrl: 'http://grafana:3000',
+            pyroscopePushUrl: 'http://pyroscope:4040',
+            profilingEnabled: true,
+        )->toUpdate();
+
+        self::assertSame('http://loki:3100/push', $update->connection->lokiPushUrl);
+        self::assertSame('tenant42', $update->connection->lokiUsername);
+        self::assertSame('http://grafana:3000', $update->connection->grafanaUrl);
+        self::assertSame('http://pyroscope:4040', $update->connection->pyroscopePushUrl);
+        self::assertTrue($update->connection->profilingEnabled);
+    }
+
+    public function testToUpdateTurnsBlankOverridesIntoNone(): void
+    {
+        $update = SettingsRequests::grafana(lokiPushUrl: '', lokiUsername: '', grafanaUrl: '', pyroscopePushUrl: '')
+            ->toUpdate();
+
+        self::assertNull($update->connection->lokiPushUrl);
+        self::assertNull($update->connection->lokiUsername);
+        self::assertNull($update->connection->grafanaUrl);
+        self::assertNull($update->connection->pyroscopePushUrl);
+        self::assertFalse($update->connection->profilingEnabled);
+    }
+
+    public function testABlankOrMissingTokenKeepsTheStoredOne(): void
+    {
+        $fromBlank = SettingsRequests::grafana(token: '')->toUpdate()->token;
+        self::assertNull($fromBlank->replacement());
+        self::assertFalse($fromBlank->isRemoval());
+
+        $fromMissing = SettingsRequests::grafana()->toUpdate()->token;
+        self::assertNull($fromMissing->replacement());
+        self::assertFalse($fromMissing->isRemoval());
+    }
+
+    public function testATokenReplacesTheStoredOne(): void
+    {
+        $update = SettingsRequests::grafana(token: 'glc_new')->toUpdate();
+
+        self::assertSame('glc_new', $update->token->replacement());
+        self::assertFalse($update->token->isRemoval());
+    }
+
+    public function testRemoveTokenWinsOverASentToken(): void
+    {
+        $update = SettingsRequests::grafana(token: 'glc_new', removeToken: true)->toUpdate();
+
+        self::assertNull($update->token->replacement());
+        self::assertTrue($update->token->isRemoval());
+    }
 }

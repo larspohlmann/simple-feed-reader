@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
@@ -23,7 +23,7 @@ final readonly class DigestMailBuilder
         private DigestHtmlRenderer $htmlRenderer,
         private DigestLinkBuilder $links,
         private DigestBrandLogo $brandLogo,
-        private MailSettings $mailSettings,
+        private MailSendingSettings $mailSettings,
     ) {
     }
 

@@ -125,6 +125,6 @@ final class RequestProfilingTest extends ApiTestCase
     {
         /** @var GrafanaSettings $settings */
         $settings = self::getContainer()->get(GrafanaSettings::class);
-        $settings->update(SettingsRequests::grafana(profilingEnabled: true, pyroscopePushUrl: $pushUrl));
+        $settings->update(SettingsRequests::grafana(profilingEnabled: true, pyroscopePushUrl: $pushUrl)->toUpdate());
     }
 }

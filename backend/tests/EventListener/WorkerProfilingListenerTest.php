@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\WorkerProfilingListener;
-use App\Service\Grafana\GrafanaSettings;
 use App\Service\Profiling\CollapsedProfile;
 use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfilingConfigSource;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint;
@@ -211,18 +211,18 @@ final class WorkerProfilingListenerTest extends TestCase
         MockClock $clock,
         array &$log,
     ): WorkerProfilingListener {
-        $settings = $this->createStub(GrafanaSettings::class);
-        $settings->method('refresh')->willReturnCallback(static function () use (&$log): void {
+        $profilingConfig = $this->createStub(ProfilingConfigSource::class);
+        $profilingConfig->method('refresh')->willReturnCallback(static function () use (&$log): void {
             $log[] = 'refresh';
         });
-        $settings->method('profilingEnabled')->willReturnCallback(
+        $profilingConfig->method('profilingEnabled')->willReturnCallback(
             static function () use (&$enabled, &$log): bool {
                 $log[] = 'profilingEnabled';
 
                 return $enabled['value'];
             },
         );
-        $policy = new ProfilingPolicy($settings, $this->policySampler(), $this->endpoint());
+        $policy = new ProfilingPolicy($profilingConfig, $this->policySampler(), $this->endpoint());
 
         $client = new PyroscopeClient(
             new MockHttpClient(function (string $method, string $url, array $options) use (&$pushes) {
@@ -234,7 +234,7 @@ final class WorkerProfilingListenerTest extends TestCase
             $this->endpoint(),
         );
 
-        return new WorkerProfilingListener($policy, $sampler, $client, $clock, $settings);
+        return new WorkerProfilingListener($policy, $sampler, $client, $clock, $profilingConfig);
     }
 
     private function endpoint(): PyroscopeEndpoint

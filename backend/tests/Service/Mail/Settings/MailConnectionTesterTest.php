@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Settings;
 
 use App\Entity\MailKind;
 use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\Settings\EffectiveMailSettings;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Settings\MailTestFailure;
@@ -13,6 +14,7 @@ use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SettingsRequests;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
@@ -39,7 +41,7 @@ final class MailConnectionTesterTest extends KernelTestCase
     private function testerWithHealth(MailFailureRecorder $health): MailConnectionTester
     {
         return new MailConnectionTester(
-            $this->settings(),
+            self::getContainer()->get(EffectiveMailSettings::class),
             self::getContainer()->get(Security::class),
             new NullLogger(),
             self::getContainer()->get(ActiveMailTransportFactory::class),
@@ -75,7 +77,7 @@ final class MailConnectionTesterTest extends KernelTestCase
     {
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p'),
+            SettingsRequests::mail(host: '127.0.0.1', port: 0, fromAddress: 'from@x.test', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -96,7 +98,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -113,7 +115,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
 
         $result = $this->tester()->test();
@@ -157,12 +159,36 @@ final class MailConnectionTesterTest extends KernelTestCase
             password: 'p',
             fromAddress: 'from@x.test',
             useProxy: true,
-        ));
+        )->toUpdate());
 
         $result = $this->tester()->test();
 
         self::assertFalse($result->ok);
         self::assertNotSame(MailTestFailure::NotConfigured, $result->failure);
+    }
+
+    public function testAnUnreadableProxyPasswordIsReportedRatherThanThrown(): void
+    {
+        $this->authenticateAsAdmin();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $entityManager->flush();
+        $this->settings()->update(SettingsRequests::mail(
+            enabled: true,
+            host: 'smtp.gmail.com',
+            username: 'u',
+            password: 'p',
+            fromAddress: 'from@x.test',
+            useProxy: true,
+        )->toUpdate());
+        $health = new InMemoryMailFailureRecorder();
+
+        $result = $this->testerWithHealth($health)->test();
+
+        self::assertFalse($result->ok);
+        self::assertSame(MailTestFailure::SecretUnreadable, $result->failure);
+        self::assertSame('Stored secret material is not valid base64.', $result->detail);
+        self::assertSame([], $health->recordedFailures());
     }
 
     /** A sendmail transport piped to the 'false' binary attempts a real send
@@ -198,7 +224,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
         $this->authenticateAsAdmin();
         $this->settings()->update(
-            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p'),
+            SettingsRequests::mail(enabled: true, host: 'smtp.relay.test', fromAddress: '', password: 'p')->toUpdate(),
         );
         $health = new InMemoryMailFailureRecorder();
 

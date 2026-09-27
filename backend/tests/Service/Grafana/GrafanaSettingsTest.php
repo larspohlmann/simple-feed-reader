@@ -7,21 +7,25 @@ namespace App\Tests\Service\Grafana;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Http\Admin\GrafanaSettingsJson;
 use App\Repository\GrafanaSettingsRepository;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
-use App\Service\Grafana\GrafanaConnection;
+use App\Service\Grafana\EffectiveGrafanaSettings;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsCache;
 use App\Service\Profiling\NullProfileSampler;
+use App\Service\Profiling\ProfileSampler;
+use App\Tests\Support\BuildsEffectiveGrafanaSettings;
+use App\Tests\Support\GrafanaApiKeyCiphers;
 use App\Tests\Support\SettingsRequests;
+use App\Tests\Support\TrackingProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class GrafanaSettingsTest extends TestCase
 {
-    private const SECRET = 'test-master-secret-at-least-32-chars-long!!';
+    use BuildsEffectiveGrafanaSettings;
+
+    private ?GrafanaSettingsEntity $stored = null;
 
     /**
      * @return array{
@@ -37,16 +41,17 @@ final class GrafanaSettingsTest extends TestCase
         return GrafanaSettingsJson::from($settings->overview());
     }
 
-    public function testUpdateThenViewStoresOverridesAndHidesTheToken(): void
+    public function testASaveIsVisibleToTheNextViewAndTheTokenStaysHidden(): void
     {
-        $settings = $this->service($stored);
+        $settings = $this->settings($this->effective());
+        self::assertFalse($this->viewOf($settings)['hasToken']);
 
         $settings->update(SettingsRequests::grafana(
             lokiPushUrl: 'https://cloud.example/loki/push',
             lokiUsername: 'tenant42',
             grafanaUrl: 'https://cloud.example/grafana',
             token: 'glc_secrettoken',
-        ));
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertSame('https://cloud.example/loki/push', $view['lokiPushUrl']);
@@ -57,179 +62,80 @@ final class GrafanaSettingsTest extends TestCase
         self::assertArrayNotHasKey('token', $view);
     }
 
-    public function testBlankTokenKeepsTheStoredSecret(): void
+    public function testANullTokenKeepsTheStoredSecret(): void
     {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first'));
+        $effective = $this->effective();
+        $settings = $this->settings($effective);
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first')->toUpdate());
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://b.example', token: null));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://b.example', token: null)->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertTrue($view['hasToken']);
         self::assertSame('https://b.example', $view['grafanaUrl']);
-        self::assertSame('glc_first', $settings->lokiToken());
+        self::assertSame('glc_first', $effective->lokiToken());
     }
 
     public function testRemoveTokenClearsTheStoredSecretButKeepsTheConnection(): void
     {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first'));
-        self::assertTrue($this->viewOf($settings)['hasToken']);
+        $effective = $this->effective();
+        $settings = $this->settings($effective);
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first')->toUpdate());
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://other.example', removeToken: true));
+        $settings->update(
+            SettingsRequests::grafana(grafanaUrl: 'https://other.example', removeToken: true)->toUpdate(),
+        );
 
         $view = $this->viewOf($settings);
         self::assertFalse($view['hasToken']);
         self::assertSame('https://other.example', $view['grafanaUrl']);
-        self::assertNull($settings->lokiToken());
+        self::assertNull($effective->lokiToken());
     }
 
     public function testRemoveTokenWinsEvenWhenATokenIsAlsoSent(): void
     {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(token: 'glc_first'));
+        $effective = $this->effective();
+        $settings = $this->settings($effective);
+        $settings->update(SettingsRequests::grafana(token: 'glc_first')->toUpdate());
 
-        $settings->update(SettingsRequests::grafana(token: 'glc_second', removeToken: true));
+        $settings->update(SettingsRequests::grafana(token: 'glc_second', removeToken: true)->toUpdate());
 
         self::assertFalse($this->viewOf($settings)['hasToken']);
-        self::assertNull($settings->lokiToken());
-    }
-
-    public function testEffectiveLokiPushUrlFallsBackToTheEnvDefaultWhenNoOverrideIsStored(): void
-    {
-        $settings = $this->service($stored, lokiPushUrlDefault: 'http://loki:3100/loki/api/v1/push');
-
-        self::assertSame('http://loki:3100/loki/api/v1/push', $settings->effectiveLokiPushUrl());
-    }
-
-    public function testEffectiveLokiPushUrlPrefersTheStoredOverrideOverTheEnvDefault(): void
-    {
-        $settings = $this->service($stored, lokiPushUrlDefault: 'http://loki:3100/loki/api/v1/push');
-        $settings->update(SettingsRequests::grafana(lokiPushUrl: 'https://cloud.example/loki/push'));
-
-        self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
-    }
-
-    public function testEffectiveLokiPushUrlIsNullWhenNeitherOverrideNorDefaultIsConfigured(): void
-    {
-        $settings = $this->service($stored, lokiPushUrlDefault: '');
-
-        self::assertNull($settings->effectiveLokiPushUrl());
-    }
-
-    public function testEffectivePyroscopePushUrlFallsBackToTheEnvDefaultWhenNoOverrideIsStored(): void
-    {
-        $settings = $this->service($stored, pyroscopePushUrlDefault: 'http://pyroscope:4040');
-
-        self::assertSame('http://pyroscope:4040', $settings->effectivePyroscopePushUrl());
-    }
-
-    public function testEffectivePyroscopePushUrlPrefersTheStoredOverrideOverTheEnvDefault(): void
-    {
-        $settings = $this->service($stored, pyroscopePushUrlDefault: 'http://pyroscope:4040');
-        $settings->update(SettingsRequests::grafana(pyroscopePushUrl: 'http://custom:4040'));
-
-        self::assertSame('http://custom:4040', $settings->effectivePyroscopePushUrl());
-    }
-
-    public function testEffectivePyroscopePushUrlIsNullWhenNeitherOverrideNorDefaultIsConfigured(): void
-    {
-        $settings = $this->service($stored, pyroscopePushUrlDefault: '');
-
-        self::assertNull($settings->effectivePyroscopePushUrl());
-    }
-
-    public function testProfilingEnabledReflectsTheStoredRow(): void
-    {
-        $settings = $this->service($stored);
-        self::assertFalse($settings->profilingEnabled());
-
-        $settings->update(SettingsRequests::grafana(profilingEnabled: true));
-
-        self::assertTrue($settings->profilingEnabled());
+        self::assertNull($effective->lokiToken());
     }
 
     public function testBlankUsernameClearsTheStoredOverrideAndItStartsNull(): void
     {
-        $settings = $this->service($stored);
-        self::assertNull($settings->lokiUsername());
+        $effective = $this->effective();
+        $settings = $this->settings($effective);
+        self::assertNull($effective->lokiUsername());
 
-        $settings->update(SettingsRequests::grafana(lokiUsername: 'tenant42'));
-        $settings->update(SettingsRequests::grafana(lokiUsername: ''));
+        $settings->update(SettingsRequests::grafana(lokiUsername: 'tenant42')->toUpdate());
+        $settings->update(SettingsRequests::grafana(lokiUsername: '')->toUpdate());
 
-        self::assertNull($settings->lokiUsername());
+        self::assertNull($effective->lokiUsername());
     }
 
-    /**
-     * A Loki flush resolves pushUrl, username and token in a row (#983 review
-     * finding 1): the singleton read must be memoised so that costs one query,
-     * not three.
-     */
-    public function testResolvingPushUrlUsernameAndTokenTogetherQueriesTheRepositoryOnce(): void
+    public function testTheViewReportsWhetherTheProfilerIsAvailable(): void
     {
-        $entity = new GrafanaSettingsEntity();
-        $entity->apply(
-            new GrafanaConnection('https://cloud.example/loki/push', 'tenant42', null, null, false),
-            (new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)))->seal('glc_secrettoken'),
-            'oken',
+        self::assertFalse($this->viewOf($this->settings($this->effective()))['profilerAvailable']);
+        self::assertTrue(
+            $this->viewOf($this->settings($this->effective(), new TrackingProfileSampler()))['profilerAvailable'],
         );
-
-        $repository = $this->createMock(GrafanaSettingsRepository::class);
-        $repository->expects(self::once())->method('findSingleton')->willReturn($entity);
-
-        $settings = new GrafanaSettings(
-            $repository,
-            $this->createStub(EntityManagerInterface::class),
-            new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
-            new GrafanaEnvDefaults('', '', ''),
-            new NullProfileSampler(),
-            new GrafanaSettingsCache(new ArrayAdapter()),
-        );
-
-        self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
-        self::assertSame('tenant42', $settings->lokiUsername());
-        self::assertSame('glc_secrettoken', $settings->lokiToken());
     }
 
     /**
-     * refresh() clears only the per-request memo; a warm shared pool keeps
-     * answering without a query (#1012). The worker relies on this — its 30 s
-     * re-check must not become a query per tick.
-     */
-    public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
-    {
-        $repository = $this->createMock(GrafanaSettingsRepository::class);
-        $repository->expects(self::once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
-
-        $settings = new GrafanaSettings(
-            $repository,
-            $this->createStub(EntityManagerInterface::class),
-            new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET)),
-            new GrafanaEnvDefaults('', '', ''),
-            new NullProfileSampler(),
-            new GrafanaSettingsCache(new ArrayAdapter()),
-        );
-
-        $settings->profilingEnabled();
-        $settings->refresh();
-        $settings->profilingEnabled();
-    }
-
-    /**
-     * The admin form saves in php-fpm; the worker re-checks the toggle in its
-     * own process. update() forgets the shared pool so the worker, once its
-     * memo is refreshed, reads the new row rather than the stale cache (#1012).
+     * The admin form saves in php-fpm; the worker re-checks the toggle in its own process. A save forgets the shared
+     * pool, so the worker reads the new row once it refreshes its memo, not the stale cache (#1012).
      */
     public function testAnAdminSaveInvalidatesTheSharedCacheSoTheWorkerSeesTheChange(): void
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
-
-        $webProcess = $this->service($stored, cache: $cache);
-        $workerProcess = $this->service($stored, cache: $cache);
-
+        $webProcess = $this->settings($this->effective($cache));
+        $workerProcess = $this->effective($cache);
         self::assertFalse($workerProcess->profilingEnabled());
 
-        $webProcess->update(SettingsRequests::grafana(profilingEnabled: true));
+        $webProcess->update(SettingsRequests::grafana(profilingEnabled: true)->toUpdate());
 
         $workerProcess->refresh();
         self::assertTrue($workerProcess->profilingEnabled());
@@ -239,54 +145,51 @@ final class GrafanaSettingsTest extends TestCase
     {
         $repository = $this->createStub(GrafanaSettingsRepository::class);
         $repository->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
-
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
-
-        $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
         $settings = new GrafanaSettings(
             $repository,
             $em,
-            $cipher,
+            GrafanaApiKeyCiphers::withTestSecret(),
+            $this->effective(),
             new GrafanaEnvDefaults('', '', ''),
             new NullProfileSampler(),
-            new GrafanaSettingsCache(new ArrayAdapter()),
         );
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example'));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example')->toUpdate());
     }
 
-    /** @param GrafanaSettingsEntity|null $stored captured by reference for the fake repo. */
-    private function service(
-        ?GrafanaSettingsEntity &$stored,
-        string $lokiPushUrlDefault = '',
-        string $grafanaUrlDefault = '',
-        string $pyroscopePushUrlDefault = '',
-        ?GrafanaSettingsCache $cache = null,
-    ): GrafanaSettings {
-        $stored = null;
-        $repository = $this->createStub(GrafanaSettingsRepository::class);
-        $repository->method('findSingleton')->willReturnCallback(static function () use (&$stored) {
-            return $stored;
-        });
+    private function effective(?GrafanaSettingsCache $cache = null): EffectiveGrafanaSettings
+    {
+        return $this->effectiveGrafanaSettingsOverRepository($this->repository(), cache: $cache);
+    }
 
+    private function settings(
+        EffectiveGrafanaSettings $effective,
+        ProfileSampler $sampler = new NullProfileSampler(),
+    ): GrafanaSettings {
         $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(static function (object $entity) use (&$stored): void {
+        $em->method('persist')->willReturnCallback(function (object $entity): void {
             if ($entity instanceof GrafanaSettingsEntity) {
-                $stored = $entity;
+                $this->stored = $entity;
             }
         });
 
-        $cipher = new GrafanaApiKeyCipher(new InstanceSecretCipher(self::SECRET));
-        $defaults = new GrafanaEnvDefaults($lokiPushUrlDefault, $grafanaUrlDefault, $pyroscopePushUrlDefault);
-
         return new GrafanaSettings(
-            $repository,
+            $this->repository(),
             $em,
-            $cipher,
-            $defaults,
-            new NullProfileSampler(),
-            $cache ?? new GrafanaSettingsCache(new ArrayAdapter()),
+            GrafanaApiKeyCiphers::withTestSecret(),
+            $effective,
+            new GrafanaEnvDefaults('', '', ''),
+            $sampler,
         );
+    }
+
+    private function repository(): GrafanaSettingsRepository
+    {
+        $repository = $this->createStub(GrafanaSettingsRepository::class);
+        $repository->method('findSingleton')->willReturnCallback(fn (): ?GrafanaSettingsEntity => $this->stored);
+
+        return $repository;
     }
 }

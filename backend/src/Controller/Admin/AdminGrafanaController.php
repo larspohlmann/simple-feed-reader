@@ -33,7 +33,7 @@ final readonly class AdminGrafanaController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] GrafanaSettingsRequest $request,
     ): JsonResponse {
-        $this->settings->update($request);
+        $this->settings->update($request->toUpdate());
 
         return new JsonResponse(GrafanaSettingsJson::from($this->settings->overview()));
     }

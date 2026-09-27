@@ -36,7 +36,7 @@ final readonly class AdminMailController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] MailSettingsRequest $request,
     ): JsonResponse {
-        $this->settings->update($request);
+        $this->settings->update($request->toUpdate());
 
         return new JsonResponse(MailSettingsJson::from($this->settings->overview()));
     }

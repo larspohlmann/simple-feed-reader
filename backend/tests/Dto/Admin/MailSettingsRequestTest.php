@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\MailSettingsRequest;
+use App\Enum\MailEncryption;
 use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -87,5 +88,58 @@ final class MailSettingsRequestTest extends TestCase
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
+    }
+
+    public function testToUpdateCarriesTheConnection(): void
+    {
+        $connection = SettingsRequests::mail(
+            enabled: true,
+            host: 'smtp.example',
+            port: 465,
+            username: 'user',
+            encryption: 'tls',
+            fromAddress: 'noreply@example.com',
+            fromName: 'Example',
+            useProxy: true,
+        )->toUpdate()->connection;
+
+        self::assertTrue($connection->enabled);
+        self::assertSame('smtp.example', $connection->host);
+        self::assertSame(465, $connection->port);
+        self::assertSame('user', $connection->username);
+        self::assertSame(MailEncryption::Tls, $connection->encryption);
+        self::assertSame('noreply@example.com', $connection->fromAddress);
+        self::assertSame('Example', $connection->fromName);
+        self::assertTrue($connection->useProxy);
+    }
+
+    public function testToUpdateTurnsABlankUsernameIntoNone(): void
+    {
+        self::assertNull(SettingsRequests::mail(host: 'smtp.example', username: '')->toUpdate()->connection->username);
+    }
+
+    public function testNoPasswordKeepsTheStoredOne(): void
+    {
+        $password = SettingsRequests::mail(host: 'smtp.example')->toUpdate()->password;
+
+        self::assertNull($password->replacement());
+        self::assertFalse($password->isRemoval());
+    }
+
+    public function testAPasswordReplacesTheStoredOne(): void
+    {
+        $password = SettingsRequests::mail(host: 'smtp.example', password: 'sw0rdfish')->toUpdate()->password;
+
+        self::assertSame('sw0rdfish', $password->replacement());
+        self::assertFalse($password->isRemoval());
+    }
+
+    public function testRemovePasswordWinsOverASentPassword(): void
+    {
+        $password = SettingsRequests::mail(host: 'smtp.example', password: 'sw0rdfish', removePassword: true)
+            ->toUpdate()->password;
+
+        self::assertNull($password->replacement());
+        self::assertTrue($password->isRemoval());
     }
 }

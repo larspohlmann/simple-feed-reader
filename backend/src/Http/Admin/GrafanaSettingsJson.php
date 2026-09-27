@@ -4,14 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Entity\GrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsOverview;
 
 /**
- * The admin Grafana payload. The token is absent by construction: only hasToken
- * and the last-four tokenHint cross the wire, never the secret. Each URL carries
- * its stored override, the env default, and the effective value the server uses
- * now, so an admin who leaves a field empty still sees the local-container value.
+ * The token is absent by construction: only hasToken and the last-four tokenHint cross the wire, never the secret.
+ * Each URL carries its stored override, the env default, and the effective value the server uses now.
  */
 final readonly class GrafanaSettingsJson
 {
@@ -37,27 +34,25 @@ final readonly class GrafanaSettingsJson
      */
     public static function from(GrafanaSettingsOverview $overview): array
     {
-        $settings = $overview->settings ?? new GrafanaSettings();
+        $stored = $overview->stored;
+        $connection = $stored->connection;
         $defaults = $overview->defaults;
-        $lokiOverride = $settings->getLokiPushUrlOverride();
-        $grafanaOverride = $settings->getGrafanaUrlOverride();
-        $pyroscopeOverride = $settings->getPyroscopePushUrlOverride();
 
         return [
-            'lokiPushUrl' => $lokiOverride,
+            'lokiPushUrl' => $connection->lokiPushUrl,
             'lokiPushUrlDefault' => $defaults->lokiPushUrl,
-            'lokiPushUrlEffective' => self::effective($lokiOverride, $defaults->lokiPushUrl),
-            'lokiUsername' => $settings->getLokiUsername(),
-            'grafanaUrl' => $grafanaOverride,
+            'lokiPushUrlEffective' => self::effective($connection->lokiPushUrl, $defaults->lokiPushUrl),
+            'lokiUsername' => $connection->lokiUsername,
+            'grafanaUrl' => $connection->grafanaUrl,
             'grafanaUrlDefault' => $defaults->grafanaUrl,
-            'grafanaUrlEffective' => self::effective($grafanaOverride, $defaults->grafanaUrl),
-            'hasToken' => $settings->hasToken(),
-            'tokenHint' => $settings->getTokenHint(),
+            'grafanaUrlEffective' => self::effective($connection->grafanaUrl, $defaults->grafanaUrl),
+            'hasToken' => $stored->hasToken(),
+            'tokenHint' => $stored->tokenHint,
             'containerPresent' => '' !== $defaults->lokiPushUrl,
-            'pyroscopePushUrl' => $pyroscopeOverride,
+            'pyroscopePushUrl' => $connection->pyroscopePushUrl,
             'pyroscopePushUrlDefault' => $defaults->pyroscopePushUrl,
-            'pyroscopePushUrlEffective' => self::effective($pyroscopeOverride, $defaults->pyroscopePushUrl),
-            'profilingEnabled' => $settings->isProfilingEnabled(),
+            'pyroscopePushUrlEffective' => self::effective($connection->pyroscopePushUrl, $defaults->pyroscopePushUrl),
+            'profilingEnabled' => $connection->profilingEnabled,
             'profilingContainerPresent' => '' !== $defaults->pyroscopePushUrl,
             'profilerAvailable' => $overview->profilerAvailable,
         ];

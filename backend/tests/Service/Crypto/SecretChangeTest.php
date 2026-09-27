@@ -32,4 +32,28 @@ final class SecretChangeTest extends TestCase
         self::assertNull($change->replacement());
         self::assertTrue($change->isRemoval());
     }
+
+    public function testFromSubmittedKeepsOnNull(): void
+    {
+        $change = SecretChange::fromSubmitted(null);
+
+        self::assertNull($change->replacement());
+        self::assertFalse($change->isRemoval());
+    }
+
+    public function testFromSubmittedReplacesOnAnEmptyString(): void
+    {
+        $change = SecretChange::fromSubmitted('');
+
+        self::assertSame('', $change->replacement());
+        self::assertFalse($change->isRemoval());
+    }
+
+    public function testFromSubmittedReplacesOnAString(): void
+    {
+        $change = SecretChange::fromSubmitted('x');
+
+        self::assertSame('x', $change->replacement());
+        self::assertFalse($change->isRemoval());
+    }
 }

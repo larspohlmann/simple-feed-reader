@@ -4,20 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Settings;
 
-use App\Dto\Admin\MailSettingsRequest;
 use App\Entity\MailServerSettings;
-use App\Enum\MailEncryption;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * Reads and writes the instance-wide mail row, defaulting to "not configured"
- * when no row exists. The rest of the app depends on this, never on the entity.
- */
-readonly class MailSettings
+final readonly class MailSettings
 {
     public function __construct(
         private MailServerSettingsRepository $repository,
@@ -30,10 +24,11 @@ readonly class MailSettings
 
     public function overview(): MailSettingsOverview
     {
+        $saved = $this->repository->findSingleton();
         $proxy = $this->proxySettings->current();
 
         return new MailSettingsOverview(
-            $this->repository->findSingleton(),
+            null === $saved ? null : MailSettingsSnapshot::fromEntity($saved),
             $this->fallback->connection(),
             $proxy->isConfigured() ? $proxy->connection : null,
         );
@@ -48,13 +43,12 @@ readonly class MailSettings
         }
     }
 
-    public function update(MailSettingsRequest $request): void
+    public function update(MailSettingsUpdate $update): void
     {
         $existing = $this->repository->findSingleton();
-        $connection = $this->connectionFrom($request);
-        $this->guardAgainstEnablingWithoutATransport($connection);
-        $this->guardAgainstIncompleteAuthenticatedRow($request, $connection, $existing);
-        $this->guardAgainstProxyRoutingWithoutAProxy($request);
+        $this->guardAgainstEnablingWithoutATransport($update->connection);
+        $this->guardAgainstIncompleteAuthenticatedRow($update, $existing);
+        $this->guardAgainstProxyRoutingWithoutAProxy($update->connection);
 
         $settings = $existing;
         if (null === $settings) {
@@ -62,73 +56,18 @@ readonly class MailSettings
             $this->em->persist($settings);
         }
 
-        if ($request->removePassword) {
-            $settings->applyWithoutPassword($connection);
-            $settings->clearStoredPassword();
-        } elseif (null === $request->password) {
-            $settings->applyWithoutPassword($connection);
-        } else {
-            $settings->apply($connection, $this->cipher->seal($request->password));
-        }
-
+        $this->apply($update, $settings);
         $this->em->flush();
     }
 
-    /** The saved SMTP transport regardless of the enable switch — the tester and
-     *  the dynamic transport resolve this. Null when nothing usable is saved. */
-    public function configuredTransport(): ?ResolvedMailTransport
-    {
-        $settings = $this->repository->findSingleton();
-
-        if (null === $settings || '' === $settings->getHost()) {
-            return null;
-        }
-
-        return new ResolvedMailTransport(
-            $settings->getHost(),
-            $settings->getPort(),
-            $settings->getUsername(),
-            $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
-            $settings->getEncryption(),
-            $settings->usesProxy(),
-        );
-    }
-
-    public function activeTransportDsnFallback(): string
-    {
-        return $this->fallback->transportDsn();
-    }
-
-    public function hasEnvFallback(): bool
-    {
-        return $this->fallback->connection()->enabled;
-    }
-
-    public function identity(): MailIdentity
-    {
-        $settings = $this->repository->findSingleton();
-
-        if (null !== $settings && '' !== $settings->getFromAddress()) {
-            return new MailIdentity($settings->getFromAddress(), $settings->getFromName());
-        }
-
-        return $this->fallback->identity();
-    }
-
-    public function isSendingEnabled(): bool
-    {
-        $settings = $this->repository->findSingleton();
-
-        return null !== $settings ? $settings->isEnabled() : $this->fallback->connection()->enabled;
-    }
-
     private function guardAgainstIncompleteAuthenticatedRow(
-        MailSettingsRequest $request,
-        MailConnection $connection,
+        MailSettingsUpdate $update,
         ?MailServerSettings $existing,
     ): void {
-        $willHavePassword = !$request->removePassword
-            && (null !== $request->password || ($existing?->hasPassword() ?? false));
+        $password = $update->password;
+        $willHavePassword = !$password->isRemoval()
+            && (null !== $password->replacement() || ($existing?->hasPassword() ?? false));
+        $connection = $update->connection;
         $isAuthenticatedTransport = $connection->enabled
             && '' !== $connection->host
             && null !== $connection->username;
@@ -145,24 +84,25 @@ readonly class MailSettings
         }
     }
 
-    private function guardAgainstProxyRoutingWithoutAProxy(MailSettingsRequest $request): void
+    private function guardAgainstProxyRoutingWithoutAProxy(MailConnection $connection): void
     {
-        if ($request->useProxy && !$this->proxySettings->current()->isConfigured()) {
+        if ($connection->useProxy && !$this->proxySettings->current()->isConfigured()) {
             throw IncompleteMailConfigurationException::proxyMissing();
         }
     }
 
-    private function connectionFrom(MailSettingsRequest $request): MailConnection
+    private function apply(MailSettingsUpdate $update, MailServerSettings $settings): void
     {
-        return new MailConnection(
-            $request->enabled,
-            $request->host,
-            $request->port,
-            '' === $request->username ? null : $request->username,
-            MailEncryption::from($request->encryption),
-            $request->fromAddress,
-            $request->fromName,
-            $request->useProxy,
-        );
+        $replacement = $update->password->replacement();
+        if (null !== $replacement) {
+            $settings->apply($update->connection, $this->cipher->seal($replacement));
+
+            return;
+        }
+
+        $settings->applyWithoutPassword($update->connection);
+        if ($update->password->isRemoval()) {
+            $settings->clearStoredPassword();
+        }
     }
 }

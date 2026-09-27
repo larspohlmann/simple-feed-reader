@@ -24,10 +24,10 @@ final readonly class MailSettingsJson
     /** @return MailSettingsPayload */
     public static function from(MailSettingsOverview $overview): array
     {
-        $settings = $overview->saved;
+        $saved = $overview->saved;
         $fallback = $overview->fallback;
         $proxy = $overview->proxy;
-        $connection = $settings?->connection() ?? $fallback;
+        $connection = null !== $saved ? $saved->connection : $fallback;
 
         return [
             'enabled' => $connection->enabled,
@@ -37,10 +37,10 @@ final readonly class MailSettingsJson
             'encryption' => $connection->encryption->value,
             'fromAddress' => $connection->fromAddress,
             'fromName' => $connection->fromName,
-            'hasPassword' => $settings?->hasPassword() ?? false,
-            'hasSavedConfig' => null !== $settings,
+            'hasPassword' => null !== $saved && $saved->hasPassword,
+            'hasSavedConfig' => null !== $saved,
             'envFallbackConfigured' => $fallback->enabled,
-            'useProxy' => $settings?->usesProxy() ?? false,
+            'useProxy' => null !== $saved && $saved->connection->useProxy,
             'proxyConfigured' => null !== $proxy,
             'proxyLabel' => null !== $proxy
                 ? \sprintf('%s · %s:%d', $proxy->type->value, $proxy->host, $proxy->port)

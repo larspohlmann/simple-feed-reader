@@ -27,6 +27,11 @@ final readonly class SecretChange
         return new self(null, true);
     }
 
+    public static function fromSubmitted(?string $secret): self
+    {
+        return null === $secret ? self::keep() : self::replaceWith($secret);
+    }
+
     public function replacement(): ?string
     {
         return $this->replacement;

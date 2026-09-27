@@ -7,11 +7,11 @@ namespace App\Tests\Service\Proxy;
 use App\Entity\ProxyServerSettings;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Crypto\SealedSecret;
 use App\Service\Proxy\ProxyConnection;
 use App\Service\Proxy\StoredProxy;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\StoredProxies;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use PHPUnit\Framework\TestCase;
 
 final class StoredProxyTest extends TestCase
@@ -92,11 +92,7 @@ final class StoredProxyTest extends TestCase
 
     public function testAPasswordThatCannotBeOpenedIsReportedAsUnreadable(): void
     {
-        $row = new ProxyServerSettings();
-        $row->apply(
-            new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
-            new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
-        );
+        $row = UnreadableProxyPasswordRows::enabledWithUnreadablePassword();
 
         $this->expectException(SecretUnreadableException::class);
 

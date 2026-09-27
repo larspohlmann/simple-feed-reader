@@ -5626,3 +5626,26 @@ Expected: `CLOSED`. Do not close it by hand. If it is still open, report it: the
   - `ConfiguredProxySource`'s docblock no longer lists its callers.
 - **Accepted:** the `ProxySettings::apply()` early `return` mutant is equivalent. Falling through re-applies the same connection, and a replacement can never also be a removal.
 - **For PR B:** `GrafanaSettingsTest` holds a fourth copy of the test secret; fold it into `ProxyPasswordCiphers` or a sibling when B1/B3 rewrite that file.
+
+### Execution rulings (PR B)
+
+- **Preflight (opus scan):**
+  - One shared test secret (`TestInstanceSecret`, also used by `ProxyPasswordCiphers`), plus `GrafanaApiKeyCiphers::withTestSecret()` and a `BuildsEffectiveGrafanaSettings` trait for the four Grafana test files.
+  - One `UnreadableProxyPasswordRows` helper with two named factories, used at all four unreadable-proxy sites.
+  - `AdminMailControllerTest` pins the listed wire change over HTTP: `POST /api/admin/mail/test` answers `200 {"ok":false,"reason":"Stored secret material is not valid base64."}`. Building the transport outside the `try` turns it into a 500.
+  - A `ConfiguresAProxy` trait at three sites. `MailConnectionTesterTest`'s proxy test keeps its `127.0.0.1:1` fixture, which is refused at once instead of doing a DNS lookup.
+  - Listener-test stubs are `profilingConfig()`/`$profilingConfig`. Use blocks are re-sorted in every touched file.
+  - Added deletion checks: `refresh()` forgets the pool, `isAvailable()` false, remove wins over a sent secret, and replace.
+- **Docblock trims (planner ruling):** `GrafanaSettingsJson`, `InstanceSettingsJson`, `EnablesMailInTests`, `GrafanaSettingsCache`, the `cache.yaml` pool comment, the `MailSettingsRequest` PHPMD reason (one line), and the `services_test.yaml` `MailCapability` comment (the stale "No production caller exists yet" is gone). `MailCapabilityWiringTest` was already three lines.
+- **Tests compare strictly.** `assertEquals` treats `''` and `null` as equal, so the DTO, snapshot and value tests assert per field with `assertSame`, and on `SecretChange::replacement()`/`isRemoval()`.
+- **PHPStan at max:** `MailSettingsJson` uses explicit `null !== $saved` guards (the `?->x ?? y` form trips `nullsafe.neverNull`). Two `MailSettingsTest` cases hold the first read in `$before` (`alreadyNarrowedType`).
+- **Fix wave:**
+  - `SecretChange::fromSubmitted(?string)` replaces the three copies of the keep/replace/remove mapping in the Grafana, mail and proxy requests.
+  - A test pins the Grafana memo: a worker keeps the old value until `refresh()`.
+  - `useProxy` in the mail JSON uses the explicit guard. It is byte-identical, because the env fallback never uses a proxy.
+  - B7's `TransportException`s pass `previous:` by name.
+  - The parked test and wording minors are done.
+- **Accepted:** the `GrafanaSettings::apply()` and `MailSettings::apply()` early `return` mutants are equivalent, as in PR A.
+- **Not done, on purpose:**
+  - The three `*Settings::apply()` bodies stay separate. They call different entity APIs, and Grafana also stores a hint. Watch item.
+  - `EffectiveMailSettings` re-reads the row per accessor, exactly as the pre-split `MailSettings` did.

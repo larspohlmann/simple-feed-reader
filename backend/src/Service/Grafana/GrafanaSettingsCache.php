@@ -8,15 +8,8 @@ use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 
 /**
- * Holds the Grafana singleton row across requests so the profiling enablement
- * check on every request (#1012), and the Loki and Pyroscope endpoint reads,
- * stop querying the database on the hot path.
- *
- * A shared pool, not the per-request memo GrafanaSettings already keeps: the
- * php-fpm process that saves the admin form and the long-running worker that
- * re-checks the toggle are different processes, so the invalidation must cross
- * the process boundary. forget() runs on every admin save; the lifetime is only
- * a backstop for an entry whose invalidation was somehow lost.
+ * Shares the Grafana row between processes: php-fpm saves the admin form while the long-running worker re-checks the
+ * profiling toggle, so the invalidation must cross the process boundary (#1012). The lifetime is only a backstop.
  */
 final readonly class GrafanaSettingsCache
 {

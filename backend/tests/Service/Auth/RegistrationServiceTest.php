@@ -18,7 +18,7 @@ use App\Service\Auth\RegistrationService;
 use App\Service\Mail\AccountMailer;
 use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use App\Tests\DbTestCase;
@@ -81,7 +81,7 @@ final class RegistrationServiceTest extends DbTestCase
         $settings = self::getContainer()->get(InstanceSettings::class);
         $settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
-        $mailSettings = $this->createStub(MailSettings::class);
+        $mailSettings = $this->createStub(MailSendingSettings::class);
         $mailSettings->method('isSendingEnabled')->willReturn(true);
 
         return new RegistrationPolicy(new MailCapability($mailSettings), $settings);

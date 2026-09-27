@@ -12,8 +12,9 @@ use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
-use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
+use App\Tests\Support\UnreadableProxyPasswordRows;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
@@ -21,6 +22,8 @@ use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 
 final class DynamicMailTransportTest extends KernelTestCase
 {
+    use ConfiguresAProxy;
+
     public function testWithoutARowItBuildsFromTheFallbackDsn(): void
     {
         $transport = self::getContainer()->get(DynamicMailTransport::class);
@@ -31,7 +34,7 @@ final class DynamicMailTransportTest extends KernelTestCase
     public function testWithARowItBuildsAnSmtpTransport(): void
     {
         self::getContainer()->get(MailSettings::class)->update(
-            SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'),
+            SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p')->toUpdate(),
         );
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
@@ -51,9 +54,9 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
         $fallback = $transport->activeTransport();
 
-        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p'));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2525, password: 'p')->toUpdate());
         $first = $transport->activeTransport();
-        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2526, password: null));
+        $settings->update(SettingsRequests::mail(host: 'smtp.relay.test', port: 2526, password: null)->toUpdate());
         $second = $transport->activeTransport();
 
         self::assertNotSame($fallback, $first);
@@ -89,17 +92,13 @@ final class DynamicMailTransportTest extends KernelTestCase
 
     public function testActiveTransportUsesTheCurlTransportForAProxiedRow(): void
     {
-        self::getContainer()->get(ProxySettings::class)->update(SettingsRequests::proxy(
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-        )->toUpdate());
+        $this->configureAProxy();
         self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.gmail.com',
             username: 'alice',
             password: 'app-pw',
             useProxy: true,
-        ));
+        )->toUpdate());
 
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
@@ -127,13 +126,32 @@ final class DynamicMailTransportTest extends KernelTestCase
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
+    public function testAProxiedRowWhoseProxyPasswordIsUnreadableSurfacesAsATransportFailure(): void
+    {
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $em->persist(UnreadableProxyPasswordRows::disabledWithUnreadablePassword());
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.gmail.com', 587, 'alice', MailEncryption::Starttls, '', '', true),
+            self::getContainer()->get(MailPasswordCipher::class)->seal('app-pw'),
+        );
+        $em->persist($row);
+        $em->flush();
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage(
+            'The stored proxy password is unreadable: Stored secret material is not valid base64.',
+        );
+        self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
+    }
+
     public function testActiveTransportUsesEsmtpForADirectRow(): void
     {
         self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.relay.test',
             password: 'p',
             useProxy: false,
-        ));
+        )->toUpdate());
 
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 

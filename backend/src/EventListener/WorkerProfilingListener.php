@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Service\Grafana\GrafanaSettings;
 use App\Service\Profiling\ProfileLabels;
 use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfilingConfigSource;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
 use Psr\Clock\ClockInterface;
@@ -32,7 +32,7 @@ final class WorkerProfilingListener
         private readonly ProfileSampler $sampler,
         private readonly PyroscopeClient $client,
         private readonly ClockInterface $clock,
-        private readonly GrafanaSettings $settings,
+        private readonly ProfilingConfigSource $profilingConfig,
     ) {
     }
 
@@ -69,7 +69,7 @@ final class WorkerProfilingListener
 
     private function refreshToggle(): void
     {
-        $this->settings->refresh();
+        $this->profilingConfig->refresh();
         $this->lastToggleCheckAt = $this->now();
         $enabled = $this->policy->isEnabled();
         if ($enabled && !$this->sampler->isRunning()) {

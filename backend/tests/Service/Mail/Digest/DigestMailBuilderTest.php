@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\User;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Mail\Digest\DigestGroup;
-use App\Tests\Support\DigestTwigEnvironment;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
@@ -20,8 +18,10 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\EmbeddedImage;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Mail\Settings\MailIdentity;
-use App\Service\Mail\Settings\MailSettings;
+use App\Tests\Support\DigestTwigEnvironment;
+use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
@@ -105,9 +105,9 @@ final class DigestMailBuilderTest extends TestCase
         self::assertCount(0, $email->getAttachments());
     }
 
-    private function mailIdentity(string $address, string $name): MailSettings
+    private function mailIdentity(string $address, string $name): MailSendingSettings
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;

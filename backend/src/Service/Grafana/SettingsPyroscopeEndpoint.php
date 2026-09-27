@@ -8,7 +8,7 @@ use App\Service\Profiling\PyroscopeEndpoint;
 
 final readonly class SettingsPyroscopeEndpoint implements PyroscopeEndpoint
 {
-    public function __construct(private GrafanaSettings $settings)
+    public function __construct(private EffectiveGrafanaSettings $settings)
     {
     }
 

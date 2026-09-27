@@ -66,4 +66,20 @@ final class GrafanaSettingsTest extends TestCase
         self::assertSame('u', $settings->getLokiPushUrlOverride());
         self::assertEquals(new SealedSecret('', '', '', 1), $settings->getSealedToken());
     }
+
+    public function testConnectionReadsBackWhatWasApplied(): void
+    {
+        $connection = new GrafanaConnection(
+            'https://loki.example/push',
+            'tenant42',
+            'https://grafana.example',
+            'https://pyroscope.example',
+            true,
+        );
+        $settings = new GrafanaSettings();
+
+        $settings->applyWithoutToken($connection);
+
+        self::assertEquals($connection, $settings->connection());
+    }
 }

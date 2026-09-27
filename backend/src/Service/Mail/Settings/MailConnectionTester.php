@@ -8,6 +8,7 @@ use App\Entity\MailKind;
 use App\Entity\User;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -26,7 +27,7 @@ use Symfony\Component\Mime\Exception\RfcComplianceException;
 final readonly class MailConnectionTester
 {
     public function __construct(
-        private MailSettings $settings,
+        private MailSendingSettings $settings,
         private Security $security,
         private LoggerInterface $logger,
         private ActiveMailTransportFactory $transportFactory,
@@ -37,14 +38,12 @@ final readonly class MailConnectionTester
     public function test(): MailTestResult
     {
         try {
-            $resolved = $this->settings->configuredTransport();
+            $transport = $this->effectiveTransport($this->settings->configuredTransport());
         } catch (SecretUnreadableException $e) {
             // A config guard, not a failed send: nothing was ever attempted,
             // so the health log stays untouched.
             return MailTestResult::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
         }
-
-        $transport = $this->effectiveTransport($resolved);
         $recipient = $this->actingAdminEmail();
 
         if (null === $transport || null === $recipient) {

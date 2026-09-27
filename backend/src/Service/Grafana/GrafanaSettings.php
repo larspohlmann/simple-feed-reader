@@ -4,50 +4,30 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
-use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Profiling\ProfileSampler;
 use Doctrine\ORM\EntityManagerInterface;
 
-/**
- * Reads and writes the instance-wide Grafana row, defaulting to the env values
- * the installer writes for the local container when no row exists. The push
- * handler resolves its endpoint through here, so "no row", the env fallback and
- * the token sealing all live in one place.
- *
- * `class`, not `readonly`: settings() memoises the resolved row so a Loki
- * flush reading pushUrl/username/token in a row issues one lookup instead of
- * three (mirrors App\Service\Settings\InstanceSettings). The memo is a plain
- * field — request-scoped under PHP-FPM. The row itself is read through
- * GrafanaSettingsCache, so a warm request answers profiling/Loki/Pyroscope from
- * the shared pool without a query (#1012). update() forgets that pool so a read
- * after a write sees the new value; refresh() clears only the memo, which the
- * long-running worker calls on its periodic toggle re-check to pick up an
- * admin save from the web process. Not marked `final`: SettingsLokiEndpointTest
- * stubs this class.
- */
-class GrafanaSettings
+final readonly class GrafanaSettings
 {
-    private ?GrafanaSettingsEntity $memoisedSettings = null;
-
     public function __construct(
-        private readonly GrafanaSettingsRepository $repository,
-        private readonly EntityManagerInterface $em,
-        private readonly GrafanaApiKeyCipher $cipher,
-        private readonly GrafanaEnvDefaults $defaults,
-        private readonly ProfileSampler $sampler,
-        private readonly GrafanaSettingsCache $cache,
+        private GrafanaSettingsRepository $repository,
+        private EntityManagerInterface $em,
+        private GrafanaApiKeyCipher $cipher,
+        private EffectiveGrafanaSettings $effective,
+        private GrafanaEnvDefaults $defaults,
+        private ProfileSampler $sampler,
     ) {
     }
 
     public function overview(): GrafanaSettingsOverview
     {
-        return new GrafanaSettingsOverview($this->settings(), $this->defaults, $this->sampler->isAvailable());
+        return new GrafanaSettingsOverview($this->effective->stored(), $this->defaults, $this->sampler->isAvailable());
     }
 
-    public function update(GrafanaSettingsRequest $request): void
+    public function update(GrafanaSettingsUpdate $update): void
     {
         $settings = $this->repository->findSingleton();
         if (null === $settings) {
@@ -55,87 +35,24 @@ class GrafanaSettings
             $this->em->persist($settings);
         }
 
-        $connection = $this->connectionFrom($request);
+        $this->apply($update, $settings);
+        $this->em->flush();
+        $this->effective->forgetStored();
+    }
 
-        if ($request->removeToken) {
-            $settings->applyWithoutToken($connection);
-            $settings->clearStoredToken();
-        } elseif (null === $request->token || '' === $request->token) {
-            $settings->applyWithoutToken($connection);
-        } else {
-            $settings->apply($connection, $this->cipher->seal($request->token), $this->hint($request->token));
+    private function apply(GrafanaSettingsUpdate $update, GrafanaSettingsEntity $settings): void
+    {
+        $replacement = $update->token->replacement();
+        if (null !== $replacement) {
+            $settings->apply($update->connection, $this->cipher->seal($replacement), $this->hint($replacement));
+
+            return;
         }
 
-        $this->em->flush();
-        $this->cache->forget();
-        $this->refresh();
-    }
-
-    public function refresh(): void
-    {
-        $this->memoisedSettings = null;
-    }
-
-    public function effectiveLokiPushUrl(): ?string
-    {
-        $override = $this->settings()->getLokiPushUrlOverride();
-
-        return $override ?? ('' === $this->defaults->lokiPushUrl ? null : $this->defaults->lokiPushUrl);
-    }
-
-    public function effectivePyroscopePushUrl(): ?string
-    {
-        return $this->settings()->getPyroscopePushUrlOverride()
-            ?? ('' === $this->defaults->pyroscopePushUrl ? null : $this->defaults->pyroscopePushUrl);
-    }
-
-    public function profilingEnabled(): bool
-    {
-        return $this->settings()->isProfilingEnabled();
-    }
-
-    public function lokiUsername(): ?string
-    {
-        return $this->settings()->getLokiUsername();
-    }
-
-    public function lokiToken(): ?string
-    {
-        $settings = $this->settings();
-
-        return $settings->hasToken() ? $this->cipher->open($settings->getSealedToken()) : null;
-    }
-
-    /**
-     * Never persisted: a fresh GrafanaSettings stands in for the no-row case,
-     * and the entity a cache hit rebuilds is detached. update() above has its
-     * own findSingleton()-then-persist path and never reads through this memo
-     * or the cache.
-     */
-    private function settings(): GrafanaSettingsEntity
-    {
-        return $this->memoisedSettings ??= $this->cache->remember($this->loadSingleton(...))->toEntity();
-    }
-
-    private function loadSingleton(): GrafanaSettingsSnapshot
-    {
-        return GrafanaSettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new GrafanaSettingsEntity());
-    }
-
-    private function connectionFrom(GrafanaSettingsRequest $request): GrafanaConnection
-    {
-        return new GrafanaConnection(
-            $this->blankToNull($request->lokiPushUrl),
-            $this->blankToNull($request->lokiUsername),
-            $this->blankToNull($request->grafanaUrl),
-            $this->blankToNull($request->pyroscopePushUrl),
-            $request->profilingEnabled,
-        );
-    }
-
-    private function blankToNull(?string $value): ?string
-    {
-        return null === $value || '' === $value ? null : $value;
+        $settings->applyWithoutToken($update->connection);
+        if ($update->token->isRemoval()) {
+            $settings->clearStoredToken();
+        }
     }
 
     private function hint(string $token): string

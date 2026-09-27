@@ -13,58 +13,60 @@ use PHPUnit\Framework\TestCase;
 
 final class GrafanaSettingsSnapshotTest extends TestCase
 {
+    public function testItCarriesTheRowsConnectionTokenAndHint(): void
+    {
+        $connection = new GrafanaConnection(
+            'https://loki.example/push',
+            'tenant42',
+            'https://grafana.example',
+            'http://pyro:4040',
+            true,
+        );
+        $entity = new GrafanaSettingsEntity();
+        $entity->apply($connection, new SealedSecret('cipher', 'nonce', 'salt', 3), 'oken');
+
+        $snapshot = GrafanaSettingsSnapshot::fromEntity($entity);
+
+        self::assertEquals($connection, $snapshot->connection);
+        self::assertEquals(new SealedSecret('cipher', 'nonce', 'salt', 3), $snapshot->sealedToken);
+        self::assertSame('oken', $snapshot->tokenHint);
+        self::assertTrue($snapshot->hasToken());
+    }
+
+    public function testAFreshRowHasNoToken(): void
+    {
+        $snapshot = GrafanaSettingsSnapshot::fromEntity(new GrafanaSettingsEntity());
+
+        self::assertFalse($snapshot->hasToken());
+        self::assertSame('', $snapshot->tokenHint);
+        self::assertEquals(new GrafanaConnection(null, null, null, null, false), $snapshot->connection);
+    }
+
     public function testARowWithATokenSurvivesTheArrayRoundTrip(): void
     {
-        $entity = new GrafanaSettingsEntity();
-        $entity->apply(
-            new GrafanaConnection(
-                'https://loki.example/push',
-                'tenant42',
-                'https://grafana.example',
-                'http://pyro:4040',
-                true,
-            ),
+        $snapshot = new GrafanaSettingsSnapshot(
+            new GrafanaConnection('https://loki.example/push', 'tenant42', 'https://grafana.example', null, true),
             new SealedSecret('cipher', 'nonce', 'salt', 3),
             'oken',
         );
 
-        $rebuilt = self::roundTrip($entity);
-
-        self::assertNotNull($rebuilt);
-        self::assertSame('https://loki.example/push', $rebuilt->getLokiPushUrlOverride());
-        self::assertSame('tenant42', $rebuilt->getLokiUsername());
-        self::assertSame('https://grafana.example', $rebuilt->getGrafanaUrlOverride());
-        self::assertSame('http://pyro:4040', $rebuilt->getPyroscopePushUrlOverride());
-        self::assertTrue($rebuilt->isProfilingEnabled());
-        self::assertTrue($rebuilt->hasToken());
-        self::assertSame('oken', $rebuilt->getTokenHint());
-        self::assertEquals(new SealedSecret('cipher', 'nonce', 'salt', 3), $rebuilt->getSealedToken());
+        self::assertEquals($snapshot, GrafanaSettingsSnapshot::fromArrayOrNull($snapshot->toArray()));
     }
 
     public function testATokenlessRowSurvivesTheArrayRoundTripWithoutGainingAToken(): void
     {
-        $entity = new GrafanaSettingsEntity();
-        $entity->applyWithoutToken(new GrafanaConnection(null, null, null, null, false));
+        $snapshot = GrafanaSettingsSnapshot::fromEntity(new GrafanaSettingsEntity());
 
-        $rebuilt = self::roundTrip($entity);
+        $rebuilt = GrafanaSettingsSnapshot::fromArrayOrNull($snapshot->toArray());
 
-        self::assertNotNull($rebuilt);
-        self::assertFalse($rebuilt->hasToken());
-        self::assertFalse($rebuilt->isProfilingEnabled());
-        self::assertNull($rebuilt->getLokiPushUrlOverride());
+        self::assertEquals($snapshot, $rebuilt);
+        self::assertFalse($rebuilt?->hasToken());
     }
 
     #[DataProvider('malformedEntries')]
     public function testAMalformedEntryIsRejectedAsAMiss(mixed $stored): void
     {
         self::assertNull(GrafanaSettingsSnapshot::fromArrayOrNull($stored));
-    }
-
-    private static function roundTrip(GrafanaSettingsEntity $entity): ?GrafanaSettingsEntity
-    {
-        $stored = GrafanaSettingsSnapshot::fromEntity($entity)->toArray();
-
-        return GrafanaSettingsSnapshot::fromArrayOrNull($stored)?->toEntity();
     }
 
     /** @return iterable<string, array{mixed}> */

@@ -213,6 +213,8 @@ services:
     # id, which decoration then swaps for the decorator.
     App\Service\Mail\Digest\DigestMailerInterface: '@App\Service\Mail\Digest\DigestMailer'
 
+    App\Service\Mail\MailSendingSettings: '@App\Service\Mail\Settings\EffectiveMailSettings'
+
     # The sweep's in-flight cap. Wired on this one service rather than as a
     # `bind` in _defaults: a binding matches by parameter NAME, so a global
     # `int $concurrency` would also feed any unrelated service that ever names a
@@ -289,6 +291,8 @@ services:
         factory: ['@App\Service\Profiling\ProfileSamplerFactory', 'create']
 
     App\Service\Profiling\PyroscopeEndpoint: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
+
+    App\Service\Profiling\ProfilingConfigSource: '@App\Service\Grafana\EffectiveGrafanaSettings'
 
     App\Service\Logging\Loki\LokiEndpoint: '@App\Service\Grafana\SettingsLokiEndpoint'
 

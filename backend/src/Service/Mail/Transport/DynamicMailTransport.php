@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\MailSettings;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
@@ -30,7 +30,7 @@ final class DynamicMailTransport implements TransportInterface
     private ?string $cachedSignature = null;
 
     public function __construct(
-        private readonly MailSettings $settings,
+        private readonly MailSendingSettings $settings,
         private readonly ActiveMailTransportFactory $transportFactory,
         private readonly EventDispatcherInterface $dispatcher,
         private readonly LoggerInterface $logger,
@@ -67,7 +67,9 @@ final class DynamicMailTransport implements TransportInterface
             // A row that routes through the egress proxy after that proxy's config
             // was removed. Surfaced as a transport failure so the send path degrades
             // the way a dead relay already does, not as an HTTP 422 in a worker.
-            throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), 0, $e);
+            throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), previous: $e);
+        } catch (SecretUnreadableException $e) {
+            throw new TransportException('The stored proxy password is unreadable: ' . $e->getMessage(), previous: $e);
         }
         $this->cachedSignature = $signature;
 
