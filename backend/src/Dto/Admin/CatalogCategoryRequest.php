@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
+use App\Service\Catalog\CatalogCategoryDetails;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogCategoryRequest
@@ -26,5 +27,17 @@ final readonly class CatalogCategoryRequest
         /** Locked rows are the admin's: an import will neither overwrite nor delete them. */
         public bool $locked = true,
     ) {
+    }
+
+    public function toDetails(): CatalogCategoryDetails
+    {
+        return new CatalogCategoryDetails(
+            key: $this->key,
+            name: $this->name,
+            icon: $this->icon,
+            color: $this->color,
+            enabled: $this->enabled,
+            locked: $this->locked,
+        );
     }
 }

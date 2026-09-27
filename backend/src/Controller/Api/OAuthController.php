@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller\Api;
 
-use App\Dto\OAuth\OAuthCallbackAttempt;
 use App\Dto\OAuth\OAuthExchangeRequest;
 use App\Http\OAuth\CallbackParameters;
 use App\Http\OAuth\FlowCookie;
 use App\Http\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
 use App\Service\OAuth\OAuthCallback;
+use App\Service\OAuth\OAuthCallbackAttempt;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;

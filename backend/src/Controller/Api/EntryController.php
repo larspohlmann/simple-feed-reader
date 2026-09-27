@@ -140,7 +140,7 @@ final readonly class EntryController
     ): JsonResponse {
         $row = $this->entryList->getRowForUser($user->requireId(), $id);
 
-        $state = $this->entryStateUpdater->apply($user, $row, $request);
+        $state = $this->entryStateUpdater->apply($user, $row, $request->toChange());
 
         return new JsonResponse(['state' => EntryStateJson::one($state, $id)]);
     }

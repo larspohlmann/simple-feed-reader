@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\ClientError;
 
+use App\Service\ClientError\ClientError;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ClientErrorReportRequest
@@ -16,5 +17,11 @@ final readonly class ClientErrorReportRequest
         #[Assert\Count(min: 1, max: 10)]
         public array $errors = [],
     ) {
+    }
+
+    /** @return list<ClientError> */
+    public function toClientErrors(): array
+    {
+        return array_map(static fn (ClientErrorItem $item): ClientError => $item->toClientError(), $this->errors);
     }
 }

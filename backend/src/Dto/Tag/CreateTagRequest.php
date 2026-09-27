@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Tag;
 
+use App\Service\Tag\TagDetails;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CreateTagRequest
@@ -19,5 +20,10 @@ final readonly class CreateTagRequest
         #[Assert\Regex(pattern: '/^[a-z0-9_]+$/', message: 'Icon must be a Material Symbol name.')]
         public ?string $icon = null,
     ) {
+    }
+
+    public function toDetails(): TagDetails
+    {
+        return new TagDetails(name: $this->name, color: $this->color, icon: $this->icon);
     }
 }

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\ClientError;
 
-use App\Dto\ClientError\ClientErrorItem;
 use App\Entity\User;
 use App\Service\Logging\Loki\LokiPushHandler;
 use Psr\Log\LoggerInterface;
@@ -26,12 +25,12 @@ final readonly class ClientErrorRecorder
     }
 
     /**
-     * @param list<ClientErrorItem> $items
+     * @param list<ClientError> $clientErrors
      */
-    public function record(array $items, ?User $user): void
+    public function record(array $clientErrors, ?User $user): void
     {
-        foreach ($items as $item) {
-            $scrubbed = $this->scrubber->scrub($item);
+        foreach ($clientErrors as $clientError) {
+            $scrubbed = $this->scrubber->scrub($clientError);
             $this->logger->error($scrubbed->message, $this->context($scrubbed, $user));
         }
     }
@@ -39,16 +38,16 @@ final readonly class ClientErrorRecorder
     /**
      * @return array<string, mixed>
      */
-    private function context(ClientErrorItem $item, ?User $user): array
+    private function context(ClientError $clientError, ?User $user): array
     {
         return array_filter([
-            'kind' => $item->kind,
-            'url' => $item->url,
-            'route' => $item->route,
-            'buildVersion' => $item->buildVersion,
-            'userAgent' => $item->userAgent,
-            'stack' => $item->stack,
-            'at' => $item->at,
+            'kind' => $clientError->kind,
+            'url' => $clientError->url,
+            'route' => $clientError->route,
+            'buildVersion' => $clientError->buildVersion,
+            'userAgent' => $clientError->userAgent,
+            'stack' => $clientError->stack,
+            'at' => $clientError->at,
             'userId' => $user?->getId(),
         ], static fn (mixed $value): bool => null !== $value);
     }

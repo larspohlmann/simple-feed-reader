@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Dto\Entry\UpdateEntryStateRequest;
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
@@ -27,39 +26,39 @@ final readonly class EntryStateUpdater
     ) {
     }
 
-    public function apply(User $user, EntryListRow $row, UpdateEntryStateRequest $request): EntryState
+    public function apply(User $user, EntryListRow $row, EntryStateChange $change): EntryState
     {
         $state = $this->states->resolve($user, $row);
-        $this->applyTo($state, $request);
-        $this->mirror($user, $row, $request);
+        $this->applyTo($state, $change);
+        $this->mirror($user, $row, $change);
         $this->em->flush();
 
         return $state;
     }
 
-    private function applyTo(EntryState $state, UpdateEntryStateRequest $request): void
+    private function applyTo(EntryState $state, EntryStateChange $change): void
     {
-        if ($request->isHidden !== null) {
+        if ($change->isHidden !== null) {
             // Unread also clears "opened" (EntryState::markUnread, #478), so the
             // rule reaches every client, not just the web app.
-            $request->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
+            $change->isHidden ? $state->hide($this->clock->now()) : $state->markUnread();
         }
-        if ($request->isFavorite !== null) {
-            $request->isFavorite ? $state->markFavorite() : $state->clearFavorite();
+        if ($change->isFavorite !== null) {
+            $change->isFavorite ? $state->markFavorite() : $state->clearFavorite();
         }
-        if ($request->isKept !== null) {
-            $request->isKept ? $state->markKept() : $state->clearKept();
+        if ($change->isKept !== null) {
+            $change->isKept ? $state->markKept() : $state->clearKept();
         }
-        if ($request->isViewed !== null) {
+        if ($change->isViewed !== null) {
             // markViewed sets only the viewed flag; ViewedImpliesHiddenListener
             // adds the hidden flag on flush. clearViewed leaves the entry hidden.
-            $request->isViewed ? $state->markViewed($this->clock->now()) : $state->clearViewed();
+            $change->isViewed ? $state->markViewed($this->clock->now()) : $state->clearViewed();
         }
     }
 
-    private function mirror(User $user, EntryListRow $row, UpdateEntryStateRequest $request): void
+    private function mirror(User $user, EntryListRow $row, EntryStateChange $change): void
     {
-        if ($request->isHidden === null && $request->isViewed === null) {
+        if ($change->isHidden === null && $change->isViewed === null) {
             return;
         }
         $hash = $row->entry->getUrlHash();
@@ -69,19 +68,19 @@ final readonly class EntryStateUpdater
 
         $siblings = $this->rows->siblingRowsForUser($user->requireId(), $hash, $row->entry->requireId());
         foreach ($siblings as $siblingRow) {
-            $this->mirrorOnto($this->states->resolve($user, $siblingRow), $request);
+            $this->mirrorOnto($this->states->resolve($user, $siblingRow), $change);
         }
     }
 
-    private function mirrorOnto(EntryState $sibling, UpdateEntryStateRequest $request): void
+    private function mirrorOnto(EntryState $sibling, EntryStateChange $change): void
     {
         // Same isHidden/isViewed invariants as applyTo() above (#478,
         // ViewedImpliesHiddenListener): mirroring must not sidestep them.
-        if ($request->isHidden !== null) {
-            $request->isHidden ? $sibling->hide($this->clock->now()) : $sibling->markUnread();
+        if ($change->isHidden !== null) {
+            $change->isHidden ? $sibling->hide($this->clock->now()) : $sibling->markUnread();
         }
-        if ($request->isViewed !== null) {
-            $request->isViewed ? $sibling->markViewed($this->clock->now()) : $sibling->clearViewed();
+        if ($change->isViewed !== null) {
+            $change->isViewed ? $sibling->markViewed($this->clock->now()) : $sibling->clearViewed();
         }
     }
 }

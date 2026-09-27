@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
-use App\Dto\SavedSearch\CreateSavedSearchRequest;
-use App\Dto\SavedSearch\UpdateSavedSearchRequest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchRepository;
@@ -25,24 +23,24 @@ final readonly class SavedSearchEditor
     ) {
     }
 
-    public function save(User $user, CreateSavedSearchRequest $request): SavedSearchOutcome
+    public function save(User $user, SavedSearchDefinition $definition): SavedSearchOutcome
     {
         $existing = $this->savedSearches->findOneForUserByTerm(
             $user->requireId(),
-            $request->term,
-            $request->wholeWord,
-            $request->phrase,
+            $definition->term,
+            $definition->wholeWord,
+            $definition->phrase,
         );
         if (null !== $existing) {
             return SavedSearchOutcome::existing($existing);
         }
 
-        return SavedSearchOutcome::created($this->create($user, $request));
+        return SavedSearchOutcome::created($this->create($user, $definition));
     }
 
-    public function changeDigestInclusion(SavedSearch $savedSearch, UpdateSavedSearchRequest $request): void
+    public function changeDigestInclusion(SavedSearch $savedSearch, bool $includeInDigest): void
     {
-        $savedSearch->setIncludeInDigest($request->includeInDigest);
+        $savedSearch->setIncludeInDigest($includeInDigest);
         $this->entityManager->flush();
     }
 
@@ -52,9 +50,9 @@ final readonly class SavedSearchEditor
         $this->entityManager->flush();
     }
 
-    private function create(User $user, CreateSavedSearchRequest $request): SavedSearch
+    private function create(User $user, SavedSearchDefinition $definition): SavedSearch
     {
-        $savedSearch = new SavedSearch($user, $request->term, $request->wholeWord, $request->phrase);
+        $savedSearch = new SavedSearch($user, $definition->term, $definition->wholeWord, $definition->phrase);
         $this->entityManager->persist($savedSearch);
         $this->entityManager->flush();
         $this->slug->assignTo($savedSearch);

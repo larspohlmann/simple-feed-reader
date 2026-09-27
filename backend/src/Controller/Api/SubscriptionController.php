@@ -88,7 +88,7 @@ final readonly class SubscriptionController
     ): JsonResponse {
         $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
 
-        $this->editor->update($sub, $request);
+        $this->editor->update($sub, $request->toChange());
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
     }
@@ -106,7 +106,7 @@ final readonly class SubscriptionController
     ): JsonResponse {
         $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
 
-        $this->editor->moveToTag($sub, $request);
+        $this->editor->moveToTag($sub, $request->toMove());
 
         return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
     }
@@ -121,7 +121,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] ReorderSubscriptionsRequest $request,
     ): JsonResponse {
-        $this->editor->reorder($user, $request);
+        $this->editor->reorder($user, $request->subscriptionIds);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -135,7 +135,7 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] BulkUpdateSubscriptionsRequest $request,
     ): JsonResponse {
-        $changed = $this->bulkUpdater->apply($request, $user->requireId());
+        $changed = $this->bulkUpdater->apply($request->toChange(), $user->requireId());
 
         return new JsonResponse([
             'subscriptions' => array_map(

@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
-use App\Dto\Subscription\MoveFeedToTagRequest;
 use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
+use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
-use App\Exception\InvalidSelectionException;
 
 /**
  * Moves one feed between the sidebar's lists the way a drag does: out of the
@@ -29,7 +28,7 @@ final readonly class FeedTagMove
     ) {
     }
 
-    public function move(Subscription $subscription, MoveFeedToTagRequest $move): void
+    public function move(Subscription $subscription, TagMove $move): void
     {
         // A same-list drop is a reorder, which the reorder endpoints own.
         if ($move->fromTagId === $move->toTagId) {

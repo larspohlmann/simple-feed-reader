@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Catalog;
 
-use App\Dto\Admin\CatalogCategoryRequest;
-use App\Dto\Admin\ReorderRequest;
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
 use App\Service\Ordering\PositionReorderer;
@@ -20,11 +18,11 @@ final readonly class CatalogCategoryEditor
     ) {
     }
 
-    public function create(CatalogCategoryRequest $request): CatalogCategory
+    public function create(CatalogCategoryDetails $details): CatalogCategory
     {
-        $category = new CatalogCategory($request->key, $request->name, $request->icon, $request->color);
-        $category->setEnabled($request->enabled);
-        $category->setLocked($request->locked);
+        $category = new CatalogCategory($details->key, $details->name, $details->icon, $details->color);
+        $category->setEnabled($details->enabled);
+        $category->setLocked($details->locked);
         $category->setPosition($this->categories->nextPosition());
         $this->entityManager->persist($category);
         $this->entityManager->flush();
@@ -32,13 +30,13 @@ final readonly class CatalogCategoryEditor
         return $category;
     }
 
-    public function update(CatalogCategory $category, CatalogCategoryRequest $request): void
+    public function update(CatalogCategory $category, CatalogCategoryDetails $details): void
     {
-        $category->setName($request->name);
-        $category->setIcon($request->icon);
-        $category->setColor($request->color);
-        $category->setEnabled($request->enabled);
-        $category->setLocked($request->locked);
+        $category->setName($details->name);
+        $category->setIcon($details->icon);
+        $category->setColor($details->color);
+        $category->setEnabled($details->enabled);
+        $category->setLocked($details->locked);
         $this->entityManager->flush();
     }
 
@@ -49,12 +47,13 @@ final readonly class CatalogCategoryEditor
         $this->entityManager->flush();
     }
 
-    public function reorder(ReorderRequest $request): void
+    /** @param list<int> $orderedCategoryIds */
+    public function reorder(array $orderedCategoryIds): void
     {
         $byId = [];
-        foreach ($request->ids as $id) {
+        foreach ($orderedCategoryIds as $id) {
             $byId[$id] = $this->categories->getById($id);
         }
-        $this->reorderer->reorder($request->ids, $byId);
+        $this->reorderer->reorder($orderedCategoryIds, $byId);
     }
 }

@@ -130,3 +130,39 @@ namespace App\Repository\Fixtures\Clean {
         }
     }
 }
+
+namespace App\Service\Fixtures\Gaps {
+    use Symfony\Component\{HttpFoundation\Request, HttpKernel\Exception\GoneHttpException};
+    use Symfony\Component\HttpFoundation as Foundation;
+    use App\Http as HttpLayer;
+    use App\Dto\Tag\CreateTagRequest;
+    use App\Dto\{Tag\UpdateTagRequest, Subscription\MoveFeedToTagRequest};
+
+    final class KnowsHttpThroughTheGaps
+    {
+        public function lowercaseString(): string
+        {
+            return 'app\http\RecommendationFeedJson';
+        }
+
+        public function lowercaseName(): string
+        {
+            return \app\http\EntryPage::class;
+        }
+
+        public function interpolatedString(string $suffix): string
+        {
+            return "App\\Http\\{$suffix}";
+        }
+
+        public function requestDto(): string
+        {
+            return CreateTagRequest::class;
+        }
+
+        public function lowercaseHttpClass(): string
+        {
+            return 'symfony\component\security\core\exception\accessdeniedexception';
+        }
+    }
+}

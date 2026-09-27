@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Admin;
 
-use App\Dto\Admin\UserFootprint;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;

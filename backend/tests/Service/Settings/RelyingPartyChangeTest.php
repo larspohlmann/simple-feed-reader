@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Settings;
 
-use App\Dto\Admin\InstanceSettingsRequest;
 use App\Exception\ValidationException;
 use App\Http\RequestServingHost;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\PasskeyRelyingParty;
 use App\Service\Settings\RelyingPartyChange;
+use App\Service\Settings\RelyingPartyIdChoice;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
-use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
@@ -30,7 +29,7 @@ final class RelyingPartyChangeTest extends TestCase
         $this->expectNotToPerformAssertions();
 
         $change->guardAndInvalidatePasskeysIfChanged(
-            $this->requestFor('green-tara.aardvark-koi.ts.net', 'https://localhost'),
+            $this->choiceOf('green-tara.aardvark-koi.ts.net'),
         );
     }
 
@@ -48,7 +47,7 @@ final class RelyingPartyChangeTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('com', 'https://reader.example.com'));
+        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
     }
 
     /**
@@ -61,7 +60,7 @@ final class RelyingPartyChangeTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('203.0.113.5', 'https://203.0.113.5'));
+        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('203.0.113.5'));
     }
 
     /** Development depends on this: rule3's one named exception must still work. */
@@ -70,7 +69,7 @@ final class RelyingPartyChangeTest extends TestCase
         $change = $this->change(currentRelyingPartyId: 'localhost', publicBaseUrl: 'https://localhost');
         $this->expectNotToPerformAssertions();
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('localhost', 'https://localhost'));
+        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('localhost'));
     }
 
     public function testTheValidationErrorNamesTheFieldAndExplainsTheRule(): void
@@ -78,7 +77,7 @@ final class RelyingPartyChangeTest extends TestCase
         $change = $this->change(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://example.test');
 
         try {
-            $change->guardAndInvalidatePasskeysIfChanged($this->requestFor('com', 'https://example.test'));
+            $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
             self::fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
             self::assertSame(
@@ -88,13 +87,9 @@ final class RelyingPartyChangeTest extends TestCase
         }
     }
 
-    private function requestFor(string $passkeyRpId, string $publicBaseUrl): InstanceSettingsRequest
+    private function choiceOf(string $passkeyRpId): RelyingPartyIdChoice
     {
-        return SettingsRequests::instance(
-            publicBaseUrl: $publicBaseUrl,
-            passkeyRpId: $passkeyRpId,
-            passkeyRpName: 'Reader',
-        );
+        return new RelyingPartyIdChoice($passkeyRpId, invalidateExistingPasskeys: false);
     }
 
     private function change(string $currentRelyingPartyId, string $publicBaseUrl): RelyingPartyChange

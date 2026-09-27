@@ -31,7 +31,7 @@ final readonly class ClientErrorController
         #[CurrentUser] ?User $user,
     ): Response {
         $this->rateLimitGuard->enforceForClient($this->clientErrorsLimiter, $httpRequest->getClientIp());
-        $this->recorder->record($request->errors, $user);
+        $this->recorder->record($request->toClientErrors(), $user);
 
         return new Response(status: Response::HTTP_ACCEPTED);
     }

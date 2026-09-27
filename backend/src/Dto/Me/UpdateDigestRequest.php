@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Me;
 
 use App\Service\Mail\Digest\DigestCadence;
+use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestFormat;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -26,5 +27,16 @@ final readonly class UpdateDigestRequest
         public int $weekday,
         public DigestFormat $format,
     ) {
+    }
+
+    public function toConfiguration(): DigestConfiguration
+    {
+        return new DigestConfiguration(
+            enabled: $this->enabled,
+            cadence: $this->cadence,
+            sendHour: $this->sendHour,
+            weekday: $this->weekday,
+            format: $this->format,
+        );
     }
 }

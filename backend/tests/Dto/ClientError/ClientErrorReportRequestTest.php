@@ -6,6 +6,7 @@ namespace App\Tests\Dto\ClientError;
 
 use App\Dto\ClientError\ClientErrorItem;
 use App\Dto\ClientError\ClientErrorReportRequest;
+use App\Service\ClientError\ClientError;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -103,6 +104,16 @@ final class ClientErrorReportRequestTest extends KernelTestCase
 
         self::assertInstanceOf(ClientErrorItem::class, $request->errors[0]);
         self::assertGreaterThan(0, $this->validator()->validate($request)->count());
+    }
+
+    public function testToClientErrorsKeepsEveryReportedErrorInOrder(): void
+    {
+        $request = new ClientErrorReportRequest([$this->item('first'), $this->item('second')]);
+
+        self::assertSame(
+            ['first', 'second'],
+            array_map(static fn (ClientError $error): string => $error->message, $request->toClientErrors()),
+        );
     }
 
     private function validator(): ValidatorInterface

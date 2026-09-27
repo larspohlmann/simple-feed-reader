@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Catalog;
 
-use App\Dto\Admin\CatalogCategoryRequest;
-use App\Dto\Admin\ReorderRequest;
 use App\Entity\CatalogCategory;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Service\Catalog\CatalogCategoryDetails;
 use App\Service\Catalog\CatalogCategoryEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -18,11 +17,15 @@ final class CatalogCategoryEditorTest extends DbTestCase
 
     public function testCreateAppendsACategoryWithTheRequestedFields(): void
     {
-        $first = $this->editor()->create(new CatalogCategoryRequest('editor_first', 'First', 'star', '#112233'));
+        $first = $this->editor()->create(new CatalogCategoryDetails('editor_first', 'First', 'star', '#112233'));
 
         $second = $this->editor()->create(
-            new CatalogCategoryRequest('editor_second', 'Second', 'bolt', '#445566', false, false),
+            new CatalogCategoryDetails('editor_second', 'Second', 'bolt', '#445566', false, false),
         );
+
+        $reloadedFirst = $this->reload($first);
+        self::assertTrue($reloadedFirst->isEnabled());
+        self::assertTrue($reloadedFirst->isLocked());
 
         $reloaded = $this->reload($second);
         self::assertSame('editor_second', $reloaded->getKey());
@@ -37,7 +40,7 @@ final class CatalogCategoryEditorTest extends DbTestCase
     public function testCreateCanLockACategory(): void
     {
         $category = $this->editor()->create(
-            new CatalogCategoryRequest('editor_locked', 'Locked', 'star', '#112233', locked: true),
+            new CatalogCategoryDetails('editor_locked', 'Locked', 'star', '#112233', locked: true),
         );
 
         self::assertTrue($this->reload($category)->isLocked());
@@ -45,11 +48,11 @@ final class CatalogCategoryEditorTest extends DbTestCase
 
     public function testUpdateRewritesEveryEditableFieldButTheKey(): void
     {
-        $category = $this->editor()->create(new CatalogCategoryRequest('editor_update', 'Before', 'star', '#000000'));
+        $category = $this->editor()->create(new CatalogCategoryDetails('editor_update', 'Before', 'star', '#000000'));
 
         $this->editor()->update(
             $category,
-            new CatalogCategoryRequest('ignored_key', 'After', 'bolt', '#ffffff', false, false),
+            new CatalogCategoryDetails('ignored_key', 'After', 'bolt', '#ffffff', false, false),
         );
 
         $reloaded = $this->reload($category);
@@ -63,7 +66,7 @@ final class CatalogCategoryEditorTest extends DbTestCase
 
     public function testDeleteRemovesTheCategory(): void
     {
-        $category = $this->editor()->create(new CatalogCategoryRequest('editor_delete', 'Doomed', 'star'));
+        $category = $this->editor()->create(new CatalogCategoryDetails('editor_delete', 'Doomed', 'star'));
         $id = $category->requireId();
 
         $this->editor()->delete($category);
@@ -74,10 +77,10 @@ final class CatalogCategoryEditorTest extends DbTestCase
 
     public function testReorderGivesEachCategoryItsIndex(): void
     {
-        $first = $this->editor()->create(new CatalogCategoryRequest('editor_order_a', 'A', 'star'));
-        $second = $this->editor()->create(new CatalogCategoryRequest('editor_order_b', 'B', 'star'));
+        $first = $this->editor()->create(new CatalogCategoryDetails('editor_order_a', 'A', 'star'));
+        $second = $this->editor()->create(new CatalogCategoryDetails('editor_order_b', 'B', 'star'));
 
-        $this->editor()->reorder(new ReorderRequest([$second->requireId(), $first->requireId()]));
+        $this->editor()->reorder([$second->requireId(), $first->requireId()]);
 
         self::assertSame(1, $this->reload($first)->getPosition());
         self::assertSame(0, $this->reload($second)->getPosition());
@@ -86,7 +89,7 @@ final class CatalogCategoryEditorTest extends DbTestCase
     public function testReorderRefusesAnUnknownCategory(): void
     {
         $this->expectException(RecordNotFoundException::class);
-        $this->editor()->reorder(new ReorderRequest([999999]));
+        $this->editor()->reorder([999999]);
     }
 
     private function editor(): CatalogCategoryEditor

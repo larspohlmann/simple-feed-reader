@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Mail;
+
+use App\Enum\RegistrationMethod;
+
+/** Built once per applicant and sent to every admin; AccountMailer adds each recipient's own locale. */
+final readonly class PendingApprovalNotice
+{
+    public function __construct(
+        public string $applicantEmail,
+        public RegistrationMethod $method,
+        public ?string $oauthProvider,
+        public string $reviewUrl,
+        public int $pendingApprovalCount,
+    ) {
+    }
+}

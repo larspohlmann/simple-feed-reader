@@ -20,6 +20,7 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
     private const string ACCESS_DENIED = 'Symfony\Component\Security\Core\Exception\AccessDeniedException';
     private const string API_PROBLEM = 'App\Http\Problem\ApiProblem';
     private const string FEED_JSON = 'App\Http\RecommendationFeedJson';
+    private const string GAPS = 'App\Service\Fixtures\Gaps';
 
     protected function getRule(): Rule
     {
@@ -54,17 +55,28 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
                 [self::message(self::PAGINATION, self::FOUNDATION . 'Cookie'), 88],
                 [self::message(self::PAGINATION, self::FOUNDATION . 'Cookie'), 92],
                 [self::message(self::PAGINATION, self::FOUNDATION . 'Cookie'), 94],
+                [self::message(self::GAPS, self::FOUNDATION . 'Request'), 135],
+                [self::message(self::GAPS, self::HTTP_KERNEL . 'GoneHttpException'), 135],
+                [self::message(self::GAPS, 'Symfony\Component\HttpFoundation'), 136],
+                [self::message(self::GAPS, 'App\Http'), 137],
+                [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 138],
+                [self::message(self::GAPS, 'App\Dto\Tag\UpdateTagRequest'), 139],
+                [self::message(self::GAPS, 'App\Dto\Subscription\MoveFeedToTagRequest'), 139],
+                [self::message(self::GAPS, 'app\http\RecommendationFeedJson'), 145],
+                [self::message(self::GAPS, 'app\http\EntryPage'), 150],
+                [self::message(self::GAPS, 'App\Http\\'), 155],
+                [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 160],
+                [self::message(self::GAPS, strtolower(self::ACCESS_DENIED)), 165],
             ],
         );
     }
 
     private static function message(string $namespaceName, string $reference): string
     {
-        return sprintf(
-            'Domain code must not know HTTP: %s references %s. '
-            . 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).',
-            $namespaceName,
-            $reference,
-        );
+        $remedy = str_starts_with(strtolower($reference), 'app\dto\\')
+            ? 'Take the service value the request DTO builds, not the DTO (#1182).'
+            : 'Return a typed value or throw a typed exception, and let src/Http shape it (#1158).';
+
+        return sprintf('Domain code must not know HTTP: %s references %s. %s', $namespaceName, $reference, $remedy);
     }
 }

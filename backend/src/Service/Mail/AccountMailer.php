@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Mail;
 
-use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Settings\PublicBaseUrl;

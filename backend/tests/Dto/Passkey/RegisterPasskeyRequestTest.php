@@ -28,4 +28,14 @@ final class RegisterPasskeyRequestTest extends TestCase
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
     }
+
+    public function testToAttestationCarriesTheHandleTheCredentialAndTheLabel(): void
+    {
+        $attestation = (new RegisterPasskeyRequest('the-handle', ['id' => 'abc'], 'My phone'))->toAttestation();
+
+        self::assertSame(
+            ['handle' => 'the-handle', 'credential' => ['id' => 'abc'], 'label' => 'My phone'],
+            get_object_vars($attestation),
+        );
+    }
 }

@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Passkey;
 
-use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\Exception\AttestationRejectedException;
+use App\Service\Passkey\PasskeyAttestation;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Tests\Support\PasskeyFixtures;
 use App\Tests\Support\PinsPasskeyRelyingParty;
@@ -62,7 +62,7 @@ final class AttestationVerifierTest extends KernelTestCase
 
         $this->verifier()->verifyAndStore(
             $user,
-            new RegisterPasskeyRequest($handle, $assertionShapedCredential, 'My phone'),
+            new PasskeyAttestation($handle, $assertionShapedCredential, 'My phone'),
         );
     }
 
@@ -98,7 +98,7 @@ final class AttestationVerifierTest extends KernelTestCase
 
         $this->verifier()->verifyAndStore(
             $user,
-            new RegisterPasskeyRequest($handle, $fixture->credential, 'My phone'),
+            new PasskeyAttestation($handle, $fixture->credential, 'My phone'),
         );
     }
 
@@ -127,7 +127,7 @@ final class AttestationVerifierTest extends KernelTestCase
 
         $stored = $this->verifier()->verifyAndStore(
             $user,
-            new RegisterPasskeyRequest($handle, $fixture->credential, 'My phone'),
+            new PasskeyAttestation($handle, $fixture->credential, 'My phone'),
         );
 
         self::assertSame(Uuid::fromBinary($aaguid)->toRfc4122(), $stored->getAaguid());

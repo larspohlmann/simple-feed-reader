@@ -127,7 +127,7 @@ final readonly class PasskeyController
         #[MapRequestPayload] RegisterPasskeyRequest $request,
     ): JsonResponse {
         $this->availability->guard();
-        $this->attestationVerifier->verifyAndStore($user, $request);
+        $this->attestationVerifier->verifyAndStore($user, $request->toAttestation());
 
         return new JsonResponse(PasskeyJson::listing($this->listing->forUser($user)), Response::HTTP_CREATED);
     }

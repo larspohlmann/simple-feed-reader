@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Dto\Me\UpdateDigestRequest;
 use App\Entity\Preferences;
 use App\Service\Clock\NaiveUtcClock;
 
@@ -24,17 +23,17 @@ final readonly class DigestEnablement
     ) {
     }
 
-    public function applyTo(Preferences $preferences, UpdateDigestRequest $request): void
+    public function applyTo(Preferences $preferences, DigestConfiguration $configuration): void
     {
         $wasEnabled = $preferences->isDigestEnabled();
 
-        $preferences->setDigestEnabled($request->enabled);
-        $preferences->setDigestCadence($request->cadence);
-        $preferences->setDigestSendHour($request->sendHour);
-        $preferences->setDigestWeekday($request->weekday);
-        $preferences->setDigestFormat($request->format);
+        $preferences->setDigestEnabled($configuration->enabled);
+        $preferences->setDigestCadence($configuration->cadence);
+        $preferences->setDigestSendHour($configuration->sendHour);
+        $preferences->setDigestWeekday($configuration->weekday);
+        $preferences->setDigestFormat($configuration->format);
 
-        if ($this->isFirstEnable($wasEnabled, $request->enabled, $preferences)) {
+        if ($this->isFirstEnable($wasEnabled, $configuration->enabled, $preferences)) {
             $preferences->setDigestLastSentAt($this->clock->now());
         }
     }

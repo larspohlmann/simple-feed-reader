@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Passkey;
 
-use App\Dto\Passkey\RegisterPasskeyRequest;
 use App\Entity\User;
 use App\Entity\UserPasskey;
 use App\Repository\UserPasskeyRepository;
@@ -14,6 +13,7 @@ use App\Service\Passkey\AssertionVerifier;
 use App\Service\Passkey\AttestationVerifier;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Passkey\PasskeyAttestation;
 use App\Service\Passkey\PasskeyCeremony;
 use App\Service\Passkey\PasskeyChallengeStore;
 use App\Service\Passkey\PasskeySignInAvailability;
@@ -251,7 +251,7 @@ final class AssertionVerifierTest extends KernelTestCase
         $attestationVerifier = self::getContainer()->get(AttestationVerifier::class);
         $attestationVerifier->verifyAndStore(
             $user,
-            new RegisterPasskeyRequest($handle, $fixture->credential, 'Test key'),
+            new PasskeyAttestation($handle, $fixture->credential, 'Test key'),
         );
 
         return $fixture;

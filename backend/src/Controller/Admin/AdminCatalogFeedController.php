@@ -39,7 +39,7 @@ final readonly class AdminCatalogFeedController
     public function create(#[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
         return new JsonResponse(
-            ['feed' => AdminCatalogJson::feed($this->editor->create($request))],
+            ['feed' => AdminCatalogJson::feed($this->editor->create($request->toDetails()))],
             Response::HTTP_CREATED,
         );
     }
@@ -47,7 +47,7 @@ final readonly class AdminCatalogFeedController
     #[Route('/reorder', name: 'api_admin_catalog_feed_reorder', methods: ['PATCH'])]
     public function reorder(#[MapRequestPayload] ReorderRequest $request): JsonResponse
     {
-        $this->editor->reorder($request);
+        $this->editor->reorder($request->ids);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -56,7 +56,7 @@ final readonly class AdminCatalogFeedController
     public function update(int $id, #[MapRequestPayload] CatalogFeedRequest $request): JsonResponse
     {
         $feed = $this->feeds->getById($id);
-        $this->editor->update($feed, $request);
+        $this->editor->update($feed, $request->toDetails());
 
         return new JsonResponse(['feed' => AdminCatalogJson::feed($feed)]);
     }

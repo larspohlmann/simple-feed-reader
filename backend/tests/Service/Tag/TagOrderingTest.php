@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Tag;
 
-use App\Dto\Tag\ReorderTagsRequest;
-use App\Dto\Tag\TagFeedOrderRequest;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
@@ -29,7 +27,7 @@ final class TagOrderingTest extends DbTestCase
 
         $ordered = $this->ordering()->reorder(
             $user,
-            new ReorderTagsRequest([$third->requireId(), $first->requireId(), $second->requireId()]),
+            [$third->requireId(), $first->requireId(), $second->requireId()],
         );
 
         self::assertSame([$third, $first, $second], $ordered);
@@ -45,7 +43,7 @@ final class TagOrderingTest extends DbTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->expectExceptionMessage('tagIds must list exactly your tags.');
-        $this->ordering()->reorder($user, new ReorderTagsRequest([$first->requireId()]));
+        $this->ordering()->reorder($user, [$first->requireId()]);
     }
 
     public function testOrderFeedsGivesEachFeedItsIndexWithinTheTag(): void
@@ -57,7 +55,7 @@ final class TagOrderingTest extends DbTestCase
 
         $this->ordering()->orderFeeds(
             $tag,
-            new TagFeedOrderRequest([$second->requireId(), $first->requireId()]),
+            [$second->requireId(), $first->requireId()],
         );
 
         $this->em->clear();
@@ -73,7 +71,7 @@ final class TagOrderingTest extends DbTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->expectExceptionMessage("subscriptionIds must list exactly this tag's feeds.");
-        $this->ordering()->orderFeeds($tag, new TagFeedOrderRequest([999999]));
+        $this->ordering()->orderFeeds($tag, [999999]);
     }
 
     private function ordering(): TagOrdering

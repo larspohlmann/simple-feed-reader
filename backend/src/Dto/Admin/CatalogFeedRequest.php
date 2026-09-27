@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\SourceFormat;
+use App\Service\Catalog\CatalogFeedDetails;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogFeedRequest
@@ -30,5 +31,19 @@ final readonly class CatalogFeedRequest
         /** Locked rows are the admin's: an import will neither overwrite nor delete them. */
         public bool $locked = true,
     ) {
+    }
+
+    public function toDetails(): CatalogFeedDetails
+    {
+        return new CatalogFeedDetails(
+            categoryId: $this->categoryId,
+            title: $this->title,
+            url: $this->url,
+            siteUrl: $this->siteUrl,
+            description: $this->description,
+            sourceFormat: $this->sourceFormat,
+            enabled: $this->enabled,
+            locked: $this->locked,
+        );
     }
 }

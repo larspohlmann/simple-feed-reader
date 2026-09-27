@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail;
 
-use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\AccountMailer;
 use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\PendingApprovalNotice;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Service\Settings\PublicBaseUrl;
 use PHPUnit\Framework\Attributes\DataProvider;

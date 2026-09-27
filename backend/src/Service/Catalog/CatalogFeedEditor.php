@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Catalog;
 
-use App\Dto\Admin\CatalogFeedRequest;
-use App\Dto\Admin\ReorderRequest;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
@@ -22,11 +20,11 @@ final readonly class CatalogFeedEditor
     ) {
     }
 
-    public function create(CatalogFeedRequest $request): CatalogFeed
+    public function create(CatalogFeedDetails $details): CatalogFeed
     {
-        $category = $this->categories->getById($request->categoryId);
-        $feed = new CatalogFeed($category, $request->title, $request->url);
-        $this->applyEditableFields($feed, $request);
+        $category = $this->categories->getById($details->categoryId);
+        $feed = new CatalogFeed($category, $details->title, $details->url);
+        $this->applyEditableFields($feed, $details);
         $feed->setPosition($this->feeds->nextPositionInCategory($category->requireId()));
         $this->entityManager->persist($feed);
         $this->entityManager->flush();
@@ -34,12 +32,12 @@ final readonly class CatalogFeedEditor
         return $feed;
     }
 
-    public function update(CatalogFeed $feed, CatalogFeedRequest $request): void
+    public function update(CatalogFeed $feed, CatalogFeedDetails $details): void
     {
-        $feed->setCategory($this->categories->getById($request->categoryId));
-        $feed->setTitle($request->title);
-        $feed->setUrl($request->url);
-        $this->applyEditableFields($feed, $request);
+        $feed->setCategory($this->categories->getById($details->categoryId));
+        $feed->setTitle($details->title);
+        $feed->setUrl($details->url);
+        $this->applyEditableFields($feed, $details);
         $this->entityManager->flush();
     }
 
@@ -49,21 +47,22 @@ final readonly class CatalogFeedEditor
         $this->entityManager->flush();
     }
 
-    public function reorder(ReorderRequest $request): void
+    /** @param list<int> $orderedFeedIds */
+    public function reorder(array $orderedFeedIds): void
     {
         $byId = [];
-        foreach ($request->ids as $id) {
+        foreach ($orderedFeedIds as $id) {
             $byId[$id] = $this->feeds->getById($id);
         }
-        $this->reorderer->reorder($request->ids, $byId);
+        $this->reorderer->reorder($orderedFeedIds, $byId);
     }
 
-    private function applyEditableFields(CatalogFeed $feed, CatalogFeedRequest $request): void
+    private function applyEditableFields(CatalogFeed $feed, CatalogFeedDetails $details): void
     {
-        $feed->setSiteUrl($request->siteUrl);
-        $feed->setDescription($request->description);
-        $feed->setSourceFormat($request->sourceFormat);
-        $feed->setEnabled($request->enabled);
-        $feed->setLocked($request->locked);
+        $feed->setSiteUrl($details->siteUrl);
+        $feed->setDescription($details->description);
+        $feed->setSourceFormat($details->sourceFormat);
+        $feed->setEnabled($details->enabled);
+        $feed->setLocked($details->locked);
     }
 }
