@@ -23,10 +23,4 @@ final readonly class ProxyTestResult
     {
         return new self(false, null, $failure, $detail);
     }
-
-    /** @return array{ok: bool, egressIp: string|null, reason: string|null} */
-    public function toArray(): array
-    {
-        return ['ok' => $this->ok, 'egressIp' => $this->egressIp, 'reason' => $this->detail ?? $this->failure?->value];
-    }
 }

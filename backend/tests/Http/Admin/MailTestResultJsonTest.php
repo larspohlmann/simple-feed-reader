@@ -2,19 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Mail\Settings;
+namespace App\Tests\Http\Admin;
 
+use App\Http\Admin\MailTestResultJson;
 use App\Service\Mail\Settings\MailTestFailure;
 use App\Service\Mail\Settings\MailTestResult;
 use PHPUnit\Framework\TestCase;
 
-final class MailTestResultTest extends TestCase
+final class MailTestResultJsonTest extends TestCase
 {
     public function testAGuardFailureSendsItsCode(): void
     {
         self::assertSame(
             ['ok' => false, 'reason' => 'not_configured'],
-            MailTestResult::failed(MailTestFailure::NotConfigured)->toArray(),
+            MailTestResultJson::from(MailTestResult::failed(MailTestFailure::NotConfigured)),
         );
     }
 
@@ -22,12 +23,14 @@ final class MailTestResultTest extends TestCase
     {
         self::assertSame(
             ['ok' => false, 'reason' => '535 5.7.8 bad credentials'],
-            MailTestResult::failed(MailTestFailure::SendRejected, '535 5.7.8 bad credentials')->toArray(),
+            MailTestResultJson::from(
+                MailTestResult::failed(MailTestFailure::SendRejected, '535 5.7.8 bad credentials'),
+            ),
         );
     }
 
     public function testSuccessSendsNoReason(): void
     {
-        self::assertSame(['ok' => true, 'reason' => null], MailTestResult::ok()->toArray());
+        self::assertSame(['ok' => true, 'reason' => null], MailTestResultJson::from(MailTestResult::ok()));
     }
 }
