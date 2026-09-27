@@ -15,9 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Reads and writes the instance-wide mail row, defaulting to "not configured"
- * when no row exists. The rest of the app depends on this, never on the entity
- * directly, so "no row yet", the sealing, and the DB-or-env resolution all live
- * in one place.
+ * when no row exists. The rest of the app depends on this, never on the entity.
  */
 readonly class MailSettings
 {
@@ -32,10 +30,12 @@ readonly class MailSettings
 
     public function overview(): MailSettingsOverview
     {
+        $proxy = $this->proxySettings->current();
+
         return new MailSettingsOverview(
             $this->repository->findSingleton(),
             $this->fallback->connection(),
-            $this->proxySettings->configuredProxy(),
+            $proxy->isConfigured() ? $proxy->connection : null,
         );
     }
 
@@ -147,7 +147,7 @@ readonly class MailSettings
 
     private function guardAgainstProxyRoutingWithoutAProxy(MailSettingsRequest $request): void
     {
-        if ($request->useProxy && null === $this->proxySettings->configuredProxy()) {
+        if ($request->useProxy && !$this->proxySettings->current()->isConfigured()) {
             throw IncompleteMailConfigurationException::proxyMissing();
         }
     }

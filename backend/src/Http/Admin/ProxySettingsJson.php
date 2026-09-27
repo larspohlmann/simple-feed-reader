@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Entity\ProxyServerSettings;
+use App\Service\Proxy\ProxySettingsSnapshot;
 
 /**
  * The admin proxy payload. The password is absent by construction: only a
@@ -24,22 +24,19 @@ final readonly class ProxySettingsJson
      *     hasPassword: bool,
      * }
      */
-    public static function from(?ProxyServerSettings $settings): array
+    public static function from(ProxySettingsSnapshot $settings): array
     {
-        // No row yet means "not configured", which is exactly what a fresh
-        // entity describes — so the defaults are read from the one place that
-        // declares them rather than restated here.
-        $settings ??= new ProxyServerSettings();
+        $connection = $settings->connection;
 
         return [
-            'enabled' => $settings->isEnabled(),
-            'directFallback' => $settings->isDirectFallback(),
-            'type' => $settings->getType()->value,
-            'host' => $settings->getHost(),
-            'port' => $settings->getPort(),
-            'username' => $settings->getUsername(),
-            'remoteDns' => $settings->isRemoteDns(),
-            'hasPassword' => $settings->hasPassword(),
+            'enabled' => $connection->enabled,
+            'directFallback' => $connection->directFallback,
+            'type' => $connection->type->value,
+            'host' => $connection->host,
+            'port' => $connection->port,
+            'username' => $connection->username,
+            'remoteDns' => $connection->remoteDns,
+            'hasPassword' => $settings->hasPassword,
         ];
     }
 }

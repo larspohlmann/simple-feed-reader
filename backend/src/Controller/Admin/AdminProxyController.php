@@ -27,7 +27,7 @@ final readonly class AdminProxyController
     #[Route('', name: 'api_admin_proxy_get', methods: ['GET'])]
     public function get(): JsonResponse
     {
-        return new JsonResponse(ProxySettingsJson::from($this->settings->stored()));
+        return new JsonResponse(ProxySettingsJson::from($this->settings->current()));
     }
 
     #[Route('', name: 'api_admin_proxy_update', methods: ['PUT'])]
@@ -36,7 +36,7 @@ final readonly class AdminProxyController
     ): JsonResponse {
         $this->settings->update($request);
 
-        return new JsonResponse(ProxySettingsJson::from($this->settings->stored()));
+        return new JsonResponse(ProxySettingsJson::from($this->settings->current()));
     }
 
     #[Route('/test', name: 'api_admin_proxy_test', methods: ['POST'])]

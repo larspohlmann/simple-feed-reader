@@ -27,7 +27,21 @@ final class ProxySettingsTest extends TestCase
      */
     private function viewOf(ProxySettings $settings): array
     {
-        return ProxySettingsJson::from($settings->stored());
+        return ProxySettingsJson::from($settings->current());
+    }
+
+    public function testWithNoRowTheViewDescribesAnUnconfiguredProxy(): void
+    {
+        self::assertSame([
+            'enabled' => false,
+            'directFallback' => true,
+            'type' => 'SOCKS5',
+            'host' => '',
+            'port' => 1080,
+            'username' => null,
+            'remoteDns' => false,
+            'hasPassword' => false,
+        ], $this->viewOf($this->service($stored)));
     }
 
     public function testUpdateThenViewHidesSecretButFlagsThatOneIsStored(): void

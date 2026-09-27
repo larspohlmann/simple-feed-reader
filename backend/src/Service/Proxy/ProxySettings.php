@@ -26,9 +26,9 @@ readonly class ProxySettings
     ) {
     }
 
-    public function stored(): ?ProxyServerSettings
+    public function current(): ProxySettingsSnapshot
     {
-        return $this->repository->findSingleton();
+        return ProxySettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new ProxyServerSettings());
     }
 
     public function update(ProxySettingsRequest $request): void

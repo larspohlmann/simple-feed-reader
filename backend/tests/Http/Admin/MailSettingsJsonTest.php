@@ -9,9 +9,9 @@ use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
 use App\Http\Admin\MailSettingsJson;
 use App\Service\Crypto\SealedSecret;
-use App\Service\Fetch\ProxyConfig;
 use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettingsOverview;
+use App\Service\Proxy\ProxyConnection;
 use PHPUnit\Framework\TestCase;
 
 final class MailSettingsJsonTest extends TestCase
@@ -40,7 +40,7 @@ final class MailSettingsJsonTest extends TestCase
     public function testProxyAvailabilityIsExposedWhenAProxyIsConfigured(): void
     {
         $fallback = new MailConnection(false, '', 587, null, MailEncryption::Starttls, '', '');
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
+        $proxy = new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, null, true);
 
         $payload = MailSettingsJson::from(new MailSettingsOverview(null, $fallback, $proxy));
 
