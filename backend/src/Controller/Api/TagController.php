@@ -44,7 +44,7 @@ final readonly class TagController
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] CreateTagRequest $request): JsonResponse
     {
         return new JsonResponse(
-            ['tag' => TagJson::one($this->editor->create($user, $request))],
+            ['tag' => TagJson::one($this->editor->create($user, $request->toDetails()))],
             Response::HTTP_CREATED,
         );
     }
@@ -61,7 +61,7 @@ final readonly class TagController
         return new JsonResponse([
             'tags' => array_map(
                 static fn (Tag $tag): array => TagJson::one($tag),
-                $this->ordering->reorder($user, $request),
+                $this->ordering->reorder($user, $request->tagIds),
             ),
         ]);
     }
@@ -79,7 +79,7 @@ final readonly class TagController
     ): JsonResponse {
         $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
-        $this->ordering->orderFeeds($tag, $request);
+        $this->ordering->orderFeeds($tag, $request->subscriptionIds);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
@@ -92,7 +92,7 @@ final readonly class TagController
     ): JsonResponse {
         $tag = $this->tags->getOneForUser($user->requireId(), $id);
 
-        $this->editor->update($tag, $request);
+        $this->editor->update($tag, $request->toDetails());
 
         return new JsonResponse(['tag' => TagJson::one($tag)]);
     }

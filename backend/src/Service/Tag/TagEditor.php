@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Tag;
 
-use App\Dto\Tag\CreateTagRequest;
-use App\Dto\Tag\UpdateTagRequest;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\SubscriptionRepository;
@@ -22,15 +20,15 @@ final readonly class TagEditor
     ) {
     }
 
-    public function create(User $user, CreateTagRequest $request): Tag
+    public function create(User $user, TagDetails $details): Tag
     {
-        if ($this->tags->existsForUserAndName($user->requireId(), $request->name)) {
+        if ($this->tags->existsForUserAndName($user->requireId(), $details->name)) {
             throw new TagNameTakenException();
         }
 
-        $tag = new Tag($user, $request->name);
-        $tag->setColor($request->color);
-        $tag->setIcon($request->icon);
+        $tag = new Tag($user, $details->name);
+        $tag->setColor($details->color);
+        $tag->setIcon($details->icon);
         $tag->setPosition($this->tags->nextPositionForUser($user->requireId()));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
@@ -38,15 +36,15 @@ final readonly class TagEditor
         return $tag;
     }
 
-    public function update(Tag $tag, UpdateTagRequest $request): void
+    public function update(Tag $tag, TagDetails $details): void
     {
-        if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $request->name, $tag->requireId())) {
+        if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $details->name, $tag->requireId())) {
             throw new TagNameTakenException();
         }
 
-        $tag->setName($request->name);
-        $tag->setColor($request->color);
-        $tag->setIcon($request->icon);
+        $tag->setName($details->name);
+        $tag->setColor($details->color);
+        $tag->setIcon($details->icon);
         $this->entityManager->flush();
     }
 
