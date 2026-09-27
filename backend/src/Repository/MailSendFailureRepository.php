@@ -15,7 +15,7 @@ final class MailSendFailureRepository extends ServiceEntityRepository
 {
     public const int RETENTION = 50;
 
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
         parent::__construct($registry, MailSendFailure::class);
     }
@@ -52,27 +52,13 @@ final class MailSendFailureRepository extends ServiceEntityRepository
     /** Keeps the newest RETENTION rows: an outage retrying every five minutes must not grow the log (#882). */
     public function pruneToRetention(): void
     {
-        /** @var list<int> $ids */
-        $ids = array_column(
+        $ids = $this->rowIds->selectedBy(
             $this->createQueryBuilder('f')
                 ->select('f.id AS id')
                 ->orderBy('f.createdAt', 'DESC')
-                ->addOrderBy('f.id', 'DESC')
-                ->getQuery()
-                ->getArrayResult(),
-            'id',
+                ->addOrderBy('f.id', 'DESC'),
         );
 
-        $overflow = array_slice($ids, self::RETENTION);
-        if ([] === $overflow) {
-            return;
-        }
-
-        $this->createQueryBuilder('f')
-            ->delete()
-            ->where('f.id IN (:ids)')
-            ->setParameter('ids', $overflow)
-            ->getQuery()
-            ->execute();
+        $this->rowIds->delete(MailSendFailure::class, array_slice($ids, self::RETENTION));
     }
 }

@@ -23,7 +23,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunLogRepository extends ServiceEntityRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly RowIds $rowIds)
     {
         parent::__construct($registry, RecommendationRunLog::class);
     }
@@ -151,13 +151,9 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
         return $log ?? throw new RecordNotFoundException('No such debug log entry.');
     }
 
-    /**
-     * Two-step (select ids, then delete) rather than a DELETE with a
-     * subquery: portable across both suite dialects and trivially testable.
-     */
     public function deleteForUser(User $user): void
     {
-        $this->deleteIds($this->idsForUser($user, null));
+        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, null));
     }
 
     /**
@@ -169,7 +165,7 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
      */
     public function deleteForUserOutsideRuns(User $user, array $keptRunIds): void
     {
-        $this->deleteIds($this->idsForUser($user, $keptRunIds));
+        $this->rowIds->delete(RecommendationRunLog::class, $this->idsForUser($user, $keptRunIds));
     }
 
     /**
@@ -189,21 +185,6 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
             $query->andWhere('r.id NOT IN (:kept)')->setParameter('kept', $keptRunIds);
         }
 
-        /** @var list<int> $ids */
-        $ids = array_column($query->getQuery()->getArrayResult(), 'id');
-
-        return $ids;
-    }
-
-    /** @param list<int> $ids */
-    private function deleteIds(array $ids): void
-    {
-        if ([] === $ids) {
-            return;
-        }
-
-        $this->getEntityManager()->createQuery(
-            'DELETE FROM App\Entity\RecommendationRunLog l WHERE l.id IN (:ids)',
-        )->setParameter('ids', $ids)->execute();
+        return $this->rowIds->selectedBy($query);
     }
 }

@@ -15,7 +15,7 @@ use Doctrine\ORM\QueryBuilder;
 /** The retention passes' queries; EntryPruner picks the feeds and chunks the deletes. */
 final readonly class RetentionRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $em, private RowIds $rowIds)
     {
     }
 
@@ -65,9 +65,7 @@ final readonly class RetentionRepository
     /** @param list<int> $ids */
     public function deleteEntries(array $ids): void
     {
-        $this->em->createQuery(sprintf('DELETE FROM %s e WHERE e.id IN (:ids)', Entry::class))
-            ->setParameter('ids', $ids)
-            ->execute();
+        $this->rowIds->delete(Entry::class, $ids);
     }
 
     /** A completed run whose items were all pruned; pending and running runs legitimately have none yet. */
