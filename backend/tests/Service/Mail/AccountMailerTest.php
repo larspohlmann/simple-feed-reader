@@ -8,8 +8,8 @@ use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\AccountMailer;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Mail\Settings\MailIdentity;
-use App\Service\Mail\Settings\MailSettings;
 use App\Service\Settings\PublicBaseUrl;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -53,7 +53,7 @@ final class AccountMailerTest extends TestCase
             }
         };
 
-        $mailSettings = $this->createStub(MailSettings::class);
+        $mailSettings = $this->createStub(MailSendingSettings::class);
         $mailSettings->method('identity')->willReturn(
             new MailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
         );

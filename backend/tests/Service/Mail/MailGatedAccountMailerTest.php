@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Service\Mail\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailGatedAccountMailer;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -51,7 +51,7 @@ final class MailGatedAccountMailerTest extends TestCase
 
     private function mailCapability(bool $enabled): MailCapability
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('isSendingEnabled')->willReturn($enabled);
 
         return new MailCapability($settings);

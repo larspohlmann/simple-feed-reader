@@ -21,16 +21,16 @@ use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailDeliveryHealth;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
+use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
-use Psr\Log\NullLogger;
 
 /**
  * Drives the real catch/success branches of SendDueDigests::sendAndAdvance()
@@ -118,7 +118,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     private function mailCapability(): MailCapability
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);

@@ -10,14 +10,9 @@ use App\Service\Settings\PasskeyRelyingParty;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * The admin settings payload. mailEnabled is read-only here — it reflects the
- * derived mail-sending state (MailSettings), not a toggle on this endpoint —
- * but the UI needs it to explain why the email-confirmation switch is disabled.
- *
- * passkeyRpIdEffective is likewise read-only: it is always what the server
- * would actually use right now — the stored override, or the derived host —
- * so an admin who leaves passkeyRpId empty can still see what they are
- * getting.
+ * The admin settings payload. mailEnabled and passkeyRpIdEffective are
+ * read-only derived values (mail-sending state via MailSendingSettings, and
+ * the resolved passkey relying-party id), not toggles on this endpoint.
  */
 final readonly class InstanceSettingsJson
 {

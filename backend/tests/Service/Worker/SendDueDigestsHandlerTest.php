@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Worker;
 
-use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\Preferences;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
@@ -20,10 +19,11 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests as SendDueDigestsService;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Worker\Handler\SendDueDigestsHandler;
 use App\Service\Worker\Message\SendDueDigests;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
@@ -106,7 +106,7 @@ final class SendDueDigestsHandlerTest extends DbTestCase
 
     private function mailCapabilityEnabled(): MailCapability
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);

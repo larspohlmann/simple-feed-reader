@@ -335,12 +335,8 @@ services:
         public: true
 
     # MailCapabilityWiringTest fetches this to prove the service actually
-    # resolves through the real container, including its MailSettings
-    # collaborator. A test that constructs MailCapability by hand cannot catch
-    # a wiring regression — it bypasses container resolution entirely. No
-    # production caller exists yet, so the compiler would otherwise inline it
-    # away and the test container could not fetch it. Same `autowire` caveat
-    # as above.
+    # resolves through the real container, including its MailSendingSettings
+    # collaborator, which a hand-constructed MailCapability cannot catch.
     App\Service\Mail\MailCapability:
         autowire: true
         public: true

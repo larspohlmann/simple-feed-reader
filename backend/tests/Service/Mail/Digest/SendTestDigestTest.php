@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
@@ -14,7 +13,6 @@ use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestFormat;
-use App\Tests\Support\DigestTwigEnvironment;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
@@ -26,12 +24,14 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\SendTestDigest;
+use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\Settings\MailIdentity;
 use App\Tests\DbTestCase;
+use App\Tests\Support\DigestTwigEnvironment;
+use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
-use App\Service\Mail\Settings\MailIdentity;
-use App\Service\Mail\Settings\MailSettings;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
@@ -207,9 +207,9 @@ final class SendTestDigestTest extends DbTestCase
         self::assertNotNull($this->sentEmails[0]->getTextBody());
     }
 
-    private function mailIdentity(string $address, string $name): MailSettings
+    private function mailIdentity(string $address, string $name): MailSendingSettings
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;

@@ -7,7 +7,6 @@ namespace App\Service\Mail;
 use App\Dto\Mail\PendingApprovalNotice;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
-use App\Service\Mail\Settings\MailSettings;
 use App\Service\Settings\PublicBaseUrl;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
@@ -25,7 +24,7 @@ final readonly class AccountMailer implements AccountMailerInterface
     public function __construct(
         private MailerInterface $mailer,
         private TranslatorInterface $translator,
-        private MailSettings $mailSettings,
+        private MailSendingSettings $mailSettings,
         private PublicBaseUrl $publicBaseUrl,
     ) {
     }

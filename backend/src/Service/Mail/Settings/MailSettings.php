@@ -11,7 +11,7 @@ use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
-readonly class MailSettings
+final readonly class MailSettings
 {
     public function __construct(
         private MailServerSettingsRepository $repository,
@@ -58,54 +58,6 @@ readonly class MailSettings
 
         $this->apply($update, $settings);
         $this->em->flush();
-    }
-
-    /** The saved SMTP transport regardless of the enable switch — the tester and
-     *  the dynamic transport resolve this. Null when nothing usable is saved. */
-    public function configuredTransport(): ?ResolvedMailTransport
-    {
-        $settings = $this->repository->findSingleton();
-
-        if (null === $settings || '' === $settings->getHost()) {
-            return null;
-        }
-
-        return new ResolvedMailTransport(
-            $settings->getHost(),
-            $settings->getPort(),
-            $settings->getUsername(),
-            $settings->hasPassword() ? $this->cipher->open($settings->getSealedPassword()) : null,
-            $settings->getEncryption(),
-            $settings->usesProxy(),
-        );
-    }
-
-    public function activeTransportDsnFallback(): string
-    {
-        return $this->fallback->transportDsn();
-    }
-
-    public function hasEnvFallback(): bool
-    {
-        return $this->fallback->connection()->enabled;
-    }
-
-    public function identity(): MailIdentity
-    {
-        $settings = $this->repository->findSingleton();
-
-        if (null !== $settings && '' !== $settings->getFromAddress()) {
-            return new MailIdentity($settings->getFromAddress(), $settings->getFromName());
-        }
-
-        return $this->fallback->identity();
-    }
-
-    public function isSendingEnabled(): bool
-    {
-        $settings = $this->repository->findSingleton();
-
-        return null !== $settings ? $settings->isEnabled() : $this->fallback->connection()->enabled;
     }
 
     private function guardAgainstIncompleteAuthenticatedRow(

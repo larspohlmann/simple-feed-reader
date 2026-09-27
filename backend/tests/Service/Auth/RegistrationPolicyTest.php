@@ -7,7 +7,7 @@ namespace App\Tests\Service\Auth;
 use App\Enum\UserStatus;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Settings\InstanceSettings;
 use App\Service\Settings\InstanceSettingsUpdate;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -32,7 +32,7 @@ final class RegistrationPolicyTest extends KernelTestCase
     {
         $this->settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
-        $mailSettings = $this->createStub(MailSettings::class);
+        $mailSettings = $this->createStub(MailSendingSettings::class);
         $mailSettings->method('isSendingEnabled')->willReturn($mailOn);
 
         return new RegistrationPolicy(

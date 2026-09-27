@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Mail\MailSendingSettings;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\MailSettings;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;
@@ -30,7 +30,7 @@ final class DynamicMailTransport implements TransportInterface
     private ?string $cachedSignature = null;
 
     public function __construct(
-        private readonly MailSettings $settings,
+        private readonly MailSendingSettings $settings,
         private readonly ActiveMailTransportFactory $transportFactory,
         private readonly EventDispatcherInterface $dispatcher,
         private readonly LoggerInterface $logger,

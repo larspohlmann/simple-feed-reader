@@ -9,7 +9,7 @@ use App\Service\Mail\Digest\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\MailGatedDigestMailer;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\MailSendingSettings;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -45,7 +45,7 @@ final class MailGatedDigestMailerTest extends TestCase
 
     private function mailCapability(bool $enabled): MailCapability
     {
-        $settings = $this->createStub(MailSettings::class);
+        $settings = $this->createStub(MailSendingSettings::class);
         $settings->method('isSendingEnabled')->willReturn($enabled);
 
         return new MailCapability($settings);

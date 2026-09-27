@@ -12,7 +12,7 @@ use App\Service\Mail\Settings\MailConnection;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Mail\Transport\DynamicMailTransport;
-use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -21,6 +21,8 @@ use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 
 final class DynamicMailTransportTest extends KernelTestCase
 {
+    use ConfiguresAProxy;
+
     public function testWithoutARowItBuildsFromTheFallbackDsn(): void
     {
         $transport = self::getContainer()->get(DynamicMailTransport::class);
@@ -89,11 +91,7 @@ final class DynamicMailTransportTest extends KernelTestCase
 
     public function testActiveTransportUsesTheCurlTransportForAProxiedRow(): void
     {
-        self::getContainer()->get(ProxySettings::class)->update(SettingsRequests::proxy(
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-        )->toUpdate());
+        $this->configureAProxy();
         self::getContainer()->get(MailSettings::class)->update(SettingsRequests::mail(
             host: 'smtp.gmail.com',
             username: 'alice',

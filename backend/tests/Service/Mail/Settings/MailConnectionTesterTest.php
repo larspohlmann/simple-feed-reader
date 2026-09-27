@@ -6,6 +6,7 @@ namespace App\Tests\Service\Mail\Settings;
 
 use App\Entity\MailKind;
 use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\Settings\EffectiveMailSettings;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Settings\MailTestFailure;
@@ -39,7 +40,7 @@ final class MailConnectionTesterTest extends KernelTestCase
     private function testerWithHealth(MailFailureRecorder $health): MailConnectionTester
     {
         return new MailConnectionTester(
-            $this->settings(),
+            self::getContainer()->get(EffectiveMailSettings::class),
             self::getContainer()->get(Security::class),
             new NullLogger(),
             self::getContainer()->get(ActiveMailTransportFactory::class),
