@@ -77,7 +77,7 @@ final class RefreshFeedsCommand extends Command
             return Command::SUCCESS;
         }
 
-        foreach ($report->toArray() as $key => $value) {
+        foreach ($report->toLogContext() as $key => $value) {
             $io->writeln(sprintf('%-18s %s', $key, $value));
         }
 

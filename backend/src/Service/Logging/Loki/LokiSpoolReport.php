@@ -11,12 +11,4 @@ final readonly class LokiSpoolReport
         public int $failed,
     ) {
     }
-
-    /**
-     * @return array{shipped: int, failed: int}
-     */
-    public function toArray(): array
-    {
-        return ['shipped' => $this->shipped, 'failed' => $this->failed];
-    }
 }

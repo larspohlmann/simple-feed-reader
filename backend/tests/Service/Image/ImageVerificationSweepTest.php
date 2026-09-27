@@ -56,12 +56,12 @@ final class ImageVerificationSweepTest extends DbTestCase
         $fetcher->willReturnBytes('https://i/beacon.png', PngImageFactory::bytes(1, 1));
         $fetcher->willFail('https://i/rejected.png', new FaviconRejectedException('Icon responded 403.'));
 
-        $report = $this->sweep($fetcher)->verifyDue()->toArray();
+        $report = $this->sweep($fetcher)->verifyDue();
 
-        self::assertSame(1, $report['measured']);
-        self::assertSame(1, $report['kept']);
-        self::assertSame(1, $report['dropped']);
-        self::assertSame(0, $report['retried']);
+        self::assertSame(1, $report->measured);
+        self::assertSame(1, $report->kept);
+        self::assertSame(1, $report->dropped);
+        self::assertSame(0, $report->retried);
 
         $this->em->clear();
         $good = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'good']);
@@ -87,11 +87,11 @@ final class ImageVerificationSweepTest extends DbTestCase
         $fetcher = new StubFaviconFetcher();
         $fetcher->willFail('https://i/gone.png', new FaviconUnavailableException('timeout'));
 
-        $report = $this->sweep($fetcher)->verifyDue()->toArray();
+        $report = $this->sweep($fetcher)->verifyDue();
 
-        self::assertSame(0, $report['measured']);
-        self::assertSame(0, $report['dropped']);
-        self::assertSame(1, $report['retried']);
+        self::assertSame(0, $report->measured);
+        self::assertSame(0, $report->dropped);
+        self::assertSame(1, $report->retried);
 
         $this->em->clear();
         $gone = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'gone']);
@@ -112,9 +112,9 @@ final class ImageVerificationSweepTest extends DbTestCase
         );
         $this->em->clear();
 
-        $report = $this->sweep(new StubFaviconFetcher())->verifyDue()->toArray();
+        $report = $this->sweep(new StubFaviconFetcher())->verifyDue();
 
-        self::assertSame(1, $report['dropped']);
+        self::assertSame(1, $report->dropped);
         /** @var PendingImageVerificationRepository $repository */
         $repository = self::getContainer()->get(PendingImageVerificationRepository::class);
         self::assertCount(0, $repository->findPendingImageVerification(50));

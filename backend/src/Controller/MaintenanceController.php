@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Http\ForYouSweepReportJson;
+use App\Http\MaintenanceTickJson;
 use App\Http\MaintenanceTokenGuard;
+use App\Http\RefreshReportJson;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Recommendation\ForYouSweep;
 use App\Service\Refresh\RefreshReport;
@@ -47,7 +50,7 @@ final readonly class MaintenanceController
             default => Response::HTTP_OK,
         };
 
-        return new JsonResponse($report->toArray(), $status);
+        return new JsonResponse(RefreshReportJson::report($report), $status);
     }
 
     /**
@@ -63,7 +66,7 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        return new JsonResponse($this->forYouSweep->sweepOnce()->toArray());
+        return new JsonResponse(ForYouSweepReportJson::report($this->forYouSweep->sweepOnce()));
     }
 
     /**
@@ -84,6 +87,6 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        return new JsonResponse($this->maintenanceTick->run()->toArray());
+        return new JsonResponse(MaintenanceTickJson::report($this->maintenanceTick->run()));
     }
 }

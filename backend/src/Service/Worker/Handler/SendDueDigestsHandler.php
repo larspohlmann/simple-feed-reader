@@ -27,6 +27,6 @@ final readonly class SendDueDigestsHandler
     {
         $report = $this->sendDueDigests->run();
 
-        $this->logger->info('Worker digest sweep finished.', ['report' => $report->toArray()]);
+        $this->logger->info('Worker digest sweep finished.', ['report' => $report->toLogContext()]);
     }
 }

@@ -38,6 +38,6 @@ final readonly class RefreshDueFeedsHandler
 
         // 'busy' is healthy here: a user-driven refresh holds the global lock
         // and is doing the same work; this firing simply yields to it.
-        $this->logger->info('Worker refresh sweep finished.', ['report' => $report->toArray()]);
+        $this->logger->info('Worker refresh sweep finished.', ['report' => $report->toLogContext()]);
     }
 }

@@ -18,7 +18,7 @@ final class SweepTallyTest extends TestCase
 
         self::assertSame(
             ['searchesSwept' => 2, 'entriesScanned' => 1000, 'matchesInserted' => 7, 'caughtUp' => true],
-            $tally->caughtUp()->toArray(),
+            $tally->caughtUp()->toLogContext(),
         );
     }
 

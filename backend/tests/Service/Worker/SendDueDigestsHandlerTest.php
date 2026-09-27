@@ -25,6 +25,7 @@ use App\Service\Worker\Message\SendDueDigests;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
@@ -32,20 +33,7 @@ use PHPUnit\Framework\MockObject\Stub;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
-/**
- * `App\Service\Mail\Digest\SendDueDigests` is `final readonly`, so PHPUnit
- * cannot generate a mock double for it (PHP refuses to extend a final
- * class) -- the same constraint `SendDueDigestsTest` works around by
- * building a real instance over stub collaborators. This test does the
- * same and drives it through the handler, asserting the one thing the
- * handler is responsible for: that firing it reaches the mailer. That is
- * an honest proof of the wiring, not a re-encoding of the service's own
- * branch coverage (already pinned by SendDueDigestsTest).
- *
- * DigestEntryFinder now reads the membership table through
- * SavedSearchEntryRepository, which is `final` and cannot be doubled, so a
- * due account's match is a real persisted saved-search member (#1116).
- */
+/** SendDueDigests and SavedSearchEntryRepository are final: the service is built for real over stubs. */
 final class SendDueDigestsHandlerTest extends DbTestCase
 {
     use SeedsDigestReaders;
@@ -80,12 +68,39 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         $this->handler($preferences, $mailer, $savedSearches)->__invoke(new SendDueDigests());
     }
 
+    public function testFiringLogsTheSweepReport(): void
+    {
+        $preferences = $this->createStub(PreferencesRepository::class);
+        $preferences->method('findWithDigestEnabled')->willReturn([]);
+        $service = $this->service($preferences, $this->createStub(DigestMailerInterface::class));
+        $logger = new RecordingLogger();
+
+        (new SendDueDigestsHandler($service, $logger))->__invoke(new SendDueDigests());
+
+        self::assertSame(
+            [[
+                'level' => 'info',
+                'message' => 'Worker digest sweep finished.',
+                'context' => ['report' => ['considered' => 0, 'sent' => 0, 'skippedEmpty' => 0]],
+            ]],
+            $logger->records,
+        );
+    }
+
     private function handler(
         PreferencesRepository&Stub $preferences,
         DigestMailerInterface $mailer,
         ?SavedSearchRepository $savedSearches = null,
     ): SendDueDigestsHandler {
-        $service = new SendDueDigestsService(
+        return new SendDueDigestsHandler($this->service($preferences, $mailer, $savedSearches), new NullLogger());
+    }
+
+    private function service(
+        PreferencesRepository&Stub $preferences,
+        DigestMailerInterface $mailer,
+        ?SavedSearchRepository $savedSearches = null,
+    ): SendDueDigestsService {
+        return new SendDueDigestsService(
             $preferences,
             new DigestSchedule('UTC'),
             new DigestComposer(
@@ -100,8 +115,6 @@ final class SendDueDigestsHandlerTest extends DbTestCase
             new NullLogger(),
             new InMemoryMailFailureRecorder(),
         );
-
-        return new SendDueDigestsHandler($service, new NullLogger());
     }
 
     private function mailCapabilityEnabled(): MailCapability

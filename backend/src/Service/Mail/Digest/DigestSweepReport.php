@@ -15,7 +15,7 @@ final readonly class DigestSweepReport
     }
 
     /** @return array{considered: int, sent: int, skippedEmpty: int} */
-    public function toArray(): array
+    public function toLogContext(): array
     {
         return ['considered' => $this->considered, 'sent' => $this->sent, 'skippedEmpty' => $this->skippedEmpty];
     }
