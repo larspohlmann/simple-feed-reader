@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
-use Psr\Clock\ClockInterface;
+use App\Service\Clock\NaiveUtcClock;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -23,7 +23,7 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
 {
     public function __construct(
         private string $projectDir,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
         private LoggerInterface $logger,
     ) {
     }
@@ -42,7 +42,7 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
     // distinct, which is the whole job of the marker.
     private function payload(): string
     {
-        $lastUpdated = $this->clock->now()->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.u\Z');
+        $lastUpdated = $this->clock->now()->format('Y-m-d\TH:i:s.u\Z');
 
         return json_encode(['lastUpdated' => $lastUpdated], \JSON_THROW_ON_ERROR);
     }

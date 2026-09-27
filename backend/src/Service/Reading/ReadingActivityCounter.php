@@ -6,8 +6,8 @@ namespace App\Service\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Recommendation\ViewerTimeZone;
-use Psr\Clock\ClockInterface;
 
 /**
  * How many articles the account opened on each of the last WINDOW_DAYS days, in the viewer's own timezone
@@ -21,13 +21,13 @@ final readonly class ReadingActivityCounter
 
     public function __construct(
         private EntryStateRepository $states,
-        private ClockInterface $clock,
+        private NaiveUtcClock $clock,
     ) {
     }
 
     public function daily(User $user, ViewerTimeZone $viewer): ReadingActivity
     {
-        $window = ReadingWindow::lastDays(self::WINDOW_DAYS, $viewer, $this->nowUtc());
+        $window = ReadingWindow::lastDays(self::WINDOW_DAYS, $viewer, $this->clock->now());
         $userId = $user->requireId();
 
         $countsByDay = $this->countByLocalDay(
@@ -56,11 +56,5 @@ final readonly class ReadingActivityCounter
         }
 
         return $countsByDay;
-    }
-
-    private function nowUtc(): \DateTimeImmutable
-    {
-        return \DateTimeImmutable::createFromInterface($this->clock->now())
-            ->setTimezone(new \DateTimeZone('UTC'));
     }
 }
