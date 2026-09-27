@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
-use App\Dto\Admin\GrafanaSettingsRequest;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
@@ -30,7 +29,7 @@ class GrafanaSettings
         return new GrafanaSettingsOverview($this->settings(), $this->defaults, $this->sampler->isAvailable());
     }
 
-    public function update(GrafanaSettingsRequest $request): void
+    public function update(GrafanaSettingsUpdate $update): void
     {
         $settings = $this->repository->findSingleton();
         if (null === $settings) {
@@ -38,17 +37,7 @@ class GrafanaSettings
             $this->em->persist($settings);
         }
 
-        $connection = $this->connectionFrom($request);
-
-        if ($request->removeToken) {
-            $settings->applyWithoutToken($connection);
-            $settings->clearStoredToken();
-        } elseif (null === $request->token || '' === $request->token) {
-            $settings->applyWithoutToken($connection);
-        } else {
-            $settings->apply($connection, $this->cipher->seal($request->token), $this->hint($request->token));
-        }
-
+        $this->apply($update, $settings);
         $this->em->flush();
         $this->cache->forget();
         $this->refresh();
@@ -87,6 +76,21 @@ class GrafanaSettings
         return $settings->hasToken() ? $this->cipher->open($settings->sealedToken) : null;
     }
 
+    private function apply(GrafanaSettingsUpdate $update, GrafanaSettingsEntity $settings): void
+    {
+        $replacement = $update->token->replacement();
+        if (null !== $replacement) {
+            $settings->apply($update->connection, $this->cipher->seal($replacement), $this->hint($replacement));
+
+            return;
+        }
+
+        $settings->applyWithoutToken($update->connection);
+        if ($update->token->isRemoval()) {
+            $settings->clearStoredToken();
+        }
+    }
+
     private function settings(): GrafanaSettingsSnapshot
     {
         return $this->memoisedSettings ??= $this->cache->remember($this->loadSingleton(...));
@@ -100,22 +104,6 @@ class GrafanaSettings
     private function defaultOrNull(string $default): ?string
     {
         return '' === $default ? null : $default;
-    }
-
-    private function connectionFrom(GrafanaSettingsRequest $request): GrafanaConnection
-    {
-        return new GrafanaConnection(
-            $this->blankToNull($request->lokiPushUrl),
-            $this->blankToNull($request->lokiUsername),
-            $this->blankToNull($request->grafanaUrl),
-            $this->blankToNull($request->pyroscopePushUrl),
-            $request->profilingEnabled,
-        );
-    }
-
-    private function blankToNull(?string $value): ?string
-    {
-        return null === $value || '' === $value ? null : $value;
     }
 
     private function hint(string $token): string

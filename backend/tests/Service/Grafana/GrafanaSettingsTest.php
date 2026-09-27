@@ -46,7 +46,7 @@ final class GrafanaSettingsTest extends TestCase
             lokiUsername: 'tenant42',
             grafanaUrl: 'https://cloud.example/grafana',
             token: 'glc_secrettoken',
-        ));
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertSame('https://cloud.example/loki/push', $view['lokiPushUrl']);
@@ -60,9 +60,9 @@ final class GrafanaSettingsTest extends TestCase
     public function testBlankTokenKeepsTheStoredSecret(): void
     {
         $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first'));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first')->toUpdate());
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://b.example', token: null));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://b.example', token: null)->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertTrue($view['hasToken']);
@@ -73,10 +73,13 @@ final class GrafanaSettingsTest extends TestCase
     public function testRemoveTokenClearsTheStoredSecretButKeepsTheConnection(): void
     {
         $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first'));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example', token: 'glc_first')->toUpdate());
         self::assertTrue($this->viewOf($settings)['hasToken']);
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://other.example', removeToken: true));
+        $settings->update(SettingsRequests::grafana(
+            grafanaUrl: 'https://other.example',
+            removeToken: true,
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertFalse($view['hasToken']);
@@ -87,9 +90,9 @@ final class GrafanaSettingsTest extends TestCase
     public function testRemoveTokenWinsEvenWhenATokenIsAlsoSent(): void
     {
         $settings = $this->service($stored);
-        $settings->update(SettingsRequests::grafana(token: 'glc_first'));
+        $settings->update(SettingsRequests::grafana(token: 'glc_first')->toUpdate());
 
-        $settings->update(SettingsRequests::grafana(token: 'glc_second', removeToken: true));
+        $settings->update(SettingsRequests::grafana(token: 'glc_second', removeToken: true)->toUpdate());
 
         self::assertFalse($this->viewOf($settings)['hasToken']);
         self::assertNull($settings->lokiToken());
@@ -105,7 +108,7 @@ final class GrafanaSettingsTest extends TestCase
     public function testEffectiveLokiPushUrlPrefersTheStoredOverrideOverTheEnvDefault(): void
     {
         $settings = $this->service($stored, lokiPushUrlDefault: 'http://loki:3100/loki/api/v1/push');
-        $settings->update(SettingsRequests::grafana(lokiPushUrl: 'https://cloud.example/loki/push'));
+        $settings->update(SettingsRequests::grafana(lokiPushUrl: 'https://cloud.example/loki/push')->toUpdate());
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
     }
@@ -127,7 +130,7 @@ final class GrafanaSettingsTest extends TestCase
     public function testEffectivePyroscopePushUrlPrefersTheStoredOverrideOverTheEnvDefault(): void
     {
         $settings = $this->service($stored, pyroscopePushUrlDefault: 'http://pyroscope:4040');
-        $settings->update(SettingsRequests::grafana(pyroscopePushUrl: 'http://custom:4040'));
+        $settings->update(SettingsRequests::grafana(pyroscopePushUrl: 'http://custom:4040')->toUpdate());
 
         self::assertSame('http://custom:4040', $settings->effectivePyroscopePushUrl());
     }
@@ -144,7 +147,7 @@ final class GrafanaSettingsTest extends TestCase
         $settings = $this->service($stored);
         self::assertFalse($settings->profilingEnabled());
 
-        $settings->update(SettingsRequests::grafana(profilingEnabled: true));
+        $settings->update(SettingsRequests::grafana(profilingEnabled: true)->toUpdate());
 
         self::assertTrue($settings->profilingEnabled());
     }
@@ -154,8 +157,8 @@ final class GrafanaSettingsTest extends TestCase
         $settings = $this->service($stored);
         self::assertNull($settings->lokiUsername());
 
-        $settings->update(SettingsRequests::grafana(lokiUsername: 'tenant42'));
-        $settings->update(SettingsRequests::grafana(lokiUsername: ''));
+        $settings->update(SettingsRequests::grafana(lokiUsername: 'tenant42')->toUpdate());
+        $settings->update(SettingsRequests::grafana(lokiUsername: '')->toUpdate());
 
         self::assertNull($settings->lokiUsername());
     }
@@ -229,7 +232,7 @@ final class GrafanaSettingsTest extends TestCase
 
         self::assertFalse($workerProcess->profilingEnabled());
 
-        $webProcess->update(SettingsRequests::grafana(profilingEnabled: true));
+        $webProcess->update(SettingsRequests::grafana(profilingEnabled: true)->toUpdate());
 
         $workerProcess->refresh();
         self::assertTrue($workerProcess->profilingEnabled());
@@ -253,7 +256,7 @@ final class GrafanaSettingsTest extends TestCase
             new GrafanaSettingsCache(new ArrayAdapter()),
         );
 
-        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example'));
+        $settings->update(SettingsRequests::grafana(grafanaUrl: 'https://a.example')->toUpdate());
     }
 
     /** @param GrafanaSettingsEntity|null $stored captured by reference for the fake repo. */

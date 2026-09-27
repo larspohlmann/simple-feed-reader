@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Dto\Admin;
 
 use App\Dto\Admin\GrafanaSettingsRequest;
+use App\Service\Crypto\SecretChange;
+use App\Service\Grafana\GrafanaConnection;
 use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
@@ -106,5 +108,55 @@ final class GrafanaSettingsRequestTest extends TestCase
 
         self::assertCount(0, $this->validator->validate($atLimit));
         self::assertGreaterThan(0, \count($this->validator->validate($overLimit)));
+    }
+
+    public function testToUpdateCarriesTheOverridesAndTheProfilingSwitch(): void
+    {
+        $update = SettingsRequests::grafana(
+            lokiPushUrl: 'http://loki:3100/push',
+            lokiUsername: 'tenant42',
+            grafanaUrl: 'http://grafana:3000',
+            pyroscopePushUrl: 'http://pyroscope:4040',
+            profilingEnabled: true,
+        )->toUpdate();
+
+        self::assertEquals(
+            new GrafanaConnection(
+                'http://loki:3100/push',
+                'tenant42',
+                'http://grafana:3000',
+                'http://pyroscope:4040',
+                true,
+            ),
+            $update->connection,
+        );
+    }
+
+    public function testToUpdateTurnsBlankOverridesIntoNone(): void
+    {
+        $update = SettingsRequests::grafana(lokiPushUrl: '', lokiUsername: '', grafanaUrl: '', pyroscopePushUrl: '')
+            ->toUpdate();
+
+        self::assertEquals(new GrafanaConnection(null, null, null, null, false), $update->connection);
+    }
+
+    public function testABlankOrMissingTokenKeepsTheStoredOne(): void
+    {
+        self::assertEquals(SecretChange::keep(), SettingsRequests::grafana(token: '')->toUpdate()->token);
+        self::assertEquals(SecretChange::keep(), SettingsRequests::grafana()->toUpdate()->token);
+    }
+
+    public function testATokenReplacesTheStoredOne(): void
+    {
+        $update = SettingsRequests::grafana(token: 'glc_new')->toUpdate();
+
+        self::assertEquals(SecretChange::replaceWith('glc_new'), $update->token);
+    }
+
+    public function testRemoveTokenWinsOverASentToken(): void
+    {
+        $update = SettingsRequests::grafana(token: 'glc_new', removeToken: true)->toUpdate();
+
+        self::assertEquals(SecretChange::remove(), $update->token);
     }
 }
