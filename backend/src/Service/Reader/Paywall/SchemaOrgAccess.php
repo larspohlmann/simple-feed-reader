@@ -16,36 +16,20 @@ final readonly class SchemaOrgAccess
 {
     private const string KEY = 'isAccessibleForFree';
 
-    public static function declaredIn(HTMLDocument $rawPage): AccessDeclaration
+    public static function declaredIn(HTMLDocument $rawDocument): AccessDeclaration
     {
-        $declarations = [];
-        foreach (JsonLd::scriptsIn($rawPage) as $script) {
-            array_push($declarations, ...self::declarationsIn(JsonLd::decode($script)));
-        }
-
-        if (\in_array(false, $declarations, true)) {
-            return AccessDeclaration::Paywalled;
-        }
-
-        return $declarations === [] ? AccessDeclaration::Undeclared : AccessDeclaration::Free;
-    }
-
-    /**
-     * @param array<mixed> $block
-     *
-     * @return list<bool> every isAccessibleForFree in the block, as a boolean
-     */
-    private static function declarationsIn(array $block): array
-    {
-        $declarations = [];
-        foreach (JsonLd::nodesIn($block) as $node) {
-            $declared = self::asBoolean($node[self::KEY] ?? null);
-            if ($declared !== null) {
-                $declarations[] = $declared;
+        $sawDeclaration = false;
+        foreach (JsonLd::scriptsIn($rawDocument) as $script) {
+            foreach (JsonLd::nodesIn(JsonLd::decode($script)) as $node) {
+                $declared = self::asBoolean($node[self::KEY] ?? null);
+                if ($declared === false) {
+                    return AccessDeclaration::Paywalled;
+                }
+                $sawDeclaration = $sawDeclaration || $declared === true;
             }
         }
 
-        return $declarations;
+        return $sawDeclaration ? AccessDeclaration::Free : AccessDeclaration::Undeclared;
     }
 
     private static function asBoolean(mixed $value): ?bool
