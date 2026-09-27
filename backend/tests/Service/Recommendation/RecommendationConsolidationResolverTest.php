@@ -16,7 +16,6 @@ use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationConsolidationResolver;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RetryPlan;
-use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
@@ -352,7 +351,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
 
     private function plan(): RetryPlan
     {
-        return RetryPlan::forDriver(TickDriver::Poll);
+        return RetryPlan::deferring();
     }
 
     private function idOf(Entry $entry): int

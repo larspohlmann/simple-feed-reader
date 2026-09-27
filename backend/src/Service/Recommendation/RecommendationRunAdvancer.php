@@ -244,7 +244,7 @@ final class RecommendationRunAdvancer
             return RecommendationRunReport::fromRun($run);
         }
 
-        $plan = RetryPlan::forDriver($driver);
+        $plan = $driver->retryPlan();
 
         if ($run->progress()->distillPending) {
             return $this->distillTick($run, $user, $settings, $plan);

@@ -16,7 +16,6 @@ use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\RecommendationProfileDistiller;
 use App\Service\Recommendation\RecommendationSettingsResolver;
 use App\Service\Recommendation\RetryPlan;
-use App\Service\Recommendation\TickDriver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;
@@ -212,7 +211,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
 
     private function plan(): RetryPlan
     {
-        return RetryPlan::forDriver(TickDriver::Poll);
+        return RetryPlan::deferring();
     }
 
     private function userId(): int

@@ -15,7 +15,6 @@ use App\Service\Recommendation\JsonSchema;
 use App\Service\Recommendation\NullCompletionStreamObserver;
 use App\Service\Recommendation\RateLimitedCompletion;
 use App\Service\Recommendation\RetryPlan;
-use App\Service\Recommendation\TickDriver;
 use App\Tests\Support\StubChatClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -76,7 +75,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertFalse($result->isDeferred());
         self::assertTrue($result->rateLimitObserved);
@@ -94,7 +93,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertSame('{"ok":1}', $result->outcomes[0]->content());
         self::assertSame(7, $this->elapsedSeconds($clock));
@@ -108,7 +107,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertSame(5, $this->elapsedSeconds($clock));
     }
@@ -120,7 +119,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(200.0, $result->deferSeconds);
@@ -146,7 +145,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(45.0, $result->deferSeconds);
@@ -162,7 +161,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
 
         self::assertFalse($result->isDeferred());
         self::assertTrue($result->rateLimitObserved);
@@ -177,7 +176,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::forDriver(TickDriver::Poll));
+            ->completeMany($this->connection(), $this->calls(1), RetryPlan::deferring());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(15.0, $result->deferSeconds);
@@ -193,7 +192,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(2), RetryPlan::forDriver(TickDriver::Worker));
+            ->completeMany($this->connection(), $this->calls(2), RetryPlan::blocking());
 
         self::assertSame('{"a":1}', $result->outcomes[0]->content());
         self::assertSame('{"b":2}', $result->outcomes[1]->content());
@@ -213,7 +212,7 @@ final class RateLimitedCompletionTest extends TestCase
             $this->connection(),
             $this->request(),
             new NullCompletionStreamObserver(),
-            RetryPlan::forDriver(TickDriver::Poll),
+            RetryPlan::deferring(),
         );
     }
 }

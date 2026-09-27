@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 /**
- * How a tick handles a provider rate limit, decided by its driver. The worker
- * owns its process, so it blocks and retries in-tick within a budget; the poll
- * and sweep drivers run inside a bounded web request, so they never block and
- * defer to a later tick instead (#947).
+ * How a caller handles a provider rate limit (#947): a blocking plan waits and retries within a budget,
+ * a deferring plan hands the wait back for its caller to record.
  */
 final readonly class RetryPlan
 {
@@ -18,15 +16,20 @@ final readonly class RetryPlan
     private const int MAX_RETRIES = 3;
 
     /** Stays under Strato's 240 s cgi-fcgi cap with room for the call itself. */
-    private const float WORKER_BUDGET_SECONDS = 120.0;
+    private const float BLOCKING_BUDGET_SECONDS = 120.0;
 
     private function __construct(private bool $blocks)
     {
     }
 
-    public static function forDriver(TickDriver $driver): self
+    public static function blocking(): self
     {
-        return new self(TickDriver::Worker === $driver);
+        return new self(true);
+    }
+
+    public static function deferring(): self
+    {
+        return new self(false);
     }
 
     public function blocks(): bool
@@ -41,7 +44,7 @@ final readonly class RetryPlan
 
     public function budgetSeconds(): float
     {
-        return self::WORKER_BUDGET_SECONDS;
+        return self::BLOCKING_BUDGET_SECONDS;
     }
 
     public function waitSecondsFor(int $retryIndex, ?int $retryAfterSeconds): float
