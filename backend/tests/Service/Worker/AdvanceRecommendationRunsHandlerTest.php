@@ -48,9 +48,9 @@ use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\TickingClock;
-use App\Tests\Support\UserFactory;
 use Monolog\Handler\TestHandler;
 use Monolog\Level;
 use Monolog\Logger;
@@ -59,7 +59,6 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Lock\LockFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Drives the handler through the container's real repository, advancer,
@@ -69,6 +68,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -776,14 +777,6 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
         $this->em->flush();
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function activeRun(User $user): RecommendationRun

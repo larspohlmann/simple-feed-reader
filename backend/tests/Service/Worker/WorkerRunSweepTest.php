@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\RecommendationRun;
-use App\Entity\User;
 use App\Entity\WorkerHeartbeat;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\WorkerHeartbeatRepository;
@@ -19,13 +18,12 @@ use App\Service\Worker\WorkerRunSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ClearTrackingEntityManager;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\ThrowingClock;
 use App\Tests\Support\TickingClock;
-use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * The shared worker-regime sweep (#371). Its coordination behavior --
@@ -37,6 +35,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class WorkerRunSweepTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -203,14 +203,6 @@ final class WorkerRunSweepTest extends DbTestCase
         $client = self::getContainer()->get(StubChatClient::class);
 
         return $client;
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function runs(): RecommendationRunRepository

@@ -10,9 +10,12 @@ use App\Entity\CatalogCategory;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Service\Catalog\CatalogCategoryEditor;
 use App\Tests\DbTestCase;
+use App\Tests\Support\ReloadsEntities;
 
 final class CatalogCategoryEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     public function testCreateAppendsACategoryWithTheRequestedFields(): void
     {
         $first = $this->editor()->create(new CatalogCategoryRequest('editor_first', 'First', 'star', '#112233'));
@@ -92,15 +95,5 @@ final class CatalogCategoryEditorTest extends DbTestCase
         self::assertInstanceOf(CatalogCategoryEditor::class, $editor);
 
         return $editor;
-    }
-
-    private function reload(CatalogCategory $category): CatalogCategory
-    {
-        $id = $category->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(CatalogCategory::class, $id);
-        self::assertInstanceOf(CatalogCategory::class, $reloaded);
-
-        return $reloaded;
     }
 }

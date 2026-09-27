@@ -24,15 +24,16 @@ use App\Service\Worker\SweepStreamHeartbeat;
 use App\Service\Worker\WorkerPresence;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubChatClient;
 use App\Tests\Support\ThrowingClock;
-use App\Tests\Support\UserFactory;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class ForYouSweepTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -57,14 +58,6 @@ final class ForYouSweepTest extends DbTestCase
         $repository = $this->em->getRepository(RecommendationRun::class);
 
         return $repository;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function setCadence(User $user, int $hours): void

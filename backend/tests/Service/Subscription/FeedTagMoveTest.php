@@ -11,12 +11,13 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\FeedTagMove;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use App\Exception\InvalidSelectionException;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class FeedTagMoveTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testInsertsAtIndexAndShiftsTheTargetTagsFeedsDown(): void
     {
         $user = $this->user('inserter@example.com');
@@ -142,14 +143,6 @@ final class FeedTagMoveTest extends DbTestCase
         $service = self::getContainer()->get(FeedTagMove::class);
         self::assertInstanceOf(FeedTagMove::class, $service);
         $service->move($subscription, $move);
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function tag(User $user, string $name): Tag

@@ -8,18 +8,20 @@ use App\Dto\Me\UpdateDigestRequest;
 use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
-use App\Entity\User;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
 use App\Service\Mail\Digest\DigestCadence;
 use App\Service\Mail\Digest\DigestFormat;
 use App\Service\Reader\MagazineStyle;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SeedsUsers;
 
 final class AccountPreferencesWriterTest extends DbTestCase
 {
+    use ReloadsEntities;
+    use SeedsUsers;
+
     public function testChangeLocalePersists(): void
     {
         $user = $this->user('prefs-locale@example.com');
@@ -83,23 +85,5 @@ final class AccountPreferencesWriterTest extends DbTestCase
         self::assertInstanceOf(AccountPreferencesWriter::class, $writer);
 
         return $writer;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
-
-    private function reload(User $user): User
-    {
-        $id = $user->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(User::class, $id);
-        self::assertInstanceOf(User::class, $reloaded);
-
-        return $reloaded;
     }
 }

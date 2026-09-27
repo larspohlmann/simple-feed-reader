@@ -10,11 +10,12 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\SubscriptionTagSync;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionTagSyncTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testKeepsAKeptTagAtItsPositionAndAppendsANewTag(): void
     {
         $user = $this->user('keeper@example.com');
@@ -134,14 +135,6 @@ final class SubscriptionTagSyncTest extends DbTestCase
         self::assertInstanceOf(SubscriptionTagSync::class, $sync);
 
         return $sync;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function tag(User $user, string $name): Tag

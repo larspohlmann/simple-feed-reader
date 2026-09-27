@@ -8,6 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Service\Ai\AiConfigurationEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiProviderSettingsFactory;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -17,6 +18,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class AiConfigurationEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+
     public function testRenameRoundTripsTheName(): void
     {
         $settings = $this->savedConfiguration('editor-rename@example.test', 'Old name');
@@ -63,21 +66,5 @@ final class AiConfigurationEditorTest extends DbTestCase
         $this->em->flush();
 
         return $settings;
-    }
-
-    /**
-     * clear() first: without it the identity map serves the entity the test
-     * already holds, so the assertion would pass even if nothing was written.
-     */
-    private function reload(AiProviderSettings $settings): AiProviderSettings
-    {
-        $id = $settings->getId();
-        self::assertNotNull($id);
-        $this->em->clear();
-
-        $reloaded = $this->em->find(AiProviderSettings::class, $id);
-        self::assertInstanceOf(AiProviderSettings::class, $reloaded);
-
-        return $reloaded;
     }
 }

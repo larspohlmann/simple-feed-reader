@@ -11,9 +11,12 @@ use App\Entity\User;
 use App\Repository\OrphanedFeedRepository;
 use App\Service\OrphanedFeedReclaimer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 
 final class OrphanedFeedReclaimerTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private const string NOW = '2026-07-01 10:00:00';
 
     private OrphanedFeedReclaimer $reclaimer;
@@ -96,15 +99,6 @@ final class OrphanedFeedReclaimerTest extends DbTestCase
         $this->em->flush();
 
         return $feed;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable(self::NOW));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     private function subscribe(User $user, Feed $feed): void

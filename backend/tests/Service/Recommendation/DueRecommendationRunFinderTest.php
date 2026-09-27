@@ -18,12 +18,13 @@ use App\Service\Recommendation\RecommendationSettingsValues;
 use App\Service\Recommendation\RecommendationSettingsWriter;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
-use App\Tests\Support\UserFactory;
+use App\Tests\Support\SeedsUsers;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class DueRecommendationRunFinderTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private RecommendationRunFixtures $fixtures;
 
     protected function setUp(): void
@@ -32,14 +33,6 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
         $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function setCadence(User $user, int $hours): void

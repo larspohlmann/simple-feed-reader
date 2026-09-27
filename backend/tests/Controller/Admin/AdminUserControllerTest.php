@@ -14,6 +14,7 @@ use App\Repository\UserRepository;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\EnablesMailInTests;
 use App\Tests\Support\QueryRecorder;
+use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -30,6 +31,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class AdminUserControllerTest extends WebTestCase
 {
     use EnablesMailInTests;
+    use ReloadsEntities;
 
     private const LIST = '/api/admin/users';
 
@@ -155,18 +157,6 @@ final class AdminUserControllerTest extends WebTestCase
         $em->flush();
     }
 
-    /** Re-reads through the CURRENT kernel: the seeding EM belongs to a rebooted one. */
-    private function reload(int $id): User
-    {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->clear();
-        $user = $em->getRepository(User::class)->find($id);
-        self::assertInstanceOf(User::class, $user);
-
-        return $user;
-    }
-
     public function testAnonymousIsRejectedWithProblemJson(): void
     {
         $this->call('GET', self::LIST);
@@ -283,7 +273,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('active', $this->payload()['status']);
         self::assertEmailCount(1);
 
-        $reloaded = $this->reload($id);
+        $reloaded = $this->reload($target);
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
         self::assertNotNull($reloaded->getApprovedAt());
     }
@@ -306,7 +296,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('active', $this->payload()['status']);
         self::assertEmailCount(1, message: 'a first-time grant is announced whichever queue it came from');
 
-        self::assertSame(UserStatus::Active, $this->reload($id)->getStatus());
+        self::assertSame(UserStatus::Active, $this->reload($target)->getStatus());
     }
 
     /**
@@ -354,7 +344,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('active', $this->payload()['status']);
         self::assertEmailCount(1, message: 'a reversed rejection grants access for the first time');
 
-        $reloaded = $this->reload($id);
+        $reloaded = $this->reload($target);
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
         self::assertNotNull($reloaded->getApprovedAt());
     }
@@ -376,7 +366,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertSame('active', $this->payload()['status']);
         self::assertEmailCount(0, message: 'restoring access the user already had is not an announcement');
 
-        $reloaded = $this->reload($id);
+        $reloaded = $this->reload($target);
         self::assertSame(UserStatus::Active, $reloaded->getStatus());
         self::assertNotNull(
             $reloaded->getApprovedAt(),
@@ -404,7 +394,7 @@ final class AdminUserControllerTest extends WebTestCase
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
 
         self::assertResponseIsSuccessful();
-        $approvedAt = $this->reload($id)->getApprovedAt();
+        $approvedAt = $this->reload($target)->getApprovedAt();
         self::assertNotNull($approvedAt);
         self::assertGreaterThan($original, $approvedAt);
     }
@@ -420,7 +410,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('rejected', $this->payload()['status']);
         self::assertEmailCount(0);
-        self::assertSame(UserStatus::Rejected, $this->reload($id)->getStatus());
+        self::assertSame(UserStatus::Rejected, $this->reload($target)->getStatus());
     }
 
     public function testSuspendSetsTheStatusAndSendsNoMail(): void
@@ -434,7 +424,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('suspended', $this->payload()['status']);
         self::assertEmailCount(0);
-        self::assertSame(UserStatus::Suspended, $this->reload($id)->getStatus());
+        self::assertSame(UserStatus::Suspended, $this->reload($target)->getStatus());
     }
 
     /**
@@ -475,7 +465,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertIsString($payload['password']);
         self::assertNotSame('', $payload['password']);
 
-        $reloaded = $this->reload($id);
+        $reloaded = $this->reload($target);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertTrue($hasher->isPasswordValid($reloaded, $payload['password']));

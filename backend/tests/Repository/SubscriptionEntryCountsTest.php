@@ -8,12 +8,14 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionEntryCountsTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testCountsEveryEntryPerSubscriptionReadOrNot(): void
     {
         $user = $this->user('reader@example.com');
@@ -77,14 +79,6 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         self::assertInstanceOf(SubscriptionRepository::class, $repo);
 
         return $repo;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-
-        return $user;
     }
 
     private function feed(string $url): Feed

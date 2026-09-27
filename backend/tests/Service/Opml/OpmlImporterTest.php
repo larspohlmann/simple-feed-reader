@@ -12,24 +12,18 @@ use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlImporter;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 
 final class OpmlImporterTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private function importer(): OpmlImporter
     {
         $svc = self::getContainer()->get(OpmlImporter::class);
         self::assertInstanceOf(OpmlImporter::class, $svc);
 
         return $svc;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     private function fixture(): string

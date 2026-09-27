@@ -10,25 +10,18 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\SubscriptionTagPositions;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionTagPositionsTest extends DbTestCase
 {
+    use SeedsUsers;
+
     private function positions(): SubscriptionTagPositions
     {
         $positions = self::getContainer()->get(SubscriptionTagPositions::class);
         self::assertInstanceOf(SubscriptionTagPositions::class, $positions);
 
         return $positions;
-    }
-
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function feed(string $url): Feed

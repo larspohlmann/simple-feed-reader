@@ -13,11 +13,14 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Subscription\SubscriptionEditor;
 use App\Tests\DbTestCase;
-use App\Tests\Support\UserFactory;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
+use App\Tests\Support\ReloadsEntities;
+use App\Tests\Support\SeedsUsers;
 
 final class SubscriptionEditorTest extends DbTestCase
 {
+    use ReloadsEntities;
+    use SeedsUsers;
+
     public function testUpdateStoresAnEmptyCustomTitleAsNone(): void
     {
         $user = $this->user('title-clear@example.com');
@@ -118,14 +121,6 @@ final class SubscriptionEditorTest extends DbTestCase
         return $editor;
     }
 
-    private function user(string $email): User
-    {
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
-    }
-
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
@@ -144,16 +139,6 @@ final class SubscriptionEditorTest extends DbTestCase
         $this->em->flush();
 
         return $subscription;
-    }
-
-    private function reload(Subscription $subscription): Subscription
-    {
-        $id = $subscription->requireId();
-        $this->em->clear();
-        $reloaded = $this->em->find(Subscription::class, $id);
-        self::assertInstanceOf(Subscription::class, $reloaded);
-
-        return $reloaded;
     }
 
     /** @return list<string> */

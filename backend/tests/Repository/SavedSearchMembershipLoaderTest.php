@@ -15,9 +15,12 @@ use App\Repository\EntryListRowViewState;
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchMembershipLoader;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 
 final class SavedSearchMembershipLoaderTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testLoaderAttachesSavedSearchesToRows(): void
     {
         $user = $this->user('loader-member@example.com');
@@ -97,15 +100,6 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
         self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
         return $repository;
-    }
-
-    private function user(string $email): User
-    {
-        $user = new User($email, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
-        $this->em->flush();
-
-        return $user;
     }
 
     private function feed(): Feed

@@ -6,18 +6,16 @@ namespace App\Tests\Service\Worker;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Refresh\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Tests\DbTestCase;
+use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubFeedFetcher;
-use App\Tests\Support\UserFactory;
 use Monolog\Handler\TestHandler;
 use Monolog\Logger;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
  * Drives the handler through the container's real RefreshRunner, the same
@@ -30,6 +28,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 final class RefreshDueFeedsHandlerTest extends DbTestCase
 {
+    use SeedsUsers;
+
     public function testFiringWithNoDueFeedsCompletesWithoutThrowing(): void
     {
         $this->handler()->__invoke(new RefreshDueFeeds());
@@ -115,14 +115,6 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
             <item><title>Post</title><link>https://example.com/p</link><guid>due-1</guid></item>
             </channel></rss>
             XML;
-    }
-
-    private function user(string $email): User
-    {
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-
-        return (new UserFactory($this->em, $hasher))->create($email);
     }
 
     private function handler(): RefreshDueFeedsHandler
