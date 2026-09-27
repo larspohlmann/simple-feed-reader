@@ -7,7 +7,6 @@ namespace App\Tests\Service\Reader\Media;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\ArticleMedia;
@@ -19,12 +18,15 @@ use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\StreamLocationResolver;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class StreamLocationResolverTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const string DECLARED = 'https://www.zdfheute.de/api/video/istaf-100.m3u8';
     private const string LANDING = 'https://zdfvod.akamaized.net/i/mp4/none/zdf/26/09/'
         . 'istaf,_508k,_808k,v17.mp4.csmil/master.m3u8';
@@ -53,13 +55,14 @@ final class StreamLocationResolverTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
         $providers = new EmbedProviders([new YouTubeEmbedProvider()]);
 
         return new StreamLocationResolver(
             new MediaLanding(
-                new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+                new RedirectFollower(
+                    new FailoverRequestSender($client, $this->noEgressProxy()),
+                    new UrlGuard($dns, new IpValidator()),
+                ),
                 'TestAgent/1.0',
             ),
             new MediaUrlKind(new DurableMediaUrl(), $providers),

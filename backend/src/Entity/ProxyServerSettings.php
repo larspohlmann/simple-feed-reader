@@ -11,8 +11,7 @@ use App\Service\Proxy\ProxyConnection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * The instance-wide egress proxy, held in a single row (see InstanceSetting for
- * the singleton rationale). Absence of the row means "no proxy configured".
+ * The instance-wide egress proxy, held in a single row (see InstanceSetting).
  * The password is never readable here; only whether one is stored crosses to
  * the admin page.
  */
@@ -95,6 +94,19 @@ class ProxyServerSettings
     public function isRemoteDns(): bool
     {
         return $this->remoteDns;
+    }
+
+    public function connection(): ProxyConnection
+    {
+        return new ProxyConnection(
+            $this->enabled,
+            $this->directFallback,
+            $this->type,
+            $this->host,
+            $this->port,
+            $this->username,
+            $this->remoteDns,
+        );
     }
 
     public function hasPassword(): bool

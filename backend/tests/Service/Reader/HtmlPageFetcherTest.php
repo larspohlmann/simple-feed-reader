@@ -8,19 +8,21 @@ use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class HtmlPageFetcherTest extends TestCase
 {
+    use NoEgressProxy;
+
     /**
      * @param callable|iterable<MockResponse> $responses
      * @param array<string, list<string>>     $dnsMap
@@ -43,7 +45,7 @@ final class HtmlPageFetcherTest extends TestCase
 
         return new HtmlPageFetcher(
             new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+                new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
                 new UrlGuard($resolver, new IpValidator()),
             ),
             new MetaRefreshTarget(),
@@ -51,14 +53,6 @@ final class HtmlPageFetcherTest extends TestCase
             'TestAgent/1.0',
             new SymfonyStatusReasonPhrases(),
         );
-    }
-
-    private function noProxyResolver(): ProxyEgressResolver
-    {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
-
-        return $resolver;
     }
 
     private static function metaRefresh(string $target): string

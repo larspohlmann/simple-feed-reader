@@ -14,11 +14,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Fetches many feeds at once over Symfony's multiplexing HTTP client.
- *
- * The refresh sweep is network-wait-bound — measured at 5.37 s of waiting across
- * 24 feeds against 0.4 s of parsing — so the requests overlap while the caller
- * still processes results one at a time.
+ * Fetches many feeds at once over Symfony's multiplexing HTTP client; the refresh
+ * sweep is network-wait-bound, so requests overlap while the caller still
+ * processes results one at a time.
  */
 final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
@@ -31,7 +29,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private readonly int $concurrency,
         private readonly int $hostConcurrency,
         private readonly string $userAgent,
-        private readonly ProxyEgressResolver $proxyEgressResolver,
+        private readonly EgressProxySource $egressProxySource,
         private readonly FetchRetryPolicy $retryPolicy,
     ) {
         // A cap below one opens no requests at all, and the engine would report
@@ -58,7 +56,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     public function fetchAll(iterable $tickets): \Generator
     {
         try {
-            $batchProxy = $this->proxyEgressResolver->resolve();
+            $batchProxy = $this->egressProxySource->egressProxy();
         } catch (SecretUnreadableException $e) {
             // The proxy is enabled but its stored password cannot be opened, so
             // no feed in this batch can be reached. Report that per feed instead

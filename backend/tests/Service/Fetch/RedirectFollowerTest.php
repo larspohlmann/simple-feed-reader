@@ -8,15 +8,17 @@ use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class RedirectFollowerTest extends TestCase
 {
+    use NoEgressProxy;
+
     /** @param callable|iterable<MockResponse> $responses */
     private function follower(callable|iterable $responses): RedirectFollower
     {
@@ -26,11 +28,9 @@ final class RedirectFollowerTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
 
         return new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $proxy),
+            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
             new UrlGuard($dns, new IpValidator()),
         );
     }

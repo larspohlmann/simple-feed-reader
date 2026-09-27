@@ -7,16 +7,18 @@ namespace App\Tests\Service\Reader\Media;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Media\MediaLanding;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class MediaLandingTest extends TestCase
 {
+    use NoEgressProxy;
+
     /** @var array<array-key, mixed> */
     private array $seenOptions = [];
 
@@ -37,11 +39,11 @@ final class MediaLandingTest extends TestCase
                 return ['93.184.216.34'];
             }
         };
-        $proxy = $this->createStub(ProxyEgressResolver::class);
-        $proxy->method('resolve')->willReturn(null);
-
         return new MediaLanding(
-            new RedirectFollower(new FailoverRequestSender($client, $proxy), new UrlGuard($dns, new IpValidator())),
+            new RedirectFollower(
+                new FailoverRequestSender($client, $this->noEgressProxy()),
+                new UrlGuard($dns, new IpValidator()),
+            ),
             'TestAgent/1.0',
         );
     }

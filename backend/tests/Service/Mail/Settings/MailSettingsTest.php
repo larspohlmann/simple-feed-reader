@@ -41,7 +41,7 @@ final class MailSettingsTest extends KernelTestCase
             type: 'SOCKS5',
             host: 'proxy.example',
             port: 1080,
-        ));
+        )->toUpdate());
     }
 
     public function testNoRowReportsDerivedEnabledFromTheFallback(): void

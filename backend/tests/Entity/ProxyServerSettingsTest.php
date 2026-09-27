@@ -63,4 +63,20 @@ final class ProxyServerSettingsTest extends TestCase
         self::assertSame('user', $settings->getUsername());
         self::assertEquals(new SealedSecret('', '', '', 1), $settings->getSealedPassword());
     }
+
+    public function testConnectionReadsBackEveryAppliedField(): void
+    {
+        $settings = new ProxyServerSettings();
+        $connections = [
+            new ProxyConnection(true, false, ProxyType::Http, 'proxy.example', 3128, 'user', false),
+            new ProxyConnection(false, true, ProxyType::Socks5, 'other.example', 1081, null, false),
+            new ProxyConnection(false, false, ProxyType::Socks5, 'third.example', 1082, 'u3', true),
+        ];
+
+        foreach ($connections as $connection) {
+            $settings->applyWithoutPassword($connection);
+
+            self::assertEquals($connection, $settings->connection());
+        }
+    }
 }

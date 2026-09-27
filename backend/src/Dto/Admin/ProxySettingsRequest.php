@@ -6,6 +6,9 @@ namespace App\Dto\Admin;
 
 use App\Enum\ProxyType;
 use App\Http\FullReplacePayload;
+use App\Service\Crypto\SecretChange;
+use App\Service\Proxy\ProxyConnection;
+use App\Service\Proxy\ProxySettingsUpdate;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -36,5 +39,30 @@ final readonly class ProxySettingsRequest
         #[Assert\Type('bool')]
         public bool $removePassword = false,
     ) {
+    }
+
+    public function toUpdate(): ProxySettingsUpdate
+    {
+        return new ProxySettingsUpdate(
+            new ProxyConnection(
+                $this->enabled,
+                $this->directFallback,
+                ProxyType::from($this->type),
+                $this->host,
+                $this->port,
+                '' === $this->username ? null : $this->username,
+                $this->remoteDns,
+            ),
+            $this->passwordChange(),
+        );
+    }
+
+    private function passwordChange(): SecretChange
+    {
+        if ($this->removePassword) {
+            return SecretChange::remove();
+        }
+
+        return null === $this->password ? SecretChange::keep() : SecretChange::replaceWith($this->password);
     }
 }

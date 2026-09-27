@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Controller\Admin;
 
+use App\Entity\ProxyServerSettings;
 use App\Entity\User;
+use App\Enum\ProxyType;
+use App\Service\Crypto\SealedSecret;
+use App\Service\Proxy\ProxyConnection;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -117,6 +121,8 @@ final class AdminMailControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         $body = $this->payload($this->client);
         self::assertFalse($body['hasPassword']);
+        self::assertFalse($body['proxyConfigured']);
+        self::assertSame('', $body['proxyLabel']);
     }
 
     public function testAdminCanRoundTripMailSettingsWithoutLeakingTheSecret(): void
@@ -293,6 +299,38 @@ final class AdminMailControllerTest extends ApiTestCase
         $problem = $this->payload($this->client);
         self::assertIsArray($problem['errors']);
         self::assertSame([$key], array_keys($problem['errors']));
+    }
+
+    public function testAnUnreadableProxyPasswordDoesNotBreakTheMailPage(): void
+    {
+        $proxy = new ProxyServerSettings();
+        $proxy->apply(
+            new ProxyConnection(true, true, ProxyType::Socks5, 'proxy.example', 1080, 'user'),
+            new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
+        );
+        $this->em()->persist($proxy);
+        $this->em()->flush();
+        $admin = $this->admin();
+
+        $this->requestAs($admin, 'GET');
+
+        self::assertResponseIsSuccessful();
+        $body = $this->payload($this->client);
+        self::assertTrue($body['proxyConfigured']);
+        self::assertSame('SOCKS5 · proxy.example:1080', $body['proxyLabel']);
+
+        $this->requestWithJsonBody(
+            'PUT',
+            $admin,
+            $this->mailBody(['host' => 'smtp.example', 'useProxy' => true, 'password' => 'sw0rdfish']),
+        );
+
+        self::assertResponseIsSuccessful();
+        self::assertTrue($this->payload($this->client)['useProxy']);
+
+        $this->requestAs($admin, 'POST', self::MAIL . '/reset');
+
+        self::assertResponseIsSuccessful();
     }
 
     public function testResetAsNonAdminIsForbidden(): void

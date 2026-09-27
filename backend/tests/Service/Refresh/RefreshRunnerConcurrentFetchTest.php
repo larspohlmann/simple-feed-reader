@@ -25,7 +25,6 @@ use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Ingest\EntryCategoryWriter;
@@ -50,6 +49,7 @@ use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\StubFeedFetcher;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -61,15 +61,14 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 /**
- * Every other budget test drives RefreshRunner against StubFeedFetcher's wave
- * simulation, and ConcurrentFeedFetcher's own tests never exercise a budget —
- * so nothing proves BudgetedFeedQueue's lazy ticket generator and the real
- * concurrent engine cooperate correctly once a budget forces a mid-batch stop.
- * This test wires the REAL ConcurrentFeedFetcher onto a MockHttpClient and
- * drives it through RefreshRunner, exactly as production does.
+ * Drives the REAL ConcurrentFeedFetcher through RefreshRunner: no other budget
+ * test exercises BudgetedFeedQueue's lazy ticket generator against the real
+ * concurrent engine once a budget forces a mid-batch stop.
  */
 final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 {
+    use NoEgressProxy;
+
     private MockClock $clock;
     private StubFeedFetcher $faviconFetcher;
     private LockFactory $lockFactory;
@@ -180,9 +179,6 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             }
         };
 
-        $proxyEgressResolver = $this->createStub(ProxyEgressResolver::class);
-        $proxyEgressResolver->method('resolve')->willReturn(null);
-
         $urlGuard = new UrlGuard($resolver, new IpValidator());
 
         return new ConcurrentFeedFetcher(
@@ -192,7 +188,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $concurrency,
             $hostConcurrency,
             'TestAgent/1.0',
-            $proxyEgressResolver,
+            $this->noEgressProxy(),
             new FetchRetryPolicy($urlGuard),
         );
     }

@@ -5,19 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
-use App\Enum\ProxyType;
 use App\Http\Admin\ProxySettingsJson;
 use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxySettings;
+use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
 final class ProxySettingsTest extends TestCase
 {
-    private const SECRET = 'test-master-secret-at-least-32-chars-long!!';
+    private ?ProxyServerSettings $stored = null;
 
     /**
      * @return array{
@@ -27,12 +25,26 @@ final class ProxySettingsTest extends TestCase
      */
     private function viewOf(ProxySettings $settings): array
     {
-        return ProxySettingsJson::from($settings->stored());
+        return ProxySettingsJson::from($settings->current());
     }
 
-    public function testUpdateThenViewHidesSecretButFlagsThatOneIsStored(): void
+    public function testWithNoRowTheViewDescribesAnUnconfiguredProxy(): void
     {
-        $settings = $this->service($stored);
+        self::assertSame([
+            'enabled' => false,
+            'directFallback' => true,
+            'type' => 'SOCKS5',
+            'host' => '',
+            'port' => 1080,
+            'username' => null,
+            'remoteDns' => false,
+            'hasPassword' => false,
+        ], $this->viewOf($this->settings()));
+    }
+
+    public function testUpdateThenViewHidesTheSecretButFlagsThatOneIsStored(): void
+    {
+        $settings = $this->settings();
 
         $settings->update(SettingsRequests::proxy(
             enabled: true,
@@ -42,7 +54,7 @@ final class ProxySettingsTest extends TestCase
             port: 1080,
             username: 'user',
             password: 'sw0rdfish',
-        ));
+        )->toUpdate());
 
         $view = $this->viewOf($settings);
         self::assertTrue($view['enabled']);
@@ -56,129 +68,64 @@ final class ProxySettingsTest extends TestCase
         self::assertArrayNotHasKey('password', $view);
     }
 
-    public function testRemovePasswordClearsTheStoredSecret(): void
+    public function testThePasswordIsStoredSealed(): void
     {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::proxy(
-            enabled: false,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: 'user',
-            password: 'sw0rdfish',
-        ));
+        $settings = $this->settings();
+
+        $settings->update(SettingsRequests::proxy(host: 'proxy.example', password: 'sw0rdfish')->toUpdate());
+
+        $stored = $this->stored;
+        self::assertNotNull($stored);
+        self::assertNotSame('sw0rdfish', $stored->getSealedPassword()->ciphertext);
+        self::assertSame('sw0rdfish', ProxyPasswordCiphers::withTestSecret()->open($stored->getSealedPassword()));
+    }
+
+    public function testANullPasswordKeepsTheStoredSecretWhileTheConnectionChanges(): void
+    {
+        $settings = $this->settings();
+        $settings->update(
+            SettingsRequests::proxy(enabled: true, host: 'a', port: 1, password: 'sw0rdfish')->toUpdate(),
+        );
+
+        $settings->update(
+            SettingsRequests::proxy(directFallback: false, type: 'HTTP', host: 'b', port: 2)->toUpdate(),
+        );
+
+        $stored = $this->stored;
+        self::assertNotNull($stored);
+        self::assertSame('sw0rdfish', ProxyPasswordCiphers::withTestSecret()->open($stored->getSealedPassword()));
+        $view = $this->viewOf($settings);
+        self::assertFalse($view['enabled']);
+        self::assertFalse($view['directFallback']);
+        self::assertSame('HTTP', $view['type']);
+        self::assertSame('b', $view['host']);
+        self::assertSame(2, $view['port']);
+    }
+
+    public function testRemovePasswordClearsTheStoredSecretAndStillAppliesTheConnection(): void
+    {
+        $settings = $this->settings();
+        $settings->update(
+            SettingsRequests::proxy(host: 'proxy.example', username: 'user', password: 'sw0rdfish')->toUpdate(),
+        );
         self::assertTrue($this->viewOf($settings)['hasPassword']);
 
-        $settings->update(SettingsRequests::proxy(
-            enabled: false,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'other.example',
-            port: 1080,
-            username: 'user',
-            removePassword: true,
-        ));
+        $settings->update(
+            SettingsRequests::proxy(host: 'other.example', username: 'user', removePassword: true)->toUpdate(),
+        );
 
         $view = $this->viewOf($settings);
         self::assertFalse($view['hasPassword']);
-        // The connection is applied alongside the clear: removing the password
-        // is still a full-replace of the rest of the row.
         self::assertSame('other.example', $view['host']);
     }
 
-    /**
-     * The DNS switch decides which SOCKS scheme the fetchers use, so it has to
-     * survive the round trip through the row and reach ProxyConfig (#490).
-     */
-    public function testRemoteDnsRoundTripsThroughTheRowIntoTheProxyConfig(): void
+    public function testRemoteDnsIsStoredAndShown(): void
     {
-        $settings = $this->service($stored);
+        $settings = $this->settings();
 
-        $settings->update(SettingsRequests::proxy(
-            enabled: true,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: null,
-            remoteDns: true,
-            password: 'pw',
-        ));
+        $settings->update(SettingsRequests::proxy(host: 'proxy.example', remoteDns: true)->toUpdate());
 
         self::assertTrue($this->viewOf($settings)['remoteDns']);
-        self::assertSame('socks5h://proxy.example:1080', $settings->configuredProxy()?->dsn());
-    }
-
-    public function testLocalDnsIsTheDefaultForAFreshInstance(): void
-    {
-        $settings = $this->service($stored);
-
-        self::assertFalse($this->viewOf($settings)['remoteDns']);
-
-        $settings->update(SettingsRequests::proxy(
-            enabled: true,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: null,
-            password: 'pw',
-        ));
-
-        self::assertSame('socks5://proxy.example:1080', $settings->configuredProxy()?->dsn());
-    }
-
-    public function testBlankPasswordKeepsTheStoredSecret(): void
-    {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::proxy(
-            enabled: true,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'a',
-            port: 1,
-            username: null,
-            password: 'sw0rdfish',
-        ));
-
-        $settings->update(SettingsRequests::proxy(
-            enabled: false,
-            directFallback: false,
-            type: 'HTTP',
-            host: 'b',
-            port: 2,
-            username: null,
-            password: null,
-        ));
-
-        $egress = $settings->configuredProxy();
-        self::assertNotNull($egress);
-        self::assertSame(ProxyType::Http, $egress->type);
-        self::assertSame('sw0rdfish', $egress->password);
-        self::assertFalse($egress->directFallback);
-    }
-
-    public function testEgressProxyIsNullWhenDisabled(): void
-    {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::proxy(
-            enabled: false,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'a',
-            port: 1,
-            username: null,
-            password: 'pw123456',
-        ));
-
-        self::assertNull($settings->egressProxy());
-        self::assertNotNull($settings->configuredProxy());
-    }
-
-    public function testConfiguredProxyIsNullWhenNeverConfigured(): void
-    {
-        self::assertNull($this->service($stored)->configuredProxy());
     }
 
     public function testUpdateFlushesTheEntityManager(): void
@@ -189,54 +136,22 @@ final class ProxySettingsTest extends TestCase
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
 
-        $cipher = new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET));
-        $settings = new ProxySettings($repository, $em, $cipher);
-
-        $settings->update(SettingsRequests::proxy(
-            enabled: true,
-            directFallback: true,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: null,
-            password: 'pw123456',
-        ));
+        (new ProxySettings($repository, $em, ProxyPasswordCiphers::withTestSecret()))
+            ->update(SettingsRequests::proxy(host: 'proxy.example', password: 'pw123456')->toUpdate());
     }
 
-    public function testDirectFallbackSurvivesTheRoundTrip(): void
+    private function settings(): ProxySettings
     {
-        $settings = $this->service($stored);
-        $settings->update(SettingsRequests::proxy(
-            enabled: true,
-            directFallback: false,
-            type: 'SOCKS5',
-            host: 'proxy.example',
-            port: 1080,
-            username: null,
-            password: 'pw123456',
-        ));
-
-        $egress = $settings->configuredProxy();
-        self::assertNotNull($egress);
-        self::assertFalse($egress->directFallback);
-    }
-
-    /** @param ProxyServerSettings|null $stored captured by reference for the fake repo. */
-    private function service(?ProxyServerSettings &$stored): ProxySettings
-    {
-        $stored = null;
         $repository = $this->createStub(ProxyServerSettingsRepository::class);
-        $repository->method('findSingleton')->willReturnCallback(static function () use (&$stored) {
-            return $stored;
-        });
+        $repository->method('findSingleton')->willReturnCallback(fn (): ?ProxyServerSettings => $this->stored);
 
         $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(static function (object $entity) use (&$stored): void {
+        $em->method('persist')->willReturnCallback(function (object $entity): void {
             if ($entity instanceof ProxyServerSettings) {
-                $stored = $entity;
+                $this->stored = $entity;
             }
         });
 
-        return new ProxySettings($repository, $em, new ProxyPasswordCipher(new InstanceSecretCipher(self::SECRET)));
+        return new ProxySettings($repository, $em, ProxyPasswordCiphers::withTestSecret());
     }
 }

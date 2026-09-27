@@ -11,7 +11,6 @@ use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyEgressResolver;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
@@ -70,12 +69,15 @@ use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class ArticleExtractorTest extends TestCase
 {
+    use NoEgressProxy;
+
     private const string WINDOWS_1252_SENTENCE = 'Café crème für señor Müller — “quoted” ½ ©.';
 
     /**
@@ -100,7 +102,7 @@ final class ArticleExtractorTest extends TestCase
         };
 
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noProxyResolver()),
+            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
@@ -125,14 +127,6 @@ final class ArticleExtractorTest extends TestCase
             new TeaserPlayerScanner($this->urlKind()),
             $this->articleReadability(),
         );
-    }
-
-    private function noProxyResolver(): ProxyEgressResolver
-    {
-        $resolver = $this->createStub(ProxyEgressResolver::class);
-        $resolver->method('resolve')->willReturn(null);
-
-        return $resolver;
     }
 
     private function bodyCleaner(): ReaderBodyCleaner
@@ -492,7 +486,7 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient(), $this->noProxyResolver()),
+            new FailoverRequestSender(new MockHttpClient(), $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
