@@ -20,19 +20,6 @@ final class TickContextTest extends TestCase
 {
     private const string AT = '2026-08-07 09:00:00';
 
-    public function testTheModelIsTheConnectionsChosenModel(): void
-    {
-        $connection = $this->connection();
-        $connection->chooseModel('m', new \DateTimeImmutable(self::AT), 32768);
-
-        self::assertSame('m', $this->tick($connection, TickDriver::Poll)->model());
-    }
-
-    public function testAConnectionWithoutAModelNamesNone(): void
-    {
-        self::assertSame('', $this->tick($this->connection(), TickDriver::Poll)->model());
-    }
-
     public function testTheDriverDecidesTheRetryPlan(): void
     {
         self::assertTrue($this->tick($this->connection(), TickDriver::Worker)->retryPlan()->blocks());

@@ -26,11 +26,6 @@ final readonly class TickContext
         return $this->run->getUser()->requireId();
     }
 
-    public function model(): string
-    {
-        return $this->connection->getModel() ?? '';
-    }
-
     public function retryPlan(): RetryPlan
     {
         return $this->driver->retryPlan();

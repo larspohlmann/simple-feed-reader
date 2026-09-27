@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationRunLog;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Completion\RateLimitedResult;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationPick;
 use App\Service\Recommendation\Prompt\RecommendationPickParser;
@@ -126,22 +126,12 @@ final readonly class RecommendationBatchWave
         foreach ($pending as $position) {
             $waveBatch = $wave->batches[$position];
             $messages = $this->batchMessages($wave, $waveBatch, $correctiveReply[$position] ?? null);
-            $recordedCall = $this->callRecorder->begin(
-                $tick->run,
-                RecommendationRunLog::PHASE_BATCH,
-                $waveBatch->index + 1,
-                $messages,
-                $tick->model(),
+            $request = $this->requestFactory->create(
+                $tick->connection,
+                new CallPrompt($messages, \count($waveBatch->validIds()), RecommendationResponseSchema::BatchScore),
             );
-            $calls[] = new ConcurrentCompletion(
-                $this->requestFactory->create(
-                    $tick->connection,
-                    $messages,
-                    \count($waveBatch->validIds()),
-                    RecommendationResponseSchema::BatchScore,
-                ),
-                $recordedCall,
-            );
+            $recordedCall = $this->callRecorder->begin($tick->run, CallSlot::batch($waveBatch->index + 1), $request);
+            $calls[] = new ConcurrentCompletion($request, $recordedCall);
             $recordedCalls[] = $recordedCall;
         }
 

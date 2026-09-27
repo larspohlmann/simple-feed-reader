@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\ConsolidationParseResult;
 use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;
@@ -59,24 +59,12 @@ final readonly class RecommendationConsolidationResolver
             RecommendationPromptText::CONSOLIDATION_CORRECTIVE,
         );
 
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_CONSOLIDATE,
-            null,
-            $messages,
-            $tick->model(),
+        $request = $this->requestFactory->create(
+            $tick->connection,
+            new CallPrompt($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
-
-        $content = $this->providerCall->complete(
-            $tick,
-            $this->requestFactory->create(
-                $tick->connection,
-                $messages,
-                \count($pool),
-                RecommendationResponseSchema::Consolidation,
-            ),
-            $recordedCall,
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlot::consolidation(), $request);
+        $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
         if (!$result->usable) {

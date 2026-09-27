@@ -11,20 +11,15 @@ use App\Service\Ai\Completion\Reasoning;
 /** Builds every phase's request, so a prompt and its output bound are always derived together. */
 final readonly class RecommendationCompletionRequestFactory
 {
-    /** @param list<array{role: string, content: string}> $messages */
-    public function create(
-        AiProviderSettings $settings,
-        array $messages,
-        int $replyItemCount,
-        RecommendationResponseSchema $responseSchema,
-    ): CompletionRequest {
-        $reasoning = Reasoning::preferredBy($settings);
+    public function create(AiProviderSettings $connection, CallPrompt $prompt): CompletionRequest
+    {
+        $reasoning = Reasoning::preferredBy($connection);
 
         return new CompletionRequest(
-            $settings->getModel() ?? '',
-            $messages,
-            RecommendationAnswerBudget::outputBoundTokens($replyItemCount, $responseSchema, $reasoning),
-            $responseSchema->toJsonSchema(),
+            $connection->getModel() ?? '',
+            $prompt->messages,
+            RecommendationAnswerBudget::outputBoundTokens($prompt->replyItemCount, $prompt->schema, $reasoning),
+            $prompt->schema->toJsonSchema(),
             $reasoning,
         );
     }

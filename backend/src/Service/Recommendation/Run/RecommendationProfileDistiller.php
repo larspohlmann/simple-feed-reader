@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Entity\RecommendationRunLog;
+use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationProfileParser;
@@ -41,24 +41,12 @@ final readonly class RecommendationProfileDistiller
             RecommendationPromptText::DISTILL_CORRECTIVE,
         );
 
-        $recordedCall = $this->callRecorder->begin(
-            $run,
-            RecommendationRunLog::PHASE_DISTILL,
-            null,
-            $messages,
-            $tick->model(),
+        $request = $this->requestFactory->create(
+            $tick->connection,
+            new CallPrompt($messages, 1, RecommendationResponseSchema::Distillation),
         );
-
-        $content = $this->providerCall->complete(
-            $tick,
-            $this->requestFactory->create(
-                $tick->connection,
-                $messages,
-                1,
-                RecommendationResponseSchema::Distillation,
-            ),
-            $recordedCall,
-        );
+        $recordedCall = $this->callRecorder->begin($run, CallSlot::distillation(), $request);
+        $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->profileParser->parse($content);
         if (!$result->usable) {
