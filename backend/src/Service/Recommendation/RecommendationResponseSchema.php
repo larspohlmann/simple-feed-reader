@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Service\Ai\Completion\JsonSchema;
+
 /**
  * The structured-output schema each provider phase asks for, the machine form
  * of the prose in RecommendationPromptText. OpenAiCompatibleChatClient records

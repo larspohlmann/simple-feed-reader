@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 /**
  * The observer for callers with nothing to observe — an explicit argument

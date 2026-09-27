@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 /**
  * Reads one /chat/completions response as it arrives and keeps only the

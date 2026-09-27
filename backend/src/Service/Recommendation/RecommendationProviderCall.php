@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
+use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\RateLimitedCompletion;
+use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\ProviderConnectionFactory;
 
 /**

@@ -8,6 +8,9 @@ use App\Entity\CallOutcome;
 use App\Entity\RecommendationRunLog;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
+use App\Service\Ai\Completion\CompletionStreamObserver;
+use App\Service\Ai\Completion\CompletionStreamProgress;
+use App\Service\Ai\Completion\CompletionUsage;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

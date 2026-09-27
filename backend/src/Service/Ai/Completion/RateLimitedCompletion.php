@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\Exception\ProviderRateLimitedException;

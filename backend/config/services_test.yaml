@@ -362,7 +362,7 @@ services:
 
     # Test environment only: the whole container speaks to the stub instead of
     # OpenAiCompatibleChatClient, same swap pattern as ModelCatalog above.
-    App\Service\Recommendation\ChatCompletionClient:
+    App\Service\Ai\Completion\ChatCompletionClient:
         alias: App\Tests\Support\StubChatClient
         public: true
 
@@ -487,8 +487,8 @@ services:
         autowire: true
         public: true
 
-    App\Service\Recommendation\CompletionStreamHeartbeat:
-        alias: App\Service\Recommendation\CompositeCompletionStreamHeartbeat
+    App\Service\Ai\Completion\CompletionStreamHeartbeat:
+        alias: App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat
         public: true
 
     # EntryListTest, EntryRowsByIdsTest, EntrySearchTest and IndexedEntrySearch

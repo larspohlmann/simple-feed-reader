@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 /**
  * How a caller handles a provider rate limit (#947): a blocking plan waits and retries within a budget,

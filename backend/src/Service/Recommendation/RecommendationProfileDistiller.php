@@ -7,6 +7,7 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Service\Ai\Completion\RetryPlan;
 
 /**
  * The distillation phase's single provider call (#493). Once a run starts, before any

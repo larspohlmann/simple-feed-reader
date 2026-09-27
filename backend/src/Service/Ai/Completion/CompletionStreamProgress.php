@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 /**
  * One report of a streamed provider call's progress.

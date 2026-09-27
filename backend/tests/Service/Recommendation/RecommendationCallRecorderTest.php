@@ -9,7 +9,7 @@ use App\Entity\RecommendationRunLog;
 use App\Entity\User;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\CompletionStreamProgress;
+use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Recommendation\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;

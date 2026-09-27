@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation;
 
 use App\Entity\AiProviderSettings;
+use App\Service\Ai\Completion\CompletionRequest;
 
 /**
  * Builds the CompletionRequest both provider phases send. Both ask the same

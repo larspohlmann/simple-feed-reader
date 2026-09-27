@@ -7,6 +7,11 @@ namespace App\Service\Recommendation;
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
+use App\Service\Ai\Completion\CompletionOutcome;
+use App\Service\Ai\Completion\ConcurrentCompletion;
+use App\Service\Ai\Completion\RateLimitedCompletion;
+use App\Service\Ai\Completion\RateLimitedResult;
+use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 

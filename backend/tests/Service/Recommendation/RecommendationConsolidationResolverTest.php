@@ -15,7 +15,7 @@ use App\Service\Recommendation\ConsolidationOutcome;
 use App\Service\Recommendation\EffectiveRecommendationSettings;
 use App\Service\Recommendation\RecommendationConsolidationResolver;
 use App\Service\Recommendation\RecommendationSettingsResolver;
-use App\Service\Recommendation\RetryPlan;
+use App\Service\Ai\Completion\RetryPlan;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\StubChatClient;

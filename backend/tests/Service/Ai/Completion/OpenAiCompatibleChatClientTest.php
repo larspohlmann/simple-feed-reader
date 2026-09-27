@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation;
+namespace App\Tests\Service\Ai\Completion;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
@@ -11,16 +11,16 @@ use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderConnection;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Ai\ProviderTimeouts;
-use App\Service\Recommendation\CompletionBodyDecoder;
-use App\Service\Recommendation\CompletionOutcome;
-use App\Service\Recommendation\CompletionRequest;
-use App\Service\Recommendation\CompletionStreamHeartbeat;
-use App\Service\Recommendation\CompletionStreamObserver;
-use App\Service\Recommendation\CompletionStreamProgress;
-use App\Service\Recommendation\ConcurrentCompletion;
-use App\Service\Recommendation\JsonSchema;
-use App\Service\Recommendation\NullCompletionStreamObserver;
-use App\Service\Recommendation\OpenAiCompatibleChatClient;
+use App\Service\Ai\Completion\CompletionBodyDecoder;
+use App\Service\Ai\Completion\CompletionOutcome;
+use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamObserver;
+use App\Service\Ai\Completion\CompletionStreamProgress;
+use App\Service\Ai\Completion\ConcurrentCompletion;
+use App\Service\Ai\Completion\JsonSchema;
+use App\Service\Ai\Completion\NullCompletionStreamObserver;
+use App\Service\Ai\Completion\OpenAiCompatibleChatClient;
 use App\Tests\Support\CountingCompletionStreamHeartbeat;
 use App\Tests\Support\NullCompletionStreamHeartbeat;
 use App\Tests\Support\ResponseCapturingHttpClient;

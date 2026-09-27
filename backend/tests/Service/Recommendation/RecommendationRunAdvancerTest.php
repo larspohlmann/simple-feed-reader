@@ -26,7 +26,7 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\ProviderTimeouts;
-use App\Service\Recommendation\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 use App\Service\Recommendation\RecommendationAnswerBudget;
 use App\Service\Recommendation\RecommendationPromptText;
 use App\Service\Recommendation\RecommendationResponseSchema;

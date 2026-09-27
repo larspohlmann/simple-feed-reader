@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation;
 
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;

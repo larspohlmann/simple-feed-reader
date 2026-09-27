@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation;
+namespace App\Service\Ai\Completion;
 
 use App\Service\Ai\Exception\ProviderReplyFailure;
 use App\Service\Ai\Exception\RetryableProviderException;

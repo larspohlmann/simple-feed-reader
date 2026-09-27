@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation;
+namespace App\Tests\Service\Ai\Completion;
 
-use App\Service\Recommendation\RetryPlan;
+use App\Service\Ai\Completion\RetryPlan;
 use PHPUnit\Framework\TestCase;
 
 final class RetryPlanTest extends TestCase

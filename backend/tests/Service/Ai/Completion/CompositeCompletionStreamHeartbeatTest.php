@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Recommendation;
+namespace App\Tests\Service\Ai\Completion;
 
-use App\Service\Recommendation\CompletionStreamHeartbeat;
-use App\Service\Recommendation\CompositeCompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
