@@ -41,13 +41,8 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
     }
 
     #[WithSpan]
-    public function extract(
-        string $url,
-        ?string $entryTitle = null,
-        ?string $entryAuthor = null,
-        ?FeedMedia $feedMedia = null,
-    ): ExtractionResult {
-        $hints = new EntryHints($entryTitle, $entryAuthor, $feedMedia);
+    public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+    {
         try {
             return $this->extractPage($this->fetcher->fetch($url), $hints);
         } catch (PageFetchException $failure) {

@@ -198,7 +198,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('Jana Steger', $fake->requests[0]['author']);
+        self::assertSame('Jana Steger', $fake->hints[0]->author);
     }
 
     public function testCarriesTheFeedPosterFallbackIntoTheReaderExtraction(): void
@@ -224,7 +224,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('https://example.com/poster.jpg', $fake->requests[0]['feedMedia']?->posterFallback());
+        self::assertSame('https://example.com/poster.jpg', $fake->hints[0]->feedMedia->posterFallback());
     }
 
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void

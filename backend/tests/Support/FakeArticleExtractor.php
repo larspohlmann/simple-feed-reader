@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\FeedMedia;
 
 /**
  * Test double for the reader endpoint: returns a preconfigured outcome and
@@ -18,8 +18,8 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
     /** @var list<string> */
     public array $calls = [];
 
-    /** @var list<array{url: string, title: string|null, author: string|null, feedMedia: FeedMedia|null}> */
-    public array $requests = [];
+    /** @var list<EntryHints> */
+    public array $hints = [];
 
     private ?ExtractionResult $result = null;
 
@@ -28,19 +28,10 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
         $this->result = $result;
     }
 
-    public function extract(
-        string $url,
-        ?string $entryTitle = null,
-        ?string $entryAuthor = null,
-        ?FeedMedia $feedMedia = null,
-    ): ExtractionResult {
+    public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+    {
         $this->calls[] = $url;
-        $this->requests[] = [
-            'url' => $url,
-            'title' => $entryTitle,
-            'author' => $entryAuthor,
-            'feedMedia' => $feedMedia,
-        ];
+        $this->hints[] = $hints;
 
         return $this->result
             ?? throw new \LogicException('FakeArticleExtractor::extract called without a configured result.');

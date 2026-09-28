@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\FeedMedia;
 use App\Service\ReaderAudit\AuditFinding;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
@@ -46,12 +46,8 @@ final class ReaderAuditRunnerTest extends TestCase
         // A thousand publishers produce markup no fixture holds; the sweep has to
         // survive the one page that throws.
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(
-                string $url,
-                ?string $entryTitle = null,
-                ?string $entryAuthor = null,
-                ?FeedMedia $feedMedia = null,
-            ): ExtractionResult {
+            public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+            {
                 throw new \RuntimeException('lexbor gave up');
             }
         };
@@ -96,7 +92,7 @@ final class ReaderAuditRunnerTest extends TestCase
 
         iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
 
-        self::assertSame('Jana Steger', $extractor->requests[0]['author']);
+        self::assertSame('Jana Steger', $extractor->hints[0]->author);
     }
 
     public function testMeasuresTheCleanedBodyForTheReport(): void
@@ -210,12 +206,8 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testACrashedPageStillCarriesItsLinkSoItCanBeOpened(): void
     {
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(
-                string $url,
-                ?string $entryTitle = null,
-                ?string $entryAuthor = null,
-                ?FeedMedia $feedMedia = null,
-            ): ExtractionResult {
+            public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+            {
                 throw new \RuntimeException('lexbor gave up');
             }
         };
