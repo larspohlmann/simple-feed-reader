@@ -214,3 +214,43 @@ Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `b
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
 strings, not comments), and the cycle rule fails while any cycle is left, naming the path of each one it reports.
 A class loose in the `Service` root counts as a module of its own.
+
+## 10. Class roles
+
+Every class in `backend/src/Service` and `backend/src/Http` has one role, and its folder and its name say which.
+Decided in #1202.
+
+| Folder, inside a module or area | Holds | Contract |
+|---|---|---|
+| the area root (`Service/Refresh/`) | services | `final readonly`; the constructor takes only collaborators (services, interfaces, `#[Autowire]` configuration); no mutable property |
+| `Model/` | domain data (class names end in `Model`) and the module's enums (plain names) | `final readonly` or an enum; takes no service; imports no `Dto/`; never injected |
+| `Dto/` | transfer shapes whose form something outside the module dictates (the backup file's lines) | `final readonly`, data only, no domain rule, never named `…Model`; mapped to and from models at the boundary |
+| `Factory/` | factories (class names end in `Factory`) | stateless services that build and return an object and never persist it |
+| `Pass/` | per-call objects: one run, one import, one page, one tick | built with `new` by a service or a factory, never by the container; may hold collaborators its creator passes in; may be mutable |
+| `Support/` | static-only helpers | `final`, a private constructor, static methods only, no state |
+| `Exception/` | typed exceptions and their marker interfaces (`…ExceptionInterface`) | as before; a marker interface stays flat |
+| a folder named after an interface | the `…Interface` and its implementations in the same module | an implementation in another module stays in its own module (§9 relies on that inversion) |
+
+- **Model is not DTO.** A model holds invariants and behaviour; a DTO carries a shape something else dictates and is
+  mapped to or from a model at the boundary. A model never names a DTO; a DTO names a model only in a mapping
+  method.
+- **Interfaces in a role folder** carry the role before `Interface`: `…FactoryInterface`, `…ModelInterface`,
+  `…ExceptionInterface`. In `Factory/` and `Model/` they sit flat when every class in the folder implements that one
+  interface; otherwise each gets a subfolder named without that suffix (`Factory/EntryBuilder/` for
+  `EntryBuilderFactoryInterface`), and the classes that implement none sit flat.
+- **Build and save.** A service that builds an entity with real construction logic — it derives or normalises a
+  value, calls three or more setters, or builds related entities together — hands the construction to a `…Factory`
+  and keeps the unit of work. A `new` from ready values plus at most two setters stays in the service, and so does an
+  upsert.
+- **Per call or process lifetime.** A class production code builds with `new` outside a constructor is a model or a
+  per-call object, never a service. A service that keeps state implements `ResetInterface`, so the Messenger worker
+  drops it between messages, or carries `#[ProcessLifetimeState('why')]` when the state must outlive messages.
+- **Messaging.** Event listeners end in `Listener`; a message handler is its message's name plus `Handler`;
+  `Worker/Message/` holds imperative names with no suffix; `src/Event/` holds past-tense facts.
+- **The container** registers `src/` except `Service/**/{Model,Dto,Pass,Support,Exception}/`, so a service that
+  type-hints a model or a per-call object fails at container build.
+- **`src/Http`** follows the interface and `Factory` rules; its static `…Json` mappers are that layer's own role and
+  stay in its area roots.
+
+Enforced by `ServiceRoleRule` (`backend/tests/PhpStan/`, with `ServiceRoleClassCollector` and
+`ServiceRoleInstantiationCollector`, run by `composer stan`), which names each misplaced class's home.
