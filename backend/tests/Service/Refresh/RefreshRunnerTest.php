@@ -19,12 +19,13 @@ use App\Service\Refresh\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\DuplicateKeyViolation;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -596,12 +597,7 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException(new UniqueConstraintViolationException(
-            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-            },
-            null,
-        ));
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
 
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 
@@ -1080,19 +1076,11 @@ final class RefreshRunnerTest extends DbTestCase
             );
         }
 
-        $flushes = 0;
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes): void {
-            $flushes++;
-            if ($flushes === 2) {
-                throw new UniqueConstraintViolationException(
-                    new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-                    },
-                    null,
-                );
-            }
-            $this->em->flush();
-        });
+        $failingEm = new FlushFailingEntityManager(
+            $this->em,
+            failingFlush: 2,
+            thrown: DuplicateKeyViolation::exception(),
+        );
 
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 
@@ -1109,11 +1097,7 @@ final class RefreshRunnerTest extends DbTestCase
      */
     public static function exceptionsTheFaviconFlushDegradesToAborted(): iterable
     {
-        yield 'unique constraint violation' => [new UniqueConstraintViolationException(
-            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-            },
-            null,
-        )];
+        yield 'unique constraint violation' => [DuplicateKeyViolation::exception()];
         yield 'optimistic lock exception' => [OptimisticLockException::lockFailed(Feed::class)];
     }
 
@@ -1131,17 +1115,9 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $flushes = 0;
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes, $thrown): void {
-            $flushes++;
-            // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
-            // phase's — the one this test targets.
-            if ($flushes === 2) {
-                throw $thrown;
-            }
-            $this->em->flush();
-        });
+        // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
+        // phase's — the one this test targets.
+        $failingEm = new FlushFailingEntityManager($this->em, failingFlush: 2, thrown: $thrown);
 
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 
@@ -1173,8 +1149,7 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException(new ForeignKeyConstraintViolationException(
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: new ForeignKeyConstraintViolationException(
             new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
             },
             null,
@@ -1210,19 +1185,11 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::notModified($untouched->getUrl(), false, null, null),
         );
 
-        $flushes = 0;
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes): void {
-            $flushes++;
-            if ($flushes === 3) {
-                throw new UniqueConstraintViolationException(
-                    new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-                    },
-                    null,
-                );
-            }
-            $this->em->flush();
-        });
+        $failingEm = new FlushFailingEntityManager(
+            $this->em,
+            failingFlush: 3,
+            thrown: DuplicateKeyViolation::exception(),
+        );
 
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 
@@ -1263,12 +1230,7 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException(new UniqueConstraintViolationException(
-            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-            },
-            null,
-        ));
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
 
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 

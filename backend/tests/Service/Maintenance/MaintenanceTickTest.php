@@ -25,6 +25,8 @@ use App\Service\Maintenance\MaintenanceSweeps;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Tests\DbTestCase;
+use App\Tests\Support\DuplicateKeyViolation;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\InMemoryMailFailureRecorder;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingSavedSearchMatcher;
@@ -32,9 +34,6 @@ use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFaviconFetcher;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\StubLokiEndpoint;
-use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -83,12 +82,7 @@ final class MaintenanceTickTest extends DbTestCase
             ),
         );
 
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException(new UniqueConstraintViolationException(
-            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-            },
-            null,
-        ));
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
 
         $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->em, $clock)
             ->flushingThrough($failingEm)

@@ -20,11 +20,11 @@ use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
-use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Psr\Log\NullLogger;
@@ -123,13 +123,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
     public function testAFailedFlushAbortsAndIsLoggedAsAnError(): void
     {
         $feed = $this->feed('https://one.example.com/feed');
-        $duplicate = new UniqueConstraintViolationException(
-            new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-            },
-            null,
-        );
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException($duplicate);
+        $duplicate = DuplicateKeyViolation::exception();
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: $duplicate);
 
         $result = $this->persister($failingEm)->persist(
             $feed,
@@ -149,8 +144,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
     {
         $feed = $this->feed('https://one.example.com/feed');
         $staleLock = OptimisticLockException::lockFailed(Feed::class);
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willThrowException($staleLock);
+        $failingEm = new FlushFailingEntityManager($this->em, thrown: $staleLock);
 
         $result = $this->persister($failingEm)->persist(
             $feed,

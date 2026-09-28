@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Makes the next flush() throw instead of reaching the wrapped, real
@@ -19,14 +20,21 @@ use Doctrine\ORM\Decorator\EntityManagerDecorator;
  */
 final class FlushFailingEntityManager extends EntityManagerDecorator
 {
-    private bool $shouldThrowOnNextFlush = true;
+    private int $flushes = 0;
+
+    public function __construct(
+        EntityManagerInterface $wrapped,
+        private readonly int $failingFlush = 1,
+        private readonly \Throwable $thrown = new \RuntimeException('Simulated flush failure.'),
+    ) {
+        parent::__construct($wrapped);
+    }
 
     public function flush(): void
     {
-        if ($this->shouldThrowOnNextFlush) {
-            $this->shouldThrowOnNextFlush = false;
-
-            throw new \RuntimeException('Simulated flush failure.');
+        $this->flushes++;
+        if ($this->flushes === $this->failingFlush) {
+            throw $this->thrown;
         }
 
         parent::flush();
