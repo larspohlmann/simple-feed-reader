@@ -9,9 +9,9 @@ use Psr\Cache\InvalidArgumentException;
 /**
  * Runs one slice and folds it into the run it belongs to.
  *
- * The ONLY place run-wide accounting happens. RefreshRunner is left alone: it already
- * carries thirteen collaborators, and the CLI and maintenance sweeps — which nothing
- * polls — must not pay for a feature that exists for the polling client.
+ * The ONLY place run-wide accounting happens. RefreshRunner is left alone: the CLI and
+ * maintenance sweeps — which nothing polls — must not pay for a feature that exists for
+ * the polling client.
  *
  * Two quirks on the abort path, neither reachable by anything a user sees:
  *
