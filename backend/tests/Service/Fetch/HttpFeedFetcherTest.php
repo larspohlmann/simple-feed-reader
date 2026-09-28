@@ -75,29 +75,6 @@ final class HttpFeedFetcherTest extends TestCase
         self::assertSame('https://example.com/feed', $response->finalUrl);
     }
 
-    public function testSendsConditionalGetHeaders(): void
-    {
-        $seenOptions = [];
-        $factory = static function (string $method, string $url, array $options) use (&$seenOptions): MockResponse {
-            $seenOptions = $options;
-
-            return new MockResponse('', ['http_code' => 304]);
-        };
-
-        $response = $this->fetcher($factory)
-            ->fetch('https://example.com/feed', '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT');
-
-        self::assertTrue($response->notModified);
-        $headers = [];
-        foreach ((array) ($seenOptions['headers'] ?? []) as $header) {
-            if (\is_string($header)) {
-                $headers[] = strtolower($header);
-            }
-        }
-        self::assertContains('if-none-match: "v1"', $headers);
-        self::assertContains('if-modified-since: mon, 20 jul 2026 08:30:00 gmt', $headers);
-    }
-
     public function testPinsConnectionToGuardValidatedIp(): void
     {
         $seenOptions = [];

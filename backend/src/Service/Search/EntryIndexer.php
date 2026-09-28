@@ -26,7 +26,7 @@ use Psr\Log\LoggerInterface;
  *
  * NOT `final readonly class`: $configured is a memoised flag mutated after
  * construction (see index()). This service is a process-lifetime singleton and
- * RefreshRunner calls index() once per feed (up to 50 per sweep), so without
+ * FeedOutcomePersister calls index() once per feed (up to 50 per sweep), so without
  * memoising it would PATCH identical, idempotent settings up to 50 times per
  * sweep for no gain. Every other collaborator stays constructor-promoted
  * `readonly`; only $configured needs to change after construction.

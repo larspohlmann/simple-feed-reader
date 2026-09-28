@@ -75,7 +75,7 @@ final readonly class FirstFetchRecorder
         $feed->recordCacheValidators($discovered->etag, $discovered->lastModified);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->em->flush();
-        // See RefreshRunner's identical ordering: an id only exists after this
+        // See FeedOutcomePersister's identical ordering: an id only exists after this
         // flush, so indexing has to happen after it, not before.
         $this->indexer->index($createdEntries);
 

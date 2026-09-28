@@ -9,9 +9,9 @@ use App\Service\Fetch\Exception\FetchException;
 interface FeedFetcherInterface
 {
     /**
-     * Fetch a feed URL with SSRF protection and conditional-GET support.
+     * Fetch a URL with SSRF protection, unconditionally.
      *
      * @throws FetchException
      */
-    public function fetch(string $url, ?string $etag = null, ?string $lastModified = null): FetchResponse;
+    public function fetch(string $url): FetchResponse;
 }
