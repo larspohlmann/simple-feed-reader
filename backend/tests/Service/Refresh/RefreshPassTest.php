@@ -47,21 +47,28 @@ final class RefreshPassTest extends DbTestCase
 
     public function testAnAbortDuringOutcomesLeavesEveryUnprocessedFeedRemaining(): void
     {
-        [$one, $two, $three, $four] = $this->feeds(4);
-        $pass = $this->pass([$one, $two, $three, $four], self::WHOLE_BATCH_BUDGET);
+        $feeds = $this->feeds(10);
+        $pass = $this->pass($feeds, self::WHOLE_BATCH_BUDGET);
         iterator_to_array($pass->tickets());
-        $pass->tally->record(FeedRefreshResult::fetched(2), $one);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $two);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $three);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Aborted), $four);
+        // Every count gets a distinct value, so a swapped argument in RefreshPass::aborted() fails this test.
+        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[0]);
+        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[1]);
+        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[2]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[3]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[4]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[5]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[6]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[7]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[8]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Aborted), $feeds[9]);
 
         $report = $pass->abortedDuringOutcomes();
 
         self::assertSame('aborted', $report->status);
-        self::assertSame(4, $report->total);
-        self::assertSame(1, $report->fetched);
-        self::assertSame(1, $report->notModified);
-        self::assertSame(1, $report->failed);
+        self::assertSame(10, $report->total);
+        self::assertSame(3, $report->fetched);
+        self::assertSame(2, $report->notModified);
+        self::assertSame(4, $report->failed);
         self::assertSame(1, $report->throttled);
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
@@ -100,22 +107,32 @@ final class RefreshPassTest extends DbTestCase
 
     public function testAFinishedPassCarriesTheTallyTheBudgetSkipsAndTheCallersCounts(): void
     {
-        [$one, $two, $three] = $this->feeds(3);
-        $pass = $this->pass([$one, $two, $three], self::ONE_FEED_BUDGET);
+        $feeds = $this->feeds(6);
+        $pass = $this->pass($feeds, self::ONE_FEED_BUDGET);
         iterator_to_array($pass->tickets());
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $one);
+        // Every count gets a distinct value, so a swapped argument in RefreshPass::finished() fails this test.
+        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[0]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[1]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[2]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[5]);
 
-        $report = $pass->finished(4, 7);
+        $report = $pass->finished(7, 8);
 
         self::assertSame('partial', $report->status);
-        self::assertSame(3, $report->total);
-        self::assertSame(0, $report->fetched);
-        self::assertSame(0, $report->notModified);
-        self::assertSame(1, $report->failed);
-        self::assertSame(0, $report->throttled);
-        self::assertSame(2, $report->skippedForBudget);
-        self::assertSame(4, $report->remaining);
-        self::assertSame(7, $report->pruned);
+        self::assertSame(6, $report->total);
+        self::assertSame(1, $report->fetched);
+        self::assertSame(2, $report->notModified);
+        self::assertSame(3, $report->failed);
+        self::assertSame(4, $report->throttled);
+        self::assertSame(5, $report->skippedForBudget);
+        self::assertSame(7, $report->remaining);
+        self::assertSame(8, $report->pruned);
     }
 
     /**
