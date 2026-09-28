@@ -362,23 +362,27 @@ function rewriteQualifiedNamesOutsideNamespaceLines(string $text, array $moves):
     return implode('', $parts);
 }
 
-/** @param array<string, string> $moves */
-function rewriteDocumentPaths(string $text, array $moves): string
+/** A source file's path as config and prose name it: from below src/ (`Service/…/X.php`), a test's from tests/. */
+function pathReferenceOf(string $class): string
 {
-    foreach ($moves as $old => $new) {
-        if (str_starts_with($old, 'App\\Tests\\')) {
-            continue;
-        }
-        $oldPath = substr(pathOf($old), strlen('src/'));
-        $newPath = substr(pathOf($new), strlen('src/'));
-        $text = (string) preg_replace_callback(
-            '/(?<!\w)' . preg_quote($oldPath, '/') . '/',
-            static fn (): string => $newPath,
-            $text,
-        );
-    }
+    return str_starts_with($class, 'App\\Tests\\') ? pathOf($class) : substr(pathOf($class), strlen('src/'));
+}
 
-    return $text;
+/** @param array<string, string> $moves */
+function rewritePaths(string $text, array $moves): string
+{
+    $paths = [];
+    foreach ($moves as $old => $new) {
+        $paths[pathReferenceOf($old)] = pathReferenceOf($new);
+    }
+    uksort($paths, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+    $alternation = implode('|', array_map(static fn (string $path): string => preg_quote($path, '/'), array_keys($paths)));
+
+    return (string) preg_replace_callback(
+        '/(?<!\w)(' . $alternation . ')/',
+        static fn (array $match): string => $paths[$match[1]],
+        $text,
+    );
 }
 
 /** @param list<mixed> $tokens */
@@ -543,19 +547,15 @@ foreach ($moves as $old => $new) {
     file_put_contents($to, $code);
 }
 
-// 3. Both spellings of every old name, in every tracked file outside docs/ (code, strings, docblocks, config, JSON5,
-// Docker, CI, migrations, Markdown) and in docs/architecture.md, become the new one.
+// 3. Both spellings of every old name and every old path, in every tracked file outside docs/ (code, strings,
+// docblocks, config, JSON5, Docker, CI, migrations, Markdown) and in docs/architecture.md, become the new one.
 $rewrittenFiles = 0;
 foreach ([...repositoryFiles(), '../docs/architecture.md'] as $file) {
     $code = (string) file_get_contents($file);
-    $isDocument = str_ends_with($file, '.md');
-    if (!$isDocument && !str_contains($code, 'App\\')) {
+    if (!str_contains($code, 'App\\') && !str_contains($code, '.php')) {
         continue;
     }
-    $rewritten = rewriteQualifiedNamesOutsideNamespaceLines($code, $moves);
-    if ($isDocument) {
-        $rewritten = rewriteDocumentPaths($rewritten, $moves);
-    }
+    $rewritten = rewritePaths(rewriteQualifiedNamesOutsideNamespaceLines($code, $moves), $moves);
     if ($rewritten !== $code) {
         file_put_contents($file, $rewritten);
         ++$rewrittenFiles;
