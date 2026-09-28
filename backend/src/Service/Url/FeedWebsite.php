@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Url;
 
-use App\Service\Fetch\UrlResolver;
-
 /**
  * Where to send a reader who asks to visit a feed's website.
  *
@@ -75,7 +73,7 @@ final class FeedWebsite
      */
     private static function siteOrigin(string $feedUrl): ?string
     {
-        $origin = UrlResolver::origin($feedUrl);
+        $origin = UrlOrigin::of($feedUrl);
         if ($origin === null) {
             return null;
         }

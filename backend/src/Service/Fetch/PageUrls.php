@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\UrlOrigin;
 
 /**
  * The URL context of one page, bound once and asked many times.
@@ -27,7 +28,7 @@ final readonly class PageUrls
     /** Scheme, host and port of the page, or null when it names no host. */
     public function origin(): ?string
     {
-        return UrlResolver::origin($this->pageUrl);
+        return UrlOrigin::of($this->pageUrl);
     }
 
     /** The page's own path, always leading-slashed: "/" when it carries none. */
