@@ -18,7 +18,7 @@ final readonly class DigestMailer implements DigestMailerInterface
 {
     public function __construct(
         private MailerInterface $mailer,
-        private DigestMailFactory $builder,
+        private DigestMailFactory $mailFactory,
     ) {
     }
 
@@ -27,6 +27,6 @@ final readonly class DigestMailer implements DigestMailerInterface
      */
     public function send(User $user, DigestModel $model): void
     {
-        $this->mailer->send($this->builder->build($user, $model));
+        $this->mailer->send($this->mailFactory->build($user, $model));
     }
 }

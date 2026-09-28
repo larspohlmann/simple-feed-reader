@@ -29,7 +29,7 @@ use Symfony\Component\Translation\Translator;
 
 final class DigestMailFactoryTest extends TestCase
 {
-    private function builder(DigestImageSet $set): DigestMailFactory
+    private function factory(DigestImageSet $set): DigestMailFactory
     {
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
@@ -83,7 +83,7 @@ final class DigestMailFactoryTest extends TestCase
     {
         $set = new DigestImageSet([new EmbeddedImage('imgFAV', 'PNGBYTES', 'image/png')], []);
 
-        $email = $this->builder($set)->build($this->user(DigestFormat::Html), $this->model());
+        $email = $this->factory($set)->build($this->user(DigestFormat::Html), $this->model());
 
         self::assertNotNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
@@ -98,7 +98,7 @@ final class DigestMailFactoryTest extends TestCase
 
     public function testTextFormatBuildsPlainTextOnly(): void
     {
-        $email = $this->builder(new DigestImageSet([], []))->build($this->user(DigestFormat::Text), $this->model());
+        $email = $this->factory(new DigestImageSet([], []))->build($this->user(DigestFormat::Text), $this->model());
 
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());

@@ -24,7 +24,7 @@ use Symfony\Component\Mime\Email;
 final readonly class DigestMailFactory
 {
     public function __construct(
-        private DigestPageFactory $pageBuilder,
+        private DigestPageFactory $pageFactory,
         private DigestImageEmbedderInterface $embedder,
         private DigestTextRenderer $textRenderer,
         private DigestHtmlRenderer $htmlRenderer,
@@ -57,7 +57,7 @@ final readonly class DigestMailFactory
 
     private function addHtml(Email $email, DigestModel $model, string $locale): Email
     {
-        $page = $this->pageBuilder->build($model, DigestPageFactory::DEFAULT_MAX_CARDS);
+        $page = $this->pageFactory->build($model, DigestPageFactory::DEFAULT_MAX_CARDS);
         $images = $this->embedder->embed($page);
 
         $email->html($this->htmlRenderer->render($page, $images, $locale));
