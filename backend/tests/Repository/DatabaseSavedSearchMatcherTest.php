@@ -80,7 +80,7 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
     public function testNoCandidatesRunsNoStatement(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
-        $entityManager->expects(self::never())->method('createQueryBuilder');
+        $entityManager->expects($this->never())->method('createQueryBuilder');
         $matcher = new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder());
 
         self::assertSame([1 => []], $matcher->matchingIds([$this->search(1, 'climate')], []));
