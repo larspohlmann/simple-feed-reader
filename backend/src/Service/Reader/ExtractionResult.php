@@ -5,25 +5,17 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 /**
- * Discriminated outcome of an extraction. `ok` carries the cleaned article;
- * `failed` carries a machine reason the client switches on:
- *   no_url        — the entry has no source URL to fetch
- *   fetch         — the page could not be retrieved (network / SSRF-blocked / oversized)
- *   unextractable — readability could not find an article
- *   empty         — extraction produced nothing after sanitization
- *   mismatch      — the extraction did not reflect the article the feed carries (#654)
- *
+ * An extraction's outcome: the cleaned article, or why it failed, so the client falls back to the feed body.
  * `paywalled` marks an ok body that is the free preview of a paywalled article (#785).
  */
 final readonly class ExtractionResult
 {
-    /** True for a successful extraction. Derived, not stored: a failure always
-     *  carries a reason and a success never does, so the two cannot disagree. */
+    /** Derived, not stored: a failure always carries a reason and a success never does. */
     public bool $ok;
 
     private function __construct(
         public ?string $url,
-        public ?string $reason,
+        public ?ExtractionFailure $reason,
         public ?string $detail,
         public ?string $title,
         public ?string $byline,
@@ -47,9 +39,8 @@ final readonly class ExtractionResult
         return new self($url, null, null, $title, $byline, $siteName, $contentHtml, $excerpt, $paywalled);
     }
 
-    /** `$detail` is the underlying cause in words when one exists — a fetch carries
-     *  the HTTP status or transport message; a reason with no such cause passes null. */
-    public static function failed(?string $url, string $reason, ?string $detail = null): self
+    /** `$detail` is the underlying cause in words when there is one, such as a fetch's HTTP status. */
+    public static function failed(?string $url, ExtractionFailure $reason, ?string $detail = null): self
     {
         return new self($url, $reason, $detail, null, null, null, null, null, false);
     }

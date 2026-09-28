@@ -6,6 +6,7 @@ namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\ReaderAudit\AuditFinding;
@@ -125,7 +126,7 @@ final class ReaderAuditRunnerTest extends TestCase
         // The report prints the metric line for every candidate; a missing key
         // there would be an undefined index in the renderer, not a blank.
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::failed('https://example.test/a', 'mismatch'));
+        $extractor->willReturn(ExtractionResult::failed('https://example.test/a', ExtractionFailure::Mismatch));
 
         $finding = $this->auditOne($extractor);
 

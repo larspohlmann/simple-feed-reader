@@ -10,6 +10,7 @@ use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionCoverageGate;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\OriginalHeroResolver;
@@ -52,7 +53,7 @@ final readonly class EntryReaderController
 
         $url = $entry->getUrl();
         $result = $url === null || $url === ''
-            ? ExtractionResult::failed(null, 'no_url')
+            ? ExtractionResult::failed(null, ExtractionFailure::NoUrl)
             : $this->extractor->extract(
                 $url,
                 $entry->getTitle(),

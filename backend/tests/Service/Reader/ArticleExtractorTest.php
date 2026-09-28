@@ -15,6 +15,7 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\ArticleReadability;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
@@ -476,7 +477,7 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('http://169.254.169.254/');
 
         self::assertFalse($result->ok);
-        self::assertSame('fetch', $result->reason);
+        self::assertSame(ExtractionFailure::Fetch, $result->reason);
     }
 
     public function testFetchFailureCarriesTheRealErrorMessageAsDetail(): void
@@ -487,7 +488,7 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/x');
 
         self::assertFalse($result->ok);
-        self::assertSame('fetch', $result->reason);
+        self::assertSame(ExtractionFailure::Fetch, $result->reason);
         self::assertSame('HTTP 403 Forbidden — Access Denied Your request was blocked.', $result->detail);
     }
 
@@ -498,7 +499,7 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/x');
 
         self::assertFalse($result->ok);
-        self::assertContains($result->reason, ['unextractable', 'empty']);
+        self::assertContains($result->reason, [ExtractionFailure::Unextractable, ExtractionFailure::Empty]);
     }
 
     public function testABlankPageStopsAsUnextractable(): void
@@ -508,8 +509,21 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/post');
 
         self::assertFalse($result->ok);
-        self::assertSame('unextractable', $result->reason);
+        self::assertSame(ExtractionFailure::Unextractable, $result->reason);
         self::assertNull($result->detail);
+    }
+
+    /** Readability found metadata but no article body; a video elsewhere on the page does not rescue that. */
+    public function testAPageWithNoArticleBodyFailsAsEmptyEvenWithMediaElsewhereOnThePage(): void
+    {
+        $html = '<html lang="en"><body><video src="https://example.test/clip.mp4" '
+            . 'poster="https://example.test/poster.jpg" controls></video></body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
     }
 
     public function testStripsASemanticHeaderMasthead(): void

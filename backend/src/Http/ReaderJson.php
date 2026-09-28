@@ -28,7 +28,7 @@ final class ReaderJson
             return [
                 'status' => 'failed',
                 'url' => $r->url,
-                'reason' => (string) $r->reason,
+                'reason' => (string) $r->reason?->value,
                 'detail' => $r->detail,
                 'originalHero' => self::hero($originalHero),
             ];

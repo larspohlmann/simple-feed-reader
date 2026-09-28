@@ -61,7 +61,7 @@ final readonly class ExtractionCoverageGate
             return $result;
         }
 
-        return ExtractionResult::failed($result->url, 'mismatch');
+        return ExtractionResult::failed($result->url, ExtractionFailure::Mismatch);
     }
 
     /**

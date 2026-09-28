@@ -72,13 +72,13 @@ final class ArticleExtractor implements ArticleExtractorInterface
         try {
             $page = $this->fetcher->fetch($url);
         } catch (PageFetchException $failure) {
-            return ExtractionResult::failed($url, 'fetch', $failure->getMessage());
+            return ExtractionResult::failed($url, ExtractionFailure::Fetch, $failure->getMessage());
         }
 
         try {
             $normalized = $this->normalizer->normalize($page->html);
         } catch (UnparseableHtmlException) {
-            return ExtractionResult::failed($url, 'unextractable');
+            return ExtractionResult::failed($url, ExtractionFailure::Unextractable);
         }
         $pageImages = PageImageInventory::fromDocument($normalized);
         $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
@@ -90,16 +90,16 @@ final class ArticleExtractor implements ArticleExtractorInterface
 
         $article = $this->readability->richest($normalized, $page, $this->slideshowContainers($slideshows));
         if ($article === null) {
-            return ExtractionResult::failed($url, 'unextractable');
+            return ExtractionResult::failed($url, ExtractionFailure::Unextractable);
         }
 
         if ($article->content === null || !$article->hasContent()) {
-            return ExtractionResult::failed($url, 'empty');
+            return ExtractionResult::failed($url, ExtractionFailure::Empty);
         }
         // A page whose media IS the article carries little prose. Recovered media
         // is itself evidence that this is an article worth showing.
         if ($media->isEmpty() && mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {
-            return ExtractionResult::failed($url, 'empty');
+            return ExtractionResult::failed($url, ExtractionFailure::Empty);
         }
 
         $body = $this->bodyCleaner->clean($article->content, new BodyCleaningInput(
@@ -114,7 +114,7 @@ final class ArticleExtractor implements ArticleExtractorInterface
         ));
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
-            return ExtractionResult::failed($url, 'empty');
+            return ExtractionResult::failed($url, ExtractionFailure::Empty);
         }
 
         return ExtractionResult::ok(
