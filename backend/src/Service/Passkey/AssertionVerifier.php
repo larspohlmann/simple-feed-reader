@@ -203,7 +203,7 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * Mirrors AttestationVerifier::aaguidOrNull() in reverse: this column is
+     * Mirrors UserPasskeyFactory::aaguidOrNull() in reverse: this column is
      * nullable for the same "no AAGUID assigned" reason, so a null stored
      * value rehydrates to the spec's all-zero sentinel the library's own
      * Uuid type expects.
