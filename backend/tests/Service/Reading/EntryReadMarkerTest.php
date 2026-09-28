@@ -94,6 +94,20 @@ final class EntryReadMarkerTest extends DbTestCase
         self::assertFalse($this->stateOf($newer)?->isHidden());
     }
 
+    public function testMarkingSubscriptionsMovesAnEarlierWatermarkForward(): void
+    {
+        $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-05T00:00:00Z'));
+        $this->em->flush();
+
+        $this->marker()->markSubscriptionsReadUntil(
+            $this->reader->requireId(),
+            [$this->subscription],
+            new \DateTimeImmutable('2026-07-10T00:00:00Z'),
+        );
+
+        self::assertSame('2026-07-10T00:00:00+00:00', $this->watermark());
+    }
+
     public function testMarkingSubscriptionsNeverMovesAWatermarkBack(): void
     {
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T00:00:00Z'));

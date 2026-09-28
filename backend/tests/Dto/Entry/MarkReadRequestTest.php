@@ -17,7 +17,8 @@ final class MarkReadRequestTest extends TestCase
         $scope = $this->request('all', 5)->toScope();
 
         self::assertSame(ReadScopeKind::All, $scope->kind);
-        self::assertNull($scope->id);
+        $this->expectException(\LogicException::class);
+        $scope->targetId();
     }
 
     public function testFeedCarriesItsId(): void
@@ -25,7 +26,7 @@ final class MarkReadRequestTest extends TestCase
         $scope = $this->request('feed', 5)->toScope();
 
         self::assertSame(ReadScopeKind::Feed, $scope->kind);
-        self::assertSame(5, $scope->id);
+        self::assertSame(5, $scope->targetId());
     }
 
     public function testTagCarriesItsId(): void
@@ -33,7 +34,7 @@ final class MarkReadRequestTest extends TestCase
         $scope = $this->request('tag', 6)->toScope();
 
         self::assertSame(ReadScopeKind::Tag, $scope->kind);
-        self::assertSame(6, $scope->id);
+        self::assertSame(6, $scope->targetId());
     }
 
     #[DataProvider('scopesThatNeedAnId')]

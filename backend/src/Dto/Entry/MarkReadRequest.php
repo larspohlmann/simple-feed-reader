@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final readonly class MarkReadRequest
 {
     public function __construct(
-        #[Assert\Choice(choices: ['all', 'feed', 'tag'])]
+        #[Assert\Choice(choices: [ReadScopeKind::All->value, ReadScopeKind::Feed->value, ReadScopeKind::Tag->value])]
         public string $scope,
         public \DateTimeImmutable $until,
         #[Assert\Positive]

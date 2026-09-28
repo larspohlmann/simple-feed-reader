@@ -8,7 +8,7 @@ final readonly class ReadScope
 {
     private function __construct(
         public ReadScopeKind $kind,
-        public ?int $id,
+        private ?int $id,
     ) {
     }
 

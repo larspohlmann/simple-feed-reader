@@ -15,8 +15,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The one way entries are marked read: by subscription watermark for a feed or tag scope, or by entry state for
- * the lists no watermark can scope (search, saved searches, For You, a batch of ids).
+ * The mark-read services' one marker: by subscription watermark for a scope of subscriptions (all, feed, tag),
+ * or by entry state for the lists no watermark can scope (search, saved searches, For You, a batch of ids).
  */
 final readonly class EntryReadMarker
 {
