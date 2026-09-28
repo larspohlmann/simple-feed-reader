@@ -427,7 +427,6 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertSame(1, substr_count($out, '<img'), 'the poster is the only picture, no restored hero');
     }
 
-    /** #627: a bare Substack poster (no wrapping link yet) becomes a working YouTube link. */
     public function testLinksABareSubstackPoster(): void
     {
         $content = '<p><img src="https://substackcdn.com/image/youtube/w_728/aaaaaaaaaaa"></p>'
