@@ -12,7 +12,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
 {
     private const array SERVICE_ROLES = [null, ServiceRoleNames::FACTORY, ServiceRoleNames::HANDLER];
 
-    private const array UNSUPPLIED_ROLES = [ServiceRoleNames::MODEL, ServiceRoleNames::PASS];
+    private const array UNSUPPLIED_ROLES = [ServiceRoleNames::MODEL, ServiceRoleNames::PASS, ServiceRoleNames::DTO];
 
     public function violationsIn(ServiceRoleMap $map): array
     {

@@ -254,6 +254,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 531,
             ],
+            [self::takesADto(), 563],
         ]);
     }
 
@@ -266,12 +267,22 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [self::shop('rootService', 'Porter', self::NOT_FINAL), 170],
             [self::shop('rootService', 'Register', self::TAKES_A_MODEL), 178],
             [self::listenerMessage(), 493],
+            [self::takesADto(), 563],
         ]);
     }
 
     private static function roleSuffix(string $role): string
     {
         return sprintf('is an interface in %s/, so its name ends in %sInterface', $role, $role);
+    }
+
+    private static function takesADto(): string
+    {
+        return self::message(
+            'rootService',
+            'App\Service\Wrap\PaperPicker',
+            'takes App\Service\Wrap\Dto\WrapRequest, which the container cannot supply',
+        );
     }
 
     private static function listenerMessage(): string

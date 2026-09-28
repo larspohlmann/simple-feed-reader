@@ -547,3 +547,28 @@ namespace App\Service\Wrap {
         }
     }
 }
+
+namespace App\Service\Wrap\Dto {
+    final readonly class WrapRequest
+    {
+        public function __construct(public string $paper)
+        {
+        }
+    }
+}
+
+namespace App\Service\Wrap {
+    use App\Service\Wrap\Dto\WrapRequest;
+
+    final readonly class PaperPicker
+    {
+        public function __construct(private WrapRequest $request)
+        {
+        }
+
+        public function paper(): string
+        {
+            return $this->request->paper;
+        }
+    }
+}
