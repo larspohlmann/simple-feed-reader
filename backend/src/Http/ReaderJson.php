@@ -24,11 +24,11 @@ final class ReaderJson
      */
     public static function one(ExtractionResult $r, ?DeclaredImage $originalHero, \DateTimeImmutable $now): array
     {
-        if (!$r->ok) {
+        if ($r->reason !== null) {
             return [
                 'status' => 'failed',
                 'url' => $r->url,
-                'reason' => (string) $r->reason?->value,
+                'reason' => $r->reason->value,
                 'detail' => $r->detail,
                 'originalHero' => self::hero($originalHero),
             ];
