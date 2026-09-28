@@ -617,7 +617,7 @@ final class PasskeyRegistrationTest extends ApiTestCase
 
     /**
      * `response.transports` is client-supplied and the WebAuthn library
-     * never validates it (AttestationVerifier::knownTransports()'s own
+     * never validates it (UserPasskeyFactory::knownTransports()'s own
      * docblock) — an authenticator, or a forged request, can claim any
      * string. Only the spec's own enum should ever reach storage, since
      * PasskeyCredentials::excludeListFor() echoes whatever is stored here

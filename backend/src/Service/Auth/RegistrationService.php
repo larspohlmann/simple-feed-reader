@@ -148,7 +148,6 @@ final readonly class RegistrationService
     {
         $user = $this->tokens->consume($plainToken, TokenPurpose::ResetPassword);
 
-        // The timestamp evicts JWTs minted before the reset (PasswordChangeTokenInvalidator).
         $this->passwords->setPassword($user, $plainPassword);
     }
 }

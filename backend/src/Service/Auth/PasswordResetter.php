@@ -11,9 +11,7 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Operator-driven password reset for a mailless instance (#230), where the
- * self-service email flow cannot run. Shared by the CLI command and the admin
- * endpoint. Stamping passwordChangedAt evicts every JWT issued before the reset
+ * Stamping passwordChangedAt evicts every JWT issued before the reset
  * ({@see PasswordChangeTokenInvalidator}), so a leaked session dies too.
  */
 final readonly class PasswordResetter
