@@ -12,6 +12,9 @@ use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
+use App\Service\Feed\Factory\FeedFactory;
+use App\Service\Tag\Factory\TagFactory;
+use App\Service\Tag\TagDetails;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -34,6 +37,8 @@ final readonly class BulkSubscriber
         private TagRepository $tags,
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
+        private TagFactory $tagFactory,
+        private FeedFactory $feedFactory,
     ) {
     }
 
@@ -104,10 +109,8 @@ final readonly class BulkSubscriber
 
     private function persistNewFeed(BulkSubscribeItem $item): Feed
     {
-        $feed = new Feed($item->feedUrl);
-        $feed->setSourceFormat($item->sourceFormat);
         // Seeded for the sidebar before the first fetch; only on creation, since a shared row is not ours to retitle.
-        $feed->setTitle($item->feedTitle);
+        $feed = $this->feedFactory->create($item->feedUrl, $item->sourceFormat, $item->feedTitle);
         $feed->scheduleNextFetchAt($this->clock->now());
         $this->em->persist($feed);
 
@@ -143,10 +146,11 @@ final readonly class BulkSubscriber
 
     private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyle $style): Tag
     {
-        $tag = new Tag($batch->user, $name);
-        $tag->setColor($style?->color);
-        $tag->setIcon($style?->icon);
-        $tag->setPosition($batch->positions->takeTagPosition());
+        $tag = $this->tagFactory->create(
+            $batch->user,
+            new TagDetails($name, $style?->color, $style?->icon),
+            $batch->positions->takeTagPosition(),
+        );
         $this->em->persist($tag);
 
         return $tag;

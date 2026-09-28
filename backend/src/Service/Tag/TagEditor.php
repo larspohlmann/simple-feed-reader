@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Tag\Exception\TagNameTakenException;
+use App\Service\Tag\Factory\TagFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class TagEditor
@@ -17,6 +18,7 @@ final readonly class TagEditor
         private TagRepository $tags,
         private SubscriptionRepository $subscriptions,
         private EntityManagerInterface $entityManager,
+        private TagFactory $tagFactory,
     ) {
     }
 
@@ -26,10 +28,7 @@ final readonly class TagEditor
             throw new TagNameTakenException();
         }
 
-        $tag = new Tag($user, $details->name);
-        $tag->setColor($details->color);
-        $tag->setIcon($details->icon);
-        $tag->setPosition($this->tags->nextPositionForUser($user->requireId()));
+        $tag = $this->tagFactory->create($user, $details, $this->tags->nextPositionForUser($user->requireId()));
         $this->entityManager->persist($tag);
         $this->entityManager->flush();
 

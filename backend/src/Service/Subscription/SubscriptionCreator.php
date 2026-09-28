@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Subscription;
 
-use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\SourceFormat;
+use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
 use App\Repository\FeedRepository;
@@ -35,6 +35,7 @@ final readonly class SubscriptionCreator
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
+        private FeedFactory $feedFactory,
     ) {
     }
 
@@ -62,9 +63,7 @@ final readonly class SubscriptionCreator
         if (null === $feed) {
             // New shared feed: nextFetchAt null => due immediately. XML and
             // scraped metadata still wait for the refresh pipeline.
-            $feed = new Feed($feedUrl);
-            $feed->setSourceFormat($sourceFormat);
-            $feed->setTitle($initialTitle);
+            $feed = $this->feedFactory->create($feedUrl, $sourceFormat, $initialTitle);
             $this->em->persist($feed);
             $this->em->flush(); // assign an id so the duplicate check is meaningful
         } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {
