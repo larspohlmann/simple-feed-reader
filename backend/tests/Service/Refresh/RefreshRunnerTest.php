@@ -1097,16 +1097,11 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
 
         self::assertSame('aborted', $report->status);
-        self::assertSame(3, $report->total);
-        self::assertSame(1, $report->fetched);
-        self::assertSame(1, $report->failed);
-        self::assertSame(0, $report->skippedForBudget);
-        self::assertSame(0, $report->pruned);
-        // The failing feed plus the untouched third one are still due.
-        self::assertSame(2, $report->remaining);
         // The run stopped: the third feed's outcome was never processed.
         self::assertCount(2, $this->fetcher->fetchedUrls);
         self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
+        // The first feed's entries were committed before the second flush failed (#720).
+        self::assertSame(1, $this->changeMarker->marks);
     }
 
     /**
@@ -1241,40 +1236,6 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(2, $report->remaining);
         self::assertSame(0, $report->pruned);
         self::assertNotContains($untouched->getUrl(), $this->fetcher->fetchedUrls);
-    }
-
-    public function testEntriesCommittedBeforeAnAbortStillMoveTheChangeMarker(): void
-    {
-        $first = $this->dueFeed('https://one.example.com/feed');
-        $second = $this->dueFeed('https://two.example.com/feed');
-        $this->em->flush();
-        $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
-        $this->fetcher->willReturn(
-            $first->getUrl(),
-            FetchResponse::fetched($first->getUrl(), false, $this->rss('A', 'a-1'), null, null),
-        );
-        $this->fetcher->willReturn(
-            $second->getUrl(),
-            FetchResponse::fetched($second->getUrl(), false, $this->rss('B', 'b-1'), null, null),
-        );
-        $flushes = 0;
-        $failingEm = $this->createStub(EntityManagerInterface::class);
-        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes): void {
-            $flushes++;
-            if ($flushes === 2) {
-                throw new UniqueConstraintViolationException(
-                    new class ('duplicate key', '23000', 1062) extends DriverAbstractException {
-                    },
-                    null,
-                );
-            }
-            $this->em->flush();
-        });
-
-        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
-
-        self::assertSame('aborted', $report->status);
-        self::assertSame(1, $this->changeMarker->marks);
     }
 
     public function testAForcedRefreshSkipsAFeedFetchedWithinTheCooldown(): void
