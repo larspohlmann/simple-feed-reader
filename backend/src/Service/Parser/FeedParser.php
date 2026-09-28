@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\Factory\FeedParserFactory;
 
 final readonly class FeedParser
 {

@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Exception\InvalidCredentialsException;
-use App\Service\RateLimit\Exception\RateLimitedException;
+use App\Http\Problem\Factory\ProblemResponseFactory;
 use App\Http\Problem\ProblemCatalog;
-use App\Http\Problem\ProblemResponseFactory;
+use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\RateLimit\Exception\RateLimitedException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;

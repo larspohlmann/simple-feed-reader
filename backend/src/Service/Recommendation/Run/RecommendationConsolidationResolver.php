@@ -6,10 +6,10 @@ namespace App\Service\Recommendation\Run;
 
 use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\ConsolidationParseResult;
+use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
-use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationPick;

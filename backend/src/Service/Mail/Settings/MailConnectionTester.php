@@ -9,7 +9,7 @@ use App\Enum\MailKind;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Transport\ActiveMailTransportFactory;
+use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;

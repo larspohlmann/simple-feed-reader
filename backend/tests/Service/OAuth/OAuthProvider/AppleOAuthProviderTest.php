@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth\OAuthProvider;
 
-use App\Service\OAuth\AppleClientSecretFactory;
+use App\Service\OAuth\Factory\AppleClientSecretFactory;
 use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
 use App\Service\OAuth\OAuthProvider\AppleOAuthProvider;
 use App\Tests\Support\AppleTestKey;

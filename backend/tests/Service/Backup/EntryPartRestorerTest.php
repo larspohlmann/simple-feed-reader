@@ -21,7 +21,7 @@ use App\Service\Backup\EntryPartInspector;
 use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
-use App\Service\Backup\RestoreEntryLoaderFactory;
+use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;

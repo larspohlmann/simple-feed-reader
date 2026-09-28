@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Entity\User;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
+use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
 
 /**
  * The entries endpoint's whole restore: additive and idempotent, unlike

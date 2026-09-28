@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\ApiExceptionListener;
+use App\Http\Problem\Factory\ProblemResponseFactory;
 use App\Http\Problem\ProblemCatalog;
-use App\Http\Problem\ProblemResponseFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\EventDispatcher\EventDispatcher;

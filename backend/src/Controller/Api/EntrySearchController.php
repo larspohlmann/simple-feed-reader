@@ -6,7 +6,7 @@ namespace App\Controller\Api;
 
 use App\Dto\Search\MarkSearchReadRequest;
 use App\Entity\User;
-use App\Http\EntrySearchRequestFactory;
+use App\Http\Factory\EntrySearchRequestFactory;
 use App\Http\SearchPage;
 use App\Repository\EntryListRowEnricher;
 use App\Service\Reading\SearchMarkReadService;

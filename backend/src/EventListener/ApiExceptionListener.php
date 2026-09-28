@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Http\Problem\Factory\ProblemResponseFactory;
 use App\Http\Problem\ProblemCatalog;
-use App\Http\Problem\ProblemResponseFactory;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 

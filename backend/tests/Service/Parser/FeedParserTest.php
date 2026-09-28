@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\Factory\FeedParserFactory;
 use App\Service\Parser\FeedFormatParser\Atom03Parser;
 use App\Service\Parser\FeedFormatParser\Atom10Parser;
 use App\Service\Parser\FeedFormatParser\Rss1Parser;
 use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Service\Parser\FeedParser;
-use App\Service\Parser\FeedParserFactory;
 use PHPUnit\Framework\TestCase;
 
 final class FeedParserTest extends TestCase

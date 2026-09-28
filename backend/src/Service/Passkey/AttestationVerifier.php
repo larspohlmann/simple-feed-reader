@@ -11,6 +11,7 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\Exception\AttestationRejectedException;
 use App\Service\Passkey\Exception\DuplicatePasskeyException;
 use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
+use App\Service\Passkey\Factory\RegistrationOptionsFactory;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
