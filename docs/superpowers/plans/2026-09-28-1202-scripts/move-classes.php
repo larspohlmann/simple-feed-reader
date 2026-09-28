@@ -280,6 +280,24 @@ function rewriteQualifiedNames(string $text, array $moves): string
     return rewriteNames(rewriteNames($text, $moves, '\\'), $doubled, '\\\\');
 }
 
+/**
+ * A namespace declaration is step 2's alone: an old FQCN can be exactly a moved file's new namespace
+ * (`…\SearchIndexReader` becomes the folder of `…\SearchIndexReader\SearchIndexReaderInterface`).
+ *
+ * @param array<string, string> $moves
+ */
+function rewriteQualifiedNamesOutsideNamespaceLines(string $text, array $moves): string
+{
+    $parts = preg_split('/^(namespace [^;{]+;)$/m', $text, flags: PREG_SPLIT_DELIM_CAPTURE) ?: [$text];
+    foreach ($parts as $index => $part) {
+        if (0 === $index % 2) {
+            $parts[$index] = rewriteQualifiedNames($part, $moves);
+        }
+    }
+
+    return implode('', $parts);
+}
+
 /** @param array<string, string> $moves */
 function rewriteDocumentPaths(string $text, array $moves): string
 {
@@ -457,7 +475,7 @@ foreach ([...repositoryFiles(), '../docs/architecture.md'] as $file) {
     if (!$isDocument && !str_contains($code, 'App\\')) {
         continue;
     }
-    $rewritten = rewriteQualifiedNames($code, $moves);
+    $rewritten = rewriteQualifiedNamesOutsideNamespaceLines($code, $moves);
     if ($isDocument) {
         $rewritten = rewriteDocumentPaths($rewritten, $moves);
     }

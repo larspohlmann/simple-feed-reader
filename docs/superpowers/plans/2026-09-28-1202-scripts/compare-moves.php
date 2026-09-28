@@ -5,7 +5,7 @@ declare(strict_types=1);
 // php ../docs/superpowers/plans/2026-09-28-1202-scripts/compare-moves.php var/refactor-1202/<map>.php [<base ref>]
 // A move changes no code: compares each moved file's code tokens with its old self at the base ref (default
 // origin/develop), without comments, whitespace, the namespace line or the imports, and with the map applied to the
-// old side's names. Prints each file that still differs, and where.
+// old side's names. Prints each file that still differs, and where, and each that declares the wrong namespace.
 
 require __DIR__ . '/class-names.php';
 
@@ -87,7 +87,13 @@ foreach ($moves as $old => $new) {
 
 $rename = renamer($moves, $shortRenames);
 $differing = 0;
+$misplaced = 0;
 foreach ($moves as $old => $new) {
+    $declared = preg_match('/^namespace ([^;{]+);$/m', (string) file_get_contents(pathOf($new)), $match) ? $match[1] : '';
+    if ($declared !== namespaceOf($new)) {
+        ++$misplaced;
+        printf("%s declares namespace %s, not %s\n", pathOf($new), $declared, namespaceOf($new));
+    }
     $before = (string) shell_exec(sprintf('git show %s', escapeshellarg($base . ':backend/' . pathOf($old))));
     $oldTokens = array_map($rename, codeTokens($before));
     $newTokens = codeTokens((string) file_get_contents(pathOf($new)));
@@ -109,3 +115,4 @@ foreach ($moves as $old => $new) {
 }
 
 printf("%d of %d moved files differ in code.\n", $differing, count($moves));
+printf("%d of %d moved files declare the wrong namespace.\n", $misplaced, count($moves));
