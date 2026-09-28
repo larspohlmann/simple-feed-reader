@@ -35,7 +35,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
 {
     use SeedsUsers;
 
-    /** @param list<string|ModelDescriptorModel>|\Throwable|\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $models */
+    /**
+     * @param list<string|ModelDescriptorModel>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $models
+     */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator
     {
         self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));

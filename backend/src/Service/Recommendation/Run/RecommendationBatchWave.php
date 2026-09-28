@@ -182,7 +182,7 @@ final readonly class RecommendationBatchWave
      * The atomic-wave rule (#344): one transport failure settles every call of the round and banks none of it. A
      * healthy sibling's answer is discarded and re-billed next tick; that cost is accepted, not a bug.
      *
-     * @param list<RecordedCall>      $recordedCalls
+     * @param list<RecordedCall>           $recordedCalls
      * @param list<CompletionOutcomeModel> $outcomes
      */
     private function guardWaveTransport(array $recordedCalls, array $outcomes): void
@@ -218,9 +218,9 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * @param list<int>               $pending       positions into the wave, in call order
+     * @param list<int>                    $pending       positions into the wave, in call order
      * @param list<CompletionOutcomeModel> $outcomes      one per call, aligned to $pending
-     * @param list<RecordedCall>      $recordedCalls one per call, aligned to $pending
+     * @param list<RecordedCall>           $recordedCalls one per call, aligned to $pending
      *
      * @return array<int, array{content: string, call: RecordedCall}>
      */

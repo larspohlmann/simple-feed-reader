@@ -27,7 +27,10 @@ final readonly class StubModelCatalog implements ModelCatalogInterface
     /** @var \Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> */
     private \Closure $answer;
 
-    /** @param list<string|ModelDescriptorModel>|\Throwable|\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $answer */
+    /**
+     * @param list<string|ModelDescriptorModel>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $answer
+     */
     public function __construct(array|\Throwable|\Closure $answer)
     {
         $this->answer = match (true) {

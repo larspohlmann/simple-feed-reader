@@ -124,7 +124,7 @@ final readonly class RateLimitedCompletion
 
     /**
      * @param non-empty-list<ConcurrentCompletion> $calls
-     * @param list<CompletionOutcomeModel>              $outcomes
+     * @param list<CompletionOutcomeModel>         $outcomes
      * @param non-empty-list<int>                  $pending
      *
      * @return list<CompletionOutcomeModel>

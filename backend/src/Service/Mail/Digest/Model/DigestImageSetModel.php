@@ -7,8 +7,8 @@ namespace App\Service\Mail\Digest\Model;
 final readonly class DigestImageSetModel
 {
     /**
-     * @param list<EmbeddedImageModel>  $images
-     * @param array<string, string> $cidByUrl
+     * @param list<EmbeddedImageModel> $images
+     * @param array<string, string>    $cidByUrl
      */
     public function __construct(
         public array $images,

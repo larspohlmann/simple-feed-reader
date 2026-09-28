@@ -11,7 +11,7 @@ final readonly class FeedPreviewModel
      * @param int                           $itemCount
      * @param 'full'|'summary'|'title-only' $content
      * @param bool                          $hasImages
-     * @param list<FeedPreviewItemModel>         $items
+     * @param list<FeedPreviewItemModel>    $items
      */
     public function __construct(
         public ?string $title,
