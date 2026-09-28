@@ -103,8 +103,8 @@ Non-negotiables:
   ([docs/architecture.md](docs/architecture.md) §7, `QueriesLiveInRepositoriesRule`).
 - **Errors are exceptions**, typed and namespaced next to their service
   (`Service/*/Exception/`). Never signal failure with `null` or a magic value.
-  Map a new one to HTTP by adding an arm to its module's `src/Http/Problem/*Problems`
-  mapper.
+  Map a new one to HTTP by adding an arm to its module's
+  `src/Http/Problem/ExceptionProblems/*Problems` mapper.
 - **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*`,
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,

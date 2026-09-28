@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Service\OAuth\AppleOAuthProvider;
-use App\Service\OAuth\GoogleOAuthProvider;
+use App\Service\OAuth\OAuthProvider\AppleOAuthProvider;
+use App\Service\OAuth\OAuthProvider\GoogleOAuthProvider;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\AppleTestKey;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

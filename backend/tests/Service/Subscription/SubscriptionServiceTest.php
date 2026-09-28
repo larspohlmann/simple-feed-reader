@@ -14,7 +14,7 @@ use App\Repository\OrphanedFeedRepository;
 use App\Service\Discovery\DiscoveredFeed;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\FeedCandidate;
-use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;

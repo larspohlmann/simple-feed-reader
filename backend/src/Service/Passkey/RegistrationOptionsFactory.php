@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Entity\User;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Cose\Algorithm\Signature\ECDSA\ES256;
 use Cose\Algorithm\Signature\RSA\RS256;
 use ParagonIE\ConstantTime\Base64UrlSafe;
@@ -43,7 +43,7 @@ final readonly class RegistrationOptionsFactory
     public function __construct(
         private PasskeyCeremony $ceremony,
         private PasskeyChallengeStore $challengeStore,
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
         private PasskeyCredentials $credentials,
     ) {
     }

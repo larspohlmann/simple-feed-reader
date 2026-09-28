@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Service\Comments\Exception\NoCommentsFeedException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;

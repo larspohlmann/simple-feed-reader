@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Worker\Handler;
 
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Profiling;
 
 use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileSampler;
-use App\Service\Profiling\ProfilingConfigSource;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
+use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
-use App\Service\Profiling\PyroscopeEndpoint;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use PHPUnit\Framework\TestCase;
 
 final class ProfilingPolicyTest extends TestCase
@@ -22,7 +22,7 @@ final class ProfilingPolicyTest extends TestCase
 
     public function testDisabledWhenTheSamplerIsUnavailableAndTheConfigIsNeverRead(): void
     {
-        $config = $this->createMock(ProfilingConfigSource::class);
+        $config = $this->createMock(ProfilingConfigSourceInterface::class);
         $config->expects(self::never())->method('profilingEnabled');
         $policy = new ProfilingPolicy($config, $this->sampler(false), $this->endpoint('http://pyroscope:4040'));
 
@@ -41,7 +41,7 @@ final class ProfilingPolicyTest extends TestCase
 
     public function testAConfigThatCannotBeReadMeansProfilingIsOff(): void
     {
-        $config = $this->createStub(ProfilingConfigSource::class);
+        $config = $this->createStub(ProfilingConfigSourceInterface::class);
         $config->method('profilingEnabled')->willThrowException(new \RuntimeException('database gone'));
         $policy = new ProfilingPolicy($config, $this->sampler(true), $this->endpoint('http://pyroscope:4040'));
 
@@ -50,7 +50,7 @@ final class ProfilingPolicyTest extends TestCase
 
     public function testAPushUrlThatCannotBeReadMeansProfilingIsOff(): void
     {
-        $endpoint = new class implements PyroscopeEndpoint {
+        $endpoint = new class implements PyroscopeEndpointInterface {
             public function pushUrl(): ?string
             {
                 throw new \RuntimeException('cache gone');
@@ -66,17 +66,17 @@ final class ProfilingPolicyTest extends TestCase
         return new ProfilingPolicy($this->config($enabled), $this->sampler($available), $this->endpoint($url));
     }
 
-    private function config(bool $enabled): ProfilingConfigSource
+    private function config(bool $enabled): ProfilingConfigSourceInterface
     {
-        $config = $this->createStub(ProfilingConfigSource::class);
+        $config = $this->createStub(ProfilingConfigSourceInterface::class);
         $config->method('profilingEnabled')->willReturn($enabled);
 
         return $config;
     }
 
-    private function sampler(bool $available): ProfileSampler
+    private function sampler(bool $available): ProfileSamplerInterface
     {
-        return new class ($available) implements ProfileSampler {
+        return new class ($available) implements ProfileSamplerInterface {
             public function __construct(private readonly bool $available)
             {
             }
@@ -102,9 +102,9 @@ final class ProfilingPolicyTest extends TestCase
         };
     }
 
-    private function endpoint(?string $url): PyroscopeEndpoint
+    private function endpoint(?string $url): PyroscopeEndpointInterface
     {
-        return new class ($url) implements PyroscopeEndpoint {
+        return new class ($url) implements PyroscopeEndpointInterface {
             public function __construct(private readonly ?string $url)
             {
             }

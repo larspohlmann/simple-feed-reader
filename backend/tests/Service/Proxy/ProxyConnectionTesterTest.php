@@ -10,7 +10,7 @@ use App\Enum\ProxyType;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ProxyConnectionTester;
 use App\Service\Proxy\ProxyTestFailure;
-use App\Service\Proxy\StoredProxy;
+use App\Service\Proxy\ConfiguredProxySource\StoredProxy;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\StoredProxies;
 use PHPUnit\Framework\TestCase;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Entry;
-use App\Service\Search\Membership\SavedSearchMatcher;
+use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\SavedSearchTerm;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -15,7 +15,7 @@ use Doctrine\ORM\QueryBuilder;
  * WHERE keeps the candidates any search matches, a CASE per search flags which.
  * Title and summary only, exact terms — the database host's recall.
  */
-final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcher
+final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInterface
 {
     /**
      * A search binds up to 24 parameters (six terms, two each, in the WHERE and

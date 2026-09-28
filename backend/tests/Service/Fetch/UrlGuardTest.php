@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
-use App\Service\Fetch\DnsResolverInterface;
+use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;

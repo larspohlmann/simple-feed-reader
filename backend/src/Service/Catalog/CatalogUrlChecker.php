@@ -6,7 +6,7 @@ namespace App\Service\Catalog;
 
 use App\Service\Catalog\Exception\BrokenCatalogUrlException;
 use App\Service\Fetch\EgressOptions;
-use App\Service\Fetch\EgressProxySource;
+use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\ProxyConfig;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -19,7 +19,7 @@ final readonly class CatalogUrlChecker
         private HttpClientInterface $httpClient,
         private BundledCatalog $bundled,
         private string $userAgent,
-        private EgressProxySource $egressProxySource,
+        private EgressProxySourceInterface $egressProxySource,
     ) {
     }
 

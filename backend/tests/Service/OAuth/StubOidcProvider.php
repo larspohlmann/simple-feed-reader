@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Service\OAuth\AbstractOidcProvider;
+use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

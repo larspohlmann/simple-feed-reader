@@ -8,7 +8,7 @@ use App\Command\Exception\MalformedOptionException;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionResult;
 use App\Service\ReaderAudit\DatabaseValue;
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;

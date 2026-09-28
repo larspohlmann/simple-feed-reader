@@ -6,7 +6,7 @@ namespace App\Tests\Service\Search;
 
 use App\Service\Search\Index\IndexMatches;
 use App\Service\Search\Index\IndexSearch;
-use App\Service\Search\Index\SearchIndexReader;
+use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
  * Drives the combined saved-search engine path without a running Meilisearch.
@@ -15,7 +15,7 @@ use App\Service\Search\Index\SearchIndexReader;
  * test can assert on the searches and the paging it drove. find() is unused
  * here — the combined path only ever batches.
  */
-final class FakeMultiSearchReader implements SearchIndexReader
+final class FakeMultiSearchReader implements SearchIndexReaderInterface
 {
     /** @var list<list<IndexSearch>> */
     public array $receivedRounds = [];

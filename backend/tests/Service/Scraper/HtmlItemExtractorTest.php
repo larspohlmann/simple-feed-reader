@@ -7,9 +7,9 @@ namespace App\Tests\Service\Scraper;
 use App\Service\Scraper\CardFields;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Scraper\Layer\ClusterLayer;
-use App\Service\Scraper\Layer\JsonLdLayer;
-use App\Service\Scraper\Layer\SemanticLayer;
+use App\Service\Scraper\ScrapeLayer\ClusterLayer;
+use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
+use App\Service\Scraper\ScrapeLayer\SemanticLayer;
 use PHPUnit\Framework\TestCase;
 
 final class HtmlItemExtractorTest extends TestCase

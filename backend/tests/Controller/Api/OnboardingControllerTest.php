@@ -9,7 +9,7 @@ use App\Entity\CatalogFeed;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;

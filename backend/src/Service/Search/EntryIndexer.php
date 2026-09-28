@@ -7,7 +7,7 @@ namespace App\Service\Search;
 use App\Entity\Entry;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\IndexedEntry;
-use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Text\PlainText;
 use Psr\Log\LoggerInterface;
 
@@ -36,7 +36,7 @@ final class EntryIndexer
     private bool $configured = false;
 
     public function __construct(
-        private readonly SearchIndexWriter $index,
+        private readonly SearchIndexWriterInterface $index,
         private readonly LoggerInterface $logger,
     ) {
     }

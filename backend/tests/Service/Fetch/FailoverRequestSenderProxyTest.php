@@ -6,7 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\EgressProxySource;
+use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\GuardedUrl;
 use App\Service\Fetch\ProxyConfig;
@@ -231,7 +231,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
         $egressProxySource->method('egressProxy')->willThrowException(
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
@@ -246,9 +246,9 @@ final class FailoverRequestSenderProxyTest extends TestCase
         }
     }
 
-    private function egressProxy(?ProxyConfig $config): EgressProxySource
+    private function egressProxy(?ProxyConfig $config): EgressProxySourceInterface
     {
-        $egressProxySource = $this->createStub(EgressProxySource::class);
+        $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
         $egressProxySource->method('egressProxy')->willReturn($config);
 
         return $egressProxySource;

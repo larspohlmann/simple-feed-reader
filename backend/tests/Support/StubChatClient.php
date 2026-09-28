@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\ChatCompletionClient;
+use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\CompletionRequest;
-use App\Service\Ai\Completion\CompletionStreamObserver;
+use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\Reasoning;
-use App\Service\Ai\Exception\ProviderReplyFailure;
+use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\ProviderConnection;
 
 /**
  * Records every complete() call and answers with a queued response, so
  * recommendation tests can assert exactly which prompts reached the model
  * without a live provider call. Registered as the container's
- * ChatCompletionClient in the test environment (services_test.yaml), so it
+ * ChatCompletionClientInterface in the test environment (services_test.yaml), so it
  * stands in wherever the production alias would resolve to
  * OpenAiCompatibleChatClient.
  *
@@ -24,7 +24,7 @@ use App\Service\Ai\ProviderConnection;
  * queues "fail, then succeed" (to prove a corrective retry) gets that exact
  * order regardless of which queue* method it called first.
  */
-final class StubChatClient implements ChatCompletionClient
+final class StubChatClient implements ChatCompletionClientInterface
 {
     /** @var list<string|\RuntimeException> */
     private array $queue = [];
@@ -82,13 +82,13 @@ final class StubChatClient implements ChatCompletionClient
     public function complete(
         ProviderConnection $connection,
         CompletionRequest $request,
-        CompletionStreamObserver $observer,
+        CompletionStreamObserverInterface $observer,
     ): string {
         $next = $this->answer($request);
 
         // A spoiled reply is content, not an exception — the real client
         // returns it so the caller's parser can judge it (#437).
-        if ($next instanceof ProviderReplyFailure) {
+        if ($next instanceof ProviderReplyFailureExceptionInterface) {
             return $next->partialAnswer();
         }
 
@@ -112,7 +112,7 @@ final class StubChatClient implements ChatCompletionClient
         foreach ($calls as $call) {
             $next = $this->answer($call->request);
             $outcomes[] = match (true) {
-                $next instanceof ProviderReplyFailure => CompletionOutcome::unusableReply($next),
+                $next instanceof ProviderReplyFailureExceptionInterface => CompletionOutcome::unusableReply($next),
                 $next instanceof \RuntimeException => CompletionOutcome::failure($next),
                 default => CompletionOutcome::answer($next),
             };

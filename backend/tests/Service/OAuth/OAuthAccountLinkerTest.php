@@ -12,7 +12,7 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\OAuth\OAuthIdentity;
 use App\Service\Settings\InstanceSettings;
@@ -400,7 +400,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $settings = self::getContainer()->get(InstanceSettings::class);
         $settings->update(new InstanceSettingsUpdate(true, $approve, null, null, null));
 
-        $mailSettings = $this->createStub(MailSendingSettings::class);
+        $mailSettings = $this->createStub(MailSendingSettingsInterface::class);
         $mailSettings->method('isSendingEnabled')->willReturn(true);
 
         return new RegistrationPolicy(new MailCapability($mailSettings), $settings);

@@ -10,6 +10,10 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Recommendation\Run\ProviderPhase\BatchPhase;
+use App\Service\Recommendation\Run\ProviderPhase\ConsolidationPhase;
+use App\Service\Recommendation\Run\ProviderPhase\DistillationPhase;
+use App\Service\Recommendation\Run\ProviderPhase\ProviderPhaseInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class TickPhases
@@ -39,7 +43,7 @@ final readonly class TickPhases
         return $this->advanceWithinTheEnvelope($this->providerPhaseFor($run), $tick);
     }
 
-    private function providerPhaseFor(RecommendationRun $run): ProviderPhase
+    private function providerPhaseFor(RecommendationRun $run): ProviderPhaseInterface
     {
         $progress = $run->progress();
 
@@ -50,7 +54,7 @@ final readonly class TickPhases
         };
     }
 
-    private function advanceWithinTheEnvelope(ProviderPhase $phase, TickContext $tick): RecommendationRunReport
+    private function advanceWithinTheEnvelope(ProviderPhaseInterface $phase, TickContext $tick): RecommendationRunReport
     {
         try {
             return $phase->advance($tick);

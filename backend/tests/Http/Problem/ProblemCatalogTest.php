@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Problem;
 
 use App\Http\Problem\ApiProblem;
-use App\Http\Problem\ExceptionProblems;
+use App\Http\Problem\ExceptionProblems\ExceptionProblemsInterface;
 use App\Http\Problem\ProblemCatalog;
 use App\Http\Problem\ResolvedProblem;
 use App\Security\AccountStatusException;
@@ -94,9 +94,9 @@ final class ProblemCatalogTest extends TestCase
     }
 
     /** @param class-string<\Throwable> $class */
-    private static function claiming(string $class, ResolvedProblem $problem): ExceptionProblems
+    private static function claiming(string $class, ResolvedProblem $problem): ExceptionProblemsInterface
     {
-        return new class ($class, $problem) implements ExceptionProblems {
+        return new class ($class, $problem) implements ExceptionProblemsInterface {
             /** @param class-string<\Throwable> $class */
             public function __construct(private readonly string $class, private readonly ResolvedProblem $problem)
             {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 
 /**
  * For a test that drives the transport without a worker around it. The one
@@ -13,7 +13,7 @@ use App\Service\Ai\Completion\CompletionStreamHeartbeat;
  * spelled out, rather than left to a mock that would assert the transport's
  * ping count in tests that are not about it.
  */
-final readonly class NullCompletionStreamHeartbeat implements CompletionStreamHeartbeat
+final readonly class NullCompletionStreamHeartbeat implements CompletionStreamHeartbeatInterface
 {
     public function beat(): void
     {

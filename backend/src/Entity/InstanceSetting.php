@@ -34,14 +34,14 @@ class InstanceSetting
     /**
      * The externally reachable base URL used to build links in outgoing email
      * (#636). Null means "no override" — email links fall back to the
-     * APP_FRONTEND_URL deploy env. See {@see \App\Service\Settings\PublicBaseUrl}.
+     * APP_FRONTEND_URL deploy env. See {@see \App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface}.
      */
     #[ORM\Column(name: 'public_base_url', length: 255, nullable: true)]
     private ?string $publicBaseUrl = null;
 
     /**
      * The WebAuthn relying-party id every stored credential is bound to
-     * (#624). Null means "no override" — {@see \App\Service\Settings\ConfiguredPasskeyRelyingParty}
+     * (#624). Null means "no override" — {@see \App\Service\Settings\PasskeyRelyingParty\ConfiguredPasskeyRelyingParty}
      * derives it from the public base URL's host instead. It exists because
      * an RP id is baked into every credential at registration time: changing
      * it invalidates every passkey on the instance, which is why the write

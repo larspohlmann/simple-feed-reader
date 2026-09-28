@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
+use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\CacheItemPoolInterface;
@@ -195,7 +195,7 @@ final class ClientErrorControllerTest extends ApiTestCase
     private function installLokiCapture(): void
     {
         $this->lokiPushes = [];
-        $endpoint = new class implements LokiEndpoint {
+        $endpoint = new class implements LokiEndpointInterface {
             public function pushUrl(): string
             {
                 return 'http://loki.test/loki/api/v1/push';

@@ -4,26 +4,26 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Reader\ArticleExtractor;
-use App\Service\Reader\ArticleExtractorInterface;
-use App\Service\Reader\AuthorBio\AuthorBioSeparator;
-use App\Service\Reader\BodyCleaning\PageMediaPlacement;
-use App\Service\Reader\DuplicateBlockCollapser;
-use App\Service\Reader\EdgeBoilerplateTrimmer;
-use App\Service\Reader\FeedDimensionStamper;
-use App\Service\Reader\LeadingEngagementCleaner;
-use App\Service\Reader\LeadingTitleRemover;
+use App\Service\Reader\ArticleExtractor\ArticleExtractor;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\InBodyEmbedRewriter;
-use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\SubstackPosterLink;
-use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
-use App\Service\Reader\MediaOnlyLede;
-use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\PlayerChromeCleaner;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
-use App\Service\Reader\Slideshow\SlideshowInserter;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 final class ReaderBodyCleanerWiringTest extends KernelTestCase

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Version;
 
+use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
+
 /**
  * Joins the running build with the newest release upstream and decides whether
  * an update is worth showing. The decision is the strict semver ordering
@@ -14,8 +17,8 @@ namespace App\Service\Version;
 final readonly class VersionReporter
 {
     public function __construct(
-        private ReleaseVersionReader $releaseVersionReader,
-        private LatestReleaseReader $latestReleaseReader,
+        private ReleaseVersionReaderInterface $releaseVersionReader,
+        private LatestReleaseReaderInterface $latestReleaseReader,
     ) {
     }
 

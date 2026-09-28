@@ -7,7 +7,7 @@ namespace App\Tests\Command;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Fetch\BatchFeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;

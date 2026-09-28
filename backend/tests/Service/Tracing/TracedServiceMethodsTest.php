@@ -9,7 +9,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use App\Service\Reader\ArticleExtractor;
+use App\Service\Reader\ArticleExtractor\ArticleExtractor;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;

@@ -6,11 +6,11 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Image\FaviconFetcher;
-use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\FaviconFetcher\FaviconFetcher;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Fetch\FaviconResolver;
-use App\Service\Fetch\FaviconResolverInterface;
+use App\Service\Fetch\FaviconResolver\FaviconResolver;
+use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;

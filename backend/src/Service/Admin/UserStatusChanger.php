@@ -6,7 +6,7 @@ namespace App\Service\Admin;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\Service\Mail\AccountMailerInterface;
+use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;

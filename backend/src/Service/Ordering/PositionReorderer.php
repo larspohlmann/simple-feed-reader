@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ordering;
 
-use App\Entity\Positioned;
+use App\Entity\PositionedInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class PositionReorderer
@@ -15,7 +15,7 @@ final readonly class PositionReorderer
 
     /**
      * @param list<int>              $orderedIds
-     * @param array<int, Positioned> $byId
+     * @param array<int, PositionedInterface> $byId
      */
     public function reorder(array $orderedIds, array $byId): void
     {

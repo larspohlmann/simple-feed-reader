@@ -6,20 +6,20 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\PictureSources;
-use App\Service\Reader\Repair\CustomElementUnwrapper;
+use App\Service\Reader\PageRepair\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
-use App\Service\Reader\Repair\HeadingClassRemover;
-use App\Service\Reader\Repair\HorizontalRuleUnwrapper;
-use App\Service\Reader\Repair\ImageButtonUnwrapper;
-use App\Service\Reader\Repair\ImageWrapperClassRemover;
-use App\Service\Reader\Repair\LazyImageSources;
-use App\Service\Reader\Repair\NoscriptImageUnwrapper;
-use App\Service\Reader\Repair\OrphanIconGlyphRemover;
-use App\Service\Reader\Repair\PageRepair;
-use App\Service\Reader\Repair\ScreenReaderOnlyElementRemover;
-use App\Service\Reader\Repair\ShareIntentLinkRemover;
-use App\Service\Reader\Repair\ShareWidgetRemover;
-use App\Service\Reader\Repair\SubstackGatedVideoPlaceholder;
+use App\Service\Reader\PageRepair\HeadingClassRemover;
+use App\Service\Reader\PageRepair\HorizontalRuleUnwrapper;
+use App\Service\Reader\PageRepair\ImageButtonUnwrapper;
+use App\Service\Reader\PageRepair\ImageWrapperClassRemover;
+use App\Service\Reader\PageRepair\LazyImageSources;
+use App\Service\Reader\PageRepair\NoscriptImageUnwrapper;
+use App\Service\Reader\PageRepair\OrphanIconGlyphRemover;
+use App\Service\Reader\PageRepair\PageRepairInterface;
+use App\Service\Reader\PageRepair\ScreenReaderOnlyElementRemover;
+use App\Service\Reader\PageRepair\ShareIntentLinkRemover;
+use App\Service\Reader\PageRepair\ShareWidgetRemover;
+use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -32,7 +32,7 @@ final class FetchedPageNormalizerTest extends TestCase
         $this->normalizer = new FetchedPageNormalizer(self::repairs());
     }
 
-    /** @return list<PageRepair> the repair pipeline in the order services.yaml wires. */
+    /** @return list<PageRepairInterface> the repair pipeline in the order services.yaml wires. */
     public static function repairs(): array
     {
         return [

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
-use App\Service\Ai\Exception\ProviderReplyFailure;
+use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\RetryableProviderException;
 
 /**
@@ -36,7 +36,7 @@ final readonly class CompletionOutcome
      * failed with content, so content() still answers and the caller treats it
      * as the unusable reply it is.
      */
-    public static function unusableReply(ProviderReplyFailure $cause): self
+    public static function unusableReply(ProviderReplyFailureExceptionInterface $cause): self
     {
         return new self($cause->partialAnswer(), $cause);
     }
@@ -53,7 +53,7 @@ final readonly class CompletionOutcome
      */
     public function isFailure(): bool
     {
-        return null !== $this->cause && !$this->cause instanceof ProviderReplyFailure;
+        return null !== $this->cause && !$this->cause instanceof ProviderReplyFailureExceptionInterface;
     }
 
     public function content(): string

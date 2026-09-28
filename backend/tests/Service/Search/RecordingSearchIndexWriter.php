@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search;
 
 use App\Service\Search\Index\IndexedEntry;
-use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 
 /**
  * Records every call instead of talking to an engine, so EntryIndexerTest can
@@ -13,7 +13,7 @@ use App\Service\Search\Index\SearchIndexWriter;
  * (index() must configure() before it upsert()s). An optional $failure lets a
  * test drive the "engine unavailable" path without a running Meilisearch.
  */
-final class RecordingSearchIndexWriter implements SearchIndexWriter
+final class RecordingSearchIndexWriter implements SearchIndexWriterInterface
 {
     /** @var list<string> */
     public array $calls = [];

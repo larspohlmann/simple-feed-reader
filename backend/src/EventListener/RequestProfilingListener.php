@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Service\Logging\TraceContext;
+use App\Service\Logging\TraceContext\TraceContextInterface;
 use App\Service\Profiling\ProfileLabels;
-use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
 use OpenTelemetry\API\Trace\Span;
@@ -27,9 +27,9 @@ final class RequestProfilingListener
 
     public function __construct(
         private readonly ProfilingPolicy $policy,
-        private readonly ProfileSampler $sampler,
+        private readonly ProfileSamplerInterface $sampler,
         private readonly PyroscopeClient $client,
-        private readonly TraceContext $trace,
+        private readonly TraceContextInterface $trace,
     ) {
     }
 

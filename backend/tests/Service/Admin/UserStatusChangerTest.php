@@ -8,7 +8,7 @@ use App\Enum\UserStatus;
 use App\Exception\ValidationException;
 use App\Service\Admin\SelfActionGuard;
 use App\Service\Admin\UserStatusChanger;
-use App\Service\Mail\AccountMailerInterface;
+use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use PHPUnit\Framework\Attributes\DataProvider;

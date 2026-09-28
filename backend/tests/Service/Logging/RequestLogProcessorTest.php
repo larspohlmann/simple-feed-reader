@@ -7,7 +7,7 @@ namespace App\Tests\Service\Logging;
 use App\Service\Logging\Loki\LokiPushHandler;
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
-use App\Service\Logging\TraceContext;
+use App\Service\Logging\TraceContext\TraceContextInterface;
 use Monolog\Level;
 use Monolog\LogRecord;
 use PHPUnit\Framework\TestCase;
@@ -78,9 +78,9 @@ final class RequestLogProcessorTest extends TestCase
         return new LogRecord(new \DateTimeImmutable(), $channel, Level::Info, 'hello');
     }
 
-    private function tracingContext(string $traceId, string $spanId): TraceContext
+    private function tracingContext(string $traceId, string $spanId): TraceContextInterface
     {
-        return new class ($traceId, $spanId) implements TraceContext {
+        return new class ($traceId, $spanId) implements TraceContextInterface {
             public function __construct(private string $traceId, private string $spanId)
             {
             }
@@ -97,9 +97,9 @@ final class RequestLogProcessorTest extends TestCase
         };
     }
 
-    private function partialTracingContext(?string $traceId, ?string $spanId): TraceContext
+    private function partialTracingContext(?string $traceId, ?string $spanId): TraceContextInterface
     {
-        return new class ($traceId, $spanId) implements TraceContext {
+        return new class ($traceId, $spanId) implements TraceContextInterface {
             public function __construct(private ?string $traceId, private ?string $spanId)
             {
             }

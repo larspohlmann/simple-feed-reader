@@ -6,11 +6,11 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\WorkerProfilingListener;
 use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileSampler;
-use App\Service\Profiling\ProfilingConfigSource;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
+use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
-use App\Service\Profiling\PyroscopeEndpoint;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use App\Tests\Support\TrackingProfileSampler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -174,9 +174,9 @@ final class WorkerProfilingListenerTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    private function throwingSampler(): ProfileSampler
+    private function throwingSampler(): ProfileSamplerInterface
     {
-        return new class implements ProfileSampler {
+        return new class implements ProfileSamplerInterface {
             public function isAvailable(): bool
             {
                 return true;
@@ -205,13 +205,13 @@ final class WorkerProfilingListenerTest extends TestCase
      * @param list<string> $log
      */
     private function listener(
-        ProfileSampler $sampler,
+        ProfileSamplerInterface $sampler,
         array &$pushes,
         array &$enabled,
         MockClock $clock,
         array &$log,
     ): WorkerProfilingListener {
-        $profilingConfig = $this->createStub(ProfilingConfigSource::class);
+        $profilingConfig = $this->createStub(ProfilingConfigSourceInterface::class);
         $profilingConfig->method('refresh')->willReturnCallback(static function () use (&$log): void {
             $log[] = 'refresh';
         });
@@ -237,9 +237,9 @@ final class WorkerProfilingListenerTest extends TestCase
         return new WorkerProfilingListener($policy, $sampler, $client, $clock, $profilingConfig);
     }
 
-    private function endpoint(): PyroscopeEndpoint
+    private function endpoint(): PyroscopeEndpointInterface
     {
-        return new class implements PyroscopeEndpoint {
+        return new class implements PyroscopeEndpointInterface {
             public function pushUrl(): string
             {
                 return 'http://pyroscope.test';
@@ -247,9 +247,9 @@ final class WorkerProfilingListenerTest extends TestCase
         };
     }
 
-    private function policySampler(): ProfileSampler
+    private function policySampler(): ProfileSamplerInterface
     {
-        return new class implements ProfileSampler {
+        return new class implements ProfileSamplerInterface {
             public function isAvailable(): bool
             {
                 return true;

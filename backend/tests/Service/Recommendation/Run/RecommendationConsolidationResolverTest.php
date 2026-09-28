@@ -28,7 +28,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * the provider call and the ranked-list assembly, and a mock would have to
  * encode that coordination itself instead of proving it. The provider itself
  * is the one seam worth faking: StubChatClient stands in for it, registered
- * as the container's ChatCompletionClient in the test environment.
+ * as the container's ChatCompletionClientInterface in the test environment.
  */
 final class RecommendationConsolidationResolverTest extends DbTestCase
 {

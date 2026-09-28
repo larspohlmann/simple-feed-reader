@@ -8,8 +8,9 @@ use App\Entity\Preferences;
 use App\Entity\User;
 use App\Enum\MailKind;
 use App\Repository\PreferencesRepository;
+use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -36,7 +37,7 @@ final readonly class SendDueDigests
         private ClockInterface $clock,
         private EntityManagerInterface $em,
         private LoggerInterface $logger,
-        private MailFailureRecorder $health,
+        private MailFailureRecorderInterface $health,
     ) {
     }
 

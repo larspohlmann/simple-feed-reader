@@ -7,9 +7,9 @@ namespace App\EventListener;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
-use App\Service\Mail\AccountMailerInterface;
+use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Service\Mail\PendingApprovalNotice;
-use App\Service\Settings\PublicBaseUrl;
+use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
@@ -26,7 +26,7 @@ final readonly class NotifyAdminsOfPendingApproval
         private UserRepository $users,
         private AccountMailerInterface $mailer,
         private LoggerInterface $logger,
-        private PublicBaseUrl $publicBaseUrl,
+        private PublicBaseUrlInterface $publicBaseUrl,
     ) {
     }
 

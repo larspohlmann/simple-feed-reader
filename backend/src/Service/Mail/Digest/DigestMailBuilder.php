@@ -6,7 +6,8 @@ namespace App\Service\Mail\Digest;
 
 use App\Entity\User;
 use App\Enum\DigestFormat;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 
@@ -24,7 +25,7 @@ final readonly class DigestMailBuilder
         private DigestHtmlRenderer $htmlRenderer,
         private DigestLinkBuilder $links,
         private DigestBrandLogo $brandLogo,
-        private MailSendingSettings $mailSettings,
+        private MailSendingSettingsInterface $mailSettings,
     ) {
     }
 

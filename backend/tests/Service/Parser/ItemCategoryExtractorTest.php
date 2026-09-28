@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\ItemCategoryExtractor;
-use App\Service\Parser\Rss2Parser;
+use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use PHPUnit\Framework\TestCase;
 
 final class ItemCategoryExtractorTest extends TestCase

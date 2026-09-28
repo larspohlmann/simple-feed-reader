@@ -6,14 +6,14 @@ namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\RawPage;
-use App\Service\Reader\Media\Source\AttributeMediaSource;
-use App\Service\Reader\Media\Source\JsonLdMediaSource;
-use App\Service\Reader\Media\Source\MetaMediaSource;
-use App\Service\Reader\Media\Source\PageEmbedSource;
-use App\Service\Reader\Media\Source\ScriptEmbedSource;
-use App\Service\Reader\Media\Source\SemanticMediaSource;
-use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
-use App\Service\Reader\Media\Source\ZdfPlayerConfigSource;
+use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\MetaMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\PageEmbedSource;
+use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
+use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
+use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

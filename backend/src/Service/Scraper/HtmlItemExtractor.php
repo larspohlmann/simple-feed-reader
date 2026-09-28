@@ -10,7 +10,7 @@ use App\Service\Parser\ParsedEntryMedia;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Image\DeclaredImage;
 use App\Service\Scraper\Exception\HtmlExtractionException;
-use App\Service\Scraper\Layer\ScrapeLayerInterface;
+use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

@@ -9,7 +9,9 @@ parametersSchema:
 
 parameters:
     level: max
-    serviceRoleChecks: []
+    serviceRoleChecks:
+        - interfaceName
+        - interfaceFolder
     paths:
         - src
         - tests

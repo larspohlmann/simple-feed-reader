@@ -16,10 +16,10 @@ use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
-use App\Service\Mail\AccountMailer;
-use App\Service\Mail\AccountMailerInterface;
+use App\Service\Mail\AccountMailer\AccountMailer;
+use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Settings\InstanceSettings;
 use App\Tests\DbTestCase;
 use Psr\Clock\ClockInterface;
@@ -81,7 +81,7 @@ final class RegistrationServiceTest extends DbTestCase
         $settings = self::getContainer()->get(InstanceSettings::class);
         $settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
 
-        $mailSettings = $this->createStub(MailSendingSettings::class);
+        $mailSettings = $this->createStub(MailSendingSettingsInterface::class);
         $mailSettings->method('isSendingEnabled')->willReturn(true);
 
         return new RegistrationPolicy(new MailCapability($mailSettings), $settings);

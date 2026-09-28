@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Process\DetachedProcessLauncherInterface;
+use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
  * The one spawn policy for the on-demand drainer (#371): every trigger site goes through

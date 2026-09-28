@@ -6,9 +6,9 @@ namespace App\Tests\Functional;
 
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\PyroscopeClient;
-use App\Service\Profiling\PyroscopeEndpoint;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\SettingsRequests;
 use OpenTelemetry\API\Instrumentation\Configurator;
@@ -76,7 +76,7 @@ final class RequestProfilingTest extends ApiTestCase
     private function installPyroscopeCapture(): void
     {
         $this->pyroscopePushes = [];
-        $endpoint = new class implements PyroscopeEndpoint {
+        $endpoint = new class implements PyroscopeEndpointInterface {
             public function pushUrl(): string
             {
                 return 'http://pyroscope.test';
@@ -89,12 +89,12 @@ final class RequestProfilingTest extends ApiTestCase
             return new MockResponse('', ['http_code' => 204]);
         });
         self::getContainer()->set(PyroscopeClient::class, new PyroscopeClient($http, $endpoint));
-        self::getContainer()->set(ProfileSampler::class, $this->fixedSampler());
+        self::getContainer()->set(ProfileSamplerInterface::class, $this->fixedSampler());
     }
 
-    private function fixedSampler(): ProfileSampler
+    private function fixedSampler(): ProfileSamplerInterface
     {
-        return new class implements ProfileSampler {
+        return new class implements ProfileSamplerInterface {
             private bool $running = false;
 
             public function isAvailable(): bool

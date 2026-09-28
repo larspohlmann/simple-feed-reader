@@ -7,8 +7,8 @@ namespace App\Service\Mail\Settings;
 use App\Entity\User;
 use App\Enum\MailKind;
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Mail\MailFailureRecorder;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -27,11 +27,11 @@ use Symfony\Component\Mime\Exception\RfcComplianceException;
 final readonly class MailConnectionTester
 {
     public function __construct(
-        private MailSendingSettings $settings,
+        private MailSendingSettingsInterface $settings,
         private Security $security,
         private LoggerInterface $logger,
         private ActiveMailTransportFactory $transportFactory,
-        private MailFailureRecorder $health,
+        private MailFailureRecorderInterface $health,
     ) {
     }
 

@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Enum\MailKind;
-use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 
-/** A MailFailureRecorder that captures calls in memory, for tests (#882). */
-final class InMemoryMailFailureRecorder implements MailFailureRecorder
+/** A MailFailureRecorderInterface that captures calls in memory, for tests (#882). */
+final class InMemoryMailFailureRecorder implements MailFailureRecorderInterface
 {
     /** @var list<array{kind: MailKind, recipient: string, error: string}> */
     private array $failures = [];

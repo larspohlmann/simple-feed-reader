@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Slideshow;
 
 use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

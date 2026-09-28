@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Settings;
 
 use App\Enum\MailKind;
-use App\Service\Mail\MailFailureRecorder;
-use App\Service\Mail\Settings\EffectiveMailSettings;
+use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
+use App\Service\Mail\MailSendingSettings\EffectiveMailSettings;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
 use App\Service\Mail\Settings\MailTestFailure;
@@ -38,7 +38,7 @@ final class MailConnectionTesterTest extends KernelTestCase
 
     /** Builds a tester wired to a given health recorder, so a test can inspect
      *  what got recorded instead of hitting the real mail-failure repository. */
-    private function testerWithHealth(MailFailureRecorder $health): MailConnectionTester
+    private function testerWithHealth(MailFailureRecorderInterface $health): MailConnectionTester
     {
         return new MailConnectionTester(
             self::getContainer()->get(EffectiveMailSettings::class),

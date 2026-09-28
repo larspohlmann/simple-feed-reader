@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Http\ReaderJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
-use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionFailure;

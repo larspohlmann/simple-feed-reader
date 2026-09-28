@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Http\Problem\OAuthProblems;
+use App\Http\Problem\ExceptionProblems\OAuthProblems;
 use App\Service\OAuth\Exception\UnknownProviderException;
 use App\Service\OAuth\OAuthIdentity;
-use App\Service\OAuth\OAuthProviderInterface;
+use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 use App\Service\OAuth\OAuthProviderRegistry;
 use PHPUnit\Framework\TestCase;
 

@@ -6,7 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunnerInterface;
+use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 
 /**
  * Hands out one prepared report per call. A double rather than a mock so the

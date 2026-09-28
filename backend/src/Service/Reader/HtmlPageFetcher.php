@@ -10,6 +10,7 @@ use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
 use App\Service\Text\Whitespace;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -36,7 +37,7 @@ final readonly class HtmlPageFetcher
         private MetaRefreshTarget $metaRefresh,
         private LandingChallenge $challenge,
         private string $userAgent,
-        private StatusReasonPhrases $reasonPhrases,
+        private StatusReasonPhrasesInterface $reasonPhrases,
     ) {
     }
 

@@ -7,9 +7,9 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Fetch\FaviconResolverInterface;
+use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 

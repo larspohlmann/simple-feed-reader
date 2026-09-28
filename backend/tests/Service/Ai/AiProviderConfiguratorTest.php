@@ -14,7 +14,7 @@ use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
-use App\Service\Ai\ModelCatalog;
+use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderConnectionFactory;
 use App\Service\Ai\ProviderCredentials;
@@ -38,7 +38,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
     /** @param list<string|ModelDescriptor>|\Throwable|\Closure(ProviderCredentials): list<string|ModelDescriptor> $models */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator
     {
-        self::getContainer()->set(ModelCatalog::class, new StubModelCatalog($models));
+        self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));
 
         /** @var AiProviderConfigurator $configurator */
         $configurator = self::getContainer()->get(AiProviderConfigurator::class);

@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Service\Backup\BackupFilename;
 use App\Service\Backup\BackupPart;
-use App\Service\Version\ReleaseVersionReader;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipStream\CompressionMethod;
@@ -20,7 +20,7 @@ final readonly class BackupDownloadResponseFactory
 {
     public function __construct(
         private ClockInterface $clock,
-        private ReleaseVersionReader $versionReader,
+        private ReleaseVersionReaderInterface $versionReader,
     ) {
     }
 

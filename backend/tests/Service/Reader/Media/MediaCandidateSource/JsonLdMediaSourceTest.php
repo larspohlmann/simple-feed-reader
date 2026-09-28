@@ -1,0 +1,239 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
+
+use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
+use PHPUnit\Framework\TestCase;
+
+final class JsonLdMediaSourceTest extends TestCase
+{
+    use FindsMediaInRawPage;
+
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
+    private function source(): JsonLdMediaSource
+    {
+        $providers = [new YouTubeEmbedProvider(), new SoundCloudEmbedProvider(), new BrightcoveEmbedProvider()];
+
+        return new JsonLdMediaSource(
+            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders($providers)),
+            new EmbedProviders($providers),
+        );
+    }
+
+    public function testTakesContentUrlFromAVideoObject(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https:\\/\\/www.youtube.com\\/watch?v=M1j_uRqKMKI"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://www.heise.de/news/x.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Embed, $found[0]->kind);
+        self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $found[0]->url);
+    }
+
+    public function testFindsAVideoObjectNestedUnderAnArticle(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"NewsArticle","video":{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://x.test/poster.jpg', $found[0]->posterUrl);
+    }
+
+    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
+    public function testEmitsAPosterlessVideoObjectForTheScannerToResolve(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+        self::assertNull($found[0]->posterUrl);
+    }
+
+    /** An <audio> element has no poster attribute; a phantom thumbnailUrl must not become one. */
+    public function testAnAudioObjectNeverCarriesAPoster(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"AudioObject","contentUrl":"https://x.test/a.mp3",'
+            . '"thumbnailUrl":"https://x.test/logo.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Audio, $found[0]->kind);
+        self::assertNull($found[0]->posterUrl);
+    }
+
+    /** 5 Magazine's JSON-LD contentUrls are images; they must not become media. */
+    public function testIgnoresAnImageContentUrl(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"ImageObject","contentUrl":"https://5mag.net/wp-content/uploads/x.jpg"}'
+            . '</script></body></html>';
+
+        self::assertSame([], $this->find($html, 'https://5mag.net/audio/x/'));
+    }
+
+    public function testIgnoresMalformedJson(): void
+    {
+        $html = '<html><body><script type="application/ld+json">{not json</script></body></html>';
+
+        self::assertSame([], $this->find($html, 'https://x.test/a.html'));
+    }
+
+    public function testFindsTheCompanionVideoInTheCapturedHeisePage(): void
+    {
+        $html = file_get_contents(__DIR__ . '/../../../../Fixtures/reader/media/heise-video.html');
+        self::assertIsString($html);
+
+        $found = $this->find($html, 'https://www.heise.de/news/x.html');
+
+        self::assertNotSame([], $found);
+        self::assertStringContainsString('M1j_uRqKMKI', $found[0]->url);
+    }
+
+    public function testNamesTheProseBlockAnInBodyDeclarationFollows(): void
+    {
+        $html = '<html lang="de"><body><p>' . self::PROSE . '</p><div>'
+            . '<script type="application/ld+json">{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}</script>'
+            . '</div></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
+    }
+
+    public function testAnchorsARepeatedDeclarationWhereItFirstAppears(): void
+    {
+        $video = '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4",'
+            . '"thumbnailUrl":"https://x.test/poster.jpg"}';
+        $html = '<html lang="de"><body><p>' . self::PROSE . '</p>'
+            . '<div><script type="application/ld+json">' . $video . '</script></div>'
+            . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
+            . '<div><script type="application/ld+json">' . $video . '</script></div></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(self::PROSE, $found[0]->precedingText);
+    }
+
+    public function testSkipsADeclarationInsideANav(): void
+    {
+        $html = '<html lang="de"><body><nav><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/teaser.mp4","thumbnailUrl":"https://x.test/t.jpg"}'
+            . '</script></nav><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+    }
+
+    /**
+     * Al Jazeera: the provider has no poster of its own, so the declared
+     * thumbnail stands in and the body image reconciles.
+     */
+    public function testAnEmbedWithoutAProviderPosterCarriesTheDeclaredThumbnail(): void
+    {
+        $thumbnail = 'https://www.aljazeera.com/wp-content/uploads/2026/08/image-1787184739.jpg?resize=1609%2C1080';
+        $html = '<html><head><script type="application/ld+json">{"@type":"VideoObject",'
+            . '"embedUrl":"https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html'
+            . '?videoId=6403736850112","thumbnailUrl":"' . $thumbnail . '"}'
+            . '</script></head><body></body></html>';
+
+        $found = $this->find($html, 'https://www.aljazeera.com/video/x');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Embed, $found[0]->kind);
+        self::assertSame($thumbnail, $found[0]->posterUrl);
+    }
+
+    /** ZDF 491430: contentUrl is an HLS playlist, thumbnailUrl a two-entry array. */
+    public function testAnHlsContentUrlYieldsAStreamWithTheFirstThumbnail(): void
+    {
+        $html = '<html><head><script type="application/ld+json">{"@type":"VideoObject",'
+            . '"thumbnailUrl":["https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1",'
+            . '"https://www.zdfheute.de/assets/istaf-102~314x314?cb=1"],'
+            . '"contentUrl":"https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8",'
+            . '"embedUrl":"https://ngp.zdf.de/miniplayer/embed/?mediaID=/zdf/nachrichten/istaf-100"}'
+            . '</script></head><body></body></html>';
+
+        $found = $this->find($html, 'https://www.zdfheute.de/video/x.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Stream, $found[0]->kind);
+        self::assertSame('https://www.zdfheute.de/api/video/istaf-berlin-em-stars-100.m3u8', $found[0]->url);
+        self::assertSame('https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1', $found[0]->posterUrl);
+    }
+
+    /** Al Jazeera 495829: one VideoObject declares its file and its player page — one asset, one player. */
+    public function testAFileBeatsThePlayerPageDeclaredOnTheSameNode(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://cdn.test/main.mp4",'
+            . '"embedUrl":"https://players.brightcove.net/665003303001/6tKQRAx7lu_default/index.html'
+            . '?videoId=6404485067112","thumbnailUrl":"https://x.test/poster.jpg"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Video, $found[0]->kind);
+        self::assertSame('https://cdn.test/main.mp4', $found[0]->url);
+    }
+
+    public function testTwoSeparateVideoObjectsEachYieldTheirOwnCandidate(): void
+    {
+        $html = '<html><body><script type="application/ld+json">[' . '{"@type":"VideoObject",'
+            . '"contentUrl":"https://x.test/first.mp4","thumbnailUrl":"https://x.test/first.jpg"},'
+            . '{"@type":"VideoObject","contentUrl":"https://x.test/second.mp4",'
+            . '"thumbnailUrl":"https://x.test/second.jpg"}]</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(2, $found);
+        self::assertSame('https://x.test/first.mp4', $found[0]->url);
+        self::assertSame('https://x.test/second.mp4', $found[1]->url);
+    }
+
+    public function testThePlayerPageServesWhenTheNodesFileIsRefused(): void
+    {
+        $html = '<html><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://cdn.test/main.mp4",'
+            . '"embedUrl":"https://www.youtube.com/watch?v=M1j_uRqKMKI"}'
+            . '</script></body></html>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found, 'the poster-less file is refused (D5); the player page is the fallback');
+        self::assertSame(MediaKind::Embed, $found[0]->kind);
+        self::assertSame('https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', $found[0]->url);
+    }
+}

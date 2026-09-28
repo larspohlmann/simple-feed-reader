@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Search\Membership\SavedSearchMatcher;
+use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\SavedSearchTerm;
 
 /**
@@ -12,7 +12,7 @@ use App\Service\Search\SavedSearchTerm;
  * every call it received, and can be told to fail — so a sweep test can
  * assert exactly which candidates were asked about and what happened after.
  */
-final class RecordingSavedSearchMatcher implements SavedSearchMatcher
+final class RecordingSavedSearchMatcher implements SavedSearchMatcherInterface
 {
     /** @var list<array{searchIds: list<int>, candidates: list<int>}> */
     public array $calls = [];

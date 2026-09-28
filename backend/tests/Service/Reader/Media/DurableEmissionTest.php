@@ -6,16 +6,16 @@ namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidateSourceInterface;
+use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\RawPage;
-use App\Service\Reader\Media\Source\AttributeMediaSource;
-use App\Service\Reader\Media\Source\JsonLdMediaSource;
-use App\Service\Reader\Media\Source\MetaMediaSource;
-use App\Service\Reader\Media\Source\SemanticMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\MetaMediaSource;
+use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

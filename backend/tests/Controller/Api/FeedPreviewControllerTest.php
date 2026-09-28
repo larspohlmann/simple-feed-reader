@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;

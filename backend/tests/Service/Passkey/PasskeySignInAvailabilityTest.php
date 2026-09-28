@@ -8,7 +8,7 @@ use App\Entity\UserPasskey;
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Passkey\PasskeySignInAvailability;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\PasskeyRegistrations;
@@ -141,9 +141,9 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
         );
     }
 
-    private function relyingPartyOf(string $id): PasskeyRelyingParty
+    private function relyingPartyOf(string $id): PasskeyRelyingPartyInterface
     {
-        return new class ($id) implements PasskeyRelyingParty {
+        return new class ($id) implements PasskeyRelyingPartyInterface {
             public function __construct(private string $id)
             {
             }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Logging\Loki;
 
+use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -17,7 +18,7 @@ final readonly class LokiClient
 
     public function __construct(
         private HttpClientInterface $httpClient,
-        private LokiEndpoint $endpoint,
+        private LokiEndpointInterface $endpoint,
     ) {
     }
 

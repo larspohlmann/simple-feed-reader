@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling;
 
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
+use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
+
 final readonly class ProfilingPolicy
 {
     public function __construct(
-        private ProfilingConfigSource $config,
-        private ProfileSampler $sampler,
-        private PyroscopeEndpoint $endpoint,
+        private ProfilingConfigSourceInterface $config,
+        private ProfileSamplerInterface $sampler,
+        private PyroscopeEndpointInterface $endpoint,
     ) {
     }
 

@@ -8,6 +8,7 @@ use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\ParsedFeed;
+use App\Service\Refresh\FeedBodyParser\FeedBodyParserInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;

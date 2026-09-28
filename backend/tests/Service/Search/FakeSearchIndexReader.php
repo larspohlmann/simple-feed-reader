@@ -6,7 +6,7 @@ namespace App\Tests\Service\Search;
 
 use App\Service\Search\Index\IndexMatches;
 use App\Service\Search\Index\IndexSearch;
-use App\Service\Search\Index\SearchIndexReader;
+use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
  * Stands in for the engine gateway. By default find() answers with the
@@ -17,7 +17,7 @@ use App\Service\Search\Index\SearchIndexReader;
  * failure case, kept identical because the read and write sides of the
  * gateway are deliberately symmetric.
  */
-final class FakeSearchIndexReader implements SearchIndexReader
+final class FakeSearchIndexReader implements SearchIndexReaderInterface
 {
     public ?IndexSearch $received = null;
 

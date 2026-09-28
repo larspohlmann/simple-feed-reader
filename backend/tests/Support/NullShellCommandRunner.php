@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Process\ShellCommandRunnerInterface;
+use App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface;
 
 /**
  * The test environment must never actually fork a drainer: a real child

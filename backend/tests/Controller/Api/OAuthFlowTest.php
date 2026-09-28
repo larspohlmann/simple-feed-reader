@@ -48,7 +48,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  *    still uninstantiated. The registry pulls its providers out of a tagged
  *    iterator lazily, so a swap performed before anything touches the registry
  *    IS picked up — but once a request has built it, the same call throws
- *    `InvalidArgumentException: The "App\Service\OAuth\GoogleOAuthProvider"
+ *    `InvalidArgumentException: The "App\Service\OAuth\OAuthProvider\GoogleOAuthProvider"
  *    service is already initialized, you cannot replace it.` That makes the
  *    seam order-dependent in a way nothing in the test reads.
  *  - Setting `OAuthProviderRegistry::class` replaces the one object the

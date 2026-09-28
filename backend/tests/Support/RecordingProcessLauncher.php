@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Process\DetachedProcessLauncherInterface;
+use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
  * Records every detached launch instead of forking one, so a test can assert

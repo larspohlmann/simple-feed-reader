@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: CatalogCategoryRepository::class)]
 #[ORM\Table(name: 'catalog_category')]
 #[ORM\UniqueConstraint(name: 'uniq_catalog_category_key', columns: ['category_key'])]
-class CatalogCategory implements Positioned
+class CatalogCategory implements PositionedInterface
 {
     use PersistedId;
 

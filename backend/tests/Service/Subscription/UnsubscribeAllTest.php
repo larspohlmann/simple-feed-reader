@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
-use App\Service\Discovery\FeedDiscoveryInterface;
+use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Subscription\FirstFetchRecorder;

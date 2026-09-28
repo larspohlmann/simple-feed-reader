@@ -6,7 +6,7 @@ namespace App\Service\Mail\Transport;
 
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\ResolvedMailTransport;
-use App\Service\Proxy\ConfiguredProxySource;
+use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport;
@@ -21,7 +21,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 final readonly class ActiveMailTransportFactory
 {
     public function __construct(
-        private ConfiguredProxySource $proxySource,
+        private ConfiguredProxySourceInterface $proxySource,
         private HttpClientInterface $httpClient,
     ) {
     }

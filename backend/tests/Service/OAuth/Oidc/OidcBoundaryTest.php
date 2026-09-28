@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth\Oidc;
 
-use App\Service\OAuth\AbstractOidcProvider;
+use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
 use App\Service\OAuth\Oidc\IdToken;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
 use App\Service\OAuth\Oidc\TokenEndpoint;

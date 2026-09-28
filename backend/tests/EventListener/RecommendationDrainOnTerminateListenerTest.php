@@ -8,7 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Kernel;
 use App\Service\Mail\DeferredMailer;
-use App\Service\Process\DetachedProcessLauncherInterface;
+use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 use App\Service\Recommendation\Run\RecommendationDrainSpawner;
 use App\Service\Recommendation\Run\RecommendationDriverKind;
 use App\Service\Recommendation\Run\WorkerPresence;

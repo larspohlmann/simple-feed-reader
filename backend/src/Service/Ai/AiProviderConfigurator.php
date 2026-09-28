@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
@@ -42,7 +43,7 @@ final readonly class AiProviderConfigurator
     private const int NAME_MAX_LENGTH = 120; // matches AiProviderSettings::$name column length
 
     public function __construct(
-        private ModelCatalog $catalog,
+        private ModelCatalogInterface $catalog,
         private ApiKeyCipher $cipher,
         private AiProviderSettingsRepository $repository,
         private EntityManagerInterface $entityManager,

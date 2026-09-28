@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\SharedLockInterface;
 
@@ -18,7 +18,7 @@ final class BeatDuringReleaseLockFactory extends RecordingLockFactory
 {
     public function __construct(
         PersistingStoreInterface $store,
-        private readonly CompletionStreamHeartbeat $heartbeat,
+        private readonly CompletionStreamHeartbeatInterface $heartbeat,
     ) {
         parent::__construct($store);
     }

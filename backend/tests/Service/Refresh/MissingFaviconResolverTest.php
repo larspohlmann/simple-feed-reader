@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FaviconResolver;
+use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Tests\DbTestCase;

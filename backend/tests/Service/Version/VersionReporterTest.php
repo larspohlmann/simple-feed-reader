@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Version;
 
 use App\Service\Version\LatestRelease;
-use App\Service\Version\LatestReleaseReader;
+use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
 use App\Service\Version\ReleaseVersion;
-use App\Service\Version\ReleaseVersionReader;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Service\Version\VersionReporter;
 use PHPUnit\Framework\TestCase;
 
@@ -63,7 +63,7 @@ final class VersionReporterTest extends TestCase
 
     private function reporter(ReleaseVersion $running, ?LatestRelease $latest): VersionReporter
     {
-        $releaseReader = new class ($running) implements ReleaseVersionReader {
+        $releaseReader = new class ($running) implements ReleaseVersionReaderInterface {
             public function __construct(private readonly ReleaseVersion $version)
             {
             }
@@ -74,7 +74,7 @@ final class VersionReporterTest extends TestCase
             }
         };
 
-        $latestReader = new class ($latest) implements LatestReleaseReader {
+        $latestReader = new class ($latest) implements LatestReleaseReaderInterface {
             public function __construct(private readonly ?LatestRelease $latest)
             {
             }

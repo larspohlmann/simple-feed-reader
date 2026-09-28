@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 
 /**
  * Verifies one pending image via the SSRF-guarded fetcher, retrying a bounded

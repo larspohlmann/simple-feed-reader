@@ -9,7 +9,7 @@ use App\Enum\SourceFormat;
 use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Ingest\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;

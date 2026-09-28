@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
@@ -45,7 +45,7 @@ use Symfony\Component\Lock\LockInterface;
  *
  * Not readonly: the held lock is the point.
  */
-final class TickLockKeepalive implements CompletionStreamHeartbeat
+final class TickLockKeepalive implements CompletionStreamHeartbeatInterface
 {
     public const int MINIMUM_INTERVAL_SECONDS = 30;
 

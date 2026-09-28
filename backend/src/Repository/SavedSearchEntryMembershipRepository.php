@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\SavedSearchEntry;
-use App\Service\Search\Membership\SavedSearchMembershipWriter;
+use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -15,7 +15,8 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<SavedSearchEntry>
  */
-final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository implements SavedSearchMembershipWriter
+final class SavedSearchEntryMembershipRepository extends ServiceEntityRepository implements
+    SavedSearchMembershipWriterInterface
 {
     /** Rows per INSERT: 3 placeholders each, kept under SQLite's historical 999. */
     private const int INSERT_ROWS = 300;

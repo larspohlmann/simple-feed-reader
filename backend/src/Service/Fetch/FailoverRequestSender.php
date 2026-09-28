@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -20,7 +21,7 @@ final readonly class FailoverRequestSender
 {
     public function __construct(
         private HttpClientInterface $httpClient,
-        private EgressProxySource $egressProxySource,
+        private EgressProxySourceInterface $egressProxySource,
     ) {
     }
 

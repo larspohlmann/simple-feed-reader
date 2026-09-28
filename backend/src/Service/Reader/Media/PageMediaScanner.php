@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\FeedMedia;
+use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Search\SearchEngineCapability;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StoredMark;
@@ -65,7 +65,7 @@ final class SearchReindexCommandTest extends DbTestCase
     }
 
     private function tester(
-        SearchIndexWriter $writer,
+        SearchIndexWriterInterface $writer,
         string $engineUrl = 'http://meilisearch.test',
         int $batchSize = 500,
     ): CommandTester {

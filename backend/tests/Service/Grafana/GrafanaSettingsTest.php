@@ -11,8 +11,8 @@ use App\Service\Grafana\EffectiveGrafanaSettings;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsCache;
-use App\Service\Profiling\NullProfileSampler;
-use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfileSampler\NullProfileSampler;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use App\Tests\Support\SettingsRequests;
@@ -166,7 +166,7 @@ final class GrafanaSettingsTest extends TestCase
 
     private function settings(
         EffectiveGrafanaSettings $effective,
-        ProfileSampler $sampler = new NullProfileSampler(),
+        ProfileSamplerInterface $sampler = new NullProfileSampler(),
     ): GrafanaSettings {
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('persist')->willReturnCallback(function (object $entity): void {

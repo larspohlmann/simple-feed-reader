@@ -8,8 +8,8 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MediaUrlKindTest extends TestCase
