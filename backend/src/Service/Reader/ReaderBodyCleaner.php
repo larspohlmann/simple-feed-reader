@@ -98,12 +98,12 @@ final readonly class ReaderBodyCleaner
         // scraper never runs (#963; the fragile image half was removed in #1088).
         $this->duplicateCollapser->collapseIn($document);
 
-        // plan() only classifies, so restore() still sees every body image and
-        // can skip the hero when a lead visual will land at the top; apply()'s
-        // mutation runs after, or the hero would come back (#755).
+        // plan() only classifies, so restore() still sees every body image; apply()'s
+        // mutation runs after, or the hero would come back (#755). A top-placed video or
+        // embed takes the lead position, so no hero is restored above it (#907).
         $discoveredMedia = $recoveredInBody ? $input->media->withoutEmbeds() : $input->media;
         $plan = $this->mediaInserter->plan($document, $discoveredMedia);
-        $restoredHero = $this->leadImage->restore($document, $input->leadImage, $plan->topPlacesLeadVisual());
+        $restoredHero = $plan->topPlacesLeadVisual() ? null : $this->leadImage->restore($document, $input->leadImage);
         $this->mediaInserter->apply($document, $plan, $restoredHero);
 
         // Inline teasers the extraction reduced to a lone thumbnail: rebuild each
