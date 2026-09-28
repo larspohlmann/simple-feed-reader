@@ -6,14 +6,13 @@ namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
+use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\SubstackPosterLink;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
 use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
-use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
@@ -62,23 +61,9 @@ final readonly class ReaderBodyCleaner
     ) {
     }
 
-    /**
-     * @param list<string|null>  $titleCandidates
-     * @param list<Slideshow>    $slideshows
-     * @param list<TeaserPlayer> $teasers
-     */
     #[WithSpan]
-    public function clean(
-        string $contentHtml,
-        array $titleCandidates,
-        LeadImageCandidate $leadImage,
-        ArticleMedia $media,
-        ?string $entryAuthor = null,
-        ?FeedMedia $feedMedia = null,
-        array $slideshows = [],
-        array $teasers = [],
-        ?string $excerpt = null,
-    ): string {
+    public function clean(string $contentHtml, BodyCleaningInput $input): string
+    {
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         if ($document === null) {
             return $contentHtml;
@@ -94,15 +79,15 @@ final readonly class ReaderBodyCleaner
         $this->navigationTrimmer->trimIn($document);
         // Engagement first: it strips the leading kickers and breadcrumbs that
         // otherwise sit in front of the title and hide it from the title remover.
-        $this->engagementCleaner->removeFrom($document, $entryAuthor);
-        $this->titleRemover->removeFrom($document, $titleCandidates);
+        $this->engagementCleaner->removeFrom($document, $input->entryAuthor);
+        $this->titleRemover->removeFrom($document, $input->titleCandidates);
         $this->boilerplateTrimmer->trimIn($document);
 
         // A recreated slideshow replaces the publisher's original carousel, which
         // extraction leaves as a broken pile of markup or an empty box. Runs after
         // the trimmers so a trimmer cannot drop the anchor, before media planning
         // so the plan sees the finished structure.
-        $this->slideshowInserter->insert($document, $slideshows);
+        $this->slideshowInserter->insert($document, $input->slideshows);
 
         // A publisher's recipe-fact block (servings/calories/time) lays out with
         // its own stylesheet, which the sanitizer never receives; relay it to the
@@ -116,20 +101,20 @@ final readonly class ReaderBodyCleaner
         // plan() only classifies, so restore() still sees every body image and
         // can skip the hero when a lead visual will land at the top; apply()'s
         // mutation runs after, or the hero would come back (#755).
-        $discoveredMedia = $recoveredInBody ? $media->withoutEmbeds() : $media;
+        $discoveredMedia = $recoveredInBody ? $input->media->withoutEmbeds() : $input->media;
         $plan = $this->mediaInserter->plan($document, $discoveredMedia);
-        $restoredHero = $this->leadImage->restore($document, $leadImage, $plan->topPlacesLeadVisual());
+        $restoredHero = $this->leadImage->restore($document, $input->leadImage, $plan->topPlacesLeadVisual());
         $this->mediaInserter->apply($document, $plan, $restoredHero);
 
         // Inline teasers the extraction reduced to a lone thumbnail: rebuild each
         // as a player where its still still sits, skipping any the media pipeline
         // already placed so the lead media is never mistaken for one (#948).
-        $this->teaserInserter->insert($document, $teasers, $this->mediaUrls($media));
+        $this->teaserInserter->insert($document, $input->teasers, $this->mediaUrls($input->media));
 
         // A gallery or video article whose only prose lived in a dropped header
         // now has a body of pure media; give it back the lede readability kept as
         // the excerpt. Runs last, so it judges "media-only" against the final body.
-        $this->mediaOnlyLede->restore($document, $excerpt);
+        $this->mediaOnlyLede->restore($document, $input->excerpt);
 
         // Over the settled body: set the trailing author bio and its disclosure
         // apart from the article prose they otherwise run on into (#1000).
@@ -137,7 +122,7 @@ final readonly class ReaderBodyCleaner
 
         // Last, over the finished body: the feed's real pixel sizes on the
         // images and players it enumerated, so none of them reflows the article.
-        FeedDimensionStamper::stampInto($document, $feedMedia ?? FeedMedia::none());
+        FeedDimensionStamper::stampInto($document, $input->feedMedia);
 
         return $document->saveHtml();
     }

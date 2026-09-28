@@ -568,6 +568,26 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Because cumulus clouds', $content);
     }
 
+    /**
+     * Readability demotes the page's own duplicate h1 to h2 and checks only the top candidate (see
+     * LeadingTitleRemover's docblock), so this h2 survives extraction; the page <title> alone, with no feed
+     * entry title passed, is what lets the body cleaner catch and drop it.
+     */
+    public function testDropsTheDuplicateHeadingFromReadabilitysOwnTitleAlone(): void
+    {
+        $prose = str_repeat('This is a substantial paragraph of real article text past the length gate. ', 4);
+        $html = '<html><head><title>Weekend Roundup</title></head><body>'
+            . '<h1>Weekend Roundup</h1>'
+            . '<article><h2>Weekend Roundup</h2><p>' . $prose . '</p><p>' . $prose . '</p></article>'
+            . '</body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $content = (string) $extractor->extract('https://site.test/post')->contentHtml;
+
+        self::assertStringNotContainsString('Weekend Roundup', $content);
+        self::assertStringContainsString('substantial paragraph', $content);
+    }
+
     public function testStripsABreadcrumbSeparatorAndKickerMasthead(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-breadcrumb.html');

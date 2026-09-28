@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
+use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
+use App\Service\Reader\FeedMedia;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
@@ -17,23 +19,22 @@ use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
-use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
-use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
+use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\PlayerChromeCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
-use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
@@ -68,7 +69,10 @@ final class ReaderBodyCleanerTest extends TestCase
         );
     }
 
-    /** The Verge ships the dek once per breakpoint; the reader collapses it, and keeps the lead image untouched (#963, #1088). */
+    /**
+     * The Verge ships the dek once per breakpoint; the reader collapses it, and keeps the lead image untouched
+     * (#963, #1088).
+     */
     public function testCollapsesTheResponsiveDuplicateDek(): void
     {
         $dek = 'Apple might recycle the name from Microsoft dual-screen device for its first folding iPhone.';
@@ -76,7 +80,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
             . '<p>' . self::PROSE . '</p>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertSame(1, substr_count($result, 'recycle the name from Microsoft'));
     }
@@ -90,19 +94,9 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<p><a href="https://news.test/author/jane-doe/">View Bio</a></p></div>'
             . '</div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertStringContainsString('<figure class="reader-author-bio">', $result);
-    }
-
-    private function noLead(): LeadImageCandidate
-    {
-        return new LeadImageCandidate(null, $this->pageDrawingNothing());
-    }
-
-    private function pageDrawingNothing(): PageImageInventory
-    {
-        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body></body>'));
     }
 
     public function testRebuildsAnOrphanTeaserThumbnailAsAnInlinePlayer(): void
@@ -116,7 +110,7 @@ final class ReaderBodyCleanerTest extends TestCase
             'https://x.test/related.html',
         );
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none(), teasers: [$teaser]);
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTeasers([$teaser], ArticleMedia::none()));
 
         self::assertStringContainsString('<figure class="reader-teaser">', $result);
         self::assertStringContainsString('<video', $result);
@@ -131,7 +125,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new MediaCandidate(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg'),
         ]);
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), $media, teasers: [$teaser]);
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTeasers([$teaser], $media));
 
         self::assertStringNotContainsString('reader-teaser', $result);
     }
@@ -145,7 +139,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<span class="detail-item-unit">Portionen</span></div></div>';
         $content = '<div><p>' . self::PROSE . '</p>' . $facts . '</div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertStringContainsString('<figure class="reader-recipe-facts">', $result);
         self::assertStringContainsString('<dt>Portionen</dt><dd>1 Portionen</dd>', $result);
@@ -158,7 +152,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<a href="/b">Blog</a><a href="/c">Debate</a><a href="/d">About</a></nav></div>';
         $content = '<div>' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertStringNotContainsString('site-header', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -168,7 +162,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p></div>';
 
-        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles(['My Article']));
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -179,7 +173,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $title = 'Schwedens Wohlfahrtsstaat nach 30 Jahren neoliberalem Experiment';
         $content = '<div><p>Kapitalismus</p><h2>' . $title . '</h2><p>' . self::PROSE . '</p></div>';
 
-        $result = $this->cleaner->clean($content, [$title], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles([$title]));
 
         self::assertStringNotContainsString('Kapitalismus', $result);
         self::assertStringNotContainsString($title, $result);
@@ -190,7 +184,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $content = '<div><p>1.251 Klicks</p><p>❤️️</p><p>' . self::PROSE . '</p></div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertStringNotContainsString('Klicks', $result);
         self::assertStringNotContainsString('❤️', $result);
@@ -204,7 +198,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, [null], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
         self::assertStringNotContainsString('jp-relatedposts', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -217,7 +211,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
             . '<p>' . self::PROSE . '</p>' . $grid . '</div>';
 
-        $result = $this->cleaner->clean($content, ['My Article'], $this->noLead(), ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles(['My Article']));
 
         self::assertStringNotContainsString('<h2>', $result);
         self::assertStringNotContainsString('jp-relatedposts', $result);
@@ -228,18 +222,15 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         // Readability output is always non-empty in the pipeline, but a body that
         // cannot be parsed must fall through untouched rather than crash the pass.
-        self::assertSame('   ', $this->cleaner->clean('   ', ['My Article'], $this->noLead(), ArticleMedia::none()));
+        self::assertSame('   ', $this->cleaner->clean('   ', BodyCleaningInputs::withTitles(['My Article'])));
     }
 
     public function testRestoresTheLeadIntoATextOnlyBodyInTheSharedWindow(): void
     {
         $content = '<div><p>' . self::PROSE . '</p></div>';
-        $candidate = new LeadImageCandidate(
-            'https://cdn.test/hero.jpg',
-            $this->pageDrawingNothing(),
-        );
+        $candidate = new LeadImageCandidate('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
 
-        $result = $this->cleaner->clean($content, [null], $candidate, ArticleMedia::none());
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::withLeadImage($candidate));
 
         self::assertStringContainsString('<img src="https://cdn.test/hero.jpg"', $result);
         self::assertStringContainsString('Fliesstext', $result);
@@ -250,17 +241,13 @@ final class ReaderBodyCleanerTest extends TestCase
         $html = '<h3>One</h3><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
             . '<p>' . self::PROSE . '</p>';
 
-        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), ArticleMedia::none());
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
 
         self::assertStringContainsString('youtube-nocookie.com/embed/aaaaaaaaaaa', $out);
         self::assertStringNotContainsString('<iframe', $out);
     }
 
-    /**
-     * A page with one video per section recovers a poster per embed, all named
-     * `hqdefault.jpg`; the duplicate collapser must keep every embed, not fold
-     * them to one on the shared poster stem (#1051, Trancentral).
-     */
+    /** One video per section recovers a poster per embed, all `hqdefault.jpg`; every embed stays (#1051). */
     public function testKeepsEveryInBodyEmbedWhenTheirPostersShareAStem(): void
     {
         $html = '<h4>One</h4><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
@@ -268,7 +255,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<h4>Three</h4><div><iframe src="https://www.youtube.com/embed/ccccccccccc"></iframe></div>'
             . '<p>' . self::PROSE . '</p>';
 
-        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), ArticleMedia::none());
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
 
         self::assertStringContainsString('embed/aaaaaaaaaaa', $out);
         self::assertStringContainsString('embed/bbbbbbbbbbb', $out);
@@ -281,16 +268,13 @@ final class ReaderBodyCleanerTest extends TestCase
         $html = '<p>' . self::PROSE . '</p><h3>Playlist</h3>'
             . '<div><iframe src="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4"></iframe></div>';
 
-        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), ArticleMedia::none());
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
 
         self::assertStringContainsString('open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', $out);
         self::assertStringNotContainsString('<iframe', $out);
     }
 
-    /**
-     * A discovered embed is dropped when the body recovered its own, so the same
-     * video never appears twice.
-     */
+    /** A discovered embed is dropped when the body recovered its own, so the same video never appears twice. */
     public function testSuppressesDiscoveredEmbedsWhenTheBodyHadItsOwn(): void
     {
         $html = '<div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
@@ -299,7 +283,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb', null, 'Watch'),
         ]);
 
-        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), $discovered);
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
         self::assertStringContainsString('aaaaaaaaaaa', $out);
         self::assertStringNotContainsString('bbbbbbbbbbb', $out);
@@ -312,16 +296,14 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<p>' . self::PROSE . '</p>';
         $discovered = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
-        $out = $this->cleaner->clean($html, [null, null], $this->noLead(), $discovered);
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
         self::assertStringContainsString('a.mp3', $out);
     }
 
     /**
-     * tagesschau 491512: a body img shares the video poster's path UUID, a
-     * different rendition. The video reconciles into that img's position, no
-     * duplicate remains, and it is not also prepended at the top; an
-     * accompanying audio candidate with no matching body img is top-placed.
+     * tagesschau 491512: the video reconciles into the body img that shares its poster's path UUID, in place and
+     * once; an audio candidate with no matching img is top-placed.
      */
     public function testReconcilesARecoveredVideoIntoItsMatchingBodyImage(): void
     {
@@ -333,7 +315,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3'),
         ]);
 
-        $out = $this->cleaner->clean($html, [null], $this->noLead(), $discovered);
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
         self::assertSame(1, substr_count($out, '<video'));
         self::assertStringNotContainsString('<img', $out);
@@ -346,16 +328,15 @@ final class ReaderBodyCleanerTest extends TestCase
     }
 
     /**
-     * heise 487576: an embed poster and the hero are the same picture from
-     * different CDNs, so identity cannot match them — the embed is top-placed
-     * and the hero must be suppressed rather than stacking a duplicate above it.
+     * heise 487576: the embed poster and the hero are one picture on two CDNs, so identity cannot match them;
+     * the embed is top-placed and the hero is suppressed rather than stacked above it.
      */
     public function testSuppressesTheHeroWhenARecoveredEmbedIsTopPlaced(): void
     {
         $html = '<div><p>' . self::PROSE . '</p></div>';
         $lead = new LeadImageCandidate(
             'https://heise.cloudimg.example/thumb.jpg',
-            $this->pageDrawingNothing(),
+            BodyCleaningInputs::pageDrawingNothing(),
         );
         $discovered = new ArticleMedia([
             new MediaCandidate(
@@ -366,16 +347,15 @@ final class ReaderBodyCleanerTest extends TestCase
             ),
         ]);
 
-        $out = $this->cleaner->clean($html, [null], $lead, $discovered);
+        $out = $this->cleaner->clean($html, new BodyCleaningInput([], $lead, $discovered, FeedMedia::none()));
 
         self::assertStringNotContainsString('heise.cloudimg.example', $out);
         self::assertStringContainsString('i.ytimg.example/hqdefault.jpg', $out);
     }
 
     /**
-     * tagesschau 491912 mix: video1 reconciles into its matching body img,
-     * video2 has no match and is top-placed, and an unrelated map img is
-     * left untouched.
+     * tagesschau 491912: video1 reconciles into its matching body img, video2 has no match and is top-placed, and
+     * an unrelated map img is left untouched.
      */
     public function testMixesReconciledAndTopPlacedVideosInTheSamePass(): void
     {
@@ -391,7 +371,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new MediaCandidate(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
         ]);
 
-        $out = $this->cleaner->clean($html, [null], $this->noLead(), $discovered);
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
         self::assertSame(2, substr_count($out, '<video'));
         self::assertSame(1, substr_count($out, '<img'));
@@ -410,16 +390,15 @@ final class ReaderBodyCleanerTest extends TestCase
             new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster),
         ]);
 
-        $out = $this->cleaner->clean($html, [null], $this->noLead(), $discovered);
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
         self::assertStringContainsString('<img', $out);
         self::assertStringContainsString('<video', $out);
     }
 
     /**
-     * Substack 481600, the shape readability hands over for a paid video post:
-     * a byline card (date, "Paid"), then #627's poster link, then the teaser.
-     * The poster link is the reader's play overlay hook and must survive.
+     * Substack 481600, a paid video post: a byline card ("Paid"), then #627's poster link, then the teaser. The
+     * poster link is the reader's play overlay hook and must survive.
      */
     public function testKeepsTheGatedVideoPosterBelowASubstackBylineCard(): void
     {
@@ -429,9 +408,9 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<div><p><a href="https://x.substack.com/p/plants"><img src="' . $poster . '"'
             . ' alt="Video — open the original article to watch" width="1280" height="720"></a></p>'
             . '<p>' . self::PROSE . '</p></div></div>';
-        $lead = new LeadImageCandidate($poster, $this->pageDrawingNothing());
+        $lead = new LeadImageCandidate($poster, BodyCleaningInputs::pageDrawingNothing());
 
-        $out = $this->cleaner->clean($html, [null], $lead, ArticleMedia::none());
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withLeadImage($lead));
 
         self::assertStringContainsString('alt="Video — open the original article to watch"', $out);
         self::assertSame(1, substr_count($out, '<img'), 'the poster is the only picture, no restored hero');

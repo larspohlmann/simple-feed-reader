@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
+use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\PageMediaScanner;
@@ -101,18 +102,16 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'empty');
         }
 
-        $leadImage = new LeadImageCandidate($article->image, $pageImages, $leadCaptions->captionFor($article->image));
-        $body = $this->bodyCleaner->clean(
-            $article->content,
-            [$article->title, $entryTitle],
-            $leadImage,
-            $this->bodyMedia->resolveForBody($media, $page->html),
-            $entryAuthor,
-            $feedMedia,
-            $slideshows,
-            $teasers,
-            $article->excerpt,
-        );
+        $body = $this->bodyCleaner->clean($article->content, new BodyCleaningInput(
+            titleCandidates: [$article->title, $entryTitle],
+            leadImage: new LeadImageCandidate($article->image, $pageImages, $leadCaptions->captionFor($article->image)),
+            media: $this->bodyMedia->resolveForBody($media, $page->html),
+            feedMedia: $feedMedia,
+            entryAuthor: $entryAuthor,
+            slideshows: $slideshows,
+            teasers: $teasers,
+            excerpt: $article->excerpt,
+        ));
         $clean = $this->sanitizer->sanitize($body);
         if ($clean === null) {
             return ExtractionResult::failed($url, 'empty');
