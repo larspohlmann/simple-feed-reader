@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Repository\PendingImageVerificationRepository;
+use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\Image\Model\ImageVerifyOutcome;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -23,7 +25,7 @@ final readonly class ImageVerificationSweep
     ) {
     }
 
-    public function verifyDue(): ImageVerificationReport
+    public function verifyDue(): ImageVerificationReportModel
     {
         $deadline = microtime(true) + self::BUDGET_SECONDS;
         $measured = 0;
@@ -49,6 +51,6 @@ final readonly class ImageVerificationSweep
             $this->em->flush();
         }
 
-        return new ImageVerificationReport($measured, $kept, $dropped, $retried);
+        return new ImageVerificationReportModel($measured, $kept, $dropped, $retried);
     }
 }

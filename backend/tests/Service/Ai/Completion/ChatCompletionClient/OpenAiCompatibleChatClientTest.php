@@ -6,22 +6,22 @@ namespace App\Tests\Service\Ai\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Completion\ChatCompletionClient\OpenAiCompatibleChatClient;
 use App\Service\Ai\Completion\CompletionBodyDecoder;
-use App\Service\Ai\Completion\CompletionOutcome;
-use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
-use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\ConcurrentCompletion;
-use App\Service\Ai\Completion\JsonSchema;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\JsonSchemaModel;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderConnection;
-use App\Service\Ai\ProviderCredentials;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderConnectionModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Tests\Support\CountingCompletionStreamHeartbeat;
 use App\Tests\Support\NullCompletionStreamHeartbeat;
 use App\Tests\Support\ResponseCapturingHttpClient;
@@ -30,18 +30,21 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpClient\Response\ResponseStream;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 final class OpenAiCompatibleChatClientTest extends TestCase
 {
-    private function credentials(): ProviderCredentials
+    private function credentials(): ProviderCredentialsModel
     {
-        return ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
+        return ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
     }
 
-    private function connection(): ProviderConnection
+    private function connection(): ProviderConnectionModel
     {
-        return new ProviderConnection($this->credentials(), ProviderTimeouts::standard());
+        return new ProviderConnectionModel($this->credentials(), ProviderTimeoutsModel::standard());
     }
 
     /** @return list<array{role: string, content: string}> */
@@ -50,19 +53,19 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return [['role' => 'user', 'content' => 'Rank these entries.']];
     }
 
-    private function request(): CompletionRequest
+    private function request(): CompletionRequestModel
     {
-        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), Reasoning::Allowed);
+        return new CompletionRequestModel('m', $this->messages(), 2048, $this->schema(), Reasoning::Allowed);
     }
 
-    private function suppressingRequest(): CompletionRequest
+    private function suppressingRequest(): CompletionRequestModel
     {
-        return new CompletionRequest('m', $this->messages(), 2048, $this->schema(), Reasoning::Suppressed);
+        return new CompletionRequestModel('m', $this->messages(), 2048, $this->schema(), Reasoning::Suppressed);
     }
 
-    private function schema(): JsonSchema
+    private function schema(): JsonSchemaModel
     {
-        return new JsonSchema('test_schema', ['type' => 'object']);
+        return new JsonSchemaModel('test_schema', ['type' => 'object']);
     }
 
     private function clientUsing(HttpClientInterface $httpClient): OpenAiCompatibleChatClient
@@ -98,8 +101,10 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * exception out of complete() -- it is content with a cause attached
      * (#437) -- so the cause is read off the outcome.
      */
-    private function soleOutcomeOf(OpenAiCompatibleChatClient $client, CompletionRequest $request): CompletionOutcome
-    {
+    private function soleOutcomeOf(
+        OpenAiCompatibleChatClient $client,
+        CompletionRequestModel $request,
+    ): CompletionOutcomeModel {
         return $client->completeMany($this->connection(), [
             new ConcurrentCompletion($request, new NullCompletionStreamObserver()),
         ])[0];
@@ -238,7 +243,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      */
     #[DataProvider('profileOptions')]
     public function testTheRequestCarriesTheConnectionsOwnBounds(
-        ProviderTimeouts $timeouts,
+        ProviderTimeoutsModel $timeouts,
         array $expected,
     ): void {
         $seen = [];
@@ -252,7 +257,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         });
 
         $this->clientUsing($client)->complete(
-            new ProviderConnection($this->credentials(), $timeouts),
+            new ProviderConnectionModel($this->credentials(), $timeouts),
             $this->request(),
             new NullCompletionStreamObserver(),
         );
@@ -262,16 +267,16 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * @return iterable<string, array{ProviderTimeouts, array<string, mixed>}>
+     * @return iterable<string, array{ProviderTimeoutsModel, array<string, mixed>}>
      */
     public static function profileOptions(): iterable
     {
         yield 'standard' => [
-            ProviderTimeouts::standard(),
+            ProviderTimeoutsModel::standard(),
             ['timeout' => 180.0, 'max_duration' => 600.0],
         ];
         yield 'slow model' => [
-            ProviderTimeouts::forSlowModel(),
+            ProviderTimeoutsModel::forSlowModel(),
             ['timeout' => 900.0, 'max_duration' => 3600.0],
         ];
     }
@@ -292,7 +297,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $this->expectExceptionMessage('That provider sent nothing for more than 900 seconds.');
 
         $this->clientUsing(new ResponseCapturingHttpClient(new MockResponse($body())))->complete(
-            new ProviderConnection($this->credentials(), ProviderTimeouts::forSlowModel()),
+            new ProviderConnectionModel($this->credentials(), ProviderTimeoutsModel::forSlowModel()),
             $this->request(),
             new NullCompletionStreamObserver(),
         );
@@ -300,7 +305,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
 
     /**
      * A keyless credential (a local model server) must not send `Bearer ` with
-     * nothing after it — ProviderCredentials::authorizationHeaders() drops the
+     * nothing after it — ProviderCredentialsModel::authorizationHeaders() drops the
      * header entirely, and every other header this call sets must survive
      * that.
      */
@@ -316,9 +321,9 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             ]);
         });
 
-        $credentials = ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', '');
+        $credentials = ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', '');
         $this->clientUsing($client)->complete(
-            new ProviderConnection($credentials, ProviderTimeouts::standard()),
+            new ProviderConnectionModel($credentials, ProviderTimeoutsModel::standard()),
             $this->request(),
             new NullCompletionStreamObserver()
         );
@@ -340,7 +345,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * Shape only, not timing: the MockResponse answers instantly, so this says
      * nothing about whether such a provider can still finish in time. It
      * cannot, past the profile's first-byte bound — that bound covers the wait
-     * for the response headers too, and ProviderTimeouts records why the branch
+     * for the response headers too, and ProviderTimeoutsModel records why the branch
      * accepts that.
      */
     public function testABlockingEnvelopeAnswerStillWorks(): void
@@ -721,7 +726,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             \JSON_THROW_ON_ERROR,
         ) . "\n\n";
         $client = $this->clientAnswering(new MockResponse(str_split(str_repeat($event, 12_000), 50_000)));
-        $request = new CompletionRequest('m', $this->messages(), 512, $this->schema(), Reasoning::Suppressed);
+        $request = new CompletionRequestModel('m', $this->messages(), 512, $this->schema(), Reasoning::Suppressed);
 
         self::assertSame(
             'That provider answered with more than 4096 bytes.',
@@ -1148,8 +1153,31 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[1]->cause());
     }
 
+    public function testCompleteManySettlesACallWhoseStreamNeverClosedAsAFailure(): void
+    {
+        $client = $this->clientUsing(new class ([$this->sseStream('{"picks":[]}')]) extends MockHttpClient {
+            public function stream(
+                ResponseInterface|iterable $responses,
+                ?float $timeout = null,
+            ): ResponseStreamInterface {
+                return new ResponseStream((static function (): \Generator {
+                    yield from [];
+                })());
+            }
+        });
+
+        $outcomes = $client->completeMany($this->connection(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertCount(1, $outcomes);
+        self::assertInstanceOf(CompletionOutcomeModel::class, $outcomes[0]);
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
+    }
+
     /** @return array<string, mixed> the decoded JSON request body */
-    private function captureRequestBody(CompletionRequest $request): array
+    private function captureRequestBody(CompletionRequestModel $request): array
     {
         $seen = null;
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
@@ -1168,14 +1196,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return $decoded;
     }
 
-    /** @return CompletionStreamObserverInterface&object{reports: list<CompletionStreamProgress>} */
+    /** @return CompletionStreamObserverInterface&object{reports: list<CompletionStreamProgressModel>} */
     private function recordingObserver(): CompletionStreamObserverInterface
     {
         return new class implements CompletionStreamObserverInterface {
-            /** @var list<CompletionStreamProgress> */
+            /** @var list<CompletionStreamProgressModel> */
             public array $reports = [];
 
-            public function streamProgressed(CompletionStreamProgress $progress): void
+            public function streamProgressed(CompletionStreamProgressModel $progress): void
             {
                 $this->reports[] = $progress;
             }

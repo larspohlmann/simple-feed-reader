@@ -78,7 +78,7 @@ final class AppleOAuthProviderTest extends TestCase
      * skip signature verification does not cover it — trusting it would need
      * full JWKS verification that nothing here does.
      *
-     * The general defence is that IdTokenVerifier accepts only an IdToken and
+     * The general defence is that IdTokenVerifier accepts only an IdTokenModel and
      * only TokenEndpoint mints one; OidcBoundaryTest pins that. What is left to
      * check here is that THIS provider — the one whose callback actually carries
      * such a token — has not grown a door of its own: no override of the

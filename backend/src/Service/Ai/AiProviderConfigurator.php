@@ -9,15 +9,18 @@ use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\Factory\AiConfigurationFactory;
-use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ModelRequiredForActivationException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
+use App\Service\Ai\Factory\AiConfigurationFactory;
+use App\Service\Ai\Model\AddedConfigurationModel;
+use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -83,22 +86,26 @@ final readonly class AiProviderConfigurator
      * @throws ProviderUnreachableException
      * @throws TooManyConfigurationsException
      */
-    public function addConfiguration(User $user, ?string $name, string $baseUrl, string $apiKey): AddedConfiguration
-    {
+    public function addConfiguration(
+        User $user,
+        ?string $name,
+        string $baseUrl,
+        string $apiKey,
+    ): AddedConfigurationModel {
         if ($this->repository->countForUser($user) >= self::MAX_CONFIGURATIONS) {
             throw new TooManyConfigurationsException(
                 'This account already holds the maximum number of AI configurations.',
             );
         }
 
-        $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
+        $credentials = ProviderCredentialsModel::fromAccountInput($baseUrl, $apiKey);
         $descriptors = $this->catalog->listModels($credentials);
 
         $configuration = $this->configurations->create($user, $name, $credentials);
         $this->entityManager->persist($configuration);
         $this->entityManager->flush();
 
-        return new AddedConfiguration($configuration, $this->ids($descriptors));
+        return new AddedConfigurationModel($configuration, $this->ids($descriptors));
     }
 
     /**
@@ -187,7 +194,7 @@ final readonly class AiProviderConfigurator
      *
      * @throws AiKeyUnreadableException
      */
-    public function credentials(AiProviderSettings $settings): ProviderCredentials
+    public function credentials(AiProviderSettings $settings): ProviderCredentialsModel
     {
         try {
             $apiKey = $this->cipher->open($settings->getUser()->requireId(), $settings->getSealedSecret());
@@ -195,7 +202,7 @@ final readonly class AiProviderConfigurator
             throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $e);
         }
 
-        return ProviderCredentials::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);
+        return ProviderCredentialsModel::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);
     }
 
     private function activateWhenNoneActive(AiProviderSettings $settings): void
@@ -219,7 +226,7 @@ final readonly class AiProviderConfigurator
      * @throws ModelNotOfferedException
      * @throws ProviderUnreachableException
      */
-    private function assertModelStillOffered(AiProviderSettings $settings, string $model): ModelDescriptor
+    private function assertModelStillOffered(AiProviderSettings $settings, string $model): ModelDescriptorModel
     {
         $offered = $this->catalog->listModels($this->credentials($settings));
 
@@ -227,9 +234,9 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @param list<ModelDescriptor> $offered
+     * @param list<ModelDescriptorModel> $offered
      */
-    private function offeredDescriptor(array $offered, string $model): ModelDescriptor
+    private function offeredDescriptor(array $offered, string $model): ModelDescriptorModel
     {
         foreach ($offered as $descriptor) {
             if ($descriptor->id === $model) {
@@ -241,12 +248,12 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * @param list<ModelDescriptor> $descriptors
+     * @param list<ModelDescriptorModel> $descriptors
      *
      * @return list<string>
      */
     private function ids(array $descriptors): array
     {
-        return array_map(static fn (ModelDescriptor $descriptor): string => $descriptor->id, $descriptors);
+        return array_map(static fn (ModelDescriptorModel $descriptor): string => $descriptor->id, $descriptors);
     }
 }

@@ -6,7 +6,7 @@ namespace App\Service\OAuth\Factory;
 
 use App\Entity\User;
 use App\Service\Auth\RegistrationPolicy;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class OAuthUserFactory
@@ -28,7 +28,7 @@ final readonly class OAuthUserFactory
      * identity, humans decide access. When approval is off, the account is
      * active immediately and approvedAt is stamped.
      */
-    public function create(OAuthIdentity $identity): User
+    public function create(OAuthIdentityModel $identity): User
     {
         $now = $this->clock->now();
         $user = new User($this->loginIdentifierFor($identity), $now);
@@ -72,7 +72,7 @@ final readonly class OAuthUserFactory
      * surfacing as a 500 on a retryable request, as RegistrationService does
      * with the same race.
      */
-    private function loginIdentifierFor(OAuthIdentity $identity): string
+    private function loginIdentifierFor(OAuthIdentityModel $identity): string
     {
         if ($identity->isLinkableByEmail()) {
             \assert(null !== $identity->email);
@@ -104,7 +104,7 @@ final readonly class OAuthUserFactory
      * accumulating a new account per sign-in. The hash also keeps the subject
      * out of a column the admin UI displays.
      */
-    private function placeholderEmail(OAuthIdentity $identity): string
+    private function placeholderEmail(OAuthIdentityModel $identity): string
     {
         return \sprintf(
             '%s-%s@oauth.invalid',

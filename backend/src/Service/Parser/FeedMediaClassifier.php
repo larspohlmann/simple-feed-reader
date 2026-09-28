@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Parser\Model\FeedMediaKind;
+
 /**
  * Decides what a feed media node — `<media:content>`, `<media:thumbnail>`, or an
  * `<enclosure>` — carries. `<media:thumbnail>` is an image by definition. An

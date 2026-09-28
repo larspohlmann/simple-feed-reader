@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion\ChatCompletionClient;
 
-use App\Service\Ai\Completion\CompletionOutcome;
-use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\ConcurrentCompletion;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\Model\ProviderConnectionModel;
 
 interface ChatCompletionClientInterface
 {
@@ -27,20 +27,20 @@ interface ChatCompletionClientInterface
      * @throws ProviderUnreachableException
      */
     public function complete(
-        ProviderConnection $connection,
-        CompletionRequest $request,
+        ProviderConnectionModel $connection,
+        CompletionRequestModel $request,
         CompletionStreamObserverInterface $observer,
     ): string;
 
     /**
      * Several JSON-mode chat completions at once, read in one multiplexed
-     * stream. Returns one CompletionOutcome per call, aligned by index. A
+     * stream. Returns one CompletionOutcomeModel per call, aligned by index. A
      * per-call transport failure is carried in that call's outcome rather than
      * thrown, so one failed call never discards a sibling's answer (#344).
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
-     * @return list<CompletionOutcome>
+     * @return list<CompletionOutcomeModel>
      */
-    public function completeMany(ProviderConnection $connection, array $calls): array;
+    public function completeMany(ProviderConnectionModel $connection, array $calls): array;
 }

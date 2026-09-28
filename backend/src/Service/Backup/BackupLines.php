@@ -14,6 +14,7 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\Dto\BackupTotals;
+use App\Service\Backup\Model\BackupProvenanceModel;
 
 /**
  * Shapes one backup record into its encoded NDJSON line. Every "…Line"
@@ -34,7 +35,7 @@ final readonly class BackupLines
         BackupSchema::KIND_ENTRY_STATE => 0,
     ];
 
-    public function foundationHeader(BackupProvenance $provenance, int $parts, BackupTotals $totals): string
+    public function foundationHeader(BackupProvenanceModel $provenance, int $parts, BackupTotals $totals): string
     {
         return $this->encode([
             ...$this->headerFields($provenance, 0),
@@ -43,7 +44,7 @@ final readonly class BackupLines
         ]);
     }
 
-    public function entryPartHeader(BackupProvenance $provenance, int $part): string
+    public function entryPartHeader(BackupProvenanceModel $provenance, int $part): string
     {
         return $this->encode([
             ...$this->headerFields($provenance, $part),
@@ -184,7 +185,7 @@ final readonly class BackupLines
     /**
      * @return array<string, mixed>
      */
-    private function headerFields(BackupProvenance $provenance, int $part): array
+    private function headerFields(BackupProvenanceModel $provenance, int $part): array
     {
         return [
             'kind' => BackupSchema::KIND_HEADER,

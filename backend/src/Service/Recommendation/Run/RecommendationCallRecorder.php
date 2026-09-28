@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -25,7 +25,7 @@ final readonly class RecommendationCallRecorder
     ) {
     }
 
-    public function begin(RecommendationRun $run, CallSlot $slot, CompletionRequest $request): RecordedCall
+    public function begin(RecommendationRun $run, CallSlot $slot, CompletionRequestModel $request): RecordedCall
     {
         $log = $this->logFactory->create($run, $slot, $request);
         $this->entityManager->persist($log);

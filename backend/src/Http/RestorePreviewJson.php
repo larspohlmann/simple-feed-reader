@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Backup\RestorePreview;
+use App\Service\Backup\Model\RestorePreviewModel;
 
 /**
  * The restore preview: the file's provenance, what it would load, and what
@@ -16,15 +16,15 @@ final readonly class RestorePreviewJson
     /**
      * @return array<string, mixed>
      */
-    public static function from(RestorePreview $preview): array
+    public static function from(RestorePreviewModel $preview): array
     {
         return [
             'backup' => [
-                'backupId' => $preview->header->backupId,
-                'parts' => $preview->header->parts,
-                'createdAt' => $preview->header->createdAt->format(\DateTimeInterface::ATOM),
-                'sourceUrl' => $preview->header->sourceUrl,
-                'sourceEmail' => $preview->header->sourceEmail,
+                'backupId' => $preview->source->backupId,
+                'parts' => $preview->source->parts,
+                'createdAt' => $preview->source->createdAt->format(\DateTimeInterface::ATOM),
+                'sourceUrl' => $preview->source->sourceUrl,
+                'sourceEmail' => $preview->source->sourceEmail,
             ],
             'toLoad' => [
                 'tags' => $preview->toLoad->tags,

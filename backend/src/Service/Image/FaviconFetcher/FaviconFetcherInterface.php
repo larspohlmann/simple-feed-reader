@@ -6,7 +6,7 @@ namespace App\Service\Image\FaviconFetcher;
 
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FetchedFavicon;
+use App\Service\Image\Model\FetchedFaviconModel;
 
 interface FaviconFetcherInterface
 {
@@ -16,5 +16,5 @@ interface FaviconFetcherInterface
      * @throws FaviconRejectedException when the host or this fetcher's policy refused; the resource may still be valid
      * @throws FaviconUnavailableException
      */
-    public function download(string $iconUrl): FetchedFavicon;
+    public function download(string $iconUrl): FetchedFaviconModel;
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\Exception;
 
-use App\Service\OAuth\OAuthCallbackFailure;
+use App\Service\OAuth\Model\OAuthCallbackFailure;
 
 final class OAuthCallbackRefusedException extends OAuthException
 {

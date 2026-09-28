@@ -6,8 +6,8 @@ namespace App\Service\Account;
 
 use App\Entity\User;
 use App\Enum\MagazineStyle;
-use App\Service\Mail\Digest\DigestConfiguration;
 use App\Service\Mail\Digest\DigestEnablement;
+use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Service\Passkey\PasskeyOffer;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -38,7 +38,7 @@ final readonly class AccountPreferencesWriter
         $this->entityManager->flush();
     }
 
-    public function changeDigest(User $user, DigestConfiguration $configuration): void
+    public function changeDigest(User $user, DigestConfigurationModel $configuration): void
     {
         $this->digestEnablement->applyTo($user->getPreferences(), $configuration);
         $this->entityManager->flush();

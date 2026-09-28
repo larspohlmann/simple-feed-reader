@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Entity\Subscription;
-use App\Service\Discovery\FeedCandidate;
-use App\Service\Discovery\ScrapeFailureReason;
+use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Model\ScrapeFailureReason;
 
 final readonly class SubscribeOutcome
 {
     /**
-     * @param list<FeedCandidate> $candidates
+     * @param list<FeedCandidateModel> $candidates
      * @param int                 $unreadCount the entries the subscribe stored; nobody has read a feed just added
      */
     private function __construct(
@@ -28,7 +28,7 @@ final readonly class SubscribeOutcome
         return new self($subscription, [], null, $unreadCount);
     }
 
-    /** @param list<FeedCandidate> $candidates an empty list is a legitimate outcome; the reason says why */
+    /** @param list<FeedCandidateModel> $candidates an empty list is a legitimate outcome; the reason says why */
     public static function candidates(array $candidates, ?ScrapeFailureReason $scrapeFailureReason = null): self
     {
         return new self(null, $candidates, $scrapeFailureReason);

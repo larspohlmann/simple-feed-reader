@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\SubscribeOutcomeJson;
-use App\Service\Discovery\FeedCandidate;
-use App\Service\Discovery\ScrapeFailureReason;
+use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Model\ScrapeFailureReason;
 use App\Service\Subscription\SubscribeOutcome;
 use PHPUnit\Framework\TestCase;
 
@@ -15,8 +15,8 @@ final class SubscribeOutcomeJsonTest extends TestCase
     public function testListsEveryCandidateWithoutAReasonWhenNoneWasGiven(): void
     {
         $outcome = SubscribeOutcome::candidates([
-            new FeedCandidate('https://example.com/rss', 'Example', 'rss'),
-            new FeedCandidate('https://example.com/atom', null, 'atom'),
+            new FeedCandidateModel('https://example.com/rss', 'Example', 'rss'),
+            new FeedCandidateModel('https://example.com/atom', null, 'atom'),
         ]);
 
         self::assertSame(

@@ -4,22 +4,25 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Text\PlainText;
 
 /**
  * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`)
- * into a ParsedFeed. The reusable core shared by the refresh strategy
+ * into a ParsedFeedModel. The reusable core shared by the refresh strategy
  * (WpJsonBodyParser) and the subscribe-dialog preview, mirroring how
  * FeedParser and HtmlItemExtractor are used directly by both pipelines.
  *
- * The posts endpoint carries no site name, so ParsedFeed::title is null; the
+ * The posts endpoint carries no site name, so ParsedFeedModel::title is null; the
  * discovery candidate supplies a readable title from the page instead.
  */
 final readonly class WordPressJsonParser
 {
-    public function parse(string $body): ParsedFeed
+    public function parse(string $body): ParsedFeedModel
     {
         /** @var mixed $posts */
         $posts = json_decode(trim($body), true);
@@ -37,15 +40,15 @@ final readonly class WordPressJsonParser
             }
         }
 
-        return new ParsedFeed(null, null, null, null, $entries);
+        return new ParsedFeedModel(null, null, null, null, $entries);
     }
 
     /** @param array<string, mixed> $post */
-    private function entry(array $post): ParsedEntry
+    private function entry(array $post): ParsedEntryModel
     {
         $image = $this->image($post);
 
-        return new ParsedEntry(
+        return new ParsedEntryModel(
             guid: $this->guid($post),
             url: $this->stringOrNull($post['link'] ?? null),
             title: PlainText::from($this->rendered($post, 'title')) ?? '(untitled)',
@@ -55,7 +58,7 @@ final readonly class WordPressJsonParser
             summary: $this->rendered($post, 'excerpt'),
             contentHtml: $this->rendered($post, 'content'),
             publishedAt: $this->publishedAt($post),
-            media: new ParsedEntryMedia($image),
+            media: new ParsedEntryMediaModel($image),
         );
     }
 
@@ -69,11 +72,11 @@ final readonly class WordPressJsonParser
      *
      * @param array<string, mixed> $post
      */
-    private function image(array $post): ?DeclaredImage
+    private function image(array $post): ?DeclaredImageModel
     {
         $jetpackUrl = $this->stringOrNull($post['jetpack_featured_media_url'] ?? null);
         if ($jetpackUrl !== null) {
-            return new DeclaredImage($jetpackUrl);
+            return new DeclaredImageModel($jetpackUrl);
         }
 
         return ItemImageExtractor::fromHtml($this->rendered($post, 'content'))

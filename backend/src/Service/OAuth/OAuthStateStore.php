@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth;
 
 use App\Service\OAuth\Exception\InvalidOAuthStateException;
+use App\Service\OAuth\Model\OAuthStartStateModel;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
@@ -57,7 +58,7 @@ use Random\RandomException;
  * validating it, so a state that fails a check is still burned, but redemption is
  * not atomic: PSR-6 offers no compare-and-swap, so two callbacks arriving
  * together can both see isHit(), both delete, and both get the same
- * OAuthStartState. That is deliberate: both racers then spend the SAME
+ * OAuthStartStateModel. That is deliberate: both racers then spend the SAME
  * authorization code at the provider, which is single-use there, so the second
  * exchange fails on the provider's authority; the race wastes a round trip,
  * cannot produce two sessions, and never crosses a user boundary. Closing it
@@ -80,7 +81,7 @@ final readonly class OAuthStateStore
      * @throws InvalidArgumentException
      * @throws RandomException
      */
-    public function start(string $provider): OAuthStartState
+    public function start(string $provider): OAuthStartStateModel
     {
         $state = self::randomToken();
         $nonce = self::randomToken();
@@ -94,7 +95,7 @@ final readonly class OAuthStateStore
         // docblock: this is what makes `state` mean "this browser".
         $browserToken = self::randomToken();
 
-        $started = new OAuthStartState(
+        $started = new OAuthStartStateModel(
             $provider,
             $state,
             $nonce,
@@ -126,7 +127,7 @@ final readonly class OAuthStateStore
      * @throws InvalidOAuthStateException when the state is unknown, spent, expired, or presented by another browser
      * @throws InvalidArgumentException
      */
-    public function consume(string $state, ?string $browserToken): OAuthStartState
+    public function consume(string $state, ?string $browserToken): OAuthStartStateModel
     {
         $key = self::keyFor($state);
         $item = $this->oauthStateCache->getItem($key);
@@ -152,7 +153,7 @@ final readonly class OAuthStateStore
 
         $codeVerifier = $stored['code_verifier'];
 
-        return new OAuthStartState(
+        return new OAuthStartStateModel(
             $stored['provider'],
             $state,
             $stored['nonce'],

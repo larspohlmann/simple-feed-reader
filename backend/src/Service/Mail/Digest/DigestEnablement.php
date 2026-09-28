@@ -6,6 +6,7 @@ namespace App\Service\Mail\Digest;
 
 use App\Entity\Preferences;
 use App\Service\Clock\NaiveUtcClock;
+use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 
 /**
  * Applies a digest configuration write, including the one piece of business
@@ -23,7 +24,7 @@ final readonly class DigestEnablement
     ) {
     }
 
-    public function applyTo(Preferences $preferences, DigestConfiguration $configuration): void
+    public function applyTo(Preferences $preferences, DigestConfigurationModel $configuration): void
     {
         $wasEnabled = $preferences->isDigestEnabled();
 

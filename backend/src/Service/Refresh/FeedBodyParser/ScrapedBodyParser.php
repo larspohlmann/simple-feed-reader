@@ -6,7 +6,7 @@ namespace App\Service\Refresh\FeedBodyParser;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
@@ -27,7 +27,7 @@ final readonly class ScrapedBodyParser implements FeedBodyParserInterface
         return SourceFormat::SCRAPED;
     }
 
-    public function parse(string $body, Feed $feed): ParsedFeed
+    public function parse(string $body, Feed $feed): ParsedFeedModel
     {
         // The feed's stored URL is the page's canonical address — it anchors
         // relative article links exactly as it did at discovery time.

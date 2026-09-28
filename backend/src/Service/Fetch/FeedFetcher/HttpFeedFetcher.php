@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Fetch\FeedFetcher;
 
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Fetch\Model\FetchTicketModel;
 
 /**
  * Single-URL adapter over the batch engine, for the callers that genuinely want
@@ -23,9 +23,9 @@ final readonly class HttpFeedFetcher implements FeedFetcherInterface
     {
     }
 
-    public function fetch(string $url): FetchResponse
+    public function fetch(string $url): FetchResponseModel
     {
-        foreach ($this->fetcher->fetchAll([new FetchTicket($url)]) as $outcome) {
+        foreach ($this->fetcher->fetchAll([new FetchTicketModel($url)]) as $outcome) {
             return $outcome->responseOrThrow();
         }
 

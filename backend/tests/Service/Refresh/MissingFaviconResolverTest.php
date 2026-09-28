@@ -6,7 +6,7 @@ namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FlushFailingEntityManager;
@@ -72,7 +72,7 @@ final class MissingFaviconResolverTest extends DbTestCase
 
     private function homepageAdvertises(string $origin, string $iconPath): void
     {
-        $this->homepages->willReturn($origin, FetchResponse::fetched(
+        $this->homepages->willReturn($origin, FetchResponseModel::fetched(
             $origin . '/',
             false,
             sprintf(/** @lang TEXT */ '<link rel="icon" href="%s">', $iconPath),

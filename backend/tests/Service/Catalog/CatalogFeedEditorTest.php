@@ -8,8 +8,8 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Enum\SourceFormat;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Catalog\CatalogFeedDetails;
 use App\Service\Catalog\CatalogFeedEditor;
+use App\Service\Catalog\Model\CatalogFeedDetailsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 
@@ -26,7 +26,7 @@ final class CatalogFeedEditorTest extends DbTestCase
         self::assertTrue($reloadedFirst->isEnabled());
         self::assertTrue($reloadedFirst->isLocked());
 
-        $second = $this->editor()->create(new CatalogFeedDetails(
+        $second = $this->editor()->create(new CatalogFeedDetailsModel(
             $category->requireId(),
             'Second',
             'https://second.feed-editor.example.com/rss',
@@ -52,7 +52,7 @@ final class CatalogFeedEditorTest extends DbTestCase
     public function testCreateCanLockAFeed(): void
     {
         $category = $this->category('feed_editor_locked');
-        $feed = $this->editor()->create(new CatalogFeedDetails(
+        $feed = $this->editor()->create(new CatalogFeedDetailsModel(
             $category->requireId(),
             'Locked',
             'https://locked.feed-editor.example.com/rss',
@@ -68,7 +68,7 @@ final class CatalogFeedEditorTest extends DbTestCase
         $to = $this->category('feed_editor_to');
         $feed = $this->editor()->create($this->details($from, 'https://before.feed-editor.example.com/rss'));
 
-        $this->editor()->update($feed, new CatalogFeedDetails(
+        $this->editor()->update($feed, new CatalogFeedDetailsModel(
             $to->requireId(),
             'After',
             'https://after.feed-editor.example.com/rss',
@@ -94,7 +94,8 @@ final class CatalogFeedEditorTest extends DbTestCase
         );
 
         $this->expectException(RecordNotFoundException::class);
-        $this->editor()->update($feed, new CatalogFeedDetails(999999, 'T', 'https://x.feed-editor.example.com/rss'));
+        $this->editor()
+            ->update($feed, new CatalogFeedDetailsModel(999999, 'T', 'https://x.feed-editor.example.com/rss'));
     }
 
     public function testDeleteRemovesTheFeed(): void
@@ -139,8 +140,8 @@ final class CatalogFeedEditorTest extends DbTestCase
         return $category;
     }
 
-    private function details(CatalogCategory $category, string $url): CatalogFeedDetails
+    private function details(CatalogCategory $category, string $url): CatalogFeedDetailsModel
     {
-        return new CatalogFeedDetails($category->requireId(), 'Title', $url);
+        return new CatalogFeedDetailsModel($category->requireId(), 'Title', $url);
     }
 }

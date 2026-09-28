@@ -642,7 +642,7 @@ final class PasskeyLoginTest extends ApiTestCase
         return $store->issue($fixture->challenge, $user->getId(), Base64UrlSafe::encodeUnpadded($fixture->userHandle));
     }
 
-    /** A LOGIN challenge carries no user id or user handle — see PasskeyChallenge's docblock. */
+    /** A LOGIN challenge carries no user id or user handle — see PasskeyChallengeModel's docblock. */
     private function issueLoginChallenge(string $challenge): string
     {
         /** @var PasskeyChallengeStore $store */

@@ -6,7 +6,7 @@ namespace App\Dto\Me;
 
 use App\Enum\DigestCadence;
 use App\Enum\DigestFormat;
-use App\Service\Mail\Digest\DigestConfiguration;
+use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -29,9 +29,9 @@ final readonly class UpdateDigestRequest
     ) {
     }
 
-    public function toConfiguration(): DigestConfiguration
+    public function toConfiguration(): DigestConfigurationModel
     {
-        return new DigestConfiguration(
+        return new DigestConfigurationModel(
             enabled: $this->enabled,
             cadence: $this->cadence,
             sendHour: $this->sendHour,

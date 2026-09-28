@@ -6,7 +6,7 @@ namespace App\Service\Mail\AccountMailer;
 
 use App\Entity\User;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\PendingApprovalNotice;
+use App\Service\Mail\Model\PendingApprovalNoticeModel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
@@ -42,7 +42,7 @@ final readonly class MailGatedAccountMailer implements AccountMailerInterface
         $this->send('password reset', $user, fn () => $this->inner->sendPasswordReset($user, $plainToken));
     }
 
-    public function sendPendingApprovalNotice(User $admin, PendingApprovalNotice $notice): void
+    public function sendPendingApprovalNotice(User $admin, PendingApprovalNoticeModel $notice): void
     {
         $this->send(
             'pending-approval notice',

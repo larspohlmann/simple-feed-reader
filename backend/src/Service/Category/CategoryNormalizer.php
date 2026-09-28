@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Category;
 
-use App\Service\Parser\ParsedCategory;
+use App\Service\Category\Model\NormalizedCategoryModel;
+use App\Service\Parser\Model\ParsedCategoryModel;
 
 /**
  * Turns the raw categories a feed declared for one entry into the rows to
@@ -18,9 +19,9 @@ final class CategoryNormalizer
     private const int SCHEME_MAX = 255;
 
     /**
-     * @param list<ParsedCategory> $raw
+     * @param list<ParsedCategoryModel> $raw
      *
-     * @return list<NormalizedCategory>
+     * @return list<NormalizedCategoryModel>
      */
     public function normalize(array $raw): array
     {
@@ -39,7 +40,7 @@ final class CategoryNormalizer
         return array_values($byIdentity);
     }
 
-    private function normalizeOne(ParsedCategory $category): ?NormalizedCategory
+    private function normalizeOne(ParsedCategoryModel $category): ?NormalizedCategoryModel
     {
         $label = trim($category->label);
         if ($label === '') {
@@ -49,7 +50,7 @@ final class CategoryNormalizer
         $collapsed = (string) preg_replace('/\s+/u', ' ', $label);
         $canonicalKey = mb_substr(mb_strtolower($collapsed), 0, self::LABEL_MAX);
 
-        return new NormalizedCategory(
+        return new NormalizedCategoryModel(
             $canonicalKey,
             mb_substr($label, 0, self::LABEL_MAX),
             mb_substr(trim($category->scheme ?? ''), 0, self::SCHEME_MAX),

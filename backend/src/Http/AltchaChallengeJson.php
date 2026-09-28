@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Auth\AltchaChallenge;
+use App\Service\Auth\Model\AltchaChallengeModel;
 
 /** The JSON the ALTCHA browser widget consumes verbatim. */
 final class AltchaChallengeJson
 {
     /** @return array{algorithm: string, challenge: string, salt: string, signature: string, maxnumber: int} */
-    public static function from(AltchaChallenge $challenge): array
+    public static function from(AltchaChallengeModel $challenge): array
     {
         return [
             'algorithm' => $challenge->algorithm,

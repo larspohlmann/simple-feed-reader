@@ -8,8 +8,8 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Service\Catalog\CatalogDocument;
 use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\CatalogImportMode;
-use App\Service\Catalog\ParsedCatalog;
+use App\Service\Catalog\Model\CatalogImportMode;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -34,7 +34,7 @@ final class CatalogImporterTest extends DbTestCase
     /**
      * @param list<array{title: string, url: string}> $feeds
      */
-    private function document(array $feeds, string $key = 'technology', string $name = 'Technology'): ParsedCatalog
+    private function document(array $feeds, string $key = 'technology', string $name = 'Technology'): ParsedCatalogModel
     {
         $outlines = '';
         foreach ($feeds as $feed) {
@@ -53,7 +53,7 @@ final class CatalogImporterTest extends DbTestCase
         ));
     }
 
-    private function parsed(string $categoryOutlines): ParsedCatalog
+    private function parsed(string $categoryOutlines): ParsedCatalogModel
     {
         $parser = self::getContainer()->get(CatalogDocument::class);
         self::assertInstanceOf(CatalogDocument::class, $parser);
@@ -68,7 +68,7 @@ final class CatalogImporterTest extends DbTestCase
      * tell "positioned by document order" apart from "fell back to the name
      * tiebreak" — the two would otherwise look identical.
      */
-    private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalog
+    private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalogModel
     {
         return $this->parsed(
             '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'

@@ -6,6 +6,9 @@ namespace App\Service\Catalog;
 
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
+use App\Service\Catalog\Model\CatalogImportMode;
+use App\Service\Catalog\Model\CatalogImportResultModel;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -21,9 +24,9 @@ final readonly class CatalogImporter
     ) {
     }
 
-    public function import(ParsedCatalog $document, CatalogImportMode $mode): CatalogImportResult
+    public function import(ParsedCatalogModel $document, CatalogImportMode $mode): CatalogImportResultModel
     {
-        return $this->em->wrapInTransaction(function () use ($document, $mode): CatalogImportResult {
+        return $this->em->wrapInTransaction(function () use ($document, $mode): CatalogImportResultModel {
             $pass = new CatalogImportPass($this->em, $this->categories->findAllOrdered(), $this->feeds->findAll());
             $pass->apply($document);
             if (CatalogImportMode::Replace === $mode) {

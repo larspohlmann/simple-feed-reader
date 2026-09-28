@@ -73,6 +73,29 @@ final class BackupHeaderTest extends TestCase
         self::assertSame($header, $header->requireCoherent());
     }
 
+    public function testItMapsToTheSourceARestoreShows(): void
+    {
+        $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
+        $header = new BackupHeader(
+            schemaVersion: 3,
+            createdAt: $createdAt,
+            sourceUrl: 'https://reader.example',
+            sourceEmail: 'owner@example.test',
+            backupId: 'backup-1202',
+            part: 0,
+            parts: 4,
+            totals: new BackupTotals(1, 1),
+        );
+
+        $source = $header->toSource();
+
+        self::assertSame('backup-1202', $source->backupId);
+        self::assertSame(4, $source->parts);
+        self::assertSame($createdAt, $source->createdAt);
+        self::assertSame('https://reader.example', $source->sourceUrl);
+        self::assertSame('owner@example.test', $source->sourceEmail);
+    }
+
     private static function header(int $part, ?int $parts, ?BackupTotals $totals = null): BackupHeader
     {
         return new BackupHeader(

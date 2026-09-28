@@ -6,13 +6,13 @@ namespace App\Tests\Service\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\WordPressJsonParser;
+use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\FeedPreviewService;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Service\Scraper\ScrapedFixtures;
@@ -60,7 +60,13 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             self::URL,
-            FetchResponse::fetched(self::URL, permanentRedirect: false, body: $xml, etag: null, lastModified: null),
+            FetchResponseModel::fetched(
+                self::URL,
+                permanentRedirect: false,
+                body: $xml,
+                etag: null,
+                lastModified: null,
+            ),
         );
 
         return $fetcher;

@@ -6,14 +6,14 @@ namespace App\Tests\Service\Ingest;
 
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Ingest\PlatformEntryRules;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class PlatformEntryRulesTest extends TestCase
 {
-    private function entry(string $url): ParsedEntry
+    private function entry(string $url): ParsedEntryModel
     {
-        return new ParsedEntry('g-1', $url, 'Title', null, null, '<p>body</p>', null);
+        return new ParsedEntryModel('g-1', $url, 'Title', null, null, '<p>body</p>', null);
     }
 
     public function testANonMatchingEntryComesBackUnchanged(): void

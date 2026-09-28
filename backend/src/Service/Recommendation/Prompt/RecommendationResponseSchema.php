@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
-use App\Service\Ai\Completion\JsonSchema;
+use App\Service\Ai\Completion\Model\JsonSchemaModel;
 
 /**
  * The structured-output schema each provider phase asks for, the machine form
@@ -80,12 +80,12 @@ enum RecommendationResponseSchema
         'additionalProperties' => false,
     ];
 
-    public function toJsonSchema(): JsonSchema
+    public function toJsonSchema(): JsonSchemaModel
     {
         return match ($this) {
-            self::Distillation => new JsonSchema('profile', self::DISTILLATION_SCHEMA),
-            self::BatchScore => new JsonSchema('recommendations', self::BATCH_SCORE_SCHEMA),
-            self::Consolidation => new JsonSchema('recommendations', self::CONSOLIDATION_SCHEMA),
+            self::Distillation => new JsonSchemaModel('profile', self::DISTILLATION_SCHEMA),
+            self::BatchScore => new JsonSchemaModel('recommendations', self::BATCH_SCORE_SCHEMA),
+            self::Consolidation => new JsonSchemaModel('recommendations', self::CONSOLIDATION_SCHEMA),
         };
     }
 }

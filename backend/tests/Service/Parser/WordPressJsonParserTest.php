@@ -25,7 +25,7 @@ final class WordPressJsonParserTest extends TestCase
         ]
         JSON;
 
-    private function parse(string $body): \App\Service\Parser\ParsedFeed
+    private function parse(string $body): \App\Service\Parser\Model\ParsedFeedModel
     {
         return (new WordPressJsonParser())->parse($body);
     }

@@ -7,7 +7,7 @@ namespace App\Service\Ai\Factory;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use Psr\Clock\ClockInterface;
 
 final readonly class AiConfigurationFactory
@@ -19,7 +19,7 @@ final readonly class AiConfigurationFactory
     {
     }
 
-    public function create(User $user, ?string $name, ProviderCredentials $credentials): AiProviderSettings
+    public function create(User $user, ?string $name, ProviderCredentialsModel $credentials): AiProviderSettings
     {
         return new AiProviderSettings(
             $user,
@@ -31,8 +31,10 @@ final readonly class AiConfigurationFactory
         );
     }
 
-    public function duplicate(AiProviderSettings $source, ProviderCredentials $sourceCredentials): AiProviderSettings
-    {
+    public function duplicate(
+        AiProviderSettings $source,
+        ProviderCredentialsModel $sourceCredentials,
+    ): AiProviderSettings {
         $user = $source->getUser();
         $copy = new AiProviderSettings(
             $user,

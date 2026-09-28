@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
+use App\Service\Backup\Model\BackupInventoryModel;
 use App\Service\Subscription\SubscriptionLimitResolver;
 
 /**
@@ -52,7 +53,7 @@ final readonly class BackupFitCheck
     {
     }
 
-    public function assertFits(BackupInventory $inventory, User $user): void
+    public function assertFits(BackupInventoryModel $inventory, User $user): void
     {
         $limit = $this->subscriptionLimits->resolve($user);
         if ($inventory->subscriptions > $limit) {

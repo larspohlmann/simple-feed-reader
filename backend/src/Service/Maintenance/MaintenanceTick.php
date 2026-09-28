@@ -7,6 +7,8 @@ namespace App\Service\Maintenance;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
+use App\Service\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
@@ -42,23 +44,25 @@ final readonly class MaintenanceTick
     ) {
     }
 
-    public function run(): MaintenanceTickReport
+    public function run(): MaintenanceTickReportModel
     {
         $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', self::TICK_WINDOW_SECONDS));
         $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
-        $sweeps = $refresh->isAborted() ? MaintenanceSweeps::skippedAfterAbortedRefresh() : $this->sweep($deadline);
+        $sweeps = $refresh->isAborted()
+            ? MaintenanceSweepsModel::skippedAfterAbortedRefresh()
+            : $this->sweep($deadline);
 
-        return new MaintenanceTickReport($refresh, $sweeps, $this->logSpoolShipper->ship());
+        return new MaintenanceTickReportModel($refresh, $sweeps, $this->logSpoolShipper->ship());
     }
 
-    private function sweep(\DateTimeImmutable $deadline): MaintenanceSweeps
+    private function sweep(\DateTimeImmutable $deadline): MaintenanceSweepsModel
     {
         $recommendations = $this->forYouSweep->sweepOnce();
         $digests = $this->sendDueDigests->run();
         $imageVerification = $this->imageVerificationSweep->verifyDue();
         $budget = SweepBudget::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
 
-        return new MaintenanceSweeps(
+        return new MaintenanceSweepsModel(
             $recommendations,
             $digests,
             $imageVerification,

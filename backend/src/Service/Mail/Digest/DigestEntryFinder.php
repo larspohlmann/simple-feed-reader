@@ -7,6 +7,7 @@ namespace App\Service\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
+use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
 
 /**
  * The digest's own read of a saved search: everything unread in the
@@ -24,11 +25,11 @@ final readonly class DigestEntryFinder
     ) {
     }
 
-    public function matchesSince(SavedSearch $search, int $userId, \DateTimeImmutable $since): DigestSearchMatches
+    public function matchesSince(SavedSearch $search, int $userId, \DateTimeImmutable $since): DigestSearchMatchesModel
     {
         $ids = $this->members->unreadMemberIdsForUserSince($userId, $search->requireId(), $since);
         if ($ids === []) {
-            return new DigestSearchMatches([], 0);
+            return new DigestSearchMatchesModel([], 0);
         }
 
         // Hydrate only the newest PER_SEARCH rows, not the whole match set: a wide
@@ -37,6 +38,6 @@ final readonly class DigestEntryFinder
         // head is the newest; totalCount stays the full pre-cap count for "+N more".
         $newestIds = \array_slice($ids, 0, self::PER_SEARCH);
 
-        return new DigestSearchMatches($this->entries->rowsByIdsForUser($userId, $newestIds), \count($ids));
+        return new DigestSearchMatchesModel($this->entries->rowsByIdsForUser($userId, $newestIds), \count($ids));
     }
 }

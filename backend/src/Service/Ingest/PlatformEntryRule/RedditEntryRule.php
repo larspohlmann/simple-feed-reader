@@ -6,7 +6,7 @@ namespace App\Service\Ingest\PlatformEntryRule;
 
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Url\AbsoluteHttpUrl;
 
 final readonly class RedditEntryRule implements PlatformEntryRuleInterface
@@ -23,14 +23,14 @@ final readonly class RedditEntryRule implements PlatformEntryRuleInterface
     private const string FOOTER = "#(?:\\s|&\\#32;)*submitted by(?:\\s|&\\#32;)*"
         . "<a\\s+href\\s*=\\s*\x22[^\x22]*/user/[^\x22]*\x22>.*?\\[comments]</a>\\s*</span>#s";
 
-    public function supports(ParsedEntry $entry): bool
+    public function supports(ParsedEntryModel $entry): bool
     {
         return $entry->url !== null
             && self::isRedditHosted($entry->url)
             && preg_match(self::THREAD_PATH, (string) parse_url($entry->url, \PHP_URL_PATH)) === 1;
     }
 
-    public function apply(ParsedEntry $entry): ParsedEntry
+    public function apply(ParsedEntryModel $entry): ParsedEntryModel
     {
         $thread = self::withoutQuery((string) $entry->url);
         $footer = self::footerOf($entry->contentHtml);

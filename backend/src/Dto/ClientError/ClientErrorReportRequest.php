@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\ClientError;
 
-use App\Service\ClientError\ClientError;
+use App\Service\ClientError\Model\ClientErrorModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class ClientErrorReportRequest
@@ -19,9 +19,9 @@ final readonly class ClientErrorReportRequest
     ) {
     }
 
-    /** @return list<ClientError> */
+    /** @return list<ClientErrorModel> */
     public function toClientErrors(): array
     {
-        return array_map(static fn (ClientErrorItem $item): ClientError => $item->toClientError(), $this->errors);
+        return array_map(static fn (ClientErrorItem $item): ClientErrorModel => $item->toClientError(), $this->errors);
     }
 }

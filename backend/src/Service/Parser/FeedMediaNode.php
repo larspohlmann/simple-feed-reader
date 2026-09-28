@@ -4,6 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Parser\Model\ParsedAttachmentModel;
+use App\Service\Parser\Model\ParsedMediumModel;
+use App\Service\Parser\Model\VisualMediaKind;
+
 /**
  * One feed media element — a `<media:content>`, `<media:thumbnail>`, or an
  * `<enclosure>` — wrapped so the extractor reads its URL, kind, dimensions, and
@@ -34,14 +39,19 @@ final readonly class FeedMediaNode
         return $this->intAttribute('width');
     }
 
-    public function toImage(): ParsedMedium
+    public function toImage(): ParsedMediumModel
     {
-        return new ParsedMedium($this->url(), VisualMediaKind::Image, $this->width(), $this->intAttribute('height'));
+        return new ParsedMediumModel(
+            $this->url(),
+            VisualMediaKind::Image,
+            $this->width(),
+            $this->intAttribute('height'),
+        );
     }
 
-    public function toVideo(?string $previewImageUrl): ParsedMedium
+    public function toVideo(?string $previewImageUrl): ParsedMediumModel
     {
-        return new ParsedMedium(
+        return new ParsedMediumModel(
             $this->url(),
             VisualMediaKind::Video,
             $this->width(),
@@ -50,9 +60,9 @@ final readonly class FeedMediaNode
         );
     }
 
-    public function toAttachment(?int $fallbackDuration): ParsedAttachment
+    public function toAttachment(?int $fallbackDuration): ParsedAttachmentModel
     {
-        return new ParsedAttachment(
+        return new ParsedAttachmentModel(
             $this->url(),
             self::nonEmpty($this->element->getAttribute('type')),
             MediaDuration::seconds($this->element->getAttribute('duration')) ?? $fallbackDuration,

@@ -185,8 +185,8 @@ and ORM extensions — never imports a service. Decided in #1182.
 - **`App\Dto`** is HTTP input. A controller turns a request DTO into a service value (`$request->toUpdate()`,
   `->toChange()`) or passes a plain field; no domain class imports `App\Dto`.
 
-Repository → Service value imports (`SearchTerms`, `LikePattern`, `NormalizedCategory`, `MonthWindow`,
-`CompletionUsage`…) are an open question; the rule below does not check `App\Repository`.
+Repository → Service value imports (`SearchTerms`, `LikePattern`, `NormalizedCategoryModel`, `MonthWindow`,
+`CompletionUsageModel`…) are an open question; the rule below does not check `App\Repository`.
 
 Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
 `DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code), both in `backend/tests/PhpStan/` and run by

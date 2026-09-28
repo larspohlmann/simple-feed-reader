@@ -6,7 +6,7 @@ namespace App\Service\Mail\Settings\Crypto;
 
 use App\Entity\SealedSecret;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SecretBinding;
+use App\Service\Crypto\Model\SecretBindingModel;
 
 /** The instance-wide mail password; its own binding keeps it apart from every other sealed secret. */
 final readonly class MailPasswordCipher
@@ -19,11 +19,11 @@ final readonly class MailPasswordCipher
 
     public function seal(string $plainPassword): SealedSecret
     {
-        return $this->cipher->seal(SecretBinding::forInstance(self::PURPOSE), $plainPassword);
+        return $this->cipher->seal(SecretBindingModel::forInstance(self::PURPOSE), $plainPassword);
     }
 
     public function open(SealedSecret $sealed): string
     {
-        return $this->cipher->open(SecretBinding::forInstance(self::PURPOSE), $sealed);
+        return $this->cipher->open(SecretBindingModel::forInstance(self::PURPOSE), $sealed);
     }
 }

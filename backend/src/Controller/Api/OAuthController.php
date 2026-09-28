@@ -9,8 +9,8 @@ use App\Http\OAuth\CallbackParameters;
 use App\Http\OAuth\Factory\OAuthRedirectFactory;
 use App\Http\OAuth\FlowCookie;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
+use App\Service\OAuth\Model\OAuthCallbackAttemptModel;
 use App\Service\OAuth\OAuthCallback;
-use App\Service\OAuth\OAuthCallbackAttempt;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
 use App\Service\OAuth\OAuthStateStore;
@@ -145,7 +145,7 @@ final class OAuthController
     public function callback(string $provider, Request $request): RedirectResponse
     {
         $cookie = $request->cookies->get(self::FLOW_COOKIE);
-        $attempt = new OAuthCallbackAttempt(
+        $attempt = new OAuthCallbackAttemptModel(
             provider: $provider,
             declined: null !== CallbackParameters::read($request, 'error'),
             state: CallbackParameters::read($request, 'state'),

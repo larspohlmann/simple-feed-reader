@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\OpmlJson;
-use App\Service\Opml\OpmlImportResult;
+use App\Service\Opml\Model\OpmlImportResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OpmlJsonTest extends TestCase
@@ -14,7 +14,7 @@ final class OpmlJsonTest extends TestCase
     {
         self::assertSame(
             ['imported' => 5, 'alreadySubscribed' => 2, 'invalid' => 1, 'skippedOverLimit' => 3],
-            OpmlJson::imported(new OpmlImportResult(5, 2, 1, 3)),
+            OpmlJson::imported(new OpmlImportResultModel(5, 2, 1, 3)),
         );
     }
 }

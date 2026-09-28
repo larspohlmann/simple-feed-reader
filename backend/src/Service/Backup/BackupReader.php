@@ -15,6 +15,7 @@ use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\BackupLineOrderModel;
 
 /**
  * Reads a backup file front to back, enforcing its grammar: one header first,
@@ -49,7 +50,7 @@ final readonly class BackupReader
     public function read(string $gzipBytes): \Generator
     {
         $lineNumber = 0;
-        $order = BackupLineOrder::beforeTheFirstLine();
+        $order = BackupLineOrderModel::beforeTheFirstLine();
         $counts = array_fill_keys(self::COUNTED_KINDS, 0);
         $accountSeen = false;
         $footerSeen = false;
@@ -126,7 +127,7 @@ final readonly class BackupReader
 
     /**
      * The grammar guarantees a header precedes every other line, so a null
-     * guard here means BackupLineOrder failed to do its job.
+     * guard here means BackupLineOrderModel failed to do its job.
      */
     private function requireGuard(?BackupPartGuard $guard): BackupPartGuard
     {
@@ -188,9 +189,9 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: read() handles header/footer, and BackupLineOrder
+            // Unreachable: read() handles header/footer, and BackupLineOrderModel
             // refuses any other kind. Stays only for match exhaustiveness.
-            default => throw new \LogicException(sprintf('BackupLineOrder admitted unknown kind "%s".', $kind)),
+            default => throw new \LogicException(sprintf('BackupLineOrderModel admitted unknown kind "%s".', $kind)),
         };
     }
 

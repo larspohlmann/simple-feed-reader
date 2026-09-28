@@ -6,9 +6,9 @@ namespace App\Tests\Service\Recommendation\Run\Factory;
 
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Completion\CompletionRequest;
-use App\Service\Ai\Completion\JsonSchema;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\JsonSchemaModel;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Run\CallSlot;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use App\Tests\DbTestCase;
@@ -55,13 +55,13 @@ final class RecommendationRunLogFactoryTest extends DbTestCase
         return $run;
     }
 
-    private function request(): CompletionRequest
+    private function request(): CompletionRequestModel
     {
-        return new CompletionRequest(
+        return new CompletionRequestModel(
             'm',
             [['role' => 'user', 'content' => 'héllo/wörld']],
             1024,
-            new JsonSchema('test', ['type' => 'object']),
+            new JsonSchemaModel('test', ['type' => 'object']),
             Reasoning::Allowed,
         );
     }

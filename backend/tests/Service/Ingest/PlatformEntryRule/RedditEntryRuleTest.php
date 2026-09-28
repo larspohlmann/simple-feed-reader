@@ -7,7 +7,7 @@ namespace App\Tests\Service\Ingest\PlatformEntryRule;
 use App\Enum\CommentsLoad;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -22,9 +22,9 @@ final class RedditEntryRuleTest extends TestCase
             . '">[comments]</a></span>';
     }
 
-    private static function entry(string $url, string $contentHtml): ParsedEntry
+    private static function entry(string $url, string $contentHtml): ParsedEntryModel
     {
-        return new ParsedEntry('t3_1wobnjy', $url, 'Title', '/u/someone', null, $contentHtml, null);
+        return new ParsedEntryModel('t3_1wobnjy', $url, 'Title', '/u/someone', null, $contentHtml, null);
     }
 
     public function testSupportsAThreadUrl(): void

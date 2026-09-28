@@ -9,6 +9,7 @@ use App\Repository\EntryStateRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Backup\Model\RestorePreviewModel;
 
 /**
  * Assembles a restore preview: inspect the file, refuse it if it does not
@@ -29,15 +30,15 @@ final readonly class RestorePreviewer
     ) {
     }
 
-    public function preview(User $user, string $gzipBytes): RestorePreview
+    public function preview(User $user, string $gzipBytes): RestorePreviewModel
     {
         $inventory = $this->inspector->inspect($gzipBytes);
         $this->fitCheck->assertFits($inventory, $user);
 
         $userId = $user->requireId();
 
-        return new RestorePreview(
-            header: $inventory->header,
+        return new RestorePreviewModel(
+            source: $inventory->source,
             toLoad: $inventory,
             currentSubscriptions: $this->subscriptions->countForUser($userId),
             currentTags: $this->tags->countForUser($userId),

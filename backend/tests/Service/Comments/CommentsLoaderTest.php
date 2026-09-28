@@ -9,13 +9,13 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Comments\CommentsLoader;
-use App\Service\Comments\CommentsStatus;
-use App\Service\Comments\EntryComment;
+use App\Service\Comments\Model\CommentsStatus;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\HostThrottle;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
@@ -39,12 +39,12 @@ final class CommentsLoaderTest extends KernelTestCase
         $this->throttle = new HostThrottle(new ArrayAdapter(clock: $clock), $clock);
     }
 
-    /** @return list<EntryComment> */
+    /** @return list<EntryCommentModel> */
     private function loadWordPressComments(): array
     {
         $feed = self::WORDPRESS_POST . 'feed/';
         $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/wordpress/post-comments.rss');
-        $this->fetcher->willReturn($feed, FetchResponse::fetched($feed, false, $xml, null, null));
+        $this->fetcher->willReturn($feed, FetchResponseModel::fetched($feed, false, $xml, null, null));
         $entry = self::entry(guid: 'https://blog.example.org/?p=7');
         $entry->setDiscussion(
             Discussion::withCommentsFeed(self::WORDPRESS_POST . '#comments', $feed, CommentsLoad::Manual),
@@ -67,7 +67,7 @@ final class CommentsLoaderTest extends KernelTestCase
     private function serveRedditThread(): void
     {
         $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $this->fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $this->fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
     }
 
     private static function entry(?string $author = '/u/Background_Lie11', string $guid = self::THREAD_GUID): Entry
@@ -96,7 +96,7 @@ final class CommentsLoaderTest extends KernelTestCase
         self::assertNotSame([], $result->comments);
         self::assertNotContains(
             self::THREAD,
-            array_map(static fn (EntryComment $comment) => $comment->url, $result->comments),
+            array_map(static fn (EntryCommentModel $comment) => $comment->url, $result->comments),
         );
     }
 
@@ -106,13 +106,13 @@ final class CommentsLoaderTest extends KernelTestCase
 
         self::assertSame(
             [self::WORDPRESS_POST . '#comment-12', self::WORDPRESS_POST . '#comment-13'],
-            array_map(static fn (EntryComment $comment) => $comment->url, $comments),
+            array_map(static fn (EntryCommentModel $comment) => $comment->url, $comments),
         );
     }
 
     public function testStripsScriptsFromCommentBodies(): void
     {
-        $bodies = array_map(static fn (EntryComment $comment) => $comment->html, $this->loadWordPressComments());
+        $bodies = array_map(static fn (EntryCommentModel $comment) => $comment->html, $this->loadWordPressComments());
 
         self::assertStringContainsString('Agreed.', $bodies[1]);
         self::assertStringNotContainsString('<script', $bodies[1]);
@@ -219,7 +219,7 @@ final class CommentsLoaderTest extends KernelTestCase
     {
         $this->fetcher->willReturn(
             self::FEED,
-            FetchResponse::fetched(self::FEED, false, /** @lang TEXT */ '<html>nope', null, null),
+            FetchResponseModel::fetched(self::FEED, false, /** @lang TEXT */ '<html>nope', null, null),
         );
 
         self::assertSame(CommentsStatus::Failed, $this->loader()->load(self::entry())->status);

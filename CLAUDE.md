@@ -269,7 +269,7 @@ no `text/html` fallback. Run the design-time checklist in
 [docs/architecture.md](docs/architecture.md) §6 against any new client-facing
 endpoint; flag browser-coupled patterns rather than baking them in.
 
-The OIDC boundary (`IdToken` and friends in `Service/OAuth/Oidc/`) is a security
+The OIDC boundary (`IdTokenModel` and friends in `Service/OAuth/Oidc/`) is a security
 control, not ceremony — do not "simplify" it away, and do not delete
 `OidcBoundaryTest`.
 

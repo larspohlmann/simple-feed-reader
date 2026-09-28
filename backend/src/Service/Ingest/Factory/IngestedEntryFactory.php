@@ -11,9 +11,9 @@ use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\EntryMediaAssembler;
 use App\Service\Ingest\EntrySnippet;
 use App\Service\Ingest\FeedIngestContext;
-use App\Service\Ingest\IncomingEntry;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedMediaBundle;
+use App\Service\Ingest\Model\IncomingEntryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Sanitize\EntrySanitizer;
 
 /** Builds the Entry row for an incoming item, cut to its column limits. It persists nothing. */
@@ -29,7 +29,7 @@ final readonly class IngestedEntryFactory
     ) {
     }
 
-    public function create(Feed $feed, IncomingEntry $incoming, FeedIngestContext $context): Entry
+    public function create(Feed $feed, IncomingEntryModel $incoming, FeedIngestContext $context): Entry
     {
         $parsed = $incoming->parsed;
         $entry = new Entry(
@@ -57,9 +57,9 @@ final readonly class IngestedEntryFactory
         return null === $value ? null : mb_substr($value, 0, $maxLength);
     }
 
-    private static function attachMedia(Entry $entry, ParsedEntry $parsed): void
+    private static function attachMedia(Entry $entry, ParsedEntryModel $parsed): void
     {
-        $bundle = $parsed->media->mediaBundle ?? new ParsedMediaBundle();
+        $bundle = $parsed->media->mediaBundle ?? new ParsedMediaBundleModel();
         $assembled = EntryMediaAssembler::assemble($parsed->media->image, $bundle->media, $bundle->attachments);
         $entry->setMedia($assembled->media, $assembled->attachments);
     }

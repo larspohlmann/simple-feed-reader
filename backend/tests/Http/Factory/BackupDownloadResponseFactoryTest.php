@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http\Factory;
 
 use App\Http\Factory\BackupDownloadResponseFactory;
-use App\Service\Backup\BackupPart;
+use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Version\ReleaseVersion;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Tests\Support\TickingClock;
@@ -16,8 +16,8 @@ final class BackupDownloadResponseFactoryTest extends TestCase
     public function testItStreamsEveryPartAsAStoredZipMember(): void
     {
         $parts = (static function (): \Generator {
-            yield BackupPart::entries(1, (string) gzencode("entries\n"));
-            yield BackupPart::foundation((string) gzencode("foundation\n"));
+            yield BackupPartModel::entries(1, (string) gzencode("entries\n"));
+            yield BackupPartModel::foundation((string) gzencode("foundation\n"));
         })();
 
         $response = $this->factory()->stream('reader@example.com', $parts);

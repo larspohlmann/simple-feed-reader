@@ -7,7 +7,7 @@ namespace App\Service\Refresh\FeedBodyParser;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Parser\FeedParser;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
  * The pre-seam default every existing feed row refreshes through: RSS/Atom
@@ -26,7 +26,7 @@ final readonly class XmlBodyParser implements FeedBodyParserInterface
         return SourceFormat::XML;
     }
 
-    public function parse(string $body, Feed $feed): ParsedFeed
+    public function parse(string $body, Feed $feed): ParsedFeedModel
     {
         return $this->parser->parse($body);
     }

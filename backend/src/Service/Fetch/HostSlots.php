@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Model\FetchAttemptModel;
+
 /**
  * How many requests to each host the sweep currently has in flight, capped so a
  * host concentration cannot become a burst. The engine acquires a slot when a
@@ -24,18 +26,18 @@ final class HostSlots
         }
     }
 
-    public function hasCapacityFor(FetchAttempt $attempt): bool
+    public function hasCapacityFor(FetchAttemptModel $attempt): bool
     {
         return ($this->inFlightByHost[$this->keyOf($attempt)] ?? 0) < $this->capacityPerHost;
     }
 
-    public function acquire(FetchAttempt $attempt): void
+    public function acquire(FetchAttemptModel $attempt): void
     {
         $host = $this->keyOf($attempt);
         $this->inFlightByHost[$host] = ($this->inFlightByHost[$host] ?? 0) + 1;
     }
 
-    public function release(FetchAttempt $attempt): void
+    public function release(FetchAttemptModel $attempt): void
     {
         $host = $this->keyOf($attempt);
         $remaining = ($this->inFlightByHost[$host] ?? 0) - 1;
@@ -49,7 +51,7 @@ final class HostSlots
         $this->inFlightByHost[$host] = $remaining;
     }
 
-    private function keyOf(FetchAttempt $attempt): string
+    private function keyOf(FetchAttemptModel $attempt): string
     {
         return HostKey::forUrl($attempt->url);
     }

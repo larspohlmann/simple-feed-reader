@@ -7,6 +7,8 @@ namespace App\Service\Fetch;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
+use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -34,7 +36,7 @@ final readonly class FailoverRequestSender
      *                                      pinned family is tried), or when the
      *                                      final pinned family's connection fails
      */
-    public function send(string $method, string $url, GuardedUrl $guarded, array $options): ResponseInterface
+    public function send(string $method, string $url, GuardedUrlModel $guarded, array $options): ResponseInterface
     {
         $proxy = $this->egressProxyOrFail();
         if (null === $proxy) {
@@ -58,7 +60,7 @@ final readonly class FailoverRequestSender
      *
      * @throws TransportExceptionInterface when the egress cannot be resolved
      */
-    private function egressProxyOrFail(): ?ProxyConfig
+    private function egressProxyOrFail(): ?ProxyConfigModel
     {
         try {
             return $this->egressProxySource->egressProxy();
@@ -80,7 +82,7 @@ final readonly class FailoverRequestSender
         string $method,
         string $url,
         array $options,
-        ProxyConfig $proxy,
+        ProxyConfigModel $proxy,
     ): ResponseInterface {
         $response = $this->httpClient->request($method, $url, [...$options, ...EgressOptions::proxied($proxy)]);
 
@@ -115,7 +117,7 @@ final readonly class FailoverRequestSender
     private function sendPinnedFamilies(
         string $method,
         string $url,
-        GuardedUrl $guarded,
+        GuardedUrlModel $guarded,
         array $options,
     ): ResponseInterface {
         $attempts = $guarded->pinnedAddressAttempts();

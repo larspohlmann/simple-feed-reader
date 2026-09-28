@@ -9,8 +9,8 @@ use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 
 final class PlatformEntryRulesWiringTest extends DbTestCase
@@ -22,7 +22,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
         $feed = new Feed('https://www.reddit.com/r/PHP/.rss');
         $this->em->persist($feed);
         $this->em->flush();
-        $thread = new ParsedEntry(
+        $thread = new ParsedEntryModel(
             't3_1abc',
             'https://www.reddit.com/r/PHP/comments/1abc/t/',
             'Title',
@@ -34,7 +34,7 @@ final class PlatformEntryRulesWiringTest extends DbTestCase
 
         $ingestor->ingest(
             $feed,
-            new ParsedFeed('Feed', null, null, null, [$thread]),
+            new ParsedFeedModel('Feed', null, null, null, [$thread]),
             new FeedIngestContext(new \DateTimeImmutable('2026-09-24T12:00:00Z'), null),
         );
         $this->em->flush();

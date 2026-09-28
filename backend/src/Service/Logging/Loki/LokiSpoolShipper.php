@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\Exception\CorruptSpoolFileException;
+use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 
 /**
  * Drains the Loki spool out-of-band. LokiClient::push() is fail-open, so a
@@ -21,7 +22,7 @@ final readonly class LokiSpoolShipper
     ) {
     }
 
-    public function ship(): LokiSpoolReport
+    public function ship(): LokiSpoolReportModel
     {
         $shipped = 0;
         $failed = 0;
@@ -36,7 +37,7 @@ final readonly class LokiSpoolShipper
             }
         }
 
-        return new LokiSpoolReport($shipped, $failed);
+        return new LokiSpoolReportModel($shipped, $failed);
     }
 
     /**

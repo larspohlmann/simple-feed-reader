@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Ingest\PlatformEntryRule;
 
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 
 interface PlatformEntryRuleInterface
 {
-    public function supports(ParsedEntry $entry): bool;
+    public function supports(ParsedEntryModel $entry): bool;
 
-    public function apply(ParsedEntry $entry): ParsedEntry;
+    public function apply(ParsedEntryModel $entry): ParsedEntryModel;
 }

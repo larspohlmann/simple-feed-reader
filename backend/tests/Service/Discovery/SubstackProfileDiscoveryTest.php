@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery;
 
-use App\Service\Discovery\ScrapeFallback;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Discovery\Model\ScrapeFallback;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -85,7 +85,7 @@ final class SubstackProfileDiscoveryTest extends KernelTestCase
         $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
         $fetcher->willReturn(
             $apiUrl,
-            FetchResponse::fetched($apiUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
+            FetchResponseModel::fetched($apiUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
         );
     }
 }

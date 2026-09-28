@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface;
-use App\Service\Ai\Completion\CompletionOutcome;
-use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
-use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\Model\ProviderConnectionModel;
 
 /**
  * Records every complete() call and answers with a queued response, so
@@ -80,8 +80,8 @@ final class StubChatClient implements ChatCompletionClientInterface
     }
 
     public function complete(
-        ProviderConnection $connection,
-        CompletionRequest $request,
+        ProviderConnectionModel $connection,
+        CompletionRequestModel $request,
         CompletionStreamObserverInterface $observer,
     ): string {
         $next = $this->answer($request);
@@ -105,16 +105,16 @@ final class StubChatClient implements ChatCompletionClientInterface
      * concurrent contract, where one failed call never aborts its siblings
      * (#344). Outcomes stay aligned to $calls by index.
      */
-    public function completeMany(ProviderConnection $connection, array $calls): array
+    public function completeMany(ProviderConnectionModel $connection, array $calls): array
     {
         $outcomes = [];
 
         foreach ($calls as $call) {
             $next = $this->answer($call->request);
             $outcomes[] = match (true) {
-                $next instanceof ProviderReplyFailureExceptionInterface => CompletionOutcome::unusableReply($next),
-                $next instanceof \RuntimeException => CompletionOutcome::failure($next),
-                default => CompletionOutcome::answer($next),
+                $next instanceof ProviderReplyFailureExceptionInterface => CompletionOutcomeModel::unusableReply($next),
+                $next instanceof \RuntimeException => CompletionOutcomeModel::failure($next),
+                default => CompletionOutcomeModel::answer($next),
             };
         }
 
@@ -126,7 +126,7 @@ final class StubChatClient implements ChatCompletionClientInterface
      * response — a string answer or the failure to surface. Shared by both
      * read methods so they record and dequeue identically.
      */
-    private function answer(CompletionRequest $request): string|\RuntimeException
+    private function answer(CompletionRequestModel $request): string|\RuntimeException
     {
         // maxAnswerTokens is recorded alongside the prompt so a test can prove
         // the answer bound was derived from the batch it belongs to, rather

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion\CompletionStreamObserver;
 
-use App\Service\Ai\Completion\CompletionStreamProgress;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 
 /**
  * The observer for callers with nothing to observe — an explicit argument
@@ -12,7 +12,7 @@ use App\Service\Ai\Completion\CompletionStreamProgress;
  */
 final readonly class NullCompletionStreamObserver implements CompletionStreamObserverInterface
 {
-    public function streamProgressed(CompletionStreamProgress $progress): void
+    public function streamProgressed(CompletionStreamProgressModel $progress): void
     {
     }
 }

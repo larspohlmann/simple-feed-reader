@@ -7,7 +7,7 @@ namespace App\Tests\Dto\Admin;
 use App\Dto\Admin\ProxySettingsRequest;
 use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
-use App\Service\Crypto\SecretChange;
+use App\Service\Crypto\Model\SecretChangeModel;
 use App\Tests\Support\SettingsRequests;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Validator\Validation;
@@ -108,21 +108,21 @@ final class ProxySettingsRequestTest extends TestCase
     {
         $update = SettingsRequests::proxy(host: 'proxy.example')->toUpdate();
 
-        self::assertEquals(SecretChange::keep(), $update->password);
+        self::assertEquals(SecretChangeModel::keep(), $update->password);
     }
 
     public function testAPasswordReplacesTheStoredOne(): void
     {
         $update = SettingsRequests::proxy(host: 'proxy.example', password: 'sw0rdfish')->toUpdate();
 
-        self::assertEquals(SecretChange::replaceWith('sw0rdfish'), $update->password);
+        self::assertEquals(SecretChangeModel::replaceWith('sw0rdfish'), $update->password);
     }
 
     public function testAnEmptyPasswordStillReplacesTheStoredOne(): void
     {
         $update = SettingsRequests::proxy(host: 'proxy.example', password: '')->toUpdate();
 
-        self::assertEquals(SecretChange::replaceWith(''), $update->password);
+        self::assertEquals(SecretChangeModel::replaceWith(''), $update->password);
     }
 
     public function testRemovePasswordWinsOverASentPassword(): void
@@ -130,7 +130,7 @@ final class ProxySettingsRequestTest extends TestCase
         $update = SettingsRequests::proxy(host: 'proxy.example', password: 'sw0rdfish', removePassword: true)
             ->toUpdate();
 
-        self::assertEquals(SecretChange::remove(), $update->password);
+        self::assertEquals(SecretChangeModel::remove(), $update->password);
     }
 
     private function requestWithPort(int $port): ProxySettingsRequest

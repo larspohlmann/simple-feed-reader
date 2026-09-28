@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Mail\Settings\MailSettingsOverview;
+use App\Service\Mail\Settings\Model\MailSettingsOverviewModel;
 
 /**
  * The admin mail payload. The password never crosses the wire — only a
@@ -22,7 +22,7 @@ use App\Service\Mail\Settings\MailSettingsOverview;
 final readonly class MailSettingsJson
 {
     /** @return MailSettingsPayload */
-    public static function from(MailSettingsOverview $overview): array
+    public static function from(MailSettingsOverviewModel $overview): array
     {
         $saved = $overview->saved;
         $fallback = $overview->fallback;

@@ -8,7 +8,7 @@ use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Auth\Exception\InvalidTokenException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthSignIn;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;
@@ -182,9 +182,9 @@ final class OAuthSignInTest extends DbTestCase
         return $signIn;
     }
 
-    private function identity(): OAuthIdentity
+    private function identity(): OAuthIdentityModel
     {
-        return new OAuthIdentity('google', 'sub-1', 'bob@example.com', true);
+        return new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true);
     }
 
     private function findUser(string $email): ?User

@@ -7,19 +7,19 @@ namespace App\Tests\Service\Mail\Digest\DigestMailer;
 use App\Entity\User;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
-use App\Service\Mail\Digest\DigestEntry;
-use App\Service\Mail\Digest\DigestGroup;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
-use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailer;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
@@ -57,7 +57,7 @@ final class DigestMailerTest extends TestCase
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
         $embedder = $this->createStub(DigestImageEmbedderInterface::class);
-        $embedder->method('embed')->willReturn(new DigestImageSet([], []));
+        $embedder->method('embed')->willReturn(new DigestImageSetModel([], []));
 
         $builder = new DigestMailFactory(
             new DigestPageFactory(),
@@ -79,7 +79,7 @@ final class DigestMailerTest extends TestCase
     private function model(): DigestModel
     {
         $entries = [
-            new DigestEntry(
+            new DigestEntryModel(
                 'Rust 1.80 released',
                 'Rust Blog',
                 'A short summary.',
@@ -89,7 +89,7 @@ final class DigestMailerTest extends TestCase
                 null,
             ),
         ];
-        $group = new DigestGroup('rust', 1, $entries, false, '');
+        $group = new DigestGroupModel('rust', 1, $entries, false, '');
 
         return new DigestModel([$group], 1);
     }
@@ -158,7 +158,7 @@ final class DigestMailerTest extends TestCase
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface
     {
         $settings = $this->createStub(MailSendingSettingsInterface::class);
-        $settings->method('identity')->willReturn(new MailIdentity($address, $name));
+        $settings->method('identity')->willReturn(new MailIdentityModel($address, $name));
 
         return $settings;
     }

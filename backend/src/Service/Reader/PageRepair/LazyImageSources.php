@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Html\ImageRendition;
 use App\Service\Html\ImageSourceUrl;
+use App\Service\Html\Model\ImageRenditionModel;
 use App\Service\Html\PictureSources;
 use App\Service\Html\Srcset;
 use Dom\Element;
@@ -127,7 +127,7 @@ final readonly class LazyImageSources implements PageRepairInterface
     {
         if (
             $this->enclosingPicture($image) !== null
-            || ImageRendition::widthFromUrl($image->getAttribute('src')) === null
+            || ImageRenditionModel::widthFromUrl($image->getAttribute('src')) === null
         ) {
             return;
         }
@@ -137,7 +137,7 @@ final readonly class LazyImageSources implements PageRepairInterface
             return;
         }
 
-        $this->adoptWiderRendition($image, ImageRendition::measuredFromUrl($widest->url, $widest->width));
+        $this->adoptWiderRendition($image, ImageRenditionModel::measuredFromUrl($widest->url, $widest->width));
     }
 
     /**
@@ -146,14 +146,14 @@ final readonly class LazyImageSources implements PageRepairInterface
      * measures at least as wide, so a real photo is never traded for a
      * narrower one (the NDR mirror case, entry 480204).
      */
-    private function adoptWiderRendition(Element $image, ImageRendition $candidate): void
+    private function adoptWiderRendition(Element $image, ImageRenditionModel $candidate): void
     {
         $imageSource = $image->getAttribute('src');
         if ($imageSource === $candidate->url) {
             return;
         }
 
-        $imageWidth = ImageRendition::widthFromUrl($imageSource);
+        $imageWidth = ImageRenditionModel::widthFromUrl($imageSource);
         if ($imageWidth !== null && ($candidate->width === null || $imageWidth >= $candidate->width)) {
             return;
         }

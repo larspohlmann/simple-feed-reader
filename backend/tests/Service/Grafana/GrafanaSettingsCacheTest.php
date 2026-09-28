@@ -7,7 +7,7 @@ namespace App\Tests\Service\Grafana;
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Service\Grafana\GrafanaSettingsCache;
-use App\Service\Grafana\GrafanaSettingsSnapshot;
+use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
@@ -17,7 +17,7 @@ final class GrafanaSettingsCacheTest extends TestCase
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
         $loads = 0;
-        $loader = function () use (&$loads): GrafanaSettingsSnapshot {
+        $loader = function () use (&$loads): GrafanaSettingsSnapshotModel {
             ++$loads;
 
             return $this->enabledSnapshot();
@@ -32,7 +32,7 @@ final class GrafanaSettingsCacheTest extends TestCase
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
         $loads = 0;
-        $loader = function () use (&$loads): GrafanaSettingsSnapshot {
+        $loader = function () use (&$loads): GrafanaSettingsSnapshotModel {
             ++$loads;
 
             return $this->enabledSnapshot();
@@ -45,11 +45,11 @@ final class GrafanaSettingsCacheTest extends TestCase
         self::assertSame(2, $loads);
     }
 
-    private function enabledSnapshot(): GrafanaSettingsSnapshot
+    private function enabledSnapshot(): GrafanaSettingsSnapshotModel
     {
         $entity = new GrafanaSettingsEntity();
         $entity->applyWithoutToken(new GrafanaConnection(null, null, null, null, true));
 
-        return GrafanaSettingsSnapshot::fromEntity($entity);
+        return GrafanaSettingsSnapshotModel::fromEntity($entity);
     }
 }

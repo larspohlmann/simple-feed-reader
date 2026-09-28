@@ -6,6 +6,7 @@ namespace App\Service\Mail\Settings;
 
 use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\Exception\InvalidArgumentException;
 use Symfony\Component\Mailer\Transport\Dsn;
@@ -33,9 +34,9 @@ final readonly class MailFallback
         return $this->dsn;
     }
 
-    public function identity(): MailIdentity
+    public function identity(): MailIdentityModel
     {
-        return new MailIdentity($this->fromAddress, $this->fromName);
+        return new MailIdentityModel($this->fromAddress, $this->fromName);
     }
 
     public function connection(): MailConnection

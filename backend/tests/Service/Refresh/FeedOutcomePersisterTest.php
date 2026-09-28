@@ -10,8 +10,8 @@ use App\Repository\FeedRepository;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcome;
 use App\Service\Refresh\FeedOutcomePersister;
@@ -49,7 +49,9 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $result = $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::fetched($feed->getUrl(), false, $this->rss(), '"e1"', null)),
+            FetchOutcomeModel::succeeded(
+                FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), '"e1"', null),
+            ),
             $this->clock->now(),
         );
 
@@ -65,7 +67,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $result = $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::failed(new FeedThrottledException('HTTP 429', 90)),
+            FetchOutcomeModel::failed(new FeedThrottledException('HTTP 429', 90)),
             $this->clock->now(),
         );
 
@@ -79,7 +81,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $feed = $this->feed('https://one.example.com/feed');
         $gone = new FeedGoneException('HTTP 410 Gone');
 
-        $result = $this->persister($this->em)->persist($feed, FetchOutcome::failed($gone), $this->clock->now());
+        $result = $this->persister($this->em)->persist($feed, FetchOutcomeModel::failed($gone), $this->clock->now());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->assertLoggedOnce('warning', 'Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
@@ -91,7 +93,8 @@ final class FeedOutcomePersisterTest extends DbTestCase
         $feed = $this->feed('https://one.example.com/feed');
         $unreachable = new FeedUnreachableException('connection refused');
 
-        $result = $this->persister($this->em)->persist($feed, FetchOutcome::failed($unreachable), $this->clock->now());
+        $result = $this->persister($this->em)
+            ->persist($feed, FetchOutcomeModel::failed($unreachable), $this->clock->now());
 
         self::assertSame(FeedOutcome::Failed, $result->outcome);
         $this->assertLoggedOnce(
@@ -108,7 +111,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $result = $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified($feed->getUrl(), false, null, null)),
+            FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
         );
 
@@ -126,7 +129,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $result = $this->persister($failingEm)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified($feed->getUrl(), false, null, null)),
+            FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
         );
 
@@ -146,7 +149,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $result = $this->persister($failingEm)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified($feed->getUrl(), false, null, null)),
+            FetchOutcomeModel::succeeded(FetchResponseModel::notModified($feed->getUrl(), false, null, null)),
             $this->clock->now(),
         );
 
@@ -164,7 +167,9 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified('https://new.example.com/feed', false, null, null)),
+            FetchOutcomeModel::succeeded(
+                FetchResponseModel::notModified('https://new.example.com/feed', false, null, null),
+            ),
             $this->clock->now(),
         );
 
@@ -179,7 +184,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified($target, true, null, null)),
+            FetchOutcomeModel::succeeded(FetchResponseModel::notModified($target, true, null, null)),
             $this->clock->now(),
         );
 
@@ -194,7 +199,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
 
         $this->persister($this->em)->persist(
             $feed,
-            FetchOutcome::succeeded(FetchResponse::notModified($target, true, null, null)),
+            FetchOutcomeModel::succeeded(FetchResponseModel::notModified($target, true, null, null)),
             $this->clock->now(),
         );
 

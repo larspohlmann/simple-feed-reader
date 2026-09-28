@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
  * A parser for one feed dialect (RSS 2.0, RSS 1.0, Atom 1.0/0.3).
@@ -21,5 +21,5 @@ interface FeedFormatParserInterface
      */
     public function supports(\DOMElement $root): bool;
 
-    public function parse(\DOMDocument $document): ParsedFeed;
+    public function parse(\DOMDocument $document): ParsedFeedModel;
 }

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
+use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Ai\ModelDescriptor;
-use App\Service\Ai\ProviderCredentials;
 
 /**
  * A model catalog that answers from a script instead of from a network.
@@ -18,16 +18,19 @@ use App\Service\Ai\ProviderCredentials;
  * differently for different keys, which is what a case that saves a good
  * connection and then a refused one needs.
  *
- * A plain identifier is accepted alongside a full ModelDescriptor: most
+ * A plain identifier is accepted alongside a full ModelDescriptorModel: most
  * callers only care which ids are offered, not their context windows, and
  * writing a bare string for those keeps the existing scripts unchanged.
  */
 final readonly class StubModelCatalog implements ModelCatalogInterface
 {
-    /** @var \Closure(ProviderCredentials): list<string|ModelDescriptor> */
+    /** @var \Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> */
     private \Closure $answer;
 
-    /** @param list<string|ModelDescriptor>|\Throwable|\Closure(ProviderCredentials): list<string|ModelDescriptor> $answer */
+    /**
+     * @param list<string|ModelDescriptorModel>|\Throwable
+     *     |\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $answer
+     */
     public function __construct(array|\Throwable|\Closure $answer)
     {
         $this->answer = match (true) {
@@ -37,12 +40,13 @@ final readonly class StubModelCatalog implements ModelCatalogInterface
         };
     }
 
-    public function listModels(ProviderCredentials $credentials): array
+    public function listModels(ProviderCredentialsModel $credentials): array
     {
         return array_map(
-            static fn (string|ModelDescriptor $entry): ModelDescriptor => $entry instanceof ModelDescriptor
-                ? $entry
-                : new ModelDescriptor($entry, null),
+            static fn (string|ModelDescriptorModel $entry): ModelDescriptorModel
+                => $entry instanceof ModelDescriptorModel
+                    ? $entry
+                    : new ModelDescriptorModel($entry, null),
             ($this->answer)($credentials),
         );
     }

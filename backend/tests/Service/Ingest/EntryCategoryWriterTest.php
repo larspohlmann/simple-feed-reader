@@ -11,8 +11,8 @@ use App\Entity\Feed;
 use App\Repository\CategoryRepository;
 use App\Service\Category\CategoryNormalizer;
 use App\Service\Ingest\EntryCategoryWriter;
-use App\Service\Parser\ParsedCategory;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedCategoryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 
@@ -45,9 +45,9 @@ final class EntryCategoryWriterTest extends DbTestCase
         return $entry;
     }
 
-    private function parsed(string $guid, ParsedCategory ...$categories): ParsedEntry
+    private function parsed(string $guid, ParsedCategoryModel ...$categories): ParsedEntryModel
     {
-        return new ParsedEntry($guid, null, 'T', null, null, null, null, categories: array_values($categories));
+        return new ParsedEntryModel($guid, null, 'T', null, null, null, null, categories: array_values($categories));
     }
 
     public function testWritesLinksAndCreatesCategories(): void
@@ -55,7 +55,7 @@ final class EntryCategoryWriterTest extends DbTestCase
         $feed = $this->persistFeed();
         $entry = $this->persistEntry($feed, 'a');
 
-        $parsed = $this->parsed('a', new ParsedCategory('Politics'), new ParsedCategory('World'));
+        $parsed = $this->parsed('a', new ParsedCategoryModel('Politics'), new ParsedCategoryModel('World'));
         $this->writer->attach([[$entry, $parsed]]);
         $this->em->flush();
         $this->em->clear();
@@ -73,9 +73,9 @@ final class EntryCategoryWriterTest extends DbTestCase
         $entryA = $this->persistEntry($feedA, 'a');
         $entryB = $this->persistEntry($feedB, 'b');
 
-        $this->writer->attach([[$entryA, $this->parsed('a', new ParsedCategory('Politics'))]]);
+        $this->writer->attach([[$entryA, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
         $this->em->flush();
-        $this->writer->attach([[$entryB, $this->parsed('b', new ParsedCategory('POLITICS'))]]);
+        $this->writer->attach([[$entryB, $this->parsed('b', new ParsedCategoryModel('POLITICS'))]]);
         $this->em->flush();
         $this->em->clear();
 
@@ -86,13 +86,13 @@ final class EntryCategoryWriterTest extends DbTestCase
     {
         $feed = $this->persistFeed();
         $seedEntry = $this->persistEntry($feed, 'seed');
-        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategory('Politics'))]]);
+        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategoryModel('Politics'))]]);
         $this->em->flush();
 
         $entry = $this->persistEntry($feed, 'a');
         self::assertNull($entry->getId());
 
-        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategory('Politics'))]]);
+        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
 
         self::assertNull($entry->getId(), 'attach() must not flush when it created no new Category row');
     }
@@ -103,7 +103,7 @@ final class EntryCategoryWriterTest extends DbTestCase
         $entry = $this->persistEntry($feed, 'a');
         $this->em->flush();
 
-        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategory('Politics'))]]);
+        $this->writer->attach([[$entry, $this->parsed('a', new ParsedCategoryModel('Politics'))]]);
 
         $categories = $this->em->getRepository(Category::class)->findBy(['canonicalKey' => 'politics']);
         self::assertCount(1, $categories);
@@ -117,12 +117,12 @@ final class EntryCategoryWriterTest extends DbTestCase
     {
         $feed = $this->persistFeed();
         $seedEntry = $this->persistEntry($feed, 'seed');
-        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategory('Politics'))]]);
+        $this->writer->attach([[$seedEntry, $this->parsed('seed', new ParsedCategoryModel('Politics'))]]);
         $this->em->flush();
 
         $entry = $this->persistEntry($feed, 'a');
         $this->writer->attach([
-            [$entry, $this->parsed('a', new ParsedCategory('Politics'), new ParsedCategory('World'))],
+            [$entry, $this->parsed('a', new ParsedCategoryModel('Politics'), new ParsedCategoryModel('World'))],
         ]);
         $this->em->flush();
         $this->em->clear();
@@ -143,8 +143,8 @@ final class EntryCategoryWriterTest extends DbTestCase
         $recorder->reset();
 
         $this->writer->attach([
-            [$entryA, $this->parsed('a', new ParsedCategory('Politics'), new ParsedCategory('World'))],
-            [$entryB, $this->parsed('b', new ParsedCategory('Tech'))],
+            [$entryA, $this->parsed('a', new ParsedCategoryModel('Politics'), new ParsedCategoryModel('World'))],
+            [$entryB, $this->parsed('b', new ParsedCategoryModel('Tech'))],
         ]);
 
         self::assertCount(

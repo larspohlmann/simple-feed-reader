@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -103,13 +103,13 @@ final class RefreshControllerTest extends WebTestCase
         // StubFeedFetcher throws LogicException on an unstubbed URL; stub the one feed as not-modified.
         $fetcher->willReturn(
             'https://example.com/mine.xml',
-            FetchResponse::notModified('https://example.com/mine.xml', false, null, null),
+            FetchResponseModel::notModified('https://example.com/mine.xml', false, null, null),
         );
         // The runner's favicon phase fetches the feed's site homepage through
         // this same fetcher — stub the origin too, or it throws just as loudly.
         $fetcher->willReturn(
             'https://example.com',
-            FetchResponse::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 
@@ -172,13 +172,13 @@ final class RefreshControllerTest extends WebTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             'https://example.com/tagged.xml',
-            FetchResponse::notModified('https://example.com/tagged.xml', false, null, null),
+            FetchResponseModel::notModified('https://example.com/tagged.xml', false, null, null),
         );
         // The runner's favicon phase fetches the feed's site homepage through
         // this same fetcher — stub the origin too, or it throws just as loudly.
         $fetcher->willReturn(
             'https://example.com',
-            FetchResponse::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 

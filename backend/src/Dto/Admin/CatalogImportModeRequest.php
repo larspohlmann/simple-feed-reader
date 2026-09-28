@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
-use App\Service\Catalog\CatalogImportMode;
+use App\Service\Catalog\Model\CatalogImportMode;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogImportModeRequest

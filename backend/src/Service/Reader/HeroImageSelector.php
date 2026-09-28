@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 
@@ -35,7 +35,7 @@ final class HeroImageSelector
      */
     private const int MIN_HERO_WIDTH = 480;
 
-    public function select(?DeclaredImage $candidate, string $bodyHtml): ?DeclaredImage
+    public function select(?DeclaredImageModel $candidate, string $bodyHtml): ?DeclaredImageModel
     {
         if ($candidate === null || !AbsoluteHttpUrl::matches($candidate->url)) {
             return null;

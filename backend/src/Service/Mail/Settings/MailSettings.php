@@ -9,6 +9,9 @@ use App\Entity\MailServerSettings;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Mail\Settings\Model\MailSettingsOverviewModel;
+use App\Service\Mail\Settings\Model\MailSettingsSnapshotModel;
+use App\Service\Mail\Settings\Model\MailSettingsUpdateModel;
 use App\Service\Proxy\ProxySettings;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -23,13 +26,13 @@ final readonly class MailSettings
     ) {
     }
 
-    public function overview(): MailSettingsOverview
+    public function overview(): MailSettingsOverviewModel
     {
         $saved = $this->repository->findSingleton();
         $proxy = $this->proxySettings->current();
 
-        return new MailSettingsOverview(
-            null === $saved ? null : MailSettingsSnapshot::fromEntity($saved),
+        return new MailSettingsOverviewModel(
+            null === $saved ? null : MailSettingsSnapshotModel::fromEntity($saved),
             $this->fallback->connection(),
             $proxy->isConfigured() ? $proxy->connection : null,
         );
@@ -44,7 +47,7 @@ final readonly class MailSettings
         }
     }
 
-    public function update(MailSettingsUpdate $update): void
+    public function update(MailSettingsUpdateModel $update): void
     {
         $existing = $this->repository->findSingleton();
         $this->guardAgainstEnablingWithoutATransport($update->connection);
@@ -62,7 +65,7 @@ final readonly class MailSettings
     }
 
     private function guardAgainstIncompleteAuthenticatedRow(
-        MailSettingsUpdate $update,
+        MailSettingsUpdateModel $update,
         ?MailServerSettings $existing,
     ): void {
         $password = $update->password;
@@ -92,7 +95,7 @@ final readonly class MailSettings
         }
     }
 
-    private function apply(MailSettingsUpdate $update, MailServerSettings $settings): void
+    private function apply(MailSettingsUpdateModel $update, MailServerSettings $settings): void
     {
         $replacement = $update->password->replacement();
         if (null !== $replacement) {

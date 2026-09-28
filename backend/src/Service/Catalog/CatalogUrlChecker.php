@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Catalog;
 
 use App\Service\Catalog\Exception\BrokenCatalogUrlException;
+use App\Service\Catalog\Model\BrokenCatalogUrlModel;
+use App\Service\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Catalog\Model\CatalogUrlReportModel;
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -23,7 +26,7 @@ final readonly class CatalogUrlChecker
     ) {
     }
 
-    public function check(?int $limit): CatalogUrlReport
+    public function check(?int $limit): CatalogUrlReportModel
     {
         $feeds = $this->feedsToCheck($limit);
         // Once per sweep: the instance proxy cannot change mid-run, and each read costs a row lookup and a decryption.
@@ -34,14 +37,14 @@ final readonly class CatalogUrlChecker
             try {
                 $this->assertServesFeed($feed->url, $proxy);
             } catch (BrokenCatalogUrlException $failure) {
-                $broken[] = new BrokenCatalogUrl($feed->title, $feed->url, $failure->getMessage());
+                $broken[] = new BrokenCatalogUrlModel($feed->title, $feed->url, $failure->getMessage());
             }
         }
 
-        return new CatalogUrlReport(\count($feeds), $broken);
+        return new CatalogUrlReportModel(\count($feeds), $broken);
     }
 
-    /** @return list<CatalogDocumentFeed> */
+    /** @return list<CatalogDocumentFeedModel> */
     private function feedsToCheck(?int $limit): array
     {
         $feeds = [];
@@ -55,7 +58,7 @@ final readonly class CatalogUrlChecker
     }
 
     /** @throws BrokenCatalogUrlException */
-    private function assertServesFeed(string $url, ?ProxyConfig $proxy): void
+    private function assertServesFeed(string $url, ?ProxyConfigModel $proxy): void
     {
         try {
             $response = $this->httpClient->request('GET', $url, [

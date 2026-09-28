@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Transport\Factory;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -46,7 +46,7 @@ final class EsmtpTransportFactoryTest extends TestCase
     public function testCredentialsAreAppliedOnlyWhenPresent(): void
     {
         $authenticated = (new EsmtpTransportFactory())->from(
-            new ResolvedMailTransport('smtp.test', 2525, 'alice', 'hunter2', MailEncryption::Starttls),
+            new ResolvedMailTransportModel('smtp.test', 2525, 'alice', 'hunter2', MailEncryption::Starttls),
             null,
             new NullLogger(),
         );
@@ -69,7 +69,7 @@ final class EsmtpTransportFactoryTest extends TestCase
     private function build(MailEncryption $encryption): EsmtpTransport
     {
         return (new EsmtpTransportFactory())->from(
-            new ResolvedMailTransport('smtp.test', 2525, null, null, $encryption),
+            new ResolvedMailTransportModel('smtp.test', 2525, null, null, $encryption),
             null,
             new NullLogger(),
         );

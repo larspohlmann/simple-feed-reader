@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Profiling;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
@@ -90,7 +90,7 @@ final class ProfilingPolicyTest extends TestCase
             {
             }
 
-            public function stop(): ?CollapsedProfile
+            public function stop(): ?CollapsedProfileModel
             {
                 return null;
             }

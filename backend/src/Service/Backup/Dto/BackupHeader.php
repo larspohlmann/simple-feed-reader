@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\RestoreSourceModel;
 
 /**
  * A backup part's first line: format version, provenance, and where this
@@ -44,6 +45,17 @@ final readonly class BackupHeader
         }
 
         return $this->requireEntryPartDeclaresNeither();
+    }
+
+    public function toSource(): RestoreSourceModel
+    {
+        return new RestoreSourceModel(
+            $this->backupId,
+            $this->parts,
+            $this->createdAt,
+            $this->sourceUrl,
+            $this->sourceEmail,
+        );
     }
 
     private function requireFoundationPartsAndTotals(): self

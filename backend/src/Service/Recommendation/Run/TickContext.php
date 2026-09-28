@@ -6,8 +6,8 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Completion\Reasoning;
-use App\Service\Ai\Completion\RetryPlan;
+use App\Service\Ai\Completion\Model\Reasoning;
+use App\Service\Ai\Completion\Model\RetryPlanModel;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
 
 final readonly class TickContext
@@ -26,7 +26,7 @@ final readonly class TickContext
         return $this->run->getUser()->requireId();
     }
 
-    public function retryPlan(): RetryPlan
+    public function retryPlan(): RetryPlanModel
     {
         return $this->driver->retryPlan();
     }

@@ -156,7 +156,7 @@ final class BackupInspectorTest extends TestCase
         self::assertSame(1, $inventory->feeds);
         self::assertSame(1, $inventory->subscriptions);
         self::assertSame(0, $inventory->entries);
-        self::assertSame('source@example.com', $inventory->header->sourceEmail);
+        self::assertSame('source@example.com', $inventory->source->sourceEmail);
     }
 
     public function testABrokenFileRefusesInsteadOfCounting(): void

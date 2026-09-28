@@ -6,10 +6,10 @@ namespace App\Tests\Service\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\CatalogDocumentCategory;
-use App\Service\Catalog\CatalogDocumentFeed;
 use App\Service\Catalog\CatalogImportPass;
-use App\Service\Catalog\ParsedCatalog;
+use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
@@ -25,9 +25,9 @@ final class CatalogImportPassTest extends TestCase
         $em->expects($this->never())->method('remove');
         $pass = new CatalogImportPass($em, [], []);
 
-        $pass->apply(new ParsedCatalog([
-            new CatalogDocumentCategory('tech', 'Tech', 'memory', '#3b82f6', [
-                new CatalogDocumentFeed('One', 'https://one.example.com/rss.xml', null, null, 'xml'),
+        $pass->apply(new ParsedCatalogModel([
+            new CatalogDocumentCategoryModel('tech', 'Tech', 'memory', '#3b82f6', [
+                new CatalogDocumentFeedModel('One', 'https://one.example.com/rss.xml', null, null, 'xml'),
             ]),
         ]));
 
@@ -56,7 +56,9 @@ final class CatalogImportPassTest extends TestCase
             $removed[] = $row;
         });
         $pass = new CatalogImportPass($em, [$kept, $holding, $dropped], [$lockedFeed, $staleFeed]);
-        $pass->apply(new ParsedCatalog([new CatalogDocumentCategory('kept', 'Kept', 'memory', '#3b82f6', [])]));
+        $pass->apply(
+            new ParsedCatalogModel([new CatalogDocumentCategoryModel('kept', 'Kept', 'memory', '#3b82f6', [])]),
+        );
 
         $pass->removeUnmentioned();
 
@@ -81,7 +83,7 @@ final class CatalogImportPassTest extends TestCase
             $removed[] = $row;
         });
         $pass = new CatalogImportPass($em, [$first, $second], [$firstLocked, $secondLocked]);
-        $pass->apply(new ParsedCatalog([]));
+        $pass->apply(new ParsedCatalogModel([]));
 
         $pass->removeUnmentioned();
 

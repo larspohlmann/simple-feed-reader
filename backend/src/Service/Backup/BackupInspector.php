@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Service\Backup\Model\BackupInventoryModel;
+
 /**
  * Pass 1 of a restore start: reads the foundation through BackupReader, counts
  * it, and checks that every subscription's feed and tags resolve inside it —
@@ -15,7 +17,7 @@ final readonly class BackupInspector
     {
     }
 
-    public function inspect(string $gzipBytes): BackupInventory
+    public function inspect(string $gzipBytes): BackupInventoryModel
     {
         $tally = new BackupTally();
         foreach ($this->reader->read($gzipBytes) as $line) {

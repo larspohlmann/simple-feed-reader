@@ -49,7 +49,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         'spiegel' => 'https://www.spiegel.de',
     ];
 
-    /** Every reason FeedDiscoveryResult can name, and the dialog can word. */
+    /** Every reason FeedDiscoveryResultModel can name, and the dialog can word. */
     private const array SCRAPE_FAILURE_REASONS = ['blocked', 'throttled', 'unreachable', 'not_scrapable'];
 
     /** One admin login for the whole class — the JWT is cached here. */

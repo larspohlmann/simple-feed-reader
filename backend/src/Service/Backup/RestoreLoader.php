@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Entity\User;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Backup\Model\RestoreResultModel;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -30,7 +31,7 @@ final readonly class RestoreLoader
     ) {
     }
 
-    public function load(User $user, string $gzipBytes): RestoreResult
+    public function load(User $user, string $gzipBytes): RestoreResultModel
     {
         $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug, $this->rows);
 

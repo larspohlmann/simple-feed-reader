@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\CatalogFaviconResponse;
-use App\Service\Catalog\CatalogFavicon;
+use App\Service\Catalog\Model\CatalogFaviconModel;
 use PHPUnit\Framework\TestCase;
 
 final class CatalogFaviconResponseTest extends TestCase
 {
     public function testServesTheBytesWithTheirTypeAnETagAndADayOfPublicCaching(): void
     {
-        $response = CatalogFaviconResponse::of(new CatalogFavicon('icon-bytes', 'image/png'));
+        $response = CatalogFaviconResponse::of(new CatalogFaviconModel('icon-bytes', 'image/png'));
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('icon-bytes', $response->getContent());

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Html;
 
+use App\Service\Html\Model\ImageRenditionModel;
 use Dom\Element;
 
 /**
@@ -26,7 +27,7 @@ final readonly class PictureSources
      * declares a width the first usable one stands in, so a src-less picture
      * still resolves to a real image.
      */
-    public function widest(Element $picture): ?ImageRendition
+    public function widest(Element $picture): ?ImageRenditionModel
     {
         $widest = null;
         foreach ($picture->getElementsByTagName('source') as $source) {
@@ -55,7 +56,7 @@ final readonly class PictureSources
     /** A source's widest usable candidate, its width filled from the URL when the
      *  srcset omits a descriptor. Null when the source is scoped to a viewport
      *  the reader does not stand in for, or carries nothing loadable. */
-    private function renditionOf(Element $source): ?ImageRendition
+    private function renditionOf(Element $source): ?ImageRenditionModel
     {
         if (!DesktopViewport::admits($source->getAttribute('media'))) {
             return null;
@@ -66,7 +67,7 @@ final readonly class PictureSources
             return null;
         }
 
-        return ImageRendition::measuredFromUrl($candidate->url, $candidate->width);
+        return ImageRenditionModel::measuredFromUrl($candidate->url, $candidate->width);
     }
 
     /** A <source>'s candidate list, from the same lazy attributes an <img> is read by. */

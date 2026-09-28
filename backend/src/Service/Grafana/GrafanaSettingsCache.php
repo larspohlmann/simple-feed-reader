@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
+use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 
@@ -21,14 +22,14 @@ final readonly class GrafanaSettingsCache
     }
 
     /**
-     * @param callable():GrafanaSettingsSnapshot $loadFromDatabase
+     * @param callable():GrafanaSettingsSnapshotModel $loadFromDatabase
      *
      * @throws InvalidArgumentException
      */
-    public function remember(callable $loadFromDatabase): GrafanaSettingsSnapshot
+    public function remember(callable $loadFromDatabase): GrafanaSettingsSnapshotModel
     {
         $item = $this->grafanaSettingsCache->getItem(self::KEY);
-        $cached = $item->isHit() ? GrafanaSettingsSnapshot::fromCacheEntryOrNull($item->get()) : null;
+        $cached = $item->isHit() ? GrafanaSettingsSnapshotModel::fromCacheEntryOrNull($item->get()) : null;
         if (null !== $cached) {
             return $cached;
         }

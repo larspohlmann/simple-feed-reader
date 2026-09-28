@@ -6,6 +6,7 @@ namespace App\Service\Crypto;
 
 use App\Entity\SealedSecret;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Crypto\Model\SecretBindingModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -40,7 +41,7 @@ final readonly class InstanceSecretCipher
         }
     }
 
-    public function seal(SecretBinding $binding, string $plaintext): SealedSecret
+    public function seal(SecretBindingModel $binding, string $plaintext): SealedSecret
     {
         $salt = random_bytes(self::SALT_BYTES);
         $nonce = random_bytes(SODIUM_CRYPTO_AEAD_XCHACHA20POLY1305_IETF_NPUBBYTES);
@@ -63,7 +64,7 @@ final readonly class InstanceSecretCipher
         );
     }
 
-    public function open(SecretBinding $binding, SealedSecret $sealed): string
+    public function open(SecretBindingModel $binding, SealedSecret $sealed): string
     {
         if (self::CURRENT_VERSION !== $sealed->version) {
             throw new SecretUnreadableException(sprintf('Unknown scheme version %d.', $sealed->version));
@@ -94,7 +95,7 @@ final readonly class InstanceSecretCipher
         return $plaintext;
     }
 
-    private function deriveRowKey(SecretBinding $binding, int $version, string $salt): string
+    private function deriveRowKey(SecretBindingModel $binding, int $version, string $salt): string
     {
         return hash_hkdf(
             'sha256',

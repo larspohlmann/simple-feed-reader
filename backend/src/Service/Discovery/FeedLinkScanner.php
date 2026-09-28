@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Fetch\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Scraper\TextNormalizer;
@@ -62,7 +63,7 @@ final readonly class FeedLinkScanner
     /** An anchor calling itself a feed, whatever its address looks like. */
     private const string FEED_LABEL = '#\b(rss|atom|feed)\b#i';
 
-    /** @return list<FeedCandidate> */
+    /** @return list<FeedCandidateModel> */
     public function scan(string $html, string $baseUrl): array
     {
         $document = HtmlDocumentParser::parseOrNull($html);
@@ -76,7 +77,7 @@ final readonly class FeedLinkScanner
         return [] !== $advertised ? $advertised : $this->feedShapedLinks($document, $pageUrls);
     }
 
-    /** @return list<FeedCandidate> */
+    /** @return list<FeedCandidateModel> */
     private function advertisedFeeds(HTMLDocument $document, PageUrls $pageUrls): array
     {
         $candidates = [];
@@ -87,13 +88,13 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidate($url, $this->label($link), $format);
+            $candidates[$url] = new FeedCandidateModel($url, $this->label($link), $format);
         }
 
         return array_values($candidates);
     }
 
-    /** @return list<FeedCandidate> */
+    /** @return list<FeedCandidateModel> */
     private function feedShapedLinks(HTMLDocument $document, PageUrls $pageUrls): array
     {
         $candidates = [];
@@ -108,7 +109,7 @@ final readonly class FeedLinkScanner
                 continue;
             }
 
-            $candidates[$url] = new FeedCandidate($url, $label, self::GUESSED_FORMAT);
+            $candidates[$url] = new FeedCandidateModel($url, $label, self::GUESSED_FORMAT);
             // A page carries hundreds of anchors; stop as soon as the list is
             // full rather than resolving every one of them to throw it away.
             if (\count($candidates) === self::MAX_GUESSES) {

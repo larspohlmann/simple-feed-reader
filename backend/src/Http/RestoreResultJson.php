@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Backup\RestoreResult;
+use App\Service\Backup\Model\RestoreResultModel;
 
 /**
  * What a restore actually loaded, counted as rows written.
@@ -14,7 +14,7 @@ final readonly class RestoreResultJson
     /**
      * @return array<string, mixed>
      */
-    public static function from(RestoreResult $result): array
+    public static function from(RestoreResultModel $result): array
     {
         return [
             'loaded' => [

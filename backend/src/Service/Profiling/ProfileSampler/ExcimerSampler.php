@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling\ProfileSampler;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 
 final class ExcimerSampler implements ProfileSamplerInterface
 {
@@ -34,7 +34,7 @@ final class ExcimerSampler implements ProfileSamplerInterface
         $this->sampleRateHz = (int) round(1 / $periodSeconds);
     }
 
-    public function stop(): ?CollapsedProfile
+    public function stop(): ?CollapsedProfileModel
     {
         if (null === $this->profiler) {
             return null;
@@ -47,7 +47,7 @@ final class ExcimerSampler implements ProfileSamplerInterface
             return null;
         }
 
-        return new CollapsedProfile(
+        return new CollapsedProfileModel(
             $log->formatCollapsed(),
             $sampleCount,
             $this->sampleRateHz,

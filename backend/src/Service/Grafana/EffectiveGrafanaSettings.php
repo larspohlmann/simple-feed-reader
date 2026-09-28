@@ -7,11 +7,12 @@ namespace App\Service\Grafana;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 
 final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
 {
-    private ?GrafanaSettingsSnapshot $memoised = null;
+    private ?GrafanaSettingsSnapshotModel $memoised = null;
 
     public function __construct(
         private readonly GrafanaSettingsRepository $repository,
@@ -21,7 +22,7 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
     ) {
     }
 
-    public function stored(): GrafanaSettingsSnapshot
+    public function stored(): GrafanaSettingsSnapshotModel
     {
         return $this->memoised ??= $this->cache->remember($this->loadSingleton(...));
     }
@@ -65,9 +66,11 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
         return $stored->hasToken() ? $this->cipher->open($stored->sealedToken) : null;
     }
 
-    private function loadSingleton(): GrafanaSettingsSnapshot
+    private function loadSingleton(): GrafanaSettingsSnapshotModel
     {
-        return GrafanaSettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new GrafanaSettingsEntity());
+        return GrafanaSettingsSnapshotModel::fromEntity(
+            $this->repository->findSingleton() ?? new GrafanaSettingsEntity(),
+        );
     }
 
     private function defaultOrNull(string $default): ?string

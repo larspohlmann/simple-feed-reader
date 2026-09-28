@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
-use App\Service\Catalog\CatalogCategoryDetails;
+use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogCategoryRequest
@@ -29,9 +29,9 @@ final readonly class CatalogCategoryRequest
     ) {
     }
 
-    public function toDetails(): CatalogCategoryDetails
+    public function toDetails(): CatalogCategoryDetailsModel
     {
-        return new CatalogCategoryDetails(
+        return new CatalogCategoryDetailsModel(
             key: $this->key,
             name: $this->name,
             icon: $this->icon,

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling;
 
+use App\Service\Profiling\Model\CollapsedProfileModel;
+use App\Service\Profiling\Model\ProfileLabelsModel;
 use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -21,7 +23,7 @@ final readonly class PyroscopeClient
     ) {
     }
 
-    public function push(CollapsedProfile $profile, ProfileLabels $labels): void
+    public function push(CollapsedProfileModel $profile, ProfileLabelsModel $labels): void
     {
         try {
             $pushUrl = $this->endpoint->pushUrl();

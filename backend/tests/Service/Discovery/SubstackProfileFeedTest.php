@@ -6,7 +6,7 @@ namespace App\Tests\Service\Discovery;
 
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -166,7 +166,7 @@ final class SubstackProfileFeedTest extends TestCase
     {
         $apiUrl = sprintf('https://substack.com/api/v1/user/%s/public_profile', $handle);
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn($apiUrl, FetchResponse::fetched(
+        $fetcher->willReturn($apiUrl, FetchResponseModel::fetched(
             $apiUrl,
             permanentRedirect: false,
             body: $body,

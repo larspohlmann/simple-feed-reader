@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Entity\Entry;
+use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Model\ImageDimensionsModel;
+use App\Service\Image\Model\ImageVerifyOutcome;
 
 /**
  * Verifies one pending image via the SSRF-guarded fetcher, retrying a bounded
@@ -49,7 +51,7 @@ final readonly class ImageVerifier
 
     private function judge(Entry $entry, string $bytes): ImageVerifyOutcome
     {
-        $dimensions = ImageDimensions::fromBytes($bytes);
+        $dimensions = ImageDimensionsModel::fromBytes($bytes);
         if ($dimensions === null) {
             return $this->recordFailure($entry);
         }

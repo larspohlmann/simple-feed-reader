@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
+use App\Service\Backup\Model\BackupPartModel;
+
 /**
  * Accumulates one entry part's lines until it hits its byte or entry budget,
  * then drains itself into gzip-compressed bytes and resets for the next part.
@@ -57,7 +59,7 @@ final class BackupPartBuffer
     public function drain(string $headerLine, string $footerLine): string
     {
         $lines = [$headerLine, ...$this->entryLines, ...$this->entryStateLines, $footerLine];
-        $gzipBytes = BackupPart::gzip(implode("\n", $lines) . "\n");
+        $gzipBytes = BackupPartModel::gzip(implode("\n", $lines) . "\n");
         $this->reset();
 
         return $gzipBytes;

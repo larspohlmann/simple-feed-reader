@@ -6,7 +6,7 @@ namespace App\Service\Refresh\FeedBodyParser;
 
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\WordPressJsonParser;
 
 /**
@@ -27,7 +27,7 @@ final readonly class WpJsonBodyParser implements FeedBodyParserInterface
         return SourceFormat::WP_JSON;
     }
 
-    public function parse(string $body, Feed $feed): ParsedFeed
+    public function parse(string $body, Feed $feed): ParsedFeedModel
     {
         return $this->parser->parse($body);
     }

@@ -6,11 +6,11 @@ namespace App\Service\Refresh\FeedBodyParser;
 
 use App\Entity\Feed;
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
- * One strategy for turning a fetched body into a ParsedFeed, keyed by the
+ * One strategy for turning a fetched body into a ParsedFeedModel, keyed by the
  * Feed::sourceFormat value it owns. Implementations are tagged automatically
  * and collected into FeedBodyParser's keyed locator, indexed by format() —
  * so adding a format to the refresh pipeline is ONE new class implementing
@@ -23,5 +23,5 @@ interface FeedBodyParserInterface
     public static function format(): string;
 
     /** @throws FeedParseException when the body cannot be read in this format */
-    public function parse(string $body, Feed $feed): ParsedFeed;
+    public function parse(string $body, Feed $feed): ParsedFeedModel;
 }

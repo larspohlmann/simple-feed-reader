@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\WorkerProfilingListener;
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
@@ -187,7 +187,7 @@ final class WorkerProfilingListenerTest extends TestCase
                 throw new \RuntimeException('sampler start failed');
             }
 
-            public function stop(): ?CollapsedProfile
+            public function stop(): ?CollapsedProfileModel
             {
                 throw new \RuntimeException('sampler stop failed');
             }
@@ -259,7 +259,7 @@ final class WorkerProfilingListenerTest extends TestCase
             {
             }
 
-            public function stop(): ?CollapsedProfile
+            public function stop(): ?CollapsedProfileModel
             {
                 return null;
             }

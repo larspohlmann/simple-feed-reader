@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
-/** One article-like item found on a scraped HTML page, before ParsedEntry mapping. */
+/** One article-like item found on a scraped HTML page, before ParsedEntryModel mapping. */
 final readonly class ScrapedItem
 {
     public function __construct(

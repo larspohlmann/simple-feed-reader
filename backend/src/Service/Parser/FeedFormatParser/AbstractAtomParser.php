@@ -12,9 +12,9 @@ use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\GuidFallback;
 use App\Service\Parser\ItemCategoryExtractor;
 use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedEntryMedia;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\XmlHelper;
 use App\Service\Text\PlainText;
 use App\Service\Url\AbsoluteHttpUrl;
@@ -48,7 +48,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
     /** Feed-level description element ('subtitle' in 1.0, 'tagline' in 0.3). */
     abstract protected function descriptionElement(): string;
 
-    public function parse(\DOMDocument $document): ParsedFeed
+    public function parse(\DOMDocument $document): ParsedFeedModel
     {
         $root = $document->documentElement;
         if ($root === null) {
@@ -79,7 +79,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             throw new FeedParseException('Atom feed had neither a title nor any entries');
         }
 
-        return new ParsedFeed(
+        return new ParsedFeedModel(
             PlainText::from($title),
             $this->alternateLink($root, $ns),
             XmlHelper::childText($root, $this->descriptionElement(), $ns),
@@ -88,7 +88,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         );
     }
 
-    private function parseEntry(\DOMElement $entry, string $ns): ?ParsedEntry
+    private function parseEntry(\DOMElement $entry, string $ns): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($entry, 'title', $ns);
         $id = XmlHelper::childText($entry, 'id', $ns);
@@ -109,7 +109,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
         );
         $mediaBundle = ItemMediaExtractor::extract($entry);
 
-        return new ParsedEntry(
+        return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
@@ -117,7 +117,7 @@ abstract class AbstractAtomParser implements FeedFormatParserInterface
             summary: XmlHelper::childText($entry, 'summary', $ns),
             contentHtml: $contentHtml,
             publishedAt: DateParser::parse($this->firstDate($entry, $ns)),
-            media: new ParsedEntryMedia($image, $mediaBundle),
+            media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($entry),
             discussion: AtomDiscussion::from($entry, $ns),
             authorUrl: $this->authorUri($entry, $ns),

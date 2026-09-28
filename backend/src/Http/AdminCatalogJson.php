@@ -6,9 +6,9 @@ namespace App\Http;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\BundledCatalogSummary;
-use App\Service\Catalog\CatalogImportResult;
-use App\Service\Catalog\CatalogWarmReport;
+use App\Service\Catalog\Model\BundledCatalogSummaryModel;
+use App\Service\Catalog\Model\CatalogImportResultModel;
+use App\Service\Catalog\Model\CatalogWarmReportModel;
 
 /**
  * The admin view of the catalog: every row, enabled or not, plus the favicon
@@ -58,7 +58,7 @@ final class AdminCatalogJson
     /**
      * @return array<string, mixed>
      */
-    public static function importResult(CatalogImportResult $result): array
+    public static function importResult(CatalogImportResultModel $result): array
     {
         return [
             'categoriesCreated' => $result->categoriesCreated,
@@ -86,7 +86,7 @@ final class AdminCatalogJson
     }
 
     /** @return array{warmed: int, failed: int, remaining: int} */
-    public static function warmReport(CatalogWarmReport $report): array
+    public static function warmReport(CatalogWarmReportModel $report): array
     {
         return [
             'warmed' => $report->warmed,
@@ -96,7 +96,7 @@ final class AdminCatalogJson
     }
 
     /** @return array{available: bool, categories: int, feeds: int} */
-    public static function bundled(BundledCatalogSummary $summary): array
+    public static function bundled(BundledCatalogSummaryModel $summary): array
     {
         return [
             'available' => $summary->available,

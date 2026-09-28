@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryMediaAssembler;
-use App\Service\Parser\ParsedAttachment;
-use App\Service\Parser\ParsedMedium;
-use App\Service\Parser\VisualMediaKind;
+use App\Service\Parser\Model\ParsedAttachmentModel;
+use App\Service\Parser\Model\ParsedMediumModel;
+use App\Service\Parser\Model\VisualMediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class EntryMediaAssemblerTest extends TestCase
@@ -16,8 +16,8 @@ final class EntryMediaAssemblerTest extends TestCase
     public function testLeadImageBecomesTheFirstMedium(): void
     {
         $assembled = EntryMediaAssembler::assemble(
-            new DeclaredImage('https://i/lead.jpg', 800, 600),
-            [new ParsedMedium('https://i/extra.jpg', VisualMediaKind::Image)],
+            new DeclaredImageModel('https://i/lead.jpg', 800, 600),
+            [new ParsedMediumModel('https://i/extra.jpg', VisualMediaKind::Image)],
             [],
         );
 
@@ -31,8 +31,8 @@ final class EntryMediaAssemblerTest extends TestCase
     public function testAMediumMatchingTheLeadIsNotDuplicated(): void
     {
         $assembled = EntryMediaAssembler::assemble(
-            new DeclaredImage('https://i/lead.jpg', 800, 600),
-            [new ParsedMedium('https://i/lead.jpg', VisualMediaKind::Image, 800, 600)],
+            new DeclaredImageModel('https://i/lead.jpg', 800, 600),
+            [new ParsedMediumModel('https://i/lead.jpg', VisualMediaKind::Image, 800, 600)],
             [],
         );
 
@@ -45,8 +45,8 @@ final class EntryMediaAssemblerTest extends TestCase
         $assembled = EntryMediaAssembler::assemble(
             null,
             [
-                new ParsedMedium('http://i/insecure.jpg', VisualMediaKind::Image),
-                new ParsedMedium('https://i/ok.jpg', VisualMediaKind::Image),
+                new ParsedMediumModel('http://i/insecure.jpg', VisualMediaKind::Image),
+                new ParsedMediumModel('https://i/ok.jpg', VisualMediaKind::Image),
             ],
             [],
         );
@@ -59,7 +59,7 @@ final class EntryMediaAssemblerTest extends TestCase
     {
         $assembled = EntryMediaAssembler::assemble(
             null,
-            [new ParsedMedium('https://v/clip.mp4', VisualMediaKind::Video, null, null, 'http://v/poster.jpg')],
+            [new ParsedMediumModel('https://v/clip.mp4', VisualMediaKind::Video, null, null, 'http://v/poster.jpg')],
             [],
         );
 
@@ -74,8 +74,8 @@ final class EntryMediaAssemblerTest extends TestCase
             null,
             [],
             [
-                new ParsedAttachment('http://cdn/insecure.mp3', 'audio/mpeg'),
-                new ParsedAttachment('https://cdn/ok.mp3', 'audio/mpeg', 3723, 4200000, 'Ep 1'),
+                new ParsedAttachmentModel('http://cdn/insecure.mp3', 'audio/mpeg'),
+                new ParsedAttachmentModel('https://cdn/ok.mp3', 'audio/mpeg', 3723, 4200000, 'Ep 1'),
             ],
         );
 
@@ -88,7 +88,7 @@ final class EntryMediaAssemblerTest extends TestCase
     public function testAnHttpLeadIsUpgradedRatherThanDropped(): void
     {
         $assembled = EntryMediaAssembler::assemble(
-            new DeclaredImage('http://i/lead.jpg'),
+            new DeclaredImageModel('http://i/lead.jpg'),
             [],
             [],
         );
@@ -100,8 +100,8 @@ final class EntryMediaAssemblerTest extends TestCase
     public function testWhenTheLeadFailsTheGateTheNextImageLeads(): void
     {
         $assembled = EntryMediaAssembler::assemble(
-            new DeclaredImage('/img/site-relative-lead.jpg'),
-            [new ParsedMedium('https://i/ok.jpg', VisualMediaKind::Image)],
+            new DeclaredImageModel('/img/site-relative-lead.jpg'),
+            [new ParsedMediumModel('https://i/ok.jpg', VisualMediaKind::Image)],
             [],
         );
 

@@ -6,7 +6,7 @@ namespace App\Service\Grafana\Crypto;
 
 use App\Entity\SealedSecret;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SecretBinding;
+use App\Service\Crypto\Model\SecretBindingModel;
 
 /** The instance-wide Grafana push token; its own binding keeps it apart from every other sealed secret. */
 final readonly class GrafanaApiKeyCipher
@@ -19,11 +19,11 @@ final readonly class GrafanaApiKeyCipher
 
     public function seal(string $plainToken): SealedSecret
     {
-        return $this->cipher->seal(SecretBinding::forInstance(self::PURPOSE), $plainToken);
+        return $this->cipher->seal(SecretBindingModel::forInstance(self::PURPOSE), $plainToken);
     }
 
     public function open(SealedSecret $sealed): string
     {
-        return $this->cipher->open(SecretBinding::forInstance(self::PURPOSE), $sealed);
+        return $this->cipher->open(SecretBindingModel::forInstance(self::PURPOSE), $sealed);
     }
 }

@@ -6,13 +6,18 @@ namespace App\Service\Ai\Completion;
 
 use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\RateLimitedResultModel;
+use App\Service\Ai\Completion\Model\RetryPlanModel;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
-use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\Model\ProviderConnectionModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Applies a RetryPlan to rate-limited calls (#947): a blocking plan waits and re-fires only the still-limited calls,
- * so a paid provider is not re-billed for those that answered; a deferring plan never waits, it returns the deferral.
+ * Applies a RetryPlanModel to rate-limited calls (#947): a blocking plan waits and re-fires only the still-limited
+ * calls, so a paid provider is not re-billed for those that answered; a deferring plan never waits, it returns the
+ * deferral.
  */
 final readonly class RateLimitedCompletion
 {
@@ -23,10 +28,10 @@ final readonly class RateLimitedCompletion
     }
 
     public function complete(
-        ProviderConnection $connection,
-        CompletionRequest $request,
+        ProviderConnectionModel $connection,
+        CompletionRequestModel $request,
         CompletionStreamObserverInterface $observer,
-        RetryPlan $plan,
+        RetryPlanModel $plan,
     ): string {
         $result = $this->completeMany($connection, [new ConcurrentCompletion($request, $observer)], $plan);
 
@@ -45,8 +50,11 @@ final readonly class RateLimitedCompletion
     /**
      * @param non-empty-list<ConcurrentCompletion> $calls
      */
-    public function completeMany(ProviderConnection $connection, array $calls, RetryPlan $plan): RateLimitedResult
-    {
+    public function completeMany(
+        ProviderConnectionModel $connection,
+        array $calls,
+        RetryPlanModel $plan,
+    ): RateLimitedResultModel {
         $outcomes = $this->chat->completeMany($connection, $calls);
         $observed = false;
         $waited = 0.0;
@@ -56,22 +64,22 @@ final readonly class RateLimitedCompletion
         for ($retry = 0;; $retry++) {
             $pending = $this->retryablePositions($outcomes);
             if ([] === $pending) {
-                return RateLimitedResult::completed($outcomes, $observed);
+                return RateLimitedResultModel::completed($outcomes, $observed);
             }
 
             $observed = true;
             $wait = $plan->waitSecondsFor($retry, $this->retryAfterAcross($outcomes, $pending));
 
             if (!$plan->blocks()) {
-                return RateLimitedResult::deferred($wait);
+                return RateLimitedResultModel::deferred($wait);
             }
 
             if ($retry >= $plan->maxRetries()) {
-                return RateLimitedResult::completed($outcomes, true);
+                return RateLimitedResultModel::completed($outcomes, true);
             }
 
             if ($waited + $wait > $plan->budgetSeconds()) {
-                return RateLimitedResult::deferred($wait);
+                return RateLimitedResultModel::deferred($wait);
             }
 
             $this->clock->sleep($wait);
@@ -81,7 +89,7 @@ final readonly class RateLimitedCompletion
     }
 
     /**
-     * @param list<CompletionOutcome> $outcomes
+     * @param list<CompletionOutcomeModel> $outcomes
      *
      * @return list<int>
      */
@@ -98,7 +106,7 @@ final readonly class RateLimitedCompletion
     }
 
     /**
-     * @param list<CompletionOutcome> $outcomes
+     * @param list<CompletionOutcomeModel> $outcomes
      * @param list<int>               $pending
      */
     private function retryAfterAcross(array $outcomes, array $pending): ?int
@@ -116,12 +124,12 @@ final readonly class RateLimitedCompletion
 
     /**
      * @param non-empty-list<ConcurrentCompletion> $calls
-     * @param list<CompletionOutcome>              $outcomes
+     * @param list<CompletionOutcomeModel>         $outcomes
      * @param non-empty-list<int>                  $pending
      *
-     * @return list<CompletionOutcome>
+     * @return list<CompletionOutcomeModel>
      */
-    private function refire(ProviderConnection $connection, array $calls, array $outcomes, array $pending): array
+    private function refire(ProviderConnectionModel $connection, array $calls, array $outcomes, array $pending): array
     {
         $subset = array_map(
             static fn (int $position): ConcurrentCompletion => $calls[$position],

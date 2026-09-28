@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper;
 
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Parser\GuidFallback;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedEntryMedia;
-use App\Service\Parser\ParsedFeed;
-use App\Service\Image\DeclaredImage;
+use App\Service\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Synthesizes a ParsedFeed from a feedless HTML page. The heuristic layers
+ * Synthesizes a ParsedFeedModel from a feedless HTML page. The heuristic layers
  * run in order of trustworthiness — JSON-LD, semantic article markup, anchor
  * clustering — and the first one that survives the guards wins: at least
  * three items after dropping self-links (url equal to the page) and URL
@@ -37,17 +37,17 @@ final readonly class HtmlItemExtractor
     ) {
     }
 
-    public function extract(string $html, string $baseUrl): ParsedFeed
+    public function extract(string $html, string $baseUrl): ParsedFeedModel
     {
         $doc = $this->parse($html);
         $entries = array_map(
-            fn (ScrapedItem $item): ParsedEntry => $this->toEntry($item),
+            fn (ScrapedItem $item): ParsedEntryModel => $this->toEntry($item),
             \array_slice($this->firstSuccessfulLayer($doc, $baseUrl), 0, self::MAX_ITEMS),
         );
 
         // No feed image: og:image is the page's picture, not the site's mark,
         // so guessing with it would put an article photo in the feed header.
-        return new ParsedFeed(
+        return new ParsedFeedModel(
             $this->feedTitle($doc),
             $baseUrl,
             $this->metaDescription($doc),
@@ -127,7 +127,7 @@ final readonly class HtmlItemExtractor
         return $description === '' ? null : $description;
     }
 
-    private function toEntry(ScrapedItem $item): ParsedEntry
+    private function toEntry(ScrapedItem $item): ParsedEntryModel
     {
         // The teaser cap is applied once here, at the funnel every layer's
         // output passes through — a clamp inside one layer (CardFields) let
@@ -136,7 +136,7 @@ final readonly class HtmlItemExtractor
             ? null
             : mb_substr($item->teaser, 0, CardFields::MAX_TEASER_LENGTH);
 
-        return new ParsedEntry(
+        return new ParsedEntryModel(
             guid: GuidFallback::for($item->url, $item->url, $item->title),
             url: $item->url,
             title: $item->title,
@@ -146,7 +146,7 @@ final readonly class HtmlItemExtractor
                 ? null
                 : '<p>' . htmlspecialchars($teaser, \ENT_QUOTES) . '</p>',
             publishedAt: $item->publishedAt,
-            media: new ParsedEntryMedia($item->imageUrl === null ? null : new DeclaredImage($item->imageUrl)),
+            media: new ParsedEntryMediaModel($item->imageUrl === null ? null : new DeclaredImageModel($item->imageUrl)),
         );
     }
 }

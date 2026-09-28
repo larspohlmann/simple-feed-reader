@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Factory;
 
-use App\Service\Backup\BackupFilename;
-use App\Service\Backup\BackupPart;
+use App\Service\Backup\Model\BackupFilenameModel;
+use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -24,10 +24,10 @@ final readonly class BackupDownloadResponseFactory
     ) {
     }
 
-    /** @param \Generator<int, BackupPart> $parts */
+    /** @param \Generator<int, BackupPartModel> $parts */
     public function stream(string $accountEmail, \Generator $parts): StreamedResponse
     {
-        $filename = (new BackupFilename(
+        $filename = (new BackupFilenameModel(
             $accountEmail,
             $this->versionReader->read()->version,
             $this->clock->now(),

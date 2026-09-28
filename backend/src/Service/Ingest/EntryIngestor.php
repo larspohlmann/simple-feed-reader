@@ -8,13 +8,14 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Ingest\Model\IncomingEntryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Turns a ParsedFeed into persisted Entry rows: dedupes against the feed's
+ * Turns a ParsedFeedModel into persisted Entry rows: dedupes against the feed's
  * existing entries on stable URL (falling back to GUID hash), sanitizes
  * content, truncates to column limits, and refreshes feed metadata. Caller
  * flushes.
@@ -53,7 +54,7 @@ final readonly class EntryIngestor
      * @return list<Entry> the entries created, in the order the caller can
      *         later index them — each one has no id until the caller flushes
      */
-    public function ingest(Feed $feed, ParsedFeed $parsed, FeedIngestContext $context): array
+    public function ingest(Feed $feed, ParsedFeedModel $parsed, FeedIngestContext $context): array
     {
         $this->updateFeedMetadata($feed, $parsed);
 
@@ -62,7 +63,8 @@ final readonly class EntryIngestor
         }
 
         $incoming = array_map(
-            fn (ParsedEntry $parsedEntry): IncomingEntry => $this->incoming($this->platformRules->apply($parsedEntry)),
+            fn (ParsedEntryModel $parsedEntry): IncomingEntryModel
+                => $this->incoming($this->platformRules->apply($parsedEntry)),
             $parsed->entries,
         );
         $deduplicator = $this->deduplicatorFor($feed, $incoming);
@@ -96,7 +98,7 @@ final readonly class EntryIngestor
      * items against thousands stored), so this is opportunistic repair, not a
      * migration. Caller flushes. Returns the number updated.
      */
-    public function fillMissingImages(Feed $feed, ParsedFeed $parsed): int
+    public function fillMissingImages(Feed $feed, ParsedFeedModel $parsed): int
     {
         if ($parsed->entries === []) {
             return 0;
@@ -123,7 +125,7 @@ final readonly class EntryIngestor
         return $updated;
     }
 
-    private function updateFeedMetadata(Feed $feed, ParsedFeed $parsed): void
+    private function updateFeedMetadata(Feed $feed, ParsedFeedModel $parsed): void
     {
         if ($parsed->title !== null) {
             $feed->setTitle(mb_substr($parsed->title, 0, self::FEED_TITLE_MAX));
@@ -143,37 +145,37 @@ final readonly class EntryIngestor
         }
     }
 
-    private function incoming(ParsedEntry $entry): IncomingEntry
+    private function incoming(ParsedEntryModel $entry): IncomingEntryModel
     {
-        return new IncomingEntry($entry, self::guidHash($entry->guid), $this->urlNormalizer->hash($entry->url));
+        return new IncomingEntryModel($entry, self::guidHash($entry->guid), $this->urlNormalizer->hash($entry->url));
     }
 
     /**
-     * @param list<IncomingEntry> $incoming
+     * @param list<IncomingEntryModel> $incoming
      */
     private function deduplicatorFor(Feed $feed, array $incoming): EntryDeduplicator
     {
         return new EntryDeduplicator(
             $this->entryRepository->existingGuidHashesForFeed(
                 $feed->requireId(),
-                array_map(static fn (IncomingEntry $candidate): string => $candidate->guidHash, $incoming),
+                array_map(static fn (IncomingEntryModel $candidate): string => $candidate->guidHash, $incoming),
             ),
             $this->entryRepository->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
         );
     }
 
     /**
-     * @param list<ParsedEntry> $entries
+     * @param list<ParsedEntryModel> $entries
      *
      * @return list<string>
      */
     private function guidHashesOf(array $entries): array
     {
-        return array_map(static fn (ParsedEntry $entry): string => self::guidHash($entry->guid), $entries);
+        return array_map(static fn (ParsedEntryModel $entry): string => self::guidHash($entry->guid), $entries);
     }
 
     /**
-     * @param list<IncomingEntry> $incoming
+     * @param list<IncomingEntryModel> $incoming
      *
      * @return list<string> the url hashes of the entries that have one: a url-less item dedupes on GUID alone
      */

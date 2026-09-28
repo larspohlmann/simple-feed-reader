@@ -6,7 +6,7 @@ namespace App\Tests\Service\OAuth;
 
 use App\Http\Problem\ExceptionProblems\OAuthProblems;
 use App\Service\OAuth\Exception\UnknownProviderException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 use App\Service\OAuth\OAuthProviderRegistry;
 use PHPUnit\Framework\TestCase;
@@ -120,9 +120,9 @@ final class OAuthProviderRegistryTest extends TestCase
                 return 'https://provider.test/authorize';
             }
 
-            public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentity
+            public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentityModel
             {
-                return new OAuthIdentity($this->name, 'sub', null, false);
+                return new OAuthIdentityModel($this->name, 'sub', null, false);
             }
         };
     }

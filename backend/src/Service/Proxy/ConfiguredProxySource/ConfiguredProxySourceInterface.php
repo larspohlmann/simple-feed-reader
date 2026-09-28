@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Proxy\ConfiguredProxySource;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\ProxyConfigModel;
 
 interface ConfiguredProxySourceInterface
 {
@@ -14,5 +14,5 @@ interface ConfiguredProxySourceInterface
      *
      * @throws SecretUnreadableException when its stored password cannot be opened
      */
-    public function configuredProxy(): ?ProxyConfig;
+    public function configuredProxy(): ?ProxyConfigModel;
 }

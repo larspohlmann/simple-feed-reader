@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Digest\DigestMailer;
 
 use App\Entity\User;
-use App\Service\Mail\Digest\DigestModel;
+use App\Service\Mail\Digest\Model\DigestModel;
 
 interface DigestMailerInterface
 {

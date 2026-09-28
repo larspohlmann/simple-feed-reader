@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\Reasoning;
 
 /**
  * What the provider may spend answering, per phase. RecommendationPromptBuilder::packBatches() reserves this same

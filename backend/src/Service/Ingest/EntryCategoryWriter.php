@@ -9,8 +9,8 @@ use App\Entity\Entry;
 use App\Entity\EntryCategory;
 use App\Repository\CategoryRepository;
 use App\Service\Category\CategoryNormalizer;
-use App\Service\Category\NormalizedCategory;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Category\Model\NormalizedCategoryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -28,7 +28,7 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param list<array{0: Entry, 1: ParsedEntry}> $pairs
+     * @param list<array{0: Entry, 1: ParsedEntryModel}> $pairs
      */
     public function attach(array $pairs): void
     {
@@ -38,9 +38,9 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param list<array{0: Entry, 1: ParsedEntry}> $pairs
+     * @param list<array{0: Entry, 1: ParsedEntryModel}> $pairs
      *
-     * @return list<array{0: Entry, 1: list<NormalizedCategory>}>
+     * @return list<array{0: Entry, 1: list<NormalizedCategoryModel>}>
      */
     private function normalizeEach(array $pairs): array
     {
@@ -51,9 +51,9 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param list<array{0: Entry, 1: list<NormalizedCategory>}> $entriesWithCategories
+     * @param list<array{0: Entry, 1: list<NormalizedCategoryModel>}> $entriesWithCategories
      *
-     * @return array<string, NormalizedCategory>
+     * @return array<string, NormalizedCategoryModel>
      */
     private function distinctCategories(array $entriesWithCategories): array
     {
@@ -68,7 +68,7 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param array<string, NormalizedCategory> $distinct
+     * @param array<string, NormalizedCategoryModel> $distinct
      *
      * @return array<string, Category>
      */
@@ -95,7 +95,7 @@ final class EntryCategoryWriter
     }
 
     /**
-     * @param list<array{0: Entry, 1: list<NormalizedCategory>}> $entriesWithCategories
+     * @param list<array{0: Entry, 1: list<NormalizedCategoryModel>}> $entriesWithCategories
      * @param array<string, Category>                            $resolvedByIdentity
      */
     private function writeLinks(array $entriesWithCategories, array $resolvedByIdentity): void

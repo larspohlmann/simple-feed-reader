@@ -10,6 +10,7 @@ use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\BackupInventoryModel;
 
 /**
  * One foundation inspection's working state: the header, a count per line
@@ -53,14 +54,14 @@ final class BackupTally
     /**
      * A foundation holds no entry lines, so the entry counts are its header's claimed totals.
      */
-    public function inventory(): BackupInventory
+    public function inventory(): BackupInventoryModel
     {
         $header = $this->header ?? throw new InvalidBackupException('The backup is missing its header line.');
         $totals = $header->totals
             ?? throw new InvalidBackupException('The restore starts with part 0, the foundation.');
 
-        return new BackupInventory(
-            header: $header,
+        return new BackupInventoryModel(
+            source: $header->toSource(),
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],

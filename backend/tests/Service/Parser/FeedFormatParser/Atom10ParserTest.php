@@ -6,13 +6,13 @@ namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
 use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use PHPUnit\Framework\TestCase;
 
 final class Atom10ParserTest extends TestCase
 {
-    private function parse(string $xml): ParsedFeed
+    private function parse(string $xml): ParsedFeedModel
     {
         $document = new \DOMDocument();
         $document->loadXML($xml);
@@ -20,7 +20,7 @@ final class Atom10ParserTest extends TestCase
         return (new Atom10Parser())->parse($document);
     }
 
-    private function parseSingleEntry(string $entryXml): ParsedEntry
+    private function parseSingleEntry(string $entryXml): ParsedEntryModel
     {
         $feed = $this->parse(<<<XML
             <feed xmlns="http://www.w3.org/2005/Atom">

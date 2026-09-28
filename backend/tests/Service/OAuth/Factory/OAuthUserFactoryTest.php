@@ -6,7 +6,7 @@ namespace App\Tests\Service\OAuth\Factory;
 
 use App\Enum\UserStatus;
 use App\Service\OAuth\Factory\OAuthUserFactory;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RegistrationPolicies;
 use Symfony\Component\Clock\MockClock;
@@ -19,7 +19,8 @@ final class OAuthUserFactoryTest extends DbTestCase
 
     public function testALinkableAddressBecomesTheVerifiedLoginIdentifier(): void
     {
-        $user = $this->factory(approve: true)->create(new OAuthIdentity('google', 'sub-1', 'Ann@Example.test', true));
+        $user = $this->factory(approve: true)
+            ->create(new OAuthIdentityModel('google', 'sub-1', 'Ann@Example.test', true));
 
         self::assertSame('ann@example.test', $user->getEmail());
         self::assertTrue($user->isEmailVerified());
@@ -27,7 +28,8 @@ final class OAuthUserFactoryTest extends DbTestCase
 
     public function testAnUnverifiedAddressLeavesAStablePlaceholder(): void
     {
-        $user = $this->factory(approve: true)->create(new OAuthIdentity('google', 'sub-1', 'ann@example.test', false));
+        $user = $this->factory(approve: true)
+            ->create(new OAuthIdentityModel('google', 'sub-1', 'ann@example.test', false));
 
         self::assertSame(
             sprintf('google-%s@oauth.invalid', substr(hash('sha256', 'sub-1'), 0, 32)),
@@ -38,7 +40,8 @@ final class OAuthUserFactoryTest extends DbTestCase
 
     public function testWithApprovalOnTheAccountWaitsForAnAdmin(): void
     {
-        $user = $this->factory(approve: true)->create(new OAuthIdentity('google', 'sub-1', 'ann@example.test', true));
+        $user = $this->factory(approve: true)
+            ->create(new OAuthIdentityModel('google', 'sub-1', 'ann@example.test', true));
 
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getApprovedAt());
@@ -46,7 +49,8 @@ final class OAuthUserFactoryTest extends DbTestCase
 
     public function testWithApprovalOffTheAccountIsActiveAtOnce(): void
     {
-        $user = $this->factory(approve: false)->create(new OAuthIdentity('google', 'sub-1', 'ann@example.test', true));
+        $user = $this->factory(approve: false)
+            ->create(new OAuthIdentityModel('google', 'sub-1', 'ann@example.test', true));
 
         self::assertSame(UserStatus::Active, $user->getStatus());
         self::assertSame(

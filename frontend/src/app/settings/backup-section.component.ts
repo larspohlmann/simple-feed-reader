@@ -23,7 +23,7 @@ const CONFIRM_PHRASE = 'REPLACE';
 
 /** Used only if the server's Content-Disposition header is missing or
  *  unparseable -- normal responses carry the app-slug/version/account/date
- *  name the backend builds (BackupFilename). */
+ *  name the backend builds (BackupFilenameModel). */
 const FALLBACK_BACKUP_FILENAME = 'account-backup.zip';
 
 @Component({

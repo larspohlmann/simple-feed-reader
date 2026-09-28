@@ -7,14 +7,14 @@ namespace App\Tests\Support;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchResponse;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\MockClock;
 
 final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInterface
 {
-    /** @var array<string, FetchResponse|FetchException> */
+    /** @var array<string, FetchResponseModel|FetchException> */
     private array $results = [];
 
     private ?FetchException $fallbackResult = null;
@@ -34,7 +34,7 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     ) {
     }
 
-    public function willReturn(string $url, FetchResponse $response): void
+    public function willReturn(string $url, FetchResponseModel $response): void
     {
         $this->results[$url] = $response;
     }
@@ -56,16 +56,16 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
         $this->fallbackResult = $exception;
     }
 
-    public function fetch(string $url): FetchResponse
+    public function fetch(string $url): FetchResponseModel
     {
-        foreach ($this->fetchAll([new FetchTicket($url)]) as $outcome) {
+        foreach ($this->fetchAll([new FetchTicketModel($url)]) as $outcome) {
             return $outcome->responseOrThrow();
         }
 
         throw new \LogicException('No outcome for ' . $url);
     }
 
-    /** @return \Generator<int|string, FetchOutcome> */
+    /** @return \Generator<int|string, FetchOutcomeModel> */
     public function fetchAll(iterable $tickets): \Generator
     {
         $wave = [];
@@ -86,9 +86,9 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     }
 
     /**
-     * @param array<int|string, FetchTicket> $wave
+     * @param array<int|string, FetchTicketModel> $wave
      *
-     * @return \Generator<int|string, FetchOutcome>
+     * @return \Generator<int|string, FetchOutcomeModel>
      */
     private function runWave(array $wave): \Generator
     {
@@ -108,8 +108,8 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
                 ?? throw new \LogicException('No stubbed result for ' . $ticket->url);
 
             yield $key => $result instanceof FetchException
-                ? FetchOutcome::failed($result)
-                : FetchOutcome::succeeded($result);
+                ? FetchOutcomeModel::failed($result)
+                : FetchOutcomeModel::succeeded($result);
         }
     }
 }

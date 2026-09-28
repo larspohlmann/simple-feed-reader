@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth\Oidc;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\OAuth\Oidc\Model\IdTokenModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -34,7 +35,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *    redirect would mean the bytes arrived from a host other than the one we
  *    pinned, exactly the case the spec's carve-out excludes.
  *
- * This class is therefore the ONLY place that constructs an {@see IdToken}.
+ * This class is therefore the ONLY place that constructs an {@see IdTokenModel}.
  * That lets the verifier state its precondition as a parameter type;
  * OidcBoundaryTest fails the build if a second construction site appears.
  */
@@ -63,7 +64,7 @@ final readonly class TokenEndpoint
     ) {
     }
 
-    public function fetch(string $code, string $codeVerifier): IdToken
+    public function fetch(string $code, string $codeVerifier): IdTokenModel
     {
         if (!str_starts_with($this->url, 'https://')) {
             // The signature exemption is only available over validated TLS.
@@ -72,7 +73,7 @@ final readonly class TokenEndpoint
             throw new OAuthFailedException('token endpoint is not https');
         }
 
-        return new IdToken($this->readIdToken($this->post($code, $codeVerifier)));
+        return new IdTokenModel($this->readIdToken($this->post($code, $codeVerifier)));
     }
 
     /**

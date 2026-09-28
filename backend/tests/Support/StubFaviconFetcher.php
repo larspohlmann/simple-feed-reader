@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FetchedFavicon;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Model\FetchedFaviconModel;
 
 final class StubFaviconFetcher implements FaviconFetcherInterface
 {
@@ -35,7 +35,7 @@ final class StubFaviconFetcher implements FaviconFetcherInterface
         $this->default = $error;
     }
 
-    public function download(string $iconUrl): FetchedFavicon
+    public function download(string $iconUrl): FetchedFaviconModel
     {
         $result = $this->byUrl[$iconUrl] ?? $this->default;
         if ($result === null) {
@@ -45,6 +45,6 @@ final class StubFaviconFetcher implements FaviconFetcherInterface
             throw $result;
         }
 
-        return new FetchedFavicon($iconUrl, $result, $this->contentType);
+        return new FetchedFaviconModel($iconUrl, $result, $this->contentType);
     }
 }

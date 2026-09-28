@@ -8,8 +8,8 @@ use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\PendingApprovalNotice;
-use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Model\PendingApprovalNoticeModel;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -55,7 +55,7 @@ final class AccountMailerTest extends TestCase
 
         $mailSettings = $this->createStub(MailSendingSettingsInterface::class);
         $mailSettings->method('identity')->willReturn(
-            new MailIdentity('noreply@feeds.example.com', 'Simple Feed Reader'),
+            new MailIdentityModel('noreply@feeds.example.com', 'Simple Feed Reader'),
         );
 
         $this->mailer = new AccountMailer(
@@ -142,7 +142,7 @@ final class AccountMailerTest extends TestCase
 
     public function testPendingApprovalNoticeCarriesApplicantMethodCountAndLink(): void
     {
-        $notice = new PendingApprovalNotice(
+        $notice = new PendingApprovalNoticeModel(
             'newcomer@example.com',
             RegistrationMethod::EmailPassword,
             null,
@@ -166,7 +166,7 @@ final class AccountMailerTest extends TestCase
 
     public function testPendingApprovalNoticeNamesTheOAuthProvider(): void
     {
-        $notice = new PendingApprovalNotice(
+        $notice = new PendingApprovalNoticeModel(
             'newcomer@example.com',
             RegistrationMethod::OAuth,
             'google',
@@ -181,7 +181,7 @@ final class AccountMailerTest extends TestCase
 
     public function testPendingApprovalNoticeIsLocalisedToTheAdmin(): void
     {
-        $notice = new PendingApprovalNotice(
+        $notice = new PendingApprovalNoticeModel(
             'newcomer@example.com',
             RegistrationMethod::EmailPassword,
             null,
@@ -234,7 +234,7 @@ final class AccountMailerTest extends TestCase
         yield 'approved' => [static fn (AccountMailer $m) => $m->sendApproved($user)];
         yield 'password reset' => [static fn (AccountMailer $m) => $m->sendPasswordReset($user, 'tok')];
         yield 'admin pending approval' => [static function (AccountMailer $m) use ($user): void {
-            $m->sendPendingApprovalNotice($user, new PendingApprovalNotice(
+            $m->sendPendingApprovalNotice($user, new PendingApprovalNoticeModel(
                 'newcomer@example.com',
                 RegistrationMethod::EmailPassword,
                 null,

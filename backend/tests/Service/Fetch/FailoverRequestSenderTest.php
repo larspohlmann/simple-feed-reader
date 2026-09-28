@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\FailoverRequestSender;
-use App\Service\Fetch\GuardedUrl;
+use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -39,7 +39,12 @@ final class FailoverRequestSenderTest extends TestCase
         });
 
         $response = $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame(200, $response->getStatusCode());
         self::assertSame('served over IPv4', $response->getContent());
@@ -50,7 +55,7 @@ final class FailoverRequestSenderTest extends TestCase
         $client = new MockHttpClient([new MockResponse('ok', ['http_code' => 200])]);
 
         $response = $this->sender($client)
-            ->send('GET', 'https://example.com/post', new GuardedUrl('example.com', ['93.184.216.34']), []);
+            ->send('GET', 'https://example.com/post', new GuardedUrlModel('example.com', ['93.184.216.34']), []);
 
         self::assertSame('ok', $response->getContent());
         self::assertSame(1, $client->getRequestsCount());
@@ -66,7 +71,12 @@ final class FailoverRequestSenderTest extends TestCase
         ]);
 
         $response = $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame('served over IPv4', $response->getContent());
         self::assertSame(2, $client->getRequestsCount());
@@ -89,7 +99,12 @@ final class FailoverRequestSenderTest extends TestCase
         $client = new MockHttpClient($onlyIpv6Answers);
 
         $response = $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame('answered over IPv6', $response->getContent());
         self::assertSame(3, $client->getRequestsCount());
@@ -116,7 +131,12 @@ final class FailoverRequestSenderTest extends TestCase
         };
 
         $this->sender(new MockHttpClient($capture))
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame([false, true], $freshConnectPerAttempt);
     }
@@ -128,7 +148,12 @@ final class FailoverRequestSenderTest extends TestCase
         $client = new MockHttpClient(static fn (): MockResponse => new MockResponse('nope', ['http_code' => 403]));
 
         $response = $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame(403, $response->getStatusCode());
     }
@@ -144,7 +169,12 @@ final class FailoverRequestSenderTest extends TestCase
         $client = new MockHttpClient([$redirect, new MockResponse('unexpected second try', ['http_code' => 200])]);
 
         $response = $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
 
         self::assertSame(301, $response->getStatusCode());
         self::assertSame(1, $client->getRequestsCount());
@@ -159,6 +189,11 @@ final class FailoverRequestSenderTest extends TestCase
         $this->expectException(TransportExceptionInterface::class);
 
         $this->sender($client)
-            ->send('GET', 'https://dual.example.com/post', new GuardedUrl('dual.example.com', self::DUAL_STACK), []);
+            ->send(
+                'GET',
+                'https://dual.example.com/post',
+                new GuardedUrlModel('dual.example.com', self::DUAL_STACK),
+                [],
+            );
     }
 }

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
+use App\Service\Ai\Completion\Model\CompletionUsageModel;
+
 /**
  * Reads one /chat/completions response as it arrives and keeps only the
  * answer.
@@ -39,7 +41,7 @@ final class CompletionStreamReader
      * $finishReason is: it arrives in one late message and every event after
      * it carries none, so a later null must never erase it (#409).
      */
-    private ?CompletionUsage $usage = null;
+    private ?CompletionUsageModel $usage = null;
 
     /**
      * How many times the buffers have changed — the key the blocking-envelope
@@ -52,7 +54,7 @@ final class CompletionStreamReader
     /**
      * The last blocking-envelope decode and the generation it was taken at.
      *
-     * @var array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}|null
+     * @var array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}|null
      */
     private ?array $envelopeFields = null;
     private int $envelopeFieldsGeneration = -1;
@@ -121,7 +123,7 @@ final class CompletionStreamReader
      * re-reads its whole buffer but shares that decode with assistantContent(),
      * which the client asks for on the same chunk.
      */
-    public function usage(): ?CompletionUsage
+    public function usage(): ?CompletionUsageModel
     {
         if (!$this->sawStreamEvent) {
             return $this->envelopeFields()['usage'];
@@ -193,7 +195,7 @@ final class CompletionStreamReader
      * would pay one decode per field per chunk — the parse cost #327 removed
      * from the streaming shape and #409 must not reintroduce here.
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
     private function envelopeFields(): array
     {

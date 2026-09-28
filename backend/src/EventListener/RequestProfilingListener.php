@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\EventListener;
 
 use App\Service\Logging\TraceContext\TraceContextInterface;
-use App\Service\Profiling\ProfileLabels;
+use App\Service\Profiling\Model\ProfileLabelsModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
@@ -23,7 +23,7 @@ final class RequestProfilingListener
     private const string PROFILE_ID_ATTRIBUTE = 'pyroscope.profile.id';
     private const string UNROUTED = 'unrouted';
 
-    private ?ProfileLabels $labels = null;
+    private ?ProfileLabelsModel $labels = null;
 
     public function __construct(
         private readonly ProfilingPolicy $policy,
@@ -45,7 +45,7 @@ final class RequestProfilingListener
                 return;
             }
             Span::getCurrent()->setAttribute(self::PROFILE_ID_ATTRIBUTE, $spanId);
-            $this->labels = ProfileLabels::forWebRequest($traceId, $spanId);
+            $this->labels = ProfileLabelsModel::forWebRequest($traceId, $spanId);
             $this->sampler->start(self::SAMPLE_PERIOD_SECONDS);
         } catch (\Throwable) {
             // fail-open: profiling must never break a request

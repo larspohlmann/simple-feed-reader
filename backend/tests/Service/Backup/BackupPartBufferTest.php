@@ -31,6 +31,19 @@ final class BackupPartBufferTest extends TestCase
         self::assertTrue($buffer->isEmpty());
     }
 
+    public function testDrainEndsThePartWithANewlineAfterTheFooter(): void
+    {
+        $buffer = new BackupPartBuffer();
+        $buffer->add('{"kind":"entry"}', null);
+
+        $gzipBytes = $buffer->drain('{"kind":"header"}', '{"kind":"footer"}');
+
+        self::assertSame(
+            "{\"kind\":\"header\"}\n{\"kind\":\"entry\"}\n{\"kind\":\"footer\"}\n",
+            gzdecode($gzipBytes),
+        );
+    }
+
     public function testItIsFullAtTheEntryBudget(): void
     {
         $buffer = new BackupPartBuffer();

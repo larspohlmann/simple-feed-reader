@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Profiling;
 
-use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileLabels;
+use App\Service\Profiling\Model\CollapsedProfileModel;
+use App\Service\Profiling\Model\ProfileLabelsModel;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +26,7 @@ final class PyroscopeClientTest extends TestCase
         });
 
         $client = new PyroscopeClient($http, $this->endpoint('http://pyroscope:4040'));
-        $client->push($this->profile(), ProfileLabels::forWebRequest('abc', 'def'));
+        $client->push($this->profile(), ProfileLabelsModel::forWebRequest('abc', 'def'));
 
         /**
          * @var array{
@@ -61,7 +61,7 @@ final class PyroscopeClientTest extends TestCase
         });
 
         $client = new PyroscopeClient($http, $this->endpoint('http://pyroscope:4040/'));
-        $client->push($this->profile(), ProfileLabels::forWorker());
+        $client->push($this->profile(), ProfileLabelsModel::forWorker());
 
         self::assertStringStartsWith('http://pyroscope:4040/ingest?', $seen['url']);
     }
@@ -76,7 +76,7 @@ final class PyroscopeClientTest extends TestCase
         });
 
         $client = new PyroscopeClient($http, $this->endpoint(null));
-        $client->push($this->profile(), ProfileLabels::forWorker());
+        $client->push($this->profile(), ProfileLabelsModel::forWorker());
 
         self::assertFalse($called);
     }
@@ -86,7 +86,7 @@ final class PyroscopeClientTest extends TestCase
         $http = new MockHttpClient(static fn (): MockResponse => new MockResponse('', ['error' => 'boom']));
         $client = new PyroscopeClient($http, $this->endpoint('http://pyroscope:4040'));
 
-        $client->push($this->profile(), ProfileLabels::forWorker());
+        $client->push($this->profile(), ProfileLabelsModel::forWorker());
 
         $this->expectNotToPerformAssertions();
     }
@@ -101,14 +101,14 @@ final class PyroscopeClientTest extends TestCase
         };
         $client = new PyroscopeClient(new MockHttpClient(), $endpoint);
 
-        $client->push($this->profile(), ProfileLabels::forWorker());
+        $client->push($this->profile(), ProfileLabelsModel::forWorker());
 
         $this->expectNotToPerformAssertions();
     }
 
-    private function profile(): CollapsedProfile
+    private function profile(): CollapsedProfileModel
     {
-        return new CollapsedProfile(self::STACKS, 4, 1000, 1700000000, 1700000005);
+        return new CollapsedProfileModel(self::STACKS, 4, 1000, 1700000000, 1700000005);
     }
 
     private function endpoint(?string $url): PyroscopeEndpointInterface

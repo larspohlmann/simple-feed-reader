@@ -7,7 +7,7 @@ namespace App\Tests\Service\Ingest;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryImageWriter;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -18,7 +18,7 @@ final class EntryImageWriterTest extends TestCase
     {
         $entry = $this->entry();
 
-        $stored = $this->writer()->write($entry, new DeclaredImage('https://img.example.com/a.jpg', 800, 600));
+        $stored = $this->writer()->write($entry, new DeclaredImageModel('https://img.example.com/a.jpg', 800, 600));
 
         self::assertTrue($stored);
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
@@ -31,7 +31,7 @@ final class EntryImageWriterTest extends TestCase
     {
         $entry = $this->entry();
 
-        $stored = $this->writer()->write($entry, new DeclaredImage('http://img.example.com/a.jpg', 800, 600));
+        $stored = $this->writer()->write($entry, new DeclaredImageModel('http://img.example.com/a.jpg', 800, 600));
 
         self::assertTrue($stored);
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
@@ -45,7 +45,7 @@ final class EntryImageWriterTest extends TestCase
         $entry = $this->entry();
         $entry->getImage()->storePending('https://img.example.com/old.jpg', null, null);
 
-        $stored = $this->writer()->write($entry, new DeclaredImage('/relative.jpg', 800, 600));
+        $stored = $this->writer()->write($entry, new DeclaredImageModel('/relative.jpg', 800, 600));
 
         self::assertFalse($stored);
         self::assertSame('https://img.example.com/old.jpg', $entry->getImage()->getUrl());
@@ -67,7 +67,7 @@ final class EntryImageWriterTest extends TestCase
         $entry = $this->entry();
         $entry->getImage()->storePending('https://img.example.com/old.jpg', 10, 10);
 
-        $this->writer()->writeOrMarkNone($entry, new DeclaredImage('/relative.jpg', 800, 600));
+        $this->writer()->writeOrMarkNone($entry, new DeclaredImageModel('/relative.jpg', 800, 600));
 
         self::assertNull($entry->getImage()->getUrl());
         self::assertTrue($entry->getImage()->isMissing());
@@ -77,7 +77,7 @@ final class EntryImageWriterTest extends TestCase
     {
         $entry = $this->entry();
 
-        $this->writer()->writeOrMarkNone($entry, new DeclaredImage('https://img.example.com/a.jpg', 800, 600));
+        $this->writer()->writeOrMarkNone($entry, new DeclaredImageModel('https://img.example.com/a.jpg', 800, 600));
 
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
     }

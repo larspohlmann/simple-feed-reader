@@ -10,9 +10,9 @@ use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FetchRetryPolicy;
-use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use PHPUnit\Framework\TestCase;
@@ -28,7 +28,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
      */
     private function fetcher(
         callable|iterable $responses,
-        ?ProxyConfig $egressProxy,
+        ?ProxyConfigModel $egressProxy,
         array $dnsOverrides = [],
     ): ConcurrentFeedFetcher {
         $resolver = $this->dns($dnsOverrides);
@@ -67,9 +67,9 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
     }
 
     /**
-     * @param iterable<int|string, \App\Service\Fetch\FetchOutcome> $outcomes
+     * @param iterable<int|string, \App\Service\Fetch\Model\FetchOutcomeModel> $outcomes
      *
-     * @return array<int|string, \App\Service\Fetch\FetchOutcome>
+     * @return array<int|string, \App\Service\Fetch\Model\FetchOutcomeModel>
      */
     private function collect(iterable $outcomes): array
     {
@@ -111,8 +111,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            7 => new FetchTicket('https://one.example/feed'),
-            9 => new FetchTicket('https://two.example/feed'),
+            7 => new FetchTicketModel('https://one.example/feed'),
+            9 => new FetchTicketModel('https://two.example/feed'),
         ]));
 
         self::assertSame([7, 9], array_keys($outcomes));
@@ -124,7 +124,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
     public function testEnabledEgressProxyProxiesPlainTickets(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
         /** @var list<array<string, mixed>> $seenOptions */
         $seenOptions = [];
         $fetcher = $this->fetcher(
@@ -136,7 +136,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             $proxy,
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
@@ -146,7 +146,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
     public function testProxiedFailureRetriesExactlyOneDirectAttempt(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
         /** @var list<array<string, mixed>> $seenOptions */
         $seenOptions = [];
         $fetcher = $this->fetcher(
@@ -160,7 +160,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             $proxy,
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertNull($outcomes[1]->failure());
         self::assertCount(2, $seenOptions);
@@ -172,7 +172,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
 
     public function testProxiedFailureIsTerminalWhenDirectFallbackIsDisabled(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, false);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false);
         /** @var list<array<string, mixed>> $seenOptions */
         $seenOptions = [];
         $fetcher = $this->fetcher(
@@ -184,7 +184,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             $proxy,
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertNotNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
@@ -199,7 +199,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
      */
     public function testProxiedFailureOnADualStackHostIsTerminalWhenDirectFallbackIsDisabled(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, false);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false);
         /** @var list<array<string, mixed>> $seenOptions */
         $seenOptions = [];
         $fetcher = $this->fetcher(
@@ -212,7 +212,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]));
 
         self::assertNotNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);
@@ -232,7 +232,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             null,
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertNull($outcomes[1]->failure());
         self::assertCount(1, $seenOptions);

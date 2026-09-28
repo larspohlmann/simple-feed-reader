@@ -7,6 +7,8 @@ namespace App\Service\Proxy;
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
+use App\Service\Proxy\Model\ProxySettingsUpdateModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class ProxySettings
@@ -18,12 +20,12 @@ final readonly class ProxySettings
     ) {
     }
 
-    public function current(): ProxySettingsSnapshot
+    public function current(): ProxySettingsSnapshotModel
     {
-        return ProxySettingsSnapshot::fromEntity($this->repository->findSingleton() ?? new ProxyServerSettings());
+        return ProxySettingsSnapshotModel::fromEntity($this->repository->findSingleton() ?? new ProxyServerSettings());
     }
 
-    public function update(ProxySettingsUpdate $update): void
+    public function update(ProxySettingsUpdateModel $update): void
     {
         $settings = $this->repository->findSingleton();
 
@@ -36,7 +38,7 @@ final readonly class ProxySettings
         $this->em->flush();
     }
 
-    private function apply(ProxySettingsUpdate $update, ProxyServerSettings $settings): void
+    private function apply(ProxySettingsUpdateModel $update, ProxyServerSettings $settings): void
     {
         $replacement = $update->password->replacement();
         if (null !== $replacement) {

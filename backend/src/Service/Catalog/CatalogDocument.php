@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Catalog;
 
 use App\Enum\SourceFormat;
-use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
+use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlBodyReader;
 use App\Service\Url\AbsoluteHttpUrl;
 
@@ -30,7 +33,7 @@ final readonly class CatalogDocument
     ) {
     }
 
-    public function parse(string $opml): ParsedCatalog
+    public function parse(string $opml): ParsedCatalogModel
     {
         try {
             $body = $this->bodyReader->read($opml);
@@ -54,7 +57,7 @@ final readonly class CatalogDocument
             throw new InvalidCatalogDocumentException('A catalog with no categories would empty the picker.');
         }
 
-        return new ParsedCatalog($categories);
+        return new ParsedCatalogModel($categories);
     }
 
     /**
@@ -75,7 +78,7 @@ final readonly class CatalogDocument
     /**
      * @param array<string, true> $seenUrls carried across categories: a URL is unique in the whole document
      */
-    private function category(\DOMElement $outline, array &$seenUrls): CatalogDocumentCategory
+    private function category(\DOMElement $outline, array &$seenUrls): CatalogDocumentCategoryModel
     {
         if ('' !== trim($outline->getAttribute('xmlUrl'))) {
             throw new InvalidCatalogDocumentException(
@@ -98,10 +101,10 @@ final readonly class CatalogDocument
             $feeds[] = $feed;
         }
 
-        return new CatalogDocumentCategory($key, $name, $icon, $color, $feeds);
+        return new CatalogDocumentCategoryModel($key, $name, $icon, $color, $feeds);
     }
 
-    private function feed(\DOMElement $outline): CatalogDocumentFeed
+    private function feed(\DOMElement $outline): CatalogDocumentFeedModel
     {
         $url = trim($outline->getAttribute('xmlUrl'));
         if ('' === $url) {
@@ -127,7 +130,7 @@ final readonly class CatalogDocument
             throw new InvalidCatalogDocumentException(\sprintf('Unknown sourceFormat "%s".', $format));
         }
 
-        return new CatalogDocumentFeed(
+        return new CatalogDocumentFeedModel(
             title: $this->text($outline, 'text', 200),
             url: $url,
             siteUrl: $this->optional($outline, 'htmlUrl', 750),

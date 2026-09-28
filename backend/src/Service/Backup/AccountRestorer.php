@@ -7,6 +7,7 @@ namespace App\Service\Backup;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Service\Account\AccountReset;
+use App\Service\Backup\Model\RestoreResultModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -32,7 +33,7 @@ final readonly class AccountRestorer
     ) {
     }
 
-    public function start(User $user, string $gzipBytes, ?string $confirmation): RestoreResult
+    public function start(User $user, string $gzipBytes, ?string $confirmation): RestoreResultModel
     {
         if (self::CONFIRMATION !== $confirmation) {
             throw new ValidationException(['confirm' => ['Type REPLACE to confirm the restore.']]);

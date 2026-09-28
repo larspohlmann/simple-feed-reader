@@ -54,7 +54,7 @@ class Feed
     /**
      * How this feed's body is turned into entries: SourceFormat::XML (RSS/Atom
      * via FeedParser) or SourceFormat::SCRAPED (HTML listing via
-     * HtmlItemExtractor). Open string matching FeedCandidate::$format — see
+     * HtmlItemExtractor). Open string matching FeedCandidateModel::$format — see
      * App\Enum\SourceFormat for why this is not a backed enum. The default
      * stays a literal so the ORM attribute and column stay self-describing.
      */

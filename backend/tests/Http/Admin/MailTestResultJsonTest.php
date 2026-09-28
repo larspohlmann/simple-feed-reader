@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Http\Admin;
 
 use App\Http\Admin\MailTestResultJson;
-use App\Service\Mail\Settings\MailTestFailure;
-use App\Service\Mail\Settings\MailTestResult;
+use App\Service\Mail\Settings\Model\MailTestFailure;
+use App\Service\Mail\Settings\Model\MailTestResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class MailTestResultJsonTest extends TestCase
@@ -15,7 +15,7 @@ final class MailTestResultJsonTest extends TestCase
     {
         self::assertSame(
             ['ok' => false, 'reason' => 'not_configured'],
-            MailTestResultJson::from(MailTestResult::failed(MailTestFailure::NotConfigured)),
+            MailTestResultJson::from(MailTestResultModel::failed(MailTestFailure::NotConfigured)),
         );
     }
 
@@ -24,13 +24,13 @@ final class MailTestResultJsonTest extends TestCase
         self::assertSame(
             ['ok' => false, 'reason' => '535 5.7.8 bad credentials'],
             MailTestResultJson::from(
-                MailTestResult::failed(MailTestFailure::SendRejected, '535 5.7.8 bad credentials'),
+                MailTestResultModel::failed(MailTestFailure::SendRejected, '535 5.7.8 bad credentials'),
             ),
         );
     }
 
     public function testSuccessSendsNoReason(): void
     {
-        self::assertSame(['ok' => true, 'reason' => null], MailTestResultJson::from(MailTestResult::ok()));
+        self::assertSame(['ok' => true, 'reason' => null], MailTestResultJson::from(MailTestResultModel::ok()));
     }
 }

@@ -10,6 +10,7 @@ use App\Security\AccountStatusException;
 use App\Security\LoginUserChecker;
 use App\Service\Auth\Exception\AccountNotActiveException;
 use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Psr\Cache\InvalidArgumentException;
 use Random\RandomException;
@@ -60,7 +61,7 @@ final readonly class OAuthSignIn
      * @throws InvalidArgumentException
      * @throws RandomException
      */
-    public function issueLoginCode(OAuthIdentity $identity, string $browserToken): string
+    public function issueLoginCode(OAuthIdentityModel $identity, string $browserToken): string
     {
         // resolve() deliberately returns suspended and rejected users unchanged
         // — linking proves an address, it does not overrule an admin.

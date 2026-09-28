@@ -9,8 +9,8 @@ use App\Entity\GrafanaSettings;
 use App\Entity\SealedSecret;
 use App\Http\Admin\GrafanaSettingsJson;
 use App\Service\Grafana\GrafanaEnvDefaults;
-use App\Service\Grafana\GrafanaSettingsOverview;
-use App\Service\Grafana\GrafanaSettingsSnapshot;
+use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
+use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
 use PHPUnit\Framework\TestCase;
 
 final class GrafanaSettingsJsonTest extends TestCase
@@ -18,7 +18,7 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testNoRowFallsBackToDefaultsAndReportsContainerPresent(): void
     {
         $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverview($this->unconfigured(), $this->defaults(), false),
+            new GrafanaSettingsOverviewModel($this->unconfigured(), $this->defaults(), false),
         );
 
         self::assertNull($payload['lokiPushUrl']);
@@ -34,13 +34,13 @@ final class GrafanaSettingsJsonTest extends TestCase
 
     public function testOverrideWinsOverDefaultAndSecretNeverLeaks(): void
     {
-        $stored = new GrafanaSettingsSnapshot(
+        $stored = new GrafanaSettingsSnapshotModel(
             new GrafanaConnection('https://cloud/loki/push', 'tenant42', 'https://cloud/grafana', null, false),
             new SealedSecret('c', 'n', 's', 1),
             'wxyz',
         );
 
-        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverview($stored, $this->defaults(), false));
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverviewModel($stored, $this->defaults(), false));
 
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrl']);
         self::assertSame('https://cloud/loki/push', $payload['lokiPushUrlEffective']);
@@ -56,7 +56,7 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testNoContainerWhenDefaultEmpty(): void
     {
         $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverview($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
+            new GrafanaSettingsOverviewModel($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
         );
 
         self::assertFalse($payload['containerPresent']);
@@ -65,13 +65,13 @@ final class GrafanaSettingsJsonTest extends TestCase
 
     public function testProfilingOverrideToggleAndAvailabilityAreReported(): void
     {
-        $stored = new GrafanaSettingsSnapshot(
+        $stored = new GrafanaSettingsSnapshotModel(
             new GrafanaConnection(null, null, null, 'http://custom:4040', true),
             new SealedSecret('c', 'n', 's', 1),
             'wxyz',
         );
 
-        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverview($stored, $this->defaults(), true));
+        $payload = GrafanaSettingsJson::from(new GrafanaSettingsOverviewModel($stored, $this->defaults(), true));
 
         self::assertSame('http://custom:4040', $payload['pyroscopePushUrl']);
         self::assertSame('http://pyroscope:4040', $payload['pyroscopePushUrlDefault']);
@@ -84,7 +84,7 @@ final class GrafanaSettingsJsonTest extends TestCase
     public function testProfilingReportsAbsentContainerAndOffToggleWithoutARow(): void
     {
         $payload = GrafanaSettingsJson::from(
-            new GrafanaSettingsOverview($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
+            new GrafanaSettingsOverviewModel($this->unconfigured(), new GrafanaEnvDefaults('', '', ''), false),
         );
 
         self::assertNull($payload['pyroscopePushUrlEffective']);
@@ -93,9 +93,9 @@ final class GrafanaSettingsJsonTest extends TestCase
         self::assertFalse($payload['profilerAvailable']);
     }
 
-    private function unconfigured(): GrafanaSettingsSnapshot
+    private function unconfigured(): GrafanaSettingsSnapshotModel
     {
-        return GrafanaSettingsSnapshot::fromEntity(new GrafanaSettings());
+        return GrafanaSettingsSnapshotModel::fromEntity(new GrafanaSettings());
     }
 
     private function defaults(): GrafanaEnvDefaults
