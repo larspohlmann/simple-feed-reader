@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\AuthorBio;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class AuthorBioSeparatorTest extends TestCase
@@ -119,7 +120,7 @@ final class AuthorBioSeparatorTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
         self::assertNotNull($document);
-        $this->separator->separateIn($document);
+        $this->separator->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

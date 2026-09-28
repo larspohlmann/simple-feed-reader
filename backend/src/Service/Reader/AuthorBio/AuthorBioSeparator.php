@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\AuthorBio;
 
 use App\Service\Reader\BlockText;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -18,11 +20,16 @@ use Dom\HTMLDocument;
  * furniture. A link to an author-profile page (host-agnostic path segment) is
  * the signal that those siblings are a bio and not a second article section.
  */
-final readonly class AuthorBioSeparator
+final readonly class AuthorBioSeparator implements BodyCleaningStep
 {
     private const int SUBSTANTIAL_PROSE_LENGTH = 200;
 
-    public function separateIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->separateIn($pass->document);
+    }
+
+    private function separateIn(HTMLDocument $document): void
     {
         if ($document->body === null) {
             return;

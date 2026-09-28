@@ -415,4 +415,33 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringContainsString('alt="Video — open the original article to watch"', $out);
         self::assertSame(1, substr_count($out, '<img'), 'the poster is the only picture, no restored hero');
     }
+
+    /** #627: a bare Substack poster (no wrapping link yet) becomes a working YouTube link. */
+    public function testLinksABareSubstackPoster(): void
+    {
+        $content = '<p><img src="https://substackcdn.com/image/youtube/w_728/aaaaaaaaaaa"></p>'
+            . '<p>' . self::PROSE . '</p>';
+
+        $out = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
+
+        self::assertStringContainsString('href="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa"', $out);
+    }
+
+    /**
+     * A masthead menu long enough that its text exceeds LeadingEngagementCleaner's own
+     * navigation-label threshold: only NavigationChromeTrimmer's landmark-based rule removes it.
+     */
+    public function testStripsALeadingNavLandmarkTooLongForTheEngagementCleanerToCatch(): void
+    {
+        $nav = '<nav><a href="/a">The Editorial Desk And Opinion Section</a>'
+            . '<a href="/b">Long Form Investigative Reporting Hub</a>'
+            . '<a href="/c">Culture Arts And Entertainment Coverage</a>'
+            . '<a href="/d">World News And Global Affairs Section</a></nav>';
+        $content = '<div id="wrap">' . $nav . '<main><p>' . self::PROSE . '</p></main></div>';
+
+        $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
+
+        self::assertStringNotContainsString('<nav', $result);
+        self::assertStringContainsString('Fliesstext', $result);
+    }
 }

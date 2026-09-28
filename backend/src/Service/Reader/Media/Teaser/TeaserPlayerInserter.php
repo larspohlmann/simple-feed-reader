@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\ImageIdentity;
+use App\Service\Reader\Media\ArticleMedia;
+use App\Service\Reader\Media\MediaCandidate;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -17,17 +21,28 @@ use Dom\HTMLDocument;
  * mistaken for a teaser and never overwrites its hero. Each teaser claims one
  * thumbnail, and an unmatched teaser is dropped rather than forced into the body.
  */
-final readonly class TeaserPlayerInserter
+final readonly class TeaserPlayerInserter implements BodyCleaningStep
 {
     public function __construct(private TeaserPlayerMarkup $markup)
     {
+    }
+
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->insert($pass->document, $pass->input->teasers, $this->placedMediaUrls($pass->input->media));
+    }
+
+    /** @return list<string> the players the media pipeline placed, so no teaser is rebuilt over one (#948) */
+    private function placedMediaUrls(ArticleMedia $media): array
+    {
+        return array_map(static fn (MediaCandidate $candidate): string => $candidate->url, $media->candidates);
     }
 
     /**
      * @param list<TeaserPlayer> $teasers
      * @param list<string>       $articleMediaUrls the players the media pipeline already placed
      */
-    public function insert(HTMLDocument $document, array $teasers, array $articleMediaUrls): void
+    private function insert(HTMLDocument $document, array $teasers, array $articleMediaUrls): void
     {
         $root = $document->body;
         $pending = $this->notAlreadyPlaced($teasers, $articleMediaUrls);

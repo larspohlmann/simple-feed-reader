@@ -5,15 +5,26 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slide;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Tests\Support\BodyCleaningInputs;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowInserterTest extends TestCase
 {
+    /** @param list<Slideshow> $slideshows */
+    private function insert(HTMLDocument $document, array $slideshows): void
+    {
+        (new SlideshowInserter(new SlideshowMarkup()))->cleanIn(
+            new BodyCleaningPass($document, BodyCleaningInputs::withSlideshows($slideshows)),
+        );
+    }
+
     /** @return list<Slide> */
     private function slides(): array
     {
@@ -35,7 +46,7 @@ final class SlideshowInserterTest extends TestCase
         );
         self::assertNotNull($show);
 
-        (new SlideshowInserter(new SlideshowMarkup()))->insert($document, [$show]);
+        $this->insert($document, [$show]);
         $html = $document->saveHtml();
 
         self::assertStringNotContainsString('broken-original', $html);
@@ -51,7 +62,7 @@ final class SlideshowInserterTest extends TestCase
         $show = Slideshow::fromSlides($this->slides(), null, 'A heading that did not survive extraction here.', null);
         self::assertNotNull($show);
 
-        (new SlideshowInserter(new SlideshowMarkup()))->insert($document, [$show]);
+        $this->insert($document, [$show]);
 
         self::assertStringContainsString('reader-slideshow', $document->saveHtml());
     }
@@ -71,7 +82,7 @@ final class SlideshowInserterTest extends TestCase
         self::assertNotNull($first);
         self::assertNotNull($second);
 
-        (new SlideshowInserter(new SlideshowMarkup()))->insert($document, [$first, $second]);
+        $this->insert($document, [$first, $second]);
         $html = $document->saveHtml();
 
         self::assertStringNotContainsString('broken', $html);

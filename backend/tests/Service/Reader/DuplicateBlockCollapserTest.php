@@ -8,6 +8,7 @@ use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\Provider\VimeoEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Tests\Support\BodyCleaningPasses;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -149,7 +150,7 @@ final class DuplicateBlockCollapserTest extends TestCase
             '<html lang="en"><body>' . $bodyHtml . '</body></html>',
             LIBXML_NOERROR,
         );
-        $this->collapser->collapseIn($document);
+        $this->collapser->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

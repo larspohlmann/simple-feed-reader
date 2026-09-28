@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
 use Dom\HTMLCollection;
 use Dom\HTMLDocument;
@@ -30,7 +32,7 @@ use Dom\Node;
  * (Dissent, Democracy Now). The same link-dominated climb and content-body
  * guard apply.
  */
-final readonly class NavigationChromeTrimmer
+final readonly class NavigationChromeTrimmer implements BodyCleaningStep
 {
     /** Tag names and ARIA roles that mark an element as a navigation landmark. */
     private const array LANDMARK_TAGS = ['nav', 'header'];
@@ -48,7 +50,12 @@ final readonly class NavigationChromeTrimmer
     /** A paragraph at or above this length marks the article as started. */
     private const int SUBSTANTIAL_PROSE_LENGTH = 120;
 
-    public function trimIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->trimIn($pass->document);
+    }
+
+    private function trimIn(HTMLDocument $document): void
     {
         if ($document->body === null) {
             return;

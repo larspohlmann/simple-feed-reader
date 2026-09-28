@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\PlayerChromeCleaner;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class PlayerChromeCleanerTest extends TestCase
@@ -326,7 +327,7 @@ final class PlayerChromeCleanerTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        $this->cleaner->cleanIn($document);
+        $this->cleaner->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

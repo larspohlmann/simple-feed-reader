@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;
@@ -15,7 +17,7 @@ use Dom\Text;
  * When nothing but figures survives, restore readability's excerpt as a lead
  * paragraph so the reader shows the words the page led with, not just the images.
  */
-final readonly class MediaOnlyLede
+final readonly class MediaOnlyLede implements BodyCleaningStep
 {
     /**
      * A gallery article has effectively no text outside its figures; a real body
@@ -23,7 +25,12 @@ final readonly class MediaOnlyLede
      */
     private const int MIN_PROSE_LENGTH = 40;
 
-    public function restore(HTMLDocument $document, ?string $excerpt): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->restore($pass->document, $pass->input->excerpt);
+    }
+
+    private function restore(HTMLDocument $document, ?string $excerpt): void
     {
         $lede = trim($excerpt ?? '');
         $body = $document->getElementsByTagName('body')->item(0);

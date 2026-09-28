@@ -7,7 +7,7 @@ namespace App\Service\Reader;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
-use App\Service\Reader\Media\ArticleMedia;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\SubstackPosterLink;
@@ -68,68 +68,62 @@ final readonly class ReaderBodyCleaner
         if ($document === null) {
             return $contentHtml;
         }
+        $pass = new BodyCleaningPass($document, $input);
 
         // Media first: a trimmer must not remove a block that now holds a
         // recovered player, and the lead-image restore must see a poster the
         // body has gained before it decides whether to add another picture.
-        $recoveredInBody = $this->embedRewriter->rewriteIn($document);
-        $this->substackPoster->linkIn($document);
-        $this->playerChrome->cleanIn($document);
+        $this->embedRewriter->cleanIn($pass);
+        $this->substackPoster->cleanIn($pass);
+        $this->playerChrome->cleanIn($pass);
 
-        $this->navigationTrimmer->trimIn($document);
+        $this->navigationTrimmer->cleanIn($pass);
         // Engagement first: it strips the leading kickers and breadcrumbs that
         // otherwise sit in front of the title and hide it from the title remover.
-        $this->engagementCleaner->removeFrom($document, $input->entryAuthor);
-        $this->titleRemover->removeFrom($document, $input->titleCandidates);
-        $this->boilerplateTrimmer->trimIn($document);
+        $this->engagementCleaner->cleanIn($pass);
+        $this->titleRemover->cleanIn($pass);
+        $this->boilerplateTrimmer->cleanIn($pass);
 
         // A recreated slideshow replaces the publisher's original carousel, which
         // extraction leaves as a broken pile of markup or an empty box. Runs after
         // the trimmers so a trimmer cannot drop the anchor, before media planning
         // so the plan sees the finished structure.
-        $this->slideshowInserter->insert($document, $input->slideshows);
+        $this->slideshowInserter->cleanIn($pass);
 
         // A publisher's recipe-fact block (servings/calories/time) lays out with
         // its own stylesheet, which the sanitizer never receives; relay it to the
         // reader's own row-of-cells marker before media planning sees the body.
-        $this->recipeFactsCleaner->cleanIn($document);
+        $this->recipeFactsCleaner->cleanIn($pass);
 
         // Drop the dek a responsive page ships twice, one copy hidden by CSS the
         // scraper never runs (#963; the fragile image half was removed in #1088).
-        $this->duplicateCollapser->collapseIn($document);
+        $this->duplicateCollapser->cleanIn($pass);
 
         // plan() only classifies, so restore() still sees every body image; apply()'s
         // mutation runs after, or the hero would come back (#755). A top-placed video or
         // embed takes the lead position, so no hero is restored above it (#907).
-        $discoveredMedia = $recoveredInBody ? $input->media->withoutEmbeds() : $input->media;
-        $plan = $this->mediaInserter->plan($document, $discoveredMedia);
+        $plan = $this->mediaInserter->plan($document, $pass->discoveredMedia());
         $restoredHero = $plan->topPlacesLeadVisual() ? null : $this->leadImage->restore($document, $input->leadImage);
         $this->mediaInserter->apply($document, $plan, $restoredHero);
 
         // Inline teasers the extraction reduced to a lone thumbnail: rebuild each
         // as a player where its still still sits, skipping any the media pipeline
         // already placed so the lead media is never mistaken for one (#948).
-        $this->teaserInserter->insert($document, $input->teasers, $this->mediaUrls($input->media));
+        $this->teaserInserter->cleanIn($pass);
 
         // A gallery or video article whose only prose lived in a dropped header
         // now has a body of pure media; give it back the lede readability kept as
         // the excerpt. Runs last, so it judges "media-only" against the final body.
-        $this->mediaOnlyLede->restore($document, $input->excerpt);
+        $this->mediaOnlyLede->cleanIn($pass);
 
         // Over the settled body: set the trailing author bio and its disclosure
         // apart from the article prose they otherwise run on into (#1000).
-        $this->authorBioSeparator->separateIn($document);
+        $this->authorBioSeparator->cleanIn($pass);
 
         // Last, over the finished body: the feed's real pixel sizes on the
         // images and players it enumerated, so none of them reflows the article.
         FeedDimensionStamper::stampInto($document, $input->feedMedia);
 
         return $document->saveHtml();
-    }
-
-    /** @return list<string> the URLs the media pipeline placed, so a teaser is not rebuilt over one */
-    private function mediaUrls(ArticleMedia $media): array
-    {
-        return array_map(static fn ($candidate): string => $candidate->url, $media->candidates);
     }
 }

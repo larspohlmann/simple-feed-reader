@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\ReaderAudit\CleanupMarker;
 use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
+use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementMarkersTest extends TestCase
@@ -101,7 +103,9 @@ final class LeadingEngagementMarkersTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        (new LeadingEngagementCleaner())->removeFrom($document, $entryAuthor);
+        (new LeadingEngagementCleaner())->cleanIn(
+            new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)),
+        );
 
         return $document->saveHtml();
     }

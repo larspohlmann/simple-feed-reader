@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;
 
-final readonly class LeadingEngagementCleaner
+final readonly class LeadingEngagementCleaner implements BodyCleaningStep
 {
     private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
 
-    public function removeFrom(HTMLDocument $document, ?string $entryAuthor): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->removeFrom($pass->document, $pass->input->entryAuthor);
+    }
+
+    private function removeFrom(HTMLDocument $document, ?string $entryAuthor): void
     {
         if ($document->body === null) {
             return;

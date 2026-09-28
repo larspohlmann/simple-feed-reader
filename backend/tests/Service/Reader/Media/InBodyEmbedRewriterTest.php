@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\InBodyEmbedRewriter;
+use App\Service\Reader\Media\MediaCandidate;
+use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\Provider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
+use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class InBodyEmbedRewriterTest extends TestCase
@@ -26,11 +32,10 @@ final class InBodyEmbedRewriterTest extends TestCase
 
     private function rewrite(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-        $this->rewriter->rewriteIn($document);
+        $pass = BodyCleaningPasses::over(HtmlDocumentParser::parse($html));
+        $this->rewriter->cleanIn($pass);
 
-        return $document->saveHtml();
+        return $pass->document->saveHtml();
     }
 
     /** The OZORA shape: a heading, then the embed, ten times over. */
@@ -78,15 +83,25 @@ final class InBodyEmbedRewriterTest extends TestCase
         self::assertStringContainsString('googletagmanager', $this->rewrite($html));
     }
 
-    public function testReportsWhetherItActed(): void
+    public function testRecordsARecoveredEmbedSoTheDiscoveredEmbedsStandDown(): void
     {
-        $none = HtmlDocumentParser::parseOrNull('<body><p>text</p></body>');
-        self::assertNotNull($none);
-        self::assertFalse($this->rewriter->rewriteIn($none));
+        $discovered = new ArticleMedia([
+            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
+        ]);
+        $none = new BodyCleaningPass(
+            HtmlDocumentParser::parse('<body><p>text</p></body>'),
+            BodyCleaningInputs::withMedia($discovered),
+        );
+        $one = new BodyCleaningPass(
+            HtmlDocumentParser::parse('<body><iframe src="https://youtu.be/aaaaaaaaaaa"></iframe></body>'),
+            BodyCleaningInputs::withMedia($discovered),
+        );
 
-        $one = HtmlDocumentParser::parseOrNull('<body><iframe src="https://youtu.be/aaaaaaaaaaa"></iframe></body>');
-        self::assertNotNull($one);
-        self::assertTrue($this->rewriter->rewriteIn($one));
+        $this->rewriter->cleanIn($none);
+        $this->rewriter->cleanIn($one);
+
+        self::assertSame($discovered, $none->discoveredMedia());
+        self::assertTrue($one->discoveredMedia()->isEmpty());
     }
 
     /** Do not reuse #627's alt text: its CSS paints a play badge on that string. */
@@ -95,5 +110,43 @@ final class InBodyEmbedRewriterTest extends TestCase
         $out = $this->rewrite('<body><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></body>');
 
         self::assertStringNotContainsString('Video — open the original article to watch', $out);
+    }
+
+    /** A later recovered embed still records the recovery, even though the earlier one failed. */
+    public function testRecordsRecoveryWhenAnEarlierIframeIsUnknown(): void
+    {
+        $discovered = new ArticleMedia([
+            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
+        ]);
+        $pass = new BodyCleaningPass(
+            HtmlDocumentParser::parse(
+                '<body><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-1"></iframe>'
+                . '<iframe src="https://youtu.be/aaaaaaaaaaa"></iframe></body>',
+            ),
+            BodyCleaningInputs::withMedia($discovered),
+        );
+
+        $this->rewriter->cleanIn($pass);
+
+        self::assertTrue($pass->discoveredMedia()->isEmpty());
+    }
+
+    /** An earlier recovered embed still records the recovery, even though a later one failed. */
+    public function testRecordsRecoveryWhenALaterIframeIsUnknown(): void
+    {
+        $discovered = new ArticleMedia([
+            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
+        ]);
+        $pass = new BodyCleaningPass(
+            HtmlDocumentParser::parse(
+                '<body><iframe src="https://youtu.be/aaaaaaaaaaa"></iframe>'
+                . '<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-1"></iframe></body>',
+            ),
+            BodyCleaningInputs::withMedia($discovered),
+        );
+
+        $this->rewriter->cleanIn($pass);
+
+        self::assertTrue($pass->discoveredMedia()->isEmpty());
     }
 }

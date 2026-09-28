@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\RecipeFacts;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class RecipeFactsCleanerTest extends TestCase
@@ -15,7 +16,7 @@ final class RecipeFactsCleanerTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        (new RecipeFactsCleaner())->cleanIn($document);
+        (new RecipeFactsCleaner())->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

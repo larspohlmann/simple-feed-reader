@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,12 +17,17 @@ use Dom\HTMLDocument;
  * An image already inside a link is skipped: #627's gated placeholder inserts
  * its own poster anchor before readability, and this rule must not touch it.
  */
-final readonly class SubstackPosterLink
+final readonly class SubstackPosterLink implements BodyCleaningStep
 {
     private const string POSTER_PATTERN =
         '#^https://substackcdn\.com/image/youtube/[^/]+/([A-Za-z0-9_-]{11})$#';
 
-    public function linkIn(HTMLDocument $body): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->linkIn($pass->document);
+    }
+
+    private function linkIn(HTMLDocument $body): void
     {
         foreach (iterator_to_array($body->getElementsByTagName('img')) as $image) {
             $this->linkOne($body, $image);
