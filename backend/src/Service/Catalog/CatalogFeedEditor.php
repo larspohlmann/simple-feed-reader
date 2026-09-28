@@ -7,6 +7,7 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
+use App\Service\Catalog\Factory\CatalogFeedFactory;
 use App\Service\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -17,15 +18,13 @@ final readonly class CatalogFeedEditor
         private CatalogCategoryRepository $categories,
         private PositionReorderer $reorderer,
         private EntityManagerInterface $entityManager,
+        private CatalogFeedFactory $feedFactory,
     ) {
     }
 
     public function create(CatalogFeedDetails $details): CatalogFeed
     {
-        $category = $this->categories->getById($details->categoryId);
-        $feed = new CatalogFeed($category, $details->title, $details->url);
-        $this->applyEditableFields($feed, $details);
-        $feed->setPosition($this->feeds->nextPositionInCategory($category->requireId()));
+        $feed = $this->feedFactory->create($details);
         $this->entityManager->persist($feed);
         $this->entityManager->flush();
 

@@ -6,6 +6,7 @@ namespace App\Service\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
+use App\Service\Catalog\Factory\CatalogCategoryFactory;
 use App\Service\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -15,15 +16,13 @@ final readonly class CatalogCategoryEditor
         private CatalogCategoryRepository $categories,
         private PositionReorderer $reorderer,
         private EntityManagerInterface $entityManager,
+        private CatalogCategoryFactory $categoryFactory,
     ) {
     }
 
     public function create(CatalogCategoryDetails $details): CatalogCategory
     {
-        $category = new CatalogCategory($details->key, $details->name, $details->icon, $details->color);
-        $category->setEnabled($details->enabled);
-        $category->setLocked($details->locked);
-        $category->setPosition($this->categories->nextPosition());
+        $category = $this->categoryFactory->create($details);
         $this->entityManager->persist($category);
         $this->entityManager->flush();
 
