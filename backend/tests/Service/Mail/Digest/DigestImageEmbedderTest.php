@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
-use App\Service\Catalog\FetchedFavicon;
+use App\Service\Image\CatalogFaviconFetcherInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\FetchedFavicon;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestImageEmbedder;
 use App\Service\Mail\Digest\DigestImageResizerInterface;

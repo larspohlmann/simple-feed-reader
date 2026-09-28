@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Image;
 
-use App\Service\Catalog\CatalogFaviconFetcher;
-use App\Service\Catalog\Exception\FaviconRejectedException;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\CatalogFaviconFetcher;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Image;
 
 final readonly class FetchedFavicon
 {

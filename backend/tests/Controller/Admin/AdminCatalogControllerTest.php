@@ -6,9 +6,9 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Catalog\CatalogFaviconFetcher;
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\CatalogFaviconFetcher;
+use App\Service\Image\CatalogFaviconFetcherInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FaviconResolverInterface;
 use App\Tests\Support\UserFactory;
