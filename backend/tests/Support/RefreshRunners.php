@@ -9,10 +9,8 @@ use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Service\FeedScheduler;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver;
-use App\Service\Fetch\HostThrottle;
 use App\Service\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
@@ -36,7 +34,6 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\LockFactory;
@@ -141,10 +138,7 @@ final readonly class RefreshRunners
                 $feedRepository,
                 $this->bodyParser,
                 EntryIngestors::build($this->em, $this->clock),
-                new FeedScheduler(
-                    $this->clock,
-                    new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock),
-                ),
+                FeedSchedulers::build($this->clock),
                 $indexer,
                 new NullLogger(),
             ),

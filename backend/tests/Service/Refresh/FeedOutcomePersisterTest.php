@@ -7,13 +7,11 @@ namespace App\Tests\Service\Refresh;
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
 use App\Repository\FeedRepository;
-use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
-use App\Service\Fetch\HostThrottle;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcome;
 use App\Service\Refresh\FeedOutcomePersister;
@@ -22,13 +20,13 @@ use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\EntryIngestors;
+use App\Tests\Support\FeedSchedulers;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\ReloadsEntities;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class FeedOutcomePersisterTest extends DbTestCase
@@ -215,7 +213,7 @@ final class FeedOutcomePersisterTest extends DbTestCase
             $feedRepository,
             $bodyParser,
             EntryIngestors::build($this->em, $this->clock),
-            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
+            FeedSchedulers::build($this->clock),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             $this->logger,
         );
