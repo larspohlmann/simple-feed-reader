@@ -62,7 +62,7 @@ final readonly class EntryIngestor
         }
 
         $incoming = array_map(
-            fn (ParsedEntry $entry): IncomingEntry => $this->incoming($this->platformRules->apply($entry)),
+            fn (ParsedEntry $parsedEntry): IncomingEntry => $this->incoming($this->platformRules->apply($parsedEntry)),
             $parsed->entries,
         );
         $deduplicator = $this->deduplicatorFor($feed, $incoming);
@@ -156,7 +156,7 @@ final readonly class EntryIngestor
         return new EntryDeduplicator(
             $this->entryRepository->existingGuidHashesForFeed(
                 $feed->requireId(),
-                array_map(static fn (IncomingEntry $entry): string => $entry->guidHash, $incoming),
+                array_map(static fn (IncomingEntry $candidate): string => $candidate->guidHash, $incoming),
             ),
             $this->entryRepository->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
         );
@@ -180,9 +180,9 @@ final readonly class EntryIngestor
     private static function urlHashesOf(array $incoming): array
     {
         $hashes = [];
-        foreach ($incoming as $entry) {
-            if ($entry->urlHash !== null) {
-                $hashes[] = $entry->urlHash;
+        foreach ($incoming as $candidate) {
+            if ($candidate->urlHash !== null) {
+                $hashes[] = $candidate->urlHash;
             }
         }
 
