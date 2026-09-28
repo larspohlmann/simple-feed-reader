@@ -611,3 +611,49 @@ namespace App\Service\Knot {
         }
     }
 }
+
+namespace App\Service\Knot\Pass {
+    final readonly class Ticket
+    {
+    }
+}
+
+namespace App\Service\Knot {
+    final readonly class Spool
+    {
+        public function __construct(private Pass\Ticket $ticket)
+        {
+        }
+    }
+
+    final readonly class Spooler
+    {
+        public function spool(Pass\Ticket $ticket): Spool
+        {
+            return new Spool($ticket);
+        }
+    }
+
+    final readonly class Warp
+    {
+        public function __construct(private Weft $weft)
+        {
+        }
+    }
+
+    final readonly class Weft
+    {
+        public function __construct(private Warp $warp)
+        {
+        }
+    }
+
+    final readonly class Loom
+    {
+        public function weave(Warp $warp, Weft $weft): void
+        {
+            new Warp($weft);
+            new Weft($warp);
+        }
+    }
+}
