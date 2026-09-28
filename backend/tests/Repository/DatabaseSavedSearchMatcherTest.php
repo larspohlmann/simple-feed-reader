@@ -12,6 +12,7 @@ use App\Service\Search\Model\SavedSearchTermModel;
 use App\Service\Search\Model\SearchMode;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
+use Doctrine\ORM\EntityManagerInterface;
 
 /** ASCII terms only: SQLite's LIKE folds ASCII case alone. */
 final class DatabaseSavedSearchMatcherTest extends DbTestCase
@@ -74,6 +75,15 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
             [$this->search(1, 'climate'), $this->search(2, 'rocket')],
             [],
         ));
+    }
+
+    public function testNoCandidatesRunsNoStatement(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects(self::never())->method('createQueryBuilder');
+        $matcher = new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder());
+
+        self::assertSame([1 => []], $matcher->matchingIds([$this->search(1, 'climate')], []));
     }
 
     public function testMoreSearchesThanOneStatementHoldsAreStillAllAnswered(): void
