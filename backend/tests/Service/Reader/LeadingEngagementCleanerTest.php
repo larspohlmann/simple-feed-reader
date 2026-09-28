@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\LeadingEngagementCleaner;
+use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementCleanerTest extends TestCase
@@ -400,7 +402,7 @@ final class LeadingEngagementCleanerTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
 
-        $this->cleaner->removeFrom($document, $entryAuthor);
+        $this->cleaner->cleanIn(new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)));
 
         return $document->saveHtml();
     }

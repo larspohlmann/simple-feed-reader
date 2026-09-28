@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
@@ -20,7 +22,7 @@ use Dom\Text;
  * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
  * once around it). An undefined edge leaves the document unchanged.
  */
-final readonly class EdgeBoilerplateTrimmer
+final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStep
 {
     /** Characters of text that mark a block as a real, substantial paragraph. */
     private const int SUBSTANTIAL_PROSE_LENGTH = 200;
@@ -30,7 +32,12 @@ final readonly class EdgeBoilerplateTrimmer
     ) {
     }
 
-    public function trimIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->trimIn($pass->document);
+    }
+
+    private function trimIn(HTMLDocument $document): void
     {
         if ($document->body === null) {
             return;

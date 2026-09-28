@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\NavigationChromeTrimmer;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class NavigationChromeTrimmerTest extends TestCase
@@ -337,7 +338,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
         self::assertNotNull($document);
 
-        $this->trimmer->trimIn($document);
+        $this->trimmer->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

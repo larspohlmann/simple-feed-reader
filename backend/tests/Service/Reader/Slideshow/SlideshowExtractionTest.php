@@ -5,37 +5,20 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\AuthorBio\AuthorBioSeparator;
-use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\DuplicateBlockCollapser;
-use App\Service\Reader\EdgeBoilerplateTrimmer;
-use App\Service\Reader\LeadImageCandidate;
-use App\Service\Reader\LeadingEngagementCleaner;
-use App\Service\Reader\LeadingTitleRemover;
-use App\Service\Reader\MediaOnlyLede;
+use App\Service\Reader\BodyCleaning\BodyCleaningInput;
+use App\Service\Reader\FeedMedia;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\InBodyEmbedRewriter;
-use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
-use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
-use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\SubstackPosterLink;
-use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\PageImageInventory;
-use App\Service\Reader\PlayerChromeCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowInserter;
-use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Reader\Slideshow\TagesschauCarouselRecognizer;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Tests\Service\Reader\ReaderBodyCleanerTest;
+use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowExtractionTest extends TestCase
@@ -52,15 +35,7 @@ final class SlideshowExtractionTest extends TestCase
         // The cleaned "body" here is the readability output: the heading survives,
         // the attribute-only carousel div is gone.
         $body = '<h2>Die Hauptgründe für das Ergebnis in Sachsen-Anhalt</h2><p>Body text.</p>';
-        $clean = $this->cleaner()->clean(
-            $body,
-            ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
-            ArticleMedia::none(),
-            null,
-            null,
-            $slideshows,
-        );
+        $clean = $this->cleaner()->clean($body, BodyCleaningInputs::withSlideshows($slideshows));
 
         self::assertStringContainsString('reader-slideshow', $clean);
         self::assertSame(3, substr_count($clean, '<img'));
@@ -77,12 +52,7 @@ final class SlideshowExtractionTest extends TestCase
         $body = '<p>An intro paragraph long enough to anchor the gallery that follows it here.</p>';
         $clean = $this->cleaner()->clean(
             $body,
-            ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
-            ArticleMedia::none(),
-            null,
-            null,
-            $this->scanner()->scan($rawDocument),
+            BodyCleaningInputs::withSlideshows($this->scanner()->scan($rawDocument)),
         );
 
         $safe = (new EntrySanitizer())->sanitize($clean);
@@ -102,17 +72,14 @@ final class SlideshowExtractionTest extends TestCase
         self::assertNotNull($rawDocument);
 
         // Readability dropped the header block, so its output carries no prose.
-        $clean = $this->cleaner()->clean(
-            '<div></div>',
+        $clean = $this->cleaner()->clean('<div></div>', new BodyCleaningInput(
             ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            BodyCleaningInputs::noLeadImage(),
             ArticleMedia::none(),
-            null,
-            null,
-            $this->scanner()->scan($rawDocument),
-            [],
-            'Er war passionierter Segler und bei den Norwegern ausgesprochen beliebt.',
-        );
+            FeedMedia::none(),
+            slideshows: $this->scanner()->scan($rawDocument),
+            excerpt: 'Er war passionierter Segler und bei den Norwegern ausgesprochen beliebt.',
+        ));
 
         self::assertStringContainsString('<p>Er war passionierter Segler', $clean);
         self::assertLessThan(strpos($clean, 'reader-slideshow'), strpos($clean, 'passionierter Segler'));
@@ -158,25 +125,8 @@ final class SlideshowExtractionTest extends TestCase
 
     private function cleaner(): ReaderBodyCleaner
     {
-        $markup = new MediaMarkup();
         $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
 
-        return new ReaderBodyCleaner(
-            new NavigationChromeTrimmer(),
-            new LeadingTitleRemover(),
-            new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
-            new ReaderLeadImage(),
-            new InBodyEmbedRewriter($embedProviders, $markup),
-            new SubstackPosterLink(),
-            new PlayerChromeCleaner(),
-            new PageMediaInserter($markup),
-            new SlideshowInserter(new SlideshowMarkup()),
-            new RecipeFactsCleaner(),
-            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
-            new MediaOnlyLede(),
-            new DuplicateBlockCollapser($embedProviders),
-            new AuthorBioSeparator(),
-        );
+        return new ReaderBodyCleaner(ReaderBodyCleanerTest::steps($embedProviders));
     }
 }

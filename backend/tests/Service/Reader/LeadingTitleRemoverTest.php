@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\LeadingTitleRemover;
+use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingTitleRemoverTest extends TestCase
@@ -147,7 +149,7 @@ final class LeadingTitleRemoverTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull($contentHtml);
         self::assertNotNull($document);
 
-        $this->remover->removeFrom($document, $titleCandidates);
+        $this->remover->cleanIn(new BodyCleaningPass($document, BodyCleaningInputs::withTitles($titleCandidates)));
 
         return $document->saveHtml();
     }

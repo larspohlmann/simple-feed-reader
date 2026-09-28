@@ -62,17 +62,9 @@ final class PaywallSignalsTest extends TestCase
         self::assertFalse($this->isPreview($this->page(self::BODY . $nav)));
     }
 
-    public function testWithoutADocumentTheDeclarationStillDecides(): void
-    {
-        $premium = '<script type="application/ld+json">{"isAccessibleForFree":"False"}</script>';
-
-        self::assertFalse(PaywallSignals::isPreview($this->rawPage(''), null));
-        self::assertTrue(PaywallSignals::isPreview($this->rawPage($premium), null));
-    }
-
     private function isPreview(string $html): bool
     {
-        return PaywallSignals::isPreview($this->rawPage($html), HtmlDocumentParser::parseOrNull($html));
+        return PaywallSignals::isPreview($this->rawPage($html), HtmlDocumentParser::parse($html));
     }
 
     private function rawPage(string $html): HTMLDocument

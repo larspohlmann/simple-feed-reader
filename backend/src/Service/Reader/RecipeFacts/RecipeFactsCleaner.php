@@ -4,13 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\RecipeFacts;
 
-use Dom\HTMLDocument;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 /**
  * Replaces each recognized recipe-fact block with the reader's own facts
  * figure, in place, so the surrounding article order is kept.
  */
-final readonly class RecipeFactsCleaner
+final readonly class RecipeFactsCleaner implements BodyCleaningStep
 {
     public function __construct(
         private RecipeFactsRecognizer $recognizer = new RecipeFactsRecognizer(),
@@ -18,10 +19,10 @@ final readonly class RecipeFactsCleaner
     ) {
     }
 
-    public function cleanIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
     {
-        foreach ($this->recognizer->recognize($document) as $card) {
-            $figure = $this->markup->figureFor($document, $card->facts);
+        foreach ($this->recognizer->recognize($pass->document) as $card) {
+            $figure = $this->markup->figureFor($pass->document, $card->facts);
             $card->container->parentNode?->replaceChild($figure, $card->container);
         }
     }

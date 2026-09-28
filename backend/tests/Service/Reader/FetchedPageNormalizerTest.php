@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\PictureSources;
 use App\Service\Reader\Repair\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
@@ -19,6 +20,7 @@ use App\Service\Reader\Repair\ScreenReaderOnlyElementRemover;
 use App\Service\Reader\Repair\ShareIntentLinkRemover;
 use App\Service\Reader\Repair\ShareWidgetRemover;
 use App\Service\Reader\Repair\SubstackGatedVideoPlaceholder;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FetchedPageNormalizerTest extends TestCase
@@ -169,7 +171,7 @@ final class FetchedPageNormalizerTest extends TestCase
             . '<ul class="shariff-buttons"><li>Facebook teilen</li></ul></div>'
             . '<p>Body text long enough to be real content.</p></article></body></html>';
 
-        $normalized = $this->normalizer->normalize($html)?->saveHtml() ?? '';
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
 
         self::assertStringNotContainsString('teilen', $normalized);
         self::assertStringContainsString('Body text', $normalized);
@@ -185,16 +187,25 @@ final class FetchedPageNormalizerTest extends TestCase
             . '<a href="https://bsky.app/intent/compose?text=https://canarymedia.com/x">Share</a>'
             . '</article></body></html>';
 
-        $normalized = $this->normalizer->normalize($html)?->saveHtml() ?? '';
+        $normalized = $this->normalizer->normalize($html)->saveHtml();
 
         self::assertStringNotContainsString('bsky.app', $normalized);
         self::assertStringContainsString('Body text', $normalized);
     }
 
-    public function testEmptyInputYieldsNull(): void
+    #[DataProvider('blankPages')]
+    public function testABlankPageIsUnparseable(string $html): void
     {
-        self::assertNull($this->normalizer->normalize(''));
-        self::assertNull($this->normalizer->normalize('   '));
+        $this->expectException(UnparseableHtmlException::class);
+
+        $this->normalizer->normalize($html);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function blankPages(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'whitespace' => ['   '];
     }
 
     public function testUmlautsSurviveNormalization(): void
@@ -382,13 +393,9 @@ final class FetchedPageNormalizerTest extends TestCase
         self::assertStringNotContainsString('icon.png', $normalized);
     }
 
-    /** normalize() then serialize; the fixtures under test always parse. */
     private function normalized(string $html): string
     {
-        $document = $this->normalizer->normalize($html);
-        self::assertNotNull($document);
-
-        return $document->saveHtml();
+        return $this->normalizer->normalize($html)->saveHtml();
     }
 
     /** collapseWrapperChains() then serialize; used only where a chain collapses. */

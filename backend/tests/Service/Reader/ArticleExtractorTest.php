@@ -13,31 +13,20 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\ArticleReadability;
-use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\DuplicateBlockCollapser;
-use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
-use App\Service\Reader\LeadingEngagementCleaner;
-use App\Service\Reader\LeadingTitleRemover;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\InBodyEmbedRewriter;
 use App\Service\Reader\Media\MediaLanding;
-use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\Provider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\Provider\DailymotionEmbedProvider;
@@ -53,20 +42,12 @@ use App\Service\Reader\Media\Source\SemanticMediaSource;
 use App\Service\Reader\Media\Source\ScriptEmbedSource;
 use App\Service\Reader\Media\Source\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\StreamLocationResolver;
-use App\Service\Reader\Media\SubstackPosterLink;
 use App\Service\Reader\MetaRefreshTarget;
-use App\Service\Reader\MediaOnlyLede;
-use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\PlayerChromeCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\RelatedTeaserGridRemover;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowInserter;
-use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Tests\Support\NoEgressProxy;
@@ -131,26 +112,7 @@ final class ArticleExtractorTest extends TestCase
 
     private function bodyCleaner(): ReaderBodyCleaner
     {
-        $markup = new MediaMarkup();
-        $embedProviders = $this->providers();
-
-        return new ReaderBodyCleaner(
-            new NavigationChromeTrimmer(),
-            new LeadingTitleRemover(),
-            new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
-            new ReaderLeadImage(),
-            new InBodyEmbedRewriter($embedProviders, $markup),
-            new SubstackPosterLink(),
-            new PlayerChromeCleaner(),
-            new PageMediaInserter($markup),
-            new SlideshowInserter(new SlideshowMarkup()),
-            new RecipeFactsCleaner(),
-            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
-            new MediaOnlyLede(),
-            new DuplicateBlockCollapser($embedProviders),
-            new AuthorBioSeparator(),
-        );
+        return new ReaderBodyCleaner(ReaderBodyCleanerTest::steps($this->providers()));
     }
 
     private function mediaScanner(): PageMediaScanner
@@ -539,6 +501,17 @@ final class ArticleExtractorTest extends TestCase
         self::assertContains($result->reason, ['unextractable', 'empty']);
     }
 
+    public function testABlankPageStopsAsUnextractable(): void
+    {
+        $extractor = $this->extractor([new MockResponse('   ', ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($result->ok);
+        self::assertSame('unextractable', $result->reason);
+        self::assertNull($result->detail);
+    }
+
     public function testStripsASemanticHeaderMasthead(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-header.html');
@@ -555,6 +528,26 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Announcing the winning poems', $content);
         self::assertStringContainsString('Illustration by Jing Li', $content);
         self::assertStringContainsString('Because cumulus clouds', $content);
+    }
+
+    /**
+     * Readability demotes the page's own duplicate h1 to h2 and checks only the top candidate (see
+     * LeadingTitleRemover's docblock), so this h2 survives extraction; the page <title> alone, with no feed
+     * entry title passed, is what lets the body cleaner catch and drop it.
+     */
+    public function testDropsTheDuplicateHeadingFromReadabilitysOwnTitleAlone(): void
+    {
+        $prose = str_repeat('This is a substantial paragraph of real article text past the length gate. ', 4);
+        $html = '<html><head><title>Weekend Roundup</title></head><body>'
+            . '<h1>Weekend Roundup</h1>'
+            . '<article><h2>Weekend Roundup</h2><p>' . $prose . '</p><p>' . $prose . '</p></article>'
+            . '</body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $content = (string) $extractor->extract('https://site.test/post')->contentHtml;
+
+        self::assertStringNotContainsString('Weekend Roundup', $content);
+        self::assertStringContainsString('substantial paragraph', $content);
     }
 
     public function testStripsABreadcrumbSeparatorAndKickerMasthead(): void

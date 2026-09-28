@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\SubstackPosterLink;
+use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackPosterLinkTest extends TestCase
@@ -21,7 +22,7 @@ final class SubstackPosterLinkTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        $this->rule->linkIn($document);
+        $this->rule->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }

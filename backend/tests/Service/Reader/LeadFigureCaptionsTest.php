@@ -12,7 +12,7 @@ final class LeadFigureCaptionsTest extends TestCase
 {
     private function captionsOf(string $html): LeadFigureCaptions
     {
-        return LeadFigureCaptions::fromDocument(HtmlDocumentParser::parseOrNull($html));
+        return LeadFigureCaptions::fromDocument(HtmlDocumentParser::parse($html));
     }
 
     public function testReturnsTheCaptionOfTheMatchingFigure(): void
@@ -115,13 +115,6 @@ final class LeadFigureCaptionsTest extends TestCase
         $html = '<body><figure><figcaption>Orphan caption</figcaption></figure></body>';
 
         self::assertNull($this->captionsOf($html)->captionFor('https://cdn.test/hero-photo.jpg'));
-    }
-
-    public function testANullDocumentYieldsAnEmptyInstance(): void
-    {
-        $captions = LeadFigureCaptions::fromDocument(null);
-
-        self::assertNull($captions->captionFor('https://cdn.test/hero-photo.jpg'));
     }
 
     public function testReturnsTheFirstMatchingFigureInDocumentOrder(): void

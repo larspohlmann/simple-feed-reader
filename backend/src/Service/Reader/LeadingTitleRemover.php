@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -22,10 +24,15 @@ use Dom\HTMLDocument;
  * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
  * once around it). A document with no matching leading heading is left as is.
  */
-final readonly class LeadingTitleRemover
+final readonly class LeadingTitleRemover implements BodyCleaningStep
 {
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->removeFrom($pass->document, $pass->input->titleCandidates);
+    }
+
     /** @param list<string|null> $titleCandidates */
-    public function removeFrom(HTMLDocument $document, array $titleCandidates): void
+    private function removeFrom(HTMLDocument $document, array $titleCandidates): void
     {
         $firstTextBlock = $this->findFirstTextBlock($document);
         if ($firstTextBlock === null) {

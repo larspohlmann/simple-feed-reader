@@ -14,20 +14,9 @@ use fivefilters\Readability\Readability;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * Runs readability over the normalised page and returns the richer of two
- * extractions.
- *
- * Keep the richer of the score-neutral document (repairs only) and the
- * wrapper-chain-collapsed variant (#235), which rescues block-component pages
- * but breaks some well-structured ones (#476) — the longer body wins either
- * way. collapseWrapperChains() returns null when there is no chain to collapse,
- * skipping the second extraction.
- *
- * readability's built-in keep-list only covers video hosts (YouTube, Vimeo…),
- * so it strips a Spotify, SoundCloud or Brightcove frame before the body cleaner
- * can recover it in place; the allowed-frame regex is generated from the embed
- * providers instead, so every host the reader renders survives extraction where
- * the publisher put it (#1053).
+ * Runs readability over the normalised page and over its wrapper-collapsed variant (#235) and keeps the richer
+ * extraction, since the collapse rescues block-component pages but breaks some well-structured ones (#476). The
+ * frame keep-list comes from the embed providers, so every host the reader renders survives extraction (#1053).
  */
 final readonly class ArticleReadability
 {
@@ -39,37 +28,26 @@ final readonly class ArticleReadability
     }
 
     /**
-     * The conservative document arrives already normalised because the caller
-     * reads its image inventory before readability consumes (mutates) it (#684).
+     * The conservative document arrives already normalised: the caller reads it before readability consumes
+     * it (#684).
      *
      * @param list<ContainerSignature> $slideshowContainers
      */
     #[WithSpan]
-    public function richest(?HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
+    public function richest(HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
     {
         $collapsed = $this->normalizer->collapseWrapperChains($page->html);
-        $this->removeTeaserGrids($normalized, $slideshowContainers);
-        $this->removeTeaserGrids($collapsed, $slideshowContainers);
+        $this->teaserGridRemover->removeFrom($normalized, $slideshowContainers);
+        if ($collapsed === null) {
+            return $this->parse($normalized, $page->finalUrl);
+        }
+        $this->teaserGridRemover->removeFrom($collapsed, $slideshowContainers);
 
         return $this->richer($this->parse($normalized, $page->finalUrl), $this->parse($collapsed, $page->finalUrl));
     }
 
-    /**
-     * @param list<ContainerSignature> $slideshowContainers
-     */
-    private function removeTeaserGrids(?HTMLDocument $document, array $slideshowContainers): void
+    private function parse(HTMLDocument $document, string $finalUrl): ?Article
     {
-        if ($document !== null) {
-            $this->teaserGridRemover->removeFrom($document, $slideshowContainers);
-        }
-    }
-
-    private function parse(?HTMLDocument $document, string $finalUrl): ?Article
-    {
-        if ($document === null) {
-            return null;
-        }
-
         $readability = new Readability(new Configuration(
             // EdgeBoilerplateTrimmer reads class/id fingerprints on this output
             // (#582); readability strips classes by default, which would make

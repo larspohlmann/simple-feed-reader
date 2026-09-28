@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Text\Whitespace;
 use Dom\Element;
@@ -32,7 +34,7 @@ use Dom\HTMLDocument;
  * and a disclaimer sit where the article should be. A narration container that
  * does hold a player is left alone here, so the player logic above keeps it.
  */
-final readonly class PlayerChromeCleaner
+final readonly class PlayerChromeCleaner implements BodyCleaningStep
 {
     private const string CLOCK = '-?\d{1,2}:\d{2}(?::\d{2})?';
 
@@ -44,7 +46,12 @@ final readonly class PlayerChromeCleaner
      *  all) is a "copy this embed" widget, not a code sample a reader wrote. */
     private const string EMBED_SNIPPET_PATTERN = '/<iframe\b[^>]*\bsrc=/i';
 
-    public function cleanIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->removePlayerChromeFrom($pass->document);
+    }
+
+    private function removePlayerChromeFrom(HTMLDocument $document): void
     {
         $body = $document->body;
         if ($body === null) {

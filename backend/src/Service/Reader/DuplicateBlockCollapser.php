@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Text\Whitespace;
 use Dom\Element;
@@ -31,13 +33,18 @@ use Dom\HTMLDocument;
  * Mutates the shared document in place; ReaderBodyCleaner parses and serialises
  * once around it.
  */
-final readonly class DuplicateBlockCollapser
+final readonly class DuplicateBlockCollapser implements BodyCleaningStep
 {
     public function __construct(private EmbedProviders $embedProviders)
     {
     }
 
-    public function collapseIn(HTMLDocument $document): void
+    public function cleanIn(BodyCleaningPass $pass): void
+    {
+        $this->collapseIn($pass->document);
+    }
+
+    private function collapseIn(HTMLDocument $document): void
     {
         $previousText = null;
         foreach ($this->prose($document) as $paragraph) {

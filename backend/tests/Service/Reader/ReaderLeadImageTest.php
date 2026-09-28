@@ -29,12 +29,12 @@ final class ReaderLeadImageTest extends TestCase
             $images .= '<img src="' . $url . '">';
         }
 
-        return PageImageInventory::fromDocument(HtmlDocumentParser::parseOrNull('<body>' . $images . '</body>'));
+        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body>' . $images . '</body>'));
     }
 
     private function pageDrawingNothing(): PageImageInventory
     {
-        return PageImageInventory::fromDocument(null);
+        return $this->pageDrawing();
     }
 
     /** The inventory of a raw page after LazyImageSources has resolved it. */
@@ -47,16 +47,11 @@ final class ReaderLeadImageTest extends TestCase
         return PageImageInventory::fromDocument($document);
     }
 
-    /** Run restore in place and return the serialised body markup. */
-    private function restoredBody(
-        string $bodyHtml,
-        PageImageInventory $pageImages,
-        ?string $leadUrl,
-        bool $willTopPlace = false,
-    ): string {
+    private function restoredBody(string $bodyHtml, PageImageInventory $pageImages, ?string $leadUrl): string
+    {
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
         self::assertNotNull($document);
-        $this->leadImage->restore($document, new LeadImageCandidate($leadUrl, $pageImages), $willTopPlace);
+        $this->leadImage->restore($document, new LeadImageCandidate($leadUrl, $pageImages));
 
         return (string) $document->body?->innerHTML;
     }
@@ -262,30 +257,6 @@ final class ReaderLeadImageTest extends TestCase
         );
     }
 
-    public function testSkipsRestoringTheHeroWhenAPlayerWillBeTopPlaced(): void
-    {
-        // heise 487576: an embed poster and the hero are the same picture from
-        // different CDNs, so identity cannot match them — but a player is about
-        // to be prepended, so the hero must not stack a second copy above it.
-        $lead = 'https://cdn.test/hero-photo.jpg';
-        $body = '<p>Just words.</p>';
-
-        $result = $this->restoredBody($body, $this->pageDrawing($lead), $lead, true);
-
-        self::assertSame($this->unchangedBody($body), $result);
-    }
-
-    public function testStillRestoresTheHeroWhenNothingWillBeTopPlaced(): void
-    {
-        // willTopPlace=false must behave exactly as before: a legitimately
-        // distinct hero on a mid-body-video article is not dropped.
-        $lead = 'https://cdn.test/hero-photo.jpg';
-
-        $result = $this->restoredBody('<p>Just words.</p>', $this->pageDrawing($lead), $lead, false);
-
-        self::assertStringContainsString('hero-photo.jpg', $result);
-    }
-
     public function testRestoresTheLeadWithItsCaptionAsAFigcaption(): void
     {
         $lead = 'https://cdn.test/hero-photo.jpg';
@@ -293,7 +264,7 @@ final class ReaderLeadImageTest extends TestCase
         self::assertNotNull($document);
         $candidate = new LeadImageCandidate($lead, $this->pageDrawingNothing(), 'Bild: Berti Kolbow-Lehradt');
 
-        $this->leadImage->restore($document, $candidate, false);
+        $this->leadImage->restore($document, $candidate);
         $body = (string) $document->body?->innerHTML;
 
         self::assertStringContainsString('hero-photo.jpg', $body);
