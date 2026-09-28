@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Ordering\PositionReorderer;
-use App\Service\Reader\ExactSetGuard;
 
 final readonly class TagOrdering
 {
