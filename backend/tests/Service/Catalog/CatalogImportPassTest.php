@@ -13,7 +13,6 @@ use App\Service\Catalog\ParsedCatalog;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 
-/** CatalogImporterTest drives the same pass against the database; this one pins what it persists and removes. */
 final class CatalogImportPassTest extends TestCase
 {
     public function testANewDocumentPersistsEveryRowAndCountsIt(): void

@@ -25,6 +25,9 @@ final class CatalogImportPass
     /** @var array<string, CatalogDocumentFeed> */
     private array $mentionedFeeds = [];
 
+    /** @var array<string, CatalogFeed> removing one of these categories would cascade to its locked feed */
+    private array $lockedFeedsByCategoryKey = [];
+
     /**
      * @param array<CatalogCategory> $categories
      * @param array<CatalogFeed>     $feeds
@@ -40,6 +43,9 @@ final class CatalogImportPass
         }
         foreach ($feeds as $feed) {
             $this->feedsByUrl[$feed->getUrl()] = $feed;
+            if ($feed->isLocked()) {
+                $this->lockedFeedsByCategoryKey[$feed->getCategory()->getKey()] = $feed;
+            }
         }
     }
 
@@ -60,7 +66,8 @@ final class CatalogImportPass
 
     public function removeUnmentioned(): void
     {
-        $this->removeUnmentionedCategories($this->removeUnmentionedFeeds());
+        $this->removeUnmentionedFeeds();
+        $this->removeUnmentionedCategories();
     }
 
     private function applyCategory(CatalogDocumentCategory $documentCategory, int $position): CatalogCategory
@@ -129,7 +136,6 @@ final class CatalogImportPass
         return $feed;
     }
 
-    /** Matched on URL, so the row and its cached favicon survive the re-import. */
     private function updateFeed(
         CatalogFeed $feed,
         CatalogDocumentFeed $documentFeed,
@@ -142,21 +148,11 @@ final class CatalogImportPass
         return $feed;
     }
 
-    /**
-     * @return array<string, CatalogFeed> the locked feeds by category key, whose categories must stay: removing one
-     *                                    would cascade to its locked feed
-     */
-    private function removeUnmentionedFeeds(): array
+    private function removeUnmentionedFeeds(): void
     {
-        $lockedFeedsByCategoryKey = [];
         foreach ($this->feedsByUrl as $feed) {
-            if ($feed->isLocked()) {
-                $lockedFeedsByCategoryKey[$feed->getCategory()->getKey()] = $feed;
-            }
             $this->removeFeedUnlessMentioned($feed);
         }
-
-        return $lockedFeedsByCategoryKey;
     }
 
     private function removeFeedUnlessMentioned(CatalogFeed $feed): void
@@ -174,17 +170,14 @@ final class CatalogImportPass
         $this->result = $this->result->with(feedsRemoved: 1);
     }
 
-    /**
-     * @param array<string, CatalogFeed> $lockedFeedsByCategoryKey
-     */
-    private function removeUnmentionedCategories(array $lockedFeedsByCategoryKey): void
+    private function removeUnmentionedCategories(): void
     {
         foreach ($this->categoriesByKey as $category) {
             $key = $category->getKey();
             if (isset($this->mentionedCategories[$key])) {
                 continue;
             }
-            if (isset($lockedFeedsByCategoryKey[$key]) || $category->isLocked()) {
+            if (isset($this->lockedFeedsByCategoryKey[$key]) || $category->isLocked()) {
                 $this->result = $this->result->with(lockedSkipped: 1);
 
                 continue;
