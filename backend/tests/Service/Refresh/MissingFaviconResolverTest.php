@@ -9,6 +9,7 @@ use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,10 +51,8 @@ final class MissingFaviconResolverTest extends DbTestCase
         $known = new Feed('https://known.example.com/feed');
         $known->setFaviconUrl('https://known.example.com/known.png');
         $this->persistAll($known);
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::never())->method('flush');
 
-        $this->resolver($em)->resolveFor([$known]);
+        $this->resolver(new FlushFailingEntityManager($this->em))->resolveFor([$known]);
 
         self::assertSame([], $this->homepages->fetchedUrls);
     }
