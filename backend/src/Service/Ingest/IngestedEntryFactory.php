@@ -51,7 +51,6 @@ final readonly class IngestedEntryFactory
         return null === $value ? null : mb_substr($value, 0, $maxLength);
     }
 
-    /** The lead passes EntryImageWriter::write's https-upgrading gate too, so media[0] stays the stored lead. */
     private static function attachMedia(Entry $entry, ParsedEntry $parsed): void
     {
         $bundle = $parsed->media->mediaBundle ?? new ParsedMediaBundle();

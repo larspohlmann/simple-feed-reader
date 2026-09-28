@@ -65,10 +65,6 @@ final class EntryMediaAssembler
         return $kept;
     }
 
-    /**
-     * The lead is not yet verified, so it is upgraded rather than merely accepted — the same gate
-     * EntryImageWriter::write uses.
-     */
     private static function leadMedium(?DeclaredImage $lead): ?EntryMedium
     {
         if ($lead === null) {
