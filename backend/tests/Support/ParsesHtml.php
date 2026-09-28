@@ -11,9 +11,6 @@ trait ParsesHtml
 {
     private function document(string $html): HTMLDocument
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-
-        return $document;
+        return HtmlDocumentParser::parse($html);
     }
 }
