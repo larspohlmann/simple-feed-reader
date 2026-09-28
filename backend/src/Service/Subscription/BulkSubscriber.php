@@ -154,7 +154,6 @@ final readonly class BulkSubscriber
 
     private function joinTag(BulkSubscribePositions $positions, Subscription $subscription, Tag $tag): void
     {
-        // A tag created in this batch starts at 0; an existing one appends past its committed feeds.
         $subscription->addTag($tag, $positions->takeFeedPositionIn(
             $tag,
             fn (): int => null === $tag->getId() ? 0 : $this->subscriptionTags->nextPositionForTag($tag),

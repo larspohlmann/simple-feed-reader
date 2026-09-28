@@ -29,7 +29,7 @@ final class BulkSubscribePositions
     }
 
     /**
-     * @param \Closure(): int $firstFreePosition asked once per tag, on the tag's first use in this batch
+     * @param \Closure(): int $firstFreePosition
      */
     public function takeFeedPositionIn(Tag $tag, \Closure $firstFreePosition): int
     {

@@ -8,7 +8,6 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 
-/** One subscribeAll() call: what it subscribed and tagged so far, the room left under the cap, and its counts. */
 final class BulkSubscribeBatch
 {
     private BulkSubscribeResult $result;
