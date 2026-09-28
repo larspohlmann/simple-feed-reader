@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Mail\Digest;
 
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Settings\PublicBaseUrl;
+use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 
@@ -13,7 +13,7 @@ final class DigestLinkBuilderTest extends TestCase
 {
     private function builderFor(string $base): DigestLinkBuilder
     {
-        $publicBaseUrl = new class ($base) implements PublicBaseUrl {
+        $publicBaseUrl = new class ($base) implements PublicBaseUrlInterface {
             public function __construct(private readonly string $base)
             {
             }

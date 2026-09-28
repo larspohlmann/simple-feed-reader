@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\ModelCatalog;
+use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderCredentials;
 
@@ -22,7 +22,7 @@ use App\Service\Ai\ProviderCredentials;
  * callers only care which ids are offered, not their context windows, and
  * writing a bare string for those keeps the existing scripts unchanged.
  */
-final readonly class StubModelCatalog implements ModelCatalog
+final readonly class StubModelCatalog implements ModelCatalogInterface
 {
     /** @var \Closure(ProviderCredentials): list<string|ModelDescriptor> */
     private \Closure $answer;

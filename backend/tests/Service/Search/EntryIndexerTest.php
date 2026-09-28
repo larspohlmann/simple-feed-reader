@@ -15,7 +15,7 @@ use Psr\Log\NullLogger;
 
 /**
  * EntryIndexer turns persisted Entry rows into IndexedEntry documents and
- * hands them to a SearchIndexWriter. Entries are persisted through the real
+ * hands them to a SearchIndexWriterInterface. Entries are persisted through the real
  * EntityManager (not built by hand) because the one thing worth pinning here
  * — the document really does carry the id Doctrine assigned — only means
  * anything against a real id, and RefreshRunnerTest /

@@ -1,0 +1,131 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
+
+use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
+use PHPUnit\Framework\TestCase;
+
+final class SemanticMediaSourceTest extends TestCase
+{
+    use FindsMediaInRawPage;
+
+    private const string PROSE =
+        'The paragraph the player followed on the source page, long enough to be prose.';
+
+    private function source(): SemanticMediaSource
+    {
+        return new SemanticMediaSource(new MediaUrlKind(
+            new DurableMediaUrl(),
+            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+        ));
+    }
+
+    public function testFindsAnAudioElement(): void
+    {
+        $found = $this->find('<body><audio src="https://x.test/a.mp3"></audio></body>', 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Audio, $found[0]->kind);
+    }
+
+    public function testFlagsNarrationWhenAnAncestorDeclaresIt(): void
+    {
+        $html = '<body><div data-audio-type="tts"><audio src="https://x.test/full.mp3"></audio></div></body>';
+
+        $found = $this->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertTrue($found[0]->narrated);
+    }
+
+    public function testAnOrdinaryAudioElementIsNotFlaggedAsNarration(): void
+    {
+        $found = $this->find('<body><audio src="https://x.test/a.mp3"></audio></body>', 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertFalse($found[0]->narrated);
+    }
+
+    public function testFindsAVideoWithSourceChildrenAndKeepsItsPoster(): void
+    {
+        $html = '<body><video poster="https://x.test/p.jpg"><source src="https://x.test/v.mp4" type="video/mp4">'
+            . '</video></body>';
+
+        $found = $this->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
+    }
+
+    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
+    public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
+    {
+        $html = '<body><video><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';
+
+        $found = $this->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/v.mp4', $found[0]->url);
+        self::assertNull($found[0]->posterUrl);
+    }
+
+    /** A page nobody designed for: a <video> whose only source is an HLS master. */
+    public function testAVideoElementWithAnHlsSourceYieldsAStream(): void
+    {
+        $html = '<html><body><video poster="https://cdn.test/p.jpg">'
+            . '<source src="https://cdn.test/v/master.m3u8" type="application/x-mpegURL"></video></body></html>';
+
+        $found = $this->find($html, 'https://site.test/x');
+
+        self::assertCount(1, $found);
+        self::assertSame(MediaKind::Stream, $found[0]->kind);
+        self::assertSame('https://cdn.test/v/master.m3u8', $found[0]->url);
+        self::assertSame('https://cdn.test/p.jpg', $found[0]->posterUrl);
+    }
+
+    public function testNormalizesAnEmptyPosterToNull(): void
+    {
+        $html = '<body><video poster=""><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';
+
+        $found = $this->find($html, 'https://x.test/a');
+
+        self::assertCount(1, $found);
+        self::assertNull($found[0]->posterUrl);
+    }
+
+    public function testSkipsAVideoSourceThatResolvesToAnEmbedInsteadOfANativeFile(): void
+    {
+        $html = '<body><video poster="https://x.test/p.jpg">'
+            . '<source src="https://www.youtube.com/embed/aaaaaaaaaaa"></video></body>';
+
+        self::assertSame([], $this->find($html, 'https://x.test/a'));
+    }
+
+    public function testNamesTheProseBlockThePlayerFollows(): void
+    {
+        $html = '<body><p>' . self::PROSE . '</p><audio src="https://x.test/a.mp3"></audio></body>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertSame(self::PROSE, $found[0]->precedingText);
+    }
+
+    public function testSkipsAPlayerInsideAnAside(): void
+    {
+        $html = '<body><aside><audio src="https://x.test/teaser.mp3"></audio></aside>'
+            . '<audio src="https://x.test/a.mp3"></audio></body>';
+
+        $found = $this->find($html, 'https://x.test/a.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/a.mp3', $found[0]->url);
+    }
+}

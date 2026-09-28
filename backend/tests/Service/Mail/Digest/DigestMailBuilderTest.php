@@ -10,7 +10,7 @@ use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestGroup;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestImageEmbedderInterface;
+use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailBuilder;
@@ -18,7 +18,7 @@ use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\EmbeddedImage;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
@@ -105,9 +105,9 @@ final class DigestMailBuilderTest extends TestCase
         self::assertCount(0, $email->getAttachments());
     }
 
-    private function mailIdentity(string $address, string $name): MailSendingSettings
+    private function mailIdentity(string $address, string $name): MailSendingSettingsInterface
     {
-        $settings = $this->createStub(MailSendingSettings::class);
+        $settings = $this->createStub(MailSendingSettingsInterface::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;

@@ -9,27 +9,27 @@ use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Service\Fetch\BatchFeedFetcherInterface;
-use App\Service\Fetch\FaviconResolver;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
+use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\Parser\Atom03Parser;
-use App\Service\Parser\Atom10Parser;
+use App\Service\Parser\FeedFormatParser\Atom03Parser;
+use App\Service\Parser\FeedFormatParser\Atom10Parser;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\FeedParserFactory;
-use App\Service\Parser\Rss1Parser;
-use App\Service\Parser\Rss2Parser;
-use App\Service\Refresh\ContentChangeMarkerInterface;
+use App\Service\Parser\FeedFormatParser\Rss1Parser;
+use App\Service\Parser\FeedFormatParser\Rss2Parser;
+use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
 use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\MissingFaviconResolver;
 use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshRunner;
-use App\Service\Refresh\ScrapedBodyParser;
-use App\Service\Refresh\XmlBodyParser;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Refresh\FeedBodyParser\ScrapedBodyParser;
+use App\Service\Refresh\FeedBodyParser\XmlBodyParser;
 use App\Service\Retention\EntryPruner;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Search\EntryIndexer;
-use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
@@ -49,7 +49,7 @@ final readonly class RefreshRunners
         private EntityManagerInterface $flushingEm,
         private LockFactory $lockFactory,
         private ContentChangeMarkerInterface $changeMarker,
-        private SearchIndexWriter $indexWriter,
+        private SearchIndexWriterInterface $indexWriter,
     ) {
     }
 
@@ -109,7 +109,7 @@ final readonly class RefreshRunners
         );
     }
 
-    public function indexingInto(SearchIndexWriter $indexWriter): self
+    public function indexingInto(SearchIndexWriterInterface $indexWriter): self
     {
         return new self(
             $this->em,

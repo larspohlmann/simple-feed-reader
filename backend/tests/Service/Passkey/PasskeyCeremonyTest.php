@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Passkey;
 
 use App\Service\Passkey\PasskeyCeremony;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\CeremonyStep\CeremonyStepManager;
@@ -57,9 +57,9 @@ final class PasskeyCeremonyTest extends TestCase
         self::assertSame($ceremony->serializer(), $ceremony->serializer());
     }
 
-    private function relyingPartyOf(string $id): PasskeyRelyingParty
+    private function relyingPartyOf(string $id): PasskeyRelyingPartyInterface
     {
-        return new class ($id) implements PasskeyRelyingParty {
+        return new class ($id) implements PasskeyRelyingPartyInterface {
             public function __construct(private string $id)
             {
             }

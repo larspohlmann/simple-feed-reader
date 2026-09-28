@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Passkey;
 
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
 use Webauthn\CeremonyStep\CeremonyStepManager;
@@ -23,7 +23,7 @@ final class PasskeyCeremony
     private ?SerializerInterface $serializer = null;
 
     public function __construct(
-        private readonly PasskeyRelyingParty $relyingParty,
+        private readonly PasskeyRelyingPartyInterface $relyingParty,
     ) {
     }
 
@@ -67,7 +67,7 @@ final class PasskeyCeremony
 
     /**
      * The registrable domain credentials are bound to. Delegates to
-     * PasskeyRelyingParty rather than re-parsing PublicBaseUrl: the relying
+     * PasskeyRelyingPartyInterface rather than re-parsing PublicBaseUrlInterface: the relying
      * party id already applies the "stored override, else derive from the
      * public base URL's host" rule (EffectivePasskeyRelyingPartyId); a
      * second, independent derivation here could disagree whenever an admin

@@ -10,7 +10,7 @@ use App\Http\EntrySearchRequestFactory;
 use App\Http\SearchPage;
 use App\Repository\EntryListRowEnricher;
 use App\Service\Reading\SearchMarkReadService;
-use App\Service\Search\EntrySearchInterface;
+use App\Service\Search\EntrySearch\EntrySearchInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

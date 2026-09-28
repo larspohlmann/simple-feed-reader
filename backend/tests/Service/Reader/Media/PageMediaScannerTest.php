@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaCandidateSourceInterface;
+use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\RawPage;

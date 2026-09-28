@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Logging\Loki\LokiEndpoint;
+use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 
-final class StubLokiEndpoint implements LokiEndpoint
+final class StubLokiEndpoint implements LokiEndpointInterface
 {
     public function __construct(
         private ?string $pushUrl = 'http://loki:3100/loki/api/v1/push',

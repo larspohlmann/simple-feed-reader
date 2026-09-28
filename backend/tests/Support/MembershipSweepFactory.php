@@ -6,9 +6,9 @@ namespace App\Tests\Support;
 
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchEntryMembershipRepository;
-use App\Service\Search\Membership\SavedSearchMembershipWriter;
+use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Repository\SavedSearchRepository;
-use App\Service\Search\Membership\SavedSearchMatcher;
+use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -26,10 +26,10 @@ final class MembershipSweepFactory
     public static function fromContainer(
         ContainerInterface $container,
         EntityManagerInterface $em,
-        SavedSearchMatcher $matcher,
+        SavedSearchMatcherInterface $matcher,
         ClockInterface $clock,
         ?LoggerInterface $logger = null,
-        ?SavedSearchMembershipWriter $memberships = null,
+        ?SavedSearchMembershipWriterInterface $memberships = null,
     ): SavedSearchMembershipSweep {
         return new SavedSearchMembershipSweep(
             self::service($container, SavedSearchRepository::class),

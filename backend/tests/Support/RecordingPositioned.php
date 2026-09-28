@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Entity\Positioned;
+use App\Entity\PositionedInterface;
 
-final class RecordingPositioned implements Positioned
+final class RecordingPositioned implements PositionedInterface
 {
     public ?int $position = null;
 

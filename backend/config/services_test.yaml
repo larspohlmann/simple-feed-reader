@@ -7,7 +7,7 @@ services:
     # which the container refuses on a private service. Same `autowire`
     # caveat as the entries below: naming a class here replaces the
     # definition rather than amending it, and this file has no `_defaults`.
-    App\Service\Mail\MailDeliveryHealth:
+    App\Service\Mail\MailFailureRecorder\MailDeliveryHealth:
         autowire: true
         public: true
 
@@ -54,8 +54,8 @@ services:
     # public services, and fetches the configurator itself with `->get(...)`,
     # which the container refuses on a private service. Test environment only
     # — production keeps both private.
-    App\Service\Ai\ModelCatalog:
-        alias: App\Service\Ai\OpenAiCompatibleCatalog
+    App\Service\Ai\ModelCatalog\ModelCatalogInterface:
+        alias: App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog
         public: true
 
     App\Service\Ai\AiProviderConfigurator:
@@ -109,8 +109,8 @@ services:
     # Functional tests swap the real fetcher for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only — production keeps them private.
-    App\Service\Fetch\FeedFetcherInterface:
-        alias: App\Service\Fetch\HttpFeedFetcher
+    App\Service\Fetch\FeedFetcher\FeedFetcherInterface:
+        alias: App\Service\Fetch\FeedFetcher\HttpFeedFetcher
         public: true
 
     # HttpFeedFetcher depends on BatchFeedFetcherInterface today, so swapping the
@@ -118,15 +118,15 @@ services:
     # The functional tests swap it for a stub via
     # `self::getContainer()->set(...)`, which the container only allows on
     # public services. Test environment only.
-    App\Service\Fetch\BatchFeedFetcherInterface:
-        alias: App\Service\Fetch\ConcurrentFeedFetcher
+    App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface:
+        alias: App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher
         public: true
 
     # The reader-endpoint test swaps a fake extractor via
     # `self::getContainer()->set(...)` so no outbound page fetch happens; the
     # container only permits that on a public service. Test environment only.
-    App\Service\Reader\ArticleExtractorInterface:
-        alias: App\Service\Reader\ArticleExtractor
+    App\Service\Reader\ArticleExtractor\ArticleExtractorInterface:
+        alias: App\Service\Reader\ArticleExtractor\ArticleExtractor
         public: true
 
     # MailGatedAccountMailerWiringTest fetches this to prove the container
@@ -135,8 +135,8 @@ services:
     # in services.yaml necessary in the first place. `self::getContainer()->
     # get(...)` refuses a private service, so this needs the same public
     # override as the aliases above. Test environment only.
-    App\Service\Mail\AccountMailerInterface:
-        alias: App\Service\Mail\AccountMailer
+    App\Service\Mail\AccountMailer\AccountMailerInterface:
+        alias: App\Service\Mail\AccountMailer\AccountMailer
         public: true
 
     # Tests acquire the refresh lock up front to assert the "busy" path.
@@ -330,8 +330,8 @@ services:
         autowire: true
         public: true
 
-    # MailCapabilityWiringTest fetches this to prove the service actually
-    # resolves through the real container, including its MailSendingSettings
+    # MailCapabilityWiringTest fetches this to prove the service actually resolves
+    # through the real container, including its MailSendingSettingsInterface
     # collaborator, which a hand-constructed MailCapability cannot catch.
     App\Service\Mail\MailCapability:
         autowire: true
@@ -356,9 +356,10 @@ services:
         autowire: true
         public: true
 
-    # Test environment only: the whole container speaks to the stub instead of
-    # OpenAiCompatibleChatClient, same swap pattern as ModelCatalog above.
-    App\Service\Ai\Completion\ChatCompletionClient:
+    # Test environment only: the whole container speaks to the
+    # stub instead of OpenAiCompatibleChatClient, same swap
+    # pattern as ModelCatalogInterface above.
+    App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
         public: true
 
@@ -376,7 +377,7 @@ services:
     # as StubChatClient above.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
-    App\Service\Process\ShellCommandRunnerInterface:
+    App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface:
         alias: App\Tests\Support\NullShellCommandRunner
 
     # RecommendationRunAdvancerTest drives advance() directly to prove the
@@ -471,13 +472,13 @@ services:
     # reach directly, so this is the only seam that lets a kernel-level test
     # observe whether the terminate hook actually spawned. Test environment
     # only — production keeps this alias private.
-    App\Service\Process\DetachedProcessLauncherInterface:
-        alias: App\Service\Process\DetachedProcessLauncher
+    App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface:
+        alias: App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher
         public: true
 
     # CompletionStreamHeartbeatWiringTest arms each composite member by class
-    # name and beats it through the CompletionStreamHeartbeat alias, to prove
-    # the container hands the advancer and the sweep the SAME instances the
+    # name and beats it through the CompletionStreamHeartbeatInterface alias, to
+    # prove the container hands the advancer and the sweep the SAME instances the
     # composite fans out to. `self::getContainer()->get(...)` refuses a
     # private service, so all three need the same public override as the
     # entries above. Test environment only — production keeps them private.
@@ -489,8 +490,8 @@ services:
         autowire: true
         public: true
 
-    App\Service\Ai\Completion\CompletionStreamHeartbeat:
-        alias: App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat
+    App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface:
+        alias: App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat
         public: true
 
     # EntryListTest, EntryRowsByIdsTest, EntrySearchTest and IndexedEntrySearch

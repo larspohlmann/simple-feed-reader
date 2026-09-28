@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Logging\Loki;
 
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiEndpoint;
+use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -85,7 +85,7 @@ final class LokiClientTest extends TestCase
         $this->expectNotToPerformAssertions();
 
         $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 204]));
-        $endpoint = new class implements LokiEndpoint {
+        $endpoint = new class implements LokiEndpointInterface {
             public function pushUrl(): ?string
             {
                 throw new \RuntimeException('settings unavailable');
@@ -152,9 +152,9 @@ final class LokiClientTest extends TestCase
         self::assertArrayNotHasKey('authorization', $seen['normalized_headers']);
     }
 
-    private function endpoint(?string $url, ?string $user, ?string $token): LokiEndpoint
+    private function endpoint(?string $url, ?string $user, ?string $token): LokiEndpointInterface
     {
-        return new class ($url, $user, $token) implements LokiEndpoint {
+        return new class ($url, $user, $token) implements LokiEndpointInterface {
             public function __construct(private ?string $url, private ?string $user, private ?string $token)
             {
             }

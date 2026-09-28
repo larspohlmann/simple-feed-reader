@@ -6,7 +6,7 @@ namespace App\Service\Passkey;
 
 use App\Entity\User;
 use App\Repository\UserPasskeyRepository;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 
 /** One account's passkeys, with the relying party id and shared handle the WebAuthn Signal API needs (#727). */
 final readonly class PasskeyListing
@@ -14,7 +14,7 @@ final readonly class PasskeyListing
     public function __construct(
         private UserPasskeyRepository $passkeys,
         private PasskeyCredentials $credentials,
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
     ) {
     }
 

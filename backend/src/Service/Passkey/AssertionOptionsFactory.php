@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Passkey;
 
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Random\RandomException;
 use Webauthn\PublicKeyCredentialRequestOptions;
 
@@ -42,7 +42,7 @@ final readonly class AssertionOptionsFactory
     public function __construct(
         private PasskeyCeremony $ceremony,
         private PasskeyChallengeStore $challengeStore,
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
     ) {
     }
 

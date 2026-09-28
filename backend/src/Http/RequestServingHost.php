@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Settings\PublicBaseUrl;
-use App\Service\Settings\ServingHost;
+use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
+use App\Service\Settings\ServingHost\ServingHostInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /** A proxy that rewrites Host rather than passing it through needs
  *  SYMFONY_TRUSTED_PROXIES set for this to see the real one. */
-final readonly class RequestServingHost implements ServingHost
+final readonly class RequestServingHost implements ServingHostInterface
 {
     public function __construct(
         private RequestStack $requests,
-        private PublicBaseUrl $publicBaseUrl,
+        private PublicBaseUrlInterface $publicBaseUrl,
     ) {
     }
 

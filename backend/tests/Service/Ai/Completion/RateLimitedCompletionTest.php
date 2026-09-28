@@ -7,7 +7,7 @@ namespace App\Tests\Service\Ai\Completion;
 use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\JsonSchema;
-use App\Service\Ai\Completion\NullCompletionStreamObserver;
+use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Completion\RetryPlan;

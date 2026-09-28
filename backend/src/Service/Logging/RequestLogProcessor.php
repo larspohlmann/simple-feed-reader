@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Logging;
 
 use App\Service\Logging\Loki\LokiPushHandler;
+use App\Service\Logging\TraceContext\TraceContextInterface;
 use Monolog\LogRecord;
 use Monolog\Processor\ProcessorInterface;
 
@@ -12,7 +13,7 @@ final readonly class RequestLogProcessor implements ProcessorInterface
 {
     public function __construct(
         private RequestIdProvider $requestId,
-        private TraceContext $trace,
+        private TraceContextInterface $trace,
     ) {
     }
 

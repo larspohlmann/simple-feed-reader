@@ -10,8 +10,8 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Membership\SavedSearchMatcher;
-use App\Service\Search\Membership\SavedSearchMembershipWriter;
+use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
 use App\Tests\DbTestCase;
@@ -206,9 +206,9 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $hit = $this->entry('a');
         $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
         $realWriter = self::getContainer()->get(SavedSearchEntryMembershipRepository::class);
-        self::assertInstanceOf(SavedSearchMembershipWriter::class, $realWriter);
-        $failingAfterInsert = new class ($realWriter) implements SavedSearchMembershipWriter {
-            public function __construct(private readonly SavedSearchMembershipWriter $inner)
+        self::assertInstanceOf(SavedSearchMembershipWriterInterface::class, $realWriter);
+        $failingAfterInsert = new class ($realWriter) implements SavedSearchMembershipWriterInterface {
+            public function __construct(private readonly SavedSearchMembershipWriterInterface $inner)
             {
             }
 
@@ -288,9 +288,9 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     }
 
     private function sweep(
-        SavedSearchMatcher $matcher,
+        SavedSearchMatcherInterface $matcher,
         ?ClockInterface $clock = null,
-        ?SavedSearchMembershipWriter $memberships = null,
+        ?SavedSearchMembershipWriterInterface $memberships = null,
         ?RecordingLogger $logger = null,
     ): SavedSearchMembershipSweep {
         return MembershipSweepFactory::fromContainer(

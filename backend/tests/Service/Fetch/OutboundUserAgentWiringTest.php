@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch;
 
 use App\Service\Catalog\CatalogUrlChecker;
-use App\Service\Fetch\ConcurrentFeedFetcher;
+use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Reader\HtmlPageFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;

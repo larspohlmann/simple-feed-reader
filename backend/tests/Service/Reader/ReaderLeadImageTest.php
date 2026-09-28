@@ -6,7 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Html\PictureSources;
-use App\Service\Reader\Repair\LazyImageSources;
+use App\Service\Reader\PageRepair\LazyImageSources;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\ReaderLeadImage;

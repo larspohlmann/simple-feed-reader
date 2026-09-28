@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 
-final class TrackingProfileSampler implements ProfileSampler
+final class TrackingProfileSampler implements ProfileSamplerInterface
 {
     /** @var list<float> */
     public array $startedWithPeriods = [];

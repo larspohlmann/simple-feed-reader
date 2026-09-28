@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling;
 
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final readonly class PyroscopeClient
@@ -16,7 +17,7 @@ final readonly class PyroscopeClient
     // Pyroscope can never reach a request or the worker.
     public function __construct(
         private HttpClientInterface $httpClient,
-        private PyroscopeEndpoint $endpoint,
+        private PyroscopeEndpointInterface $endpoint,
     ) {
     }
 

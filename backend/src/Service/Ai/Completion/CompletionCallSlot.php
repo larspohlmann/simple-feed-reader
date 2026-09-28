@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
+use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\ProviderTimeouts;
 
 /**
@@ -22,7 +23,7 @@ final readonly class CompletionCallSlot
     public function __construct(
         public int $index,
         public CompletionStreamReader $reader,
-        public CompletionStreamObserver $observer,
+        public CompletionStreamObserverInterface $observer,
         public ProviderTimeouts $timeouts,
         /**
          * The `max_tokens` this call's own request carried (#437).

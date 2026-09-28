@@ -11,7 +11,7 @@ use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
 use App\Service\Mail\Settings\ResolvedMailTransport;
 use App\Service\Mail\Transport\ActiveMailTransportFactory;
 use App\Service\Mail\Transport\CurlSmtpTransport;
-use App\Service\Proxy\ConfiguredProxySource;
+use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Mailer\Transport\NullTransport;
@@ -55,7 +55,7 @@ final class ActiveMailTransportFactoryTest extends TestCase
 
     private function factory(?ProxyConfig $configuredProxy): ActiveMailTransportFactory
     {
-        $proxySource = $this->createStub(ConfiguredProxySource::class);
+        $proxySource = $this->createStub(ConfiguredProxySourceInterface::class);
         $proxySource->method('configuredProxy')->willReturn($configuredProxy);
 
         return new ActiveMailTransportFactory($proxySource, $this->createStub(HttpClientInterface::class));

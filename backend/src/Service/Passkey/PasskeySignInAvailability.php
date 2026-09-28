@@ -6,7 +6,7 @@ namespace App\Service\Passkey;
 
 use App\Service\Passkey\Exception\PasskeySignInDisabledException;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyIdRule;
 
 /**
@@ -29,7 +29,7 @@ final readonly class PasskeySignInAvailability
 {
     public function __construct(
         private InstanceSettings $settings,
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
         private RelyingPartyIdRule $relyingPartyIdRule,
     ) {
     }

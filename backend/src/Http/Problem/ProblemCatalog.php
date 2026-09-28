@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Problem;
 
+use App\Http\Problem\ExceptionProblems\ExceptionProblemsInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -15,7 +16,7 @@ use Symfony\Component\Validator\Exception\ValidationFailedException;
 
 final readonly class ProblemCatalog
 {
-    /** @param iterable<ExceptionProblems> $mappers */
+    /** @param iterable<ExceptionProblemsInterface> $mappers */
     public function __construct(
         #[AutowireIterator('app.exception_problems')]
         private iterable $mappers,

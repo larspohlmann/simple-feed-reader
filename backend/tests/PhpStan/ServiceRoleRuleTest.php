@@ -266,12 +266,39 @@ final class ServiceRoleRuleTest extends RuleTestCase
             ],
             [
                 self::message(
-                    'modelHome',
+                    'passHome',
                     'App\Service\Knot\Label',
-                    'is data built per call',
-                    'App\Service\Knot\Model\LabelModel',
+                    'is built per call',
+                    'App\Service\Knot\Pass\Label',
                 ),
                 587,
+            ],
+            [
+                self::message(
+                    'passHome',
+                    'App\Service\Knot\Spool',
+                    'is built per call',
+                    'App\Service\Knot\Pass\Spool',
+                ),
+                622,
+            ],
+            [
+                self::message(
+                    'modelHome',
+                    'App\Service\Knot\Warp',
+                    'is data built per call',
+                    'App\Service\Knot\Model\WarpModel',
+                ),
+                637,
+            ],
+            [
+                self::message(
+                    'modelHome',
+                    'App\Service\Knot\Weft',
+                    'is data built per call',
+                    'App\Service\Knot\Model\WeftModel',
+                ),
+                644,
             ],
         ]);
     }

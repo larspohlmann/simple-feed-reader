@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
-use App\Service\Fetch\BatchFeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\PageUrls;

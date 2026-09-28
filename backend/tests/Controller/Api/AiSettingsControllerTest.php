@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\ModelCatalog;
+use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use App\Tests\Support\AiProviderSettingsFactory;
@@ -53,7 +53,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         // KernelBrowser rebuilds the container after every request, which would
         // discard the stub before the second call of every multi-request case.
         $client->disableReboot();
-        self::getContainer()->set(ModelCatalog::class, new StubModelCatalog($models));
+        self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));
 
         return $client;
     }

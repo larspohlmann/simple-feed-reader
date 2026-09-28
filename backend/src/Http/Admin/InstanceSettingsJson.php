@@ -6,7 +6,7 @@ namespace App\Http\Admin;
 
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -18,7 +18,7 @@ final readonly class InstanceSettingsJson
     public function __construct(
         private RegistrationPolicy $policy,
         private InstanceSettings $settings,
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
         #[Autowire('%env(APP_FRONTEND_URL)%')]
         private string $publicBaseUrlDefault,
     ) {

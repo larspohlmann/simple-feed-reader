@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
-use App\Service\Fetch\BatchFeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;

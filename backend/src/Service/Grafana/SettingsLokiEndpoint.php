@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Grafana;
 
-use App\Service\Logging\Loki\LokiEndpoint;
+use App\Service\Logging\Loki\LokiEndpoint\LokiEndpointInterface;
 
-final readonly class SettingsLokiEndpoint implements LokiEndpoint
+final readonly class SettingsLokiEndpoint implements LokiEndpointInterface
 {
     public function __construct(private EffectiveGrafanaSettings $settings)
     {

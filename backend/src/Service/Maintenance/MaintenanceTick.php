@@ -9,7 +9,7 @@ use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
 use App\Service\Search\Membership\SweepBudget;
 use Psr\Clock\ClockInterface;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Service\Settings\PublicBaseUrl;
+use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 
 /**
  * Builds absolute reader deep-links from the configured public base URL — the
@@ -14,7 +14,7 @@ use App\Service\Settings\PublicBaseUrl;
  */
 final readonly class DigestLinkBuilder
 {
-    public function __construct(private PublicBaseUrl $publicBaseUrl)
+    public function __construct(private PublicBaseUrlInterface $publicBaseUrl)
     {
     }
 

@@ -16,12 +16,12 @@ use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailDeliveryHealth;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\SavedSearchMatchFixture;
@@ -118,7 +118,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     private function mailCapability(): MailCapability
     {
-        $settings = $this->createStub(MailSendingSettings::class);
+        $settings = $this->createStub(MailSendingSettingsInterface::class);
         $settings->method('isSendingEnabled')->willReturn(true);
 
         return new MailCapability($settings);

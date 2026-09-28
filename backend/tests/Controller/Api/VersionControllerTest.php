@@ -6,9 +6,9 @@ namespace App\Tests\Controller\Api;
 
 use App\Controller\Api\VersionController;
 use App\Service\Version\LatestRelease;
-use App\Service\Version\LatestReleaseReader;
+use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
 use App\Service\Version\ReleaseVersion;
-use App\Service\Version\ReleaseVersionReader;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Service\Version\VersionReporter;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -111,7 +111,7 @@ final class VersionControllerTest extends WebTestCase
 
     private function reporterReporting(ReleaseVersion $running, LatestRelease $latest): VersionReporter
     {
-        $releaseReader = new class ($running) implements ReleaseVersionReader {
+        $releaseReader = new class ($running) implements ReleaseVersionReaderInterface {
             public function __construct(private readonly ReleaseVersion $version)
             {
             }
@@ -122,7 +122,7 @@ final class VersionControllerTest extends WebTestCase
             }
         };
 
-        $latestReader = new class ($latest) implements LatestReleaseReader {
+        $latestReader = new class ($latest) implements LatestReleaseReaderInterface {
             public function __construct(private readonly LatestRelease $latest)
             {
             }

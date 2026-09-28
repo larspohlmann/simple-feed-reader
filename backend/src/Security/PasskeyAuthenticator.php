@@ -6,7 +6,7 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Service\Passkey\AssertionVerifier;
-use App\Service\Passkey\Exception\PasskeySignInFailure;
+use App\Service\Passkey\Exception\PasskeySignInFailureExceptionInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -96,8 +96,9 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
     }
 
     /**
-     * Runs lazily from the UserBadge loader (see the class docblock). Every PasskeySignInFailure becomes a plain
-     * AuthenticationException, so LoginFailureHandler treats it like a password failure, #727's `previous` aside.
+     * Runs lazily from the UserBadge loader (see the class docblock). Every PasskeySignInFailureExceptionInterface
+     * becomes a plain AuthenticationException, so LoginFailureHandler treats it like a password failure, #727's
+     * `previous` aside.
      *
      * @param array<string, mixed> $payload
      */
@@ -112,7 +113,7 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
         try {
             /** @var array<string, mixed> $credential */
             return $this->verifier->verify($handle, $credential)->getUser();
-        } catch (PasskeySignInFailure $exception) {
+        } catch (PasskeySignInFailureExceptionInterface $exception) {
             throw new AuthenticationException('Passkey assertion rejected.', previous: $exception);
         }
     }

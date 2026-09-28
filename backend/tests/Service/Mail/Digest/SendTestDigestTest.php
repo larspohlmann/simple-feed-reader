@@ -14,17 +14,17 @@ use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestImageEmbedderInterface;
+use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailBuilder;
-use App\Service\Mail\Digest\DigestMailer;
-use App\Service\Mail\Digest\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestMailer\DigestMailer;
+use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\SendTestDigest;
-use App\Service\Mail\MailSendingSettings;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
@@ -207,9 +207,9 @@ final class SendTestDigestTest extends DbTestCase
         self::assertNotNull($this->sentEmails[0]->getTextBody());
     }
 
-    private function mailIdentity(string $address, string $name): MailSendingSettings
+    private function mailIdentity(string $address, string $name): MailSendingSettingsInterface
     {
-        $settings = $this->createStub(MailSendingSettings::class);
+        $settings = $this->createStub(MailSendingSettingsInterface::class);
         $settings->method('identity')->willReturn(new MailIdentity($address, $name));
 
         return $settings;

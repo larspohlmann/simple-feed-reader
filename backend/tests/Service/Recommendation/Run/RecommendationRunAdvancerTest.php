@@ -21,7 +21,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
@@ -744,10 +744,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     /**
      * What the transport pings once per streamed chunk.
      */
-    private function streamHeartbeat(): CompletionStreamHeartbeat
+    private function streamHeartbeat(): CompletionStreamHeartbeatInterface
     {
-        /** @var CompletionStreamHeartbeat $heartbeat */
-        $heartbeat = self::getContainer()->get(CompletionStreamHeartbeat::class);
+        /** @var CompletionStreamHeartbeatInterface $heartbeat */
+        $heartbeat = self::getContainer()->get(CompletionStreamHeartbeatInterface::class);
 
         return $heartbeat;
     }

@@ -91,6 +91,11 @@ final readonly class ServiceRoleMap
         return array_values($this->classes);
     }
 
+    public function classFor(string $type): ?ServiceRoleClass
+    {
+        return $this->classes[$type] ?? null;
+    }
+
     /** @return list<ServiceRoleClass> */
     public function classesIn(string $namespace): array
     {
@@ -133,7 +138,7 @@ final readonly class ServiceRoleMap
         if ($reflection->isInterface()) {
             return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
         }
-        $class = $this->classes[$type] ?? null;
+        $class = $this->classFor($type);
         $isPerCall = null === $class ? isset($this->builtPerCall[$type]) : $this->isPerCall($class);
 
         return !$isPerCall && ServiceRoleClass::declaresPublicInstanceMethod($reflection);

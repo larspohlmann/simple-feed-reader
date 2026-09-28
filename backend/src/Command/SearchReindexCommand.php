@@ -8,7 +8,7 @@ use App\Repository\EntryRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\EntryIndexer;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\SearchIndexWriter;
+use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Search\SearchEngineCapability;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -34,7 +34,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  * thousands of rows.
  *
  * Meilisearch writes are asynchronous -- 202 now, indexed later (measured,
- * `docs/meilisearch-wire-format.md`) -- so SearchIndexWriter returns void rather
+ * `docs/meilisearch-wire-format.md`) -- so SearchIndexWriterInterface returns void rather
  * than polling; a reindex-only poll would duplicate the one class that knows the
  * wire format. This command reports only that every batch was accepted, not that
  * the engine has caught up (see the closing `note()`).
@@ -55,7 +55,7 @@ final class SearchReindexCommand extends Command
     private const int BATCH_SIZE = 500;
 
     public function __construct(
-        private readonly SearchIndexWriter $writer,
+        private readonly SearchIndexWriterInterface $writer,
         private readonly EntryRepository $entries,
         private readonly EntityManagerInterface $em,
         private readonly SearchEngineCapability $capability,

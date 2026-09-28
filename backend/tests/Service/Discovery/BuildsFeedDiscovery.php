@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Discovery;
 
 use App\Service\Discovery\BotChallengePage;
-use App\Service\Discovery\FeedDiscovery;
+use App\Service\Discovery\FeedDiscovery\FeedDiscovery;
 use App\Service\Discovery\FeedLinkScanner;
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;

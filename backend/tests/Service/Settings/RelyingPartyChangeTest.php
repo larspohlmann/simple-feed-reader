@@ -8,7 +8,7 @@ use App\Exception\ValidationException;
 use App\Http\RequestServingHost;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
-use App\Service\Settings\PasskeyRelyingParty;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyChange;
 use App\Service\Settings\RelyingPartyIdChoice;
 use App\Service\Settings\RelyingPartyIdRule;
@@ -103,9 +103,9 @@ final class RelyingPartyChangeTest extends TestCase
         );
     }
 
-    private function relyingPartyOf(string $id): PasskeyRelyingParty
+    private function relyingPartyOf(string $id): PasskeyRelyingPartyInterface
     {
-        return new class ($id) implements PasskeyRelyingParty {
+        return new class ($id) implements PasskeyRelyingPartyInterface {
             public function __construct(private string $id)
             {
             }

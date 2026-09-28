@@ -19,7 +19,7 @@ namespace App\Service\Ai\Exception;
  * the model the start of its own loop instead of asking the same question
  * unchanged.
  */
-final class ProviderRunawayException extends \RuntimeException implements ProviderReplyFailure
+final class ProviderRunawayException extends \RuntimeException implements ProviderReplyFailureExceptionInterface
 {
     /**
      * The partial answer arrives already clipped to what a retry can quote

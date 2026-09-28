@@ -6,7 +6,7 @@ namespace App\EventListener;
 
 use App\Enum\MailKind;
 use App\Service\Mail\DeferredMailer;
-use App\Service\Mail\MailFailureRecorder;
+use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Event\ConsoleTerminateEvent;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -36,7 +36,7 @@ final readonly class DeferredMailFlushListener
     public function __construct(
         private DeferredMailer $mailer,
         private LoggerInterface $logger,
-        private MailFailureRecorder $health,
+        private MailFailureRecorderInterface $health,
     ) {
     }
 

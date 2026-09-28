@@ -11,7 +11,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
-use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Tests\Support\FakeArticleExtractor;

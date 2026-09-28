@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
-use App\Service\Scraper\Layer\JsonLdLayer;
+use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 

@@ -10,7 +10,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 /**
  * MailCapabilityTest constructs the service by hand, so it can never catch a
  * container-wiring regression. This test drives the REAL container to prove
- * the service still constructs and resolves its MailSendingSettings collaborator.
+ * the service still constructs and resolves its MailSendingSettingsInterface collaborator.
  */
 final class MailCapabilityWiringTest extends KernelTestCase
 {

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Fetch\BatchFeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchTicket;

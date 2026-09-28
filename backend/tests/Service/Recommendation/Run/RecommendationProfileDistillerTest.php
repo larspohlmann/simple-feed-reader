@@ -27,7 +27,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * settings write, and a mock would have to encode that coordination itself
  * instead of proving it. The provider itself is the one seam worth faking:
  * StubChatClient stands in for it, registered as the container's
- * ChatCompletionClient in the test environment.
+ * ChatCompletionClientInterface in the test environment.
  */
 final class RecommendationProfileDistillerTest extends DbTestCase
 {

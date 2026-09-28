@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 
 /**
  * Maps a Substack profile-share URL onto the feed it stands for.

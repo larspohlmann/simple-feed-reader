@@ -94,10 +94,10 @@ additive.
 ### 4.2 Email links point at the web frontend
 
 Verify-email, password-reset, and approval links are all `APP_FRONTEND_URL`-based
-web URLs (`App\Service\Mail\AccountMailer`). The **tokens themselves are generic**;
-only the URL base is web. Native reuse means universal links / associated domains,
-or a configurable deep-link base — again additive, and it does not change how the
-tokens are minted or verified.
+web URLs (`App\Service\Mail\AccountMailer\AccountMailer`). The **tokens themselves
+are generic**; only the URL base is web. Native reuse means universal links /
+associated domains, or a configurable deep-link base — again additive, and it does
+not change how the tokens are minted or verified.
 
 ## 5. Watch item at scale (not native-specific)
 
@@ -198,9 +198,9 @@ A `Service/*` module is the first directory under `backend/src/Service`: `Recomm
 subdirectories is one module. Every service belongs to a module, and the modules depend on each other without a
 cycle, so each one can be read, tested and moved without the others. Decided in #1161.
 
-- **What both sides need lives on the lower side.** When a module needs something from a module that depends on it,
-  the class moves to the module that owns the concept, or the lower module owns an interface the higher one
-  implements (`Ai\Completion\CompletionStreamHeartbeat`, implemented in `Recommendation\Run`).
+- **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
+  class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
+  (`Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface`, implemented in `Recommendation\Run`).
 - **The cycles #1161 broke.** The favicon fetcher moved from `Catalog` to `Image` (now `FaviconFetcher`), ending a
   nine-module cycle through `Category`, `Discovery`, `Ingest`, `Opml`, `Parser`, `Scraper` and `Subscription`.
   The recommendation driver liveness (`WorkerPresence`, `SweepStreamHeartbeat`, `RecommendationDriverKind`) moved

@@ -6,22 +6,22 @@ namespace App\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Repair\PageRepair;
+use App\Service\Reader\PageRepair\PageRepairInterface;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Text;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * Parses a fetched page once and runs the PageRepair pipeline over it, in the order services.yaml wires, before
- * readability scores it. <script>/<style> are cut from the raw source first, bounded by the real close tag the
+ * Parses a fetched page once and runs the PageRepairInterface pipeline over it, in the order services.yaml wires,
+ * before readability scores it. <script>/<style> are cut from the raw source first, bounded by the real close tag the
  * tokenizer would use, to stay byte-identical to the pipeline this replaced.
  */
 final readonly class FetchedPageNormalizer
 {
     private const string SCRIPT_OR_STYLE_PATTERN = '#<(script|style)\b[^>]*>.*?</\1\s*>#is';
 
-    /** @param iterable<PageRepair> $repairs */
+    /** @param iterable<PageRepairInterface> $repairs */
     public function __construct(private iterable $repairs)
     {
     }

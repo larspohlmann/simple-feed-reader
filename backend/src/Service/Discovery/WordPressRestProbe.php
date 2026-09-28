@@ -6,7 +6,7 @@ namespace App\Service\Discovery;
 
 use App\Enum\SourceFormat;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\PageUrls;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Scraper\TextNormalizer;

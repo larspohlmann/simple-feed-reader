@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 
 /**
  * Counts the transport's pings. The production implementation decides for
  * itself whether a ping costs a write, so what the transport owes is the ping
  * — and that is what this observes.
  */
-final class CountingCompletionStreamHeartbeat implements CompletionStreamHeartbeat
+final class CountingCompletionStreamHeartbeat implements CompletionStreamHeartbeatInterface
 {
     private int $beats = 0;
 

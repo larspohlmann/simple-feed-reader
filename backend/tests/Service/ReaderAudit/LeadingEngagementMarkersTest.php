@@ -6,7 +6,7 @@ namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\LeadingEngagementCleaner;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\ReaderAudit\CleanupMarker;
 use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;

@@ -8,6 +8,8 @@ use App\Entity\SavedSearch;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
+use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Search\SavedSearchTerms;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -28,8 +30,8 @@ final readonly class SavedSearchMembershipSweep
     public function __construct(
         private SavedSearchRepository $searches,
         private EntryMembershipSweepRepository $entries,
-        private SavedSearchMembershipWriter $memberships,
-        private SavedSearchMatcher $matcher,
+        private SavedSearchMembershipWriterInterface $memberships,
+        private SavedSearchMatcherInterface $matcher,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
         private LoggerInterface $logger,

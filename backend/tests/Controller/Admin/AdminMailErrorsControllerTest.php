@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\User;
 use App\Enum\MailKind;
-use App\Service\Mail\MailDeliveryHealth;
+use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;

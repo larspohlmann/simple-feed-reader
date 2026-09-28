@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FeedFetcherInterface;
+use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;

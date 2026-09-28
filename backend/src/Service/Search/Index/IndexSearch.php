@@ -9,7 +9,7 @@ use App\Pagination\EntryCursor;
 use App\Service\Search\SearchTerms;
 
 /**
- * One search read, addressed to whichever engine sits behind SearchIndexReader.
+ * One search read, addressed to whichever engine sits behind SearchIndexReaderInterface.
  * A value object rather than loose parameters: MeilisearchIndex turns every
  * field here into wire format in one place, and a future second engine reads
  * the same shape without touching the caller.

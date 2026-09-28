@@ -7,6 +7,8 @@ namespace App\Service\Settings;
 use App\Exception\ValidationException;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
+use App\Service\Settings\ServingHost\ServingHostInterface;
 
 /**
  * A change of the EFFECTIVE relying-party id orphans every enrolled passkey, so it needs confirmation and then deletes
@@ -15,11 +17,11 @@ use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationExcepti
 final readonly class RelyingPartyChange
 {
     public function __construct(
-        private PasskeyRelyingParty $relyingParty,
+        private PasskeyRelyingPartyInterface $relyingParty,
         private EffectivePasskeyRelyingPartyId $effectiveId,
         private UserPasskeyRepository $passkeys,
         private RelyingPartyIdRule $relyingPartyIdRule,
-        private ServingHost $servingHost,
+        private ServingHostInterface $servingHost,
     ) {
     }
 

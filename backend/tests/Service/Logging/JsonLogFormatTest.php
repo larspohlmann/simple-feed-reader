@@ -6,7 +6,7 @@ namespace App\Tests\Service\Logging;
 
 use App\Service\Logging\RequestIdProvider;
 use App\Service\Logging\RequestLogProcessor;
-use App\Service\Logging\TraceContext;
+use App\Service\Logging\TraceContext\TraceContextInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Level;
 use Monolog\LogRecord;
@@ -38,9 +38,9 @@ final class JsonLogFormatTest extends TestCase
         self::assertSame('v', $context['k']);
     }
 
-    private function noTracingContext(): TraceContext
+    private function noTracingContext(): TraceContextInterface
     {
-        return new class implements TraceContext {
+        return new class implements TraceContextInterface {
             public function traceId(): ?string
             {
                 return null;

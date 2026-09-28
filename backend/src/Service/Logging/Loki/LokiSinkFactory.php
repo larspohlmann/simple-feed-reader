@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Logging\Loki;
 
+use App\Service\Logging\Loki\LokiSink\DirectLokiSink;
+use App\Service\Logging\Loki\LokiSink\LokiSinkInterface;
+use App\Service\Logging\Loki\LokiSink\SpoolLokiSink;
+
 /**
  * Direct push where it is free (FPM, CLI); spool only on a cgi-fcgi web SAPI
  * that cannot detach the response.
@@ -16,7 +20,7 @@ final readonly class LokiSinkFactory
     ) {
     }
 
-    public function create(): LokiSink
+    public function create(): LokiSinkInterface
     {
         return match (self::selects(\PHP_SAPI, \function_exists('fastcgi_finish_request'))) {
             LokiDelivery::Spool => $this->spool,

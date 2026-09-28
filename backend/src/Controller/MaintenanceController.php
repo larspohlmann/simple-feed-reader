@@ -12,7 +12,7 @@ use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

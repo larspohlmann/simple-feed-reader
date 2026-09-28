@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Logging\Loki;
 
+use App\Service\Logging\Loki\LokiSink\LokiSinkInterface;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Level;
@@ -19,7 +20,7 @@ final class LokiPushHandler extends AbstractProcessingHandler
     private array $buffer = [];
 
     public function __construct(
-        private readonly LokiSink $sink,
+        private readonly LokiSinkInterface $sink,
         private readonly string $appLabel,
         private readonly string $envLabel,
         Level $level = Level::Info,

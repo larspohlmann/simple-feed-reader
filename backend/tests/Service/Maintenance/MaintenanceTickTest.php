@@ -17,7 +17,7 @@ use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiSpoolReport;
 use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Mail\Digest\DigestComposer;
-use App\Service\Mail\Digest\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;

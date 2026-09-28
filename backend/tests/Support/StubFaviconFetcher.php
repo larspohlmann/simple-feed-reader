@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Image\FetchedFavicon;
 

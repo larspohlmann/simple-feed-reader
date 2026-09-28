@@ -7,7 +7,7 @@ namespace App\Tests\Http;
 use App\Http\BackupDownloadResponseFactory;
 use App\Service\Backup\BackupPart;
 use App\Service\Version\ReleaseVersion;
-use App\Service\Version\ReleaseVersionReader;
+use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Tests\Support\TickingClock;
 use PHPUnit\Framework\TestCase;
 
@@ -43,7 +43,7 @@ final class BackupDownloadResponseFactoryTest extends TestCase
     {
         return new BackupDownloadResponseFactory(
             new TickingClock(new \DateTimeImmutable('2026-08-17T09:30:00Z'), 0),
-            new class implements ReleaseVersionReader {
+            new class implements ReleaseVersionReaderInterface {
                 public function read(): ReleaseVersion
                 {
                     return ReleaseVersion::development();

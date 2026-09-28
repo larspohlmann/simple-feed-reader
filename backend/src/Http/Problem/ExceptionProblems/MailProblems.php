@@ -1,0 +1,30 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Problem\ExceptionProblems;
+
+use App\Http\Problem\ApiProblem;
+use App\Http\Problem\ResolvedProblem;
+use App\Service\Mail\Digest\Exception\TestDigestUnavailableException;
+use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use Symfony\Component\HttpFoundation\Response;
+
+final readonly class MailProblems implements ExceptionProblemsInterface
+{
+    public function resolve(\Throwable $exception): ?ResolvedProblem
+    {
+        return match (true) {
+            $exception instanceof IncompleteMailConfigurationException => new ResolvedProblem(new ApiProblem(
+                'incomplete_mail_configuration',
+                'Incomplete mail configuration',
+                Response::HTTP_UNPROCESSABLE_ENTITY,
+                $exception->getMessage(),
+            )),
+            $exception instanceof TestDigestUnavailableException => new ResolvedProblem(
+                ApiProblem::forStatus(Response::HTTP_FORBIDDEN),
+            ),
+            default => null,
+        };
+    }
+}

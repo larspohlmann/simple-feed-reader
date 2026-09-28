@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Ai\Completion\CompletionStreamHeartbeat;
+use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -29,7 +29,7 @@ use Symfony\Component\Clock\ClockInterface;
  * runs in a web request too, but drives every account's run on the install's
  * behalf, which is what a driver kind means here.
  */
-final class SweepStreamHeartbeat implements CompletionStreamHeartbeat
+final class SweepStreamHeartbeat implements CompletionStreamHeartbeatInterface
 {
     /**
      * Far below FRESH_SECONDS, so the gap between two writes cannot be

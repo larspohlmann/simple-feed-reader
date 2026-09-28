@@ -9,7 +9,7 @@ use App\Http\Admin\MailSettingsJson;
 use App\Http\Admin\MailTestResultJson;
 use App\Http\FullReplacePayload;
 use App\Http\MailDeliveryHealthJson;
-use App\Service\Mail\MailDeliveryHealth;
+use App\Service\Mail\MailFailureRecorder\MailDeliveryHealth;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
 use Symfony\Component\HttpFoundation\JsonResponse;

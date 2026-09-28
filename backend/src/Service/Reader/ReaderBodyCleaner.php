@@ -8,7 +8,7 @@ use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -18,7 +18,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  */
 final readonly class ReaderBodyCleaner
 {
-    /** @param iterable<BodyCleaningStep> $steps */
+    /** @param iterable<BodyCleaningStepInterface> $steps */
     public function __construct(private iterable $steps)
     {
     }

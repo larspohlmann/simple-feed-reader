@@ -6,7 +6,7 @@ namespace App\Tests\Support;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\OAuthIdentity;
-use App\Service\OAuth\OAuthProviderInterface;
+use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 
 /**
  * Stands in for Google at the network boundary, so the flow tests exercise

@@ -6,9 +6,9 @@ namespace App\Tests\Service\Worker;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Fetch\BatchFeedFetcherInterface;
+use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FetchResponse;
-use App\Service\Refresh\RefreshRunner;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use App\Tests\DbTestCase;

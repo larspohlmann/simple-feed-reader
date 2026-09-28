@@ -7,9 +7,9 @@ namespace App\Service\Grafana;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
-use App\Service\Profiling\ProfilingConfigSource;
+use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 
-final class EffectiveGrafanaSettings implements ProfilingConfigSource
+final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
 {
     private ?GrafanaSettingsSnapshot $memoised = null;
 

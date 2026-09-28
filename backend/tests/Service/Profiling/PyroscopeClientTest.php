@@ -7,7 +7,7 @@ namespace App\Tests\Service\Profiling;
 use App\Service\Profiling\CollapsedProfile;
 use App\Service\Profiling\ProfileLabels;
 use App\Service\Profiling\PyroscopeClient;
-use App\Service\Profiling\PyroscopeEndpoint;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -93,7 +93,7 @@ final class PyroscopeClientTest extends TestCase
 
     public function testAnEndpointThatThrowsIsSwallowed(): void
     {
-        $endpoint = new class implements PyroscopeEndpoint {
+        $endpoint = new class implements PyroscopeEndpointInterface {
             public function pushUrl(): ?string
             {
                 throw new \RuntimeException('boom');
@@ -111,9 +111,9 @@ final class PyroscopeClientTest extends TestCase
         return new CollapsedProfile(self::STACKS, 4, 1000, 1700000000, 1700000005);
     }
 
-    private function endpoint(?string $url): PyroscopeEndpoint
+    private function endpoint(?string $url): PyroscopeEndpointInterface
     {
-        return new class ($url) implements PyroscopeEndpoint {
+        return new class ($url) implements PyroscopeEndpointInterface {
             public function __construct(private readonly ?string $url)
             {
             }

@@ -7,7 +7,6 @@ namespace App\Service\Ingest;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\EntryRepository;
-use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Url\UrlNormalizer;

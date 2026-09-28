@@ -7,7 +7,7 @@ namespace App\Service\Grafana;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
-use App\Service\Profiling\ProfileSampler;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class GrafanaSettings
@@ -18,7 +18,7 @@ final readonly class GrafanaSettings
         private GrafanaApiKeyCipher $cipher,
         private EffectiveGrafanaSettings $effective,
         private GrafanaEnvDefaults $defaults,
-        private ProfileSampler $sampler,
+        private ProfileSamplerInterface $sampler,
     ) {
     }
 

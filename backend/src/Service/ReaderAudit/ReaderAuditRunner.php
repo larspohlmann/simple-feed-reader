@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
-use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
 use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;

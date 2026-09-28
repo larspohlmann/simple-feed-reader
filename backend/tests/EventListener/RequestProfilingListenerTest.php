@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\EventListener;
 
 use App\EventListener\RequestProfilingListener;
-use App\Service\Logging\TraceContext;
+use App\Service\Logging\TraceContext\TraceContextInterface;
 use App\Service\Profiling\CollapsedProfile;
-use App\Service\Profiling\ProfileSampler;
-use App\Service\Profiling\ProfilingConfigSource;
+use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
+use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
 use App\Service\Profiling\PyroscopeClient;
-use App\Service\Profiling\PyroscopeEndpoint;
+use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
 use App\Tests\Support\RecordingProfileSampler;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -131,9 +131,9 @@ final class RequestProfilingListenerTest extends TestCase
         self::assertSame([], $pushes);
     }
 
-    private function samplerThatThrowsOnFirstStopOnly(): ProfileSampler
+    private function samplerThatThrowsOnFirstStopOnly(): ProfileSamplerInterface
     {
-        return new class implements ProfileSampler {
+        return new class implements ProfileSamplerInterface {
             private int $stopCalls = 0;
 
             public function isAvailable(): bool
@@ -167,7 +167,7 @@ final class RequestProfilingListenerTest extends TestCase
 
     /** @param list<array{name: string}> $pushes */
     private function listener(
-        ProfileSampler $sampler,
+        ProfileSamplerInterface $sampler,
         array &$pushes,
         bool $enabled,
         ?string $traceId,
@@ -175,7 +175,7 @@ final class RequestProfilingListenerTest extends TestCase
     ): RequestProfilingListener {
         $policy = new ProfilingPolicy($this->profilingConfig($enabled), $this->policySampler(), $this->endpoint());
 
-        $trace = $this->createStub(TraceContext::class);
+        $trace = $this->createStub(TraceContextInterface::class);
         $trace->method('traceId')->willReturn($traceId);
         $trace->method('spanId')->willReturn($spanId);
 
@@ -192,9 +192,9 @@ final class RequestProfilingListenerTest extends TestCase
         return new RequestProfilingListener($policy, $sampler, $client, $trace);
     }
 
-    private function endpoint(): PyroscopeEndpoint
+    private function endpoint(): PyroscopeEndpointInterface
     {
-        return new class implements PyroscopeEndpoint {
+        return new class implements PyroscopeEndpointInterface {
             public function pushUrl(): string
             {
                 return 'http://pyroscope.test';
@@ -202,17 +202,17 @@ final class RequestProfilingListenerTest extends TestCase
         };
     }
 
-    private function profilingConfig(bool $enabled): ProfilingConfigSource
+    private function profilingConfig(bool $enabled): ProfilingConfigSourceInterface
     {
-        $profilingConfig = $this->createStub(ProfilingConfigSource::class);
+        $profilingConfig = $this->createStub(ProfilingConfigSourceInterface::class);
         $profilingConfig->method('profilingEnabled')->willReturn($enabled);
 
         return $profilingConfig;
     }
 
-    private function policySampler(): ProfileSampler
+    private function policySampler(): ProfileSamplerInterface
     {
-        return new class implements ProfileSampler {
+        return new class implements ProfileSamplerInterface {
             public function isAvailable(): bool
             {
                 return true;

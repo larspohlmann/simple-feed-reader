@@ -8,7 +8,7 @@ use App\Entity\CallOutcome;
 use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Completion\CompletionStreamObserver;
+use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\CompletionUsage;
 use Symfony\Component\Clock\ClockInterface;
@@ -17,7 +17,7 @@ use Symfony\Component\Clock\ClockInterface;
  * The stream observer for one recorded provider call (#309). Not readonly: its one piece of state is when it last
  * checkpointed.
  */
-final class RecordedCall implements CompletionStreamObserver
+final class RecordedCall implements CompletionStreamObserverInterface
 {
     /** The issue's ~2 s pseudo-streaming cadence. */
     private const int CHECKPOINT_SECONDS = 2;

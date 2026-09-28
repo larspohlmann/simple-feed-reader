@@ -7,6 +7,7 @@ namespace App\Service\Proxy;
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\ProxyHandshakeFailure;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -23,7 +24,7 @@ final readonly class ProxyConnectionTester
     private const int MAX_BYTES = 1024;
 
     public function __construct(
-        private ConfiguredProxySource $proxySource,
+        private ConfiguredProxySourceInterface $proxySource,
         private HttpClientInterface $httpClient,
     ) {
     }

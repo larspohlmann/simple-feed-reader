@@ -1,0 +1,82 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Reader\Media\MediaCandidateSource;
+
+use App\Service\Reader\Media\MediaCandidate;
+use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\ResolvedMediaUrl;
+use Dom\Element;
+use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
+
+/**
+ * `<audio>` and `<video>` elements, read at face value. This layer is not here
+ * to FIND the file — AttributeMediaSource reads `src` too and would find every
+ * one of these. It is here for the element's own `poster`, which only element
+ * context can supply: the attribute scan knows the page's og:image alone, so
+ * on a two-video article it would give both videos the same still (#756).
+ * That is why it must stay ABOVE AttributeMediaSource; the wiring test pins it.
+ */
+#[AsTaggedItem(priority: 70)]
+final readonly class SemanticMediaSource implements MediaCandidateSourceInterface
+{
+    public function __construct(private MediaUrlKind $urlKind)
+    {
+    }
+
+    public function find(RawPage $page): array
+    {
+        $found = [];
+        foreach ($page->document->querySelectorAll('audio, video') as $element) {
+            if (PageFurniture::holds($element)) {
+                continue;
+            }
+            $candidate = $this->candidateFor($element, $page->blocks->before($element));
+            if ($candidate !== null) {
+                $found[] = $candidate;
+            }
+        }
+
+        return $found;
+    }
+
+    private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidate
+    {
+        $resolved = $this->resolvedSourceOf($element);
+        if ($resolved === null) {
+            return null;
+        }
+        if (!$resolved->kind->isVideo()) {
+            $narrated = NarrationSignals::narrates($resolved->url, $element);
+
+            return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
+        }
+
+        // The poster may be absent or empty here; the scanner rescues or drops a
+        // still-poster-less video once every source has been merged (#913).
+        $poster = $element->getAttribute('poster') ?: null;
+
+        return new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
+    }
+
+    /** The element's own src or its first <source> whose kind fits the element: a <video> plays files and streams, an <audio> plays audio. */
+    private function resolvedSourceOf(Element $element): ?ResolvedMediaUrl
+    {
+        $urls = [$element->getAttribute('src')];
+        foreach ($element->querySelectorAll('source') as $source) {
+            $urls[] = $source->getAttribute('src');
+        }
+        foreach ($urls as $url) {
+            $resolved = $url === null ? null : $this->urlKind->resolve($url);
+            if ($resolved !== null && $resolved->kind->isVideo() === ($element->nodeName === 'VIDEO')) {
+                return $resolved;
+            }
+        }
+
+        return null;
+    }
+}

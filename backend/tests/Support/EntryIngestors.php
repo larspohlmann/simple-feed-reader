@@ -14,7 +14,7 @@ use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\IngestedEntryFactory;
-use App\Service\Ingest\Platform\PlatformEntryRules;
+use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;

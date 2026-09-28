@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
+use App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface;
+use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\ProviderConnection;
 use Symfony\Component\Clock\ClockInterface;
@@ -15,7 +17,7 @@ use Symfony\Component\Clock\ClockInterface;
 final readonly class RateLimitedCompletion
 {
     public function __construct(
-        private ChatCompletionClient $chat,
+        private ChatCompletionClientInterface $chat,
         private ClockInterface $clock,
     ) {
     }
@@ -23,7 +25,7 @@ final readonly class RateLimitedCompletion
     public function complete(
         ProviderConnection $connection,
         CompletionRequest $request,
-        CompletionStreamObserver $observer,
+        CompletionStreamObserverInterface $observer,
         RetryPlan $plan,
     ): string {
         $result = $this->completeMany($connection, [new ConcurrentCompletion($request, $observer)], $plan);
