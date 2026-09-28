@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
@@ -96,7 +97,12 @@ final class ReaderBodyCleanerTest extends TestCase
 
     private function noLead(): LeadImageCandidate
     {
-        return new LeadImageCandidate(null, PageImageInventory::fromDocument(null));
+        return new LeadImageCandidate(null, $this->pageDrawingNothing());
+    }
+
+    private function pageDrawingNothing(): PageImageInventory
+    {
+        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body></body>'));
     }
 
     public function testRebuildsAnOrphanTeaserThumbnailAsAnInlinePlayer(): void
@@ -230,7 +236,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $content = '<div><p>' . self::PROSE . '</p></div>';
         $candidate = new LeadImageCandidate(
             'https://cdn.test/hero.jpg',
-            PageImageInventory::fromDocument(null),
+            $this->pageDrawingNothing(),
         );
 
         $result = $this->cleaner->clean($content, [null], $candidate, ArticleMedia::none());
@@ -349,7 +355,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p></div>';
         $lead = new LeadImageCandidate(
             'https://heise.cloudimg.example/thumb.jpg',
-            PageImageInventory::fromDocument(null),
+            $this->pageDrawingNothing(),
         );
         $discovered = new ArticleMedia([
             new MediaCandidate(
@@ -423,7 +429,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<div><p><a href="https://x.substack.com/p/plants"><img src="' . $poster . '"'
             . ' alt="Video — open the original article to watch" width="1280" height="720"></a></p>'
             . '<p>' . self::PROSE . '</p></div></div>';
-        $lead = new LeadImageCandidate($poster, PageImageInventory::fromDocument(null));
+        $lead = new LeadImageCandidate($poster, $this->pageDrawingNothing());
 
         $out = $this->cleaner->clean($html, [null], $lead, ArticleMedia::none());
 

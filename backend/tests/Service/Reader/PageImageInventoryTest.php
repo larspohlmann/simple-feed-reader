@@ -13,7 +13,7 @@ final class PageImageInventoryTest extends TestCase
 {
     private function inventoryOf(string $html): PageImageInventory
     {
-        return PageImageInventory::fromDocument(HtmlDocumentParser::parseOrNull($html));
+        return PageImageInventory::fromDocument(HtmlDocumentParser::parse($html));
     }
 
     public function testDrawsAPlainImageSource(): void
@@ -78,13 +78,6 @@ final class PageImageInventoryTest extends TestCase
         $inventory = $this->inventoryOf('<body><img src="  https://cdn.test/hero-photo.jpg  "></body>');
 
         self::assertTrue($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
-    }
-
-    public function testANullDocumentDrawsNothing(): void
-    {
-        $inventory = PageImageInventory::fromDocument(null);
-
-        self::assertFalse($inventory->draws(ImageIdentity::fromUrl('https://cdn.test/hero-photo.jpg')));
     }
 
     public function testADocumentWithNoImagesDrawsNothing(): void

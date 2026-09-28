@@ -8,20 +8,9 @@ use App\Service\Html\Srcset;
 use Dom\HTMLDocument;
 
 /**
- * The URLs a normalised page draws, scanned once from the FetchedPageNormalizer
- * document. LazyImageSources has already promoted every lazy source to a plain
- * `src` and flattened each <picture> to its <img>, so this is a plain
- * `img@src` + `source@srcset` read — no `data-*` digging, which stays owned by
- * LazyImageSources (#684).
- *
- * Answers one question for ReaderLeadImage: does the page actually draw the
- * lead photo, or is the og:image a meta-only share-render? A miss only skips
- * the restore, so an unmatched URL is safe by design.
- *
- * Each URL's ImageIdentity fingerprint is computed lazily inside draws(),
- * stopping at the first match: the gate is consulted only on the minority of
- * restores where the body already holds another picture, and an image-heavy
- * page (thumbnail rails, ad units) would otherwise be fingerprinted for nothing.
+ * The URLs a normalised page draws, read before readability consumes the document (#684). It tells
+ * ReaderLeadImage whether the page draws the lead or og:image is a meta-only share render; fingerprints are
+ * computed lazily in draws(), stopping at the first match.
  */
 final readonly class PageImageInventory
 {
@@ -30,12 +19,8 @@ final readonly class PageImageInventory
     {
     }
 
-    public static function fromDocument(?HTMLDocument $page): self
+    public static function fromDocument(HTMLDocument $page): self
     {
-        if ($page === null) {
-            return new self([]);
-        }
-
         return new self(self::renderedUrls($page));
     }
 
@@ -50,9 +35,7 @@ final readonly class PageImageInventory
         return false;
     }
 
-    /**
-     * @return list<string> every URL the page draws, in document order
-     */
+    /** @return list<string> every URL the page draws, in document order */
     private static function renderedUrls(HTMLDocument $page): array
     {
         $urls = [];

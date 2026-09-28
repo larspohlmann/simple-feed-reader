@@ -55,7 +55,7 @@ final class SlideshowExtractionTest extends TestCase
         $clean = $this->cleaner()->clean(
             $body,
             ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            new LeadImageCandidate(null, $this->pageDrawingNothing()),
             ArticleMedia::none(),
             null,
             null,
@@ -78,7 +78,7 @@ final class SlideshowExtractionTest extends TestCase
         $clean = $this->cleaner()->clean(
             $body,
             ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            new LeadImageCandidate(null, $this->pageDrawingNothing()),
             ArticleMedia::none(),
             null,
             null,
@@ -105,7 +105,7 @@ final class SlideshowExtractionTest extends TestCase
         $clean = $this->cleaner()->clean(
             '<div></div>',
             ['Article title', 'Article title'],
-            new LeadImageCandidate(null, PageImageInventory::fromDocument(null)),
+            new LeadImageCandidate(null, $this->pageDrawingNothing()),
             ArticleMedia::none(),
             null,
             null,
@@ -146,6 +146,11 @@ final class SlideshowExtractionTest extends TestCase
             ],
             array_map(static fn ($slide): string => $slide->imageUrl, $slideshows[0]->slides),
         );
+    }
+
+    private function pageDrawingNothing(): PageImageInventory
+    {
+        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body></body>'));
     }
 
     private function scanner(): SlideshowScanner

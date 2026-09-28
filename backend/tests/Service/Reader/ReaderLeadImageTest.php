@@ -29,12 +29,12 @@ final class ReaderLeadImageTest extends TestCase
             $images .= '<img src="' . $url . '">';
         }
 
-        return PageImageInventory::fromDocument(HtmlDocumentParser::parseOrNull('<body>' . $images . '</body>'));
+        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body>' . $images . '</body>'));
     }
 
     private function pageDrawingNothing(): PageImageInventory
     {
-        return PageImageInventory::fromDocument(null);
+        return $this->pageDrawing();
     }
 
     /** The inventory of a raw page after LazyImageSources has resolved it. */

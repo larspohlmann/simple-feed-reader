@@ -539,6 +539,17 @@ final class ArticleExtractorTest extends TestCase
         self::assertContains($result->reason, ['unextractable', 'empty']);
     }
 
+    public function testABlankPageStopsAsUnextractable(): void
+    {
+        $extractor = $this->extractor([new MockResponse('   ', ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($result->ok);
+        self::assertSame('unextractable', $result->reason);
+        self::assertNull($result->detail);
+    }
+
     public function testStripsASemanticHeaderMasthead(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-header.html');

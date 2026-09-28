@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Repair\PageRepair;
 use Dom\Element;
@@ -12,31 +13,12 @@ use Dom\Text;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * Normalizes a fetched page's HTML before readability parses it. The document is
- * parsed once, with the same HTML5 parser readability uses (`\Dom\HTMLDocument`),
- * and handed on as an object — no serialize-and-re-parse round-trip. A pipeline
- * of PageRepair strategies then repairs the defects of real-world sites (BBC
- * News is the canonical block-component case, #235) that would otherwise cost
- * the extraction a figure, a heading or a whole article; the wiring fixes their
- * order, and each mutates the document in place.
- *
- * <script> and <style> blocks are stripped from the raw source, bounded by the
- * real close tag, before the parse — so a JSON-LD block never reaches readability
- * either. Kept as a raw-source strip rather than a DOM `querySelectorAll('script,
- * style')` removal to stay byte-identical to the pipeline this replaced;
- * script/style content is raw-text, so the regex matches the same close-tag
- * boundary the tokenizer would.
- *
- * The wrapper collapse is a separate public method, not a repair in the pipeline:
- * normalize() is the score-neutral pass, and callers decide whether to also run
- * collapseWrapperChains() (#235), which rescues block-component pages but breaks
- * some well-structured ones (#476) — ArticleExtractor extracts with and without
- * it and keeps the richer result.
+ * Parses a fetched page once and runs the PageRepair pipeline over it, in the order services.yaml wires, before
+ * readability scores it. <script>/<style> are cut from the raw source first, bounded by the real close tag the
+ * tokenizer would use, to stay byte-identical to the pipeline this replaced.
  */
 final readonly class FetchedPageNormalizer
 {
-    /** Whole <script>/<style> blocks — matched to the first real close tag, the
-     *  same boundary a browser uses, so an HTML string inside the code goes too. */
     private const string SCRIPT_OR_STYLE_PATTERN = '#<(script|style)\b[^>]*>.*?</\1\s*>#is';
 
     /** @param iterable<PageRepair> $repairs */
@@ -44,44 +26,31 @@ final readonly class FetchedPageNormalizer
     {
     }
 
-    /**
-     * The score-neutral document, ready to hand to readability, or null when the
-     * page is empty or cannot be parsed — the caller then extracts nothing.
-     */
+    /** @throws UnparseableHtmlException when the page is blank or cannot be parsed */
     #[WithSpan]
-    public function normalize(string $html): ?HTMLDocument
+    public function normalize(string $html): HTMLDocument
     {
         return $this->repair($html);
     }
 
     /**
-     * The document with single-child <div> wrapper chains collapsed (#235), or
-     * null when there is no chain to collapse — the caller then skips the second
-     * extraction. Kept separate from normalize() because the same collapse can
-     * flip a well-structured page to the wrong block (#476): ArticleExtractor
-     * extracts with and without it and keeps the richer result.
-     *
-     * Parses the raw HTML afresh rather than sharing normalize()'s document: the
-     * two variants must be independent objects since readability consumes
-     * (mutates) each one it parses.
+     * The page with single-child <div> wrapper chains collapsed (#235), or null when there is none. A fresh
+     * parse, not normalize()'s document: readability consumes each document it reads, and the collapse
+     * breaks some pages (#476).
      */
     public function collapseWrapperChains(string $html): ?HTMLDocument
     {
         $document = $this->repair($html);
-        if ($document === null || $this->unwrapSingleChildDivs($document) === 0) {
+        if ($this->unwrapSingleChildDivs($document) === 0) {
             return null;
         }
 
         return $document;
     }
 
-    private function repair(string $html): ?HTMLDocument
+    private function repair(string $html): HTMLDocument
     {
-        $document = HtmlDocumentParser::parseOrNull($this->removeScriptAndStyleBlocks($html));
-        if ($document === null) {
-            return null;
-        }
-
+        $document = HtmlDocumentParser::parse($this->removeScriptAndStyleBlocks($html));
         foreach ($this->repairs as $repair) {
             $repair->repairIn($document);
         }

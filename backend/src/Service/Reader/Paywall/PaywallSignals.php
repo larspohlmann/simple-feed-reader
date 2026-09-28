@@ -7,21 +7,18 @@ namespace App\Service\Reader\Paywall;
 use Dom\HTMLDocument;
 
 /**
- * The reader paywall verdict. Trust the publisher's schema.org
- * `isAccessibleForFree` declaration: premium marks a preview, free ends it. A
- * page that declares nothing falls back to the presence, outside page furniture,
- * of a gated block (#908) or a membership-provider checkout link (#998). Judged
- * before readability consumes the shared document, so the normalized document
- * must still be intact.
+ * The reader paywall verdict: the publisher's schema.org `isAccessibleForFree` declaration decides. A page that
+ * declares nothing is a preview when a gated block (#908) or a membership checkout (#998) sits outside the page
+ * furniture. Judged before readability consumes the normalised document.
  */
 final readonly class PaywallSignals
 {
-    public static function isPreview(HTMLDocument $rawDocument, ?HTMLDocument $normalized): bool
+    public static function isPreview(HTMLDocument $rawDocument, HTMLDocument $normalized): bool
     {
         return match (SchemaOrgAccess::declaredIn($rawDocument)) {
             AccessDeclaration::Paywalled => true,
             AccessDeclaration::Free => false,
-            AccessDeclaration::Undeclared => $normalized !== null && self::gatedInBody($normalized),
+            AccessDeclaration::Undeclared => self::gatedInBody($normalized),
         };
     }
 

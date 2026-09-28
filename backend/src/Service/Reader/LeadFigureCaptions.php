@@ -10,14 +10,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Every figure's (image src, caption text) pair, scanned once from the
- * normalised page before readability discards a header figure as chrome
- * (#684's seam). Answers ReaderLeadImage's other question: when the lead is
- * restored, what caption did its dropped figure carry?
- *
- * Each stored src's ImageIdentity fingerprint is computed lazily inside
- * captionFor(), stopping at the first match — the same rationale as
- * PageImageInventory, since most restores never need this lookup at all.
+ * Every figure's (image src, caption) pair, read from the normalised page before readability drops a header
+ * figure as chrome (#684), so a restored lead gets its caption back. Fingerprints are computed lazily in
+ * captionFor(), stopping at the first match.
  */
 final readonly class LeadFigureCaptions
 {
@@ -26,12 +21,8 @@ final readonly class LeadFigureCaptions
     {
     }
 
-    public static function fromDocument(?HTMLDocument $page): self
+    public static function fromDocument(HTMLDocument $page): self
     {
-        if ($page === null) {
-            return new self([]);
-        }
-
         return new self(self::captionedFigures($page));
     }
 

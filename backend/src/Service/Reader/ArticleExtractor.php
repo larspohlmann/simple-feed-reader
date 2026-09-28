@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\RawPage;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
-use Dom\HTMLDocument;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -75,14 +74,18 @@ final class ArticleExtractor implements ArticleExtractorInterface
             return ExtractionResult::failed($url, 'fetch', $failure->getMessage());
         }
 
-        $normalized = $this->normalizer->normalize($page->html);
+        try {
+            $normalized = $this->normalizer->normalize($page->html);
+        } catch (UnparseableHtmlException) {
+            return ExtractionResult::failed($url, 'unextractable');
+        }
         $pageImages = PageImageInventory::fromDocument($normalized);
         $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
         $rawPage = RawPage::parse($page->html, $page->finalUrl);
         $paywalled = PaywallSignals::isPreview($rawPage->document, $normalized);
         $media = $this->mediaScanner->scan($rawPage, $feedMedia);
-        $slideshows = $this->slideshowsIn($normalized);
-        $teasers = $this->teasersIn($normalized, $page->finalUrl);
+        $slideshows = $this->slideshowScanner->scan($normalized);
+        $teasers = $this->teaserScanner->scan($normalized, $page->finalUrl);
 
         $article = $this->readability->richest($normalized, $page, $this->slideshowContainers($slideshows));
         if ($article === null) {
@@ -124,18 +127,6 @@ final class ArticleExtractor implements ArticleExtractorInterface
             excerpt: $article->excerpt,
             paywalled: $paywalled,
         );
-    }
-
-    /** @return list<Slideshow> */
-    private function slideshowsIn(?HTMLDocument $normalized): array
-    {
-        return $normalized === null ? [] : $this->slideshowScanner->scan($normalized);
-    }
-
-    /** @return list<TeaserPlayer> */
-    private function teasersIn(?HTMLDocument $normalized, string $finalUrl): array
-    {
-        return $normalized === null ? [] : $this->teaserScanner->scan($normalized, $finalUrl);
     }
 
     /**
