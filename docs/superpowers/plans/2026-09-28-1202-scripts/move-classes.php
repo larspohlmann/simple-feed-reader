@@ -167,6 +167,70 @@ function docblockNames(string $docblock): array
     return [...$names, ...$imports[1], ...$sees[1]];
 }
 
+/** @return list<string> the names a docblock uses as a type or a @see target that are qualified, but not fully */
+function docblockQualifiedNames(string $docblock): array
+{
+    $text = (string) preg_replace(['~^\s*/\*\*~', '~\*/\s*$~', '~^\s*\*~m'], ' ', $docblock);
+    $types = [];
+    preg_match_all('/' . TYPE_TAGS . '/', $text, $tags, PREG_OFFSET_CAPTURE);
+    foreach ($tags[0] as [$tag, $offset]) {
+        $types[] = typeExpressionAfter($text, $offset + strlen($tag));
+    }
+    preg_match_all('/(?:\{@see|@see|@uses)\s+(\S+)/', $text, $sees);
+    preg_match_all('/(?<![\w\\\\$-])[A-Za-z_]\w*(?:\\\\\w+)+(?![\w\\\\-])/', implode(' ', [...$types, ...$sees[1]]), $names);
+
+    return $names[0];
+}
+
+/** @return array<string, true> the qualified names in the code and its docblocks that resolve against its namespace */
+function namespaceRelativeNames(string $code): array
+{
+    $imported = importedNames($code);
+    $names = [];
+    $inStatementHead = false;
+    foreach (token_get_all($code) as $token) {
+        if (!is_array($token)) {
+            $inStatementHead = $inStatementHead && ';' !== $token && '{' !== $token;
+
+            continue;
+        }
+        if (in_array($token[0], [T_USE, T_NAMESPACE], true)) {
+            $inStatementHead = true;
+
+            continue;
+        }
+        $candidates = match (true) {
+            T_DOC_COMMENT === $token[0] => docblockQualifiedNames($token[1]),
+            T_NAME_QUALIFIED === $token[0] && !$inStatementHead => [$token[1]],
+            default => [],
+        };
+        foreach ($candidates as $name) {
+            if (!isset($imported[strstr($name, '\\', true)])) {
+                $names[$name] = true;
+            }
+        }
+    }
+
+    return $names;
+}
+
+/** @param array<string, string> $replacements relative name => what the file names it by now */
+function replaceRelativeNames(string $code, array $replacements): string
+{
+    $alternation = implode('|', array_map(static fn (string $name): string => preg_quote($name, '/'), array_keys($replacements)));
+    $pattern = '/(?<![\w\\\\$-])(' . $alternation . ')(?![\w\\\\-])/';
+    $replaced = '';
+    foreach (token_get_all($code) as $token) {
+        $text = is_array($token) ? $token[1] : $token;
+        $isName = is_array($token) && in_array($token[0], [T_DOC_COMMENT, T_NAME_QUALIFIED], true);
+        $replaced .= $isName
+            ? (string) preg_replace_callback($pattern, static fn (array $match): string => $replacements[$match[1]], $text)
+            : $text;
+    }
+
+    return $replaced;
+}
+
 /** @return array<string, true> bare names the code and its docblock types use as class names */
 function referencedNames(string $code): array
 {
@@ -414,9 +478,11 @@ foreach (phpFiles() as $file) {
     }
 }
 
-// 1. Before anything moves: which bare names each file will have to import, and which renamed classes it names bare.
+// 1. Before anything moves: which bare names each file will have to import, which renamed classes it names bare, and
+// which names relative to its namespace stop resolving there.
 $importsFor = [];
 $bareRenamesIn = [];
+$relativeNamesIn = [];
 foreach (phpFiles() as $file) {
     $code = (string) file_get_contents($file);
     $namespace = declaredNamespace($code);
@@ -431,6 +497,17 @@ foreach (phpFiles() as $file) {
             || (namespaceOf($old) === $namespace && !isset($importedShortNames[$short]));
         if ($namesIt) {
             $bareRenamesIn[$destinationFile][$short] = shortNameOf($new);
+        }
+    }
+    foreach (array_keys(namespaceRelativeNames($code)) as $relative) {
+        $target = $moves[$namespace . '\\' . $relative] ?? $namespace . '\\' . $relative;
+        if (namespaceOf($destination) . '\\' . $relative === $target) {
+            continue;
+        }
+        $isTaken = isset($importedShortNames[shortNameOf($target)]) || shortNameOf($destination) === shortNameOf($target);
+        $relativeNamesIn[$destinationFile][$relative] = $isTaken ? '\\' . $target : shortNameOf($target);
+        if (!$isTaken && namespaceOf($target) !== namespaceOf($destination)) {
+            $importsFor[$destinationFile][$target] = true;
         }
     }
     if (!isset($oldNamespaces[$namespace]) || pathOf($class) !== $file) {
@@ -500,7 +577,12 @@ foreach (phpFiles() as $file) {
     }
 }
 
-// 5. A bare name that left the file's namespace gets an import.
+// 5. A relative name that no longer resolves names its class by an import, or in full where the short name is taken.
+foreach ($relativeNamesIn as $file => $replacements) {
+    file_put_contents($file, replaceRelativeNames((string) file_get_contents($file), $replacements));
+}
+
+// 6. A bare name that left the file's namespace gets an import.
 $added = 0;
 foreach ($importsFor as $file => $classes) {
     $code = (string) file_get_contents($file);
@@ -511,7 +593,7 @@ foreach ($importsFor as $file => $classes) {
     file_put_contents($file, $code);
 }
 
-// 6. A renamed class is renamed where a file named it bare: its declaration, its uses, its comments.
+// 7. A renamed class is renamed where a file named it bare: its declaration, its uses, its comments.
 foreach ($bareRenamesIn as $file => $shortRenames) {
     $code = (string) file_get_contents($file);
     $renamed = renameBareNames($code, $shortRenames);
