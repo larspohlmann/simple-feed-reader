@@ -10,6 +10,7 @@ use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Service\Auth\RegistrationPolicy;
+use App\Service\OAuth\Factory\OAuthUserFactory;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\OAuth\OAuthIdentity;
 use App\Tests\DbTestCase;
@@ -376,14 +377,17 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $users = $this->em->getRepository(User::class);
         /** @var \App\Repository\UserIdentityRepository $identities */
         $identities = $this->em->getRepository(UserIdentity::class);
+        $policy ??= $this->registrationPolicy(confirm: true, approve: true);
+        $clock = new MockClock(self::NOW);
 
         return new OAuthAccountLinker(
             $this->em,
             $users,
             $identities,
-            new MockClock(self::NOW),
+            $clock,
             $events ?? new EventDispatcher(),
-            $policy ?? $this->registrationPolicy(confirm: true, approve: true),
+            $policy,
+            new OAuthUserFactory($clock, $policy),
         );
     }
 
