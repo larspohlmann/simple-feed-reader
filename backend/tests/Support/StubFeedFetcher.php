@@ -56,9 +56,9 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
         $this->fallbackResult = $exception;
     }
 
-    public function fetch(string $url, ?string $etag = null, ?string $lastModified = null): FetchResponse
+    public function fetch(string $url): FetchResponse
     {
-        foreach ($this->fetchAll([new FetchTicket($url, $etag, $lastModified)]) as $outcome) {
+        foreach ($this->fetchAll([new FetchTicket($url)]) as $outcome) {
             return $outcome->responseOrThrow();
         }
 

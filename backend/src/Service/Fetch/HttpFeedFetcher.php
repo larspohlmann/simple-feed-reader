@@ -19,9 +19,9 @@ final readonly class HttpFeedFetcher implements FeedFetcherInterface
     {
     }
 
-    public function fetch(string $url, ?string $etag = null, ?string $lastModified = null): FetchResponse
+    public function fetch(string $url): FetchResponse
     {
-        foreach ($this->fetcher->fetchAll([new FetchTicket($url, $etag, $lastModified)]) as $outcome) {
+        foreach ($this->fetcher->fetchAll([new FetchTicket($url)]) as $outcome) {
             return $outcome->responseOrThrow();
         }
 
