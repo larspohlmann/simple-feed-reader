@@ -57,9 +57,11 @@ final readonly class UserPasskeyFactory
      */
     private static function guardCredentialIdFitsColumn(string $credentialId): void
     {
-        \strlen($credentialId) <= self::CREDENTIAL_ID_COLUMN_MAX_LENGTH || throw new AttestationRejectedException(
-            new \LengthException('Credential id is too long to store.'),
-        );
+        if (\strlen($credentialId) > self::CREDENTIAL_ID_COLUMN_MAX_LENGTH) {
+            throw new AttestationRejectedException(
+                new \LengthException('Credential id is too long to store.'),
+            );
+        }
     }
 
     /**
