@@ -10,7 +10,7 @@ final class EveryApplicationServiceBuildsTest extends KernelTestCase
 {
     private const string EXCLUDED = 'has been excluded in "config/services.yaml"';
 
-    // Data built with `new`, never injected, that takes an excluded Dto/ or Model/ type until a later PR moves it.
+    // Per-call objects built with `new` that take an excluded Model/ or Dto/ type; PR F moves them to Pass/.
     private const array BUILT_WITH_NEW = [
         'App\\Service\\Ai\\Completion\\ConcurrentCompletion',
         'App\\Service\\Backup\\BackupPartGuard',

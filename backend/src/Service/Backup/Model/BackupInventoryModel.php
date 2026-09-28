@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Model;
 
-use App\Service\Backup\Model\RestoreSourceModel;
-
 /**
  * What a backup file holds, without holding the file itself: its source, plus
  * a count for every repeatable line kind. Produced by BackupInspector's full
