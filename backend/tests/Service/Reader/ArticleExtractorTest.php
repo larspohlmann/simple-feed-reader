@@ -526,6 +526,19 @@ final class ArticleExtractorTest extends TestCase
         self::assertSame(ExtractionFailure::Empty, $result->reason);
     }
 
+    public function testAnArticleTheSanitizerStripsToNothingFailsAsEmpty(): void
+    {
+        $prose = str_repeat('Words that make up a real paragraph of an article body here. ', 8);
+        $html = '<html lang="en"><body><article><svg><text>' . $prose . '</text></svg></article></body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
+        self::assertSame('https://site.test/post', $result->url);
+    }
+
     public function testStripsASemanticHeaderMasthead(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-header.html');
