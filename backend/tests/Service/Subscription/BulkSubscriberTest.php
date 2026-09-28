@@ -7,6 +7,7 @@ namespace App\Tests\Service\Subscription;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
+use App\Entity\User;
 use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\TagStyle;
@@ -147,5 +148,96 @@ final class BulkSubscriberTest extends DbTestCase
 
         self::assertSame(1, $result->invalid);
         self::assertSame(1, $result->imported);
+    }
+
+    public function testPositionsContinueAfterWhatTheUserAlreadyHas(): void
+    {
+        $user = $this->user('positions@example.com');
+        $existingFeed = new Feed('https://existing.example.com/rss.xml');
+        $existingSubscription = new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-07-01 00:00:00'));
+        $existingSubscription->setPosition(4);
+        $existingTag = new Tag($user, 'Existing');
+        $existingTag->setPosition(2);
+        $existingSubscription->addTag($existingTag, 6);
+        $this->em()->persist($existingFeed);
+        $this->em()->persist($existingTag);
+        $this->em()->persist($existingSubscription);
+        $this->em()->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItem('https://one.example.com/rss.xml', 'One', 'Existing', null),
+            new BulkSubscribeItem('https://two.example.com/rss.xml', 'Two', 'Fresh', null),
+            new BulkSubscribeItem('https://three.example.com/rss.xml', 'Three', 'fresh', null),
+        ]);
+
+        self::assertSame(3, $result->imported);
+        self::assertCount(1, $result->tagsCreated);
+        self::assertSame('Fresh', $result->tagsCreated[0]->getName());
+        self::assertSame(3, $result->tagsCreated[0]->getPosition());
+        $one = $this->subscriptionTo($user, 'https://one.example.com/rss.xml');
+        $two = $this->subscriptionTo($user, 'https://two.example.com/rss.xml');
+        $three = $this->subscriptionTo($user, 'https://three.example.com/rss.xml');
+        self::assertSame(5, $one->getPosition());
+        self::assertSame(6, $two->getPosition());
+        self::assertSame(7, $three->getPosition());
+        self::assertSame(7, $this->positionIn($one, 'Existing'));
+        self::assertSame(0, $this->positionIn($two, 'Fresh'));
+        self::assertSame(1, $this->positionIn($three, 'Fresh'));
+    }
+
+    public function testTheCapCountsTheSubscriptionsThisBatchAlreadyMade(): void
+    {
+        $user = $this->user('cap@example.com');
+        $user->setMaxSubscriptions(2);
+        $existingFeed = new Feed('https://existing.example.com/rss.xml');
+        $this->em()->persist($existingFeed);
+        $this->em()->persist(new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->em()->flush();
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItem('https://first.example.com/rss.xml', 'First', null, null),
+            new BulkSubscribeItem('https://second.example.com/rss.xml', 'Second', null, null),
+        ]);
+
+        self::assertSame(1, $result->imported);
+        self::assertSame(1, $result->skippedOverLimit);
+        self::assertNull(
+            $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://second.example.com/rss.xml']),
+        );
+    }
+
+    public function testAnOverlongTagNameIsCutToTheColumnAndMatchedCaseInsensitively(): void
+    {
+        $user = $this->user('long-tag@example.com');
+
+        $result = $this->subscriber()->subscribeAll($user, [
+            new BulkSubscribeItem('https://long.example.com/rss.xml', 'Long', 'L' . str_repeat('t', 119), null),
+            new BulkSubscribeItem('https://longer.example.com/rss.xml', 'Longer', 'l' . str_repeat('T', 119), null),
+        ]);
+
+        self::assertSame(2, $result->imported);
+        self::assertCount(1, $result->tagsCreated);
+        self::assertSame('L' . str_repeat('t', 99), $result->tagsCreated[0]->getName());
+    }
+
+    private function subscriptionTo(User $user, string $feedUrl): Subscription
+    {
+        $feed = $this->em()->getRepository(Feed::class)->findOneBy(['url' => $feedUrl]);
+        self::assertNotNull($feed);
+        $subscription = $this->em()->getRepository(Subscription::class)->findOneBy(['user' => $user, 'feed' => $feed]);
+        self::assertNotNull($subscription);
+
+        return $subscription;
+    }
+
+    private function positionIn(Subscription $subscription, string $tagName): int
+    {
+        foreach ($subscription->getSubscriptionTags() as $join) {
+            if ($join->getTag()->getName() === $tagName) {
+                return $join->getPosition();
+            }
+        }
+
+        self::fail(sprintf('The subscription is not in the tag "%s".', $tagName));
     }
 }
