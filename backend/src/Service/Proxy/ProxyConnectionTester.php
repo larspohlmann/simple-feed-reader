@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Proxy;
 
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\ProxyHandshakeFailure;
-use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
+use App\Service\Proxy\Model\ProxyTestFailure;
+use App\Service\Proxy\Model\ProxyTestResultModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -29,18 +31,18 @@ final readonly class ProxyConnectionTester
     ) {
     }
 
-    public function test(): ProxyTestResult
+    public function test(): ProxyTestResultModel
     {
         try {
             $proxy = $this->proxySource->configuredProxy();
         } catch (SecretUnreadableException $e) {
             // Diagnosing exactly this is what the Test button is for, so it
             // reports the unreadable secret rather than crashing on it.
-            return ProxyTestResult::failed(ProxyTestFailure::SecretUnreadable, $e->getMessage());
+            return ProxyTestResultModel::failed(ProxyTestFailure::SecretUnreadable, $e->getMessage());
         }
 
         if (null === $proxy) {
-            return ProxyTestResult::failed(ProxyTestFailure::NotConfigured);
+            return ProxyTestResultModel::failed(ProxyTestFailure::NotConfigured);
         }
 
         try {
@@ -53,16 +55,16 @@ final readonly class ProxyConnectionTester
             $status = $response->getStatusCode();
             $body = substr($response->getContent(false), 0, self::MAX_BYTES);
         } catch (ExceptionInterface $e) {
-            return ProxyTestResult::failed(
+            return ProxyTestResultModel::failed(
                 ProxyTestFailure::Unreachable,
                 ProxyHandshakeFailure::explain($e->getMessage()),
             );
         }
 
         if ($status < 200 || $status >= 300) {
-            return ProxyTestResult::failed(ProxyTestFailure::UnexpectedStatus, sprintf('HTTP %d', $status));
+            return ProxyTestResultModel::failed(ProxyTestFailure::UnexpectedStatus, sprintf('HTTP %d', $status));
         }
 
-        return ProxyTestResult::ok(trim($body));
+        return ProxyTestResultModel::ok(trim($body));
     }
 }

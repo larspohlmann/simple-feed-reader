@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Service\OAuth\Oidc;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\OAuth\Oidc\Model\IdTokenClaimsModel;
+use App\Service\OAuth\Oidc\Model\IdTokenModel;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -29,7 +31,7 @@ use Psr\Clock\ClockInterface;
  *
  * ## What keeps that precondition true
  *
- * verify() takes an {@see IdToken}, never a string. That type means "fetched
+ * verify() takes an {@see IdTokenModel}, never a string. That type means "fetched
  * from a token endpoint, over validated TLS, with no redirect in between", and
  * {@see TokenEndpoint::fetch()} — which enforces all three — is the only place
  * that constructs one, so a raw JWT from another channel cannot reach this
@@ -37,11 +39,11 @@ use Psr\Clock\ClockInterface;
  *
  * That boundary used to be `private` methods on the provider; it is now the
  * parameter type, checked at every call site, plus OidcBoundaryTest, which
- * fails the build if a second IdToken construction site appears. Neither form
- * stops someone deliberately writing `new IdToken($jwt)` around a token from
+ * fails the build if a second IdTokenModel construction site appears. Neither form
+ * stops someone deliberately writing `new IdTokenModel($jwt)` around a token from
  * elsewhere. A future ID token that did not come from the token endpoint —
  * Apple's `form_post` callback carries one — must be verified against the
- * provider's JWKS in its own code; wrapping it in an IdToken to reuse this
+ * provider's JWKS in its own code; wrapping it in an IdTokenModel to reuse this
  * class would skip the only check standing behind that channel.
  *
  * ## What is checked, because TLS says nothing about it
@@ -77,7 +79,7 @@ final readonly class IdTokenVerifier
     ) {
     }
 
-    public function verify(IdToken $token, string $expectedNonce): OAuthIdentity
+    public function verify(IdTokenModel $token, string $expectedNonce): OAuthIdentityModel
     {
         if ('' === $expectedNonce) {
             // The nonce check below is an equality test, and '' === '' is
@@ -89,7 +91,7 @@ final readonly class IdTokenVerifier
             throw new OAuthFailedException('no nonce to check the id_token against');
         }
 
-        $claims = IdTokenClaims::decode($token);
+        $claims = IdTokenClaimsModel::decode($token);
 
         $this->assertIssuer($claims);
         $this->assertAudience($claims);
@@ -100,7 +102,7 @@ final readonly class IdTokenVerifier
         return $this->identityFrom($claims);
     }
 
-    private function assertIssuer(IdTokenClaims $claims): void
+    private function assertIssuer(IdTokenClaimsModel $claims): void
     {
         $issuer = $claims->string('iss');
 
@@ -115,7 +117,7 @@ final readonly class IdTokenVerifier
      * nobody later has to work out which ones were the sensitive ones. The
      * cost is a function call.
      */
-    private function assertAudience(IdTokenClaims $claims): void
+    private function assertAudience(IdTokenClaimsModel $claims): void
     {
         $mintedForUs = array_any(
             $claims->stringList('aud'),
@@ -140,7 +142,7 @@ final readonly class IdTokenVerifier
      * client secret). Enforcing it would reject nothing an attacker can send,
      * and would break the day a provider adds a second audience.
      */
-    private function assertAuthorizedParty(IdTokenClaims $claims): void
+    private function assertAuthorizedParty(IdTokenClaimsModel $claims): void
     {
         if (null === $claims->claim('azp')) {
             return;
@@ -153,7 +155,7 @@ final readonly class IdTokenVerifier
         }
     }
 
-    private function assertNotExpired(IdTokenClaims $claims): void
+    private function assertNotExpired(IdTokenClaimsModel $claims): void
     {
         $expiry = $claims->int('exp');
 
@@ -168,7 +170,7 @@ final readonly class IdTokenVerifier
      * somebody else's callback. hash_equals rather than === so the
      * comparison can't be walked character by character.
      */
-    private function assertNonce(IdTokenClaims $claims, string $expectedNonce): void
+    private function assertNonce(IdTokenClaimsModel $claims, string $expectedNonce): void
     {
         $nonce = $claims->string('nonce');
 
@@ -177,7 +179,7 @@ final readonly class IdTokenVerifier
         }
     }
 
-    private function identityFrom(IdTokenClaims $claims): OAuthIdentity
+    private function identityFrom(IdTokenClaimsModel $claims): OAuthIdentityModel
     {
         $subject = $claims->string('sub');
 
@@ -187,7 +189,7 @@ final readonly class IdTokenVerifier
 
         $email = $claims->string('email');
 
-        return new OAuthIdentity(
+        return new OAuthIdentityModel(
             $this->provider,
             $subject,
             '' === $email ? null : $email,
@@ -244,7 +246,7 @@ final readonly class IdTokenVerifier
      *
      * Read from the raw claim, not a typed accessor, because the accepted set
      * is a trust decision, not a matter of type — see
-     * {@see IdTokenClaims::claim()}.
+     * {@see IdTokenClaimsModel::claim()}.
      */
     private static function isVerified(mixed $value): bool
     {

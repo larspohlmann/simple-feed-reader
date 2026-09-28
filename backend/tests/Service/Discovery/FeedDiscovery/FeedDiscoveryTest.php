@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Discovery\FeedDiscovery;
 
-use App\Service\Discovery\ScrapeFailureReason;
-use App\Service\Discovery\ScrapeFallback;
+use App\Service\Discovery\Model\ScrapeFailureReason;
+use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Discovery\BuildsFeedDiscovery;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
@@ -82,7 +82,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         $fetcher = $this->fetcherReturning('https://wp.example/', 'https://wp.example/', $html);
         $fetcher->willReturn(
             $postsUrl,
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 $postsUrl,
                 permanentRedirect: false,
                 body: '[{"id":1}]',
@@ -172,7 +172,7 @@ final class FeedDiscoveryTest extends KernelTestCase
             'https://www.heise.de/',
             $this->scrapedFixture('heise-2026-07-23.html'),
         );
-        $fetcher->willReturn('https://www.heise.de/.rss', FetchResponse::fetched(
+        $fetcher->willReturn('https://www.heise.de/.rss', FetchResponseModel::fetched(
             'https://www.heise.de/.rss',
             permanentRedirect: false,
             body: $xml,
@@ -240,7 +240,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $fetcher = $this->fetcher();
         $fetcher->willThrow('https://www.reddit.com/r/Bitwig/', new FeedUnreachableException('x: HTTP 403', 403));
-        $fetcher->willReturn('https://www.reddit.com/r/Bitwig/.rss', FetchResponse::fetched(
+        $fetcher->willReturn('https://www.reddit.com/r/Bitwig/.rss', FetchResponseModel::fetched(
             'https://www.reddit.com/r/Bitwig/.rss',
             permanentRedirect: false,
             body: $xml,
@@ -263,7 +263,7 @@ final class FeedDiscoveryTest extends KernelTestCase
 
         $fetcher = $this->fetcher();
         $fetcher->willThrow('https://example.com/blog/', new FeedUnreachableException('x: HTTP 404', 404));
-        $fetcher->willReturn('https://example.com/blog/feed', FetchResponse::fetched(
+        $fetcher->willReturn('https://example.com/blog/feed', FetchResponseModel::fetched(
             'https://example.com/blog/feed',
             permanentRedirect: false,
             body: $xml,

@@ -9,7 +9,7 @@ use App\Enum\DigestFormat;
 use App\Enum\MagazineStyle;
 use App\Enum\SupportedLocale;
 use App\Service\Account\AccountPreferencesWriter;
-use App\Service\Mail\Digest\DigestConfiguration;
+use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
 use App\Tests\Support\SeedsUsers;
@@ -56,7 +56,7 @@ final class AccountPreferencesWriterTest extends DbTestCase
 
         $this->writer()->changeDigest(
             $user,
-            new DigestConfiguration(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
+            new DigestConfigurationModel(true, DigestCadence::Weekly, 7, 3, DigestFormat::Text),
         );
 
         $preferences = $this->reload($user)->getPreferences();

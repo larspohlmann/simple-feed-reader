@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Service\Mail\Digest\DigestEntry;
-use App\Service\Mail\Digest\DigestGroup;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestTextRenderer;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
@@ -79,7 +79,7 @@ final class DigestTextRendererTest extends TestCase
     private function twoGroupModel(): DigestModel
     {
         $rustEntries = [
-            new DigestEntry(
+            new DigestEntryModel(
                 'Rust 1.80 released',
                 'Rust Blog',
                 'A short summary.',
@@ -88,14 +88,14 @@ final class DigestTextRendererTest extends TestCase
                 null,
                 null,
             ),
-            new DigestEntry('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null),
+            new DigestEntryModel('Second post', 'Rust Blog', '', 'https://example.com/2', null, null, null),
         ];
-        $rust = new DigestGroup('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
+        $rust = new DigestGroupModel('rust', 5, $rustEntries, true, 'https://reader.example/digest?q=rust');
 
         $golangEntries = [
-            new DigestEntry('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null),
+            new DigestEntryModel('Golang release', 'Go Blog', '', 'https://example.com/3', null, null, null),
         ];
-        $golang = new DigestGroup('golang', 2, $golangEntries, false, '');
+        $golang = new DigestGroupModel('golang', 2, $golangEntries, false, '');
 
         return new DigestModel([$rust, $golang], 7);
     }

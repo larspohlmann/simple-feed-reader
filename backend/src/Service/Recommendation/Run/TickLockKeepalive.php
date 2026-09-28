@@ -28,7 +28,7 @@ use Symfony\Component\Lock\LockInterface;
  * ceiling is set by everything that produces no chunk:
  *
  * - A silent provider yields nothing until HttpClient's idle timeout,
- *   ProviderTimeouts::$firstByteSeconds -- 900 s on the slow profile.
+ *   ProviderTimeoutsModel::$firstByteSeconds -- 900 s on the slow profile.
  * - Nothing beats between acquire() and the first request: candidate loading and prompt
  *   assembly run first.
  * - Nothing beats between calls or waves, while winners are ranked, banked and recorded.

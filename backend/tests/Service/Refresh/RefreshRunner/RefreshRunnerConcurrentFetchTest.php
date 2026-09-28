@@ -10,9 +10,9 @@ use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\RefreshRequest;
@@ -64,7 +64,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $origin = 'https://' . parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
             $origin,
-            FetchResponse::fetched($origin, false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched($origin, false, '<html lang="en"></html>', null, null),
         );
 
         return $feed;

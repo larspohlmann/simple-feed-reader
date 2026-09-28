@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Run\TickContext;
 use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;

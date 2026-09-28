@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Image\FaviconFetcher;
 
-use App\Service\Image\Exception\FaviconRejectedException;
-use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\ResponseHeader;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Fetch\UrlResolver;
-use App\Service\Image\FetchedFavicon;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\Model\FetchedFaviconModel;
 use Symfony\Contracts\HttpClient\Exception\ClientExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\RedirectionExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\ServerExceptionInterface;
@@ -64,7 +64,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     ) {
     }
 
-    public function download(string $iconUrl): FetchedFavicon
+    public function download(string $iconUrl): FetchedFaviconModel
     {
         try {
             [$bytes, $contentType] = $this->fetchFollowingRedirects($iconUrl);
@@ -81,7 +81,7 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
         $this->assertNotEmpty($bytes);
         $this->assertWithinSizeCap($bytes);
 
-        return new FetchedFavicon($iconUrl, $bytes, $contentType);
+        return new FetchedFaviconModel($iconUrl, $bytes, $contentType);
     }
 
     /** A wire- or buffer-cap trip is a policy rejection, not a dead host. */

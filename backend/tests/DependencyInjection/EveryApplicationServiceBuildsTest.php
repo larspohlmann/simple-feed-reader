@@ -12,9 +12,10 @@ final class EveryApplicationServiceBuildsTest extends KernelTestCase
 
     // Data built with `new`, never injected, that takes an excluded Dto/ or Model/ type until a later PR moves it.
     private const array BUILT_WITH_NEW = [
-        'App\\Service\\Backup\\BackupInventory',
+        'App\\Service\\Ai\\Completion\\ConcurrentCompletion',
         'App\\Service\\Backup\\BackupPartGuard',
-        'App\\Service\\Backup\\RestorePreview',
+        'App\\Service\\Backup\\BackupPartWalk',
+        'App\\Service\\Mail\\Transport\\CurlSmtpTransport',
     ];
 
     public function testTheContainerBuildsEveryApplicationServiceItExposes(): void

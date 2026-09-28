@@ -6,6 +6,7 @@ namespace App\Service\Fetch;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\SsrfBlockedException;
+use App\Service\Fetch\Model\GuardedUrlModel;
 
 /**
  * Validates an outbound URL before any connection: scheme allowlist, DNS
@@ -21,7 +22,7 @@ final readonly class UrlGuard
     ) {
     }
 
-    public function assertSafe(string $url): GuardedUrl
+    public function assertSafe(string $url): GuardedUrlModel
     {
         $host = $this->parseAllowedHost($url);
         $ips = $this->resolveToPublicIps($host);
@@ -29,7 +30,7 @@ final readonly class UrlGuard
         // Every record was validated above, so pinning them all is safe — and
         // pinning the whole set, not just the first, keeps the client's
         // cross-family fallback alive when one address is unroutable.
-        return new GuardedUrl($host, $ips);
+        return new GuardedUrlModel($host, $ips);
     }
 
     /**

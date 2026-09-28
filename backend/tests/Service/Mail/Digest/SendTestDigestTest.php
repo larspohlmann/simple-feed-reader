@@ -15,17 +15,17 @@ use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
-use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
@@ -160,7 +160,7 @@ final class SendTestDigestTest extends DbTestCase
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
         $embedder = $this->createStub(DigestImageEmbedderInterface::class);
-        $embedder->method('embed')->willReturn(new DigestImageSet([], []));
+        $embedder->method('embed')->willReturn(new DigestImageSetModel([], []));
 
         $builder = new DigestMailFactory(
             new DigestPageFactory(),
@@ -210,7 +210,7 @@ final class SendTestDigestTest extends DbTestCase
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface
     {
         $settings = $this->createStub(MailSendingSettingsInterface::class);
-        $settings->method('identity')->willReturn(new MailIdentity($address, $name));
+        $settings->method('identity')->willReturn(new MailIdentityModel($address, $name));
 
         return $settings;
     }

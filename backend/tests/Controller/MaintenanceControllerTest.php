@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
@@ -59,12 +59,12 @@ final class MaintenanceControllerTest extends WebTestCase
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
         $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
         // The runner's favicon phase fetches the site homepage through the
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://maint.example.com',
-            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
@@ -85,12 +85,12 @@ final class MaintenanceControllerTest extends WebTestCase
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
         $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
         // The runner's favicon phase fetches the site homepage through the
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://maint.example.com',
-            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 
@@ -214,10 +214,10 @@ final class MaintenanceControllerTest extends WebTestCase
         $feed = $this->feedFor($client, 'https://maint.example.com/feed');
 
         $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
         $stub->willReturn(
             'https://maint.example.com',
-            FetchResponse::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://maint.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 

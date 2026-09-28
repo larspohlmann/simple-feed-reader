@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Discovery\FeedCandidate;
+use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Subscription\SubscribeOutcome;
 
 final class SubscribeOutcomeJson
@@ -14,7 +14,7 @@ final class SubscribeOutcomeJson
     {
         $payload = [
             'candidates' => array_map(
-                static fn (FeedCandidate $candidate): array => [
+                static fn (FeedCandidateModel $candidate): array => [
                     'url' => $candidate->url,
                     'title' => $candidate->title,
                     'format' => $candidate->format,

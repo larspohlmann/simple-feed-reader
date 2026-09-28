@@ -6,12 +6,12 @@ namespace App\Service\Discovery\FeedDiscovery;
 
 use App\Enum\SourceFormat;
 use App\Service\Discovery\BotChallengePage;
-use App\Service\Discovery\DiscoveredFeed;
-use App\Service\Discovery\FeedCandidate;
-use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\FeedLinkScanner;
-use App\Service\Discovery\ScrapeFailureReason;
-use App\Service\Discovery\ScrapeFallback;
+use App\Service\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Discovery\Model\ScrapeFailureReason;
+use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Discovery\WordPressRestProbe;
@@ -59,7 +59,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     ) {
     }
 
-    public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResult
+    public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
     {
         // A Substack profile-share URL names its feed on another host; rewrite
         // it before the fetch so the direct-feed path below can parse-verify it.
@@ -70,12 +70,12 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         } catch (FeedThrottledException) {
             // The site has just asked us to slow down; the parallel guesses are
             // the opposite of that, and each would draw its own 429.
-            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Throttled);
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled);
         } catch (FeedUnreachableException $e) {
             return $this->feedTheSiteMightStillServe($url, $e);
         } catch (FetchException) {
             // Gone, over-size, SSRF-blocked: nothing usable ever arrived.
-            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Unreachable);
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 
         $body = $response->modifiedBody();
@@ -86,7 +86,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             // a second time to read what we are holding already.
             $document = $this->parser->parse($body);
 
-            return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
+            return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
                 $response->finalUrl,
                 $document,
                 $response->etag,
@@ -100,7 +100,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         // scrapes to nothing, so every step below would end in "no feed here" —
         // which is the one thing this answer does not mean.
         if ($this->botChallenge->wasReturned($body)) {
-            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Blocked);
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Blocked);
         }
 
         // Native feeds first: an <link rel="alternate"> RSS/Atom is the site's
@@ -114,7 +114,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         ]));
 
         return [] !== $candidates
-            ? FeedDiscoveryResult::candidates($candidates)
+            ? FeedDiscoveryResultModel::candidates($candidates)
             : $this->feedThePageNeverMentions($body, $response->finalUrl, $fallback);
     }
 
@@ -127,11 +127,11 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         string $body,
         string $finalUrl,
         ScrapeFallback $fallback,
-    ): FeedDiscoveryResult {
+    ): FeedDiscoveryResultModel {
         return $this->probedFeed($finalUrl)
             ?? (ScrapeFallback::Enabled === $fallback
                 ? $this->scrapeFallback($body, $finalUrl)
-                : FeedDiscoveryResult::candidates([]));
+                : FeedDiscoveryResultModel::candidates([]));
     }
 
     /**
@@ -147,17 +147,17 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     private function feedTheSiteMightStillServe(
         string $url,
         FeedUnreachableException $error,
-    ): FeedDiscoveryResult {
+    ): FeedDiscoveryResultModel {
         $status = $error->statusCode;
         if (null === $status || $status >= 500) {
-            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::Unreachable);
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable);
         }
 
         $reason = \in_array($status, self::BLOCKED_STATUSES, true)
             ? ScrapeFailureReason::Blocked
             : ScrapeFailureReason::Unreachable;
 
-        return $this->probedFeed($url) ?? FeedDiscoveryResult::scrapeFailed($reason);
+        return $this->probedFeed($url) ?? FeedDiscoveryResultModel::scrapeFailed($reason);
     }
 
     /**
@@ -165,11 +165,11 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      * has already parsed the document, and a candidate would cost two more
      * requests (preview, then subscribe) to a host that just turned one down.
      */
-    private function probedFeed(string $url): ?FeedDiscoveryResult
+    private function probedFeed(string $url): ?FeedDiscoveryResultModel
     {
         $probed = $this->wellKnownFeeds->probe($url);
 
-        return null === $probed ? null : FeedDiscoveryResult::directFeed($probed);
+        return null === $probed ? null : FeedDiscoveryResultModel::directFeed($probed);
     }
 
     /**
@@ -179,7 +179,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
      * first refresh is guaranteed to fail. Keyed by the fetch's final URL so
      * the later subscribe stores the same canonical address.
      */
-    private function scrapeFallback(string $body, string $finalUrl): FeedDiscoveryResult
+    private function scrapeFallback(string $body, string $finalUrl): FeedDiscoveryResultModel
     {
         try {
             $parsed = $this->extractor->extract($body, $finalUrl);
@@ -187,11 +187,11 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             // Deliberately wider than HtmlExtractionException: an extractor
             // bug on exotic markup must degrade to "not scrapable", not 500
             // the subscribe endpoint.
-            return FeedDiscoveryResult::scrapeFailed(ScrapeFailureReason::NotScrapable);
+            return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::NotScrapable);
         }
 
-        return FeedDiscoveryResult::candidates([
-            new FeedCandidate($finalUrl, $parsed->title, SourceFormat::SCRAPED),
+        return FeedDiscoveryResultModel::candidates([
+            new FeedCandidateModel($finalUrl, $parsed->title, SourceFormat::SCRAPED),
         ]);
     }
 }

@@ -9,7 +9,7 @@ use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use App\Service\Mail\MailSendingSettings\EffectiveMailSettings;
 use App\Service\Mail\Settings\MailConnectionTester;
 use App\Service\Mail\Settings\MailSettings;
-use App\Service\Mail\Settings\MailTestFailure;
+use App\Service\Mail\Settings\Model\MailTestFailure;
 use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
 use App\Service\Proxy\ProxySettings;
 use App\Tests\Support\InMemoryMailFailureRecorder;

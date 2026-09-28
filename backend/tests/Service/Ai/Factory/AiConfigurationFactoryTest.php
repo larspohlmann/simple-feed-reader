@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai\Factory;
 
 use App\Service\Ai\Factory\AiConfigurationFactory;
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
@@ -52,9 +52,9 @@ final class AiConfigurationFactoryTest extends DbTestCase
         self::assertSame($verifiedAt, $copy->getVerifiedAt());
     }
 
-    private function credentials(): ProviderCredentials
+    private function credentials(): ProviderCredentialsModel
     {
-        return ProviderCredentials::fromAccountInput('https://api.example.test/v1', self::KEY);
+        return ProviderCredentialsModel::fromAccountInput('https://api.example.test/v1', self::KEY);
     }
 
     private function factory(): AiConfigurationFactory

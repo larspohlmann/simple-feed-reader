@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth\Oidc;
 
 use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
-use App\Service\OAuth\Oidc\IdToken;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Model\IdTokenModel;
 use App\Service\OAuth\Oidc\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 
@@ -22,7 +22,7 @@ use PHPUnit\Framework\TestCase;
  * in the request body, which did NOT arrive by direct communication with the
  * token endpoint and would need full JWKS verification that nothing here does.
  * The defence is that there is no way to hand such a token to the verifier —
- * it accepts an {@see IdToken}, and only {@see TokenEndpoint} makes one.
+ * it accepts an {@see IdTokenModel}, and only {@see TokenEndpoint} makes one.
  *
  * Every assertion below fails the build the moment that stops being true. They
  * replace the reflection guard that used to assert readIdentity() was private on
@@ -44,7 +44,7 @@ final class OidcBoundaryTest extends TestCase
 
         self::assertInstanceOf(\ReflectionNamedType::class, $type);
         self::assertSame(
-            IdToken::class,
+            IdTokenModel::class,
             $type->getName(),
             'verify() must take an IdToken: a string parameter would accept a token from any channel.',
         );
@@ -79,12 +79,12 @@ final class OidcBoundaryTest extends TestCase
     }
 
     /**
-     * Whether the source contains a real `new IdToken(...)` expression.
+     * Whether the source contains a real `new IdTokenModel(...)` expression.
      *
      * Tokenised rather than matched with a regex so that neither a docblock
      * discussing the rule nor a string containing it can trip the guard — and,
      * more importantly, so that nobody can slip a construction past it by
-     * writing it unusually. Only T_NEW followed by a name resolving to IdToken
+     * writing it unusually. Only T_NEW followed by a name resolving to IdTokenModel
      * counts, whether written short or fully qualified.
      */
     private function constructsIdToken(string $source): bool
@@ -111,7 +111,7 @@ final class OidcBoundaryTest extends TestCase
 
                 $segments = explode('\\', $candidate[1]);
 
-                if (IdToken::class === $candidate[1] || 'IdToken' === end($segments)) {
+                if (IdTokenModel::class === $candidate[1] || 'IdTokenModel' === end($segments)) {
                     return true;
                 }
 
@@ -159,7 +159,7 @@ final class OidcBoundaryTest extends TestCase
     {
         self::assertTrue((new \ReflectionClass(TokenEndpoint::class))->isFinal());
         self::assertTrue((new \ReflectionClass(IdTokenVerifier::class))->isFinal());
-        self::assertTrue((new \ReflectionClass(IdToken::class))->isFinal());
+        self::assertTrue((new \ReflectionClass(IdTokenModel::class))->isFinal());
     }
 
     /**
@@ -167,11 +167,11 @@ final class OidcBoundaryTest extends TestCase
      */
     private function productionSources(): array
     {
-        $file = (new \ReflectionClass(IdToken::class))->getFileName();
+        $file = (new \ReflectionClass(IdTokenModel::class))->getFileName();
         self::assertIsString($file);
 
-        // src/Service/OAuth/Oidc/IdToken.php -> src/
-        $src = \dirname($file, 4);
+        // src/Service/OAuth/Oidc/Model/IdTokenModel.php -> src/
+        $src = \dirname($file, 5);
         self::assertSame('src', basename($src));
 
         $paths = [];

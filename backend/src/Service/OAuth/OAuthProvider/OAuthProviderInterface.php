@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth\OAuthProvider;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 
 /**
  * Everything the application needs from an identity provider.
@@ -55,5 +55,5 @@ interface OAuthProviderInterface
      *                              failed nonce check — the caller must not be
      *                              able to tell those apart
      */
-    public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentity;
+    public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentityModel;
 }

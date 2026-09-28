@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
-use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\ConcurrentCompletion;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\RateLimitedResultModel;
 use App\Service\Ai\Completion\RateLimitedCompletion;
-use App\Service\Ai\Completion\RateLimitedResult;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Recommendation\Prompt\CallPrompt;
@@ -161,7 +161,7 @@ final readonly class RecommendationBatchWave
      * @param non-empty-list<ConcurrentCompletion> $calls
      * @param list<RecordedCall>                   $recordedCalls
      */
-    private function completeRound(TickContext $tick, array $calls, array $recordedCalls): RateLimitedResult
+    private function completeRound(TickContext $tick, array $calls, array $recordedCalls): RateLimitedResultModel
     {
         try {
             return $this->completion->completeMany(
@@ -183,7 +183,7 @@ final readonly class RecommendationBatchWave
      * healthy sibling's answer is discarded and re-billed next tick; that cost is accepted, not a bug.
      *
      * @param list<RecordedCall>      $recordedCalls
-     * @param list<CompletionOutcome> $outcomes
+     * @param list<CompletionOutcomeModel> $outcomes
      */
     private function guardWaveTransport(array $recordedCalls, array $outcomes): void
     {
@@ -200,12 +200,12 @@ final readonly class RecommendationBatchWave
     }
 
     /** A call with its own cause, a spoiled reply included, names it; only a bystander borrows the wave's (#437). */
-    private static function abortDetailFor(CompletionOutcome $outcome, \Throwable $waveFailure): string
+    private static function abortDetailFor(CompletionOutcomeModel $outcome, \Throwable $waveFailure): string
     {
         return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
     }
 
-    /** @param list<CompletionOutcome> $outcomes */
+    /** @param list<CompletionOutcomeModel> $outcomes */
     private function firstFailureIn(array $outcomes): ?\Throwable
     {
         foreach ($outcomes as $outcome) {
@@ -219,7 +219,7 @@ final readonly class RecommendationBatchWave
 
     /**
      * @param list<int>               $pending       positions into the wave, in call order
-     * @param list<CompletionOutcome> $outcomes      one per call, aligned to $pending
+     * @param list<CompletionOutcomeModel> $outcomes      one per call, aligned to $pending
      * @param list<RecordedCall>      $recordedCalls one per call, aligned to $pending
      *
      * @return array<int, array{content: string, call: RecordedCall}>

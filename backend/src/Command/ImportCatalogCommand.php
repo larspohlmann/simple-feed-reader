@@ -8,9 +8,9 @@ use App\Repository\CatalogCategoryRepository;
 use App\Service\Catalog\BundledCatalog;
 use App\Service\Catalog\CatalogDocument;
 use App\Service\Catalog\CatalogImporter;
-use App\Service\Catalog\CatalogImportMode;
 use App\Service\Catalog\Exception\InvalidCatalogDocumentException;
-use App\Service\Catalog\ParsedCatalog;
+use App\Service\Catalog\Model\CatalogImportMode;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -103,14 +103,14 @@ final class ImportCatalogCommand extends Command
     }
 
     /** The document named by --file, or the one this release ships. */
-    private function document(InputInterface $input): ParsedCatalog
+    private function document(InputInterface $input): ParsedCatalogModel
     {
         $path = ConsoleOption::text($input, 'file');
 
         return $path === null ? $this->bundled->document() : $this->read($path);
     }
 
-    private function read(string $path): ParsedCatalog
+    private function read(string $path): ParsedCatalogModel
     {
         if (!is_file($path) || !is_readable($path)) {
             throw new InvalidCatalogDocumentException(

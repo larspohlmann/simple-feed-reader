@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogFeed;
 use App\Service\Catalog\BundledCatalog;
-use App\Service\Catalog\ParsedCatalog;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -184,7 +184,7 @@ final class AdminCatalogImportControllerTest extends WebTestCase
         self::assertSame($document->feedCount(), $body['feedsCreated']);
     }
 
-    private function bundledDocument(): ParsedCatalog
+    private function bundledDocument(): ParsedCatalogModel
     {
         $catalog = self::getContainer()->get(BundledCatalog::class);
         self::assertInstanceOf(BundledCatalog::class, $catalog);

@@ -7,8 +7,8 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Ai\ProviderCredentials;
 use App\Service\Recommendation\Settings\RecommendationPackingSettings;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
@@ -45,7 +45,7 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * @param list<string>|\Throwable|\Closure(ProviderCredentials): list<string> $models
+     * @param list<string>|\Throwable|\Closure(ProviderCredentialsModel): list<string> $models
      */
     private function clientAnswering(array|\Throwable|\Closure $models): KernelBrowser
     {

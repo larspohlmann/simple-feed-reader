@@ -6,7 +6,7 @@ namespace App\Service\Ingest;
 
 use App\Entity\Entry;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Url\HttpsImageUrl;
 
 /** Stores a feed-declared image on an entry: trusted at ingest when natively https and fully sized, else pending. */
@@ -17,7 +17,7 @@ final readonly class EntryImageWriter
     }
 
     /** Whether the image had a URL worth storing; one without leaves the entry as it was. */
-    public function write(Entry $entry, DeclaredImage $image): bool
+    public function write(Entry $entry, DeclaredImageModel $image): bool
     {
         $url = HttpsImageUrl::orNullUpgrading($image->url);
         if ($url === null) {
@@ -32,14 +32,14 @@ final readonly class EntryImageWriter
         return true;
     }
 
-    public function writeOrMarkNone(Entry $entry, ?DeclaredImage $image): void
+    public function writeOrMarkNone(Entry $entry, ?DeclaredImageModel $image): void
     {
         if ($image === null || !$this->write($entry, $image)) {
             $entry->getImage()->storePending(null, null, null);
         }
     }
 
-    private static function trustedAtIngest(DeclaredImage $image): bool
+    private static function trustedAtIngest(DeclaredImageModel $image): bool
     {
         return $image->width !== null
             && $image->height !== null

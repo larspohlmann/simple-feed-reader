@@ -4,24 +4,30 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\Factory;
 
-use App\Service\Mail\Digest\DigestEntry;
-use App\Service\Mail\Digest\DigestGroup;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestModel;
 use PHPUnit\Framework\TestCase;
 
 final class DigestPageFactoryTest extends TestCase
 {
-    private function entry(string $title): DigestEntry
+    private function entry(string $title): DigestEntryModel
     {
-        return new DigestEntry($title, 'Feed', '', 'https://example.com/e', null, null, null);
+        return new DigestEntryModel($title, 'Feed', '', 'https://example.com/e', null, null, null);
     }
 
-    private function group(string $term, int $count, int $totalCount): DigestGroup
+    private function group(string $term, int $count, int $totalCount): DigestGroupModel
     {
-        $entries = array_map(fn (int $i): DigestEntry => $this->entry("{$term} {$i}"), range(1, $count));
+        $entries = array_map(fn (int $i): DigestEntryModel => $this->entry("{$term} {$i}"), range(1, $count));
 
-        return new DigestGroup($term, $totalCount, $entries, $totalCount > $count, "https://example.com/?q={$term}");
+        return new DigestGroupModel(
+            $term,
+            $totalCount,
+            $entries,
+            $totalCount > $count,
+            "https://example.com/?q={$term}",
+        );
     }
 
     public function testCapsTotalCardsAndMarksOverflowGroupsHeadingOnly(): void

@@ -7,7 +7,7 @@ namespace App\Tests\Service\Discovery;
 use App\Enum\SourceFormat;
 use App\Service\Discovery\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\TestCase;
 
@@ -24,9 +24,9 @@ final class WordPressRestProbeTest extends TestCase
         return $fetcher;
     }
 
-    private function postsResponse(string $json): FetchResponse
+    private function postsResponse(string $json): FetchResponseModel
     {
-        return FetchResponse::fetched(
+        return FetchResponseModel::fetched(
             self::POSTS,
             permanentRedirect: false,
             body: $json,

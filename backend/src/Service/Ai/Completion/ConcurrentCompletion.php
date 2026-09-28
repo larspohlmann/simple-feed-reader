@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion;
 
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
 
 /**
  * One request in a concurrent wave, paired with the observer that watches its
@@ -15,7 +16,7 @@ use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverI
 final readonly class ConcurrentCompletion
 {
     public function __construct(
-        public CompletionRequest $request,
+        public CompletionRequestModel $request,
         public CompletionStreamObserverInterface $observer,
     ) {
     }

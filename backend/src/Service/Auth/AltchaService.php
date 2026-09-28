@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Auth;
 
 use App\Exception\ValidationException;
+use App\Service\Auth\Model\AltchaChallengeModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Clock\ClockInterface;
@@ -78,7 +79,7 @@ final readonly class AltchaService
     /**
      * @throws RandomException
      */
-    public function createChallenge(): AltchaChallenge
+    public function createChallenge(): AltchaChallengeModel
     {
         $expires = $this->clock->now()->getTimestamp() + self::TTL_SECONDS;
         $salt = bin2hex(random_bytes(12)) . '?expires=' . $expires;
@@ -86,7 +87,7 @@ final readonly class AltchaService
 
         $challenge = hash('sha256', $salt . $number);
 
-        return new AltchaChallenge(
+        return new AltchaChallengeModel(
             self::ALGORITHM,
             $challenge,
             $salt,

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\OAuth\OAuthProvider;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
 use App\Service\OAuth\Oidc\TokenEndpoint;
 use Psr\Clock\ClockInterface;
@@ -34,9 +34,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * - {@see TokenEndpoint} enforces the preconditions (an `https` endpoint we
  *   hardcode, pinned TLS, no redirects) and is the only place that can mint an
- *   {@see \App\Service\OAuth\Oidc\IdToken}.
+ *   {@see \App\Service\OAuth\Oidc\Model\IdTokenModel}.
  * - {@see IdTokenVerifier} checks everything TLS says nothing about — `iss`,
- *   `aud`, `azp`, `exp`, `nonce`, `sub` — and accepts only an IdToken, so it
+ *   `aud`, `azp`, `exp`, `nonce`, `sub` — and accepts only an IdTokenModel, so it
  *   cannot be handed a token from another channel.
  *
  * Read both docblocks before changing how a token is fetched or trusted. The
@@ -145,7 +145,7 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
         return rtrim($this->backendBaseUrl, '/') . '/api/auth/oauth/' . $this->getName() . '/callback';
     }
 
-    final public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentity
+    final public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentityModel
     {
         if ('' === $nonce) {
             // Dangerous caller bug: '' === '' is true, so an empty expectation

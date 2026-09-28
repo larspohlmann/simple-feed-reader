@@ -8,8 +8,8 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\CatalogFeedDetails;
 use App\Service\Catalog\Factory\CatalogFeedFactory;
+use App\Service\Catalog\Model\CatalogFeedDetailsModel;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -32,7 +32,7 @@ final class CatalogFeedFactoryTest extends DbTestCase
         $next = $this->feeds()->nextPositionInCategory($category->requireId());
         self::assertGreaterThan(0, $next);
 
-        $feed = (new CatalogFeedFactory($this->categories(), $this->feeds()))->create(new CatalogFeedDetails(
+        $feed = (new CatalogFeedFactory($this->categories(), $this->feeds()))->create(new CatalogFeedDetailsModel(
             $category->requireId(),
             'Second',
             'https://second.example/feed.xml',

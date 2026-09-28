@@ -7,7 +7,7 @@ namespace App\Service\Proxy\ConfiguredProxySource;
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 
 final readonly class StoredProxy implements EgressProxySourceInterface, ConfiguredProxySourceInterface
@@ -18,25 +18,25 @@ final readonly class StoredProxy implements EgressProxySourceInterface, Configur
     ) {
     }
 
-    public function configuredProxy(): ?ProxyConfig
+    public function configuredProxy(): ?ProxyConfigModel
     {
         return $this->proxyFrom($this->repository->findSingleton());
     }
 
-    public function egressProxy(): ?ProxyConfig
+    public function egressProxy(): ?ProxyConfigModel
     {
         $settings = $this->repository->findSingleton();
 
         return null !== $settings && $settings->isEnabled() ? $this->proxyFrom($settings) : null;
     }
 
-    private function proxyFrom(?ProxyServerSettings $settings): ?ProxyConfig
+    private function proxyFrom(?ProxyServerSettings $settings): ?ProxyConfigModel
     {
         if (null === $settings || '' === $settings->getHost()) {
             return null;
         }
 
-        return new ProxyConfig(
+        return new ProxyConfigModel(
             $settings->getType(),
             $settings->getHost(),
             $settings->getPort(),

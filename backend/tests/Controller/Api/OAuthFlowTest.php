@@ -10,7 +10,7 @@ use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
 use App\EventListener\AddUserIdClaimOnTokenIssue;
 use App\Repository\UserRepository;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Tests\Support\FakeOAuthProvider;
 use App\Tests\Support\UserFactory;
@@ -109,7 +109,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testTheHappyPathTakesAnActiveUserFromRedirectToJwt(): void
     {
         $bob = $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         // 1. Start: we redirect to the provider, carrying a state we minted.
         $this->startFlow();
@@ -170,7 +170,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testAFirstSignInCreatesAPendingAccountAndAnIdentity(): void
     {
-        $this->completeCallback(new OAuthIdentity('google', 'sub-new', 'new@example.com', true));
+        $this->completeCallback(new OAuthIdentityModel('google', 'sub-new', 'new@example.com', true));
 
         $user = $this->userByEmail('new@example.com');
 
@@ -196,7 +196,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testAnAddresslessIdentityStillGetsAnAccountWithAPlaceholderAddress(): void
     {
-        $this->completeCallback(new OAuthIdentity('apple', 'sub-addressless', null, false));
+        $this->completeCallback(new OAuthIdentityModel('apple', 'sub-addressless', null, false));
 
         $identities = $this->em()->getRepository(UserIdentity::class)->findAll();
         self::assertCount(1, $identities);
@@ -218,7 +218,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testAPendingApprovalUserGetsAProperExplanationNotAGenericFailure(): void
     {
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-new', 'new@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-new', 'new@example.com', true));
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
 
@@ -240,7 +240,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testASuspendedUserCannotExchangeACode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Suspended);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
 
@@ -257,7 +257,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testARejectedUserCannotExchangeACode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Rejected);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
 
@@ -270,7 +270,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testALoginCodeCannotBeUsedTwice(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->postJson('/api/auth/oauth/exchange', ['code' => $code]);
         self::assertResponseIsSuccessful();
@@ -295,7 +295,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testAStateValueIsNotAcceptedAsALoginCode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -314,7 +314,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testACodeForAnAccountDeletedBeforeTheExchangeIsRejected(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         // user_identity's FK carries ON DELETE CASCADE, so removing the user
         // takes the identity row with it, exactly as an account purge would.
@@ -364,7 +364,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testACallbackFromABrowserThatDidNotStartTheFlowIsRefused(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -393,7 +393,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testACallbackWithAWrongFlowCookieIsRefused(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -420,7 +420,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testAFailedBindingCheckBurnsTheStateSoItCannotBeRetried(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -453,7 +453,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testTheFlowCookieCarriesTheAttributesTheCrossSitePostNeeds(): void
     {
-        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
 
@@ -487,7 +487,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testTheFlowCookieRevealsNothingAndIsClearedWhenTheFlowFails(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
 
@@ -532,7 +532,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testALoginCodeCannotBeExchangedByADifferentBrowser(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         // Everything the attacker cannot carry across to the victim's browser.
         $this->client->getCookieJar()->clear();
@@ -552,7 +552,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testALoginCodeCannotBeExchangedWithSomebodyElsesBinding(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->replaceFlowCookie(str_repeat('b', 64));
 
@@ -569,7 +569,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testAFailedBindingCheckBurnsTheLoginCode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
         $genuine = $this->flowCookieValue();
 
         $this->replaceFlowCookie(str_repeat('b', 64));
@@ -596,7 +596,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testTheBindingOutlivesTheCallbackAndDiesAtTheExchange(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $code = $this->completeCallback(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $code = $this->completeCallback(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         // Survived the callback, or the happy path below could not work.
         self::assertNotSame('', $this->flowCookieValue());
@@ -615,7 +615,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testAStateValueCannotBeReplayed(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -642,7 +642,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testAStateIssuedForOneProviderIsRefusedAtAnothersCallback(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -688,7 +688,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testACallbackWithNoStateIsRefusedWithoutContactingTheProvider(): void
     {
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->requestCallback(['code' => 'a-stolen-code']);
 
@@ -702,7 +702,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testACallbackWithAnUnissuedStateIsRefusedWithoutContactingTheProvider(): void
     {
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->requestCallback(['state' => str_repeat('f', 64), 'code' => 'a-stolen-code']);
 
@@ -712,7 +712,7 @@ final class OAuthFlowTest extends WebTestCase
 
     public function testACallbackWithNoCodeIsRefusedAsAnInvalidRequest(): void
     {
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -746,7 +746,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testNothingTheCallerSuppliesCanReachTheLocationHeader(): void
     {
-        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $hostile = 'https://evil.test/steal';
 
@@ -770,7 +770,7 @@ final class OAuthFlowTest extends WebTestCase
     public function testACallbackPostedAsAFormBodyCompletesTheSameWay(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $provider = $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $provider = $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -792,7 +792,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testAFailedExchangeRedirectsWithAnErrorRatherThanJson(): void
     {
-        $provider = $this->failingFakeProvider(new OAuthIdentity('google', 'sub-1', null, false));
+        $provider = $this->failingFakeProvider(new OAuthIdentityModel('google', 'sub-1', null, false));
 
         $this->startFlow();
         $state = (string) $provider->lastState;
@@ -845,7 +845,7 @@ final class OAuthFlowTest extends WebTestCase
      */
     public function testTheStartLimiterRefusesTheTwentyFirstAttempt(): void
     {
-        $this->fakeProvider(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         for ($i = 1; $i <= 20; ++$i) {
             $this->startFlow();
@@ -860,12 +860,12 @@ final class OAuthFlowTest extends WebTestCase
         self::assertNotSame('0', $this->client->getResponse()->headers->get('Retry-After'));
     }
 
-    private function fakeProvider(OAuthIdentity $identity): FakeOAuthProvider
+    private function fakeProvider(OAuthIdentityModel $identity): FakeOAuthProvider
     {
         return $this->installBeforeTheFirstRequest(FakeOAuthProvider::returning($identity));
     }
 
-    private function failingFakeProvider(OAuthIdentity $identity): FakeOAuthProvider
+    private function failingFakeProvider(OAuthIdentityModel $identity): FakeOAuthProvider
     {
         return $this->installBeforeTheFirstRequest(FakeOAuthProvider::failingExchange($identity));
     }
@@ -936,7 +936,7 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /** Runs start + callback and returns the one-time login code. */
-    private function completeCallback(OAuthIdentity $identity): string
+    private function completeCallback(OAuthIdentityModel $identity): string
     {
         $provider = $this->fakeProvider($identity);
 

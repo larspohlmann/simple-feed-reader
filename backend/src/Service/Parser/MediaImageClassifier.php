@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Parser\Model\FeedMediaKind;
+
 /**
  * Whether a Media RSS element points at an image — the question
  * ItemImageExtractor asks when it keeps only the visual candidates. The full

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\FeedMediaClassifier;
-use App\Service\Parser\FeedMediaKind;
+use App\Service\Parser\Model\FeedMediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class FeedMediaClassifierTest extends TestCase

@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\Completion;
 
-use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\ConcurrentCompletion;
-use App\Service\Ai\Completion\JsonSchema;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\JsonSchemaModel;
+use App\Service\Ai\Completion\Model\Reasoning;
+use App\Service\Ai\Completion\Model\RetryPlanModel;
 use App\Service\Ai\Completion\RateLimitedCompletion;
-use App\Service\Ai\Completion\Reasoning;
-use App\Service\Ai\Completion\RetryPlan;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderConnection;
-use App\Service\Ai\ProviderCredentials;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderConnectionModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Tests\Support\StubChatClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -24,21 +24,21 @@ final class RateLimitedCompletionTest extends TestCase
 {
     private const string START_AT = '2026-01-01T00:00:00Z';
 
-    private function connection(): ProviderConnection
+    private function connection(): ProviderConnectionModel
     {
-        return new ProviderConnection(
-            ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', 'sk-test'),
-            ProviderTimeouts::standard(),
+        return new ProviderConnectionModel(
+            ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test'),
+            ProviderTimeoutsModel::standard(),
         );
     }
 
-    private function request(): CompletionRequest
+    private function request(): CompletionRequestModel
     {
-        return new CompletionRequest(
+        return new CompletionRequestModel(
             'm',
             [['role' => 'user', 'content' => 'x']],
             2048,
-            new JsonSchema('s', ['type' => 'object']),
+            new JsonSchemaModel('s', ['type' => 'object']),
             Reasoning::Allowed,
         );
     }
@@ -76,7 +76,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertFalse($result->isDeferred());
         self::assertTrue($result->rateLimitObserved);
@@ -94,7 +94,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertSame('{"ok":1}', $result->outcomes[0]->content());
         self::assertSame(7, $this->elapsedSeconds($clock));
@@ -108,7 +108,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertSame(5, $this->elapsedSeconds($clock));
     }
@@ -120,7 +120,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(200.0, $result->deferSeconds);
@@ -146,7 +146,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(45.0, $result->deferSeconds);
@@ -162,7 +162,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::blocking());
 
         self::assertFalse($result->isDeferred());
         self::assertTrue($result->rateLimitObserved);
@@ -177,7 +177,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(1), RetryPlan::deferring());
+            ->completeMany($this->connection(), $this->calls(1), RetryPlanModel::deferring());
 
         self::assertTrue($result->isDeferred());
         self::assertSame(15.0, $result->deferSeconds);
@@ -193,7 +193,7 @@ final class RateLimitedCompletionTest extends TestCase
         $clock = $this->newClock();
 
         $result = (new RateLimitedCompletion($chat, $clock))
-            ->completeMany($this->connection(), $this->calls(2), RetryPlan::blocking());
+            ->completeMany($this->connection(), $this->calls(2), RetryPlanModel::blocking());
 
         self::assertSame('{"a":1}', $result->outcomes[0]->content());
         self::assertSame('{"b":2}', $result->outcomes[1]->content());
@@ -213,7 +213,7 @@ final class RateLimitedCompletionTest extends TestCase
             $this->connection(),
             $this->request(),
             new NullCompletionStreamObserver(),
-            RetryPlan::deferring(),
+            RetryPlanModel::deferring(),
         );
     }
 }

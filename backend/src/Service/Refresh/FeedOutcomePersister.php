@@ -11,8 +11,8 @@ use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\Exception\FeedParseException;
@@ -40,7 +40,7 @@ final readonly class FeedOutcomePersister
     }
 
     /** @throws \DateMalformedStringException */
-    public function persist(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedRefreshResult
+    public function persist(Feed $feed, FetchOutcomeModel $outcome, \DateTimeImmutable $now): FeedRefreshResult
     {
         // Read before recordSuccess() stamps the new lastSuccessfulFetchAt (#384).
         $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
@@ -59,7 +59,7 @@ final readonly class FeedOutcomePersister
         }
     }
 
-    private function record(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedRefreshResult
+    private function record(Feed $feed, FetchOutcomeModel $outcome, FeedIngestContext $context): FeedRefreshResult
     {
         try {
             $response = $outcome->responseOrThrow();
@@ -83,7 +83,7 @@ final readonly class FeedOutcomePersister
     }
 
     /** @throws \DateMalformedStringException */
-    private function storeNotModified(Feed $feed, FetchResponse $response): FeedRefreshResult
+    private function storeNotModified(Feed $feed, FetchResponseModel $response): FeedRefreshResult
     {
         // A moved feed can answer 304 at its new address; without this the redirect chain is re-walked every time.
         $this->applyPermanentRedirect($feed, $response);
@@ -98,7 +98,7 @@ final readonly class FeedOutcomePersister
      *
      * @throws \DateMalformedStringException
      */
-    private function storeFetched(Feed $feed, FetchResponse $response, array $createdEntries): FeedRefreshResult
+    private function storeFetched(Feed $feed, FetchResponseModel $response, array $createdEntries): FeedRefreshResult
     {
         $feed->recordCacheValidators($response->etag, $response->lastModified);
         $this->applyPermanentRedirect($feed, $response);
@@ -139,7 +139,7 @@ final readonly class FeedOutcomePersister
         return FeedRefreshResult::of(FeedOutcome::Failed);
     }
 
-    private function applyPermanentRedirect(Feed $feed, FetchResponse $response): void
+    private function applyPermanentRedirect(Feed $feed, FetchResponseModel $response): void
     {
         if (!$response->permanentRedirect || $response->finalUrl === $feed->getUrl()) {
             return;

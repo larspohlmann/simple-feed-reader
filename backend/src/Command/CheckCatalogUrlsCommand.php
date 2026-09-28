@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Catalog\BrokenCatalogUrl;
 use App\Service\Catalog\CatalogUrlChecker;
+use App\Service\Catalog\Model\BrokenCatalogUrlModel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -50,7 +50,7 @@ final class CheckCatalogUrlsCommand extends Command
 
         $io->error(\sprintf('%d of %d catalog URLs need attention:', \count($report->broken), $report->checked));
         $io->listing(array_map(
-            static fn (BrokenCatalogUrl $broken): string
+            static fn (BrokenCatalogUrlModel $broken): string
                 => \sprintf('%s (%s): %s', $broken->title, $broken->url, $broken->reason),
             $report->broken,
         ));

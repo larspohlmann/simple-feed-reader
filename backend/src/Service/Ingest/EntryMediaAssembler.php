@@ -6,10 +6,11 @@ namespace App\Service\Ingest;
 
 use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
-use App\Service\Image\DeclaredImage;
-use App\Service\Parser\ParsedAttachment;
-use App\Service\Parser\ParsedMedium;
-use App\Service\Parser\VisualMediaKind;
+use App\Service\Image\Model\DeclaredImageModel;
+use App\Service\Ingest\Model\AssembledMediaModel;
+use App\Service\Parser\Model\ParsedAttachmentModel;
+use App\Service\Parser\Model\ParsedMediumModel;
+use App\Service\Parser\Model\VisualMediaKind;
 use App\Service\Url\HttpsImageUrl;
 
 /**
@@ -20,23 +21,23 @@ use App\Service\Url\HttpsImageUrl;
 final class EntryMediaAssembler
 {
     /**
-     * @param list<ParsedMedium>     $media
-     * @param list<ParsedAttachment> $attachments
+     * @param list<ParsedMediumModel>     $media
+     * @param list<ParsedAttachmentModel> $attachments
      */
-    public static function assemble(?DeclaredImage $lead, array $media, array $attachments): AssembledMedia
+    public static function assemble(?DeclaredImageModel $lead, array $media, array $attachments): AssembledMediaModel
     {
-        return new AssembledMedia(
+        return new AssembledMediaModel(
             self::visualMedia($lead, $media),
             self::attachments($attachments),
         );
     }
 
     /**
-     * @param list<ParsedMedium> $media
+     * @param list<ParsedMediumModel> $media
      *
      * @return list<EntryMedium>
      */
-    private static function visualMedia(?DeclaredImage $lead, array $media): array
+    private static function visualMedia(?DeclaredImageModel $lead, array $media): array
     {
         $kept = [];
         $seen = [];
@@ -65,7 +66,7 @@ final class EntryMediaAssembler
         return $kept;
     }
 
-    private static function leadMedium(?DeclaredImage $lead): ?EntryMedium
+    private static function leadMedium(?DeclaredImageModel $lead): ?EntryMedium
     {
         if ($lead === null) {
             return null;
@@ -79,7 +80,7 @@ final class EntryMediaAssembler
     }
 
     /**
-     * @param list<ParsedAttachment> $attachments
+     * @param list<ParsedAttachmentModel> $attachments
      *
      * @return list<EntryAttachment>
      */

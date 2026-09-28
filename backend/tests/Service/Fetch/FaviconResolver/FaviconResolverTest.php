@@ -6,7 +6,7 @@ namespace App\Tests\Service\Fetch\FaviconResolver;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -18,13 +18,13 @@ final class FaviconResolverTest extends TestCase
         return new FaviconResolver($fetcher, new NullLogger());
     }
 
-    private function page(string $head): FetchResponse
+    private function page(string $head): FetchResponseModel
     {
         // @lang TEXT: every caller passes a deliberately fake icon path, because
         // resolving those paths is what the tests are about. Turning the HTML
         // injection off keeps PhpStorm from reporting them as unresolvable, and
         // from asking for a `lang` attribute the fixture does not need.
-        return FetchResponse::fetched(
+        return FetchResponseModel::fetched(
             'https://blog.example.com/',
             permanentRedirect: false,
             body: /** @lang TEXT */ '<!doctype html><html><head>' . $head . '</head><body>x</body></html>',
@@ -120,7 +120,7 @@ final class FaviconResolverTest extends TestCase
     public function testDerivesTheHostFromTheBaseIgnoringSchemeAndPath(): void
     {
         $fetcher = new StubFeedFetcher();
-        $fetcher->willReturn('https://news.example.com', FetchResponse::fetched(
+        $fetcher->willReturn('https://news.example.com', FetchResponseModel::fetched(
             'https://news.example.com/',
             permanentRedirect: false,
             body: '<!doctype html><html lang="en"><head></head><body>x</body></html>',
@@ -152,7 +152,7 @@ final class FaviconResolverTest extends TestCase
         // of the test — so the "cannot resolve file" hint is wrong here.
         $fetcher->willReturn(
             'https://one.example.com',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://one.example.com',
                 false,
                 /** @lang TEXT */ '<link rel="icon" href="/a.png">',
@@ -162,7 +162,7 @@ final class FaviconResolverTest extends TestCase
         );
         $fetcher->willReturn(
             'https://two.example.com',
-            FetchResponse::fetched('https://two.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://two.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $icons = $this->resolver($fetcher)->resolveAll([
@@ -203,7 +203,7 @@ final class FaviconResolverTest extends TestCase
     public function testABatchLevelFailureDegradesEverySiteToTheFallback(): void
     {
         // No stubs configured at all, so the very first ticket makes the
-        // generator throw instead of yielding a FetchOutcome.
+        // generator throw instead of yielding a FetchOutcomeModel.
         $fetcher = new StubFeedFetcher();
 
         $icons = $this->resolver($fetcher)->resolveAll([

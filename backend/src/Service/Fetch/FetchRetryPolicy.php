@@ -7,6 +7,7 @@ namespace App\Service\Fetch;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\FetchAttemptModel;
 
 /**
  * What a failed fetch attempt earns next: the one direct fallback for a proxied
@@ -30,7 +31,7 @@ final readonly class FetchRetryPolicy
      * proxied request once per address family, when the spec requires the
      * failure to be terminal instead.
      */
-    public function nextAttemptAfter(FetchAttempt $attempt, FetchException $failure): ?FetchAttempt
+    public function nextAttemptAfter(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
         $fallback = $this->directFallbackFor($attempt);
         if (null !== $fallback) {
@@ -41,7 +42,7 @@ final readonly class FetchRetryPolicy
     }
 
     /** The one direct fallback for a proxied attempt, or null when none applies. */
-    public function directFallbackFor(FetchAttempt $attempt): ?FetchAttempt
+    public function directFallbackFor(FetchAttemptModel $attempt): ?FetchAttemptModel
     {
         $proxy = $attempt->proxy;
 
@@ -53,7 +54,7 @@ final readonly class FetchRetryPolicy
      * different family cannot help (see warrantsAnotherFamily). A single-family
      * host has nothing left to try, so the guard's attempt list bounds the retry.
      */
-    private function overNextFamily(FetchAttempt $attempt, FetchException $failure): ?FetchAttempt
+    private function overNextFamily(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
         if (!$this->warrantsAnotherFamily($failure)) {
             return null;

@@ -7,7 +7,7 @@ namespace App\Tests\Service\Recommendation\Prompt\Factory;
 use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;

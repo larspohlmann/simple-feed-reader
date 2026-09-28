@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 
 final class FeedItemImageSelector
 {
-    public static function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImage
+    public static function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
     {
         $image = ItemImageExtractor::fromMedia($item) ?? ItemImageExtractor::fromRssEnclosure($item);
 
@@ -18,8 +18,11 @@ final class FeedItemImageSelector
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    public static function fromAtom(\DOMElement $entry, string $namespace, array $bodyHtmlCandidates): ?DeclaredImage
-    {
+    public static function fromAtom(
+        \DOMElement $entry,
+        string $namespace,
+        array $bodyHtmlCandidates,
+    ): ?DeclaredImageModel {
         $image = ItemImageExtractor::fromMedia($entry) ?? ItemImageExtractor::fromAtomEnclosure($entry, $namespace);
 
         return $image
@@ -28,7 +31,7 @@ final class FeedItemImageSelector
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    private static function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImage
+    private static function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImageModel
     {
         foreach ($bodyHtmlCandidates as $bodyHtml) {
             $image = ItemImageExtractor::fromHtml($bodyHtml);

@@ -27,7 +27,7 @@ class RunTuning
      * Whether this endpoint answers slowly enough to need the long timeout
      * profile (#433). Default false: the standard bounds are right for every
      * hosted provider, and a connection only earns the long ones by being
-     * marked. What the two profiles are is ProviderTimeouts' business — the
+     * marked. What the two profiles are is ProviderTimeoutsModel's business — the
      * row records the account's judgement about the endpoint, not a duration.
      */
     #[ORM\Column(options: ['default' => 0])]

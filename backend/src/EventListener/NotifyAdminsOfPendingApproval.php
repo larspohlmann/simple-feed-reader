@@ -8,7 +8,7 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
-use App\Service\Mail\PendingApprovalNotice;
+use App\Service\Mail\Model\PendingApprovalNoticeModel;
 use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -45,7 +45,7 @@ final readonly class NotifyAdminsOfPendingApproval
             return;
         }
 
-        $notice = new PendingApprovalNotice(
+        $notice = new PendingApprovalNoticeModel(
             $event->user->getEmail(),
             $event->method,
             $event->oauthProvider,

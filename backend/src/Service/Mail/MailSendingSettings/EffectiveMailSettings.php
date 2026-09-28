@@ -7,8 +7,8 @@ namespace App\Service\Mail\MailSendingSettings;
 use App\Repository\MailServerSettingsRepository;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailFallback;
-use App\Service\Mail\Settings\MailIdentity;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 
 final readonly class EffectiveMailSettings implements MailSendingSettingsInterface
 {
@@ -26,18 +26,18 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
         return null !== $settings ? $settings->isEnabled() : $this->fallback->connection()->enabled;
     }
 
-    public function identity(): MailIdentity
+    public function identity(): MailIdentityModel
     {
         $settings = $this->repository->findSingleton();
 
         if (null !== $settings && '' !== $settings->getFromAddress()) {
-            return new MailIdentity($settings->getFromAddress(), $settings->getFromName());
+            return new MailIdentityModel($settings->getFromAddress(), $settings->getFromName());
         }
 
         return $this->fallback->identity();
     }
 
-    public function configuredTransport(): ?ResolvedMailTransport
+    public function configuredTransport(): ?ResolvedMailTransportModel
     {
         $settings = $this->repository->findSingleton();
 
@@ -45,7 +45,7 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
             return null;
         }
 
-        return new ResolvedMailTransport(
+        return new ResolvedMailTransportModel(
             $settings->getHost(),
             $settings->getPort(),
             $settings->getUsername(),

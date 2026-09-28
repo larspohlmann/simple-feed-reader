@@ -8,6 +8,7 @@ use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\Factory\CatalogFeedFactory;
+use App\Service\Catalog\Model\CatalogFeedDetailsModel;
 use App\Service\Ordering\PositionReorderer;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,7 +23,7 @@ final readonly class CatalogFeedEditor
     ) {
     }
 
-    public function create(CatalogFeedDetails $details): CatalogFeed
+    public function create(CatalogFeedDetailsModel $details): CatalogFeed
     {
         $feed = $this->feedFactory->create($details);
         $this->entityManager->persist($feed);
@@ -31,7 +32,7 @@ final readonly class CatalogFeedEditor
         return $feed;
     }
 
-    public function update(CatalogFeed $feed, CatalogFeedDetails $details): void
+    public function update(CatalogFeed $feed, CatalogFeedDetailsModel $details): void
     {
         $feed->setCategory($this->categories->getById($details->categoryId));
         $feed->setTitle($details->title);
@@ -56,7 +57,7 @@ final readonly class CatalogFeedEditor
         $this->reorderer->reorder($orderedFeedIds, $byId);
     }
 
-    private function applyEditableFields(CatalogFeed $feed, CatalogFeedDetails $details): void
+    private function applyEditableFields(CatalogFeed $feed, CatalogFeedDetailsModel $details): void
     {
         $feed->setSiteUrl($details->siteUrl);
         $feed->setDescription($details->description);

@@ -11,7 +11,7 @@ use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Subscription\SubscriptionService;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
@@ -98,7 +98,7 @@ final class SubscriptionControllerTest extends WebTestCase
         // address the user typed.
         $stub->willReturn(
             'https://example.com/feed',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/feed.xml',
                 permanentRedirect: false,
                 body: $rss,
@@ -157,7 +157,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://example.com/feed',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/feed.xml',
                 permanentRedirect: false,
                 body: $rss,
@@ -212,7 +212,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://example.com/feed',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/feed.xml',
                 permanentRedirect: false,
                 body: <<<'XML'
@@ -270,7 +270,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://example.com/feed',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/feed.xml',
                 permanentRedirect: false,
                 body: $rss,
@@ -335,7 +335,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://example.com/feed',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/feed.xml',
                 permanentRedirect: false,
                 body: $rss,
@@ -386,7 +386,7 @@ final class SubscriptionControllerTest extends WebTestCase
         // the site root, not to a nested path.
         $stub->willReturn(
             'https://example.com/blog',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://example.com/blog/',
                 permanentRedirect: false,
                 body: $html,
@@ -423,7 +423,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://www.heise.de',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://www.heise.de/',
                 permanentRedirect: false,
                 body: $this->scrapedFixture('heise-2026-07-23.html'),
@@ -466,7 +466,7 @@ final class SubscriptionControllerTest extends WebTestCase
         $stub = new StubFeedFetcher();
         $stub->willReturn(
             'https://www.heise.de',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://www.heise.de/',
                 permanentRedirect: false,
                 body: $this->scrapedFixture('heise-2026-07-23.html'),

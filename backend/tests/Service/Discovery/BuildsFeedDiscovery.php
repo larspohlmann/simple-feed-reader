@@ -11,7 +11,7 @@ use App\Service\Discovery\SubstackProfileFeed;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Discovery\WordPressRestProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Support\StubFeedFetcher;
@@ -63,7 +63,13 @@ trait BuildsFeedDiscovery
         $fetcher = $this->fetcher();
         $fetcher->willReturn(
             $url,
-            FetchResponse::fetched($finalUrl, permanentRedirect: false, body: $body, etag: null, lastModified: null),
+            FetchResponseModel::fetched(
+                $finalUrl,
+                permanentRedirect: false,
+                body: $body,
+                etag: null,
+                lastModified: null,
+            ),
         );
 
         return $fetcher;

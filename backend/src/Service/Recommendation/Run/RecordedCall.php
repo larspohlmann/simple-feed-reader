@@ -9,8 +9,8 @@ use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\CompletionStreamProgress;
-use App\Service\Ai\Completion\CompletionUsage;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\CompletionUsageModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -39,7 +39,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
      * and banked when the call settles (#409). Sticky: it arrives in one late
      * message, so a later report without it must not erase it.
      */
-    private ?CompletionUsage $usage = null;
+    private ?CompletionUsageModel $usage = null;
 
     /**
      * Billed once per instance across every settle path; set only once
@@ -59,7 +59,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
         $this->lastCheckpointAt = $clock->now();
     }
 
-    public function streamProgressed(CompletionStreamProgress $progress): void
+    public function streamProgressed(CompletionStreamProgressModel $progress): void
     {
         $this->wireBytes = $progress->wireBytes;
         $this->finishReason = $progress->finishReason ?? $this->finishReason;

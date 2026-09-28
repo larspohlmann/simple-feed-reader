@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\DigestImageEmbedder;
 
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Mail\Digest\DigestImageKind;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Mail\Digest\DigestImageResizer\DigestImageResizerInterface;
-use App\Service\Mail\Digest\DigestImageSet;
-use App\Service\Mail\Digest\DigestPage;
-use App\Service\Mail\Digest\EmbeddedImage;
 use App\Service\Mail\Digest\Exception\ImageProcessingException;
+use App\Service\Mail\Digest\Model\DigestImageKind;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestPageModel;
+use App\Service\Mail\Digest\Model\EmbeddedImageModel;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -32,7 +32,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
     ) {
     }
 
-    public function embed(DigestPage $page): DigestImageSet
+    public function embed(DigestPageModel $page): DigestImageSetModel
     {
         $images = [];
         $cidByUrl = [];
@@ -49,7 +49,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
             $images[] = $image;
         }
 
-        return new DigestImageSet($images, $cidByUrl);
+        return new DigestImageSetModel($images, $cidByUrl);
     }
 
     /**
@@ -57,7 +57,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
      *
      * @return array<string, DigestImageKind>
      */
-    private function requests(DigestPage $page): array
+    private function requests(DigestPageModel $page): array
     {
         $requests = [];
 
@@ -79,9 +79,9 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
      * @throws FaviconUnavailableException
      * @throws ImageProcessingException
      */
-    private function embedOne(string $url, DigestImageKind $kind): EmbeddedImage
+    private function embedOne(string $url, DigestImageKind $kind): EmbeddedImageModel
     {
-        return new EmbeddedImage(
+        return new EmbeddedImageModel(
             'img' . substr(hash('xxh128', $url), 0, 16),
             $this->resized($this->downloader->download($url)->bytes, $kind),
             $kind->contentType(),

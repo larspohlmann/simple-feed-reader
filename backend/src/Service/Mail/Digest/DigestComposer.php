@@ -8,6 +8,10 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRow;
 use App\Repository\SavedSearchRepository;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
 use App\Service\Text\PlainText;
 
 /**
@@ -47,11 +51,11 @@ final readonly class DigestComposer
         return $groups === [] ? null : new DigestModel($groups, $total);
     }
 
-    private function group(SavedSearch $search, DigestSearchMatches $matches): DigestGroup
+    private function group(SavedSearch $search, DigestSearchMatchesModel $matches): DigestGroupModel
     {
-        $entries = array_map(fn (EntryListRow $row): DigestEntry => $this->entry($row), $matches->entries);
+        $entries = array_map(fn (EntryListRow $row): DigestEntryModel => $this->entry($row), $matches->entries);
 
-        return new DigestGroup(
+        return new DigestGroupModel(
             $search->getTerm(),
             $matches->totalCount,
             $entries,
@@ -60,11 +64,11 @@ final readonly class DigestComposer
         );
     }
 
-    private function entry(EntryListRow $row): DigestEntry
+    private function entry(EntryListRow $row): DigestEntryModel
     {
         $entry = $row->entry;
 
-        return new DigestEntry(
+        return new DigestEntryModel(
             $entry->getTitle(),
             $row->subscriptionTitle,
             $this->shortDescription($row),

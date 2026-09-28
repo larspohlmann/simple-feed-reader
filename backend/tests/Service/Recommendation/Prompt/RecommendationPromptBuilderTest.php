@@ -6,7 +6,7 @@ namespace App\Tests\Service\Recommendation\Prompt;
 
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\CandidatePoolSummary;
 use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\PromptLine;

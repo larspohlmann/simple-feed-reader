@@ -12,11 +12,11 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\BackupFitCheck;
-use App\Service\Backup\BackupInventory;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Model\BackupInventoryModel;
 use App\Service\Backup\RestorePreviewer;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -173,9 +173,9 @@ final class RestorePreviewerTest extends DbTestCase
      *
      * @param array<string, int> $counts
      */
-    private static function inventoryOf(array $counts): BackupInventory
+    private static function inventoryOf(array $counts): BackupInventoryModel
     {
-        return new BackupInventory(
+        return new BackupInventoryModel(
             source: self::someHeader()->toSource(),
             tags: $counts['tags'] ?? 0,
             savedSearches: $counts['savedSearches'] ?? 0,

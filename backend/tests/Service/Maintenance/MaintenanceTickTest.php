@@ -10,19 +10,19 @@ use App\Entity\User;
 use App\Repository\PendingImageVerificationRepository;
 use App\Repository\PreferencesRepository;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Image\ImageVerificationSweep;
 use App\Service\Image\ImageVerifier;
 use App\Service\Logging\Loki\LokiClient;
-use App\Service\Logging\Loki\LokiSpoolReport;
 use App\Service\Logging\Loki\LokiSpoolShipper;
+use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
-use App\Service\Maintenance\MaintenanceSweeps;
 use App\Service\Maintenance\MaintenanceTick;
+use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Recommendation\Run\ForYouSweep;
 use App\Tests\DbTestCase;
 use App\Tests\Support\DuplicateKeyViolation;
@@ -71,7 +71,7 @@ final class MaintenanceTickTest extends DbTestCase
         $fetcher = new StubFeedFetcher($clock);
         $fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 $feed->getUrl(),
                 false,
                 /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title>'
@@ -149,7 +149,7 @@ final class MaintenanceTickTest extends DbTestCase
         $report = $tick->run();
 
         self::assertTrue($report->refresh->isAborted());
-        self::assertEquals(MaintenanceSweeps::skippedAfterAbortedRefresh(), $report->sweeps);
-        self::assertEquals(new LokiSpoolReport(0, 0), $report->logShipping);
+        self::assertEquals(MaintenanceSweepsModel::skippedAfterAbortedRefresh(), $report->sweeps);
+        self::assertEquals(new LokiSpoolReportModel(0, 0), $report->logShipping);
     }
 }

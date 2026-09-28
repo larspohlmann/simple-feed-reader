@@ -13,6 +13,9 @@ use App\Repository\SavedSearchRepository;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Repository\UserRepository;
+use App\Service\Backup\Model\BackupPartModel;
+use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Model\FoundationSnapshotModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -39,7 +42,7 @@ final readonly class AccountBackupExporter
     }
 
     /**
-     * @return \Generator<int, BackupPart>
+     * @return \Generator<int, BackupPartModel>
      */
     public function parts(User $user, ?string $sourceUrl): \Generator
     {
@@ -52,9 +55,9 @@ final readonly class AccountBackupExporter
         yield $this->foundation($foundation, $provenance, $walk);
     }
 
-    private function provenanceOf(User $user, ?string $sourceUrl): BackupProvenance
+    private function provenanceOf(User $user, ?string $sourceUrl): BackupProvenanceModel
     {
-        return new BackupProvenance(
+        return new BackupProvenanceModel(
             backupId: bin2hex(random_bytes(8)),
             createdAt: $this->clock->now(),
             sourceUrl: $sourceUrl,
@@ -62,12 +65,12 @@ final readonly class AccountBackupExporter
         );
     }
 
-    private function foundationSnapshot(int $userId): FoundationSnapshot
+    private function foundationSnapshot(int $userId): FoundationSnapshotModel
     {
         $subscriptions = $this->subscriptions->findForUserWithTags($userId);
         $feedsById = $this->feedsById($subscriptions);
 
-        return new FoundationSnapshot(
+        return new FoundationSnapshotModel(
             $this->lines->accountLine($this->users->getById($userId)),
             array_map($this->lines->tagLine(...), $this->tags->findForUser($userId)),
             array_map($this->lines->savedSearchLine(...), $this->savedSearches->findForUser($userId)),
@@ -78,10 +81,10 @@ final readonly class AccountBackupExporter
     }
 
     private function foundation(
-        FoundationSnapshot $snapshot,
-        BackupProvenance $provenance,
+        FoundationSnapshotModel $snapshot,
+        BackupProvenanceModel $provenance,
         BackupPartWalk $walk,
-    ): BackupPart {
+    ): BackupPartModel {
         $header = $this->lines->foundationHeader($provenance, $walk->partsWritten() + 1, $walk->totals());
 
         return $snapshot->part($header, $this->lines->footerLine($snapshot->counts()));

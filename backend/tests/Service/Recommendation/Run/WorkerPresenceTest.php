@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Run\RecommendationDriverKind;
 use App\Service\Recommendation\Run\WorkerPresence;
 use App\Tests\DbTestCase;
@@ -78,7 +78,7 @@ final class WorkerPresenceTest extends DbTestCase
     public function testTheFreshnessWindowOutlastsTheLongestSilenceBeforeAnAnswer(): void
     {
         self::assertGreaterThan(
-            ProviderTimeouts::forSlowModel()->firstByteSeconds,
+            ProviderTimeoutsModel::forSlowModel()->firstByteSeconds,
             WorkerPresence::FRESH_SECONDS,
             'A worker waiting for a slow model\'s first token must still count as alive.',
         );
@@ -94,7 +94,7 @@ final class WorkerPresenceTest extends DbTestCase
         $sweepIntervalSeconds = 10;
 
         self::assertGreaterThan(
-            ProviderTimeouts::forSlowModel()->firstByteSeconds + $sweepIntervalSeconds,
+            ProviderTimeoutsModel::forSlowModel()->firstByteSeconds + $sweepIntervalSeconds,
             WorkerPresence::FRESH_SECONDS,
         );
     }
@@ -110,7 +110,7 @@ final class WorkerPresenceTest extends DbTestCase
     public function testTheFreshnessWindowIsNotSizedAgainstAWholeCall(): void
     {
         self::assertLessThan(
-            ProviderTimeouts::forSlowModel()->wallClockSeconds,
+            ProviderTimeoutsModel::forSlowModel()->wallClockSeconds,
             WorkerPresence::FRESH_SECONDS,
         );
     }

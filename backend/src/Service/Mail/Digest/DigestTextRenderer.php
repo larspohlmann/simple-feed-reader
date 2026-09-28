@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Mail\Digest\Model\DigestRenderedMailModel;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
@@ -17,20 +21,20 @@ final readonly class DigestTextRenderer
     {
     }
 
-    public function render(DigestModel $model, string $locale): DigestRenderedMail
+    public function render(DigestModel $model, string $locale): DigestRenderedMailModel
     {
         $subject = $this->translator->trans('digest.subject', ['%count%' => $model->totalCount], 'emails', $locale);
 
         $intro = $this->translator->trans('digest.intro', [], 'emails', $locale);
-        $blocks = array_map(fn (DigestGroup $group): string => $this->group($group, $locale), $model->groups);
+        $blocks = array_map(fn (DigestGroupModel $group): string => $this->group($group, $locale), $model->groups);
         $footer = $this->translator->trans('digest.footer', [], 'emails', $locale);
 
         $body = $intro . "\n\n" . implode("\n\n", $blocks) . "\n\n" . $footer;
 
-        return new DigestRenderedMail($subject, $body);
+        return new DigestRenderedMailModel($subject, $body);
     }
 
-    private function group(DigestGroup $group, string $locale): string
+    private function group(DigestGroupModel $group, string $locale): string
     {
         $heading = $this->translator->trans(
             'digest.group_heading',
@@ -39,7 +43,7 @@ final readonly class DigestTextRenderer
             $locale,
         );
 
-        $lines = array_map(fn (DigestEntry $entry): string => $this->entry($entry), $group->entries);
+        $lines = array_map(fn (DigestEntryModel $entry): string => $this->entry($entry), $group->entries);
         $block = $heading . "\n" . implode("\n", $lines);
 
         if (!$group->hasMore) {
@@ -54,7 +58,7 @@ final readonly class DigestTextRenderer
         );
     }
 
-    private function entry(DigestEntry $entry): string
+    private function entry(DigestEntryModel $entry): string
     {
         $lines = ["• {$entry->title} — {$entry->feedName}"];
 

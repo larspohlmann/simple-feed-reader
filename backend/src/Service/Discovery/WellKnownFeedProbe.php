@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Discovery;
 
+use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\PageUrls;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
@@ -48,7 +49,7 @@ final readonly class WellKnownFeedProbe
      * not a failure signal: a site with no feed under a conventional path is
      * the ordinary case, and the caller reports the page's own outcome instead.
      */
-    public function probe(string $pageUrl): ?DiscoveredFeed
+    public function probe(string $pageUrl): ?DiscoveredFeedModel
     {
         $candidateUrls = $this->candidateUrls(new PageUrls($pageUrl));
         if ([] === $candidateUrls) {
@@ -73,12 +74,12 @@ final readonly class WellKnownFeedProbe
      *
      * @param array<int, string> $candidateUrls
      *
-     * @return array<int, DiscoveredFeed>
+     * @return array<int, DiscoveredFeedModel>
      */
     private function feedsAmong(array $candidateUrls): array
     {
         $tickets = array_map(
-            static fn (string $url): FetchTicket => new FetchTicket($url),
+            static fn (string $url): FetchTicketModel => new FetchTicketModel($url),
             $candidateUrls,
         );
 
@@ -93,7 +94,7 @@ final readonly class WellKnownFeedProbe
         return $feeds;
     }
 
-    private function feedOf(FetchOutcome $outcome): ?DiscoveredFeed
+    private function feedOf(FetchOutcomeModel $outcome): ?DiscoveredFeedModel
     {
         if (null !== $outcome->failure()) {
             return null;
@@ -102,7 +103,7 @@ final readonly class WellKnownFeedProbe
         $response = $outcome->responseOrThrow();
 
         try {
-            return new DiscoveredFeed(
+            return new DiscoveredFeedModel(
                 $response->finalUrl,
                 $this->parser->parse($response->modifiedBody()),
                 $response->etag,

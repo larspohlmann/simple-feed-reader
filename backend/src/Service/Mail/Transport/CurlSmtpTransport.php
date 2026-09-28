@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Transport;
 
-use App\Service\Fetch\ProxyConfig;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\Exception\ProxiedSmtpSendException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
@@ -24,8 +24,8 @@ final class CurlSmtpTransport extends AbstractTransport
     private const int TIMEOUT_SECONDS = 30;
 
     public function __construct(
-        private readonly ResolvedMailTransport $resolved,
-        private readonly ProxyConfig $proxy,
+        private readonly ResolvedMailTransportModel $resolved,
+        private readonly ProxyConfigModel $proxy,
         ?EventDispatcherInterface $dispatcher = null,
         ?LoggerInterface $logger = null,
     ) {

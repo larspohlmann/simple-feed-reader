@@ -47,7 +47,7 @@ final readonly class WorkerPresence
      * What is left is the silence before the first chunk. Nothing pings while
      * the provider evaluates the prompt, and the longest that may honestly
      * last is the most patient first-byte bound any connection can be on:
-     * ProviderTimeouts' slow profile, 900s. Add ten seconds for the next
+     * ProviderTimeoutsModel's slow profile, 900s. Add ten seconds for the next
      * sweep firing plus bookkeeping and 960s carries it. This constant
      * follows THAT bound now, and must be raised with it, not the wall clock.
      *

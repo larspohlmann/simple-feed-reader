@@ -10,8 +10,8 @@ use App\Entity\User;
 use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
-use App\Service\Ai\Completion\CompletionStreamProgress;
-use App\Service\Ai\Completion\CompletionUsage;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\CompletionUsageModel;
 use App\Service\Recommendation\Run\RecordedCall;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -74,7 +74,7 @@ final class RecordedCallTest extends DbTestCase
     public function testFinishUsableWritesTheWireByteCount(): void
     {
         $call = $this->call();
-        $call->streamProgressed(new CompletionStreamProgress('partial answer', 4_096));
+        $call->streamProgressed(new CompletionStreamProgressModel('partial answer', 4_096));
 
         $call->finishUsable('the answer');
 
@@ -105,7 +105,7 @@ final class RecordedCallTest extends DbTestCase
     public function testASettledCallRecordsTheProvidersFinishReason(): void
     {
         $call = $this->call();
-        $call->streamProgressed(new CompletionStreamProgress('partial answer', 100, 'length'));
+        $call->streamProgressed(new CompletionStreamProgressModel('partial answer', 100, 'length'));
 
         $call->finishUsable('the answer');
 
@@ -120,7 +120,7 @@ final class RecordedCallTest extends DbTestCase
     public function testATransportFailureKeepsTheFinishReasonSeenBeforeItDied(): void
     {
         $call = $this->call();
-        $call->streamProgressed(new CompletionStreamProgress('', 100, 'length'));
+        $call->streamProgressed(new CompletionStreamProgressModel('', 100, 'length'));
 
         $call->abortAfterTransportFailure('cURL error 28');
 
@@ -140,7 +140,7 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop', new CompletionUsageModel(
             promptTokens: 1200,
             completionTokens: 340,
             reasoningTokens: 90,
@@ -162,7 +162,7 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
+        $call->streamProgressed(new CompletionStreamProgressModel('', 100, null, new CompletionUsageModel(
             promptTokens: 900,
             completionTokens: 0,
             reasoningTokens: 0,
@@ -178,7 +178,7 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop', new CompletionUsageModel(
             promptTokens: 40,
             completionTokens: 9,
             reasoningTokens: 0,
@@ -195,7 +195,7 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
+        $call->streamProgressed(new CompletionStreamProgressModel('', 100, null, new CompletionUsageModel(
             promptTokens: 900,
             completionTokens: 0,
             reasoningTokens: 0,
@@ -213,7 +213,7 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop'));
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop'));
         $call->finishUsable('{}');
 
         self::assertSame(0, $this->runTotals()['promptTokens']);
@@ -232,7 +232,7 @@ final class RecordedCallTest extends DbTestCase
     public function testBanksTwoCallsUsageAsASumNotAnOverwrite(): void
     {
         $first = $this->call();
-        $first->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+        $first->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop', new CompletionUsageModel(
             promptTokens: 1000,
             completionTokens: 200,
             reasoningTokens: 50,
@@ -242,7 +242,7 @@ final class RecordedCallTest extends DbTestCase
         $first->finishUsable('{}');
 
         $second = $this->call();
-        $second->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+        $second->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop', new CompletionUsageModel(
             promptTokens: 400,
             completionTokens: 90,
             reasoningTokens: 10,
@@ -272,14 +272,14 @@ final class RecordedCallTest extends DbTestCase
     {
         $call = $this->call();
 
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 100, 'stop', new CompletionUsageModel(
             promptTokens: 500,
             completionTokens: 60,
             reasoningTokens: 5,
             cachedTokens: 0,
             costNanoCredits: 7_000,
         )));
-        $call->streamProgressed(new CompletionStreamProgress('{}', 200));
+        $call->streamProgressed(new CompletionStreamProgressModel('{}', 200));
         $call->finishUsable('{}');
 
         self::assertSame(500, $this->runTotals()['promptTokens']);

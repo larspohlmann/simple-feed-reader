@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\UserPasskey;
-use App\Service\Passkey\AccountPasskeys;
+use App\Service\Passkey\Model\AccountPasskeysModel;
 
 /**
  * The passkey listing body (#624): the rows plus the three values the WebAuthn
@@ -31,7 +31,7 @@ final readonly class PasskeyJson
      *
      * @return PasskeyListingBody
      */
-    public static function listing(AccountPasskeys $account): array
+    public static function listing(AccountPasskeysModel $account): array
     {
         return [
             'rpId' => $account->relyingPartyId,

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Subscription;
 
 use App\Entity\Feed;
-use App\Service\Discovery\DiscoveredFeed;
+use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -61,7 +61,7 @@ final readonly class FirstFetchRecorder
      *
      * @throws \DateMalformedStringException
      */
-    public function record(Feed $feed, DiscoveredFeed $discovered): int
+    public function record(Feed $feed, DiscoveredFeedModel $discovered): int
     {
         if (null !== $feed->getLastFetchedAt()) {
             return 0;
@@ -94,7 +94,7 @@ final readonly class FirstFetchRecorder
      * make "newest first" true only for the feeds large enough to need the
      * cap at all — every subscribe deserves the same guarantee.
      */
-    private function newest(ParsedFeed $document): ParsedFeed
+    private function newest(ParsedFeedModel $document): ParsedFeedModel
     {
         $entries = $document->entries;
         usort($entries, self::byPublicationDateDescending(...));
@@ -103,7 +103,7 @@ final readonly class FirstFetchRecorder
         return $document->withEntries($newest);
     }
 
-    private static function byPublicationDateDescending(ParsedEntry $left, ParsedEntry $right): int
+    private static function byPublicationDateDescending(ParsedEntryModel $left, ParsedEntryModel $right): int
     {
         if ($left->publishedAt === null) {
             return $right->publishedAt === null ? 0 : 1;

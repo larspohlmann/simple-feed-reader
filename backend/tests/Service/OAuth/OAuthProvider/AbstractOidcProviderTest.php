@@ -316,7 +316,7 @@ final class AbstractOidcProviderTest extends TestCase
     public function testANonStringEmailBecomesNoEmail(): void
     {
         // A structured `email` claim is not an address. It must not become the
-        // string "Array" or reach OAuthIdentity at all.
+        // string "Array" or reach OAuthIdentityModel at all.
         $provider = $this->provider($this->tokenResponse($this->claims([
             'email' => ['bob@example.com'],
             'email_verified' => true,

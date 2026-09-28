@@ -6,16 +6,18 @@ namespace App\Service\Preview;
 
 use App\Entity\User;
 use App\Enum\SourceFormat;
-use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Image\DeclaredImage;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\WordPressJsonParser;
+use App\Service\Preview\Exception\FeedPreviewException;
+use App\Service\Preview\Model\FeedPreviewItemModel;
+use App\Service\Preview\Model\FeedPreviewModel;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Service\Text\PlainText;
 
@@ -44,7 +46,7 @@ final readonly class FeedPreviewService
     ) {
     }
 
-    public function preview(User $user, string $url, ?string $format = null): FeedPreview
+    public function preview(User $user, string $url, ?string $format = null): FeedPreviewModel
     {
         // Mirrors the guard in SubscriptionService::subscribe(): a preview
         // request asserting 'scraped' is the same hand-made bypass discovery's
@@ -87,28 +89,28 @@ final readonly class FeedPreviewService
         }
 
         $sample = \array_slice($feed->entries, 0, self::SAMPLE_SIZE);
-        $tiers = array_map(fn (ParsedEntry $e): string => $this->tier($e), $sample);
+        $tiers = array_map(fn (ParsedEntryModel $e): string => $this->tier($e), $sample);
         $displayed = \array_slice($sample, 0, self::PREVIEW_ITEMS);
-        $items = array_map(fn (ParsedEntry $e): FeedPreviewItem => $this->item($e), $displayed);
+        $items = array_map(fn (ParsedEntryModel $e): FeedPreviewItemModel => $this->item($e), $displayed);
 
-        return new FeedPreview(
+        return new FeedPreviewModel(
             title: $feed->title,
             itemCount: \count($feed->entries),
             content: $this->verdict($tiers),
             hasImages: array_any(
                 $sample,
-                fn (ParsedEntry $e): bool => $this->httpsImageUrl($e->media->image) !== null,
+                fn (ParsedEntryModel $e): bool => $this->httpsImageUrl($e->media->image) !== null,
             ),
             items: $items,
         );
     }
 
-    private function item(ParsedEntry $entry): FeedPreviewItem
+    private function item(ParsedEntryModel $entry): FeedPreviewItemModel
     {
         $image = $entry->media->image;
         $imageUrl = $this->httpsImageUrl($image);
 
-        return new FeedPreviewItem(
+        return new FeedPreviewItemModel(
             title: $entry->title,
             url: $entry->url,
             author: $entry->author,
@@ -124,7 +126,7 @@ final readonly class FeedPreviewService
 
     // The SPA is https, so an http/relative/data image is useless in an <img>.
     // Mirrors the reader's firstPreviewImage rule.
-    private function httpsImageUrl(?DeclaredImage $image): ?string
+    private function httpsImageUrl(?DeclaredImageModel $image): ?string
     {
         if ($image === null) {
             return null;
@@ -133,7 +135,7 @@ final readonly class FeedPreviewService
         return str_starts_with($image->url, 'https://') ? $image->url : null;
     }
 
-    private function tier(ParsedEntry $entry): string
+    private function tier(ParsedEntryModel $entry): string
     {
         $text = $this->plainText($entry);
         if ($entry->contentHtml !== null && mb_strlen($text) >= self::FULL_TEXT_MIN) {
@@ -166,7 +168,7 @@ final readonly class FeedPreviewService
         return $best;
     }
 
-    private function plainText(ParsedEntry $entry): string
+    private function plainText(ParsedEntryModel $entry): string
     {
         return PlainText::from($entry->contentHtml ?? $entry->summary) ?? '';
     }

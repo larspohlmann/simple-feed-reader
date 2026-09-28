@@ -7,6 +7,10 @@ namespace App\Service\OAuth;
 use App\Service\OAuth\Exception\InvalidOAuthStateException;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
 use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\OAuth\Model\OAuthCallbackAttemptModel;
+use App\Service\OAuth\Model\OAuthCallbackFailure;
+use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\OAuth\Model\OAuthStartStateModel;
 use Psr\Cache\InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use Random\RandomException;
@@ -26,7 +30,7 @@ final readonly class OAuthCallback
      * @throws InvalidArgumentException
      * @throws RandomException
      */
-    public function complete(OAuthCallbackAttempt $attempt): string
+    public function complete(OAuthCallbackAttemptModel $attempt): string
     {
         if ($attempt->declined) {
             throw new OAuthCallbackRefusedException(OAuthCallbackFailure::AccessDenied);
@@ -48,7 +52,7 @@ final readonly class OAuthCallback
     }
 
     /** @throws InvalidArgumentException */
-    private function consume(string $state, OAuthCallbackAttempt $attempt): OAuthStartState
+    private function consume(string $state, OAuthCallbackAttemptModel $attempt): OAuthStartStateModel
     {
         try {
             $started = $this->stateStore->consume($state, $attempt->browserToken);
@@ -64,7 +68,7 @@ final readonly class OAuthCallback
         return $started;
     }
 
-    private function exchange(string $provider, string $code, OAuthStartState $started): OAuthIdentity
+    private function exchange(string $provider, string $code, OAuthStartStateModel $started): OAuthIdentityModel
     {
         try {
             return $this->providers->get($provider)->exchangeCode($code, $started->codeVerifier, $started->nonce);

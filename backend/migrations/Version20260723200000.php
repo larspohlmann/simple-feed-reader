@@ -13,7 +13,7 @@ use Doctrine\Migrations\AbstractMigration;
  * Adds feed.source_format ('xml'|'scraped'), recording whether a feed's body
  * is turned into entries by parsing RSS/Atom or by scraping an HTML listing
  * (the planned HtmlItemExtractor). Open string, matching
- * App\Service\Discovery\FeedCandidate::$format.
+ * App\Service\Discovery\Model\FeedCandidateModel::$format.
  *
  * PLATFORM-AWARE DDL, for the same reason Version20260723120000 is: a
  * `doctrine:migrations:diff` run on a SQLite dev box emits SQLite-only DDL

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ingest;
 
 use App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 final readonly class PlatformEntryRules
@@ -17,7 +17,7 @@ final readonly class PlatformEntryRules
     ) {
     }
 
-    public function apply(ParsedEntry $entry): ParsedEntry
+    public function apply(ParsedEntryModel $entry): ParsedEntryModel
     {
         foreach ($this->rules as $rule) {
             if ($rule->supports($entry)) {

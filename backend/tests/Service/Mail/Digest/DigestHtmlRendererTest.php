@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
-use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestPage;
-use App\Service\Mail\Digest\DigestPageGroup;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Mail\Digest\Model\DigestPageModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
@@ -36,9 +36,9 @@ final class DigestHtmlRendererTest extends TestCase
         );
     }
 
-    private function card(string $title, ?string $imageUrl): DigestEntry
+    private function card(string $title, ?string $imageUrl): DigestEntryModel
     {
-        return new DigestEntry(
+        return new DigestEntryModel(
             $title,
             'ZDFheute',
             'A short summary.',
@@ -51,15 +51,18 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testRendersCardWithImageAndTheEntryLink(): void
     {
-        $group = new DigestPageGroup(
+        $group = new DigestPageGroupModel(
             'Thailand',
             10,
             [$this->card('Thailand-Urlaub', 'https://cdn/1.jpg')],
             7,
             'https://reader.example/?q=Thailand',
         );
-        $page = new DigestPage([$group], 10);
-        $images = new DigestImageSet([], ['https://cdn/1.jpg' => 'imgABC', 'https://site/favicon.ico' => 'imgFAV']);
+        $page = new DigestPageModel([$group], 10);
+        $images = new DigestImageSetModel(
+            [],
+            ['https://cdn/1.jpg' => 'imgABC', 'https://site/favicon.ico' => 'imgFAV'],
+        );
 
         $html = $this->renderer()->render($page, $images, 'en');
 
@@ -74,15 +77,15 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testTextOnlyCardHasNoImgTag(): void
     {
-        $group = new DigestPageGroup(
+        $group = new DigestPageGroupModel(
             'Thailand',
             1,
             [$this->card('No image here', null)],
             0,
             'https://reader.example/?q=Thailand',
         );
-        $page = new DigestPage([$group], 1);
-        $images = new DigestImageSet([], ['https://site/favicon.ico' => 'imgFAV']);
+        $page = new DigestPageModel([$group], 1);
+        $images = new DigestImageSetModel([], ['https://site/favicon.ico' => 'imgFAV']);
 
         $html = $this->renderer()->render($page, $images, 'en');
 
@@ -92,10 +95,10 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testOverflowGroupRendersHeadingAndMoreLinkOnly(): void
     {
-        $group = new DigestPageGroup('Bundesliga', 12, [], 12, 'https://reader.example/?q=Bundesliga');
-        $page = new DigestPage([$group], 12);
+        $group = new DigestPageGroupModel('Bundesliga', 12, [], 12, 'https://reader.example/?q=Bundesliga');
+        $page = new DigestPageModel([$group], 12);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString('Bundesliga (12)', $html);
         self::assertStringContainsString('+12 more in "Bundesliga"', $html);
@@ -103,24 +106,24 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testZeroRemainingRendersNoMoreLink(): void
     {
-        $group = new DigestPageGroup('Thailand', 1, [], 0, 'https://reader.example/?q=Thailand');
-        $page = new DigestPage([$group], 1);
+        $group = new DigestPageGroupModel('Thailand', 1, [], 0, 'https://reader.example/?q=Thailand');
+        $page = new DigestPageModel([$group], 1);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertStringNotContainsString('more in', $html);
     }
 
     public function testHeaderShowsTheTotalEntryCount(): void
     {
-        $html = $this->renderer()->render(new DigestPage([], 22), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([], 22), new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString('22 new entries', $html);
     }
 
     public function testTheHeaderIsDatedByTheInjectedClock(): void
     {
-        $html = $this->renderer()->render(new DigestPage([], 1), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([], 1), new DigestImageSetModel([], []), 'en');
 
         $clockDay = (new \IntlDateFormatter('en', \IntlDateFormatter::FULL, \IntlDateFormatter::NONE, 'UTC'))
             ->format(new \DateTimeImmutable('2026-08-30T12:00:00Z'));
@@ -130,18 +133,18 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testGroupHeadingShowsTermAndItsCount(): void
     {
-        $group = new DigestPageGroup('Thailand', 10, [], 0, 'https://reader.example/?q=Thailand');
+        $group = new DigestPageGroupModel('Thailand', 10, [], 0, 'https://reader.example/?q=Thailand');
 
-        $html = $this->renderer()->render(new DigestPage([$group], 10), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([$group], 10), new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString('Thailand (10)', $html);
     }
 
     public function testFooterCarriesTheSettingsLink(): void
     {
-        $page = new DigestPage([], 0);
+        $page = new DigestPageModel([], 0);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString('https://reader.example/settings/email', $html);
         self::assertStringContainsString('Settings → Email', $html);
@@ -149,15 +152,18 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testRenderedPageCarriesAllFourBodySectionsInOrder(): void
     {
-        $group = new DigestPageGroup(
+        $group = new DigestPageGroupModel(
             'Thailand',
             10,
             [$this->card('Thailand-Urlaub', 'https://cdn/1.jpg')],
             7,
             'https://reader.example/?q=Thailand',
         );
-        $page = new DigestPage([$group], 10);
-        $images = new DigestImageSet([], ['https://cdn/1.jpg' => 'imgABC', 'https://site/favicon.ico' => 'imgFAV']);
+        $page = new DigestPageModel([$group], 10);
+        $images = new DigestImageSetModel(
+            [],
+            ['https://cdn/1.jpg' => 'imgABC', 'https://site/favicon.ico' => 'imgFAV'],
+        );
 
         $html = $this->renderer()->render($page, $images, 'en');
 
@@ -177,7 +183,7 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testDocumentIsMobileReadyWithViewportAndOutlookGhostTable(): void
     {
-        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([], 0), new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString('<meta name="viewport" content="width=device-width,initial-scale=1">', $html);
         self::assertStringContainsString('text-size-adjust: 100%', $html);
@@ -190,7 +196,7 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testSheetIsFluidWithMaxWidthAndTightOuterFrame(): void
     {
-        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([], 0), new DigestImageSetModel([], []), 'en');
 
         // width:100% must sit beside max-width so Apple Mail fills the screen
         // instead of shrinking the sheet to its content width (#886).
@@ -200,23 +206,23 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testBodyDeclaresZeroPaddingSoIphoneMailDropsItsReadingInset(): void
     {
-        $html = $this->renderer()->render(new DigestPage([], 0), new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render(new DigestPageModel([], 0), new DigestImageSetModel([], []), 'en');
 
         self::assertMatchesRegularExpression('/<body[^>]+style="[^"]*\bpadding: 0;/', $html);
     }
 
     public function testStylesAreInlinedOntoElements(): void
     {
-        $group = new DigestPageGroup(
+        $group = new DigestPageGroupModel(
             'Thailand',
             1,
             [$this->card('Thailand-Urlaub', null)],
             0,
             'https://reader.example/?q=Thailand',
         );
-        $page = new DigestPage([$group], 1);
+        $page = new DigestPageModel([$group], 1);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertMatchesRegularExpression(
             '/<a[^>]+style="[^"]*font-size: 16px[^"]*"[^>]*>Thailand-Urlaub<\/a>/',
@@ -226,16 +232,16 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testTitleTextIsHtmlEscaped(): void
     {
-        $group = new DigestPageGroup(
+        $group = new DigestPageGroupModel(
             'Thailand',
             1,
             [$this->card('<script>alert(1)</script>', null)],
             0,
             'https://reader.example/?q=Thailand',
         );
-        $page = new DigestPage([$group], 1);
+        $page = new DigestPageModel([$group], 1);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertStringNotContainsString('<script>alert(1)</script>', $html);
         self::assertStringContainsString('&lt;script&gt;', $html);
@@ -243,7 +249,7 @@ final class DigestHtmlRendererTest extends TestCase
 
     public function testEscapedTextSubstitutesInvalidUtf8Bytes(): void
     {
-        $card = new DigestEntry(
+        $card = new DigestEntryModel(
             "Broken \xFF title",
             'Feed',
             '',
@@ -252,10 +258,10 @@ final class DigestHtmlRendererTest extends TestCase
             null,
             null,
         );
-        $group = new DigestPageGroup('Thailand', 1, [$card], 0, 'https://reader.example/?q=Thailand');
-        $page = new DigestPage([$group], 1);
+        $group = new DigestPageGroupModel('Thailand', 1, [$card], 0, 'https://reader.example/?q=Thailand');
+        $page = new DigestPageModel([$group], 1);
 
-        $html = $this->renderer()->render($page, new DigestImageSet([], []), 'en');
+        $html = $this->renderer()->render($page, new DigestImageSetModel([], []), 'en');
 
         self::assertStringContainsString("Broken \u{FFFD} title", $html);
     }

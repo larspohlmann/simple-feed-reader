@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthIdentity;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 
 /**
@@ -33,17 +33,17 @@ final class FakeOAuthProvider implements OAuthProviderInterface
     public array $exchanges = [];
 
     private function __construct(
-        private readonly OAuthIdentity $identity,
+        private readonly OAuthIdentityModel $identity,
         private readonly ?string $exchangeFailure,
     ) {
     }
 
-    public static function returning(OAuthIdentity $identity): self
+    public static function returning(OAuthIdentityModel $identity): self
     {
         return new self($identity, null);
     }
 
-    public static function failingExchange(OAuthIdentity $identity): self
+    public static function failingExchange(OAuthIdentityModel $identity): self
     {
         return new self($identity, 'fake provider was told to fail');
     }
@@ -67,7 +67,7 @@ final class FakeOAuthProvider implements OAuthProviderInterface
         return 'https://provider.test/authorize?state=' . urlencode($state);
     }
 
-    public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentity
+    public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentityModel
     {
         // Recorded rather than merely counted, so a test can assert the
         // controller forwarded the PKCE verifier and nonce belonging to THIS

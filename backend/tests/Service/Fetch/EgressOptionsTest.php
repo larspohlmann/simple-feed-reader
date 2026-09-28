@@ -6,15 +6,15 @@ namespace App\Tests\Service\Fetch;
 
 use App\Enum\ProxyType;
 use App\Service\Fetch\EgressOptions;
-use App\Service\Fetch\GuardedUrl;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use PHPUnit\Framework\TestCase;
 
 final class EgressOptionsTest extends TestCase
 {
     public function testProxiedYieldsTheProxyOption(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
 
         self::assertSame('socks5://p:1080', EgressOptions::proxied($proxy)['proxy']);
     }
@@ -26,14 +26,14 @@ final class EgressOptionsTest extends TestCase
      */
     public function testProxiedPinsNoProxyEmptySoTheEnvironmentCannotBypassIt(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null);
 
         self::assertSame('', EgressOptions::proxied($proxy)['no_proxy']);
     }
 
     public function testProxiedForcesIpv4WhenTheProxyResolvesNamesLocally(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null); // remoteDns off → socks5
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null); // remoteDns off → socks5
 
         $extra = EgressOptions::proxied($proxy)['extra'] ?? null;
 
@@ -44,21 +44,21 @@ final class EgressOptionsTest extends TestCase
     public function testProxiedDoesNotForceIpv4WhenTheProxyResolvesNames(): void
     {
         // remoteDns on → socks5h → curl hands the proxy the name, not an address.
-        $proxy = new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, true, true);
+        $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, true, true);
 
         self::assertArrayNotHasKey('extra', EgressOptions::proxied($proxy));
     }
 
     public function testProxiedDoesNotForceIpv4ForAnHttpProxy(): void
     {
-        $proxy = new ProxyConfig(ProxyType::Http, 'p', 8080, null, null);
+        $proxy = new ProxyConfigModel(ProxyType::Http, 'p', 8080, null, null);
 
         self::assertArrayNotHasKey('extra', EgressOptions::proxied($proxy));
     }
 
     public function testPinnedYieldsTheResolvePinAndTheCrossFamilyKeyButNoProxy(): void
     {
-        $guarded = new GuardedUrl('example.com', ['93.184.216.34']);
+        $guarded = new GuardedUrlModel('example.com', ['93.184.216.34']);
 
         $options = EgressOptions::pinned($guarded, 0);
 
@@ -68,7 +68,7 @@ final class EgressOptionsTest extends TestCase
 
     public function testPinnedClampsAnOutOfRangeAttemptToTheLastAvailablePin(): void
     {
-        $guarded = new GuardedUrl('single-family.example.com', ['93.184.216.34']);
+        $guarded = new GuardedUrlModel('single-family.example.com', ['93.184.216.34']);
 
         $options = EgressOptions::pinned($guarded, 1);
 
@@ -77,7 +77,7 @@ final class EgressOptionsTest extends TestCase
 
     public function testPinnedOnASecondAttemptAddsTheFreshConnectionExtra(): void
     {
-        $guarded = new GuardedUrl('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
+        $guarded = new GuardedUrlModel('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
 
         $options = EgressOptions::pinned($guarded, 1);
 

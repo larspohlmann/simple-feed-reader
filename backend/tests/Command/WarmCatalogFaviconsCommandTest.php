@@ -6,12 +6,12 @@ namespace App\Tests\Command;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Image\FaviconFetcher\FaviconFetcher;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Exception\FaviconUnavailableException;
-use App\Service\Image\FetchedFavicon;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\FaviconFetcher\FaviconFetcher;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Model\FetchedFaviconModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -71,7 +71,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
         $fetcher->expects(self::once())
             ->method('download')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
         $tester = $this->tester($fetcher);
 
@@ -117,7 +117,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
         $fetcher->expects(self::once())
             ->method('download')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
         $tester = $this->tester($fetcher);
         $tester->execute(['--limit' => '1']);
@@ -136,7 +136,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
         $fetcher->expects(self::atLeast(4))
             ->method('download')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
         $tester = $this->tester($fetcher);
 

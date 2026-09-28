@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Preview\FeedPreview;
-use App\Service\Preview\FeedPreviewItem;
+use App\Service\Preview\Model\FeedPreviewItemModel;
+use App\Service\Preview\Model\FeedPreviewModel;
 
 final class FeedPreviewJson
 {
@@ -27,7 +27,7 @@ final class FeedPreviewJson
      *   }>,
      * }}
      */
-    public static function one(FeedPreview $preview): array
+    public static function one(FeedPreviewModel $preview): array
     {
         return ['feed' => [
             'title' => $preview->title,
@@ -35,7 +35,7 @@ final class FeedPreviewJson
             'content' => $preview->content,
             'hasImages' => $preview->hasImages,
             'items' => array_map(
-                static fn (FeedPreviewItem $i) => [
+                static fn (FeedPreviewItemModel $i) => [
                     'title' => $i->title,
                     'url' => $i->url,
                     'author' => $i->author,

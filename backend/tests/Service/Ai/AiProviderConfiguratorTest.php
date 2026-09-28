@@ -15,10 +15,10 @@ use App\Service\Ai\Exception\ModelRequiredForActivationException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\TooManyConfigurationsException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Ai\ModelDescriptor;
-use App\Service\Ai\ProviderCredentials;
-use App\Service\Ai\ProviderTimeouts;
 use App\Tests\DbTestCase;
 use App\Tests\Support\AiSettingsRowMover;
 use App\Tests\Support\SeedsUsers;
@@ -35,7 +35,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 {
     use SeedsUsers;
 
-    /** @param list<string|ModelDescriptor>|\Throwable|\Closure(ProviderCredentials): list<string|ModelDescriptor> $models */
+    /** @param list<string|ModelDescriptorModel>|\Throwable|\Closure(ProviderCredentialsModel): list<string|ModelDescriptorModel> $models */
     private function configurator(array|\Throwable|\Closure $models): AiProviderConfigurator
     {
         self::getContainer()->set(ModelCatalogInterface::class, new StubModelCatalog($models));
@@ -108,7 +108,10 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
     public function testChoosingAModelStoresItsReportedContextWindow(): void
     {
-        $configurator = $this->configurator([new ModelDescriptor('big', 200000), new ModelDescriptor('small', null)]);
+        $configurator = $this->configurator([
+            new ModelDescriptorModel('big', 200000),
+            new ModelDescriptorModel('small', null),
+        ]);
         $user = $this->user('cfg-context-window@example.test');
         $added = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
 
@@ -275,7 +278,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
     {
         $callCount = 0;
         $configurator = $this->configurator(
-            function (ProviderCredentials $credentials) use (&$callCount): array {
+            function (ProviderCredentialsModel $credentials) use (&$callCount): array {
                 ++$callCount;
                 if ($callCount >= 5) {
                     throw new ProviderUnreachableException('The provider stopped answering.');
@@ -371,14 +374,14 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $added = $configurator->addConfiguration($user, 'Local', 'https://api.example.test/v1', 'sk-abcdef1234');
 
         self::assertEquals(
-            ProviderTimeouts::standard(),
+            ProviderTimeoutsModel::standard(),
             $connections->forSettings($added->configuration)->timeouts,
         );
 
         $added->configuration->setSlowModel(true);
 
         self::assertEquals(
-            ProviderTimeouts::forSlowModel(),
+            ProviderTimeoutsModel::forSlowModel(),
             $connections->forSettings($added->configuration)->timeouts,
         );
     }

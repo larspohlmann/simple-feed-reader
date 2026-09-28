@@ -7,7 +7,7 @@ namespace App\Service\Refresh;
 use App\Entity\Feed;
 use App\Enum\SourceFormat;
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Refresh\FeedBodyParser\FeedBodyParserInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
@@ -26,7 +26,7 @@ final readonly class FeedBodyParser
     }
 
     /** @throws FeedParseException */
-    public function parse(Feed $feed, string $body): ParsedFeed
+    public function parse(Feed $feed, string $body): ParsedFeedModel
     {
         $format = $feed->getSourceFormat();
         if ($this->parsers->has($format)) {

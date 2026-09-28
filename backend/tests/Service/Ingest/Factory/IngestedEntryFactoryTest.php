@@ -9,8 +9,8 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\FeedIngestContext;
-use App\Service\Ingest\IncomingEntry;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Ingest\Model\IncomingEntryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Sanitize\EntrySanitizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -20,7 +20,7 @@ final class IngestedEntryFactoryTest extends TestCase
     public function testBuildsTheRowFromTheItemCutToItsColumns(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $parsed = new ParsedEntry(
+        $parsed = new ParsedEntryModel(
             guid: 'g-1',
             url: 'https://example.com/' . str_repeat('u', 3000),
             title: 'T' . str_repeat('t', 2000),
@@ -32,7 +32,7 @@ final class IngestedEntryFactoryTest extends TestCase
 
         $entry = $this->factory()->create(
             $feed,
-            new IncomingEntry($parsed, hash('sha256', 'g-1'), 'url-hash'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-1'), 'url-hash'),
             self::context(),
         );
 
@@ -52,11 +52,11 @@ final class IngestedEntryFactoryTest extends TestCase
 
     public function testAnItemWithoutUrlOrAuthorKeepsBothNullAndSummarisesItsBody(): void
     {
-        $parsed = new ParsedEntry('g-2', null, 'Title', null, null, '<p>Only a body</p>', null);
+        $parsed = new ParsedEntryModel('g-2', null, 'Title', null, null, '<p>Only a body</p>', null);
 
         $entry = $this->factory()->create(
             new Feed('https://example.com/feed'),
-            new IncomingEntry($parsed, hash('sha256', 'g-2'), null),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-2'), null),
             self::context(),
         );
 
@@ -69,7 +69,7 @@ final class IngestedEntryFactoryTest extends TestCase
 
     public function testMultibyteColumnsAreCutByCharactersNotBytes(): void
     {
-        $parsed = new ParsedEntry(
+        $parsed = new ParsedEntryModel(
             guid: 'g-3',
             url: 'https://example.com/' . str_repeat('ä', 3000),
             title: str_repeat('é', 2000),
@@ -81,7 +81,7 @@ final class IngestedEntryFactoryTest extends TestCase
 
         $entry = $this->factory()->create(
             new Feed('https://example.com/feed'),
-            new IncomingEntry($parsed, hash('sha256', 'g-3'), 'url-hash'),
+            new IncomingEntryModel($parsed, hash('sha256', 'g-3'), 'url-hash'),
             self::context(),
         );
 

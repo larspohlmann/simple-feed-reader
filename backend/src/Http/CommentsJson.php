@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Comments\CommentsResult;
-use App\Service\Comments\CommentsStatus;
-use App\Service\Comments\EntryComment;
+use App\Service\Comments\Model\CommentsResultModel;
+use App\Service\Comments\Model\CommentsStatus;
+use App\Service\Comments\Model\EntryCommentModel;
 
 final class CommentsJson
 {
     /** @return array<string, mixed> */
-    public static function one(CommentsResult $result): array
+    public static function one(CommentsResultModel $result): array
     {
         return ['status' => $result->status->value] + match ($result->status) {
             CommentsStatus::Ok => ['comments' => array_map(self::comment(...), $result->comments)],
@@ -21,7 +21,7 @@ final class CommentsJson
     }
 
     /** @return array<string, string|bool|null> */
-    private static function comment(EntryComment $comment): array
+    private static function comment(EntryCommentModel $comment): array
     {
         return [
             'author' => $comment->author,

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
 
@@ -20,7 +20,7 @@ final readonly class RecommendationProviderCall
     ) {
     }
 
-    public function complete(TickContext $tick, CompletionRequest $request, RecordedCall $recordedCall): string
+    public function complete(TickContext $tick, CompletionRequestModel $request, RecordedCall $recordedCall): string
     {
         try {
             return $this->completion->complete(

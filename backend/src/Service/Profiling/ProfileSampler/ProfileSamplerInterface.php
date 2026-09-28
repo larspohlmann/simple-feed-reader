@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling\ProfileSampler;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 
 interface ProfileSamplerInterface
 {
@@ -12,7 +12,7 @@ interface ProfileSamplerInterface
 
     public function start(float $periodSeconds): void;
 
-    public function stop(): ?CollapsedProfile;
+    public function stop(): ?CollapsedProfileModel;
 
     public function isRunning(): bool;
 }

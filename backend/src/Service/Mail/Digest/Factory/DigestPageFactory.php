@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest\Factory;
 
-use App\Service\Mail\Digest\DigestModel;
-use App\Service\Mail\Digest\DigestPage;
-use App\Service\Mail\Digest\DigestPageGroup;
+use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Mail\Digest\Model\DigestPageModel;
 
 /**
  * Projects a DigestModel to the capped page an HTML mail renders: it places
@@ -17,7 +17,7 @@ final readonly class DigestPageFactory
 {
     public const int DEFAULT_MAX_CARDS = 30;
 
-    public function build(DigestModel $model, int $maxCards): DigestPage
+    public function build(DigestModel $model, int $maxCards): DigestPageModel
     {
         $budget = $maxCards;
         $groups = [];
@@ -27,7 +27,7 @@ final readonly class DigestPageFactory
             $cards = \array_slice($group->entries, 0, $take);
             $budget -= $take;
 
-            $groups[] = new DigestPageGroup(
+            $groups[] = new DigestPageGroupModel(
                 $group->term,
                 $group->totalCount,
                 $cards,
@@ -36,6 +36,6 @@ final readonly class DigestPageFactory
             );
         }
 
-        return new DigestPage($groups, $model->totalCount);
+        return new DigestPageModel($groups, $model->totalCount);
     }
 }

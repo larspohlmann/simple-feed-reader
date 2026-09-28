@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\User;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\UserFactory;
@@ -70,7 +70,13 @@ final class FeedPreviewControllerTest extends WebTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             self::URL,
-            FetchResponse::fetched(self::URL, permanentRedirect: false, body: $xml, etag: null, lastModified: null),
+            FetchResponseModel::fetched(
+                self::URL,
+                permanentRedirect: false,
+                body: $xml,
+                etag: null,
+                lastModified: null,
+            ),
         );
 
         return $fetcher;
@@ -157,7 +163,7 @@ final class FeedPreviewControllerTest extends WebTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             self::PAGE_URL,
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 self::PAGE_URL,
                 permanentRedirect: false,
                 body: $this->scrapedFixture('tagesschau-2026-07-23.html'),
@@ -234,7 +240,7 @@ final class FeedPreviewControllerTest extends WebTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             self::PAGE_URL,
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 self::PAGE_URL,
                 permanentRedirect: false,
                 body: $this->scrapedFixture('nav-only.html'),

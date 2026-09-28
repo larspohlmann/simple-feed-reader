@@ -7,8 +7,8 @@ namespace App\Dto\Admin;
 use App\Entity\MailConnection;
 use App\Enum\MailEncryption;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\SecretChange;
-use App\Service\Mail\Settings\MailSettingsUpdate;
+use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Mail\Settings\Model\MailSettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -49,9 +49,9 @@ final readonly class MailSettingsRequest
     ) {
     }
 
-    public function toUpdate(): MailSettingsUpdate
+    public function toUpdate(): MailSettingsUpdateModel
     {
-        return new MailSettingsUpdate(
+        return new MailSettingsUpdateModel(
             new MailConnection(
                 $this->enabled,
                 $this->host,
@@ -62,7 +62,7 @@ final readonly class MailSettingsRequest
                 $this->fromName,
                 $this->useProxy,
             ),
-            $this->removePassword ? SecretChange::remove() : SecretChange::fromSubmitted($this->password),
+            $this->removePassword ? SecretChangeModel::remove() : SecretChangeModel::fromSubmitted($this->password),
         );
     }
 }

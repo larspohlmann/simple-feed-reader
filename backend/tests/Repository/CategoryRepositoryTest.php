@@ -6,7 +6,7 @@ namespace App\Tests\Repository;
 
 use App\Entity\Category;
 use App\Repository\CategoryRepository;
-use App\Service\Category\NormalizedCategory;
+use App\Service\Category\Model\NormalizedCategoryModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 
@@ -46,8 +46,8 @@ final class CategoryRepositoryTest extends DbTestCase
         $this->em->persist($world);
         $this->em->flush();
 
-        $normalizedPolitics = new NormalizedCategory('politics', 'Politics', 'https://a.test');
-        $normalizedWorld = new NormalizedCategory('world', 'World', 'https://b.test');
+        $normalizedPolitics = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
+        $normalizedWorld = new NormalizedCategoryModel('world', 'World', 'https://b.test');
 
         $resolved = $this->repository->findExistingByIdentities([$normalizedPolitics, $normalizedWorld]);
 
@@ -62,9 +62,9 @@ final class CategoryRepositoryTest extends DbTestCase
         $this->em->persist($existing);
         $this->em->flush();
 
-        $unknown = new NormalizedCategory('unknown', 'Unknown', '');
+        $unknown = new NormalizedCategoryModel('unknown', 'Unknown', '');
         $resolved = $this->repository->findExistingByIdentities([
-            new NormalizedCategory('politics', 'Politics', ''),
+            new NormalizedCategoryModel('politics', 'Politics', ''),
             $unknown,
         ]);
 
@@ -80,8 +80,8 @@ final class CategoryRepositoryTest extends DbTestCase
         $this->em->persist($schemeB);
         $this->em->flush();
 
-        $normalizedA = new NormalizedCategory('politics', 'Politics', 'https://a.test');
-        $normalizedB = new NormalizedCategory('politics', 'Politics', 'https://b.test');
+        $normalizedA = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
+        $normalizedB = new NormalizedCategoryModel('politics', 'Politics', 'https://b.test');
 
         $resolved = $this->repository->findExistingByIdentities([$normalizedA, $normalizedB]);
 

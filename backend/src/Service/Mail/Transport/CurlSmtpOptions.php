@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport;
 
 use App\Enum\MailEncryption;
-use App\Service\Fetch\ProxyConfig;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mime\Address;
 
@@ -16,7 +16,7 @@ use Symfony\Component\Mime\Address;
 final class CurlSmtpOptions
 {
     /** @return array<int, mixed> */
-    public static function for(ResolvedMailTransport $resolved, ProxyConfig $proxy, Envelope $envelope): array
+    public static function for(ResolvedMailTransportModel $resolved, ProxyConfigModel $proxy, Envelope $envelope): array
     {
         $options = [
             \CURLOPT_URL => self::url($resolved),
@@ -45,7 +45,7 @@ final class CurlSmtpOptions
         return $options;
     }
 
-    private static function url(ResolvedMailTransport $resolved): string
+    private static function url(ResolvedMailTransportModel $resolved): string
     {
         $scheme = MailEncryption::Tls === $resolved->encryption ? 'smtps' : 'smtp';
 

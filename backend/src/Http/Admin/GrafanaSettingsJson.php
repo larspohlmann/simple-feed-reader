@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Grafana\GrafanaSettingsOverview;
+use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
 
 /**
  * The token is absent by construction: only hasToken and the last-four tokenHint cross the wire, never the secret.
@@ -32,7 +32,7 @@ final readonly class GrafanaSettingsJson
      *     profilerAvailable: bool,
      * }
      */
-    public static function from(GrafanaSettingsOverview $overview): array
+    public static function from(GrafanaSettingsOverviewModel $overview): array
     {
         $stored = $overview->stored;
         $connection = $stored->connection;

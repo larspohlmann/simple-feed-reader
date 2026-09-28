@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth;
 
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
+use App\Service\OAuth\Model\OAuthCallbackAttemptModel;
+use App\Service\OAuth\Model\OAuthCallbackFailure;
+use App\Service\OAuth\Model\OAuthIdentityModel;
+use App\Service\OAuth\Model\OAuthStartStateModel;
 use App\Service\OAuth\OAuthCallback;
-use App\Service\OAuth\OAuthCallbackAttempt;
-use App\Service\OAuth\OAuthCallbackFailure;
-use App\Service\OAuth\OAuthIdentity;
 use App\Service\OAuth\OAuthProviderRegistry;
 use App\Service\OAuth\OAuthSignIn;
-use App\Service\OAuth\OAuthStartState;
 use App\Service\OAuth\OAuthStateStore;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FakeOAuthProvider;
@@ -22,7 +22,7 @@ final class OAuthCallbackTest extends DbTestCase
     public function testADeclinedConsentScreenIsRefusedAsAccessDeniedWithoutContactingTheProvider(): void
     {
         $provider = $this->provider();
-        $attempt = new OAuthCallbackAttempt('google', true, null, null, null);
+        $attempt = new OAuthCallbackAttemptModel('google', true, null, null, null);
 
         try {
             $this->oauthCallback($provider)->complete($attempt);
@@ -37,7 +37,7 @@ final class OAuthCallbackTest extends DbTestCase
     public function testAMissingCodeIsRefusedAsAnInvalidRequest(): void
     {
         $started = $this->stateStore()->start('google');
-        $attempt = new OAuthCallbackAttempt('google', false, $started->state, null, $started->browserToken);
+        $attempt = new OAuthCallbackAttemptModel('google', false, $started->state, null, $started->browserToken);
         $callback = $this->oauthCallback($this->provider());
 
         self::assertSame(OAuthCallbackFailure::InvalidRequest, $this->refusalOf($callback, $attempt));
@@ -46,7 +46,7 @@ final class OAuthCallbackTest extends DbTestCase
 
     public function testAMissingStateIsRefusedAsAnInvalidRequest(): void
     {
-        $attempt = new OAuthCallbackAttempt('google', false, null, 'the-code', 'the-browser');
+        $attempt = new OAuthCallbackAttemptModel('google', false, null, 'the-code', 'the-browser');
 
         self::assertSame(
             OAuthCallbackFailure::InvalidRequest,
@@ -57,7 +57,7 @@ final class OAuthCallbackTest extends DbTestCase
     public function testAnUnissuedStateIsRefusedAsInvalidState(): void
     {
         $provider = $this->provider();
-        $attempt = new OAuthCallbackAttempt('google', false, 'never-issued', 'the-code', 'the-browser');
+        $attempt = new OAuthCallbackAttemptModel('google', false, 'never-issued', 'the-code', 'the-browser');
 
         self::assertSame(
             OAuthCallbackFailure::InvalidState,
@@ -71,7 +71,7 @@ final class OAuthCallbackTest extends DbTestCase
         $provider = $this->provider();
         $callback = $this->oauthCallback($provider);
         $started = $this->stateStore()->start('google');
-        $atApple = new OAuthCallbackAttempt('apple', false, $started->state, 'the-code', $started->browserToken);
+        $atApple = new OAuthCallbackAttemptModel('apple', false, $started->state, 'the-code', $started->browserToken);
 
         self::assertSame(OAuthCallbackFailure::InvalidState, $this->refusalOf($callback, $atApple));
         self::assertSame(OAuthCallbackFailure::InvalidState, $this->refusalOf($callback, $this->attemptFor($started)));
@@ -112,12 +112,12 @@ final class OAuthCallbackTest extends DbTestCase
         );
     }
 
-    private function attemptFor(OAuthStartState $started): OAuthCallbackAttempt
+    private function attemptFor(OAuthStartStateModel $started): OAuthCallbackAttemptModel
     {
-        return new OAuthCallbackAttempt('google', false, $started->state, 'the-code', $started->browserToken);
+        return new OAuthCallbackAttemptModel('google', false, $started->state, 'the-code', $started->browserToken);
     }
 
-    private function refusalOf(OAuthCallback $callback, OAuthCallbackAttempt $attempt): OAuthCallbackFailure
+    private function refusalOf(OAuthCallback $callback, OAuthCallbackAttemptModel $attempt): OAuthCallbackFailure
     {
         try {
             $callback->complete($attempt);
@@ -151,9 +151,9 @@ final class OAuthCallbackTest extends DbTestCase
         return FakeOAuthProvider::failingExchange($this->identity());
     }
 
-    private function identity(): OAuthIdentity
+    private function identity(): OAuthIdentityModel
     {
-        return new OAuthIdentity('google', 'sub-callback', 'callback@example.com', true);
+        return new OAuthIdentityModel('google', 'sub-callback', 'callback@example.com', true);
     }
 
     private function stateStore(): OAuthStateStore

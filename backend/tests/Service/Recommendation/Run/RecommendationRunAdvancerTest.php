@@ -22,7 +22,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -30,7 +30,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
 use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
@@ -435,7 +435,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->advancer()->advance($this->user);
 
-        $profile = $slowModel ? ProviderTimeouts::forSlowModel() : ProviderTimeouts::standard();
+        $profile = $slowModel ? ProviderTimeoutsModel::forSlowModel() : ProviderTimeoutsModel::standard();
         self::assertSame(
             $firstByteSeconds,
             $profile->firstByteSeconds,
@@ -2199,7 +2199,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A worker tick owns its process, so RetryPlan lets it block and retry a
+     * A worker tick owns its process, so RetryPlanModel lets it block and retry a
      * 429 in place (#947): the same distill call that failed once recovers
      * within the same tick, writes the profile, and never touches the
      * transport-failure ceiling -- a retry that recovers is not a failure.

@@ -6,8 +6,8 @@ namespace App\Dto\Admin;
 
 use App\Entity\GrafanaConnection;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\SecretChange;
-use App\Service\Grafana\GrafanaSettingsUpdate;
+use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Grafana\Model\GrafanaSettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -38,9 +38,9 @@ final readonly class GrafanaSettingsRequest
     ) {
     }
 
-    public function toUpdate(): GrafanaSettingsUpdate
+    public function toUpdate(): GrafanaSettingsUpdateModel
     {
-        return new GrafanaSettingsUpdate(
+        return new GrafanaSettingsUpdateModel(
             new GrafanaConnection(
                 self::blankToNull($this->lokiPushUrl),
                 self::blankToNull($this->lokiUsername),
@@ -49,8 +49,8 @@ final readonly class GrafanaSettingsRequest
                 $this->profilingEnabled,
             ),
             $this->removeToken
-                ? SecretChange::remove()
-                : SecretChange::fromSubmitted(self::blankToNull($this->token)),
+                ? SecretChangeModel::remove()
+                : SecretChangeModel::fromSubmitted(self::blankToNull($this->token)),
         );
     }
 

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Html;
 
+use App\Service\Html\Model\ImageRenditionModel;
+use App\Service\Html\Model\SrcsetCandidateModel;
+
 /**
  * Reads a `srcset` attribute: a list of candidates, each a URL optionally
  * followed by a width or density descriptor.
@@ -35,7 +38,7 @@ final class Srcset
      * density instead, the densest candidate being the largest file; a bare
      * list is all 1x and keeps its first candidate, as a browser would.
      */
-    public static function widest(?string $srcset): ?ImageRendition
+    public static function widest(?string $srcset): ?ImageRenditionModel
     {
         $widest = null;
         foreach (self::candidates($srcset) as $candidate) {
@@ -50,7 +53,7 @@ final class Srcset
     /**
      * The candidates the list declares, in source order.
      *
-     * @return list<SrcsetCandidate>
+     * @return list<SrcsetCandidateModel>
      */
     private static function candidates(?string $srcset): array
     {
@@ -110,11 +113,15 @@ final class Srcset
      *
      * @param non-empty-list<string> $tokens
      */
-    private static function candidateFrom(array $tokens): SrcsetCandidate
+    private static function candidateFrom(array $tokens): SrcsetCandidateModel
     {
         $descriptor = $tokens[1] ?? null;
 
-        return new SrcsetCandidate($tokens[0], self::declaredWidth($descriptor), self::declaredDensity($descriptor));
+        return new SrcsetCandidateModel(
+            $tokens[0],
+            self::declaredWidth($descriptor),
+            self::declaredDensity($descriptor),
+        );
     }
 
     /** The pixel width a descriptor states, or null when it states none. */

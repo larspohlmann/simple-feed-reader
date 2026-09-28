@@ -11,6 +11,8 @@ use App\Service\Passkey\Exception\DuplicatePasskeyException;
 use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
 use App\Service\Passkey\Factory\RegistrationOptionsFactory;
 use App\Service\Passkey\Factory\UserPasskeyFactory;
+use App\Service\Passkey\Model\PasskeyAttestationModel;
+use App\Service\Passkey\Model\PasskeyChallengeModel;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Cache\InvalidArgumentException;
@@ -33,7 +35,7 @@ use Webauthn\PublicKeyCredentialCreationOptions;
  * credential would otherwise have parsed.
  *
  * This class never calls PasskeyCredentials::userHandleFor() — it reads the
- * user handle straight off the consumed PasskeyChallenge. See that class's
+ * user handle straight off the consumed PasskeyChallengeModel. See that class's
  * docblock for why re-minting one here would be a real bug: userHandleFor()
  * returns a fresh random value per call for an account's first credential,
  * and options/verification are two separate HTTP requests.
@@ -53,7 +55,7 @@ final readonly class AttestationVerifier
     /**
      * @throws InvalidArgumentException
      */
-    public function verifyAndStore(User $user, PasskeyAttestation $attestation): UserPasskey
+    public function verifyAndStore(User $user, PasskeyAttestationModel $attestation): UserPasskey
     {
         $challenge = $this->challengeStore->consume($attestation->handle);
         $this->guardOwnership($user, $challenge);
@@ -66,7 +68,7 @@ final readonly class AttestationVerifier
         return $passkey;
     }
 
-    private function guardOwnership(User $user, PasskeyChallenge $challenge): void
+    private function guardOwnership(User $user, PasskeyChallengeModel $challenge): void
     {
         if ($challenge->userId !== $user->getId()) {
             throw new PasskeyChallengeOwnershipException();
@@ -83,7 +85,7 @@ final readonly class AttestationVerifier
      *
      * @param array<string, mixed> $credential
      */
-    private function check(User $user, PasskeyChallenge $challenge, array $credential): CredentialRecord
+    private function check(User $user, PasskeyChallengeModel $challenge, array $credential): CredentialRecord
     {
         $userHandle = $challenge->userHandle ?? throw new \UnexpectedValueException(
             'A registration challenge must always carry a user handle.',

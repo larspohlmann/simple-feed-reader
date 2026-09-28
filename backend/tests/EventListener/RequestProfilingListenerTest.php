@@ -6,7 +6,7 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\RequestProfilingListener;
 use App\Service\Logging\TraceContext\TraceContextInterface;
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
@@ -145,7 +145,7 @@ final class RequestProfilingListenerTest extends TestCase
             {
             }
 
-            public function stop(): ?CollapsedProfile
+            public function stop(): ?CollapsedProfileModel
             {
                 ++$this->stopCalls;
                 if (1 === $this->stopCalls) {
@@ -155,7 +155,7 @@ final class RequestProfilingListenerTest extends TestCase
                     return null;
                 }
 
-                return new CollapsedProfile('main;work 1', 1, 1000, 1_700_000_000, 1_700_000_001);
+                return new CollapsedProfileModel('main;work 1', 1, 1000, 1_700_000_000, 1_700_000_001);
             }
 
             public function isRunning(): bool
@@ -222,7 +222,7 @@ final class RequestProfilingListenerTest extends TestCase
             {
             }
 
-            public function stop(): ?CollapsedProfile
+            public function stop(): ?CollapsedProfileModel
             {
                 return null;
             }

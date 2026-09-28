@@ -6,7 +6,7 @@ namespace App\Tests\Service\Discovery;
 
 use App\Entity\User;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\ScrapeFallback;
+use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use PHPUnit\Framework\TestCase;
 

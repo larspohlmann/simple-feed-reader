@@ -8,8 +8,8 @@ use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FailoverRequestSender;
-use App\Service\Fetch\GuardedUrl;
-use App\Service\Fetch\ProxyConfig;
+use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -246,7 +246,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         }
     }
 
-    private function egressProxy(?ProxyConfig $config): EgressProxySourceInterface
+    private function egressProxy(?ProxyConfigModel $config): EgressProxySourceInterface
     {
         $egressProxySource = $this->createStub(EgressProxySourceInterface::class);
         $egressProxySource->method('egressProxy')->willReturn($config);
@@ -254,13 +254,13 @@ final class FailoverRequestSenderProxyTest extends TestCase
         return $egressProxySource;
     }
 
-    private function proxy(bool $directFallback = true): ProxyConfig
+    private function proxy(bool $directFallback = true): ProxyConfigModel
     {
-        return new ProxyConfig(ProxyType::Socks5, 'p', 1080, null, null, $directFallback);
+        return new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, $directFallback);
     }
 
-    private function guarded(): GuardedUrl
+    private function guarded(): GuardedUrlModel
     {
-        return new GuardedUrl('page.example', ['203.0.113.9']);
+        return new GuardedUrlModel('page.example', ['203.0.113.9']);
     }
 }

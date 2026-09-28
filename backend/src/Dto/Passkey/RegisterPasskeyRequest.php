@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Passkey;
 
-use App\Service\Passkey\PasskeyAttestation;
+use App\Service\Passkey\Model\PasskeyAttestationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -35,8 +35,8 @@ final readonly class RegisterPasskeyRequest
     ) {
     }
 
-    public function toAttestation(): PasskeyAttestation
+    public function toAttestation(): PasskeyAttestationModel
     {
-        return new PasskeyAttestation(handle: $this->handle, credential: $this->credential, label: $this->label);
+        return new PasskeyAttestationModel(handle: $this->handle, credential: $this->credential, label: $this->label);
     }
 }

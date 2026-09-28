@@ -6,6 +6,7 @@ namespace App\Service\Opml;
 
 use App\Entity\User;
 use App\Service\Opml\Exception\InvalidOpmlException;
+use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
 
@@ -25,7 +26,7 @@ final readonly class OpmlImporter
     ) {
     }
 
-    public function import(User $user, string $opml): OpmlImportResult
+    public function import(User $user, string $opml): OpmlImportResultModel
     {
         if ($opml === '' || \strlen($opml) > self::MAX_BYTES) {
             throw new InvalidOpmlException('The OPML body is empty or larger than 1 MB.');
@@ -43,7 +44,7 @@ final readonly class OpmlImporter
 
         $result = $this->subscriber->subscribeAll($user, $items);
 
-        return new OpmlImportResult(
+        return new OpmlImportResultModel(
             imported: $result->imported,
             alreadySubscribed: $result->alreadySubscribed,
             invalid: $result->invalid,

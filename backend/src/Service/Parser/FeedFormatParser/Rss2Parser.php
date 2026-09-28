@@ -13,9 +13,9 @@ use App\Service\Parser\FeedItemImageSelector;
 use App\Service\Parser\GuidFallback;
 use App\Service\Parser\ItemCategoryExtractor;
 use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedEntryMedia;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryMediaModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\XmlHelper;
 use App\Service\Text\PlainText;
 
@@ -30,7 +30,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         return $root->localName === 'rss';
     }
 
-    public function parse(\DOMDocument $document): ParsedFeed
+    public function parse(\DOMDocument $document): ParsedFeedModel
     {
         $channel = $document->getElementsByTagName('channel')->item(0);
         if (!$channel instanceof \DOMElement) {
@@ -45,7 +45,7 @@ final class Rss2Parser implements FeedFormatParserInterface
             }
         }
 
-        return new ParsedFeed(
+        return new ParsedFeedModel(
             PlainText::from(XmlHelper::childText($channel, 'title')),
             XmlHelper::childText($channel, 'link'),
             XmlHelper::childText($channel, 'description'),
@@ -54,7 +54,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         );
     }
 
-    private function parseItem(\DOMElement $item): ?ParsedEntry
+    private function parseItem(\DOMElement $item): ?ParsedEntryModel
     {
         $title = XmlHelper::childText($item, 'title');
         $link = XmlHelper::childText($item, 'link');
@@ -68,7 +68,7 @@ final class Rss2Parser implements FeedFormatParserInterface
         $image = FeedItemImageSelector::fromRss2($item, $contentEncoded ?? $description);
         $mediaBundle = ItemMediaExtractor::extract($item);
 
-        return new ParsedEntry(
+        return new ParsedEntryModel(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),
             url: $link,
             title: PlainText::from($title) ?? '(untitled)',
@@ -78,7 +78,7 @@ final class Rss2Parser implements FeedFormatParserInterface
             publishedAt: DateParser::parse(
                 XmlHelper::childText($item, 'pubDate') ?? XmlHelper::childText($item, 'date', self::DC_NS),
             ),
-            media: new ParsedEntryMedia($image, $mediaBundle),
+            media: new ParsedEntryMediaModel($image, $mediaBundle),
             categories: ItemCategoryExtractor::extract($item),
             discussion: self::discussion($item),
         );

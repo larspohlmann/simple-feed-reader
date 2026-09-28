@@ -12,7 +12,7 @@ use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
@@ -92,7 +92,7 @@ final readonly class RecommendationRunAdvancer
     {
         $settings = $this->configurator->settingsFor($user);
         $timeouts = null === $settings
-            ? ProviderTimeouts::standard()
+            ? ProviderTimeoutsModel::standard()
             : $this->connections->timeoutsFor($settings);
 
         return $timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_SECONDS;

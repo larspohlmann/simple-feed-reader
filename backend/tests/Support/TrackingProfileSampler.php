@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 
 final class TrackingProfileSampler implements ProfileSamplerInterface
@@ -16,7 +16,7 @@ final class TrackingProfileSampler implements ProfileSamplerInterface
     private bool $running = false;
 
     public function __construct(
-        private readonly ?CollapsedProfile $profile = new CollapsedProfile(
+        private readonly ?CollapsedProfileModel $profile = new CollapsedProfileModel(
             'main;work 1',
             1,
             1000,
@@ -37,7 +37,7 @@ final class TrackingProfileSampler implements ProfileSamplerInterface
         $this->running = true;
     }
 
-    public function stop(): ?CollapsedProfile
+    public function stop(): ?CollapsedProfileModel
     {
         $this->running = false;
         ++$this->stopCalls;

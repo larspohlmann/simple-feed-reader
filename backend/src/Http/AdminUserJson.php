@@ -13,7 +13,7 @@ use App\Dto\Admin\AdminUserTag;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Admin\UserFootprint;
+use App\Service\Admin\Model\UserFootprintModel;
 
 /**
  * The admin view of one account and of the approval queue.
@@ -117,7 +117,7 @@ final class AdminUserJson
         );
     }
 
-    public static function footprint(UserFootprint $footprint): AdminUserFootprint
+    public static function footprint(UserFootprintModel $footprint): AdminUserFootprint
     {
         return new AdminUserFootprint(
             feedsCount: $footprint->feedsCount,

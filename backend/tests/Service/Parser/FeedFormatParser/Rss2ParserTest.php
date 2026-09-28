@@ -6,7 +6,7 @@ namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
 use App\Service\Parser\FeedFormatParser\Rss2Parser;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class Rss2ParserTest extends TestCase
@@ -19,7 +19,7 @@ final class Rss2ParserTest extends TestCase
         return $document;
     }
 
-    private function parseSingleItem(string $itemXml): ParsedEntry
+    private function parseSingleItem(string $itemXml): ParsedEntryModel
     {
         /** @noinspection XmlUnusedNamespaceDeclaration */
         $document = $this->document(<<<XML

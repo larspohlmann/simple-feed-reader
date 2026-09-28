@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Parser\Model\FeedMediaKind;
+use App\Service\Parser\Model\ParsedMediaBundleModel;
+
 /**
  * Enumerates the media a feed item declares into the two lists the entry keeps:
  * visual media to show and enclosures to play or download. It reads only
@@ -20,7 +23,7 @@ final class ItemMediaExtractor
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
     private const string ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
-    public static function extract(\DOMElement $item): ParsedMediaBundle
+    public static function extract(\DOMElement $item): ParsedMediaBundleModel
     {
         $fallbackDuration = self::itunesDuration($item);
         $media = [];
@@ -34,10 +37,10 @@ final class ItemMediaExtractor
             array_push($attachments, ...$bundle->attachments);
         }
 
-        return new ParsedMediaBundle($media, $attachments);
+        return new ParsedMediaBundleModel($media, $attachments);
     }
 
-    private static function fromChild(\DOMNode $child, ?int $fallbackDuration): ?ParsedMediaBundle
+    private static function fromChild(\DOMNode $child, ?int $fallbackDuration): ?ParsedMediaBundleModel
     {
         if (!$child instanceof \DOMElement) {
             return null;
@@ -50,15 +53,15 @@ final class ItemMediaExtractor
         return $node === null ? null : self::fromNode($node, $fallbackDuration);
     }
 
-    private static function fromNode(FeedMediaNode $node, ?int $fallbackDuration): ?ParsedMediaBundle
+    private static function fromNode(FeedMediaNode $node, ?int $fallbackDuration): ?ParsedMediaBundleModel
     {
         return match ($node->kind()) {
-            FeedMediaKind::Image => new ParsedMediaBundle([$node->toImage()], []),
-            FeedMediaKind::Video => new ParsedMediaBundle(
+            FeedMediaKind::Image => new ParsedMediaBundleModel([$node->toImage()], []),
+            FeedMediaKind::Video => new ParsedMediaBundleModel(
                 [$node->toVideo(null)],
                 [$node->toAttachment($fallbackDuration)],
             ),
-            FeedMediaKind::Audio, FeedMediaKind::Other => new ParsedMediaBundle(
+            FeedMediaKind::Audio, FeedMediaKind::Other => new ParsedMediaBundleModel(
                 [],
                 [$node->toAttachment($fallbackDuration)],
             ),
@@ -66,13 +69,13 @@ final class ItemMediaExtractor
         };
     }
 
-    private static function fromGroup(\DOMElement $group, ?int $fallbackDuration): ?ParsedMediaBundle
+    private static function fromGroup(\DOMElement $group, ?int $fallbackDuration): ?ParsedMediaBundleModel
     {
         $nodes = self::mediaNodesIn($group);
 
         $video = self::firstOfKind($nodes, FeedMediaKind::Video);
         if ($video !== null) {
-            return new ParsedMediaBundle(
+            return new ParsedMediaBundleModel(
                 [$video->toVideo(self::posterIn($group))],
                 [$video->toAttachment($fallbackDuration)],
             );
@@ -80,14 +83,14 @@ final class ItemMediaExtractor
 
         $image = self::widestImage($nodes);
         if ($image !== null) {
-            return new ParsedMediaBundle([$image->toImage()], []);
+            return new ParsedMediaBundleModel([$image->toImage()], []);
         }
 
         $playable = self::firstPlayable($nodes);
 
         return $playable === null
             ? null
-            : new ParsedMediaBundle([], [$playable->toAttachment($fallbackDuration)]);
+            : new ParsedMediaBundleModel([], [$playable->toAttachment($fallbackDuration)]);
     }
 
     /**

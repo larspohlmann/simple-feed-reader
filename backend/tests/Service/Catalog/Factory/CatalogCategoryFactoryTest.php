@@ -6,8 +6,8 @@ namespace App\Tests\Service\Catalog\Factory;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\CatalogCategoryDetails;
 use App\Service\Catalog\Factory\CatalogCategoryFactory;
+use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
 use App\Tests\DbTestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -29,7 +29,7 @@ final class CatalogCategoryFactoryTest extends DbTestCase
         self::assertGreaterThan(0, $next);
 
         $category = (new CatalogCategoryFactory($this->categories()))->create(
-            new CatalogCategoryDetails('news', 'News', 'globe', '#222222', $enabled, $locked),
+            new CatalogCategoryDetailsModel('news', 'News', 'globe', '#222222', $enabled, $locked),
         );
 
         self::assertSame('news', $category->getKey());

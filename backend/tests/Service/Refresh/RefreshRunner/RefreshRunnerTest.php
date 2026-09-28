@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh\RefreshRunner;
 
-use App\Tests\Support\RecordingContentChangeMarker;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
@@ -13,7 +12,7 @@ use App\Enum\FeedStatus;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
@@ -21,6 +20,7 @@ use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\RecordingContentChangeMarker;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
@@ -97,7 +97,7 @@ final class RefreshRunnerTest extends DbTestCase
         $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
             $origin,
-            FetchResponse::fetched($origin, false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched($origin, false, '<html lang="en"></html>', null, null),
         );
 
         return $feed;
@@ -132,11 +132,11 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feedA->getUrl(),
-            FetchResponse::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
         );
         $this->fetcher->willReturn(
             $feedB->getUrl(),
-            FetchResponse::notModified($feedB->getUrl(), false, null, null),
+            FetchResponseModel::notModified($feedB->getUrl(), false, null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -173,7 +173,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -191,11 +191,11 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feedA->getUrl(),
-            FetchResponse::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
         );
         $this->fetcher->willReturn(
             $feedB->getUrl(),
-            FetchResponse::notModified($feedB->getUrl(), false, null, null),
+            FetchResponseModel::notModified($feedB->getUrl(), false, null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -209,7 +209,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::notModified($feed->getUrl(), false, null, null),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -232,7 +232,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -257,11 +257,11 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feedA->getUrl(),
-            FetchResponse::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
+            FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
         );
         $this->fetcher->willReturn(
             $feedB->getUrl(),
-            FetchResponse::fetched($feedB->getUrl(), false, $this->rss('B', 'b-1'), '"etag-b"', null),
+            FetchResponseModel::fetched($feedB->getUrl(), false, $this->rss('B', 'b-1'), '"etag-b"', null),
         );
 
         $runStart = $this->clock->now();
@@ -300,7 +300,7 @@ final class RefreshRunnerTest extends DbTestCase
             XML;
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
         );
 
         // Pruning disabled: an entry this old would otherwise be swept by the
@@ -343,7 +343,7 @@ final class RefreshRunnerTest extends DbTestCase
             XML;
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300)->withoutPruning());
@@ -384,7 +384,7 @@ final class RefreshRunnerTest extends DbTestCase
             XML;
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -406,7 +406,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher->willThrow($bad->getUrl(), new FeedUnreachableException('connection refused'));
         $this->fetcher->willReturn(
             $good->getUrl(),
-            FetchResponse::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
+            FetchResponseModel::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -467,7 +467,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, 'this is not xml at all', null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, 'this is not xml at all', null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -490,11 +490,11 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $empty->getUrl(),
-            FetchResponse::fetched($empty->getUrl(), false, '', null, null),
+            FetchResponseModel::fetched($empty->getUrl(), false, '', null, null),
         );
         $this->fetcher->willReturn(
             $good->getUrl(),
-            FetchResponse::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
+            FetchResponseModel::fetched($good->getUrl(), false, $this->rss('G', 'g-1'), null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -514,14 +514,14 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
         );
         // The site homepage (origin) advertises an icon; the favicon fetcher —
         // not the feed fetcher — serves it. `/icon.png` is a deliberately fake
         // path, because resolving it is what the test is about, so `@lang TEXT`
         // stops PhpStorm injecting HTML here and reporting the target as
         // unresolvable.
-        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
             'https://blog.example.com/',
             false,
             /** @lang TEXT */
@@ -544,11 +544,11 @@ final class RefreshRunnerTest extends DbTestCase
         // yet — resolution must not be gated on a full-body fetch.
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::notModified($feed->getUrl(), false, null, null),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
         );
         // `@lang TEXT` for the same reason as above: `/icon.png` must stay a
         // fake path, so the injected-HTML "cannot resolve file" hint is wrong.
-        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponse::fetched(
+        $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
             'https://blog.example.com/',
             false,
             /** @lang TEXT */
@@ -568,13 +568,13 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
         // `@lang TEXT` for the same reason as above: `/i.png` must stay a fake
         // path, so the injected-HTML "cannot resolve file" hint is wrong.
         $this->faviconFetcher->willReturn(
             'https://one.example.com',
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 'https://one.example.com',
                 false,
                 /** @lang TEXT */ '<link rel="icon" href="/i.png">',
@@ -594,7 +594,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
         $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
@@ -636,7 +636,13 @@ final class RefreshRunnerTest extends DbTestCase
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
-                FetchResponse::fetched($feed->getUrl(), false, $this->rss('F' . $index, 'g-' . $index), null, null),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
             );
         }
         $this->fetcher->secondsPerFetch = 100;
@@ -667,7 +673,13 @@ final class RefreshRunnerTest extends DbTestCase
             $feed = $this->dueFeed(sprintf('https://%s.example.com/feed', $name));
             $this->fetcher->willReturn(
                 $feed->getUrl(),
-                FetchResponse::fetched($feed->getUrl(), false, $this->rss('F' . $index, 'g-' . $index), null, null),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
             );
         }
         $this->em->flush();
@@ -696,7 +708,7 @@ final class RefreshRunnerTest extends DbTestCase
         foreach ([$first, $second] as $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
-                FetchResponse::notModified($feed->getUrl(), false, null, null),
+                FetchResponseModel::notModified($feed->getUrl(), false, null, null),
             );
         }
         $this->fetcher->secondsPerFetch = 5;
@@ -735,7 +747,10 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
         $this->em->flush();
-        $this->fetcher->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
 
         $this->runner()->run(RefreshRequest::allDue(300));
 
@@ -751,13 +766,13 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
+            FetchResponseModel::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
         );
         // The redirect adopts the new URL before phase two runs, so the
         // favicon homepage fetch targets the new origin, not the old one.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
-            FetchResponse::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -770,7 +785,7 @@ final class RefreshRunnerTest extends DbTestCase
         $feed = $this->dueFeed('https://verbose.example.com/feed');
         $this->em->flush();
 
-        $this->fetcher->willReturn($feed->getUrl(), FetchResponse::fetched(
+        $this->fetcher->willReturn($feed->getUrl(), FetchResponseModel::fetched(
             $feed->getUrl(),
             false,
             $this->rss('Verbose', 'v-1'),
@@ -796,7 +811,7 @@ final class RefreshRunnerTest extends DbTestCase
         $tooLong = 'https://new.example.com/' . str_repeat('p', 800);
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($tooLong, true, $this->rss('Moved', 'm-1'), null, null),
+            FetchResponseModel::fetched($tooLong, true, $this->rss('Moved', 'm-1'), null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -812,13 +827,13 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::notModified('https://new.example.com/feed', true, null, null),
+            FetchResponseModel::notModified('https://new.example.com/feed', true, null, null),
         );
         // The redirect adopts the new URL before phase two runs, so the
         // favicon homepage fetch targets the new origin, not the old one.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
-            FetchResponse::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -836,7 +851,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $moving->getUrl(),
-            FetchResponse::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
+            FetchResponseModel::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -853,7 +868,10 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->persist(new Subscription($user, $mine, $this->clock->now()));
         $this->em->flush();
 
-        $this->fetcher->willReturn($mine->getUrl(), FetchResponse::notModified($mine->getUrl(), false, null, null));
+        $this->fetcher->willReturn(
+            $mine->getUrl(),
+            FetchResponseModel::notModified($mine->getUrl(), false, null, null),
+        );
 
         $userId = $user->getId();
         self::assertNotNull($userId);
@@ -875,7 +893,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('One', 'o-1'), null, null),
         );
 
         $feedId = $feed->getId();
@@ -932,7 +950,10 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->persist($ancient);
         $this->em->flush();
 
-        $this->fetcher->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
 
@@ -965,7 +986,10 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->persist(new Subscription($user, $feed, $this->clock->now()));
         $this->em->flush();
 
-        $this->fetcher->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::notModified($feed->getUrl(), false, null, null),
+        );
 
         $userId = $user->getId();
         self::assertNotNull($userId);
@@ -982,7 +1006,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched(
+            FetchResponseModel::fetched(
                 $feed->getUrl(),
                 false,
                 $this->scrapedFixture('tagesschau-2026-07-23.html'),
@@ -1020,7 +1044,7 @@ final class RefreshRunnerTest extends DbTestCase
         $body = $this->scrapedFixture('tagesschau-2026-07-23.html');
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $body, null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $body, null, null),
         );
 
         $this->runner()->run(RefreshRequest::allDue(300));
@@ -1041,7 +1065,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->scrapedFixture('nav-only.html'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->scrapedFixture('nav-only.html'), null, null),
         );
 
         $report = $this->runner()->run(RefreshRequest::allDue(300));
@@ -1072,7 +1096,13 @@ final class RefreshRunnerTest extends DbTestCase
         foreach ([$first, $second, $third] as $index => $feed) {
             $this->fetcher->willReturn(
                 $feed->getUrl(),
-                FetchResponse::fetched($feed->getUrl(), false, $this->rss('F' . $index, 'g-' . $index), null, null),
+                FetchResponseModel::fetched(
+                    $feed->getUrl(),
+                    false,
+                    $this->rss('F' . $index, 'g-' . $index),
+                    null,
+                    null,
+                ),
             );
         }
 
@@ -1112,7 +1142,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
         // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
@@ -1146,7 +1176,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
         $failingEm = new FlushFailingEntityManager($this->em, thrown: new ForeignKeyConstraintViolationException(
@@ -1173,16 +1203,16 @@ final class RefreshRunnerTest extends DbTestCase
         $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         $this->fetcher->willReturn(
             $unchanged->getUrl(),
-            FetchResponse::notModified($unchanged->getUrl(), false, null, null),
+            FetchResponseModel::notModified($unchanged->getUrl(), false, null, null),
         );
         $this->fetcher->willThrow($rationed->getUrl(), new FeedThrottledException('HTTP 429', 60));
         $this->fetcher->willReturn(
             $failing->getUrl(),
-            FetchResponse::fetched($failing->getUrl(), false, $this->rss('F', 'f-1'), null, null),
+            FetchResponseModel::fetched($failing->getUrl(), false, $this->rss('F', 'f-1'), null, null),
         );
         $this->fetcher->willReturn(
             $untouched->getUrl(),
-            FetchResponse::notModified($untouched->getUrl(), false, null, null),
+            FetchResponseModel::notModified($untouched->getUrl(), false, null, null),
         );
 
         $failingEm = new FlushFailingEntityManager(
@@ -1212,7 +1242,10 @@ final class RefreshRunnerTest extends DbTestCase
         $stale = $this->dueFeed('https://stale.example.com/feed');
         $stale->recordSuccessfulFetch($this->clock->now()->modify('-6 minutes'), 60);
         $this->em->flush();
-        $this->fetcher->willReturn($stale->getUrl(), FetchResponse::notModified($stale->getUrl(), false, null, null));
+        $this->fetcher->willReturn(
+            $stale->getUrl(),
+            FetchResponseModel::notModified($stale->getUrl(), false, null, null),
+        );
 
         $report = $this->runner()->run(RefreshRequest::forUser($this->subscriber->requireId(), 60));
 
@@ -1227,7 +1260,7 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
         $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());

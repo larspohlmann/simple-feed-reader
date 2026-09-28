@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Ai\Completion\RetryPlan;
+use App\Service\Ai\Completion\Model\RetryPlanModel;
 
 /**
  * Which driver ticks the run (#344). Only the worker owns its process; poll and sweep (the maintenance cron's
@@ -16,8 +16,8 @@ enum TickDriver
     case Poll;
     case Sweep;
 
-    public function retryPlan(): RetryPlan
+    public function retryPlan(): RetryPlanModel
     {
-        return self::Worker === $this ? RetryPlan::blocking() : RetryPlan::deferring();
+        return self::Worker === $this ? RetryPlanModel::blocking() : RetryPlanModel::deferring();
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\ClientError;
 
 use App\Entity\User;
+use App\Service\ClientError\Model\ClientErrorModel;
 use App\Service\Logging\Loki\LokiPushHandler;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -25,7 +26,7 @@ final readonly class ClientErrorRecorder
     }
 
     /**
-     * @param list<ClientError> $clientErrors
+     * @param list<ClientErrorModel> $clientErrors
      */
     public function record(array $clientErrors, ?User $user): void
     {
@@ -38,7 +39,7 @@ final readonly class ClientErrorRecorder
     /**
      * @return array<string, mixed>
      */
-    private function context(ClientError $clientError, ?User $user): array
+    private function context(ClientErrorModel $clientError, ?User $user): array
     {
         return array_filter([
             'kind' => $clientError->kind,

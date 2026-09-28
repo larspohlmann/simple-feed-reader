@@ -6,20 +6,20 @@ namespace App\Service\Ai\Completion\ChatCompletionClient;
 
 use App\Service\Ai\Completion\CompletionBodyDecoder;
 use App\Service\Ai\Completion\CompletionCallSlot;
-use App\Service\Ai\Completion\CompletionOutcome;
-use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\CompletionStreamReader;
 use App\Service\Ai\Completion\ConcurrentCompletion;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\CompletionOutcomeModel;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Ai\ProviderConnection;
+use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Fetch\ResponseHeader;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -30,13 +30,13 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Sends `POST {baseUrl}/chat/completions`, the one call a tick makes to turn
  * a prompt into a ranking.
  *
- * The caps are not an SSRF boundary (see ProviderCredentials for why there is none);
+ * The caps are not an SSRF boundary (see ProviderCredentialsModel for why there is none);
  * they keep one hostile or broken endpoint from holding a request open or filling memory.
  */
 final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientInterface
 {
     // The wall clock and the first-byte bound now travel with the connection
-    // (ProviderTimeouts), because one pair of numbers cannot serve a hosted
+    // (ProviderTimeoutsModel), because one pair of numbers cannot serve a hosted
     // endpoint and a slow local one at once — see that class for the numbers
     // and the history behind them (#433).
 
@@ -85,8 +85,8 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     }
 
     public function complete(
-        ProviderConnection $connection,
-        CompletionRequest $request,
+        ProviderConnectionModel $connection,
+        CompletionRequestModel $request,
         CompletionStreamObserverInterface $observer,
     ): string {
         // A single-call wave through the same concurrent path (#344): one
@@ -101,7 +101,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         return $outcome->content();
     }
 
-    public function completeMany(ProviderConnection $connection, array $calls): array
+    public function completeMany(ProviderConnectionModel $connection, array $calls): array
     {
         // SplObjectStorage maps each streamed response to its own reader,
         // observer, and $calls index, so outcomes stay aligned however the
@@ -146,20 +146,20 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *
-     * @return array{0: \SplObjectStorage<ResponseInterface, CompletionCallSlot>, 1: list<?CompletionOutcome>}
+     * @return array{0: \SplObjectStorage<ResponseInterface, CompletionCallSlot>, 1: list<?CompletionOutcomeModel>}
      */
-    private function fireRequests(ProviderConnection $connection, array $calls): array
+    private function fireRequests(ProviderConnectionModel $connection, array $calls): array
     {
         /** @var \SplObjectStorage<ResponseInterface, CompletionCallSlot> $context */
         $context = new \SplObjectStorage();
-        /** @var list<?CompletionOutcome> $outcomes */
+        /** @var list<?CompletionOutcomeModel> $outcomes */
         $outcomes = array_fill(0, \count($calls), null);
 
         foreach ($calls as $index => $call) {
             try {
                 $response = $this->request($connection, $call->request);
             } catch (ExceptionInterface $e) {
-                $outcomes[$index] = CompletionOutcome::failure(
+                $outcomes[$index] = CompletionOutcomeModel::failure(
                     new ProviderUnreachableException('That address did not answer.', 0, $e),
                 );
 
@@ -198,25 +198,25 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         ResponseInterface $response,
         ChunkInterface $chunk,
         CompletionCallSlot $slot,
-    ): ?CompletionOutcome {
+    ): ?CompletionOutcomeModel {
         try {
             if (!$this->consumeChunk($response, $chunk, $slot)) {
                 return null;
             }
 
-            return CompletionOutcome::answer($this->contentOf($slot->reader));
+            return CompletionOutcomeModel::answer($this->contentOf($slot->reader));
         } catch (ProviderReplyFailureExceptionInterface $spoiledReply) {
             $response->cancel();
 
-            return CompletionOutcome::unusableReply($spoiledReply);
+            return CompletionOutcomeModel::unusableReply($spoiledReply);
         } catch (CredentialsRejectedException | ProviderUnreachableException | RetryableProviderException $failure) {
             $response->cancel();
 
-            return CompletionOutcome::failure($failure);
+            return CompletionOutcomeModel::failure($failure);
         } catch (ExceptionInterface $transportFailure) {
             $response->cancel();
 
-            return CompletionOutcome::failure($this->transportFailureOf($slot, $transportFailure));
+            return CompletionOutcomeModel::failure($this->transportFailureOf($slot, $transportFailure));
         }
     }
 
@@ -252,16 +252,17 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
      * owes the caller one outcome per call, so an unsettled slot becomes the
      * same answerless failure an empty completion does.
      *
-     * @param list<?CompletionOutcome> $outcomes
+     * @param list<?CompletionOutcomeModel> $outcomes
      *
-     * @return list<CompletionOutcome>
+     * @return list<CompletionOutcomeModel>
      */
     private function settleOutstanding(array $outcomes): array
     {
         return array_map(
-            static fn (?CompletionOutcome $outcome): CompletionOutcome => $outcome ?? CompletionOutcome::failure(
-                new ProviderUnreachableException('That provider answered without a completion.'),
-            ),
+            static fn (?CompletionOutcomeModel $outcome): CompletionOutcomeModel
+                => $outcome ?? CompletionOutcomeModel::failure(
+                    new ProviderUnreachableException('That provider answered without a completion.'),
+                ),
             $outcomes,
         );
     }
@@ -310,7 +311,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         if ('' !== $content) {
             $reader->consume($content);
             $this->guardRetainedSize($slot);
-            $slot->observer->streamProgressed(new CompletionStreamProgress(
+            $slot->observer->streamProgressed(new CompletionStreamProgressModel(
                 $reader->assistantContent() ?? '',
                 $reader->wireBytes(),
                 $reader->finishReason(),
@@ -407,7 +408,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         return mb_substr($slot->reader->assistantContent() ?? '', 0, self::QUOTABLE_ANSWER_CHARS);
     }
 
-    private function request(ProviderConnection $connection, CompletionRequest $request): ResponseInterface
+    private function request(ProviderConnectionModel $connection, CompletionRequestModel $request): ResponseInterface
     {
         return $this->httpClient->request('POST', $connection->credentials->baseUrl . '/chat/completions', [
             'headers' => [
@@ -445,7 +446,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
     /**
      * @return array<string, mixed>
      */
-    private function completionPayload(CompletionRequest $request): array
+    private function completionPayload(CompletionRequestModel $request): array
     {
         $payload = [
             'model' => $request->model,

@@ -6,9 +6,9 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Discovery\DiscoveredFeed;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Tests\DbTestCase;
@@ -53,9 +53,9 @@ final class FirstFetchRecorderTest extends DbTestCase
     public function testAFirstFetchStoresTheDiscoveredCacheValidators(): void
     {
         $feed = $this->feed();
-        $discovered = new DiscoveredFeed(
+        $discovered = new DiscoveredFeedModel(
             $feed->getUrl(),
-            new ParsedFeed('Discovered', null, null, null, []),
+            new ParsedFeedModel('Discovered', null, null, null, []),
             '"v1"',
             'Mon, 20 Jul 2026 08:30:00 GMT',
         );
@@ -164,18 +164,18 @@ final class FirstFetchRecorderTest extends DbTestCase
         return $feed;
     }
 
-    /** @param list<ParsedEntry> $entries */
-    private function discovered(Feed $feed, array $entries, ?string $imageUrl = null): DiscoveredFeed
+    /** @param list<ParsedEntryModel> $entries */
+    private function discovered(Feed $feed, array $entries, ?string $imageUrl = null): DiscoveredFeedModel
     {
-        return new DiscoveredFeed(
+        return new DiscoveredFeedModel(
             $feed->getUrl(),
-            new ParsedFeed('Discovered', null, null, $imageUrl, $entries),
+            new ParsedFeedModel('Discovered', null, null, $imageUrl, $entries),
         );
     }
 
-    private function parsedEntry(string $guid, ?\DateTimeImmutable $publishedAt): ParsedEntry
+    private function parsedEntry(string $guid, ?\DateTimeImmutable $publishedAt): ParsedEntryModel
     {
-        return new ParsedEntry(
+        return new ParsedEntryModel(
             guid: $guid,
             url: 'https://example.com/' . $guid,
             title: 'Title ' . $guid,
@@ -186,7 +186,7 @@ final class FirstFetchRecorderTest extends DbTestCase
         );
     }
 
-    /** @return list<ParsedEntry> */
+    /** @return list<ParsedEntryModel> */
     private function parsedEntries(int $count): array
     {
         $entries = [];
@@ -250,7 +250,7 @@ final class FirstFetchRecorderTest extends DbTestCase
      */
     public function testWithEntriesCopiesEveryFeedField(): void
     {
-        $document = new ParsedFeed(
+        $document = new ParsedFeedModel(
             'Example',
             'https://example.com/',
             'Example feed',
@@ -269,7 +269,7 @@ final class FirstFetchRecorderTest extends DbTestCase
     /**
      * The regression testWithEntriesCopiesEveryFeedField() cannot catch on its
      * own: it never calls FirstFetchRecorder::newest(), so it would still pass
-     * if newest() reverted to rebuilding ParsedFeed field by field (the exact
+     * if newest() reverted to rebuilding ParsedFeedModel field by field (the exact
      * bug withEntries() exists to prevent). This drives the real, wired
      * recorder's own capping method with 250 entries — over
      * FIRST_FETCH_MAX_ENTRIES, so a cap actually happens — and a non-null

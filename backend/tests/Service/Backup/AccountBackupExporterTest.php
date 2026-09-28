@@ -15,8 +15,8 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Backup\AccountBackupExporter;
-use App\Service\Backup\BackupPart;
 use App\Service\Backup\BackupReader;
+use App\Service\Backup\Model\BackupPartModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FullyPopulatedAccount;
 use App\Tests\Support\UserFactory;
@@ -57,7 +57,7 @@ final class AccountBackupExporterTest extends DbTestCase
     }
 
     /** @return list<array<string, mixed>> */
-    private function decodedLinesOf(BackupPart $part): array
+    private function decodedLinesOf(BackupPartModel $part): array
     {
         $lines = [];
         foreach (explode("\n", rtrim((string) gzdecode($part->gzipBytes), "\n")) as $line) {

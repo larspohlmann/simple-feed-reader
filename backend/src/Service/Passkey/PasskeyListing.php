@@ -6,6 +6,7 @@ namespace App\Service\Passkey;
 
 use App\Entity\User;
 use App\Repository\UserPasskeyRepository;
+use App\Service\Passkey\Model\AccountPasskeysModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 
 /** One account's passkeys, with the relying party id and shared handle the WebAuthn Signal API needs (#727). */
@@ -18,10 +19,10 @@ final readonly class PasskeyListing
     ) {
     }
 
-    public function forUser(User $user): AccountPasskeys
+    public function forUser(User $user): AccountPasskeysModel
     {
         $rows = $this->passkeys->findForUser($user);
 
-        return new AccountPasskeys($this->relyingParty->id(), $this->credentials->sharedHandle($rows), $rows);
+        return new AccountPasskeysModel($this->relyingParty->id(), $this->credentials->sharedHandle($rows), $rows);
     }
 }

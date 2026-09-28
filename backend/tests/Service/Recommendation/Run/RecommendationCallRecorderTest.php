@@ -11,10 +11,10 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Completion\CompletionRequest;
-use App\Service\Ai\Completion\CompletionStreamProgress;
-use App\Service\Ai\Completion\JsonSchema;
-use App\Service\Ai\Completion\Reasoning;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\JsonSchemaModel;
+use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Run\CallSlot;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
@@ -91,7 +91,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
 
-        $call->streamProgressed(new CompletionStreamProgress('He', 40));
+        $call->streamProgressed(new CompletionStreamProgressModel('He', 40));
         self::assertSame(
             '',
             $this->freshLog($logId)->getResponseText(),
@@ -99,7 +99,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         );
 
         $this->clock->modify('+3 seconds');
-        $call->streamProgressed(new CompletionStreamProgress('Hello', 90));
+        $call->streamProgressed(new CompletionStreamProgressModel('Hello', 90));
 
         self::assertSame('Hello', $this->freshLog($logId)->getResponseText());
     }
@@ -109,7 +109,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
 
         $this->clock->modify('+3 seconds');
-        $call->streamProgressed(new CompletionStreamProgress('He', 1_234));
+        $call->streamProgressed(new CompletionStreamProgressModel('He', 1_234));
 
         $runId = $this->run->getId();
         self::assertNotNull($runId);
@@ -123,7 +123,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
-        $call->streamProgressed(new CompletionStreamProgress('partial', 7_000));
+        $call->streamProgressed(new CompletionStreamProgressModel('partial', 7_000));
 
         $call->finishUsable('{"recommendations": []}');
 
@@ -140,7 +140,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
-        $call->streamProgressed(new CompletionStreamProgress('cut off', 9_001));
+        $call->streamProgressed(new CompletionStreamProgressModel('cut off', 9_001));
 
         $call->abortAfterTransportFailure('cURL error 28');
 
@@ -165,7 +165,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         // Inside the checkpoint interval on purpose: no write has happened,
         // so the count can only reach the row if every report tracks it.
-        $call->streamProgressed(new CompletionStreamProgress('', 1_900_000));
+        $call->streamProgressed(new CompletionStreamProgressModel('', 1_900_000));
         $call->abortAfterTransportFailure(null);
 
         $log = $this->freshLog($logId);
@@ -189,12 +189,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
         $this->clock->modify('+3 seconds');
-        $call->streamProgressed(new CompletionStreamProgress('mine', 50));
+        $call->streamProgressed(new CompletionStreamProgressModel('mine', 50));
         $call->finishUsable('final mine');
 
         $abortCall = $this->recorder->begin($this->run, CallSlot::batch(2), $this->request([]));
         $this->clock->modify('+3 seconds');
-        $abortCall->streamProgressed(new CompletionStreamProgress('cut', 60));
+        $abortCall->streamProgressed(new CompletionStreamProgressModel('cut', 60));
         $abortCall->abortAfterTransportFailure('connection reset');
 
         $this->assertOtherUsersRowsUntouched($otherRunId, $otherLogId);
@@ -273,13 +273,13 @@ final class RecommendationCallRecorderTest extends DbTestCase
     }
 
     /** @param list<array{role: string, content: string}> $messages */
-    private function request(array $messages): CompletionRequest
+    private function request(array $messages): CompletionRequestModel
     {
-        return new CompletionRequest(
+        return new CompletionRequestModel(
             'm',
             $messages,
             1024,
-            new JsonSchema('test', ['type' => 'object']),
+            new JsonSchemaModel('test', ['type' => 'object']),
             Reasoning::Allowed,
         );
     }

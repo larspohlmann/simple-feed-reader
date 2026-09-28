@@ -7,7 +7,7 @@ namespace App\Service\Recommendation\Run\Factory;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Ai\Completion\CompletionRequest;
+use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Run\CallSlot;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -19,8 +19,11 @@ final readonly class RecommendationRunLogFactory
     ) {
     }
 
-    public function create(RecommendationRun $run, CallSlot $slot, CompletionRequest $request): RecommendationRunLog
-    {
+    public function create(
+        RecommendationRun $run,
+        CallSlot $slot,
+        CompletionRequestModel $request,
+    ): RecommendationRunLog {
         return new RecommendationRunLog(
             $run,
             $slot->phase,
@@ -38,7 +41,7 @@ final readonly class RecommendationRunLogFactory
     }
 
     /** Pretty-printed for the human the debug view exists for: the payload as sent, minus transport framing. */
-    private static function renderedRequest(CompletionRequest $request): string
+    private static function renderedRequest(CompletionRequestModel $request): string
     {
         return json_encode(
             ['model' => $request->model, 'messages' => $request->messages],

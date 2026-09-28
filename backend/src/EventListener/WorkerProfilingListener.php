@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
-use App\Service\Profiling\ProfileLabels;
+use App\Service\Profiling\Model\ProfileLabelsModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 use App\Service\Profiling\ProfilingPolicy;
@@ -96,7 +96,7 @@ final class WorkerProfilingListener
     {
         $profile = $this->sampler->stop();
         if (null !== $profile) {
-            $this->client->push($profile, ProfileLabels::forWorker());
+            $this->client->push($profile, ProfileLabelsModel::forWorker());
         }
     }
 

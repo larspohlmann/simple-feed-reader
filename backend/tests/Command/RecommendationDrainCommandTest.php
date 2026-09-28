@@ -13,7 +13,7 @@ use App\Enum\RecommendationBatchSize;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use App\Service\Recommendation\Run\SweepStreamHeartbeat;
@@ -249,11 +249,11 @@ final class RecommendationDrainCommandTest extends DbTestCase
     public function testTheLockOutlivesOneProviderCallButNotAWorstCaseSweep(): void
     {
         self::assertGreaterThan(
-            ProviderTimeouts::standard()->wallClockSeconds,
+            ProviderTimeoutsModel::standard()->wallClockSeconds,
             RecommendationDrainCommand::LOCK_TTL_SECONDS,
         );
         self::assertLessThan(
-            RecommendationRun::MAX_ATTEMPTS * ProviderTimeouts::standard()->wallClockSeconds,
+            RecommendationRun::MAX_ATTEMPTS * ProviderTimeoutsModel::standard()->wallClockSeconds,
             RecommendationDrainCommand::LOCK_TTL_SECONDS,
         );
     }

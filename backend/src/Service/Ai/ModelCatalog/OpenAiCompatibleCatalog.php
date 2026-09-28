@@ -6,8 +6,8 @@ namespace App\Service\Ai\ModelCatalog;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\ModelDescriptor;
-use App\Service\Ai\ProviderCredentials;
+use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -16,7 +16,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * Reads `GET {baseUrl}/models`, the one call every OpenAI-compatible provider
  * answers the same way.
  *
- * The caps are not an SSRF boundary — see ProviderCredentials for why there is
+ * The caps are not an SSRF boundary — see ProviderCredentialsModel for why there is
  * none — they keep one hostile or broken endpoint from holding a request open
  * or filling memory.
  */
@@ -31,7 +31,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     ) {
     }
 
-    public function listModels(ProviderCredentials $credentials): array
+    public function listModels(ProviderCredentialsModel $credentials): array
     {
         $body = $this->readBody($credentials);
         $decoded = json_decode($body, true);
@@ -49,7 +49,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         return $models;
     }
 
-    private function readBody(ProviderCredentials $credentials): string
+    private function readBody(ProviderCredentialsModel $credentials): string
     {
         try {
             $response = $this->request($credentials);
@@ -69,7 +69,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         }
     }
 
-    private function request(ProviderCredentials $credentials): ResponseInterface
+    private function request(ProviderCredentialsModel $credentials): ResponseInterface
     {
         return $this->httpClient->request('GET', $credentials->baseUrl . '/models', [
             'headers' => [
@@ -109,7 +109,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
      *
      * @param array<mixed> $entries
      *
-     * @return list<ModelDescriptor> sorted by id, one entry per id
+     * @return list<ModelDescriptorModel> sorted by id, one entry per id
      */
     private function descriptors(array $entries): array
     {
@@ -119,7 +119,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             if (!\is_array($entry) || !isset($entry['id']) || !\is_string($entry['id']) || '' === $entry['id']) {
                 continue;
             }
-            $byId[$entry['id']] ??= new ModelDescriptor($entry['id'], $this->reportedContextWindow($entry));
+            $byId[$entry['id']] ??= new ModelDescriptorModel($entry['id'], $this->reportedContextWindow($entry));
         }
 
         ksort($byId, SORT_STRING);

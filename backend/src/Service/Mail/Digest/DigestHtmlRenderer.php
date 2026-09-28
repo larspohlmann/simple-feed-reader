@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestPageGroupModel;
+use App\Service\Mail\Digest\Model\DigestPageModel;
 use Psr\Clock\ClockInterface;
 use Twig\Environment;
 
 /**
- * Renders a capped DigestPage to the airy/light HTML email (#726) from Twig
+ * Renders a capped DigestPageModel to the airy/light HTML email (#726) from Twig
  * templates in templates/emails/digest/. The layout is fluid under a device-width
  * viewport so iPhone Mail keeps it readable (#886); an Outlook ghost table holds
  * the 600px column on Outlook desktop. Styles live in a single <style> block and
@@ -26,10 +30,10 @@ final readonly class DigestHtmlRenderer
     ) {
     }
 
-    public function render(DigestPage $page, DigestImageSet $images, string $locale): string
+    public function render(DigestPageModel $page, DigestImageSetModel $images, string $locale): string
     {
         $dateFormatter = new \IntlDateFormatter($locale, \IntlDateFormatter::MEDIUM, \IntlDateFormatter::SHORT, 'UTC');
-        $group = fn (DigestPageGroup $group): array => $this->group($group, $images, $dateFormatter);
+        $group = fn (DigestPageGroupModel $group): array => $this->group($group, $images, $dateFormatter);
 
         return $this->twig->render('emails/digest/digest.html.twig', [
             'locale' => $locale,
@@ -43,9 +47,12 @@ final readonly class DigestHtmlRenderer
     }
 
     /** @return array<string, mixed> */
-    private function group(DigestPageGroup $group, DigestImageSet $images, \IntlDateFormatter $dateFormatter): array
-    {
-        $card = fn (DigestEntry $card): array => $this->card($card, $images, $dateFormatter);
+    private function group(
+        DigestPageGroupModel $group,
+        DigestImageSetModel $images,
+        \IntlDateFormatter $dateFormatter,
+    ): array {
+        $card = fn (DigestEntryModel $card): array => $this->card($card, $images, $dateFormatter);
 
         return [
             'term' => $group->term,
@@ -57,7 +64,7 @@ final readonly class DigestHtmlRenderer
     }
 
     /** @return array<string, mixed> */
-    private function card(DigestEntry $card, DigestImageSet $images, \IntlDateFormatter $dateFormatter): array
+    private function card(DigestEntryModel $card, DigestImageSetModel $images, \IntlDateFormatter $dateFormatter): array
     {
         return [
             'title' => $card->title,

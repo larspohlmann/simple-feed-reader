@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Admin;
 
-use App\Service\Proxy\ProxySettingsSnapshot;
+use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
 
 /**
  * The admin proxy payload. The password is absent by construction: only a
@@ -24,7 +24,7 @@ final readonly class ProxySettingsJson
      *     hasPassword: bool,
      * }
      */
-    public static function from(ProxySettingsSnapshot $settings): array
+    public static function from(ProxySettingsSnapshotModel $settings): array
     {
         $connection = $settings->connection;
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport\Factory;
 
 use App\Enum\MailEncryption;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
@@ -16,7 +16,7 @@ use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 final readonly class EsmtpTransportFactory
 {
     public function from(
-        ResolvedMailTransport $resolved,
+        ResolvedMailTransportModel $resolved,
         ?EventDispatcherInterface $dispatcher,
         LoggerInterface $logger,
     ): EsmtpTransport {

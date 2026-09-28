@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Reader\HeroImageSelector;
 use PHPUnit\Framework\TestCase;
 
@@ -23,7 +23,7 @@ final class HeroImageSelectorTest extends TestCase
      */
     private function selectUrl(?string $candidateUrl, string $bodyHtml): ?string
     {
-        $candidate = $candidateUrl === null ? null : new DeclaredImage($candidateUrl);
+        $candidate = $candidateUrl === null ? null : new DeclaredImageModel($candidateUrl);
 
         return $this->selector->select($candidate, $bodyHtml)?->url;
     }
@@ -113,7 +113,7 @@ final class HeroImageSelectorTest extends TestCase
     {
         // The dimensions are the client's aspect-ratio reservation, so the
         // selector must hand back the candidate itself, not a rebuilt copy.
-        $hero = new DeclaredImage('https://cdn.test/hero.jpg', 800, 450);
+        $hero = new DeclaredImageModel('https://cdn.test/hero.jpg', 800, 450);
 
         $selected = $this->selector->select($hero, '<p>Just words.</p>');
 
@@ -124,21 +124,21 @@ final class HeroImageSelectorTest extends TestCase
 
     public function testRejectsAHeroNarrowerThanTheMinimum(): void
     {
-        $hero = new DeclaredImage('https://cdn.test/small.jpg', 300, 200);
+        $hero = new DeclaredImageModel('https://cdn.test/small.jpg', 300, 200);
 
         self::assertNull($this->selector->select($hero, '<p>Just words.</p>'));
     }
 
     public function testKeepsAHeroAtTheMinimumWidth(): void
     {
-        $hero = new DeclaredImage('https://cdn.test/wide.jpg', 480, 300);
+        $hero = new DeclaredImageModel('https://cdn.test/wide.jpg', 480, 300);
 
         self::assertSame($hero, $this->selector->select($hero, '<p>Just words.</p>'));
     }
 
     public function testKeepsAHeroWithUnknownWidth(): void
     {
-        $hero = new DeclaredImage('https://cdn.test/unknown.jpg');
+        $hero = new DeclaredImageModel('https://cdn.test/unknown.jpg');
 
         self::assertSame($hero, $this->selector->select($hero, '<p>Just words.</p>'));
     }

@@ -7,7 +7,7 @@ namespace App\Service\Mail\AccountMailer;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\PendingApprovalNotice;
+use App\Service\Mail\Model\PendingApprovalNoticeModel;
 use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
@@ -57,7 +57,7 @@ final readonly class AccountMailer implements AccountMailerInterface
     /**
      * @throws TransportExceptionInterface
      */
-    public function sendPendingApprovalNotice(User $admin, PendingApprovalNotice $notice): void
+    public function sendPendingApprovalNotice(User $admin, PendingApprovalNoticeModel $notice): void
     {
         $this->send($admin, 'admin_pending_approval', [
             '%applicant_email%' => $notice->applicantEmail,
@@ -72,7 +72,7 @@ final readonly class AccountMailer implements AccountMailerInterface
         return $this->publicBaseUrl->get() . $path . '?token=' . rawurlencode($plainToken);
     }
 
-    private function methodLabel(PendingApprovalNotice $notice, string $locale): string
+    private function methodLabel(PendingApprovalNoticeModel $notice, string $locale): string
     {
         if (RegistrationMethod::OAuth === $notice->method) {
             \assert(null !== $notice->oauthProvider);

@@ -10,10 +10,10 @@ use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchTicket;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use App\Tests\Support\NoEgressProxy;
@@ -69,9 +69,9 @@ final class ConcurrentFeedFetcherTest extends TestCase
     }
 
     /**
-     * @param iterable<int|string, FetchOutcome> $outcomes
+     * @param iterable<int|string, FetchOutcomeModel> $outcomes
      *
-     * @return array<int|string, FetchOutcome>
+     * @return array<int|string, FetchOutcomeModel>
      */
     private function collect(iterable $outcomes): array
     {
@@ -130,7 +130,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
     {
         $fetcher = $this->fetcher([new MockResponse('<rss/>', ['http_code' => 200])]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([7 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([7 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertCount(1, $outcomes);
         self::assertSame('<rss/>', $outcomes[7]->responseOrThrow()->modifiedBody());
@@ -157,7 +157,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['www.fazemag.de' => ['178.77.107.162', '2a01:488:42:1000:b24d:6ba2:1e:a1ad']],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://www.fazemag.de/feed/')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://www.fazemag.de/feed/')]));
 
         self::assertNull($outcomes[1]->failure());
         self::assertSame(
@@ -190,7 +190,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['www.heise.de' => ['2a02:2e0:3fe:1001:7777:772e:2:85', '193.99.144.85']],
         );
 
-        $ticket = new FetchTicket('https://www.heise.de/rss/heise-atom.xml');
+        $ticket = new FetchTicketModel('https://www.heise.de/rss/heise-atom.xml');
         $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
 
         self::assertNull($outcomes[1]->failure());
@@ -224,7 +224,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['www.heise.de' => [$ipv6, $ipv4]],
         );
 
-        $ticket = new FetchTicket('https://www.heise.de/rss/heise-atom.xml');
+        $ticket = new FetchTicketModel('https://www.heise.de/rss/heise-atom.xml');
         $outcomes = $this->collect($fetcher->fetchAll([1 => $ticket]));
 
         self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
@@ -249,7 +249,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['taz.de' => [$ipv6, $ipv4]],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://taz.de/!p4608;rss/')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://taz.de/!p4608;rss/')]));
 
         self::assertSame('<rss/>', $outcomes[1]->responseOrThrow()->modifiedBody());
     }
@@ -277,7 +277,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['taz.de' => ['2a02:2e0:3fe:1001:7777:772e:2:85', $ipv4]],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://taz.de/!p4608;rss/')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://taz.de/!p4608;rss/')]));
 
         self::assertNull($outcomes[1]->failure());
         self::assertSame([false, true], $freshConnectPerAttempt);
@@ -297,7 +297,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]));
 
         self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
         self::assertSame(1, $requestCount);
@@ -322,7 +322,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             dnsOverrides: ['dual.example.com' => ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']],
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://dual.example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://dual.example.com/feed')]));
 
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
         self::assertSame(1, $requestCount);
@@ -339,7 +339,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             },
         );
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
         // One family, so nothing to fall back to: exactly one request, no retry loop.
@@ -354,11 +354,11 @@ final class ConcurrentFeedFetcherTest extends TestCase
         ));
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://one.example.com/feed'),
-            2 => new FetchTicket('https://two.example.com/feed'),
-            3 => new FetchTicket('https://three.example.com/feed'),
-            4 => new FetchTicket('https://four.example.com/feed'),
-            5 => new FetchTicket('https://five.example.com/feed'),
+            1 => new FetchTicketModel('https://one.example.com/feed'),
+            2 => new FetchTicketModel('https://two.example.com/feed'),
+            3 => new FetchTicketModel('https://three.example.com/feed'),
+            4 => new FetchTicketModel('https://four.example.com/feed'),
+            5 => new FetchTicketModel('https://five.example.com/feed'),
         ]));
 
         self::assertCount(5, $outcomes);
@@ -376,9 +376,9 @@ final class ConcurrentFeedFetcherTest extends TestCase
             : new MockResponse('<rss/>', ['http_code' => 200]));
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://good.example.com/feed'),
-            2 => new FetchTicket('https://bad.example.com/feed'),
-            3 => new FetchTicket('https://alsogood.example.com/feed'),
+            1 => new FetchTicketModel('https://good.example.com/feed'),
+            2 => new FetchTicketModel('https://bad.example.com/feed'),
+            3 => new FetchTicketModel('https://alsogood.example.com/feed'),
         ]));
 
         self::assertCount(3, $outcomes);
@@ -391,7 +391,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
     {
         $fetcher = $this->fetcher([new MockResponse('', ['http_code' => 410])]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(FeedGoneException::class, $outcomes[1]->failure());
     }
@@ -400,7 +400,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
     {
         $fetcher = $this->fetcher([]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://blocked.example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://blocked.example.com/feed')]));
 
         self::assertInstanceOf(SsrfBlockedException::class, $outcomes[1]->failure());
     }
@@ -413,7 +413,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             new MockResponse('<rss/>', ['http_code' => 200]),
         ]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         $response = $outcomes[1]->responseOrThrow();
         self::assertSame('https://example.com/two', $response->finalUrl);
@@ -435,7 +435,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             ]),
         ]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(SsrfBlockedException::class, $outcomes[1]->failure());
     }
@@ -447,7 +447,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             'response_headers' => ['location' => 'https://example.com/next'],
         ]));
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         $failure = $outcomes[1]->failure();
         self::assertInstanceOf(FeedUnreachableException::class, $failure);
@@ -477,8 +477,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://slow.example.com/feed'),
-            2 => new FetchTicket('https://fast.example.com/feed'),
+            1 => new FetchTicketModel('https://slow.example.com/feed'),
+            2 => new FetchTicketModel('https://fast.example.com/feed'),
         ]));
 
         self::assertNull($outcomes[2]->failure());
@@ -504,7 +504,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         $failure = $outcomes[1]->failure();
         self::assertInstanceOf(FeedUnreachableException::class, $failure);
@@ -520,7 +520,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         $fetcher = $this->fetcher([new MockResponse($body, ['http_code' => 200])]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         $failure = $outcomes[1]->failure();
         self::assertInstanceOf(FeedUnreachableException::class, $failure);
@@ -537,7 +537,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
             new MockResponse(str_repeat('x', 6_000_000), ['http_code' => 200]),
         ]);
 
-        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicket('https://example.com/feed')]));
+        $outcomes = $this->collect($fetcher->fetchAll([1 => new FetchTicketModel('https://example.com/feed')]));
 
         self::assertInstanceOf(ResponseTooLargeException::class, $outcomes[1]->failure());
     }
@@ -554,7 +554,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://example.com/feed', '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'),
+            1 => new FetchTicketModel('https://example.com/feed', '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'),
         ]));
 
         self::assertTrue($outcomes[1]->responseOrThrow()->notModified);
@@ -588,11 +588,11 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
 
         $tickets = [
-            1 => new FetchTicket('https://one.example.com/feed'),
-            2 => new FetchTicket('https://two.example.com/feed'),
-            3 => new FetchTicket('https://three.example.com/feed'),
-            4 => new FetchTicket('https://four.example.com/feed'),
-            5 => new FetchTicket('https://five.example.com/feed'),
+            1 => new FetchTicketModel('https://one.example.com/feed'),
+            2 => new FetchTicketModel('https://two.example.com/feed'),
+            3 => new FetchTicketModel('https://three.example.com/feed'),
+            4 => new FetchTicketModel('https://four.example.com/feed'),
+            5 => new FetchTicketModel('https://five.example.com/feed'),
         ];
 
         foreach ($fetcher->fetchAll($tickets) as $outcome) {
@@ -623,7 +623,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
         $tickets = [];
         foreach (range(1, 5) as $index) {
-            $tickets[$index] = new FetchTicket(sprintf('https://one.example.com/feed%d', $index));
+            $tickets[$index] = new FetchTicketModel(sprintf('https://one.example.com/feed%d', $index));
         }
 
         $outcomes = $this->collect($fetcher->fetchAll($tickets));
@@ -649,9 +649,9 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://one.example.com/a'),
-            2 => new FetchTicket('https://one.example.com/b'),
-            3 => new FetchTicket('https://one.example.com/c'),
+            1 => new FetchTicketModel('https://one.example.com/a'),
+            2 => new FetchTicketModel('https://one.example.com/b'),
+            3 => new FetchTicketModel('https://one.example.com/c'),
         ]));
 
         self::assertCount(3, $outcomes);
@@ -690,12 +690,12 @@ final class ConcurrentFeedFetcherTest extends TestCase
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([
-            1 => new FetchTicket('https://busy.example.com/a'),
-            2 => new FetchTicket('https://free.example.com/a'),
-            3 => new FetchTicket('https://busy.example.com/b'),
-            4 => new FetchTicket('https://free.example.com/b'),
-            5 => new FetchTicket('https://busy.example.com/c'),
-            6 => new FetchTicket('https://free.example.com/c'),
+            1 => new FetchTicketModel('https://busy.example.com/a'),
+            2 => new FetchTicketModel('https://free.example.com/a'),
+            3 => new FetchTicketModel('https://busy.example.com/b'),
+            4 => new FetchTicketModel('https://free.example.com/b'),
+            5 => new FetchTicketModel('https://busy.example.com/c'),
+            6 => new FetchTicketModel('https://free.example.com/c'),
         ]));
 
         self::assertCount(6, $outcomes);

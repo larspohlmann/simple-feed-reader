@@ -9,6 +9,8 @@ use App\Entity\EntryState;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Service\Backup\Dto\BackupTotals;
+use App\Service\Backup\Model\BackupPartModel;
+use App\Service\Backup\Model\BackupProvenanceModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -32,7 +34,7 @@ final class BackupPartWalk
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
         private readonly BackupLines $lines,
-        private readonly BackupProvenance $provenance,
+        private readonly BackupProvenanceModel $provenance,
         private readonly int $userId,
     ) {
         $this->buffer = new BackupPartBuffer();
@@ -41,7 +43,7 @@ final class BackupPartWalk
     /**
      * @param array<int, string> $feedUrlsByFeedId
      *
-     * @return \Generator<int, BackupPart>
+     * @return \Generator<int, BackupPartModel>
      */
     public function entryParts(array $feedUrlsByFeedId): \Generator
     {
@@ -65,7 +67,7 @@ final class BackupPartWalk
     }
 
     /**
-     * @return \Generator<int, BackupPart>
+     * @return \Generator<int, BackupPartModel>
      */
     private function walkFeed(int $feedId, string $feedUrl): \Generator
     {
@@ -82,7 +84,7 @@ final class BackupPartWalk
     /**
      * @param list<Entry> $batch
      *
-     * @return \Generator<int, BackupPart>
+     * @return \Generator<int, BackupPartModel>
      */
     private function bufferBatch(array $batch, string $feedUrl): \Generator
     {
@@ -97,7 +99,7 @@ final class BackupPartWalk
     }
 
     /**
-     * @return \Generator<int, BackupPart>
+     * @return \Generator<int, BackupPartModel>
      */
     private function bufferEntry(Entry $entry, string $feedUrl, ?EntryState $state): \Generator
     {
@@ -115,7 +117,7 @@ final class BackupPartWalk
         }
     }
 
-    private function closePart(): BackupPart
+    private function closePart(): BackupPartModel
     {
         ++$this->partsWritten;
         $header = $this->lines->entryPartHeader($this->provenance, $this->partsWritten);
@@ -124,7 +126,7 @@ final class BackupPartWalk
             BackupSchema::KIND_ENTRY_STATE => $this->buffer->entryStateCount(),
         ]);
 
-        return BackupPart::entries($this->partsWritten, $this->buffer->drain($header, $footer));
+        return BackupPartModel::entries($this->partsWritten, $this->buffer->drain($header, $footer));
     }
 
     /**

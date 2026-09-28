@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
+
 /**
  * The engine's work list: redirect continuations first, then tickets not yet
  * started. Continuations jump the queue because they already hold an open
@@ -21,10 +25,10 @@ namespace App\Service\Fetch;
  */
 final class FetchQueue
 {
-    /** @var list<FetchAttempt> */
+    /** @var list<FetchAttemptModel> */
     private array $continuations = [];
 
-    /** @var list<FetchAttempt> */
+    /** @var list<FetchAttemptModel> */
     private array $parked = [];
 
     private bool $currentConsumed = false;
@@ -34,29 +38,29 @@ final class FetchQueue
      * ticket: it is resolved once per run and is the same for every feed, so
      * this is the one place that has to know it.
      *
-     * @param \Iterator<int|string, FetchTicket> $tickets
+     * @param \Iterator<int|string, FetchTicketModel> $tickets
      */
     public function __construct(
         private readonly \Iterator $tickets,
         private readonly HostSlots $hostSlots,
         private readonly int $lookAhead,
-        private readonly ?ProxyConfig $batchProxy = null,
+        private readonly ?ProxyConfigModel $batchProxy = null,
     ) {
     }
 
-    public function requeue(FetchAttempt $attempt): void
+    public function requeue(FetchAttemptModel $attempt): void
     {
         $this->continuations[] = $attempt;
     }
 
     /** Records that an attempt went on the wire, occupying a slot on its host. */
-    public function onSent(FetchAttempt $attempt): void
+    public function onSent(FetchAttemptModel $attempt): void
     {
         $this->hostSlots->acquire($attempt);
     }
 
     /** Records that an attempt's response retired, freeing its host slot. */
-    public function onRetired(FetchAttempt $attempt): void
+    public function onRetired(FetchAttemptModel $attempt): void
     {
         $this->hostSlots->release($attempt);
     }
@@ -66,7 +70,7 @@ final class FetchQueue
      * either the work is done, or every candidate's host is full and the caller
      * must wait for an in-flight response to free a slot.
      */
-    public function takeRunnable(): ?FetchAttempt
+    public function takeRunnable(): ?FetchAttemptModel
     {
         $freed = $this->takeFreedFromPark();
         if (null !== $freed) {
@@ -85,7 +89,7 @@ final class FetchQueue
         return null;
     }
 
-    private function takeFreedFromPark(): ?FetchAttempt
+    private function takeFreedFromPark(): ?FetchAttemptModel
     {
         foreach ($this->parked as $index => $attempt) {
             if ($this->hostSlots->hasCapacityFor($attempt)) {
@@ -108,7 +112,7 @@ final class FetchQueue
         return $this->tickets->valid();
     }
 
-    private function takeFresh(): FetchAttempt
+    private function takeFresh(): FetchAttemptModel
     {
         $continuation = array_shift($this->continuations);
         if (null !== $continuation) {
@@ -117,7 +121,7 @@ final class FetchQueue
 
         $this->retireConsumed();
 
-        $attempt = FetchAttempt::start($this->tickets->key(), $this->tickets->current(), $this->batchProxy);
+        $attempt = FetchAttemptModel::start($this->tickets->key(), $this->tickets->current(), $this->batchProxy);
         $this->currentConsumed = true;
 
         return $attempt;

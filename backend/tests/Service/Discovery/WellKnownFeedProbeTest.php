@@ -7,7 +7,7 @@ namespace App\Tests\Service\Discovery;
 use App\Service\Discovery\WellKnownFeedProbe;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
 use App\Tests\Support\StubFeedFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -32,12 +32,12 @@ final class WellKnownFeedProbeTest extends KernelTestCase
         return new WellKnownFeedProbe($fetcher, $parser);
     }
 
-    private function feedAt(string $url, ?string $finalUrl = null): FetchResponse
+    private function feedAt(string $url, ?string $finalUrl = null): FetchResponseModel
     {
         $xml = file_get_contents(__DIR__ . '/../../Fixtures/feeds/rss2-basic.xml');
         self::assertIsString($xml);
 
-        return FetchResponse::fetched(
+        return FetchResponseModel::fetched(
             $finalUrl ?? $url,
             permanentRedirect: false,
             body: $xml,
@@ -140,7 +140,7 @@ final class WellKnownFeedProbeTest extends KernelTestCase
     {
         $page = 'https://blocked.example.com/blog/';
         $fetcher = $this->fetcher();
-        $fetcher->willReturn($page . '.rss', FetchResponse::fetched(
+        $fetcher->willReturn($page . '.rss', FetchResponseModel::fetched(
             $page . '.rss',
             permanentRedirect: false,
             body: '<!doctype html><html><body>Not a feed</body></html>',

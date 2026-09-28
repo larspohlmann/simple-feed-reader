@@ -9,6 +9,9 @@ use App\Entity\User;
 use App\Enum\MailKind;
 use App\Repository\PreferencesRepository;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\Model\DigestAttempt;
+use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -41,10 +44,10 @@ final readonly class SendDueDigests
     ) {
     }
 
-    public function run(): DigestSweepReport
+    public function run(): DigestSweepReportModel
     {
         if (!$this->mail->isEnabled()) {
-            return new DigestSweepReport(0, 0, 0);
+            return new DigestSweepReportModel(0, 0, 0);
         }
 
         $now = $this->clock->now();
@@ -63,7 +66,7 @@ final readonly class SendDueDigests
             }
         }
 
-        return new DigestSweepReport($considered, $sent, $skippedEmpty);
+        return new DigestSweepReportModel($considered, $sent, $skippedEmpty);
     }
 
     private function attemptSend(Preferences $prefs, \DateTimeImmutable $now): DigestAttempt

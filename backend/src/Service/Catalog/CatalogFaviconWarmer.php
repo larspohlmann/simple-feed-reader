@@ -7,9 +7,10 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
-use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Catalog\Model\CatalogWarmReportModel;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -48,7 +49,7 @@ final readonly class CatalogFaviconWarmer
     /**
      * @throws \DateInvalidOperationException
      */
-    public function warm(int $budgetSeconds, ?int $limit = null): CatalogWarmReport
+    public function warm(int $budgetSeconds, ?int $limit = null): CatalogWarmReportModel
     {
         $now = $this->clock->now();
         $deadline = $now->getTimestamp() + $budgetSeconds;
@@ -77,7 +78,7 @@ final readonly class CatalogFaviconWarmer
             }
         }
 
-        return new CatalogWarmReport(
+        return new CatalogWarmReportModel(
             $warmed,
             $failed,
             $this->feeds->countNeedingFavicon($criteria),

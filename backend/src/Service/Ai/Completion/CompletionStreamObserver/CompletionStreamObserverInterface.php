@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion\CompletionStreamObserver;
 
-use App\Service\Ai\Completion\CompletionStreamProgress;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 
 /**
  * Streaming hook for one /chat/completions call (#309): the client reports
@@ -14,5 +14,5 @@ use App\Service\Ai\Completion\CompletionStreamProgress;
 interface CompletionStreamObserverInterface
 {
     /** Called after every received chunk, with the answer decoded so far. */
-    public function streamProgressed(CompletionStreamProgress $progress): void;
+    public function streamProgressed(CompletionStreamProgressModel $progress): void;
 }

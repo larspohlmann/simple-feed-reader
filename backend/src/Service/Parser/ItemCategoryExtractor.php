@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Parser;
 
+use App\Service\Parser\Model\ParsedCategoryModel;
+
 /**
  * Reads a feed item's declared categories into a flat list, across RSS 2.0
  * <category>, Atom <category term= scheme=>, and Dublin Core <dc:subject>.
  */
 final class ItemCategoryExtractor
 {
-    /** @return list<ParsedCategory> */
+    /** @return list<ParsedCategoryModel> */
     public static function extract(\DOMElement $item): array
     {
         $categories = [];
@@ -24,7 +26,7 @@ final class ItemCategoryExtractor
         return $categories;
     }
 
-    private static function fromChild(\DOMNode $child): ?ParsedCategory
+    private static function fromChild(\DOMNode $child): ?ParsedCategoryModel
     {
         if (!$child instanceof \DOMElement) {
             return null;
@@ -35,13 +37,13 @@ final class ItemCategoryExtractor
         if ($child->localName === 'subject' && $child->namespaceURI === XmlHelper::DUBLIN_CORE_NAMESPACE) {
             $label = trim($child->textContent);
 
-            return $label === '' ? null : new ParsedCategory($label);
+            return $label === '' ? null : new ParsedCategoryModel($label);
         }
 
         return null;
     }
 
-    private static function fromCategoryElement(\DOMElement $element): ?ParsedCategory
+    private static function fromCategoryElement(\DOMElement $element): ?ParsedCategoryModel
     {
         $term = trim($element->getAttribute('term'));
         $label = $term !== '' ? $term : trim($element->textContent);
@@ -54,6 +56,6 @@ final class ItemCategoryExtractor
             $scheme = trim($element->getAttribute('domain'));
         }
 
-        return new ParsedCategory($label, $scheme === '' ? null : $scheme);
+        return new ParsedCategoryModel($label, $scheme === '' ? null : $scheme);
     }
 }

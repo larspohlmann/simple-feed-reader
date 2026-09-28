@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling\ProfileSampler;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 
 final class NullProfileSampler implements ProfileSamplerInterface
 {
@@ -17,7 +17,7 @@ final class NullProfileSampler implements ProfileSamplerInterface
     {
     }
 
-    public function stop(): ?CollapsedProfile
+    public function stop(): ?CollapsedProfileModel
     {
         return null;
     }

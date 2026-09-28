@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth\Oidc;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
-use App\Service\OAuth\OAuthIdentity;
-use App\Service\OAuth\Oidc\IdToken;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\Oidc\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Model\IdTokenModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -298,7 +298,7 @@ final class IdTokenVerifierTest extends TestCase
     public function testANonStringEmailBecomesNoEmail(): void
     {
         // A structured `email` claim is not an address. It must not become the
-        // string "Array" or reach OAuthIdentity at all.
+        // string "Array" or reach OAuthIdentityModel at all.
         $identity = $this->verify($this->claims([
             'email' => ['bob@example.com'],
             'email_verified' => true,
@@ -316,7 +316,7 @@ final class IdTokenVerifierTest extends TestCase
     {
         // The verifier does not re-implement decoding; it must still surface a
         // decode failure as the same kind of failure as every other rejection.
-        $this->assertRejectedWith('id_token is not a three-segment JWT', new IdToken('garbage'));
+        $this->assertRejectedWith('id_token is not a three-segment JWT', new IdTokenModel('garbage'));
     }
 
     public function testTheIdentityCarriesTheProviderItWasVerifiedFor(): void
@@ -339,14 +339,14 @@ final class IdTokenVerifierTest extends TestCase
     /**
      * @param array<string, mixed> $claims
      */
-    private function verify(array $claims): OAuthIdentity
+    private function verify(array $claims): OAuthIdentityModel
     {
         return $this->verifier()->verify($this->token($claims), self::NONCE);
     }
 
     private function assertRejectedWith(
         string $logDetail,
-        IdToken $token,
+        IdTokenModel $token,
         string $expectedNonce = self::NONCE,
     ): void {
         try {
@@ -389,11 +389,11 @@ final class IdTokenVerifierTest extends TestCase
     /**
      * @param array<string, mixed> $claims
      */
-    private function token(array $claims): IdToken
+    private function token(array $claims): IdTokenModel
     {
         $encode = static fn (string $data): string => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
 
-        return new IdToken(
+        return new IdTokenModel(
             $encode('{"alg":"RS256","typ":"JWT"}')
             . '.' . $encode(json_encode($claims, \JSON_THROW_ON_ERROR))
             . '.signature',

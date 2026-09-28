@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Fetch\FaviconResolver;
 
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchOutcome;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\PageUrls;
 use Psr\Log\LoggerInterface;
 
@@ -70,7 +70,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     private function fetchAllIcons(array $origins): array
     {
         $icons = [];
-        $tickets = array_map(static fn (string $origin): FetchTicket => new FetchTicket($origin), $origins);
+        $tickets = array_map(static fn (string $origin): FetchTicketModel => new FetchTicketModel($origin), $origins);
 
         try {
             foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
@@ -95,7 +95,7 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         return $icons;
     }
 
-    private function iconFrom(FetchOutcome $outcome, string $origin): ?string
+    private function iconFrom(FetchOutcomeModel $outcome, string $origin): ?string
     {
         $failure = $outcome->failure();
         if (null !== $failure) {

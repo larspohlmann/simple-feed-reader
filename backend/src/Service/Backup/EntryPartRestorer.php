@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Backup\Model\RestoreResultModel;
 
 /**
  * The entries endpoint's whole restore: additive and idempotent, unlike
@@ -25,7 +26,7 @@ final readonly class EntryPartRestorer
     ) {
     }
 
-    public function load(User $user, string $gzipBytes): RestoreResult
+    public function load(User $user, string $gzipBytes): RestoreResultModel
     {
         $loader = $this->loaderFactory->create($user, $this->inspector->inspect($user, $gzipBytes));
         foreach ($this->reader->read($gzipBytes) as $line) {
@@ -37,6 +38,6 @@ final readonly class EntryPartRestorer
         }
         $loader->finish();
 
-        return RestoreResult::ofEntryPart($loader->entriesCreated(), $loader->entryStatesCreated());
+        return RestoreResultModel::ofEntryPart($loader->entriesCreated(), $loader->entryStatesCreated());
     }
 }

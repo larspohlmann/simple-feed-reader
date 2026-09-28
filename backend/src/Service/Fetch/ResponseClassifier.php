@@ -9,6 +9,9 @@ use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
+use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Fetch\Model\HeaderVerdictModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -36,7 +39,7 @@ final readonly class ResponseClassifier
     {
     }
 
-    public function fromHeaders(ResponseInterface $response, FetchAttempt $attempt): HeaderVerdict
+    public function fromHeaders(ResponseInterface $response, FetchAttemptModel $attempt): HeaderVerdictModel
     {
         $status = $this->statusCode($response, $attempt->url);
 
@@ -45,7 +48,7 @@ final readonly class ResponseClassifier
         }
 
         if (304 === $status) {
-            return HeaderVerdict::terminal($this->notModifiedOrEmptyFetch($attempt));
+            return HeaderVerdictModel::terminal($this->notModifiedOrEmptyFetch($attempt));
         }
 
         if (410 === $status) {
@@ -66,15 +69,15 @@ final readonly class ResponseClassifier
             );
         }
 
-        return HeaderVerdict::awaitBody();
+        return HeaderVerdictModel::awaitBody();
     }
 
-    public function fromBody(ResponseInterface $response, FetchAttempt $attempt): FetchResponse
+    public function fromBody(ResponseInterface $response, FetchAttemptModel $attempt): FetchResponseModel
     {
         $body = $this->content($response, $attempt->url);
         ResponseTooLargeException::throwIfExceeded(\strlen($body), $attempt->url);
 
-        return FetchResponse::fetched(
+        return FetchResponseModel::fetched(
             $attempt->url,
             $attempt->permanentRedirect,
             $body,
@@ -84,14 +87,14 @@ final readonly class ResponseClassifier
     }
 
     /** A 304 answering an unconditional request confirms nothing; it becomes an empty fetch instead. */
-    private function notModifiedOrEmptyFetch(FetchAttempt $attempt): FetchResponse
+    private function notModifiedOrEmptyFetch(FetchAttemptModel $attempt): FetchResponseModel
     {
         $ticket = $attempt->ticket;
         if (!$ticket->isConditional()) {
-            return FetchResponse::fetched($attempt->url, $attempt->permanentRedirect, '', null, null);
+            return FetchResponseModel::fetched($attempt->url, $attempt->permanentRedirect, '', null, null);
         }
 
-        return FetchResponse::notModified(
+        return FetchResponseModel::notModified(
             $attempt->url,
             $attempt->permanentRedirect,
             $ticket->etag,
@@ -99,7 +102,7 @@ final readonly class ResponseClassifier
         );
     }
 
-    private function redirect(ResponseInterface $response, FetchAttempt $attempt, int $status): HeaderVerdict
+    private function redirect(ResponseInterface $response, FetchAttemptModel $attempt, int $status): HeaderVerdictModel
     {
         $location = ResponseHeader::first($response, 'location');
         if (null === $location) {
@@ -112,8 +115,8 @@ final readonly class ResponseClassifier
         $target = UrlResolver::resolve($attempt->url, $location);
 
         return \in_array($status, self::PERMANENT_CODES, true)
-            ? HeaderVerdict::permanentRedirectTo($target)
-            : HeaderVerdict::temporaryRedirectTo($target);
+            ? HeaderVerdictModel::permanentRedirectTo($target)
+            : HeaderVerdictModel::temporaryRedirectTo($target);
     }
 
     /**

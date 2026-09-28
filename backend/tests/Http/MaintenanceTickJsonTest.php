@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\MaintenanceTickJson;
-use App\Service\Image\ImageVerificationReport;
-use App\Service\Logging\Loki\LokiSpoolReport;
-use App\Service\Mail\Digest\DigestSweepReport;
-use App\Service\Maintenance\MaintenanceSweeps;
-use App\Service\Maintenance\MaintenanceTickReport;
+use App\Service\Image\Model\ImageVerificationReportModel;
+use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
+use App\Service\Mail\Digest\Model\DigestSweepReportModel;
+use App\Service\Maintenance\Model\MaintenanceSweepsModel;
+use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\ForYouSweepReport;
 use App\Service\Refresh\RefreshReport;
 use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
@@ -19,15 +19,15 @@ final class MaintenanceTickJsonTest extends TestCase
 {
     public function testACompletedTickSendsEveryHalfUnderItsKey(): void
     {
-        $report = new MaintenanceTickReport(
+        $report = new MaintenanceTickReportModel(
             RefreshReport::finished(9, 1, 2, 3, 4, 5, 0, 7),
-            new MaintenanceSweeps(
+            new MaintenanceSweepsModel(
                 new ForYouSweepReport(1, 2, 3),
-                new DigestSweepReport(4, 5, 6),
-                new ImageVerificationReport(7, 8, 9, 10),
+                new DigestSweepReportModel(4, 5, 6),
+                new ImageVerificationReportModel(7, 8, 9, 10),
                 new SavedSearchMembershipSweepReport(11, 12, 13, true),
             ),
-            new LokiSpoolReport(14, 15),
+            new LokiSpoolReportModel(14, 15),
         );
 
         self::assertSame(
@@ -60,10 +60,10 @@ final class MaintenanceTickJsonTest extends TestCase
 
     public function testSweepsSkippedAfterAnAbortedRefreshSayWhy(): void
     {
-        $report = new MaintenanceTickReport(
+        $report = new MaintenanceTickReportModel(
             RefreshReport::aborted(5, 1, 1, 1, 0, 2),
-            MaintenanceSweeps::skippedAfterAbortedRefresh(),
-            new LokiSpoolReport(0, 0),
+            MaintenanceSweepsModel::skippedAfterAbortedRefresh(),
+            new LokiSpoolReportModel(0, 0),
         );
         $reason = 'refresh aborted: the shared EntityManager is unusable this tick';
 

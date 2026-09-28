@@ -6,6 +6,7 @@ namespace App\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Factory\FeedParserFactory;
+use App\Service\Parser\Model\ParsedFeedModel;
 
 final readonly class FeedParser
 {
@@ -14,7 +15,7 @@ final readonly class FeedParser
     ) {
     }
 
-    public function parse(string $xml): ParsedFeed
+    public function parse(string $xml): ParsedFeedModel
     {
         $feedXml = $this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml));
 

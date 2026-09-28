@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Category;
-use App\Service\Category\NormalizedCategory;
+use App\Service\Category\Model\NormalizedCategoryModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -25,9 +25,9 @@ final class CategoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<NormalizedCategory> $normalizedCategories
+     * @param list<NormalizedCategoryModel> $normalizedCategories
      *
-     * @return array<string, Category> keyed by NormalizedCategory::identity()
+     * @return array<string, Category> keyed by NormalizedCategoryModel::identity()
      */
     public function findExistingByIdentities(array $normalizedCategories): array
     {
@@ -51,14 +51,14 @@ final class CategoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * @param list<NormalizedCategory> $normalizedCategories
+     * @param list<NormalizedCategoryModel> $normalizedCategories
      *
      * @return list<Category>
      */
     private function findByCanonicalKeys(array $normalizedCategories): array
     {
         $keys = array_unique(array_map(
-            static fn (NormalizedCategory $category): string => $category->canonicalKey,
+            static fn (NormalizedCategoryModel $category): string => $category->canonicalKey,
             $normalizedCategories,
         ));
 

@@ -7,19 +7,19 @@ namespace App\Tests\Service\Mail\Digest\Factory;
 use App\Entity\User;
 use App\Enum\DigestFormat;
 use App\Service\Mail\Digest\DigestBrandLogo;
-use App\Service\Mail\Digest\DigestEntry;
-use App\Service\Mail\Digest\DigestGroup;
 use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
-use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestTextRenderer;
-use App\Service\Mail\Digest\EmbeddedImage;
 use App\Service\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Mail\Digest\Factory\DigestPageFactory;
+use App\Service\Mail\Digest\Model\DigestEntryModel;
+use App\Service\Mail\Digest\Model\DigestGroupModel;
+use App\Service\Mail\Digest\Model\DigestImageSetModel;
+use App\Service\Mail\Digest\Model\DigestModel;
+use App\Service\Mail\Digest\Model\EmbeddedImageModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Mail\Settings\MailIdentity;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
 use App\Tests\Support\DigestTwigEnvironment;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
@@ -29,7 +29,7 @@ use Symfony\Component\Translation\Translator;
 
 final class DigestMailFactoryTest extends TestCase
 {
-    private function factory(DigestImageSet $set): DigestMailFactory
+    private function factory(DigestImageSetModel $set): DigestMailFactory
     {
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
@@ -58,7 +58,7 @@ final class DigestMailFactoryTest extends TestCase
 
     private function model(): DigestModel
     {
-        $entry = new DigestEntry(
+        $entry = new DigestEntryModel(
             'Rust 1.80',
             'Rust Blog',
             'Summary.',
@@ -68,7 +68,7 @@ final class DigestMailFactoryTest extends TestCase
             null,
         );
 
-        return new DigestModel([new DigestGroup('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
+        return new DigestModel([new DigestGroupModel('rust', 1, [$entry], false, 'https://reader.example/?q=rust')], 1);
     }
 
     private function user(DigestFormat $format): User
@@ -81,7 +81,7 @@ final class DigestMailFactoryTest extends TestCase
 
     public function testHtmlFormatBuildsAlternativeWithHtmlTextAndInlineImage(): void
     {
-        $set = new DigestImageSet([new EmbeddedImage('imgFAV', 'PNGBYTES', 'image/png')], []);
+        $set = new DigestImageSetModel([new EmbeddedImageModel('imgFAV', 'PNGBYTES', 'image/png')], []);
 
         $email = $this->factory($set)->build($this->user(DigestFormat::Html), $this->model());
 
@@ -98,7 +98,8 @@ final class DigestMailFactoryTest extends TestCase
 
     public function testTextFormatBuildsPlainTextOnly(): void
     {
-        $email = $this->factory(new DigestImageSet([], []))->build($this->user(DigestFormat::Text), $this->model());
+        $email = $this->factory(new DigestImageSetModel([], []))
+            ->build($this->user(DigestFormat::Text), $this->model());
 
         self::assertNull($email->getHtmlBody());
         self::assertNotNull($email->getTextBody());
@@ -108,7 +109,7 @@ final class DigestMailFactoryTest extends TestCase
     private function mailIdentity(string $address, string $name): MailSendingSettingsInterface
     {
         $settings = $this->createStub(MailSendingSettingsInterface::class);
-        $settings->method('identity')->willReturn(new MailIdentity($address, $name));
+        $settings->method('identity')->willReturn(new MailIdentityModel($address, $name));
 
         return $settings;
     }

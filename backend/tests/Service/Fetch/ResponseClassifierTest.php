@@ -8,9 +8,9 @@ use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FetchAttempt;
-use App\Service\Fetch\FetchTicket;
-use App\Service\Fetch\HeaderDecision;
+use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\HeaderDecision;
 use App\Service\Fetch\ResponseClassifier;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -21,9 +21,9 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class ResponseClassifierTest extends TestCase
 {
-    private function attempt(string $url = 'https://example.com/feed'): FetchAttempt
+    private function attempt(string $url = 'https://example.com/feed'): FetchAttemptModel
     {
-        return FetchAttempt::start(1, new FetchTicket($url, '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'));
+        return FetchAttemptModel::start(1, new FetchTicketModel($url, '"v1"', 'Mon, 20 Jul 2026 08:30:00 GMT'));
     }
 
     private function classifier(string $now = '2026-08-05 12:00:00'): ResponseClassifier
@@ -127,7 +127,7 @@ final class ResponseClassifierTest extends TestCase
     {
         $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
-            FetchAttempt::start(1, new FetchTicket('https://example.com/feed')),
+            FetchAttemptModel::start(1, new FetchTicketModel('https://example.com/feed')),
         );
 
         self::assertSame(HeaderDecision::Terminal, $verdict->decision);
@@ -151,7 +151,7 @@ final class ResponseClassifierTest extends TestCase
     ): void {
         $verdict = $this->classifier()->fromHeaders(
             $this->respond(new MockResponse('', ['http_code' => 304])),
-            FetchAttempt::start(1, new FetchTicket('https://example.com/feed', $etag, $lastModified)),
+            FetchAttemptModel::start(1, new FetchTicketModel('https://example.com/feed', $etag, $lastModified)),
         );
 
         $response = $verdict->response;

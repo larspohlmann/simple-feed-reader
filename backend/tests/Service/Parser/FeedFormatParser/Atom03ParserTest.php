@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Service\Parser\FeedFormatParser\Atom03Parser;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedFeedModel;
 use PHPUnit\Framework\TestCase;
 
 final class Atom03ParserTest extends TestCase
 {
-    private function parse(string $xml): ParsedFeed
+    private function parse(string $xml): ParsedFeedModel
     {
         $document = new \DOMDocument();
         $document->loadXML($xml);

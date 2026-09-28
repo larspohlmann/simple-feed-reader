@@ -6,13 +6,15 @@ namespace App\Service\Comments;
 
 use App\Entity\Entry;
 use App\Service\Comments\Exception\NoCommentsFeedException;
+use App\Service\Comments\Model\CommentsResultModel;
+use App\Service\Comments\Model\EntryCommentModel;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\HostThrottle;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
-use App\Service\Parser\ParsedEntry;
+use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Sanitize\EntrySanitizer;
 
 final readonly class CommentsLoader
@@ -25,33 +27,33 @@ final readonly class CommentsLoader
     ) {
     }
 
-    public function load(Entry $entry): CommentsResult
+    public function load(Entry $entry): CommentsResultModel
     {
         $feedUrl = $entry->getDiscussion()->commentsFeedUrl
             ?? throw new NoCommentsFeedException('The entry has no comments feed.');
 
         $wait = $this->hostThrottle->remainingSeconds($feedUrl);
         if ($wait > 0) {
-            return CommentsResult::throttled($wait);
+            return CommentsResultModel::throttled($wait);
         }
 
         try {
             $body = $this->fetcher->fetch($feedUrl)->modifiedBody();
 
-            return CommentsResult::ok($this->comments($entry, $this->parser->parse($body)->entries));
+            return CommentsResultModel::ok($this->comments($entry, $this->parser->parse($body)->entries));
         } catch (FeedThrottledException $e) {
             $wait = $this->hostThrottle->record($feedUrl, $e->retryAfterSeconds);
 
-            return CommentsResult::throttled($wait);
+            return CommentsResultModel::throttled($wait);
         } catch (FetchException | FeedParseException) {
-            return CommentsResult::failed();
+            return CommentsResultModel::failed();
         }
     }
 
     /**
-     * @param list<ParsedEntry> $parsed
+     * @param list<ParsedEntryModel> $parsed
      *
-     * @return list<EntryComment>
+     * @return list<EntryCommentModel>
      */
     private function comments(Entry $entry, array $parsed): array
     {
@@ -60,7 +62,7 @@ final readonly class CommentsLoader
             if ($item->guid === $entry->getGuid()) {
                 continue;
             }
-            $comments[] = new EntryComment(
+            $comments[] = new EntryCommentModel(
                 $item->author,
                 $item->authorUrl,
                 $item->url,

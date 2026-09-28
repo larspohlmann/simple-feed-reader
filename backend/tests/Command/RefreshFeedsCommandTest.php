@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
@@ -50,12 +50,12 @@ final class RefreshFeedsCommandTest extends DbTestCase
         $feed = $this->dueFeed('https://cli.example.com/feed');
 
         $stub = new StubFeedFetcher();
-        $stub->willReturn($feed->getUrl(), FetchResponse::notModified($feed->getUrl(), false, null, null));
+        $stub->willReturn($feed->getUrl(), FetchResponseModel::notModified($feed->getUrl(), false, null, null));
         // The runner's favicon phase fetches the site homepage through the
         // same fetcher — stub the origin too, or it throws just as loudly.
         $stub->willReturn(
             'https://cli.example.com',
-            FetchResponse::fetched('https://cli.example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://cli.example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $stub);
 

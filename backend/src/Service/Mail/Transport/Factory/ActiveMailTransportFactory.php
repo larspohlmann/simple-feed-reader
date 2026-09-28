@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Mail\Transport\Factory;
 
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
-use App\Service\Mail\Settings\ResolvedMailTransport;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\CurlSmtpTransport;
 use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use Psr\EventDispatcher\EventDispatcherInterface;
@@ -29,7 +29,7 @@ final readonly class ActiveMailTransportFactory
     }
 
     public function forResolved(
-        ResolvedMailTransport $resolved,
+        ResolvedMailTransportModel $resolved,
         ?EventDispatcherInterface $dispatcher,
         LoggerInterface $logger,
     ): TransportInterface {

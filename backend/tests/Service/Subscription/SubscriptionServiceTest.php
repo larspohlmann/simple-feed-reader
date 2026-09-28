@@ -11,17 +11,17 @@ use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Enum\SourceFormat;
 use App\Repository\OrphanedFeedRepository;
-use App\Service\Discovery\DiscoveredFeed;
 use App\Service\Discovery\Exception\ScrapingDisabledException;
-use App\Service\Discovery\FeedCandidate;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
-use App\Service\Discovery\FeedDiscoveryResult;
-use App\Service\Discovery\ScrapeFallback;
+use App\Service\Discovery\Model\DiscoveredFeedModel;
+use App\Service\Discovery\Model\FeedCandidateModel;
+use App\Service\Discovery\Model\FeedDiscoveryResultModel;
+use App\Service\Discovery\Model\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Feed\OrphanedFeedReclaimer;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\Exception\AlreadySubscribedException;
 use App\Service\Subscription\Exception\SubscriptionLimitReachedException;
@@ -49,14 +49,14 @@ final class SubscriptionServiceTest extends DbTestCase
     }
 
     /** A FeedDiscovery test double returning a fixed result. */
-    private function discoveryReturning(FeedDiscoveryResult $result): FeedDiscoveryInterface
+    private function discoveryReturning(FeedDiscoveryResultModel $result): FeedDiscoveryInterface
     {
         return new class ($result) implements FeedDiscoveryInterface {
-            public function __construct(private readonly FeedDiscoveryResult $result)
+            public function __construct(private readonly FeedDiscoveryResultModel $result)
             {
             }
 
-            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResult
+            public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
             {
                 return $this->result;
             }
@@ -64,9 +64,9 @@ final class SubscriptionServiceTest extends DbTestCase
     }
 
     /** The document a real discovery would carry back, with one entry to ingest. */
-    private function discovered(string $url, string $title = 'Discovered'): FeedDiscoveryResult
+    private function discovered(string $url, string $title = 'Discovered'): FeedDiscoveryResultModel
     {
-        $entry = new ParsedEntry(
+        $entry = new ParsedEntryModel(
             guid: $url . '#1',
             title: 'First post',
             url: $url . '/1',
@@ -76,9 +76,9 @@ final class SubscriptionServiceTest extends DbTestCase
             summary: null,
         );
 
-        return FeedDiscoveryResult::directFeed(new DiscoveredFeed(
+        return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
             $url,
-            new ParsedFeed($title, null, null, null, [$entry]),
+            new ParsedFeedModel($title, null, null, null, [$entry]),
         ));
     }
 
@@ -330,7 +330,7 @@ final class SubscriptionServiceTest extends DbTestCase
     public function testAScrapedSubscribeIsRefusedWhenTheUserHasScrapingDisabled(): void
     {
         $user = $this->factory()->create('scrape-off@example.com');
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $this->expectException(ScrapingDisabledException::class);
 
@@ -341,7 +341,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $user = $this->factory()->create('scrape-on@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe($user, 'https://example.com/blog', SourceFormat::SCRAPED);
 
@@ -352,7 +352,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $user = $this->factory()->create('wpjson@example.com');
         // Discovery must NOT run: hand it a result that would fail the assertion if used.
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $url = 'https://wp.example/wp-json/wp/v2/posts?per_page=20'
             . '&_fields=id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
@@ -370,7 +370,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $this->em->persist($shared);
         $this->em->flush();
 
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
         $outcome = $service->subscribe(
             $this->factory()->create('second-wpjson@example.com'),
             'https://wp.example/wp-json/wp/v2/posts',
@@ -387,7 +387,7 @@ final class SubscriptionServiceTest extends DbTestCase
     {
         $user = $this->factory()->create('scraped-title@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe(
             $user,
@@ -406,7 +406,7 @@ final class SubscriptionServiceTest extends DbTestCase
         // A user with scraping disabled (the default) must still be able to
         // subscribe a wp-json candidate — the scrape gate is scraped-only.
         $user = $this->factory()->create('wpjson-nopref@example.com');
-        $service = $this->service($this->discoveryReturning(FeedDiscoveryResult::candidates([])));
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
 
         $outcome = $service->subscribe(
             $user,
@@ -452,8 +452,8 @@ final class SubscriptionServiceTest extends DbTestCase
         $user = $this->factory()->create('cand@example.com');
 
         $service = $this->service(
-            $this->discoveryReturning(FeedDiscoveryResult::candidates([
-                new FeedCandidate('https://example.com/rss.xml', 'Main', 'rss'),
+            $this->discoveryReturning(FeedDiscoveryResultModel::candidates([
+                new FeedCandidateModel('https://example.com/rss.xml', 'Main', 'rss'),
             ])),
         );
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Backup\RestorePreview;
+use App\Service\Backup\Model\RestorePreviewModel;
 
 /**
  * The restore preview: the file's provenance, what it would load, and what
@@ -16,7 +16,7 @@ final readonly class RestorePreviewJson
     /**
      * @return array<string, mixed>
      */
-    public static function from(RestorePreview $preview): array
+    public static function from(RestorePreviewModel $preview): array
     {
         return [
             'backup' => [

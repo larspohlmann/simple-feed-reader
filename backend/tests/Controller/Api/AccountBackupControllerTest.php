@@ -122,7 +122,7 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('application/zip', $client->getResponse()->headers->get('Content-Type'));
         // No version.json is deployed in the test environment, so the release
-        // version reads as "dev" -- see BackupFilenameTest for the full
+        // version reads as "dev" -- see BackupFilenameModelTest for the full
         // filename-formatting rule this pins the shape of.
         self::assertMatchesRegularExpression(
             '/^attachment; filename="simplefeedreader-dev-backup-download-at-example-\d{8}\.zip"$/',

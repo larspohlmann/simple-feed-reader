@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Model\GuardedUrlModel;
+use App\Service\Fetch\Model\ProxyConfigModel;
+
 /**
  * The single place the "how do we reach the host" request options are built, so
  * the proxy-vs-pin rule lives once for both fetch builders. The invariant: the
@@ -21,7 +24,7 @@ final class EgressOptions
      *
      * @return array{proxy: string, no_proxy: string, extra?: array{curl: array<int, int>}}
      */
-    public static function proxied(ProxyConfig $proxy): array
+    public static function proxied(ProxyConfigModel $proxy): array
     {
         $options = ['proxy' => $proxy->dsn(), 'no_proxy' => ''];
         if (!$proxy->resolvesLocally()) {
@@ -39,7 +42,7 @@ final class EgressOptions
      * @return array<string, mixed> the `resolve` pin for this family attempt plus
      *                              the cross-family fresh-connection extra
      */
-    public static function pinned(GuardedUrl $guarded, int $pinAttempt): array
+    public static function pinned(GuardedUrlModel $guarded, int $pinAttempt): array
     {
         $pins = $guarded->pinnedAddressAttempts();
         $pinnedAddresses = $pins[min($pinAttempt, \count($pins) - 1)];

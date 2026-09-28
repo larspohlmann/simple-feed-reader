@@ -6,7 +6,7 @@ namespace App\Tests\Dto\ClientError;
 
 use App\Dto\ClientError\ClientErrorItem;
 use App\Dto\ClientError\ClientErrorReportRequest;
-use App\Service\ClientError\ClientError;
+use App\Service\ClientError\Model\ClientErrorModel;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -112,7 +112,7 @@ final class ClientErrorReportRequestTest extends KernelTestCase
 
         self::assertSame(
             ['first', 'second'],
-            array_map(static fn (ClientError $error): string => $error->message, $request->toClientErrors()),
+            array_map(static fn (ClientErrorModel $error): string => $error->message, $request->toClientErrors()),
         );
     }
 

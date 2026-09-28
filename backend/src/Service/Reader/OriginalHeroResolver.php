@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Entity\Entry;
-use App\Service\Image\DeclaredImage;
+use App\Service\Image\Model\DeclaredImageModel;
 
 /**
  * Resolves the picture that leads the Original (feed-body) view: the feed's own
@@ -22,16 +22,16 @@ final readonly class OriginalHeroResolver
     {
     }
 
-    public function resolve(Entry $entry): ?DeclaredImage
+    public function resolve(Entry $entry): ?DeclaredImageModel
     {
         return $this->selector->select($this->feedPicture($entry), $this->feedBody($entry));
     }
 
-    private function feedPicture(Entry $entry): ?DeclaredImage
+    private function feedPicture(Entry $entry): ?DeclaredImageModel
     {
         $url = $entry->getImageUrl();
 
-        return $url === null ? null : new DeclaredImage($url, $entry->getImageWidth(), $entry->getImageHeight());
+        return $url === null ? null : new DeclaredImageModel($url, $entry->getImageWidth(), $entry->getImageHeight());
     }
 
     /** The body the original view renders. */

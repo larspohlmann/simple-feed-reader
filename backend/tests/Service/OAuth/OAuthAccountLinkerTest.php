@@ -11,8 +11,8 @@ use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\OAuth\Factory\OAuthUserFactory;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthAccountLinker;
-use App\Service\OAuth\OAuthIdentity;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;
 use App\Tests\Support\RegistrationPolicies;
@@ -36,7 +36,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $this->em->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
         $this->em->flush();
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($user->getId(), $resolved->getId());
         self::assertSame(1, $this->countIdentities());
@@ -46,7 +46,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'BOB@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'BOB@example.com', true));
 
         self::assertSame($user->getId(), $resolved->getId());
         self::assertSame(UserStatus::Active, $resolved->getStatus());
@@ -59,7 +59,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // do not own, linking on it would hand them the real owner's account.
         $existing = $this->persistUser('bob@example.com', UserStatus::Active);
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', false));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', false));
 
         self::assertNotSame($existing->getId(), $resolved->getId());
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
@@ -72,7 +72,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // `admin@company.example` in the approval queue, be approved on the
         // strength of how the address reads, and end up sharing one account
         // with the real owner once that owner recovered a password to it.
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'admin@company.example', false));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'admin@company.example', false));
 
         self::assertNotSame('admin@company.example', $resolved->getEmail());
         self::assertStringEndsWith('@oauth.invalid', $resolved->getEmail());
@@ -89,7 +89,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $existing = $this->persistUser('relay@privaterelay.appleid.com', UserStatus::Active);
 
         $resolved = $this->linker()->resolve(
-            new OAuthIdentity('apple', 'sub-1', 'relay@privaterelay.appleid.com', true),
+            new OAuthIdentityModel('apple', 'sub-1', 'relay@privaterelay.appleid.com', true),
         );
 
         self::assertNotSame($existing->getId(), $resolved->getId());
@@ -104,7 +104,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $planted->setPasswordHash('an-attackers-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
         $this->em->flush();
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($planted->getId(), $resolved->getId());
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
@@ -124,7 +124,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $rejected = $this->persistUser('bob@example.com', UserStatus::Rejected);
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($rejected->getId(), $resolved->getId());
         self::assertSame(UserStatus::Rejected, $resolved->getStatus());
@@ -134,7 +134,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $this->persistUser('bob@example.com', UserStatus::Suspended);
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame(UserStatus::Suspended, $resolved->getStatus());
     }
@@ -148,7 +148,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $user->setPasswordHash('a-real-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
         $this->em->flush();
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame('a-real-hash', $resolved->getPasswordHash());
         self::assertEquals(new \DateTimeImmutable('2020-01-01 00:00:00'), $resolved->getPasswordChangedAt());
@@ -156,7 +156,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
     public function testANewAccountIsCreatedPendingApprovalWithNoPassword(): void
     {
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
 
         self::assertSame('new@example.com', $resolved->getEmail());
         // pending_approval, not pending_verification: the provider already
@@ -189,7 +189,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $expected = 'apple-' . substr(hash('sha256', 'sub-1'), 0, 32) . '@oauth.invalid';
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-1', null, false));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('apple', 'sub-1', null, false));
 
         self::assertSame($expected, $resolved->getEmail());
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
@@ -197,15 +197,15 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
         // Stable across sign-ins: the same identity must resolve to the same
         // account, not mint a second one.
-        $again = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-1', null, false));
+        $again = $this->linker()->resolve(new OAuthIdentityModel('apple', 'sub-1', null, false));
         self::assertSame($resolved->getId(), $again->getId());
         self::assertSame(1, $this->countIdentities());
     }
 
     public function testTwoAddresslessIdentitiesDoNotCollide(): void
     {
-        $first = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-1', null, false));
-        $second = $this->linker()->resolve(new OAuthIdentity('apple', 'sub-2', null, false));
+        $first = $this->linker()->resolve(new OAuthIdentityModel('apple', 'sub-1', null, false));
+        $second = $this->linker()->resolve(new OAuthIdentityModel('apple', 'sub-2', null, false));
 
         self::assertNotSame($first->getId(), $second->getId());
         self::assertNotSame($first->getEmail(), $second->getEmail());
@@ -215,8 +215,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
     {
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
 
-        $this->linker()->resolve(new OAuthIdentity('google', 'g-1', 'bob@example.com', true));
-        $resolved = $this->linker()->resolve(new OAuthIdentity('apple', 'a-1', 'bob@example.com', true));
+        $this->linker()->resolve(new OAuthIdentityModel('google', 'g-1', 'bob@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('apple', 'a-1', 'bob@example.com', true));
 
         self::assertSame($user->getId(), $resolved->getId());
         self::assertSame(2, $this->countIdentities());
@@ -227,8 +227,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // Subject identifiers are unique per provider, not globally. If the
         // lookup ever collapsed to `sub` alone, one provider's user would sign
         // in as another provider's.
-        $first = $this->linker()->resolve(new OAuthIdentity('google', 'shared-sub', null, false));
-        $second = $this->linker()->resolve(new OAuthIdentity('apple', 'shared-sub', null, false));
+        $first = $this->linker()->resolve(new OAuthIdentityModel('google', 'shared-sub', null, false));
+        $second = $this->linker()->resolve(new OAuthIdentityModel('apple', 'shared-sub', null, false));
 
         self::assertNotSame($first->getId(), $second->getId());
     }
@@ -241,7 +241,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $this->em->persist($identity);
         $this->em->flush();
 
-        $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+        $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
         $this->em->clear();
 
         $reloaded = $this->em->getRepository(UserIdentity::class)
@@ -265,10 +265,10 @@ final class OAuthAccountLinkerTest extends DbTestCase
      */
     public function testAChangedProviderAddressDoesNotMigrateAKnownIdentityOntoAnotherAccount(): void
     {
-        $attacker = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'attacker@example.com', true));
+        $attacker = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'attacker@example.com', true));
         $victim = $this->persistUser('victim@example.com', UserStatus::Active);
 
-        $resolved = $this->linker()->resolve(new OAuthIdentity('google', 'sub-1', 'victim@example.com', true));
+        $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'victim@example.com', true));
 
         self::assertSame($attacker->getId(), $resolved->getId());
         self::assertNotSame($victim->getId(), $resolved->getId());
@@ -285,7 +285,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
 
         self::assertCount(1, $captured);
         self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
@@ -300,7 +300,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertCount(1, $captured);
         self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
@@ -315,7 +315,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame([], $captured);
     }
@@ -327,7 +327,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $this->linker($events)->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame([], $captured);
     }
@@ -339,7 +339,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $captured = &$recording[1];
 
         $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
-            ->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
 
         self::assertSame(UserStatus::Active, $resolved->getStatus());
         self::assertEquals($this->now(), $resolved->getApprovedAt());
@@ -356,7 +356,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $captured = &$recording[1];
 
         $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
-            ->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($planted->getId(), $resolved->getId());
         self::assertSame(UserStatus::Active, $resolved->getStatus());

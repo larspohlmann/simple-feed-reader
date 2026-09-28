@@ -1,0 +1,49 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Html\Model;
+
+/**
+ * One selectable rendition of an image: its URL and, when a width is declared,
+ * the pixel width that lets callers compare renditions of the same picture and
+ * keep the largest.
+ */
+final readonly class ImageRenditionModel
+{
+    public function __construct(
+        public string $url,
+        public ?int $width,
+    ) {
+    }
+
+    /** True when this rendition outsizes the other; an unmeasured one never does. */
+    public function outsizes(self $other): bool
+    {
+        if ($this->width === null) {
+            return false;
+        }
+
+        return $other->width === null || $this->width > $other->width;
+    }
+
+    /**
+     * A rendition measured by the width given, or, when none is, by the width
+     * its URL states — so a candidate whose srcset omits a descriptor is still
+     * sized from its `width=`/`w=` query.
+     */
+    public static function measuredFromUrl(string $url, ?int $width): self
+    {
+        return new self($url, $width ?? self::widthFromUrl($url));
+    }
+
+    /** The pixel width a URL states in a `width=` or `w=` query, or null. */
+    public static function widthFromUrl(?string $url): ?int
+    {
+        if ($url === null || preg_match('/[?&](?:width|w)=(\d+)/', $url, $matches) !== 1) {
+            return null;
+        }
+
+        return (int) $matches[1];
+    }
+}

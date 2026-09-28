@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Service\Grafana\GrafanaSettings;
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Service\Profiling\PyroscopeClient;
 use App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface;
@@ -107,11 +107,11 @@ final class RequestProfilingTest extends ApiTestCase
                 $this->running = true;
             }
 
-            public function stop(): CollapsedProfile
+            public function stop(): CollapsedProfileModel
             {
                 $this->running = false;
 
-                return new CollapsedProfile('main;work 1', 1, 1000, 1_700_000_000, 1_700_000_001);
+                return new CollapsedProfileModel('main;work 1', 1, 1000, 1_700_000_000, 1_700_000_001);
             }
 
             public function isRunning(): bool

@@ -6,7 +6,7 @@ namespace App\Service\Catalog\Factory;
 
 use App\Entity\CatalogCategory;
 use App\Repository\CatalogCategoryRepository;
-use App\Service\Catalog\CatalogCategoryDetails;
+use App\Service\Catalog\Model\CatalogCategoryDetailsModel;
 
 final readonly class CatalogCategoryFactory
 {
@@ -14,7 +14,7 @@ final readonly class CatalogCategoryFactory
     {
     }
 
-    public function create(CatalogCategoryDetails $details): CatalogCategory
+    public function create(CatalogCategoryDetailsModel $details): CatalogCategory
     {
         $category = new CatalogCategory($details->key, $details->name, $details->icon, $details->color);
         $category->setEnabled($details->enabled);

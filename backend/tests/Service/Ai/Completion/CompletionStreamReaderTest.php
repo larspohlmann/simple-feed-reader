@@ -455,7 +455,7 @@ final class CompletionStreamReaderTest extends TestCase
      * A blocking provider stamps `finish_reason` on the choice exactly as a
      * stream event does, and the runaway classifier reads it through
      * hitTokenCeiling(). Decoding it only on the streaming path left that
-     * classifier permanently blind on the one shape ProviderTimeouts documents
+     * classifier permanently blind on the one shape ProviderTimeoutsModel documents
      * as answering all at once (#437 review).
      */
     public function testABlockingEnvelopeReportsItsTokenCeiling(): void

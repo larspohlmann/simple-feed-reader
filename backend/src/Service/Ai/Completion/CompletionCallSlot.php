@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion;
 
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 
 /**
  * The per-call state a multiplexed read routes each chunk to: which call in
@@ -24,7 +24,7 @@ final readonly class CompletionCallSlot
         public int $index,
         public CompletionStreamReader $reader,
         public CompletionStreamObserverInterface $observer,
-        public ProviderTimeouts $timeouts,
+        public ProviderTimeoutsModel $timeouts,
         /**
          * The `max_tokens` this call's own request carried (#437).
          *

@@ -16,6 +16,7 @@ use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
+use App\Service\Backup\Model\RestoreResultModel;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -61,7 +62,7 @@ final class RestoreLoadPass
     /**
      * @param \Generator<int, object> $lines
      */
-    public function run(User $user, \Generator $lines): RestoreResult
+    public function run(User $user, \Generator $lines): RestoreResultModel
     {
         $this->user = $user;
         foreach ($lines as $line) {
@@ -71,7 +72,7 @@ final class RestoreLoadPass
         $this->flush();
         $this->regenerateSavedSearchSlugs();
 
-        return RestoreResult::ofFoundation(
+        return RestoreResultModel::ofFoundation(
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],

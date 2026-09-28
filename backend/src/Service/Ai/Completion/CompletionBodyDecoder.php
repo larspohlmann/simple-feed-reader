@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Ai\Completion;
 
+use App\Service\Ai\Completion\Model\CompletionUsageModel;
+
 /**
  * Knows where a /chat/completions answer sits inside the provider's JSON, in either
  * shape: the whole envelope a blocking request returns, or one event of the SSE stream
@@ -19,7 +21,7 @@ final readonly class CompletionBodyDecoder
      * ignores `stream: true` has its whole buffer re-read on every chunk, so reading
      * every field off it must cost one decode, not one apiece.
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
     public function envelope(string $body): array
     {
@@ -62,7 +64,7 @@ final readonly class CompletionBodyDecoder
      * the last message of a streamed reply — the one whose `choices` is empty, which is
      * why nothing here read it before (#409).
      *
-     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsage}
+     * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
     public function streamEvent(string $payload): array
     {
@@ -182,7 +184,7 @@ final readonly class CompletionBodyDecoder
     /**
      * @param array<mixed>|null $root
      */
-    private function usageIn(?array $root): ?CompletionUsage
+    private function usageIn(?array $root): ?CompletionUsageModel
     {
         $usage = null === $root ? null : ($root['usage'] ?? null);
 
@@ -190,7 +192,7 @@ final readonly class CompletionBodyDecoder
             return null;
         }
 
-        return new CompletionUsage(
+        return new CompletionUsageModel(
             $this->intField($usage, 'prompt_tokens'),
             $this->intField($usage, 'completion_tokens'),
             $this->intField($this->detailsOf($usage, 'completion_tokens_details'), 'reasoning_tokens'),

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Model\SocksReplyCode;
+
 /**
  * Turns curl's SOCKS5 handshake messages into something an admin can act on.
  *

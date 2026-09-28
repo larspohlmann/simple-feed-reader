@@ -4,20 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\BatchFeedFetcher;
 
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\FetchAttempt;
-use App\Service\Fetch\FetchOutcome;
 use App\Service\Fetch\FetchQueue;
-use App\Service\Fetch\FetchResponse;
 use App\Service\Fetch\FetchRetryPolicy;
-use App\Service\Fetch\FetchTicket;
-use App\Service\Fetch\HeaderDecision;
 use App\Service\Fetch\HostSlots;
+use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Model\FetchOutcomeModel;
+use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Fetch\Model\HeaderDecision;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
 use Symfony\Contracts\HttpClient\ChunkInterface;
@@ -61,9 +61,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * @param iterable<int|string, FetchTicket> $tickets
+     * @param iterable<int|string, FetchTicketModel> $tickets
      *
-     * @return \Generator<int|string, FetchOutcome>
+     * @return \Generator<int|string, FetchOutcomeModel>
      */
     public function fetchAll(iterable $tickets): \Generator
     {
@@ -86,7 +86,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         $lookAhead = $this->concurrency;
         $hostSlots = new HostSlots($this->hostConcurrency);
         $queue = new FetchQueue($this->iterator($tickets), $hostSlots, $lookAhead, $batchProxy);
-        /** @var \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
+        /** @var \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
         $inFlight = new \SplObjectStorage();
 
         try {
@@ -116,9 +116,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      * request, so it is reported here. The host slot is claimed on the queue the
      * moment the request goes on the wire and released when its response retires.
      *
-     * @param \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight
+     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
      *
-     * @return \Generator<int|string, FetchOutcome>
+     * @return \Generator<int|string, FetchOutcomeModel>
      */
     private function fill(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
     {
@@ -137,7 +137,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                     continue;
                 }
 
-                yield $attempt->key => FetchOutcome::failed($e);
+                yield $attempt->key => FetchOutcomeModel::failed($e);
                 continue;
             }
 
@@ -152,9 +152,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      * being followed inline, which is what lets a feed on its fourth hop share
      * the loop with one on its first.
      *
-     * @param \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight
+     * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
      *
-     * @return \Generator<int|string, FetchOutcome>
+     * @return \Generator<int|string, FetchOutcomeModel>
      */
     private function awaitNext(FetchQueue $queue, \SplObjectStorage $inFlight): \Generator
     {
@@ -173,7 +173,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                     return;
                 }
 
-                yield $attempt->key => FetchOutcome::failed($e);
+                yield $attempt->key => FetchOutcomeModel::failed($e);
 
                 return;
             }
@@ -184,13 +184,13 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
             $this->retire($queue, $inFlight, $response);
 
-            if ($verdict instanceof FetchAttempt) {
+            if ($verdict instanceof FetchAttemptModel) {
                 $queue->requeue($verdict);
 
                 return;
             }
 
-            yield $attempt->key => FetchOutcome::succeeded($verdict);
+            yield $attempt->key => FetchOutcomeModel::succeeded($verdict);
 
             return;
         }
@@ -198,15 +198,15 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
     /**
      * One chunk's worth of progress: null while the response is still arriving,
-     * a FetchResponse when it is done, or the next FetchAttempt on a redirect.
+     * a FetchResponseModel when it is done, or the next FetchAttemptModel on a redirect.
      *
      * @throws FetchException
      */
     private function advance(
         ResponseInterface $response,
         ChunkInterface $chunk,
-        FetchAttempt $attempt,
-    ): FetchResponse|FetchAttempt|null {
+        FetchAttemptModel $attempt,
+    ): FetchResponseModel|FetchAttemptModel|null {
         try {
             // Order is load-bearing. On a timeout ErrorChunk isTimeout() returns
             // true while isFirst() throws, so asking isFirst() first would report
@@ -228,8 +228,10 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /** @throws FetchException */
-    private function onHeaders(ResponseInterface $response, FetchAttempt $attempt): FetchResponse|FetchAttempt|null
-    {
+    private function onHeaders(
+        ResponseInterface $response,
+        FetchAttemptModel $attempt,
+    ): FetchResponseModel|FetchAttemptModel|null {
         $verdict = $this->classifier->fromHeaders($response, $attempt);
 
         if (HeaderDecision::AwaitBody === $verdict->decision) {
@@ -246,7 +248,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             throw new FeedUnreachableException(sprintf(
                 '%s: more than %d redirects',
                 $attempt->ticket->url,
-                FetchAttempt::MAX_REDIRECTS,
+                FetchAttemptModel::MAX_REDIRECTS,
             ));
         }
 
@@ -255,7 +257,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         return $attempt->followedTo($verdict->redirectUrl, $verdict->permanent);
     }
 
-    /** @param \SplObjectStorage<ResponseInterface, FetchAttempt> $inFlight */
+    /** @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight */
     private function retire(FetchQueue $queue, \SplObjectStorage $inFlight, ResponseInterface $response): void
     {
         $queue->onRetired($inFlight[$response]);
@@ -264,7 +266,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /** @throws FetchException when the URL fails the SSRF guard */
-    private function send(FetchAttempt $attempt): ResponseInterface
+    private function send(FetchAttemptModel $attempt): ResponseInterface
     {
         $proxy = $attempt->proxy;
 
@@ -292,7 +294,7 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /** @return array<string, string> */
-    private function headers(FetchTicket $ticket): array
+    private function headers(FetchTicketModel $ticket): array
     {
         $headers = [
             'Accept' => 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.1',
@@ -317,9 +319,9 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      * itself, it never materialises the batch — the queue pulls tickets one at a
      * time, and buffering them would defeat a lazy source.
      *
-     * @param iterable<int|string, FetchTicket> $tickets
+     * @param iterable<int|string, FetchTicketModel> $tickets
      *
-     * @return \Iterator<int|string, FetchTicket>
+     * @return \Iterator<int|string, FetchTicketModel>
      */
     private function iterator(iterable $tickets): \Iterator
     {
@@ -331,14 +333,14 @@ final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
      * egress cannot be resolved at all, which is a property of the run rather
      * than of any one feed.
      *
-     * @param iterable<int|string, FetchTicket> $tickets
+     * @param iterable<int|string, FetchTicketModel> $tickets
      *
-     * @return \Generator<int|string, FetchOutcome>
+     * @return \Generator<int|string, FetchOutcomeModel>
      */
     private function failEvery(iterable $tickets, \Throwable $cause): \Generator
     {
         foreach ($tickets as $key => $ticket) {
-            yield $key => FetchOutcome::failed(new FeedUnreachableException(
+            yield $key => FetchOutcomeModel::failed(new FeedUnreachableException(
                 sprintf('%s: the instance egress proxy is unusable: %s', $ticket->url, $cause->getMessage()),
                 previous: $cause,
             ));

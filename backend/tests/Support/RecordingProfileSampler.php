@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Profiling\CollapsedProfile;
+use App\Service\Profiling\Model\CollapsedProfileModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 
 final class RecordingProfileSampler implements ProfileSamplerInterface
@@ -13,7 +13,7 @@ final class RecordingProfileSampler implements ProfileSamplerInterface
     public array $startedWithPeriods = [];
 
     public function __construct(
-        private readonly ?CollapsedProfile $profile = new CollapsedProfile(
+        private readonly ?CollapsedProfileModel $profile = new CollapsedProfileModel(
             'main;work 1',
             1,
             1000,
@@ -33,7 +33,7 @@ final class RecordingProfileSampler implements ProfileSamplerInterface
         $this->startedWithPeriods[] = $periodSeconds;
     }
 
-    public function stop(): ?CollapsedProfile
+    public function stop(): ?CollapsedProfileModel
     {
         return $this->profile;
     }

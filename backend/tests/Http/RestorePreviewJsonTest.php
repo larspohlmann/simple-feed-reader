@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RestorePreviewJson;
-use App\Service\Backup\BackupInventory;
+use App\Service\Backup\Model\BackupInventoryModel;
+use App\Service\Backup\Model\RestorePreviewModel;
 use App\Service\Backup\Model\RestoreSourceModel;
-use App\Service\Backup\RestorePreview;
 use PHPUnit\Framework\TestCase;
 
 final class RestorePreviewJsonTest extends TestCase
@@ -21,9 +21,9 @@ final class RestorePreviewJsonTest extends TestCase
             'https://reader.example',
             'owner@example.test',
         );
-        $toLoad = new BackupInventory($source, 1, 2, 3, 4, 5, 6);
+        $toLoad = new BackupInventoryModel($source, 1, 2, 3, 4, 5, 6);
 
-        $json = RestorePreviewJson::from(new RestorePreview($source, $toLoad, 7, 8, 9, 10));
+        $json = RestorePreviewJson::from(new RestorePreviewModel($source, $toLoad, 7, 8, 9, 10));
 
         self::assertSame([
             'backup' => [

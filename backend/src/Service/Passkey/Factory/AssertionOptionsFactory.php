@@ -23,7 +23,7 @@ use Webauthn\PublicKeyCredentialRequestOptions;
  * No enumeration: `create()` takes no parameter that varies with whether an
  * account exists, so response shape and cost are identical for every caller.
  * The stored challenge carries a null user id and handle for the same reason
- * — see PasskeyChallenge's docblock.
+ * — see PasskeyChallengeModel's docblock.
  *
  * Unlike RegistrationOptionsFactory, this class never touches
  * PasskeyCeremony::request() — that's AssertionVerifier's job, verifying the

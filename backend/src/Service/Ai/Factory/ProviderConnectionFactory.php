@@ -7,8 +7,8 @@ namespace App\Service\Ai\Factory;
 use App\Entity\AiProviderSettings;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
-use App\Service\Ai\ProviderConnection;
-use App\Service\Ai\ProviderTimeouts;
+use App\Service\Ai\Model\ProviderConnectionModel;
+use App\Service\Ai\Model\ProviderTimeoutsModel;
 
 /**
  * Turns a stored configuration into the connection a completion call needs.
@@ -28,9 +28,9 @@ final readonly class ProviderConnectionFactory
     /**
      * @throws AiKeyUnreadableException
      */
-    public function forSettings(AiProviderSettings $settings): ProviderConnection
+    public function forSettings(AiProviderSettings $settings): ProviderConnectionModel
     {
-        return new ProviderConnection($this->configurator->credentials($settings), $this->timeoutsFor($settings));
+        return new ProviderConnectionModel($this->configurator->credentials($settings), $this->timeoutsFor($settings));
     }
 
     /**
@@ -38,8 +38,8 @@ final readonly class ProviderConnectionFactory
      * call's duration without making one — the run advancer's lock TTL. No key
      * is opened, so this cannot fail.
      */
-    public function timeoutsFor(AiProviderSettings $settings): ProviderTimeouts
+    public function timeoutsFor(AiProviderSettings $settings): ProviderTimeoutsModel
     {
-        return $settings->isSlowModel() ? ProviderTimeouts::forSlowModel() : ProviderTimeouts::standard();
+        return $settings->isSlowModel() ? ProviderTimeoutsModel::forSlowModel() : ProviderTimeoutsModel::standard();
     }
 }

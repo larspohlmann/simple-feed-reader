@@ -9,6 +9,10 @@ use App\Enum\MailKind;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\Mail\Settings\Model\MailIdentityModel;
+use App\Service\Mail\Settings\Model\MailTestFailure;
+use App\Service\Mail\Settings\Model\MailTestResultModel;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -35,19 +39,19 @@ final readonly class MailConnectionTester
     ) {
     }
 
-    public function test(): MailTestResult
+    public function test(): MailTestResultModel
     {
         try {
             $transport = $this->effectiveTransport($this->settings->configuredTransport());
         } catch (SecretUnreadableException $e) {
             // A config guard, not a failed send: nothing was ever attempted,
             // so the health log stays untouched.
-            return MailTestResult::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
+            return MailTestResultModel::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
         }
         $recipient = $this->actingAdminEmail();
 
         if (null === $transport || null === $recipient) {
-            return MailTestResult::failed(MailTestFailure::NotConfigured);
+            return MailTestResultModel::failed(MailTestFailure::NotConfigured);
         }
 
         $identity = $this->settings->identity();
@@ -56,7 +60,7 @@ final readonly class MailConnectionTester
             // Address() throws RfcComplianceException on a blank address --
             // naming that state upfront as a guard clause avoids exception-
             // driven control flow. Still a config guard: nothing is recorded.
-            return MailTestResult::failed(MailTestFailure::NoFromAddress);
+            return MailTestResultModel::failed(MailTestFailure::NoFromAddress);
         }
 
         return $this->sendTestMessage($transport, $recipient, $identity);
@@ -65,8 +69,8 @@ final readonly class MailConnectionTester
     private function sendTestMessage(
         TransportInterface $transport,
         string $recipient,
-        MailIdentity $identity,
-    ): MailTestResult {
+        MailIdentityModel $identity,
+    ): MailTestResultModel {
         try {
             $mailer = new Mailer($transport);
             $mailer->send(
@@ -79,15 +83,15 @@ final readonly class MailConnectionTester
         } catch (TransportExceptionInterface | RfcComplianceException $e) {
             $this->health->recordFailure(MailKind::Test, $recipient, $e->getMessage());
 
-            return MailTestResult::failed(MailTestFailure::SendRejected, $e->getMessage());
+            return MailTestResultModel::failed(MailTestFailure::SendRejected, $e->getMessage());
         }
 
         $this->health->recordSuccess();
 
-        return MailTestResult::ok();
+        return MailTestResultModel::ok();
     }
 
-    private function effectiveTransport(?ResolvedMailTransport $resolved): ?TransportInterface
+    private function effectiveTransport(?ResolvedMailTransportModel $resolved): ?TransportInterface
     {
         if (null !== $resolved) {
             return $this->transportFactory->forResolved($resolved, null, $this->logger);

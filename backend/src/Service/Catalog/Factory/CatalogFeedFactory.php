@@ -7,7 +7,7 @@ namespace App\Service\Catalog\Factory;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogCategoryRepository;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Catalog\CatalogFeedDetails;
+use App\Service\Catalog\Model\CatalogFeedDetailsModel;
 
 final readonly class CatalogFeedFactory
 {
@@ -17,7 +17,7 @@ final readonly class CatalogFeedFactory
     ) {
     }
 
-    public function create(CatalogFeedDetails $details): CatalogFeed
+    public function create(CatalogFeedDetailsModel $details): CatalogFeed
     {
         $category = $this->categories->getById($details->categoryId);
         $feed = new CatalogFeed($category, $details->title, $details->url);

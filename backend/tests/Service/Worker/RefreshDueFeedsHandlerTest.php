@@ -7,7 +7,7 @@ namespace App\Tests\Service\Worker;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Handler\RefreshDueFeedsHandler;
 use App\Service\Worker\Message\RefreshDueFeeds;
@@ -50,14 +50,14 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
             $feed->getUrl(),
-            FetchResponse::fetched($feed->getUrl(), false, $this->rss(), null, null),
+            FetchResponseModel::fetched($feed->getUrl(), false, $this->rss(), null, null),
         );
         // The runner's favicon phase fetches the feed's site homepage through
         // this same fetcher — stub the origin too, or it throws just as
         // loudly (same idiom as RefreshControllerTest).
         $fetcher->willReturn(
             'https://example.com',
-            FetchResponse::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
+            FetchResponseModel::fetched('https://example.com', false, '<html lang="en"></html>', null, null),
         );
         self::getContainer()->set(BatchFeedFetcherInterface::class, $fetcher);
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\AltchaChallengeJson;
-use App\Service\Auth\AltchaChallenge;
+use App\Service\Auth\Model\AltchaChallengeModel;
 use PHPUnit\Framework\TestCase;
 
 final class AltchaChallengeJsonTest extends TestCase
@@ -20,7 +20,7 @@ final class AltchaChallengeJsonTest extends TestCase
                 'signature' => 'beef',
                 'maxnumber' => 150000,
             ],
-            AltchaChallengeJson::from(new AltchaChallenge('SHA-256', 'c0ffee', 'salt?expires=1', 'beef', 150000)),
+            AltchaChallengeJson::from(new AltchaChallengeModel('SHA-256', 'c0ffee', 'salt?expires=1', 'beef', 150000)),
         );
     }
 }

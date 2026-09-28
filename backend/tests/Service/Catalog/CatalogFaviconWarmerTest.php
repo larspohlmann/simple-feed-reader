@@ -8,10 +8,10 @@ use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Catalog\CatalogFaviconWarmer;
-use App\Service\Image\FetchedFavicon;
 use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
+use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
+use App\Service\Image\Model\FetchedFaviconModel;
 use App\Tests\DbTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
@@ -93,7 +93,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $fetcher->expects(self::once())
             ->method('download')
             ->with('https://example.com/favicon.ico')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
         $report = $this->warmer($resolver, $fetcher)->warm(120);
 
@@ -133,7 +133,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
 
         $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'ICOBYTES', 'image/x-icon'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'ICOBYTES', 'image/x-icon'));
 
         $this->warmer($resolver, $fetcher)->refresh($feed);
 
@@ -165,7 +165,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
         $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')
-            ->willReturn(new FetchedFavicon('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
+            ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
         $warmer = $this->warmer($resolver, $fetcher);
         $warmer->warm(120);

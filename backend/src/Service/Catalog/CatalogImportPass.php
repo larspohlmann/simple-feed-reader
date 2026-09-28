@@ -6,12 +6,16 @@ namespace App\Service\Catalog;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
+use App\Service\Catalog\Model\CatalogDocumentCategoryModel;
+use App\Service\Catalog\Model\CatalogDocumentFeedModel;
+use App\Service\Catalog\Model\CatalogImportResultModel;
+use App\Service\Catalog\Model\ParsedCatalogModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /** One import's working state: the rows found by natural key, what the document mentioned, and the counts so far. */
 final class CatalogImportPass
 {
-    private CatalogImportResult $result;
+    private CatalogImportResultModel $result;
 
     /** @var array<string, CatalogCategory> */
     private array $categoriesByKey = [];
@@ -19,10 +23,10 @@ final class CatalogImportPass
     /** @var array<string, CatalogFeed> */
     private array $feedsByUrl = [];
 
-    /** @var array<string, CatalogDocumentCategory> */
+    /** @var array<string, CatalogDocumentCategoryModel> */
     private array $mentionedCategories = [];
 
-    /** @var array<string, CatalogDocumentFeed> */
+    /** @var array<string, CatalogDocumentFeedModel> */
     private array $mentionedFeeds = [];
 
     /** @var array<string, CatalogFeed> removing one of these categories would cascade to its locked feed */
@@ -37,7 +41,7 @@ final class CatalogImportPass
         array $categories,
         array $feeds,
     ) {
-        $this->result = new CatalogImportResult();
+        $this->result = new CatalogImportResultModel();
         foreach ($categories as $category) {
             $this->categoriesByKey[$category->getKey()] = $category;
         }
@@ -49,12 +53,12 @@ final class CatalogImportPass
         }
     }
 
-    public function result(): CatalogImportResult
+    public function result(): CatalogImportResultModel
     {
         return $this->result;
     }
 
-    public function apply(ParsedCatalog $document): void
+    public function apply(ParsedCatalogModel $document): void
     {
         foreach ($document->categories as $position => $documentCategory) {
             $category = $this->applyCategory($documentCategory, $position);
@@ -70,7 +74,7 @@ final class CatalogImportPass
         $this->removeUnmentionedCategories();
     }
 
-    private function applyCategory(CatalogDocumentCategory $documentCategory, int $position): CatalogCategory
+    private function applyCategory(CatalogDocumentCategoryModel $documentCategory, int $position): CatalogCategory
     {
         $this->mentionedCategories[$documentCategory->key] = $documentCategory;
         $existing = $this->categoriesByKey[$documentCategory->key] ?? null;
@@ -93,7 +97,7 @@ final class CatalogImportPass
         return $existing;
     }
 
-    private function createCategory(CatalogDocumentCategory $documentCategory, int $position): CatalogCategory
+    private function createCategory(CatalogDocumentCategoryModel $documentCategory, int $position): CatalogCategory
     {
         $category = new CatalogCategory(
             $documentCategory->key,
@@ -108,7 +112,7 @@ final class CatalogImportPass
         return $category;
     }
 
-    private function applyFeed(CatalogDocumentFeed $documentFeed, CatalogCategory $category, int $position): void
+    private function applyFeed(CatalogDocumentFeedModel $documentFeed, CatalogCategory $category, int $position): void
     {
         $this->mentionedFeeds[$documentFeed->url] = $documentFeed;
         $existing = $this->feedsByUrl[$documentFeed->url] ?? null;
@@ -127,7 +131,7 @@ final class CatalogImportPass
         $feed->setPosition($position);
     }
 
-    private function createFeed(CatalogDocumentFeed $documentFeed, CatalogCategory $category): CatalogFeed
+    private function createFeed(CatalogDocumentFeedModel $documentFeed, CatalogCategory $category): CatalogFeed
     {
         $feed = new CatalogFeed($category, $documentFeed->title, $documentFeed->url);
         $this->em->persist($feed);
@@ -138,7 +142,7 @@ final class CatalogImportPass
 
     private function updateFeed(
         CatalogFeed $feed,
-        CatalogDocumentFeed $documentFeed,
+        CatalogDocumentFeedModel $documentFeed,
         CatalogCategory $category,
     ): CatalogFeed {
         $feed->setTitle($documentFeed->title);

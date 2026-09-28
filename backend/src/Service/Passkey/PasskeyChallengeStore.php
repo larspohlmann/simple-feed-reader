@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Passkey;
 
 use App\Service\Passkey\Exception\UnknownChallengeException;
+use App\Service\Passkey\Model\PasskeyChallengeModel;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
@@ -74,7 +75,7 @@ final readonly class PasskeyChallengeStore
      * @throws InvalidArgumentException
      * @throws UnknownChallengeException
      */
-    public function consume(string $handle): PasskeyChallenge
+    public function consume(string $handle): PasskeyChallengeModel
     {
         $key = self::keyFor($handle);
         $item = $this->passkeyChallengeCache->getItem($key);
@@ -100,7 +101,7 @@ final readonly class PasskeyChallengeStore
             throw new UnknownChallengeException();
         }
 
-        return new PasskeyChallenge($stored['challenge'], $stored['user_id'], $stored['user_handle']);
+        return new PasskeyChallengeModel($stored['challenge'], $stored['user_id'], $stored['user_handle']);
     }
 
     /**

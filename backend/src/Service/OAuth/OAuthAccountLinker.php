@@ -13,6 +13,7 @@ use App\Repository\UserIdentityRepository;
 use App\Repository\UserRepository;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\OAuth\Factory\OAuthUserFactory;
+use App\Service\OAuth\Model\OAuthIdentityModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -50,7 +51,7 @@ final readonly class OAuthAccountLinker
     ) {
     }
 
-    public function resolve(OAuthIdentity $identity): User
+    public function resolve(OAuthIdentityModel $identity): User
     {
         $existing = $this->identities->findOneByProviderAndSubject(
             $identity->provider,
@@ -96,7 +97,7 @@ final readonly class OAuthAccountLinker
      * address must stay a deliberate, separately authenticated action, not a
      * side effect of signing in.
      */
-    private function refresh(UserIdentity $existing, OAuthIdentity $identity): User
+    private function refresh(UserIdentity $existing, OAuthIdentityModel $identity): User
     {
         if ($identity->email !== $existing->getEmail()) {
             $existing->setEmail($identity->email);
@@ -110,7 +111,7 @@ final readonly class OAuthAccountLinker
      * The linking rule. Returns the local account this identity may claim, or
      * null if it may claim none.
      */
-    private function findLinkTarget(OAuthIdentity $identity): ?User
+    private function findLinkTarget(OAuthIdentityModel $identity): ?User
     {
         if (!$identity->isLinkableByEmail()) {
             return null;
@@ -185,7 +186,7 @@ final readonly class OAuthAccountLinker
         return $this->policy->approvalRequired();
     }
 
-    private function attach(User $user, OAuthIdentity $identity): void
+    private function attach(User $user, OAuthIdentityModel $identity): void
     {
         $link = new UserIdentity(
             $user,

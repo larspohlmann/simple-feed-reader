@@ -218,7 +218,7 @@ final class RegistrationTest extends ApiTestCase
      * `invalid` as a LABEL is not the reserved TLD, and must not be swept up:
      * `invalid.example.com` is a domain somebody can really own. The check is
      * anchored to the end of the address for the same reason
-     * OAuthIdentity::isPrivateRelay() is.
+     * OAuthIdentityModel::isPrivateRelay() is.
      */
     public function testADomainMerelyContainingInvalidStillRegisters(): void
     {

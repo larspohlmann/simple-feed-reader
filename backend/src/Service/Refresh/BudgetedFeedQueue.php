@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -31,7 +31,7 @@ final class BudgetedFeedQueue
     ) {
     }
 
-    /** @return \Generator<int, FetchTicket, mixed, void> */
+    /** @return \Generator<int, FetchTicketModel, mixed, void> */
     public function tickets(): \Generator
     {
         foreach ($this->feeds as $feed) {
@@ -41,7 +41,7 @@ final class BudgetedFeedQueue
 
             $this->startedFeedIds[] = $feed->requireId();
 
-            yield $feed->requireId() => new FetchTicket(
+            yield $feed->requireId() => new FetchTicketModel(
                 $feed->getUrl(),
                 $feed->getEtag(),
                 $feed->getLastModified(),

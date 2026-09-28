@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Category;
 
 use App\Service\Category\CategoryNormalizer;
-use App\Service\Parser\ParsedCategory;
+use App\Service\Parser\Model\ParsedCategoryModel;
 use PHPUnit\Framework\TestCase;
 
 final class CategoryNormalizerTest extends TestCase
@@ -20,9 +20,9 @@ final class CategoryNormalizerTest extends TestCase
     public function testTrimsAndDropsEmpty(): void
     {
         $out = $this->normalizer->normalize([
-            new ParsedCategory('  Politics  '),
-            new ParsedCategory('   '),
-            new ParsedCategory(''),
+            new ParsedCategoryModel('  Politics  '),
+            new ParsedCategoryModel('   '),
+            new ParsedCategoryModel(''),
         ]);
 
         self::assertCount(1, $out);
@@ -33,7 +33,7 @@ final class CategoryNormalizerTest extends TestCase
 
     public function testCanonicalKeyLowercasesAndCollapsesWhitespace(): void
     {
-        $out = $this->normalizer->normalize([new ParsedCategory("Middle   East\tNews")]);
+        $out = $this->normalizer->normalize([new ParsedCategoryModel("Middle   East\tNews")]);
 
         self::assertSame('middle east news', $out[0]->canonicalKey);
         self::assertSame("Middle   East\tNews", $out[0]->displayLabel);
@@ -42,8 +42,8 @@ final class CategoryNormalizerTest extends TestCase
     public function testDeduplicatesCaseInsensitivelyKeepingFirstLabel(): void
     {
         $out = $this->normalizer->normalize([
-            new ParsedCategory('Politics'),
-            new ParsedCategory('POLITICS'),
+            new ParsedCategoryModel('Politics'),
+            new ParsedCategoryModel('POLITICS'),
         ]);
 
         self::assertCount(1, $out);
@@ -53,8 +53,8 @@ final class CategoryNormalizerTest extends TestCase
     public function testSameLabelDifferentSchemeStaySeparate(): void
     {
         $out = $this->normalizer->normalize([
-            new ParsedCategory('Politics', 'https://a.test'),
-            new ParsedCategory('Politics', 'https://b.test'),
+            new ParsedCategoryModel('Politics', 'https://a.test'),
+            new ParsedCategoryModel('Politics', 'https://b.test'),
         ]);
 
         self::assertCount(2, $out);
@@ -64,7 +64,7 @@ final class CategoryNormalizerTest extends TestCase
     {
         $raw = [];
         for ($i = 0; $i < 40; $i++) {
-            $raw[] = new ParsedCategory('cat' . $i);
+            $raw[] = new ParsedCategoryModel('cat' . $i);
         }
 
         self::assertCount(30, $this->normalizer->normalize($raw));
@@ -73,7 +73,7 @@ final class CategoryNormalizerTest extends TestCase
     public function testTruncatesLongValues(): void
     {
         $out = $this->normalizer->normalize([
-            new ParsedCategory(str_repeat('a', 200), str_repeat('s', 400)),
+            new ParsedCategoryModel(str_repeat('a', 200), str_repeat('s', 400)),
         ]);
 
         self::assertSame(128, mb_strlen($out[0]->displayLabel));
@@ -84,9 +84,9 @@ final class CategoryNormalizerTest extends TestCase
     public function testInvalidCategoryInTheMiddleDoesNotStopProcessingLaterOnes(): void
     {
         $out = $this->normalizer->normalize([
-            new ParsedCategory('Politics'),
-            new ParsedCategory('   '),
-            new ParsedCategory('World'),
+            new ParsedCategoryModel('Politics'),
+            new ParsedCategoryModel('   '),
+            new ParsedCategoryModel('World'),
         ]);
 
         self::assertCount(2, $out);
@@ -96,7 +96,7 @@ final class CategoryNormalizerTest extends TestCase
 
     public function testInvalidUtf8LabelNormalizesToEmptyCanonicalKeyWithoutThrowing(): void
     {
-        $out = $this->normalizer->normalize([new ParsedCategory("abc\x80\x81def")]);
+        $out = $this->normalizer->normalize([new ParsedCategoryModel("abc\x80\x81def")]);
 
         self::assertCount(1, $out);
         self::assertSame('', $out[0]->canonicalKey);
@@ -104,7 +104,7 @@ final class CategoryNormalizerTest extends TestCase
 
     public function testCanonicalKeyLowercasesMultibyteCharacters(): void
     {
-        $out = $this->normalizer->normalize([new ParsedCategory('MÜNCHEN')]);
+        $out = $this->normalizer->normalize([new ParsedCategoryModel('MÜNCHEN')]);
 
         self::assertSame('münchen', $out[0]->canonicalKey);
     }
@@ -113,7 +113,7 @@ final class CategoryNormalizerTest extends TestCase
     {
         $label = str_repeat('ü', 200);
 
-        $out = $this->normalizer->normalize([new ParsedCategory($label)]);
+        $out = $this->normalizer->normalize([new ParsedCategoryModel($label)]);
 
         self::assertSame(str_repeat('ü', 128), $out[0]->displayLabel);
         self::assertSame(str_repeat('ü', 128), $out[0]->canonicalKey);
@@ -123,7 +123,7 @@ final class CategoryNormalizerTest extends TestCase
     {
         $scheme = '  X' . str_repeat('ü', 300) . '  ';
 
-        $out = $this->normalizer->normalize([new ParsedCategory('Politics', $scheme)]);
+        $out = $this->normalizer->normalize([new ParsedCategoryModel('Politics', $scheme)]);
 
         self::assertSame('X' . str_repeat('ü', 254), $out[0]->scheme);
     }

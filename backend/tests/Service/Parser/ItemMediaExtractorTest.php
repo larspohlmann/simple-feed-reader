@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\ItemMediaExtractor;
-use App\Service\Parser\VisualMediaKind;
+use App\Service\Parser\Model\VisualMediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class ItemMediaExtractorTest extends TestCase

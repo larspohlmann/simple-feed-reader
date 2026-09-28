@@ -6,9 +6,9 @@ namespace App\Tests\Service\Ai\ModelCatalog;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
+use App\Service\Ai\Model\ModelDescriptorModel;
+use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog;
-use App\Service\Ai\ModelDescriptor;
-use App\Service\Ai\ProviderCredentials;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -16,9 +16,9 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class OpenAiCompatibleCatalogTest extends TestCase
 {
-    private function credentials(): ProviderCredentials
+    private function credentials(): ProviderCredentialsModel
     {
-        return ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
+        return ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', 'sk-test');
     }
 
     private function catalogAnswering(MockResponse $response): OpenAiCompatibleCatalog
@@ -27,13 +27,13 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     }
 
     /**
-     * @param list<ModelDescriptor> $models
+     * @param list<ModelDescriptorModel> $models
      *
      * @return list<string>
      */
     private function ids(array $models): array
     {
-        return array_map(static fn (ModelDescriptor $model): string => $model->id, $models);
+        return array_map(static fn (ModelDescriptorModel $model): string => $model->id, $models);
     }
 
     public function testItReturnsTheOfferedModelsSorted(): void
@@ -100,7 +100,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
     /**
      * A keyless credential (a local model server) must not send `Bearer ` with
-     * nothing after it — ProviderCredentials::authorizationHeaders() drops the
+     * nothing after it — ProviderCredentialsModel::authorizationHeaders() drops the
      * header entirely rather than sending a malformed one.
      */
     public function testAKeylessCredentialSendsNoAuthorizationHeader(): void
@@ -112,7 +112,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
             return new MockResponse('{"data":[{"id":"gpt-4o"}]}');
         });
 
-        $credentials = ProviderCredentials::fromStoredConfiguration('https://api.example.test/v1', '');
+        $credentials = ProviderCredentialsModel::fromStoredConfiguration('https://api.example.test/v1', '');
         (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($credentials);
 
         /** @var array{headers: array<int, string>} $seen */
@@ -262,7 +262,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         self::assertSame(
             'https://api.example.test/v1',
-            ProviderCredentials::fromAccountInput('  https://api.example.test/v1//  ', 'sk-test')->baseUrl,
+            ProviderCredentialsModel::fromAccountInput('  https://api.example.test/v1//  ', 'sk-test')->baseUrl,
         );
     }
 
@@ -270,7 +270,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         self::assertSame(
             'sk-test',
-            ProviderCredentials::fromAccountInput('https://api.example.test/v1', "  sk-test\n")->apiKey,
+            ProviderCredentialsModel::fromAccountInput('https://api.example.test/v1', "  sk-test\n")->apiKey,
         );
     }
 
@@ -278,31 +278,31 @@ final class OpenAiCompatibleCatalogTest extends TestCase
     {
         self::assertSame(
             'http://localhost:11434/v1',
-            ProviderCredentials::fromAccountInput('http://localhost:11434/v1', 'sk-test')->baseUrl,
+            ProviderCredentialsModel::fromAccountInput('http://localhost:11434/v1', 'sk-test')->baseUrl,
         );
     }
 
     public function testANonHttpSchemeIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::fromAccountInput('file:///etc/passwd', 'sk-test');
+        ProviderCredentialsModel::fromAccountInput('file:///etc/passwd', 'sk-test');
     }
 
     public function testCredentialsInTheUrlAreRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::fromAccountInput('https://user:pass@api.example.test/v1', 'sk-test');
+        ProviderCredentialsModel::fromAccountInput('https://user:pass@api.example.test/v1', 'sk-test');
     }
 
     public function testAQueryStringInTheUrlIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::fromAccountInput('https://api.example.test/v1?tenant=1', 'sk-test');
+        ProviderCredentialsModel::fromAccountInput('https://api.example.test/v1?tenant=1', 'sk-test');
     }
 
     public function testAFragmentInTheUrlIsRefused(): void
     {
         $this->expectException(ProviderUnreachableException::class);
-        ProviderCredentials::fromAccountInput('https://api.example.test/v1#section', 'sk-test');
+        ProviderCredentialsModel::fromAccountInput('https://api.example.test/v1#section', 'sk-test');
     }
 }

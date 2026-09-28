@@ -7,8 +7,8 @@ namespace App\Dto\Admin;
 use App\Entity\ProxyConnection;
 use App\Enum\ProxyType;
 use App\Http\FullReplacePayload;
-use App\Service\Crypto\SecretChange;
-use App\Service\Proxy\ProxySettingsUpdate;
+use App\Service\Crypto\Model\SecretChangeModel;
+use App\Service\Proxy\Model\ProxySettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -41,9 +41,9 @@ final readonly class ProxySettingsRequest
     ) {
     }
 
-    public function toUpdate(): ProxySettingsUpdate
+    public function toUpdate(): ProxySettingsUpdateModel
     {
-        return new ProxySettingsUpdate(
+        return new ProxySettingsUpdateModel(
             new ProxyConnection(
                 $this->enabled,
                 $this->directFallback,
@@ -53,7 +53,7 @@ final readonly class ProxySettingsRequest
                 '' === $this->username ? null : $this->username,
                 $this->remoteDns,
             ),
-            $this->removePassword ? SecretChange::remove() : SecretChange::fromSubmitted($this->password),
+            $this->removePassword ? SecretChangeModel::remove() : SecretChangeModel::fromSubmitted($this->password),
         );
     }
 }

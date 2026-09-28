@@ -7,7 +7,7 @@ namespace App\Tests\Service\Crypto;
 use App\Entity\SealedSecret;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Crypto\InstanceSecretCipher;
-use App\Service\Crypto\SecretBinding;
+use App\Service\Crypto\Model\SecretBindingModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -24,9 +24,9 @@ final class InstanceSecretCipherTest extends TestCase
         return new InstanceSecretCipher(self::SECRET);
     }
 
-    private function binding(int $userId = 42): SecretBinding
+    private function binding(int $userId = 42): SecretBindingModel
     {
-        return SecretBinding::forUser('ai-api-key', $userId);
+        return SecretBindingModel::forUser('ai-api-key', $userId);
     }
 
     public function testASealedSecretOpensAgain(): void
@@ -82,10 +82,10 @@ final class InstanceSecretCipherTest extends TestCase
     public function testAnotherPurposeCannotOpenTheSecret(): void
     {
         $cipher = $this->cipher();
-        $sealed = $cipher->seal(SecretBinding::forInstance('proxy-password'), 'hunter2');
+        $sealed = $cipher->seal(SecretBindingModel::forInstance('proxy-password'), 'hunter2');
 
         $this->expectException(SecretUnreadableException::class);
-        $cipher->open(SecretBinding::forInstance('mail-password'), $sealed);
+        $cipher->open(SecretBindingModel::forInstance('mail-password'), $sealed);
     }
 
     public function testAnAlteredVersionCannotOpenTheSecret(): void

@@ -7,9 +7,9 @@ namespace App\Tests\Service\Ingest;
 use App\Entity\Feed;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
-use App\Service\Parser\ParsedCategory;
-use App\Service\Parser\ParsedEntry;
-use App\Service\Parser\ParsedFeed;
+use App\Service\Parser\Model\ParsedCategoryModel;
+use App\Service\Parser\Model\ParsedEntryModel;
+use App\Service\Parser\Model\ParsedFeedModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\EntryIngestors;
 use Symfony\Component\Clock\MockClock;
@@ -32,8 +32,8 @@ final class EntryIngestorCategoriesTest extends DbTestCase
     public function testIngestWritesCategoriesForNewEntriesAndDoesNotChurnOnReingest(): void
     {
         $parsed = $this->parsedFeedWithEntry('guid-1', [
-            new ParsedCategory('Politics'),
-            new ParsedCategory('World'),
+            new ParsedCategoryModel('Politics'),
+            new ParsedCategoryModel('World'),
         ]);
 
         $this->ingestor->ingest($this->feed, $parsed, $this->context());
@@ -50,12 +50,12 @@ final class EntryIngestorCategoriesTest extends DbTestCase
     }
 
     /**
-     * @param list<ParsedCategory> $categories
+     * @param list<ParsedCategoryModel> $categories
      */
-    private function parsedFeedWithEntry(string $guid, array $categories): ParsedFeed
+    private function parsedFeedWithEntry(string $guid, array $categories): ParsedFeedModel
     {
-        return new ParsedFeed(null, null, null, null, [
-            new ParsedEntry(
+        return new ParsedFeedModel(null, null, null, null, [
+            new ParsedEntryModel(
                 guid: $guid,
                 url: 'https://example.com/' . $guid,
                 title: 'Title',

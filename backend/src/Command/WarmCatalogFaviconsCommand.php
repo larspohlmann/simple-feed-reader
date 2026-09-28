@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\Catalog\CatalogFaviconWarmer;
-use App\Service\Catalog\CatalogWarmReport;
+use App\Service\Catalog\Model\CatalogWarmReportModel;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -66,7 +66,7 @@ final class WarmCatalogFaviconsCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function warmOneSlice(SymfonyStyle $io, int $limit): CatalogWarmReport
+    private function warmOneSlice(SymfonyStyle $io, int $limit): CatalogWarmReportModel
     {
         $report = $this->warmer->warm(self::SLICE_BUDGET_SECONDS, $limit);
         $this->report($io, $report->warmed, $report->failed, $report->remaining);
@@ -74,7 +74,7 @@ final class WarmCatalogFaviconsCommand extends Command
         return $report;
     }
 
-    private function warmUntilDone(SymfonyStyle $io): CatalogWarmReport
+    private function warmUntilDone(SymfonyStyle $io): CatalogWarmReportModel
     {
         $warmed = 0;
         $failed = 0;
@@ -99,7 +99,7 @@ final class WarmCatalogFaviconsCommand extends Command
             $previousRemaining = $report->remaining;
         } while ($report->remaining > 0);
 
-        return new CatalogWarmReport($warmed, $failed, $report->remaining);
+        return new CatalogWarmReportModel($warmed, $failed, $report->remaining);
     }
 
     private function report(SymfonyStyle $io, int $warmed, int $failed, int $remaining): void

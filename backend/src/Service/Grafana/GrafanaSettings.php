@@ -7,6 +7,8 @@ namespace App\Service\Grafana;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
+use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
+use App\Service\Grafana\Model\GrafanaSettingsUpdateModel;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,12 +24,16 @@ final readonly class GrafanaSettings
     ) {
     }
 
-    public function overview(): GrafanaSettingsOverview
+    public function overview(): GrafanaSettingsOverviewModel
     {
-        return new GrafanaSettingsOverview($this->effective->stored(), $this->defaults, $this->sampler->isAvailable());
+        return new GrafanaSettingsOverviewModel(
+            $this->effective->stored(),
+            $this->defaults,
+            $this->sampler->isAvailable(),
+        );
     }
 
-    public function update(GrafanaSettingsUpdate $update): void
+    public function update(GrafanaSettingsUpdateModel $update): void
     {
         $settings = $this->repository->findSingleton();
         if (null === $settings) {
@@ -40,7 +46,7 @@ final readonly class GrafanaSettings
         $this->effective->forgetStored();
     }
 
-    private function apply(GrafanaSettingsUpdate $update, GrafanaSettingsEntity $settings): void
+    private function apply(GrafanaSettingsUpdateModel $update, GrafanaSettingsEntity $settings): void
     {
         $replacement = $update->token->replacement();
         if (null !== $replacement) {

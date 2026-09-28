@@ -7,6 +7,7 @@ namespace App\Service\Admin;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Admin\Model\UserFootprintModel;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use Psr\Clock\ClockInterface;
 
@@ -40,11 +41,11 @@ final readonly class UserStatistics
      * @param list<Subscription> $subscriptions the user's own subscriptions
      * @param list<Tag> $tags the user's own tags
      */
-    public function forUser(User $user, array $subscriptions, array $tags): UserFootprint
+    public function forUser(User $user, array $subscriptions, array $tags): UserFootprintModel
     {
         $now = $this->clock->now();
 
-        return new UserFootprint(
+        return new UserFootprintModel(
             feedsCount: \count($subscriptions),
             tagsCount: \count($tags),
             feedsLimit: $this->subscriptionLimits->resolve($user),

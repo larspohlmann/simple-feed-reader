@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Fetch\FeedFetcher;
 
 use App\Service\Fetch\Exception\FetchException;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 
 interface FeedFetcherInterface
 {
@@ -14,5 +14,5 @@ interface FeedFetcherInterface
      *
      * @throws FetchException
      */
-    public function fetch(string $url): FetchResponse;
+    public function fetch(string $url): FetchResponseModel;
 }

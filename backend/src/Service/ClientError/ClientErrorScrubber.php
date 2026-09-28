@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\ClientError;
 
+use App\Service\ClientError\Model\ClientErrorModel;
+
 /**
  * Redacts secrets before a client error reaches Loki. The patterns are a
  * small documented set derived from what browser stacks actually leak, not
@@ -26,9 +28,9 @@ final readonly class ClientErrorScrubber
         '/\b[0-9a-fA-F]{32,}\b/' => '[REDACTED_HEX]',
     ];
 
-    public function scrub(ClientError $clientError): ClientError
+    public function scrub(ClientErrorModel $clientError): ClientErrorModel
     {
-        return new ClientError(
+        return new ClientErrorModel(
             message: $this->redact($clientError->message),
             stack: null === $clientError->stack ? null : $this->redact($clientError->stack),
             kind: $clientError->kind,

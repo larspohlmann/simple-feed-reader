@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Fetch\FetchTicket;
+use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /** One run's due feeds, its budget queue and its tally, and the report they add up to. */
@@ -35,7 +35,7 @@ final readonly class RefreshPass
         $this->tally = new RefreshTally();
     }
 
-    /** @return \Generator<int, FetchTicket, mixed, void> */
+    /** @return \Generator<int, FetchTicketModel, mixed, void> */
     public function tickets(): \Generator
     {
         return $this->queue->tickets();

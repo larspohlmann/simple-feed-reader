@@ -13,7 +13,7 @@ use App\Enum\CommentsLoad;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\FetchResponse;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubFeedFetcher;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -88,7 +88,7 @@ final class EntryCommentsControllerTest extends ApiTestCase
         [$headers, $user] = $this->auth('comments-ok@example.com');
         $fetcher = $this->installFetcher();
         $xml = (string) file_get_contents(__DIR__ . '/../../Fixtures/reddit/thread-comments.atom');
-        $fetcher->willReturn(self::FEED, FetchResponse::fetched(self::FEED, false, $xml, null, null));
+        $fetcher->willReturn(self::FEED, FetchResponseModel::fetched(self::FEED, false, $xml, null, null));
         $entry = $this->seedEntry($user, self::redditThread());
 
         $client->request('GET', '/api/entries/' . $entry->getId() . '/comments', server: $headers);

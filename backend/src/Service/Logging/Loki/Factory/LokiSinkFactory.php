@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Logging\Loki\Factory;
 
-use App\Service\Logging\Loki\LokiDelivery;
 use App\Service\Logging\Loki\LokiSink\DirectLokiSink;
 use App\Service\Logging\Loki\LokiSink\LokiSinkInterface;
 use App\Service\Logging\Loki\LokiSink\SpoolLokiSink;
+use App\Service\Logging\Loki\Model\LokiDelivery;
 
 /**
  * Direct push where it is free (FPM, CLI); spool only on a cgi-fcgi web SAPI

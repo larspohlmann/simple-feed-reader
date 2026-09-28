@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 use App\Enum\SourceFormat;
-use App\Service\Catalog\CatalogFeedDetails;
+use App\Service\Catalog\Model\CatalogFeedDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CatalogFeedRequest
@@ -33,9 +33,9 @@ final readonly class CatalogFeedRequest
     ) {
     }
 
-    public function toDetails(): CatalogFeedDetails
+    public function toDetails(): CatalogFeedDetailsModel
     {
-        return new CatalogFeedDetails(
+        return new CatalogFeedDetailsModel(
             categoryId: $this->categoryId,
             title: $this->title,
             url: $this->url,

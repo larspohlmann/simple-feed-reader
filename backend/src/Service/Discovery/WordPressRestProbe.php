@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Discovery;
 
 use App\Enum\SourceFormat;
+use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Fetch\PageUrls;
@@ -48,7 +49,7 @@ final readonly class WordPressRestProbe
     {
     }
 
-    public function offer(string $body, string $pageUrl): ?FeedCandidate
+    public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
         $document = HtmlDocumentParser::parseOrNull($body);
         if (null === $document) {
@@ -61,7 +62,7 @@ final readonly class WordPressRestProbe
             return null;
         }
 
-        return new FeedCandidate($postsUrl, $this->pageTitle($document), SourceFormat::WP_JSON);
+        return new FeedCandidateModel($postsUrl, $this->pageTitle($document), SourceFormat::WP_JSON);
     }
 
     private function restRoot(HTMLDocument $document, PageUrls $pageUrls, string $body): ?string
