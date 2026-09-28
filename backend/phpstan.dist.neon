@@ -73,3 +73,7 @@ services:
         class: App\Tests\PhpStan\ServiceModuleCycleRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ServiceModuleBoundaryRule
+        tags:
+            - phpstan.rules.rule
