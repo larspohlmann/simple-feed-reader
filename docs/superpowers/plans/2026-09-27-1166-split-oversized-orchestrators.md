@@ -39,6 +39,26 @@ Reconciled on 2026-09-28 against `6f88765d` (origin/develop after #1182 PR B, #1
 - **D-reconcile-6:** the helper builds one `EntryIndexer` for the persister and the pruner, as the container does. `RefreshRunnerTest` built two over one writer. `EntryIndexer::forget()` never touches the memoised `configure()`, so every writer assertion reads the same.
 - **D-reconcile-7:** the preflight diffs (A0 Step 3, B0 Step 2, C0 Step 2) and the reviewers' `git show` baselines start from `6f88765d`, not `d3196d49`. `RefreshRunner`, `EntryIngestor` and `BulkSubscriber` are byte-identical at both, but `src/Service/Ingest` is not (#1182 B9 moved `RedditEntryRule`'s `Discussion` import), which made B0's "empty `--stat`" false.
 
+## Execution rulings (PR A)
+
+- **D5' (planner, supersedes D5 for A3, B5 and C3):** no `public private(set)`. pdepend 2.16.2, the latest stable release behind `composer md`, cannot parse asymmetric visibility and aborts the whole sweep. Following the #183/#219/#220 standing decision (rewrite the syntax; no dev-pin, no exclude), the fields are `private` with same-named read methods and no `get` prefix (`fetched()` … `isAborted()`, `faviconEligibleFeeds()`; `result()` in B5 and C3). `record()` stays the only writer. If a codesize rule trips, the fix is tell-don't-ask, never a suppression.
+- **A2:** `persistOutcome()`'s docblock is deleted whole. A lone `@throws \DateMalformedStringException` made PHPStan read `applyOutcome()`'s DBAL catch as dead. The wiring `LogicException` passes `previous: $e` instead of a `0` code literal, which leaves no equivalent code mutant (fd6e84c7).
+- **A3:** an added `testFaviconFlushOrmExceptionAbortsTheRunWithoutThrowing` kills the escaped `| ORMException` arm of `resolveFaviconsAndReport()`'s catch.
+- **A3:** `RefreshTally` reads its abort flag as `isAborted()`. An `is` prefix on a bool reads as allowed under D5'.
+- **A4:** the gates forced three edits to plan code. `FeedOutcomePersister::record()` carries no `@throws` docblock (the A2 dead-catch case). `RefreshRunners::bodyParser()` has no `instanceof` guard (PHPStan: always true). `MissingFaviconResolverTest`'s HTML format string carries `/** @lang TEXT */`.
+- **A4:** five killing tests were added to `FeedOutcomePersisterTest`:
+  - the gone and failed paths reload the feed and assert its stored status and error;
+  - a 304 is stored as a success with no new entries;
+  - an `OptimisticLockException` flush aborts;
+  - a redirect target is measured in characters.
+- **A4:** `recordSuccess($feed, 0)` → `-1` in `storeNotModified()` is an equivalent mutant: `FeedScheduler::recordSuccess()` only tests `> 0`, and the line moved unchanged from `RefreshRunner`. It was reported to the planner, with no ignore added.
+- **Final review and /simplify:**
+  - `RefreshPass` builds its own `BudgetedFeedQueue` (`__construct(list<Feed>, ClockInterface, int $deadline)`), so the feed list is handed over once.
+  - The abort tests share a generalised `FlushFailingEntityManager` (which flush fails, and what it throws) and a new `tests/Support/DuplicateKeyViolation`.
+  - `tests/Support/FeedSchedulers` builds the test `FeedScheduler`. PR B's B1 moves `SubscriptionServiceTest` and `FirstFetchRecorderTest` onto it.
+  - The change-marker pin merged into `testEntityManagerFailureAbortsRunWithoutCascading`.
+  - `EntryIndexer`'s docblock names `FeedOutcomePersister`.
+
 ## Status
 
 | Task | State |
