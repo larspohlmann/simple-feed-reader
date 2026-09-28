@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest\DigestImageResizer;
 
-use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use App\Service\Mail\Digest\DigestImageResizer\GdImageResizer;
+use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowScanner;
+use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideshowScanner;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowScannerTest extends TestCase

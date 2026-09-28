@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use PHPUnit\Framework\TestCase;
 
 final class MediaUrlKindTest extends TestCase

@@ -6,14 +6,14 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
+use App\Service\Reader\Media\ArticleMedia;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\Attributes\DataProvider;

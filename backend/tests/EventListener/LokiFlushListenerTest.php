@@ -6,9 +6,9 @@ namespace App\Tests\EventListener;
 
 use App\EventListener\LokiFlushListener;
 use App\Kernel;
-use App\Service\Logging\Loki\LokiSink\DirectLokiSink;
 use App\Service\Logging\Loki\LokiClient;
 use App\Service\Logging\Loki\LokiPushHandler;
+use App\Service\Logging\Loki\LokiSink\DirectLokiSink;
 use App\Tests\Support\StubLokiEndpoint;
 use Monolog\Level;
 use Monolog\LogRecord;

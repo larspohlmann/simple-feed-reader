@@ -6,10 +6,10 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slide;
 use App\Service\Reader\Slideshow\Slideshow;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;

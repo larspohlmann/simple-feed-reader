@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
 
 use App\Service\Reader\Media\DurableMediaUrl;
+use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
 use PHPUnit\Framework\TestCase;
 
 final class AttributeMediaSourceTest extends TestCase

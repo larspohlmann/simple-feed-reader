@@ -6,10 +6,10 @@ namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\Media\PageTextBlocks;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use PHPUnit\Framework\TestCase;
 
 final class MarkupCarouselRecognizerTest extends TestCase

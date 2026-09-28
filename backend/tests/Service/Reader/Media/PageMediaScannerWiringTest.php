@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\MetaMediaSource;
@@ -14,6 +12,8 @@ use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
 use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
+use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\RawPage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

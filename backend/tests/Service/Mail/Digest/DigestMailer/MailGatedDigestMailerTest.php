@@ -6,8 +6,8 @@ namespace App\Tests\Service\Mail\Digest\DigestMailer;
 
 use App\Entity\User;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
-use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\Digest\DigestMailer\MailGatedDigestMailer;
+use App\Service\Mail\Digest\DigestModel;
 use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use PHPUnit\Framework\TestCase;

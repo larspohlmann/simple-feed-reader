@@ -6,9 +6,9 @@ namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
 
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
 use PHPUnit\Framework\TestCase;
 
 final class ZdfPlayerConfigSourceTest extends TestCase

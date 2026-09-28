@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
-use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\FeedFormatParser\Rss2Parser;
+use App\Service\Parser\ParsedEntry;
 use PHPUnit\Framework\TestCase;
 
 final class Rss2ParserTest extends TestCase

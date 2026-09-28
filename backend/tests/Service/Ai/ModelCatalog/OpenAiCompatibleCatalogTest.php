@@ -6,8 +6,8 @@ namespace App\Tests\Service\Ai\ModelCatalog;
 
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
-use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog;
+use App\Service\Ai\ModelDescriptor;
 use App\Service\Ai\ProviderCredentials;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;

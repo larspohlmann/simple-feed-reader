@@ -6,11 +6,11 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\Teaser\TeaserPlayer;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;
