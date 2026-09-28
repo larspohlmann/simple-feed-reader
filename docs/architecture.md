@@ -248,7 +248,8 @@ Decided in #1202.
 - **Messaging.** Event listeners end in `Listener`; a message handler is its message's name plus `Handler`;
   `Worker/Message/` holds imperative names with no suffix; `src/Event/` holds past-tense facts.
 - **The container** registers `src/` except `Service/**/{Model,Dto,Pass,Support,Exception}/`, so a service that
-  type-hints a model or a per-call object fails at container build.
+  type-hints a model, a DTO or a per-call object cannot be autowired. Symfony reports that only when the service is
+  first built (`lint:container` passes), so `ServiceRoleRule`'s `rootService` check is the guard.
 - **`src/Http`** follows the interface and `Factory` rules; its static `…Json` mappers are that layer's own role and
   stay in its area roots.
 
