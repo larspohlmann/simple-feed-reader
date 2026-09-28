@@ -1907,6 +1907,16 @@ Run: `gh issue view 1163 --json state --jq .state`. Expected: `OPEN`. If it clos
 
 ---
 
+### Execution rulings (PR A)
+
+- A2 added `EntryStateResolverTest::testResolveSkipsTheInsertWhenTheRowAlreadyExists` (out of brief) to kill an escaped mutant on the resolver's early return; it counts statements with the existing `QueryRecorder`.
+- Escaped mutant `UnwrapArrayValues` on `MarkReadService::includedInAllItems()` accepted as equivalent: the line predates #1163, and its one consumer iterates key-agnostically. Dropping `array_values` would break the `list<Subscription>` type, so it cannot be rewritten away.
+- Final review fix wave: the `EntryReadMarker` docblock no longer calls it the one way entries are marked read (`EntryStateUpdater` also marks). `ReadScope::$id` is private, so tests assert `targetId()`. `MarkReadRequest`'s `Assert\Choice` lists `ReadScopeKind` values. A new test moves an earlier watermark forward, because dropping `|| $current < $until` passed every test.
+- The simplify pass's other finding is pre-existing and left for a follow-up: scope `all` fetch-joins every subscription's tags and then filters `includeInAllItems` in PHP.
+- The real run (#1162's recommendation run) is not a gate here. PR A moves `ForYouMarkReadService` unchanged and does not touch the run pipeline.
+
+---
+
 # PR B — Parse failure is typed; the body cleaner is an ordered pipeline
 
 ### Task B0: Preflight (PR A merged)
