@@ -45,13 +45,8 @@ final class CatalogImporterTest extends DbTestCase
             );
         }
 
-        $parser = self::getContainer()->get(CatalogDocument::class);
-        self::assertInstanceOf(CatalogDocument::class, $parser);
-
-        return $parser->parse(\sprintf(
-            '<opml version="2.0"><head><title>t</title></head><body>'
-            . '<outline text="%s" key="%s" icon="memory" color="#3b82f6">%s</outline>'
-            . '</body></opml>',
+        return $this->parsed(\sprintf(
+            '<outline text="%s" key="%s" icon="memory" color="#3b82f6">%s</outline>',
             $name,
             $key,
             $outlines,
@@ -75,14 +70,9 @@ final class CatalogImporterTest extends DbTestCase
      */
     private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalog
     {
-        $parser = self::getContainer()->get(CatalogDocument::class);
-        self::assertInstanceOf(CatalogDocument::class, $parser);
-
-        return $parser->parse(
-            '<opml version="2.0"><head><title>t</title></head><body>'
-            . '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
-            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>'
-            . '</body></opml>',
+        return $this->parsed(
+            '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
+            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>',
         );
     }
 
