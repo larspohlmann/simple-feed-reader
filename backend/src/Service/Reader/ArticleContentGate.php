@@ -25,7 +25,7 @@ final class ArticleContentGate
         return $article->content;
     }
 
-    private static function textLength(Article $article): int
+    public static function textLength(Article $article): int
     {
         return mb_strlen(trim((string) $article->textContent));
     }

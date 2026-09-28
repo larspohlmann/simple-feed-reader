@@ -17,7 +17,6 @@ use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
-use fivefilters\Readability\Article;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -56,12 +55,26 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
 
     private function extractPage(PageResponse $page, EntryHints $hints): ExtractionResult
     {
-        $scanned = $this->scan($page, $hints->feedMedia);
-        $containers = $this->slideshowContainers($scanned->slideshows);
-        $article = $this->readability->richest($scanned->normalized, $page, $containers)
+        $articlePage = $this->readPage($page, $hints->feedMedia);
+        $containers = $this->slideshowContainers($articlePage->slideshows);
+        $article = $this->readability->richest($articlePage->normalized, $page, $containers)
             ?? throw new ArticleNotExtractedException(ExtractionFailure::Unextractable);
-        $content = ArticleContentGate::contentOf($article, $scanned->media);
-        $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $scanned, $hints));
+        $content = ArticleContentGate::contentOf($article, $articlePage->media);
+        $input = new BodyCleaningInput(
+            titleCandidates: [$article->title, $hints->title],
+            leadImage: new LeadImageCandidate(
+                $article->image,
+                $articlePage->pageImages,
+                $articlePage->leadCaptions->captionFor($article->image),
+            ),
+            media: $this->bodyMedia->resolveForBody($articlePage->media, $page->html),
+            feedMedia: $hints->feedMedia,
+            entryAuthor: $hints->author,
+            slideshows: $articlePage->slideshows,
+            teasers: $articlePage->teasers,
+            excerpt: $article->excerpt,
+        );
+        $body = $this->bodyCleaner->clean($content, $input);
         $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 
         return ExtractionResult::ok(
@@ -71,11 +84,11 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            paywalled: $scanned->paywalled,
+            paywalled: $articlePage->paywalled,
         );
     }
 
-    private function scan(PageResponse $page, FeedMedia $feedMedia): ArticlePage
+    private function readPage(PageResponse $page, FeedMedia $feedMedia): ArticlePage
     {
         $normalized = $this->normalizer->normalize($page->html);
         $pageImages = PageImageInventory::fromDocument($normalized);
@@ -83,7 +96,6 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         $rawPage = RawPage::parse($page->html, $page->finalUrl);
 
         return new ArticlePage(
-            page: $page,
             normalized: $normalized,
             pageImages: $pageImages,
             leadCaptions: $leadCaptions,
@@ -91,24 +103,6 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             media: $this->mediaScanner->scan($rawPage, $feedMedia),
             slideshows: $this->slideshowScanner->scan($normalized),
             teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
-        );
-    }
-
-    private function bodyCleaningInput(Article $article, ArticlePage $scanned, EntryHints $hints): BodyCleaningInput
-    {
-        return new BodyCleaningInput(
-            titleCandidates: [$article->title, $hints->title],
-            leadImage: new LeadImageCandidate(
-                $article->image,
-                $scanned->pageImages,
-                $scanned->leadCaptions->captionFor($article->image),
-            ),
-            media: $this->bodyMedia->resolveForBody($scanned->media, $scanned->page->html),
-            feedMedia: $hints->feedMedia,
-            entryAuthor: $hints->author,
-            slideshows: $scanned->slideshows,
-            teasers: $scanned->teasers,
-            excerpt: $article->excerpt,
         );
     }
 

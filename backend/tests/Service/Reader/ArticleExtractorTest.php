@@ -514,7 +514,10 @@ final class ArticleExtractorTest extends TestCase
             . '<figure><img src="https://example.test/photo.jpg" alt="A"><figcaption>' . $caption
             . '</figcaption></figure></article></body></html>';
         $extractor = $this->extractor([
-            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => 'https://site.test/post-final']]),
+            new MockResponse(
+                '',
+                ['http_code' => 301, 'response_headers' => ['location' => 'https://site.test/post-final']],
+            ),
             new MockResponse($html, ['http_code' => 200]),
         ]);
 

@@ -7,7 +7,6 @@ namespace App\Service\Reader;
 /** Why an extraction failed. The values are wire vocabulary the reader client switches on. */
 enum ExtractionFailure: string
 {
-    /** The entry has no source URL to fetch. */
     case NoUrl = 'no_url';
     /** The page could not be retrieved: network, SSRF-blocked, oversized. */
     case Fetch = 'fetch';
