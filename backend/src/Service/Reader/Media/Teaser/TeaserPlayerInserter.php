@@ -32,7 +32,7 @@ final readonly class TeaserPlayerInserter implements BodyCleaningStep
         $this->insert($pass->document, $pass->input->teasers, $this->placedMediaUrls($pass->input->media));
     }
 
-    /** @return list<string> the players the media pipeline placed, so no teaser is rebuilt over one (#948) */
+    /** @return list<string> */
     private function placedMediaUrls(ArticleMedia $media): array
     {
         return array_map(static fn (MediaCandidate $candidate): string => $candidate->url, $media->candidates);
@@ -40,12 +40,12 @@ final readonly class TeaserPlayerInserter implements BodyCleaningStep
 
     /**
      * @param list<TeaserPlayer> $teasers
-     * @param list<string>       $articleMediaUrls the players the media pipeline already placed
+     * @param list<string>       $placedMediaUrls
      */
-    private function insert(HTMLDocument $document, array $teasers, array $articleMediaUrls): void
+    private function insert(HTMLDocument $document, array $teasers, array $placedMediaUrls): void
     {
         $root = $document->body;
-        $pending = $this->notAlreadyPlaced($teasers, $articleMediaUrls);
+        $pending = $this->notAlreadyPlaced($teasers, $placedMediaUrls);
         if ($root === null || $pending === []) {
             return;
         }
@@ -66,13 +66,13 @@ final readonly class TeaserPlayerInserter implements BodyCleaningStep
 
     /**
      * @param list<TeaserPlayer> $teasers
-     * @param list<string>       $articleMediaUrls
+     * @param list<string>       $placedMediaUrls
      *
      * @return array<int, TeaserPlayer>
      */
-    private function notAlreadyPlaced(array $teasers, array $articleMediaUrls): array
+    private function notAlreadyPlaced(array $teasers, array $placedMediaUrls): array
     {
-        $placed = array_fill_keys($articleMediaUrls, true);
+        $placed = array_fill_keys($placedMediaUrls, true);
 
         return array_filter($teasers, static fn (TeaserPlayer $teaser): bool => !isset($placed[$teaser->mediaUrl]));
     }

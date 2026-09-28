@@ -35,8 +35,8 @@ final readonly class FetchedPageNormalizer
 
     /**
      * The page with single-child <div> wrapper chains collapsed (#235), or null when there is none. A fresh
-     * parse, not normalize()'s document: readability consumes each document it reads, and the collapse
-     * breaks some pages (#476).
+     * parse, since readability consumes each document it reads and the collapse breaks some pages (#476).
+     * @throws UnparseableHtmlException when the page is blank or cannot be parsed
      */
     public function collapseWrapperChains(string $html): ?HTMLDocument
     {
