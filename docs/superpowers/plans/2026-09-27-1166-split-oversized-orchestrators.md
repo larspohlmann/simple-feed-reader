@@ -59,6 +59,21 @@ Reconciled on 2026-09-28 against `6f88765d` (origin/develop after #1182 PR B, #1
   - The change-marker pin merged into `testEntityManagerFailureAbortsRunWithoutCascading`.
   - `EntryIndexer`'s docblock names `FeedOutcomePersister`.
 
+## Execution rulings (PR B)
+
+- **Preflight (B0):** `tests/Support/FeedSchedulers` from PR A moved B1's `SubscriptionServiceTest` and `FirstFetchRecorderTest` onto it in the same edit (planner-approved). `CatalogImportPass` follows D5': a private `$result` read through `result()`.
+- **Deletion checks:** B1, B2 and B4 ran fewer checks than they had new tests, so the controller and the reviewers ran the rest. Two were vacuous and were made real:
+  - B3's content assertion only checked that the script was gone, and null cast to `''` passed it. Both ingest tests now assert that `<p>Body</p>` is present.
+  - B4's feed-position pin expected 0, which is the default. The update now moves the feed to position 1.
+- **B3:** two multibyte killing tests were added (`IngestedEntryFactoryTest`, and `EntryIngestorTest`'s site url), because the ASCII fixtures could not tell a byte cut from a character cut. The factory test no longer asserts two defaults: an absent image and a null `publishedAt`.
+- **B5:** `testEveryCategoryHoldingALockedFeedIsSpared` kills an `ArrayOneItem` escape. `CatalogImportPassTest` uses `createStub` where a test sets no expectation, and `$this->never()`, because `self::never()` raises an EA WARNING.
+- **Final review and /simplify:**
+  - The pass computes its locked-feed map in the constructor, so `removeUnmentionedFeeds()` returns nothing.
+  - `CatalogImporterTest` builds every document through `parsed()`.
+  - The lead-image invariant is stated once, in `EntryMediaAssembler`'s class docblock.
+  - The pending-image test pins its dimensions.
+  - `IncomingEntry` values are named `$candidate`.
+
 ## Status
 
 | Task | State |
