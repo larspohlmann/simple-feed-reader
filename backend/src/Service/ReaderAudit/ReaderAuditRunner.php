@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\ExtractionResult;
 
@@ -45,7 +46,7 @@ final readonly class ReaderAuditRunner
     private function audit(SampledEntry $entry, ReaderLink $link): AuditFinding
     {
         $result = $this->coverageGate->verify(
-            $this->extractor->extract($entry->url, $entry->title, $entry->author),
+            $this->extractor->extract($entry->url, new EntryHints(title: $entry->title, author: $entry->author)),
             $entry->feedContentHtml,
         );
 

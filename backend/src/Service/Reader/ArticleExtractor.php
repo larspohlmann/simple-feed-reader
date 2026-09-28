@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
+use App\Service\Reader\Exception\ArticleNotExtractedException;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\PageMediaScanner;
@@ -16,106 +17,52 @@ use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use fivefilters\Readability\Article;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * Turns an article URL into clean, sanitized, distraction-free HTML: fetch
- * (SSRF-guarded) → normalize → page-media scan → readability extraction →
- * body cleaning (duplicate-title removal, edge-boilerplate trim, lead-image
- * restore, media insertion, slideshow recreation) → EntrySanitizer (feed
- * HTML's own XSS barrier).
- * Never throws for an ordinary failure — returns a `failed` ExtractionResult
- * with a machine reason so the endpoint stays 200 and the client falls back
- * to feed content.
- *
- * Readability strips a page-header image as chrome, reporting it apart as
- * og:image; ReaderBodyCleaner restores it via ReaderLeadImage when the page
- * draws it and the body doesn't (#681), using a PageImageInventory built once
- * from the normalised document before readability consumes it (#684).
- *
- * PageMediaScanner also runs on the raw page before readability, so recovered
- * media can satisfy the length gate below and still be inserted when
- * readability's own extraction is thin (#748). PaywallSignals reads the same
- * normalised document and raw page, trusting the publisher's declaration and
- * falling back to a gated-block presence check (#908).
- *
- * SiblingMediaExtender derives from the declared scan but appends onto the
- * stream-resolved media only when consumed, so a failed extraction never pays
- * for network verification (#800).
+ * Fetch, normalise, read the page, run readability, clean the body, sanitise (EntrySanitizer is the XSS barrier).
+ * Every page read happens before readability consumes the normalised document (#684, #748). An ordinary failure is
+ * a `failed` result, never a throw, so the endpoint stays 200 and the client falls back to the feed body.
  */
-final class ArticleExtractor implements ArticleExtractorInterface
+final readonly class ArticleExtractor implements ArticleExtractorInterface
 {
-    /** Below this many characters of extracted text, treat as not an article. */
-    private const int MIN_CONTENT_LENGTH = 200;
-
     public function __construct(
-        private readonly HtmlPageFetcher $fetcher,
-        private readonly FetchedPageNormalizer $normalizer,
-        private readonly ReaderBodyCleaner $bodyCleaner,
-        private readonly EntrySanitizer $sanitizer,
-        private readonly PageMediaScanner $mediaScanner,
-        private readonly BodyMediaResolver $bodyMedia,
-        private readonly SlideshowScanner $slideshowScanner,
-        private readonly TeaserPlayerScanner $teaserScanner,
-        private readonly ArticleReadability $readability,
+        private HtmlPageFetcher $fetcher,
+        private FetchedPageNormalizer $normalizer,
+        private ReaderBodyCleaner $bodyCleaner,
+        private EntrySanitizer $sanitizer,
+        private PageMediaScanner $mediaScanner,
+        private BodyMediaResolver $bodyMedia,
+        private SlideshowScanner $slideshowScanner,
+        private TeaserPlayerScanner $teaserScanner,
+        private ArticleReadability $readability,
     ) {
     }
 
     #[WithSpan]
-    public function extract(
-        string $url,
-        ?string $entryTitle = null,
-        ?string $entryAuthor = null,
-        ?FeedMedia $feedMedia = null,
-    ): ExtractionResult {
-        $feedMedia ??= FeedMedia::none();
+    public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+    {
         try {
-            $page = $this->fetcher->fetch($url);
+            return $this->extractPage($this->fetcher->fetch($url), $hints);
         } catch (PageFetchException $failure) {
-            return ExtractionResult::failed($url, 'fetch', $failure->getMessage());
-        }
-
-        try {
-            $normalized = $this->normalizer->normalize($page->html);
+            return ExtractionResult::failed($url, ExtractionFailure::Fetch, $failure->getMessage());
         } catch (UnparseableHtmlException) {
-            return ExtractionResult::failed($url, 'unextractable');
+            return ExtractionResult::failed($url, ExtractionFailure::Unextractable);
+        } catch (ArticleNotExtractedException $failure) {
+            return ExtractionResult::failed($url, $failure->failure);
         }
-        $pageImages = PageImageInventory::fromDocument($normalized);
-        $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
-        $rawPage = RawPage::parse($page->html, $page->finalUrl);
-        $paywalled = PaywallSignals::isPreview($rawPage->document, $normalized);
-        $media = $this->mediaScanner->scan($rawPage, $feedMedia);
-        $slideshows = $this->slideshowScanner->scan($normalized);
-        $teasers = $this->teaserScanner->scan($normalized, $page->finalUrl);
+    }
 
-        $article = $this->readability->richest($normalized, $page, $this->slideshowContainers($slideshows));
-        if ($article === null) {
-            return ExtractionResult::failed($url, 'unextractable');
-        }
-
-        if ($article->content === null || !$article->hasContent()) {
-            return ExtractionResult::failed($url, 'empty');
-        }
-        // A page whose media IS the article carries little prose. Recovered media
-        // is itself evidence that this is an article worth showing.
-        if ($media->isEmpty() && mb_strlen(trim((string) $article->textContent)) < self::MIN_CONTENT_LENGTH) {
-            return ExtractionResult::failed($url, 'empty');
-        }
-
-        $body = $this->bodyCleaner->clean($article->content, new BodyCleaningInput(
-            titleCandidates: [$article->title, $entryTitle],
-            leadImage: new LeadImageCandidate($article->image, $pageImages, $leadCaptions->captionFor($article->image)),
-            media: $this->bodyMedia->resolveForBody($media, $page->html),
-            feedMedia: $feedMedia,
-            entryAuthor: $entryAuthor,
-            slideshows: $slideshows,
-            teasers: $teasers,
-            excerpt: $article->excerpt,
-        ));
-        $clean = $this->sanitizer->sanitize($body);
-        if ($clean === null) {
-            return ExtractionResult::failed($url, 'empty');
-        }
+    private function extractPage(PageResponse $page, EntryHints $hints): ExtractionResult
+    {
+        $articlePage = $this->readPage($page, $hints->feedMedia);
+        $containers = $this->slideshowContainers($articlePage->slideshows);
+        $article = $this->readability->richest($articlePage->normalized, $page, $containers)
+            ?? throw new ArticleNotExtractedException(ExtractionFailure::Unextractable);
+        $content = ArticleContentGate::contentOf($article, $articlePage->media);
+        $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $articlePage, $hints));
+        $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 
         return ExtractionResult::ok(
             url: $page->finalUrl,
@@ -124,7 +71,44 @@ final class ArticleExtractor implements ArticleExtractorInterface
             siteName: $article->siteName,
             contentHtml: $clean,
             excerpt: $article->excerpt,
-            paywalled: $paywalled,
+            paywalled: $articlePage->paywalled,
+        );
+    }
+
+    private function readPage(PageResponse $page, FeedMedia $feedMedia): ArticlePage
+    {
+        $normalized = $this->normalizer->normalize($page->html);
+        $pageImages = PageImageInventory::fromDocument($normalized);
+        $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
+        $rawPage = RawPage::parse($page->html, $page->finalUrl);
+
+        return new ArticlePage(
+            page: $page,
+            normalized: $normalized,
+            pageImages: $pageImages,
+            leadCaptions: $leadCaptions,
+            paywalled: PaywallSignals::isPreview($rawPage->document, $normalized),
+            media: $this->mediaScanner->scan($rawPage, $feedMedia),
+            slideshows: $this->slideshowScanner->scan($normalized),
+            teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
+        );
+    }
+
+    private function bodyCleaningInput(Article $article, ArticlePage $articlePage, EntryHints $hints): BodyCleaningInput
+    {
+        return new BodyCleaningInput(
+            titleCandidates: [$article->title, $hints->title],
+            leadImage: new LeadImageCandidate(
+                $article->image,
+                $articlePage->pageImages,
+                $articlePage->leadCaptions->captionFor($article->image),
+            ),
+            media: $this->bodyMedia->resolveForBody($articlePage->media, $articlePage->page->html),
+            feedMedia: $hints->feedMedia,
+            entryAuthor: $hints->author,
+            slideshows: $articlePage->slideshows,
+            teasers: $articlePage->teasers,
+            excerpt: $article->excerpt,
         );
     }
 

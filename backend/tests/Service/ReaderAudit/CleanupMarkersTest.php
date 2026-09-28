@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
@@ -35,10 +36,10 @@ final class CleanupMarkersTest extends TestCase
         // Whatever went wrong, the reader falls back to the feed body and shows
         // the user the original. That is a real outcome and no cleaner changes
         // it; listing it filled the report with work nobody could do (#744).
-        foreach (['fetch', 'no_url', 'unextractable', 'empty', 'mismatch'] as $reason) {
+        foreach (ExtractionFailure::cases() as $reason) {
             $failed = ExtractionResult::failed(null, $reason);
 
-            self::assertSame([], $this->markers->detect($failed, $this->entry(), null), $reason);
+            self::assertSame([], $this->markers->detect($failed, $this->entry(), null), $reason->value);
         }
     }
 

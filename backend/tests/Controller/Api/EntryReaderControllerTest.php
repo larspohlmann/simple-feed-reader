@@ -12,6 +12,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Tests\Support\FakeArticleExtractor;
 use App\Tests\Support\UserFactory;
@@ -155,7 +156,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-fail@example.com');
         $fake = $this->installFake();
         $fake->willReturn(
-            ExtractionResult::failed('https://example.com/article', 'fetch', 'HTTP 403 Forbidden'),
+            ExtractionResult::failed('https://example.com/article', ExtractionFailure::Fetch, 'HTTP 403 Forbidden'),
         );
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
@@ -197,7 +198,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('Jana Steger', $fake->requests[0]['author']);
+        self::assertSame('Jana Steger', $fake->hints[0]->author);
     }
 
     public function testCarriesTheFeedPosterFallbackIntoTheReaderExtraction(): void
@@ -223,7 +224,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client->request('GET', '/api/entries/' . $entry->getId() . '/reader', server: $headers);
 
         self::assertResponseIsSuccessful();
-        self::assertSame('https://example.com/poster.jpg', $fake->requests[0]['feedMedia']?->posterFallback());
+        self::assertSame('https://example.com/poster.jpg', $fake->hints[0]->feedMedia->posterFallback());
     }
 
     public function testOffTopicExtractionOfAFullFeedArticleFallsBackToTheFeed(): void

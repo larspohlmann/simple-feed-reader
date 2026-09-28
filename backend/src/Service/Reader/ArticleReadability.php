@@ -75,13 +75,8 @@ final readonly class ArticleReadability
             return $conservative;
         }
 
-        return $this->textLength($collapsed) > $this->textLength($conservative)
+        return ArticleContentGate::textLength($collapsed) > ArticleContentGate::textLength($conservative)
             ? $collapsed
             : $conservative;
-    }
-
-    private function textLength(Article $article): int
-    {
-        return mb_strlen(trim((string) $article->textContent));
     }
 }

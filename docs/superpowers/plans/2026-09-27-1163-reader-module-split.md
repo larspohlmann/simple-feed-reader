@@ -6592,3 +6592,18 @@ Send the planner the three PR numbers and merge SHAs, and these carry-forward it
   - A namespace-dependency rule that would keep `Reader → Search` and `Recommendation → Reader` from coming back.
   - `ViewerTimeZone`'s home: `Service/Reading` imports `Recommendation\Feed\ViewerTimeZone` (two files), and after #1163 that is the only edge between the two modules (D1's note).
 - Any equivalent mutant this issue met, and how its line was rewritten.
+
+---
+
+### Execution rulings (PR C)
+
+- **C0.** The anchors held against PR B's final extractor. `->extract(` now appears 43 times, not 40: three URL-only killing tests were added by B3, C1 and C2. The 7 hint-passing calls C3 rewrites were unchanged.
+- **C1.** `ReaderJson` had two escaped mutants, a nullsafe and a string cast. Both were equivalent, so the line was rewritten rather than killed: `ReaderJson` now branches on `$r->reason !== null` and writes `->value`. A killing test was also added for the empty exit with media present.
+- **C2.** A killing test was added for the sanitiser-null exit. The single `try` now maps an `UnparseableHtmlException` from `ArticleReadability::richest()` → `collapseWrapperChains()` to `unextractable`. Before, that exception escaped. It cannot happen in practice, because the call re-parses HTML that `normalize()` already parsed. Accepted.
+- **C3.** Deletion check 3 could not fail, because the masthead pass strips the author's name anyway. The review round's test (final url, excerpt, author reaching the cleaner) is the proof instead.
+- **Review round:**
+  - The #800 order (media verification runs only after the content gate) is pinned by a test whose mock client records any verification request.
+  - One text measure now serves both `ArticleContentGate` and `ArticleReadability`.
+  - `scan()`/`$scanned` became `readPage()`/`$articlePage`.
+  - Dropping `ArticlePage::$page` forced the input builder inline, which undid the orchestration shape, so the field and `bodyCleaningInput()` were kept.
+- **Carry-forward:** posted on #1169 by the planner. The namespace-dependency rule belongs to #1161 PR B.

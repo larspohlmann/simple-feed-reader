@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\ExtractionCoverageGate;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use PHPUnit\Framework\TestCase;
 
@@ -35,7 +36,7 @@ final class ExtractionCoverageGateTest extends TestCase
         );
 
         self::assertFalse($verified->ok);
-        self::assertSame('mismatch', $verified->reason);
+        self::assertSame(ExtractionFailure::Mismatch, $verified->reason);
         self::assertSame('https://site.test/post', $verified->url);
     }
 
@@ -64,7 +65,7 @@ final class ExtractionCoverageGateTest extends TestCase
         $feed = $this->distinctWords(203);
         $result = $this->okWith('<p>' . $this->firstWords($feed, 13) . '</p>'); // 10 / 200 = 0.05
 
-        self::assertSame('mismatch', $this->gate->verify($result, '<p>' . $feed . '</p>')->reason);
+        self::assertSame(ExtractionFailure::Mismatch, $this->gate->verify($result, '<p>' . $feed . '</p>')->reason);
     }
 
     /** The bar is counted in characters, not bytes: 500 two-byte letters stay a teaser. */
@@ -83,7 +84,7 @@ final class ExtractionCoverageGateTest extends TestCase
         self::assertSame(1000, mb_strlen($feed));
         $result = $this->okWith('<p>completely different words nothing shared</p>');
 
-        self::assertSame('mismatch', $this->gate->verify($result, '<p>' . $feed . '</p>')->reason);
+        self::assertSame(ExtractionFailure::Mismatch, $this->gate->verify($result, '<p>' . $feed . '</p>')->reason);
     }
 
     /** An empty extracted body shares nothing with a full feed article. */
@@ -91,12 +92,12 @@ final class ExtractionCoverageGateTest extends TestCase
     {
         $verified = $this->gate->verify($this->okWith(''), '<div>' . $this->paragraph() . '</div>');
 
-        self::assertSame('mismatch', $verified->reason);
+        self::assertSame(ExtractionFailure::Mismatch, $verified->reason);
     }
 
     public function testLeavesAnAlreadyFailedExtractionUntouched(): void
     {
-        $failed = ExtractionResult::failed('https://site.test/post', 'fetch');
+        $failed = ExtractionResult::failed('https://site.test/post', ExtractionFailure::Fetch);
 
         self::assertSame($failed, $this->gate->verify($failed, '<div>' . $this->paragraph() . '</div>'));
     }

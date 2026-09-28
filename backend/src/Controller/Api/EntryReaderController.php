@@ -9,7 +9,9 @@ use App\Http\ReaderJson;
 use App\Repository\EntryListRepository;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Reader\ArticleExtractorInterface;
+use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\OriginalHeroResolver;
@@ -52,13 +54,12 @@ final readonly class EntryReaderController
 
         $url = $entry->getUrl();
         $result = $url === null || $url === ''
-            ? ExtractionResult::failed(null, 'no_url')
-            : $this->extractor->extract(
-                $url,
-                $entry->getTitle(),
-                $entry->getAuthor(),
-                FeedMedia::fromEntry($entry),
-            );
+            ? ExtractionResult::failed(null, ExtractionFailure::NoUrl)
+            : $this->extractor->extract($url, new EntryHints(
+                title: $entry->getTitle(),
+                author: $entry->getAuthor(),
+                feedMedia: FeedMedia::fromEntry($entry),
+            ));
 
         // A confident-but-wrong extraction (page furniture instead of the article)
         // is failed here so the client falls back to the feed body (#654).

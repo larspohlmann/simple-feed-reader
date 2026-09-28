@@ -15,6 +15,8 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor;
 use App\Service\Reader\ArticleReadability;
+use App\Service\Reader\EntryHints;
+use App\Service\Reader\ExtractionFailure;
 use App\Service\Reader\ExtractionResult;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
@@ -228,7 +230,8 @@ final class ArticleExtractorTest extends TestCase
         );
         $entry->setMedia([new EntryMedium('https://site.test/img/photo.jpg', 'image', 1600, 900)], []);
 
-        $result = $extractor->extract('https://site.test/post', feedMedia: FeedMedia::fromEntry($entry));
+        $hints = new EntryHints(feedMedia: FeedMedia::fromEntry($entry));
+        $result = $extractor->extract('https://site.test/post', $hints);
 
         self::assertStringContainsString('width="1600"', (string) $result->contentHtml);
         self::assertStringContainsString('height="900"', (string) $result->contentHtml);
@@ -476,7 +479,7 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('http://169.254.169.254/');
 
         self::assertFalse($result->ok);
-        self::assertSame('fetch', $result->reason);
+        self::assertSame(ExtractionFailure::Fetch, $result->reason);
     }
 
     public function testFetchFailureCarriesTheRealErrorMessageAsDetail(): void
@@ -487,7 +490,7 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/x');
 
         self::assertFalse($result->ok);
-        self::assertSame('fetch', $result->reason);
+        self::assertSame(ExtractionFailure::Fetch, $result->reason);
         self::assertSame('HTTP 403 Forbidden — Access Denied Your request was blocked.', $result->detail);
     }
 
@@ -498,7 +501,35 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/x');
 
         self::assertFalse($result->ok);
-        self::assertContains($result->reason, ['unextractable', 'empty']);
+        self::assertContains($result->reason, [ExtractionFailure::Unextractable, ExtractionFailure::Empty]);
+    }
+
+    /** The extractor's own result fields, and the hint the entry passes in, survive the pipeline unmangled. */
+    public function testTheFinalUrlExcerptAndByLineArePinnedAndTheEntryAuthorReachesTheBody(): void
+    {
+        $caption = str_repeat('Real caption prose that documents the scene in detail. ', 4);
+        $html = '<html lang="en"><head><meta name="description" content="A short excerpt of the story.">'
+            . '<meta name="author" content="Jana Steger"></head>'
+            . '<body><article><p>Von <a href="https://example.test/jana">Jana Steger</a></p>'
+            . '<figure><img src="https://example.test/photo.jpg" alt="A"><figcaption>' . $caption
+            . '</figcaption></figure></article></body></html>';
+        $extractor = $this->extractor([
+            new MockResponse(
+                '',
+                ['http_code' => 301, 'response_headers' => ['location' => 'https://site.test/post-final']],
+            ),
+            new MockResponse($html, ['http_code' => 200]),
+        ]);
+
+        $result = $extractor->extract('https://site.test/post', new EntryHints(author: 'Jana Steger'));
+        $content = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertSame('https://site.test/post-final', $result->url);
+        self::assertSame('A short excerpt of the story.', $result->excerpt);
+        self::assertSame('Jana Steger', $result->byline);
+        self::assertStringNotContainsString('Jana Steger', $content);
+        self::assertStringContainsString('<p>A short excerpt of the story.</p>', $content);
     }
 
     public function testABlankPageStopsAsUnextractable(): void
@@ -508,8 +539,68 @@ final class ArticleExtractorTest extends TestCase
         $result = $extractor->extract('https://site.test/post');
 
         self::assertFalse($result->ok);
-        self::assertSame('unextractable', $result->reason);
+        self::assertSame(ExtractionFailure::Unextractable, $result->reason);
         self::assertNull($result->detail);
+    }
+
+    /** Readability found metadata but no article body; a video elsewhere on the page does not rescue that. */
+    public function testAPageWithNoArticleBodyFailsAsEmptyEvenWithMediaElsewhereOnThePage(): void
+    {
+        $html = '<html lang="en"><body><video src="https://example.test/clip.mp4" '
+            . 'poster="https://example.test/poster.jpg" controls></video></body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
+    }
+
+    /**
+     * The gate exits before the media that survives it ever pays for network verification (#800): the mock
+     * client below answers only the page request, so a stream candidate resolved before the gate would reach
+     * it for a second, unmocked request.
+     */
+    public function testMediaVerificationNeverRunsBeforeTheContentGate(): void
+    {
+        $html = '<html lang="en"><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://example.test/master.m3u8",'
+            . '"thumbnailUrl":"https://example.test/poster.jpg"}'
+            . '</script></body></html>';
+        $verificationRequested = false;
+        $responses = function (string $method, string $url) use ($html, &$verificationRequested): MockResponse {
+            if (str_contains($url, 'master.m3u8')) {
+                $verificationRequested = true;
+
+                return new MockResponse('#EXTM3U', ['http_code' => 200]);
+            }
+
+            return new MockResponse($html, ['http_code' => 200]);
+        };
+        $extractor = $this->extractor(
+            $responses,
+            ['site.test' => ['93.184.216.34'], 'example.test' => ['93.184.216.35']],
+        );
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($verificationRequested);
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
+    }
+
+    public function testAnArticleTheSanitizerStripsToNothingFailsAsEmpty(): void
+    {
+        $prose = str_repeat('Words that make up a real paragraph of an article body here. ', 8);
+        $html = '<html lang="en"><body><article><svg><text>' . $prose . '</text></svg></article></body></html>';
+        $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertNull((new EntrySanitizer())->sanitize('<svg><text>' . $prose . '</text></svg>'));
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
+        self::assertSame('https://site.test/post', $result->url);
     }
 
     public function testStripsASemanticHeaderMasthead(): void
@@ -517,7 +608,8 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-header.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'The Haiku Challenge', 'Clark Strand');
+        $hints = new EntryHints(title: 'The Haiku Challenge', author: 'Clark Strand');
+        $result = $extractor->extract('https://site.test/post', $hints);
         $content = (string) $result->contentHtml;
 
         self::assertStringNotContainsString('badge.png', $content);
@@ -555,7 +647,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-breadcrumb.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'Political Balancing Act');
+        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Political Balancing Act'));
         $content = (string) $result->contentHtml;
 
         self::assertStringNotContainsString('2026/36', $content);
@@ -571,7 +663,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-toolbar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'Shoulder to Shoulder');
+        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Shoulder to Shoulder'));
         $content = (string) $result->contentHtml;
 
         self::assertStringContainsString('reaffirmed its course', $content);
@@ -591,7 +683,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-masthead-metabar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'September Wallpapers');
+        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'September Wallpapers'));
         $content = (string) $result->contentHtml;
 
         self::assertStringNotContainsString('11 min read', $content);
@@ -605,7 +697,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-block-components.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'Block Component Headline');
+        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Block Component Headline'));
 
         self::assertTrue($result->ok);
         // Subheadings and the figure survive the wrapper-chain layout.
@@ -729,7 +821,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-inline-video.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', 'Inline video headline');
+        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Inline video headline'));
 
         $body = (string) $result->contentHtml;
         self::assertTrue($result->ok);
