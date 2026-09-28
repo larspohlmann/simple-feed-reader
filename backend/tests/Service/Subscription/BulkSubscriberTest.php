@@ -13,6 +13,7 @@ use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\TagStyle;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\TagJoins;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
@@ -180,9 +181,9 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame(5, $one->getPosition());
         self::assertSame(6, $two->getPosition());
         self::assertSame(7, $three->getPosition());
-        self::assertSame(7, $this->positionIn($one, 'Existing'));
-        self::assertSame(0, $this->positionIn($two, 'Fresh'));
-        self::assertSame(1, $this->positionIn($three, 'Fresh'));
+        self::assertSame(7, TagJoins::positionOf($one, $existingTag));
+        self::assertSame(0, TagJoins::positionOf($two, $result->tagsCreated[0]));
+        self::assertSame(1, TagJoins::positionOf($three, $result->tagsCreated[0]));
     }
 
     public function testTheCapCountsTheSubscriptionsThisBatchAlreadyMade(): void
@@ -228,16 +229,5 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertNotNull($subscription);
 
         return $subscription;
-    }
-
-    private function positionIn(Subscription $subscription, string $tagName): int
-    {
-        foreach ($subscription->getSubscriptionTags() as $join) {
-            if ($join->getTag()->getName() === $tagName) {
-                return $join->getPosition();
-            }
-        }
-
-        self::fail(sprintf('The subscription is not in the tag "%s".', $tagName));
     }
 }
