@@ -124,6 +124,32 @@ final class ItemMediaExtractorTest extends TestCase
         self::assertSame('Chapter two', $bundle->attachments[0]->title);
     }
 
+    public function testTopLevelVideoYieldsAVisualAndAPlayableAttachment(): void
+    {
+        $bundle = ItemMediaExtractor::extract($this->rssItem(
+            '<enclosure url="https://v/clip.mp4" type="video/mp4" length="5000"/>',
+        ));
+
+        self::assertCount(1, $bundle->media);
+        self::assertSame(VisualMediaKind::Video, $bundle->media[0]->kind);
+        self::assertSame('https://v/clip.mp4', $bundle->media[0]->url);
+        self::assertNull($bundle->media[0]->previewImageUrl);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://v/clip.mp4', $bundle->attachments[0]->url);
+        self::assertSame(5000, $bundle->attachments[0]->sizeInBytes);
+    }
+
+    public function testTopLevelNonMediaEnclosureBecomesAnAttachmentOnly(): void
+    {
+        $bundle = ItemMediaExtractor::extract($this->rssItem(
+            '<enclosure url="https://cdn/paper.pdf" type="application/pdf" length="900"/>',
+        ));
+
+        self::assertSame([], $bundle->media);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('application/pdf', $bundle->attachments[0]->mimeType);
+    }
+
     public function testUnknownTypelessNodeIsLeftOut(): void
     {
         $bundle = ItemMediaExtractor::extract($this->rssItem(

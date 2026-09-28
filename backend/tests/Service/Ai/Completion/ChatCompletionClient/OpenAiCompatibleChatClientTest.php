@@ -30,7 +30,10 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
+use Symfony\Component\HttpClient\Response\ResponseStream;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
+use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 final class OpenAiCompatibleChatClientTest extends TestCase
 {
@@ -1148,6 +1151,29 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertFalse($outcomes[0]->isFailure());
         self::assertTrue($outcomes[1]->isFailure());
         self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[1]->cause());
+    }
+
+    public function testCompleteManySettlesACallWhoseStreamNeverClosedAsAFailure(): void
+    {
+        $client = $this->clientUsing(new class ([$this->sseStream('{"picks":[]}')]) extends MockHttpClient {
+            public function stream(
+                ResponseInterface|iterable $responses,
+                ?float $timeout = null,
+            ): ResponseStreamInterface {
+                return new ResponseStream((static function (): \Generator {
+                    yield from [];
+                })());
+            }
+        });
+
+        $outcomes = $client->completeMany($this->connection(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertCount(1, $outcomes);
+        self::assertInstanceOf(CompletionOutcomeModel::class, $outcomes[0]);
+        self::assertTrue($outcomes[0]->isFailure());
+        self::assertInstanceOf(ProviderUnreachableException::class, $outcomes[0]->cause());
     }
 
     /** @return array<string, mixed> the decoded JSON request body */
