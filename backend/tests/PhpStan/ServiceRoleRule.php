@@ -49,7 +49,10 @@ final readonly class ServiceRoleRule implements Rule
     public function processNode(Node $node, Scope $scope): array
     {
         $map = ServiceRoleMap::fromCollected($this->reflectionProvider, $node);
-        $errors = [];
+        $errors = array_map(
+            static fn (UnresolvedServiceRoleClass $class): IdentifierRuleError => $class->toError(),
+            $map->unresolvedClasses(),
+        );
         foreach ($this->checkers as $checker) {
             foreach ($checker->violationsIn($map) as $violation) {
                 if (\in_array($violation->check, $this->checks, true)) {

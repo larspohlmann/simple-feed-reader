@@ -20,29 +20,51 @@ final readonly class ServiceRoleMap
      * @param array<string, ServiceRoleClass> $classes
      * @param array<string, true> $builtPerCall
      * @param array<string, true> $builtInConstructor
+     * @param list<UnresolvedServiceRoleClass> $unresolvedClasses
      */
     public function __construct(
         private ReflectionProvider $reflectionProvider,
         private array $classes,
         private array $builtPerCall,
         private array $builtInConstructor,
+        private array $unresolvedClasses,
     ) {
     }
 
     public static function fromCollected(ReflectionProvider $reflectionProvider, CollectedDataNode $node): self
     {
+        return self::fromCollectedData(
+            $reflectionProvider,
+            $node->get(ServiceRoleClassCollector::class),
+            $node->get(ServiceRoleInstantiationCollector::class),
+        );
+    }
+
+    /**
+     * @param array<string, list<array{string, int, list<string>}>> $collectedClasses
+     * @param array<string, list<array{string, bool}>> $collectedInstantiations
+     */
+    public static function fromCollectedData(
+        ReflectionProvider $reflectionProvider,
+        array $collectedClasses,
+        array $collectedInstantiations,
+    ): self {
         $classes = [];
-        foreach ($node->get(ServiceRoleClassCollector::class) as $file => $collected) {
+        $unresolved = [];
+        foreach ($collectedClasses as $file => $collected) {
             foreach ($collected as [$name, $line, $dtoReferences]) {
-                if ($reflectionProvider->hasClass($name)) {
-                    $reflection = $reflectionProvider->getClass($name);
-                    $classes[$name] = new ServiceRoleClass($reflection, $file, $line, $dtoReferences);
+                if (!$reflectionProvider->hasClass($name)) {
+                    $unresolved[$name] = new UnresolvedServiceRoleClass($name, $file, $line);
+
+                    continue;
                 }
+                $reflection = $reflectionProvider->getClass($name);
+                $classes[$name] = new ServiceRoleClass($reflection, $file, $line, $dtoReferences);
             }
         }
         $perCall = [];
         $inConstructor = [];
-        foreach ($node->get(ServiceRoleInstantiationCollector::class) as $instantiations) {
+        foreach ($collectedInstantiations as $instantiations) {
             foreach ($instantiations as [$name, $isPerCall]) {
                 if ($isPerCall) {
                     $perCall[$name] = true;
@@ -52,8 +74,15 @@ final readonly class ServiceRoleMap
             }
         }
         ksort($classes);
+        ksort($unresolved);
 
-        return new self($reflectionProvider, $classes, $perCall, $inConstructor);
+        return new self($reflectionProvider, $classes, $perCall, $inConstructor, array_values($unresolved));
+    }
+
+    /** @return list<UnresolvedServiceRoleClass> */
+    public function unresolvedClasses(): array
+    {
+        return $this->unresolvedClasses;
     }
 
     /** @return list<ServiceRoleClass> */

@@ -289,6 +289,30 @@ final class ServiceRoleRuleTest extends RuleTestCase
         ]);
     }
 
+    public function testAClassReflectionCannotResolveIsReportedNotDropped(): void
+    {
+        $map = ServiceRoleMap::fromCollectedData(
+            self::getContainer()->getByType(ReflectionProvider::class),
+            [self::FIXTURES => [['App\Service\Ghost\Phantom', 7, []]]],
+            [],
+        );
+
+        $unresolved = $map->unresolvedClasses();
+
+        self::assertSame(
+            [['App\Service\Ghost\Phantom', self::FIXTURES, 7]],
+            array_map(
+                static fn (UnresolvedServiceRoleClass $class): array => [$class->name, $class->file, $class->line],
+                $unresolved,
+            ),
+        );
+        self::assertSame(
+            'Service role: App\Service\Ghost\Phantom cannot be reflected, so no role check sees it.',
+            $unresolved[0]->toError()->getMessage(),
+        );
+        self::assertSame('simpleFeedReader.serviceRole.unresolved', $unresolved[0]->toError()->getIdentifier());
+    }
+
     private static function roleSuffix(string $role): string
     {
         return sprintf('is an interface in %s/, so its name ends in %sInterface', $role, $role);
