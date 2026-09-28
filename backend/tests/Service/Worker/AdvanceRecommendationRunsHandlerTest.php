@@ -11,6 +11,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -120,7 +121,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // single batch frozen, and makes no provider call yet.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
         $run = $this->activeRun($user);
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(RunStatus::Running, $run->getStatus());
         $batch = $run->getCandidateBatches()[0] ?? [];
         self::assertNotSame([], $batch);
 
@@ -144,7 +145,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted->getStatus());
+        self::assertSame(RunStatus::Completed, $persisted->getStatus());
         self::assertNotCount(0, $this->recommendationItems($persisted));
     }
 
@@ -217,7 +218,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $stillActive = $this->runs()->findActiveForUser($strugglingUser);
         self::assertNotNull($stillActive);
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $stillActive->getStatus());
+        self::assertSame(RunStatus::Running, $stillActive->getStatus());
 
         // The healthy run's own tick was not blocked by the struggling one's
         // failure in the same firing: its distillation phase went through.
@@ -237,7 +238,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
+        self::assertSame(RunStatus::Completed, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
 
         $this->assertSoleProviderFailureWarningLogged($logSpy, $strugglingRun->getId());
@@ -263,7 +264,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $stillActive = $this->runs()->findActiveForUser($user);
         self::assertNotNull($stillActive);
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $stillActive->getStatus());
+        self::assertSame(RunStatus::Running, $stillActive->getStatus());
 
         $this->assertSoleProviderFailureWarningLogged($logSpy, $run->getId());
     }
@@ -294,7 +295,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
         self::assertSame('The stored API key can no longer be read.', $failed->getError());
         self::assertSame([], $logSpy->getRecords());
     }
@@ -346,7 +347,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
         self::assertSame('The AI provider is no longer configured.', $failed->getError());
         self::assertSame([], $logSpy->getRecords());
     }
@@ -363,7 +364,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $user = $this->user('never-snapshotted@example.test');
         $this->fixtures->seedSingleBatchFixture($user);
         $this->starter()->start($user);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($user)->getStatus());
+        self::assertSame(RunStatus::Pending, $this->activeRun($user)->getStatus());
 
         $this->deleteAiSettingsFor($user);
 
@@ -372,7 +373,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
         self::assertSame('The AI provider is no longer configured.', $failed->getError());
     }
 
@@ -388,7 +389,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $strugglingUser = $this->user('never-snapshotted-struggling@example.test');
         $this->fixtures->seedSingleBatchFixture($strugglingUser);
         $this->starter()->start($strugglingUser);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $this->activeRun($strugglingUser)->getStatus());
+        self::assertSame(RunStatus::Pending, $this->activeRun($strugglingUser)->getStatus());
         $this->deleteAiSettingsFor($strugglingUser);
 
         $healthyUser = $this->user('healthy-after-pending-failure@example.test');
@@ -401,7 +402,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
 
         // The fairness this test is about is already proven above: the
         // healthy run's own distillation tick went through in the very same
@@ -418,7 +419,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
+        self::assertSame(RunStatus::Completed, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
     }
 
@@ -444,7 +445,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->fixtures->seedSingleBatchFixture($strugglingUser);
         $this->starter()->start($strugglingUser);
         $strugglingRun = $this->activeRun($strugglingUser);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $strugglingRun->getStatus());
+        self::assertSame(RunStatus::Pending, $strugglingRun->getStatus());
         $this->deleteAiSettingsFor($strugglingUser);
 
         $healthyUser = $this->user('flush-failure-healthy@example.test');
@@ -469,7 +470,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // distillation flush still happened at all in the same firing.
         $struggling = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($struggling);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $struggling->getStatus());
+        self::assertSame(RunStatus::Failed, $struggling->getStatus());
 
         self::assertFalse($this->activeRun($healthyUser)->progress()->distillPending);
 
@@ -486,7 +487,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $advanced = $this->runs()->findLatestForUser($healthyUser);
         self::assertNotNull($advanced);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $advanced->getStatus());
+        self::assertSame(RunStatus::Completed, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
 
         // The flush() failure is an unanticipated \Throwable, not one of the

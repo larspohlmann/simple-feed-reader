@@ -14,6 +14,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CallPhase;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
@@ -188,7 +189,7 @@ final readonly class RecommendationRunFixtures
      */
     public function log(
         RecommendationRun $run,
-        string $phase,
+        CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
         string $requestBody,

@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Controller\Api;
 
 use App\Entity\CallOutcome;
-use App\Entity\RecommendationRun;
-use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
+use App\Enum\RunStatus;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -72,7 +73,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $run = $this->fixtures()->createRun($user);
         $finished = $this->fixtures()->log(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'req a',
@@ -82,7 +83,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
             $finished,
             'done text',
             new CallOutcome(
-                RecommendationRunLog::VERDICT_USABLE,
+                CallVerdict::Usable,
                 1_900_000,
                 new \DateTimeImmutable('2026-08-08T10:00:05Z'),
                 'stop',
@@ -90,7 +91,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         );
         $open = $this->fixtures()->log(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             2,
             1,
             'req b',
@@ -144,7 +145,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         );
         $run = $payload['run'];
         self::assertIsArray($run);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $run['status']);
+        self::assertSame(RunStatus::Pending->value, $run['status']);
         self::assertSame(0, $run['attempts']);
     }
 
@@ -201,9 +202,9 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-run-list@example.test');
         $older = $this->fixtures()->createRun($user);
-        $this->fixtures()->log($older, RecommendationRunLog::PHASE_BATCH, 1, 1, 'older request');
+        $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
-        $this->fixtures()->log($newer, RecommendationRunLog::PHASE_BATCH, 1, 1, 'newer request');
+        $this->fixtures()->log($newer, CallPhase::Batch, 1, 1, 'newer request');
         $this->em()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log', server: $headers);
@@ -234,9 +235,9 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-run-pick@example.test');
         $older = $this->fixtures()->createRun($user);
-        $this->fixtures()->log($older, RecommendationRunLog::PHASE_BATCH, 1, 1, 'older request');
+        $this->fixtures()->log($older, CallPhase::Batch, 1, 1, 'older request');
         $newer = $this->fixtures()->createRun($user);
-        $this->fixtures()->log($newer, RecommendationRunLog::PHASE_BATCH, 1, 1, 'newer request');
+        $this->fixtures()->log($newer, CallPhase::Batch, 1, 1, 'newer request');
         $this->em()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log?run=' . $older->getId(), server: $headers);
@@ -261,7 +262,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-run-stale@example.test');
         $run = $this->fixtures()->createRun($user);
-        $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'request');
+        $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'request');
         $this->em()->flush();
 
         $client->request('GET', '/api/recommendations/runs/debug-log?run=999999', server: $headers);
@@ -277,12 +278,12 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('debug-log-detail@example.test');
         $run = $this->fixtures()->createRun($user);
-        $log = $this->fixtures()->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
+        $log = $this->fixtures()->log($run, CallPhase::Batch, 1, 1, 'req');
         $this->fixtures()->settleLog(
             $log,
             'res',
             new CallOutcome(
-                RecommendationRunLog::VERDICT_USABLE,
+                CallVerdict::Usable,
                 4_096,
                 new \DateTimeImmutable('2026-08-08T10:00:05Z'),
                 'length',
@@ -317,7 +318,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers] = $this->auth('debug-log-detail-mine@example.test');
         [, $otherUser] = $this->auth('debug-log-detail-theirs@example.test');
         $theirRun = $this->fixtures()->createRun($otherUser);
-        $theirLog = $this->fixtures()->log($theirRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
+        $theirLog = $this->fixtures()->log($theirRun, CallPhase::Batch, 1, 1, 'req');
         $this->em()->flush();
         $id = $theirLog->getId();
         self::assertNotNull($id);

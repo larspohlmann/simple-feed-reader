@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -38,28 +39,6 @@ class RecommendationRun
 {
     use PersistedId;
 
-    public const string STATUS_PENDING = 'pending';
-    public const string STATUS_RUNNING = 'running';
-    public const string STATUS_COMPLETED = 'completed';
-    public const string STATUS_FAILED = 'failed';
-
-    /** Terminal, and reached only by the user stopping the run themselves. */
-    public const string STATUS_CANCELLED = 'cancelled';
-
-    /**
-     * The statuses that mean the run is over. resume() deliberately leaves
-     * completedAt standing, so "carries a completion time" and "has finished"
-     * are two different questions: anything that reports a run as finished has
-     * to ask this one (#409).
-     *
-     * @var list<string>
-     */
-    public const array TERMINAL_STATUSES = [
-        self::STATUS_COMPLETED,
-        self::STATUS_FAILED,
-        self::STATUS_CANCELLED,
-    ];
-
     /** First call plus the spec's two retries. */
     public const int MAX_ATTEMPTS = 3;
 
@@ -81,8 +60,8 @@ class RecommendationRun
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    #[ORM\Column(length: 16)]
-    private string $status = self::STATUS_PENDING;
+    #[ORM\Column(length: 16, enumType: RunStatus::class)]
+    private RunStatus $status = RunStatus::Pending;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
@@ -157,7 +136,7 @@ class RecommendationRun
         return $this->user;
     }
 
-    public function getStatus(): string
+    public function getStatus(): RunStatus
     {
         return $this->status;
     }
@@ -182,10 +161,10 @@ class RecommendationRun
      */
     public function snapshot(array $candidateBatches): void
     {
-        $this->guardStatus(self::STATUS_PENDING, 'snapshot');
+        $this->guardStatus(RunStatus::Pending, 'snapshot');
 
         $this->candidateBatches = $candidateBatches;
-        $this->status = self::STATUS_RUNNING;
+        $this->status = RunStatus::Running;
     }
 
     /**
@@ -211,7 +190,7 @@ class RecommendationRun
      */
     public function recordBatchWinners(array $picks): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'recordBatchWinners');
+        $this->guardStatus(RunStatus::Running, 'recordBatchWinners');
 
         $this->batchWinners[] = $picks;
         $this->batchProgress->recordCompletedBatch();
@@ -223,7 +202,7 @@ class RecommendationRun
      * call begins so a concurrent status poll cannot start the ETA early. */
     public function markFirstBatchStarted(): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'mark the first batch as started');
+        $this->guardStatus(RunStatus::Running, 'mark the first batch as started');
         $this->batchProgress->markFirstBatchStarted();
     }
 
@@ -258,14 +237,14 @@ class RecommendationRun
 
     public function recordInvalidReply(string $reply): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'recordInvalidReply');
+        $this->guardStatus(RunStatus::Running, 'recordInvalidReply');
 
         $this->callAttempts->recordInvalidReply($reply);
     }
 
     public function recordTransportFailure(): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'recordTransportFailure');
+        $this->guardStatus(RunStatus::Running, 'recordTransportFailure');
 
         $this->callAttempts->recordTransportFailure();
     }
@@ -287,7 +266,7 @@ class RecommendationRun
      */
     public function recordProfile(?string $profileText): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'recordProfile');
+        $this->guardStatus(RunStatus::Running, 'recordProfile');
 
         $this->runProfile->record($profileText);
         $this->callAttempts->reset();
@@ -326,13 +305,13 @@ class RecommendationRun
 
     public function deferRetryUntil(\DateTimeImmutable $when): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'defer a recommendation run');
+        $this->guardStatus(RunStatus::Running, 'defer a recommendation run');
         $this->throttle->deferUntil($when);
     }
 
     public function reduceWaveConcurrency(int $configuredCap): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'reduce the wave concurrency of');
+        $this->guardStatus(RunStatus::Running, 'reduce the wave concurrency of');
         $this->throttle->reduceConcurrency($configuredCap);
     }
 
@@ -393,9 +372,9 @@ class RecommendationRun
 
     public function complete(\DateTimeImmutable $when): void
     {
-        $this->guardStatus(self::STATUS_RUNNING, 'complete');
+        $this->guardStatus(RunStatus::Running, 'complete');
 
-        $this->terminate(self::STATUS_COMPLETED, $when);
+        $this->terminate(RunStatus::Completed, $when);
         $this->batchProgress->completeAllBatches(
             $this->progress()->batchesTotal ?? $this->batchProgress->batchesDone(),
         );
@@ -411,9 +390,9 @@ class RecommendationRun
      */
     public function fail(string $error, \DateTimeImmutable $when): void
     {
-        $this->guardStatusOneOf([self::STATUS_PENDING, self::STATUS_RUNNING], 'fail');
+        $this->guardStatusOneOf(RunStatus::active(), 'fail');
 
-        $this->terminate(self::STATUS_FAILED, $when);
+        $this->terminate(RunStatus::Failed, $when);
         $this->error = $error;
     }
 
@@ -431,16 +410,16 @@ class RecommendationRun
      */
     public function cancel(\DateTimeImmutable $when): void
     {
-        $this->guardStatusOneOf([self::STATUS_PENDING, self::STATUS_RUNNING], 'cancel');
+        $this->guardStatusOneOf(RunStatus::active(), 'cancel');
 
-        $this->terminate(self::STATUS_CANCELLED, $when);
+        $this->terminate(RunStatus::Cancelled, $when);
     }
 
     public function resume(): void
     {
-        $this->guardStatus(self::STATUS_FAILED, 'resume');
+        $this->guardStatus(RunStatus::Failed, 'resume');
 
-        $this->status = self::STATUS_RUNNING;
+        $this->status = RunStatus::Running;
         $this->error = null;
         $this->callAttempts->reset();
         $this->throttle->reset();
@@ -452,19 +431,19 @@ class RecommendationRun
      * stamp the time", and a fourth ending that forgot the stamp would leave a
      * finished run looking unfinished to every query that reads completedAt.
      */
-    private function terminate(string $status, \DateTimeImmutable $when): void
+    private function terminate(RunStatus $status, \DateTimeImmutable $when): void
     {
         $this->status = $status;
         $this->completedAt = $when;
     }
 
-    private function guardStatus(string $requiredStatus, string $transition): void
+    private function guardStatus(RunStatus $requiredStatus, string $transition): void
     {
         $this->guardStatusOneOf([$requiredStatus], $transition);
     }
 
     /**
-     * @param list<string> $allowedStatuses
+     * @param list<RunStatus> $allowedStatuses
      */
     private function guardStatusOneOf(array $allowedStatuses, string $transition): void
     {
@@ -472,7 +451,7 @@ class RecommendationRun
             throw new \LogicException(sprintf(
                 'Cannot %s a recommendation run from status "%s".',
                 $transition,
-                $this->status,
+                $this->status->value,
             ));
         }
     }

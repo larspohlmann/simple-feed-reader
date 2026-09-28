@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
@@ -57,6 +58,6 @@ final readonly class RecommendationTickCheckpoint
 
     private function wasStopped(RecommendationRun $run): bool
     {
-        return RecommendationRun::STATUS_CANCELLED === $this->runs->statusOf($run->requireId());
+        return RunStatus::Cancelled === $this->runs->statusOf($run->requireId());
     }
 }

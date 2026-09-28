@@ -40,7 +40,7 @@ final readonly class RecommendationCallRepository
         $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
             'response_text' => $content,
-            'verdict' => $outcome->verdict,
+            'verdict' => $outcome->verdict->value,
             'wire_bytes' => $outcome->wireBytes,
             'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
             'finish_reason' => $outcome->finishReason,
@@ -51,7 +51,7 @@ final readonly class RecommendationCallRepository
     {
         $outcome = $settlement->outcome;
         $this->connection->update('recommendation_run_log', [
-            'verdict' => $outcome->verdict,
+            'verdict' => $outcome->verdict->value,
             'wire_bytes' => $outcome->wireBytes,
             'finished_at' => $outcome->finishedAt->format('Y-m-d H:i:s'),
             'error_detail' => $errorDetail,

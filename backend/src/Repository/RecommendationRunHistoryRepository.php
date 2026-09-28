@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Service\Recommendation\Feed\MonthWindow;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
@@ -26,7 +27,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @phpstan-type HistoryRow array{
  *     id: int,
- *     status: string,
+ *     status: RunStatus,
  *     providerHost: ?string,
  *     model: ?string,
  *     createdAt: \DateTimeImmutable,

@@ -7,6 +7,8 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\CompletionUsage;
@@ -44,7 +46,7 @@ final class RecordedCallTest extends DbTestCase
 
         $this->log = new RecommendationRunLog(
             $this->run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'the request',
@@ -64,7 +66,7 @@ final class RecordedCallTest extends DbTestCase
 
         $log = $this->reload($this->log);
         self::assertSame('the answer', $log->getResponseText());
-        self::assertSame(RecommendationRunLog::VERDICT_USABLE, $log->getVerdict());
+        self::assertSame(CallVerdict::Usable, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertNull($log->getErrorDetail());
     }
@@ -86,7 +88,7 @@ final class RecordedCallTest extends DbTestCase
         $call->abortAfterTransportFailure('cURL error 28');
 
         $log = $this->reload($this->log);
-        self::assertSame(RecommendationRunLog::VERDICT_TRANSPORT_FAILED, $log->getVerdict());
+        self::assertSame(CallVerdict::TransportFailed, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
         self::assertSame('cURL error 28', $log->getErrorDetail());
     }
@@ -136,7 +138,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksTheProvidersUsageOntoTheRunWhenTheCallSettles(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 1200,
@@ -156,26 +158,9 @@ final class RecordedCallTest extends DbTestCase
         ], $this->runTotals());
     }
 
-    public function testBanksTheUsageWithTheDebugSwitchOff(): void
-    {
-        $call = $this->recordedCall(logId: null);
-
-        $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
-            promptTokens: 10,
-            completionTokens: 2,
-            reasoningTokens: 0,
-            cachedTokens: 0,
-            costNanoCredits: 5000,
-        )));
-        $call->finishUsable('{}');
-
-        self::assertSame(10, $this->runTotals()['promptTokens']);
-        self::assertSame(5000, $this->runTotals()['costNanoCredits']);
-    }
-
     public function testBanksTheUsageOfACallThatFailedInTransport(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
             promptTokens: 900,
@@ -191,7 +176,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testLeavesTheCostNullWhenTheProviderReportedNone(): void
     {
-        $call = $this->recordedCall(logId: null);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 40,
@@ -208,7 +193,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksOneCallOnceHoweverManySettlePathsReachIt(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('', 100, null, new CompletionUsage(
             promptTokens: 900,
@@ -226,7 +211,7 @@ final class RecordedCallTest extends DbTestCase
 
     public function testBanksNothingWhenTheProviderSentNoUsageAtAll(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop'));
         $call->finishUsable('{}');
@@ -246,7 +231,7 @@ final class RecordedCallTest extends DbTestCase
      */
     public function testBanksTwoCallsUsageAsASumNotAnOverwrite(): void
     {
-        $first = $this->recordedCall(logId: 7);
+        $first = $this->call();
         $first->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 1000,
             completionTokens: 200,
@@ -256,7 +241,7 @@ final class RecordedCallTest extends DbTestCase
         )));
         $first->finishUsable('{}');
 
-        $second = $this->recordedCall(logId: 8);
+        $second = $this->call();
         $second->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 400,
             completionTokens: 90,
@@ -285,7 +270,7 @@ final class RecordedCallTest extends DbTestCase
      */
     public function testKeepsTheUsageSeenBeforeALaterReportArrivesWithoutIt(): void
     {
-        $call = $this->recordedCall(logId: 7);
+        $call = $this->call();
 
         $call->streamProgressed(new CompletionStreamProgress('{}', 100, 'stop', new CompletionUsage(
             promptTokens: 500,
@@ -304,23 +289,7 @@ final class RecordedCallTest extends DbTestCase
     private function call(): RecordedCall
     {
         $runId = $this->run->requireId();
-        $logId = $this->log->getId();
-        self::assertNotNull($logId);
-
-        $calls = new RecommendationCallRepository($this->em->getConnection());
-
-        return new RecordedCall($calls, $this->clock, $runId, $logId);
-    }
-
-    /**
-     * Unlike call(), $logId is not the real log row's id: these tests exist
-     * to prove bankUsage() runs before the $logId guard, so an arbitrary
-     * value that is null exactly when the caller wants "debug off" serves
-     * that better than the fixture's own log, whose id is real either way.
-     */
-    private function recordedCall(?int $logId): RecordedCall
-    {
-        $runId = $this->run->requireId();
+        $logId = $this->log->requireId();
 
         $calls = new RecommendationCallRepository($this->em->getConnection());
 

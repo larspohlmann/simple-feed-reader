@@ -11,6 +11,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CallPhase;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
@@ -88,7 +89,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
         $run->snapshot([[1]]);
         $item = new RecommendationItem($run, $this->entry('mine'), 1, 'reason');
         $this->em->persist($item);
-        $log = $this->fixtures->log($run, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
+        $log = $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'req');
         $run->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
         $this->em->flush();
         $runId = $run->getId();
@@ -102,7 +103,7 @@ final class RecommendationRunPurgerTest extends DbTestCase
         $otherRun->snapshot([[1]]);
         $otherItem = new RecommendationItem($otherRun, $this->entry('theirs'), 1, 'reason');
         $this->em->persist($otherItem);
-        $otherLog = $this->fixtures->log($otherRun, RecommendationRunLog::PHASE_BATCH, 1, 1, 'req');
+        $otherLog = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'req');
         $otherRun->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
         $this->em->flush();
         $otherRunId = $otherRun->getId();

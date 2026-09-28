@@ -8,6 +8,8 @@ use App\Entity\AiProviderSettings;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -22,6 +24,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Against the real repository and entity manager, not mocks: start()'s job is
  * to decide between three existing-run states (none, active, failed) and a
  * mock would have to encode that decision itself instead of proving it.
+ *
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunStarterTest extends DbTestCase
 {
@@ -119,7 +123,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertNotNull($run);
         self::assertSame('openrouter.ai', $run->getProviderHost());
         self::assertSame('x-ai/grok-4-fast', $run->getModel());
-        self::assertSame(RecommendationRun::STATUS_PENDING, $report->status);
+        self::assertSame(RunStatus::Pending->value, $report->status);
     }
 
     public function testRestampsAResumedRunWithTheProviderItWillNowCall(): void
@@ -224,7 +228,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->em->persist($run);
         $this->em->persist(new RecommendationRunLog(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             $requestBody,
@@ -243,7 +247,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->em->persist($failed);
         $this->em->persist(new RecommendationRunLog(
             $failed,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             1,
             1,
             'kept request',
@@ -253,7 +257,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
         $report = $this->starter()->resume($this->user);
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertSame(RunStatus::Running->value, $report->status);
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
         $this->em->clear();
         self::assertCount(1, $this->logRowsOfLatestRun());
@@ -281,10 +285,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     }
 
     /**
-    /**
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function logRowsOfLatestRun(): array
     {

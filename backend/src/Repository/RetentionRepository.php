@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
+use App\Enum\RunStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -76,7 +77,7 @@ final readonly class RetentionRepository
             RecommendationRun::class,
             RecommendationItem::class,
         ))
-            ->setParameter('completed', RecommendationRun::STATUS_COMPLETED)
+            ->setParameter('completed', RunStatus::Completed)
             ->execute();
     }
 

@@ -11,6 +11,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationItemRepository;
@@ -56,15 +57,15 @@ final class RecommendationFeedTest extends DbTestCase
         return $entry;
     }
 
-    private function seedRun(User $user, string $status): RecommendationRun
+    private function seedRun(User $user, RunStatus $status): RecommendationRun
     {
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
 
-        if ($status !== RecommendationRun::STATUS_PENDING) {
+        if ($status !== RunStatus::Pending) {
             $run->snapshot([[1]]);
         }
 
-        if ($status === RecommendationRun::STATUS_COMPLETED) {
+        if ($status === RunStatus::Completed) {
             $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
         }
 
@@ -98,15 +99,15 @@ final class RecommendationFeedTest extends DbTestCase
         $entryC = $this->entry('c');
         $entryD = $this->entry('d');
 
-        $run1 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run1 = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run1, $entryA, 1, 'run1 reason a');
         $this->item($run1, $entryB, 2, 'run1 reason b');
 
-        $run2 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run2 = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run2, $entryB, 1, 'run2 reason b');
         $this->item($run2, $entryC, 2, 'run2 reason c');
 
-        $runningRun = $this->seedRun($this->user, RecommendationRun::STATUS_RUNNING);
+        $runningRun = $this->seedRun($this->user, RunStatus::Running);
         $this->item($runningRun, $entryD, 1, 'running reason d');
 
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
@@ -126,7 +127,7 @@ final class RecommendationFeedTest extends DbTestCase
         );
         $this->em->persist($strangerEntry);
         $this->em->flush();
-        $strangerRun = $this->seedRun($stranger, RecommendationRun::STATUS_COMPLETED);
+        $strangerRun = $this->seedRun($stranger, RunStatus::Completed);
         $this->item($strangerRun, $strangerEntry, 1, 'stranger reason');
 
         $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
@@ -149,7 +150,7 @@ final class RecommendationFeedTest extends DbTestCase
     public function testRowCarriesTheRunGenerationTime(): void
     {
         $entryA = $this->entry('a');
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryA, 1, 'reason a');
 
         $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 20), null);
@@ -182,7 +183,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($viewedState);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryOld, 1, 'reason old');
         $this->item($run, $entryFav, 2, 'reason fav');
         $this->item($run, $entryKept, 3, 'reason kept');
@@ -236,7 +237,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
         $this->item($run, $hidden, 2, 'reason hidden');
         $this->item($run, $unreadAgain, 3, 'reason explicitly unread');
@@ -263,7 +264,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($hiddenState);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
         $this->item($run, $hidden, 2, 'reason hidden');
 
@@ -283,7 +284,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($readState);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
         $this->item($run, $read, 2, 'reason read');
 
@@ -331,7 +332,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($customEntry);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $customEntry, 1, 'reason custom');
 
         $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
@@ -357,7 +358,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($untitledEntry);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $untitledEntry, 1, 'reason untitled');
 
         $rows = $this->repo()->listForYou(new ForYouFeedQuery($this->user, null, 50), null);
@@ -370,7 +371,7 @@ final class RecommendationFeedTest extends DbTestCase
         $entryA = $this->entry('a');
         $entryB = $this->entry('b');
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryA, 1, 'reason a');
         $this->item($run, $entryB, 2, 'reason b');
 
@@ -384,10 +385,10 @@ final class RecommendationFeedTest extends DbTestCase
         $entryB = $this->entry('b');
         $entryC = $this->entry('c');
 
-        $run1 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run1 = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run1, $entryA, 1, 'reason a');
 
-        $run2 = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run2 = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run2, $entryB, 1, 'reason b');
         $this->item($run2, $entryC, 2, 'reason c');
 
@@ -405,7 +406,7 @@ final class RecommendationFeedTest extends DbTestCase
     public function testUnsubscribingHidesItsItems(): void
     {
         $entry = $this->entry('gone');
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entry, 1, 'reason gone');
 
         $this->em->remove($this->sub);
@@ -440,7 +441,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->em->persist($entryB);
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $entryA, 1, 'reason a');
         $this->item($run, $entryB, 2, 'reason b');
 
@@ -455,7 +456,7 @@ final class RecommendationFeedTest extends DbTestCase
     {
         $unread = $this->entry('unread');
         $read = $this->entry('read');
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
         $this->item($run, $read, 2, 'reason read');
         $readState = new EntryState($this->user, $read);
@@ -486,7 +487,7 @@ final class RecommendationFeedTest extends DbTestCase
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-08-07T00:00:00Z'));
         $this->em->flush();
 
-        $run = $this->seedRun($this->user, RecommendationRun::STATUS_COMPLETED);
+        $run = $this->seedRun($this->user, RunStatus::Completed);
         $this->item($run, $unread, 1, 'reason unread');
         $this->item($run, $hidden, 2, 'reason hidden');
         $this->item($run, $underWatermark, 3, 'reason under watermark');

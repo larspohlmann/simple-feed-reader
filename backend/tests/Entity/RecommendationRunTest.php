@@ -6,6 +6,7 @@ namespace App\Tests\Entity;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunTest extends TestCase
@@ -29,7 +30,7 @@ final class RecommendationRunTest extends TestCase
 
         $run->snapshot([[1, 2], [3]]);
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame([[1, 2], [3]], $run->getCandidateBatches());
         self::assertSame(4, $run->progress()->batchesTotal); // 2 batches + distill + consolidate
     }
@@ -204,7 +205,7 @@ final class RecommendationRunTest extends TestCase
 
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
+        self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertFalse($run->hasExhaustedTransportRetries());
     }
 
@@ -241,7 +242,7 @@ final class RecommendationRunTest extends TestCase
 
         $run->resume();
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertNull($run->getError());
         self::assertSame([[1]], $run->getCandidateBatches()); // checkpoints survive
 
@@ -257,7 +258,7 @@ final class RecommendationRunTest extends TestCase
 
         $run->complete($when);
 
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $run->getStatus());
+        self::assertSame(RunStatus::Completed, $run->getStatus());
         self::assertSame($when, $run->getCompletedAt());
         self::assertSame(4, $run->progress()->batchesDone);
     }
@@ -292,7 +293,7 @@ final class RecommendationRunTest extends TestCase
 
         $run->fail('boom', new \DateTimeImmutable('2026-08-07T10:00:00Z'));
 
-        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame(RunStatus::Failed, $run->getStatus());
         self::assertSame('boom', $run->getError());
     }
 
@@ -384,6 +385,24 @@ final class RecommendationRunTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $run->recordProfile('Likes Rust.');
+    }
+
+    public function testMarkFirstBatchStartedBeforeSnapshotThrows(): void
+    {
+        $run = $this->makeRun();
+
+        $this->expectException(\LogicException::class);
+        $run->markFirstBatchStarted();
+    }
+
+    public function testCancelAfterAlreadyCompletedThrows(): void
+    {
+        $run = $this->makeRun();
+        $run->snapshot([[1]]);
+        $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
+
+        $this->expectException(\LogicException::class);
+        $run->cancel(new \DateTimeImmutable('2026-08-07T10:00:01Z'));
     }
 
     public function testRecordProfileResetsAttemptsToExactlyZero(): void

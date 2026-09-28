@@ -11,6 +11,7 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\DueRecommendationRunFinder;
@@ -131,7 +132,7 @@ final class ForYouSweepTest extends DbTestCase
         // now RUNNING rather than PENDING or completed.
         $run = $this->runs()->findActiveForUser($user);
         self::assertNotNull($run);
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(RunStatus::Running, $run->getStatus());
     }
 
     /**

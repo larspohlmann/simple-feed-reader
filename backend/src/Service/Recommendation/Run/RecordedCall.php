@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\CallOutcome;
-use App\Entity\RecommendationRunLog;
+use App\Enum\CallVerdict;
 use App\Repository\CallSettlement;
 use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\CompletionStreamObserver;
@@ -51,7 +51,7 @@ final class RecordedCall implements CompletionStreamObserver
         private readonly RecommendationCallRepository $calls,
         private readonly ClockInterface $clock,
         private readonly int $runId,
-        private readonly ?int $logId,
+        private readonly int $logId,
     ) {
         // The interval is armed at begin() time: begin() already persisted
         // everything worth persisting at time zero, so the first checkpoint
@@ -72,22 +72,17 @@ final class RecordedCall implements CompletionStreamObserver
         $this->lastCheckpointAt = $now;
 
         $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
-
-        if (null === $this->logId) {
-            return;
-        }
-
         $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
     }
 
     public function finishUsable(string $content): void
     {
-        $this->finish($content, RecommendationRunLog::VERDICT_USABLE);
+        $this->finish($content, CallVerdict::Usable);
     }
 
     public function finishUnusable(string $content): void
     {
-        $this->finish($content, RecommendationRunLog::VERDICT_UNUSABLE);
+        $this->finish($content, CallVerdict::Unusable);
     }
 
     /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */
@@ -96,32 +91,24 @@ final class RecordedCall implements CompletionStreamObserver
         $this->resetLiveness();
         $this->bankUsage();
 
-        if (null === $this->logId) {
-            return;
-        }
-
         $this->calls->settleTransportFailure(
-            $this->settlement($this->logId, RecommendationRunLog::VERDICT_TRANSPORT_FAILED),
+            $this->settlement(CallVerdict::TransportFailed),
             $errorDetail,
         );
     }
 
-    private function finish(string $content, string $verdict): void
+    private function finish(string $content, CallVerdict $verdict): void
     {
         $this->resetLiveness();
         $this->bankUsage();
 
-        if (null === $this->logId) {
-            return;
-        }
-
-        $this->calls->settleAnswered($this->settlement($this->logId, $verdict), $content);
+        $this->calls->settleAnswered($this->settlement($verdict), $content);
     }
 
-    private function settlement(int $logId, string $verdict): CallSettlement
+    private function settlement(CallVerdict $verdict): CallSettlement
     {
         return new CallSettlement(
-            $logId,
+            $this->logId,
             new CallOutcome($verdict, $this->wireBytes, $this->clock->now(), $this->finishReason),
         );
     }
@@ -131,7 +118,6 @@ final class RecordedCall implements CompletionStreamObserver
         $this->calls->recordStreamedChars($this->runId, 0);
     }
 
-    /** Runs before the debug guard in both callers: a spend record must not depend on the debug switch (#409). */
     private function bankUsage(): void
     {
         $usage = $this->usage;

@@ -15,7 +15,10 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat;
@@ -54,6 +57,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  * Against the real repository, entity manager and lock factory, not mocks:
  * advance()'s job is to coordinate all of them, and a mock would have to
  * encode that coordination itself instead of proving it.
+ *
+ * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunAdvancerTest extends DbTestCase
 {
@@ -123,7 +128,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertCount(5, $persisted->getCandidateBatches()[0] ?? []);
     }
 
@@ -145,7 +150,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // in-memory entity the report happens to read from.
         $this->em->clear();
         $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted?->getStatus());
+        self::assertSame(RunStatus::Completed, $persisted?->getStatus());
     }
 
     public function testSnapshotExcludesCandidatesOlderThanTheLookbackWindow(): void
@@ -318,7 +323,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Fix #311: RecommendationRun::fail() accepts STATUS_PENDING precisely so
+     * Fix #311: RecommendationRun::fail() accepts RunStatus::Pending precisely so
      * a run that never got as far as freezing a candidate pool can still end
      * in a terminal state. Before this fix, that classification lived only
      * in AdvanceRecommendationRunsHandler, so a poll-only install left a
@@ -350,7 +355,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $persisted->getStatus());
+        self::assertSame(RunStatus::Failed, $persisted->getStatus());
         self::assertSame('The AI provider is no longer configured.', $persisted->getError());
     }
 
@@ -641,7 +646,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
             self::assertNotNull($persisted);
             self::assertSame(0, $this->persistedTransportFailures($persisted));
-            self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+            self::assertSame(RunStatus::Running, $persisted->getStatus());
         } finally {
             $thief?->release();
         }
@@ -699,7 +704,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $this->em->clear();
             $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
             self::assertNotNull($persisted);
-            self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+            self::assertSame(RunStatus::Running, $persisted->getStatus());
             self::assertSame([], $this->recommendationItems($persisted));
         } finally {
             $thief?->release();
@@ -986,7 +991,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(
             [['id' => $batches[1][0], 'score' => 90, 'reason' => 'kept']],
             $persisted->getWinners()[1],
@@ -1036,7 +1041,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         // Only the warm-up's batch banked; the failed wave advanced nothing.
         self::assertSame(1, $persisted->progress()->batchesDone);
         self::assertSame(1, $persisted->getTransportFailures());
@@ -1089,7 +1094,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(0, $persisted->progress()->batchesDone);
         self::assertSame(1, $persisted->getTransportFailures());
     }
@@ -1627,7 +1632,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
         $failed = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($failed);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $failed->getStatus());
+        self::assertSame(RunStatus::Failed, $failed->getStatus());
 
         // resume() -- not start() -- is what continues a failed run now; start()
         // would begin fresh at batch one.
@@ -1660,7 +1665,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $run = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $run->getStatus());
+        self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame(0, $run->progress()->batchesDone);
         self::assertFalse($run->progress()->attemptsExhausted);
         self::assertNull($run->getLastInvalidReply());
@@ -1691,7 +1696,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $this->em->clear();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $this->activeRun()->getStatus());
+        self::assertSame(RunStatus::Running, $this->activeRun()->getStatus());
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('still down'));
         try {
@@ -1704,7 +1709,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
-        self::assertSame(RecommendationRun::STATUS_FAILED, $run->getStatus());
+        self::assertSame(RunStatus::Failed, $run->getStatus());
         // The run error names the real cause, not a hardcoded "could not be
         // reached": the provider was reached on every call and refused each
         // one, and the message that closes the run must say what actually
@@ -1790,7 +1795,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $this->em->clear();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $this->activeRun()->getStatus());
+        self::assertSame(RunStatus::Running, $this->activeRun()->getStatus());
     }
 
     public function testPrunedBatchSkipsWithoutAProviderCall(): void
@@ -2161,7 +2166,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(1, $persisted->getTransportFailures());
         self::assertTrue(
             $persisted->progress()->distillPending,
@@ -2186,7 +2191,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $report = $this->advancer()->advance($this->user, TickDriver::Poll); // distill, rate limited
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertSame(RunStatus::Running->value, $report->status);
         $run = $this->activeRun();
         self::assertSame(0, $run->getTransportFailures());
         self::assertNotNull($run->getRetryNotBefore());
@@ -2216,7 +2221,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $report = $this->advancer()->advance($this->user, TickDriver::Worker); // distill, recovers
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertSame(RunStatus::Running->value, $report->status);
         self::assertTrue($this->activeRun()->isDistilled());
         self::assertSame(0, $this->activeRun()->getTransportFailures());
     }
@@ -2242,7 +2247,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertFalse($persisted->isDistilled());
         self::assertTrue(
             $persisted->progress()->distillPending,
@@ -2296,7 +2301,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->em->clear();
         $persisted = $this->activeRun();
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $persisted->getStatus());
+        self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(1, $persisted->getTransportFailures());
         self::assertTrue(
             $persisted->progress()->isConsolidationPhase,
@@ -2336,7 +2341,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $report = $this->advancer()->advance($this->user, TickDriver::Poll);
 
-        self::assertSame(RecommendationRun::STATUS_RUNNING, $report->status);
+        self::assertSame(RunStatus::Running->value, $report->status);
         $persisted = $this->activeRun();
         self::assertSame(0, $persisted->getTransportFailures());
         self::assertNotNull($persisted->getRetryNotBefore());
@@ -2766,10 +2771,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $rows = $this->logRowsOfLatestRun();
         self::assertSame(
             [
-                ['distill', null, 'usable'],
-                ['batch', 1, 'usable'],
-                ['batch', 2, 'usable'],
-                ['consolidate', null, 'usable'],
+                [CallPhase::Distill, null, CallVerdict::Usable],
+                [CallPhase::Batch, 1, CallVerdict::Usable],
+                [CallPhase::Batch, 2, CallVerdict::Usable],
+                [CallPhase::Consolidate, null, CallVerdict::Usable],
             ],
             array_map(
                 static fn (array $row): array => [$row['phase'], $row['batchNumber'], $row['verdict']],
@@ -2803,7 +2808,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // (#638); this scenario is about the batch calls, so read only those.
         $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
-        self::assertSame(['unusable', 'usable'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
         self::assertSame('not json', $this->freshRunLog($rows[0]['id'])->getResponseText());
         self::assertStringContainsString(
             'Your previous reply was not usable.',
@@ -2824,7 +2829,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $rows = $this->batchLogRowsOfLatestRun();
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertSame('gone', $log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
@@ -2864,7 +2869,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         }
 
         $rows = $this->batchLogRowsOfLatestRun();
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         $log = $this->freshRunLog($rows[0]['id']);
         self::assertNotNull($log->getErrorDetail());
         self::assertNotNull($log->getFinishedAt());
@@ -3100,9 +3105,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * The log rows of the account's newest run. The log keeps ten runs
      * (#401), so a read has to name one; every test here drives a single run.
      *
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function logRowsOfLatestRun(): array
     {
@@ -3117,15 +3120,13 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      * call first (#493), and it logs like every phase (#638); a test that
      * asserts on the batch calls its own scenario makes reads past that row.
      *
-     * @return list<array{id: int, runId: int, phase: string, batchNumber: ?int, attempt: int,
-     *     verdict: ?string, requestBytes: int, responseBytes: int, wireBytes: int,
-     *     createdAt: string, finishedAt: ?string, errorDetail: ?string, finishReason: ?string}>
+     * @return list<DebugLogRow>
      */
     private function batchLogRowsOfLatestRun(): array
     {
         return array_values(array_filter(
             $this->logRowsOfLatestRun(),
-            static fn (array $row): bool => RecommendationRunLog::PHASE_BATCH === $row['phase'],
+            static fn (array $row): bool => CallPhase::Batch === $row['phase'],
         ));
     }
 
@@ -3204,7 +3205,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->runRepository()->findLatestForUser($this->user);
         self::assertNotNull($persisted);
-        self::assertSame('cancelled', $persisted->getStatus());
+        self::assertSame(RunStatus::Cancelled, $persisted->getStatus());
         self::assertSame(0, $persisted->progress()->batchesDone);
         self::assertSame([], $persisted->getWinners());
     }

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
@@ -78,7 +79,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
 
         $this->distiller()->distill($this->tick($run));
 
-        self::assertSame(['usable'], $this->verdictsOf($run));
+        self::assertSame([CallVerdict::Usable], $this->verdictsOf($run));
     }
 
     public function testAnUnusableReplySettlesItsCallAsUnusable(): void
@@ -88,7 +89,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
 
         $this->distiller()->distill($this->tick($run));
 
-        self::assertSame(['unusable'], $this->verdictsOf($run));
+        self::assertSame([CallVerdict::Unusable], $this->verdictsOf($run));
     }
 
     /**
@@ -143,7 +144,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $logs = self::getContainer()->get(RecommendationRunLogRepository::class);
         $rows = $logs->listForRun($this->user, $run->requireId());
 
-        self::assertSame(['transport-failed'], array_column($rows, 'verdict'));
+        self::assertSame([CallVerdict::TransportFailed], array_column($rows, 'verdict'));
         self::assertSame('gone', $rows[0]['errorDetail']);
     }
 
@@ -187,7 +188,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         return $run;
     }
 
-    /** @return list<?string> */
+    /** @return list<?CallVerdict> */
     private function verdictsOf(RecommendationRun $run): array
     {
         /** @var RecommendationRunLogRepository $logs */

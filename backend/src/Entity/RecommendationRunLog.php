@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunLogRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -28,14 +30,6 @@ class RecommendationRunLog
 {
     use PersistedId;
 
-    public const string PHASE_BATCH = 'batch';
-    public const string PHASE_DISTILL = 'distill';
-    public const string PHASE_CONSOLIDATE = 'consolidate';
-
-    public const string VERDICT_USABLE = 'usable';
-    public const string VERDICT_UNUSABLE = 'unusable';
-    public const string VERDICT_TRANSPORT_FAILED = 'transport-failed';
-
     private const int LONGTEXT_LENGTH = 4_294_967_295;
 
     #[ORM\Id]
@@ -47,8 +41,8 @@ class RecommendationRunLog
     #[ORM\JoinColumn(name: 'run_id', nullable: false, onDelete: 'CASCADE')]
     private RecommendationRun $run;
 
-    #[ORM\Column(length: 16)]
-    private string $phase;
+    #[ORM\Column(length: 16, enumType: CallPhase::class)]
+    private CallPhase $phase;
 
     #[ORM\Column(nullable: true)]
     private ?int $batchNumber;
@@ -63,8 +57,8 @@ class RecommendationRunLog
     private string $responseText = '';
 
     /** Null while the call is still streaming. */
-    #[ORM\Column(length: 24, nullable: true)]
-    private ?string $verdict = null;
+    #[ORM\Column(length: 24, nullable: true, enumType: CallVerdict::class)]
+    private ?CallVerdict $verdict = null;
 
     /**
      * Every byte the provider sent, not just the ones that decoded into the
@@ -100,7 +94,7 @@ class RecommendationRunLog
     /** @noinspection AutowireWrongClass Built with new, never autowired */
     public function __construct(
         RecommendationRun $run,
-        string $phase,
+        CallPhase $phase,
         ?int $batchNumber,
         int $attempt,
         string $requestBody,
@@ -124,7 +118,7 @@ class RecommendationRunLog
         return $this->run;
     }
 
-    public function getPhase(): string
+    public function getPhase(): CallPhase
     {
         return $this->phase;
     }
@@ -149,7 +143,7 @@ class RecommendationRunLog
         return $this->responseText;
     }
 
-    public function getVerdict(): ?string
+    public function getVerdict(): ?CallVerdict
     {
         return $this->verdict;
     }

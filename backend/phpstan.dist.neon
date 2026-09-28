@@ -8,6 +8,9 @@ parameters:
     paths:
         - src
         - tests
+    scanDirectories:
+        # Symbols only, not analysed: lets a test resolve a migration class.
+        - migrations
     excludePaths:
         # Deliberate custom-rule violations, analysed only by each rule's RuleTestCase.
         - tests/PhpStan/data/*

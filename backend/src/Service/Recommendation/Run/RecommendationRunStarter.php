@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
@@ -90,7 +91,7 @@ final readonly class RecommendationRunStarter
         }
 
         $latest = $this->runs->findLatestForUser($user);
-        if (null === $latest || RecommendationRun::STATUS_FAILED !== $latest->getStatus()) {
+        if (null === $latest || RunStatus::Failed !== $latest->getStatus()) {
             throw new NoResumableRecommendationRunException('There is no failed run to resume.');
         }
 

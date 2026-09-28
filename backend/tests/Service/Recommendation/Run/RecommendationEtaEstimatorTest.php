@@ -6,8 +6,9 @@ namespace App\Tests\Service\Recommendation\Run;
 
 use App\Entity\CallOutcome;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationRunLog;
 use App\Entity\User;
+use App\Enum\CallPhase;
+use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Run\RecommendationEtaEstimator;
@@ -117,17 +118,17 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
 
-        $this->finishedLog($run, RecommendationRunLog::PHASE_DISTILL, null, 0, $distill);
+        $this->finishedLog($run, CallPhase::Distill, null, 0, $distill);
         for ($batch = 1; $batch <= $batches; $batch++) {
-            $this->finishedLog($run, RecommendationRunLog::PHASE_BATCH, $batch, 0, $batchWall);
+            $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
         }
-        $this->finishedLog($run, RecommendationRunLog::PHASE_CONSOLIDATE, null, 0, $consolidate);
+        $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
         $this->em->flush();
     }
 
     private function finishedLog(
         RecommendationRun $run,
-        string $phase,
+        CallPhase $phase,
         ?int $batchNumber,
         int $startOffset,
         int $spanSeconds,
@@ -135,7 +136,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $base = new \DateTimeImmutable('2026-08-07T09:00:00Z');
         $log = $this->fixtures->log($run, $phase, $batchNumber, 1, 'req', $base->modify("+{$startOffset} seconds"));
         $this->fixtures->settleLog($log, 'reply', new CallOutcome(
-            RecommendationRunLog::VERDICT_USABLE,
+            CallVerdict::Usable,
             0,
             $base->modify('+' . ($startOffset + $spanSeconds) . ' seconds'),
             'stop',

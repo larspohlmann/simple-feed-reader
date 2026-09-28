@@ -10,6 +10,7 @@ use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Feed\RecommendationForYouSummaryProvider;
@@ -59,16 +60,16 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
         return $entry;
     }
 
-    private function seedRun(string $status, string $completedAt): RecommendationRun
+    private function seedRun(RunStatus $status, string $completedAt): RecommendationRun
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
 
-        if ($status === RecommendationRun::STATUS_COMPLETED) {
+        if ($status === RunStatus::Completed) {
             $run->complete(new \DateTimeImmutable($completedAt));
         }
 
-        if ($status === RecommendationRun::STATUS_FAILED) {
+        if ($status === RunStatus::Failed) {
             $run->fail('boom', new \DateTimeImmutable($completedAt));
         }
 
@@ -102,14 +103,14 @@ final class RecommendationForYouSummaryProviderTest extends DbTestCase
         $entryShared = $this->entry('shared');
         $entryOnlyInFirstRun = $this->entry('first-only');
 
-        $firstRun = $this->seedRun(RecommendationRun::STATUS_COMPLETED, '2026-08-07T09:05:00Z');
+        $firstRun = $this->seedRun(RunStatus::Completed, '2026-08-07T09:05:00Z');
         $this->item($firstRun, $entryShared, 1);
         $this->item($firstRun, $entryOnlyInFirstRun, 2);
 
-        $secondRun = $this->seedRun(RecommendationRun::STATUS_COMPLETED, '2026-08-07T10:05:00Z');
+        $secondRun = $this->seedRun(RunStatus::Completed, '2026-08-07T10:05:00Z');
         $this->item($secondRun, $entryShared, 1);
 
-        $this->seedRun(RecommendationRun::STATUS_FAILED, '2026-08-07T11:05:00Z');
+        $this->seedRun(RunStatus::Failed, '2026-08-07T11:05:00Z');
 
         $summary = $this->provider()->forUser($this->user);
 

@@ -18,6 +18,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Enum\CallPhase;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Account\AccountReset;
 use App\Tests\DbTestCase;
@@ -81,7 +82,7 @@ final class AccountResetTest extends DbTestCase
         $this->em->persist(new RecommendationItem($run, $entry, 0, 'because'));
         $this->em->persist(new RecommendationRunLog(
             $run,
-            RecommendationRunLog::PHASE_BATCH,
+            CallPhase::Batch,
             0,
             1,
             '{}',

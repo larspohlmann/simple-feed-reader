@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\RecommendationRun;
 use App\Entity\User;
+use App\Enum\RunStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\AbstractQuery;
 use Doctrine\ORM\QueryBuilder;
@@ -16,18 +17,6 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunRepository extends ServiceEntityRepository
 {
-    /**
-     * What "active" means for a recommendation run, in one place: no query
-     * below may drift from the others about which statuses still need
-     * ticking. activeStatusQuery() carries it to all three.
-     *
-     * @var list<string>
-     */
-    private const array ACTIVE_STATUSES = [
-        RecommendationRun::STATUS_PENDING,
-        RecommendationRun::STATUS_RUNNING,
-    ];
-
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, RecommendationRun::class);
@@ -41,7 +30,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     private function activeStatusQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('r')
-            ->andWhere('r.status IN (:active)')->setParameter('active', self::ACTIVE_STATUSES);
+            ->andWhere('r.status IN (:active)')->setParameter('active', RunStatus::active());
     }
 
     /**
@@ -75,7 +64,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      * run meanwhile, and a managed entity would simply hand back the stale
      * in-memory status.
      */
-    public function statusOf(int $runId): ?string
+    public function statusOf(int $runId): ?RunStatus
     {
         /** @var string|null $status */
         $status = $this->createQueryBuilder('r')
@@ -84,7 +73,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
             ->getQuery()
             ->getOneOrNullResult(AbstractQuery::HYDRATE_SINGLE_SCALAR);
 
-        return $status;
+        return null === $status ? null : RunStatus::from($status);
     }
 
     /**
@@ -118,7 +107,7 @@ final class RecommendationRunRepository extends ServiceEntityRepository
      * Its id and completedAt drive the header's "Last refreshed" hint and the
      * for-you divider suppression.
      */
-    public function findLatestForUser(User $user, ?string $status = null): ?RecommendationRun
+    public function findLatestForUser(User $user, ?RunStatus $status = null): ?RecommendationRun
     {
         $query = $this->createQueryBuilder('r')
             ->andWhere('r.user = :user')->setParameter('user', $user)

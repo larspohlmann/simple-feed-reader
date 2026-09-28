@@ -10,6 +10,7 @@ use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
+use App\Enum\RunStatus;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\ProviderTimeouts;
@@ -89,7 +90,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted->getStatus());
+        self::assertSame(RunStatus::Completed, $persisted->getStatus());
 
         // The lock must be free again, or the next spawn could never drain.
         $lock = $this->lockFactory()->createLock(RecommendationDrainCommand::LOCK_NAME);
@@ -120,7 +121,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $this->em->clear();
         $run = $this->runs()->findActiveForUser($user);
         self::assertNotNull($run);
-        self::assertSame(RecommendationRun::STATUS_PENDING, $run->getStatus());
+        self::assertSame(RunStatus::Pending, $run->getStatus());
     }
 
     /**
@@ -202,7 +203,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         $this->em->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
-        self::assertSame(RecommendationRun::STATUS_COMPLETED, $persisted->getStatus());
+        self::assertSame(RunStatus::Completed, $persisted->getStatus());
     }
 
     /**

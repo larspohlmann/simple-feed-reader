@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
+use App\Enum\RunStatus;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
@@ -27,7 +28,7 @@ final readonly class TickPhases
     public function advance(TickContext $tick): RecommendationRunReport
     {
         $run = $tick->run;
-        if (RecommendationRun::STATUS_PENDING === $run->getStatus()) {
+        if (RunStatus::Pending === $run->getStatus()) {
             return $this->snapshot->advance($tick);
         }
 

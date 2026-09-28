@@ -5640,6 +5640,24 @@ The final report reminds the planner of what #1162 closing opens (carry-forward;
 - #1171: the comments of the classes PR A moved (D6);
 - #1169: moving `TickDriver` to `App\Enum` would take `retryPlan()` off it (D-reconcile-1).
 
+### Execution rulings (PR E)
+
+- **Preflight:** a light read-only scan at 8a3413e1. Every E1–E3 anchor still matched.
+- **E4 (planner, from PR C's M10):** `RecordedCall`'s log id is an `int`, read with `requireId()` where the row is persisted, and the null guards are gone.
+  - `testBanksTheUsageWithTheDebugSwitchOff` is deleted. The recorder has always passed an id since #638.
+  - `testLeavesTheCostNullWhenTheProviderReportedNone` keeps its assertion with a real id.
+- **E5, a stored-data change:** "no migration" did not hold. Releases v0.6.0-dev.1 … v0.6.2-dev.1 wrote `recommendation_run_log.phase = 'dedup'`, which `CallPhase` cannot hydrate. The ETA read would throw, so the status poll would 500 once a run's first batch started, and so would the debug log.
+  - `Version20260925090000` deletes those rows. `down()` throws `IrreversibleMigration`, as the repository's other irreversible migration does.
+  - A test drives the ETA read before and after the migration.
+  - Git history shows `'dedup'` is the only retired status, phase or verdict value.
+  - Lars approved the production delete (2026-09-28); it runs at the next deploy.
+- **Reviews:**
+  - The active-status set has one owner, `RunStatus::active()`, which the entity guards and the repository query use.
+  - `settlement()` loses its leftover id parameter.
+  - Stale "dedup" and `STATUS_PENDING` prose is gone.
+  - The null-verdict test catches the nullsafe mutant through the warning it would raise.
+- **Real run:** run 128 as user 2 completed 6/6 with 0 transport failures, every call usable on attempt 1, and a clean dev log. The debug-log, history and current endpoints returned 200 with unchanged field shapes.
+
 ---
 
 ## Reconcile changes (5229c947)
