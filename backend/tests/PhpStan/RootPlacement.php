@@ -92,18 +92,35 @@ final readonly class RootPlacement implements ServiceRoleChecker
         );
     }
 
-    private static function isPass(ServiceRoleMap $map, ServiceRoleClass $class): bool
+    /** @param array<string, true> $seen classes already being decided, to terminate a holder cycle */
+    private static function isPass(ServiceRoleMap $map, ServiceRoleClass $class, array $seen = []): bool
     {
         if ($class->isStateful() || 1 === preg_match(self::PER_CALL_NAMES, $class->shortName())) {
             return true;
         }
+        if (isset($seen[$class->name()])) {
+            return false;
+        }
+        $seen[$class->name()] = true;
         foreach ($class->suppliedConstructorTypes() as $type) {
-            if ($map->isCollaborator($type)) {
+            if ($map->isCollaborator($type) || self::holdsAPassBoundType($map, $type, $seen)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /** @param array<string, true> $seen */
+    private static function holdsAPassBoundType(ServiceRoleMap $map, string $type, array $seen): bool
+    {
+        $held = $map->classFor($type);
+        if (null === $held) {
+            return false;
+        }
+
+        return ServiceRoleNames::PASS === $held->role()
+            || ($map->isPerCall($held) && self::isPass($map, $held, $seen));
     }
 
     private static function homeIn(ServiceRoleClass $class, string $role): string
