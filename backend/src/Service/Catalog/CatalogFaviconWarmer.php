@@ -7,7 +7,7 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 use App\Repository\CatalogFaviconDueCriteria;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Image\CatalogFaviconFetcherInterface;
+use App\Service\Image\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\FaviconResolverInterface;
 use Doctrine\ORM\EntityManagerInterface;
@@ -39,7 +39,7 @@ final readonly class CatalogFaviconWarmer
     public function __construct(
         private CatalogFeedRepository $feeds,
         private FaviconResolverInterface $faviconResolver,
-        private CatalogFaviconFetcherInterface $fetcher,
+        private FaviconFetcherInterface $fetcher,
         private EntityManagerInterface $em,
         private ClockInterface $clock,
     ) {

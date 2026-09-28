@@ -84,7 +84,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalog
             'max_duration' => self::TIMEOUT_SECONDS,
             'max_redirects' => 0,
             // Capped on the wire, like this codebase's other size caps
-            // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, CatalogFaviconFetcher):
+            // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, FaviconFetcher):
             // a provider answering with gigabytes is refused as the bytes arrive,
             // not truncated into an unparseable body. The transport reports the
             // aborted download as a failure, which readBody() maps to this refusal.

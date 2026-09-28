@@ -7,7 +7,7 @@ namespace App\Service\Image;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 
-interface CatalogFaviconFetcherInterface
+interface FaviconFetcherInterface
 {
     /**
      * Download the bytes of one already-resolved icon URL under the SSRF/size/type guards.

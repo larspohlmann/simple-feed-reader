@@ -19,7 +19,7 @@ final readonly class ImageVerifier
     private const int MAX_ATTEMPTS = 3;
 
     public function __construct(
-        private CatalogFaviconFetcherInterface $fetcher,
+        private FaviconFetcherInterface $fetcher,
         private NaiveUtcClock $clock,
     ) {
     }

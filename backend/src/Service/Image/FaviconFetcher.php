@@ -32,7 +32,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * digest thumbnails/favicons — neither caller is a live HTTP request path,
  * both run in the worker/CLI.
  */
-final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInterface
+final readonly class FaviconFetcher implements FaviconFetcherInterface
 {
     /** Also bounds digest article thumbnails (#726), not only favicons — the
      *  pixel cap in GdImageResizer is the real memory guard. */

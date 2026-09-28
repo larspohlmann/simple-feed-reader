@@ -6,8 +6,8 @@ namespace App\Tests\Controller\Admin;
 
 use App\Entity\CatalogCategory;
 use App\Entity\CatalogFeed;
-use App\Service\Image\CatalogFaviconFetcher;
-use App\Service\Image\CatalogFaviconFetcherInterface;
+use App\Service\Image\FaviconFetcher;
+use App\Service\Image\FaviconFetcherInterface;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FaviconResolverInterface;
@@ -27,16 +27,16 @@ final class AdminCatalogControllerTest extends WebTestCase
      * bookkeeping — without any test reaching the network.
      *
      * The warmer autowires the INTERFACES (FaviconResolverInterface,
-     * CatalogFaviconFetcherInterface), which PHPUnit can double where the final
+     * FaviconFetcherInterface), which PHPUnit can double where the final
      * concrete classes cannot. We register the doubles under both the interface
      * id and the concrete-class id so whichever id the warmer's dependency
      * resolves to receives the failing mock.
      */
     private function stubFaviconServicesToFail(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willThrowException(new FaviconUnavailableException('offline'));
-        self::getContainer()->set(CatalogFaviconFetcher::class, $fetcher);
+        self::getContainer()->set(FaviconFetcher::class, $fetcher);
 
         $resolver = $this->createStub(FaviconResolverInterface::class);
         $resolver->method('resolveAll')->willReturnCallback(
