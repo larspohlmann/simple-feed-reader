@@ -1196,14 +1196,6 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * Favicon resolution's flush runs after every feed's own outcome has
-     * already been flushed individually, so a failure here cannot lose
-     * anything already persisted — but it must still degrade to an aborted
-     * report instead of letting the exception escape run(): RefreshController
-     * promises the client JSON with a `status` field, never an opaque 500 its
-     * poll loop has no branch for.
-     */
-    /**
      * @return iterable<string, array{\Throwable}>
      */
     public static function exceptionsTheFaviconFlushDegradesToAborted(): iterable
@@ -1216,6 +1208,10 @@ final class RefreshRunnerTest extends DbTestCase
         yield 'optimistic lock exception' => [OptimisticLockException::lockFailed(Feed::class)];
     }
 
+    /**
+     * The favicon flush must degrade to an aborted report, never escape run(): RefreshController promises the
+     * client JSON with a `status` field, not a 500 its poll loop has no branch for.
+     */
     #[DataProvider('exceptionsTheFaviconFlushDegradesToAborted')]
     public function testFaviconFlushFailureIsReportedAsAbortedNotThrown(\Throwable $thrown): void
     {
