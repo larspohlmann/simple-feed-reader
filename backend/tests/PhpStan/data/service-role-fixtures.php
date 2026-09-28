@@ -518,3 +518,32 @@ namespace App\Service\Stamp\Model {
         public function ink(): string;
     }
 }
+
+namespace App\Service\Wrap {
+    final readonly class Ribbon
+    {
+        public function tie(string $item): string
+        {
+            return $item;
+        }
+    }
+
+    final readonly class Bow
+    {
+        public function __construct(public string $colour = 'red')
+        {
+        }
+    }
+
+    final readonly class GiftWrapper
+    {
+        public function __construct(private Ribbon $ribbon = new Ribbon())
+        {
+        }
+
+        public function wrap(string $item, Bow $bow = new Bow()): string
+        {
+            return $this->ribbon->tie($item) . $bow->colour;
+        }
+    }
+}

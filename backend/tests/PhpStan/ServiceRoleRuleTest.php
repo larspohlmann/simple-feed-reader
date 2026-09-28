@@ -245,6 +245,15 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 516,
             ],
+            [
+                self::message(
+                    'modelHome',
+                    'App\Service\Wrap\Bow',
+                    'is data built per call',
+                    'App\Service\Wrap\Model\BowModel',
+                ),
+                531,
+            ],
         ]);
     }
 
