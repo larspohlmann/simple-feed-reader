@@ -210,7 +210,7 @@ services:
     App\Service\Ai\Completion\CompositeCompletionStreamHeartbeat:
         arguments:
             $lockKeepalive: '@App\Service\Recommendation\Run\TickLockKeepalive'
-            $workerLiveness: '@App\Service\Worker\SweepStreamHeartbeat'
+            $workerLiveness: '@App\Service\Recommendation\Run\SweepStreamHeartbeat'
     App\Service\Process\ShellCommandRunnerInterface: '@App\Service\Process\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher'
 

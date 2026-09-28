@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker;
+namespace App\Service\Recommendation\Run;
 
 use App\Repository\WorkerHeartbeatRepository;
 use Symfony\Component\Clock\ClockInterface;

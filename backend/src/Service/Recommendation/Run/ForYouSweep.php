@@ -7,9 +7,6 @@ namespace App\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Worker\RecommendationDriverKind;
-use App\Service\Worker\SweepStreamHeartbeat;
-use App\Service\Worker\WorkerPresence;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 

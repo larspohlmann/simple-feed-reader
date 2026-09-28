@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker;
+namespace App\Service\Recommendation\Run;
 
 /**
  * Which regime is driving recommendation runs, and under which heartbeat name

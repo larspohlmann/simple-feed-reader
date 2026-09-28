@@ -16,7 +16,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ModelNotOfferedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Process\DetachedProcessLauncherInterface;
-use App\Service\Worker\RecommendationDriverKind;
+use App\Service\Recommendation\Run\RecommendationDriverKind;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\RecordingProcessLauncher;

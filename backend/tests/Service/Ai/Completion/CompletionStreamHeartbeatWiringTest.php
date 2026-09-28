@@ -6,8 +6,8 @@ namespace App\Tests\Service\Ai\Completion;
 
 use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 use App\Service\Recommendation\Run\TickLockKeepalive;
-use App\Service\Worker\RecommendationDriverKind;
-use App\Service\Worker\SweepStreamHeartbeat;
+use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\SweepStreamHeartbeat;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RefreshCountingLock;
