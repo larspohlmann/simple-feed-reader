@@ -12,6 +12,8 @@ parameters:
     serviceRoleChecks:
         - interfaceName
         - interfaceFolder
+        - factoryName
+        - factoryFolder
     paths:
         - src
         - tests
