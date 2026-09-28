@@ -62,10 +62,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $criteria = $this->dueCriteria($request, $now);
         $feeds = $this->feedRepository->findDue($criteria, self::BATCH_LIMIT);
         // The deadline gates when a fetch may start, not finish: a request's own 20 s max_duration can overrun it.
-        $pass = new RefreshPass(
-            $feeds,
-            new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds),
-        );
+        $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $this->persistOutcomes($pass, $now);
 
         // Before the abort branch: what an aborted run created before the failure is already committed (#720).

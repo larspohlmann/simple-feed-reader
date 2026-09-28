@@ -6,11 +6,14 @@ namespace App\Service\Refresh;
 
 use App\Entity\Feed;
 use App\Service\Fetch\FetchTicket;
+use Symfony\Component\Clock\ClockInterface;
 
 /** One run's due feeds, its budget queue and its tally, and the report they add up to. */
 final readonly class RefreshPass
 {
     public RefreshTally $tally;
+
+    private BudgetedFeedQueue $queue;
 
     /** @var array<int, Feed> */
     private array $feedsById;
@@ -20,8 +23,10 @@ final readonly class RefreshPass
      */
     public function __construct(
         private array $feeds,
-        private BudgetedFeedQueue $queue,
+        ClockInterface $clock,
+        int $deadline,
     ) {
+        $this->queue = new BudgetedFeedQueue($feeds, $clock, $deadline);
         $feedsById = [];
         foreach ($feeds as $feed) {
             $feedsById[$feed->requireId()] = $feed;

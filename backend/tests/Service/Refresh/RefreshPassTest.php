@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Refresh\BudgetedFeedQueue;
 use App\Service\Refresh\FeedOutcome;
 use App\Service\Refresh\FeedRefreshResult;
 use App\Service\Refresh\RefreshPass;
@@ -156,9 +155,6 @@ final class RefreshPassTest extends DbTestCase
      */
     private function pass(array $feeds, int $budgetSeconds): RefreshPass
     {
-        return new RefreshPass(
-            $feeds,
-            new BudgetedFeedQueue($feeds, $this->clock, $this->clock->now()->getTimestamp() + $budgetSeconds),
-        );
+        return new RefreshPass($feeds, $this->clock, $this->clock->now()->getTimestamp() + $budgetSeconds);
     }
 }
