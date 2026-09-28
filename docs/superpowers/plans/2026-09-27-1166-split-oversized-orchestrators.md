@@ -74,6 +74,19 @@ Reconciled on 2026-09-28 against `6f88765d` (origin/develop after #1182 PR B, #1
   - The pending-image test pins its dimensions.
   - `IncomingEntry` values are named `$candidate`.
 
+## Execution rulings (PR C)
+
+- **Deletion checks (planner):** each implementer ran one check per new pin and quoted its FAIL in the task report, and a reviewer or the controller re-ran at least one. The controller added three checks for C2 (tag position, feed-in-tag position, case folding).
+- **C1:** `flushStates()` reads `$user` through `getReference(...) ?? throw`, following `stateFor()`. The non-nullable `$user` made PHPStan flag the nullable reference. `RestoreEntryLoaderTest` uses `$this->once()` because of the EA WARNING.
+- **C3:**
+  - D5' applies: `BulkSubscribeBatch::result()`, with `@noinspection AutowireWrongClass` on its `User` parameter.
+  - `BulkSubscribeBatchTest::testATagNameIsMatchedInAnyCaseBeyondAscii` kills the `strtolower` escapes.
+  - The new `BulkSubscriberTagLookupTest` kills the lookup-order mutant: the batch answers before the repository. It asserts one tag lookup and the result. It lives in its own file because `BulkSubscriberTest` stays unmodified.
+- **Final review and /simplify:**
+  - `TrackedRefreshRunner`'s docblock drops the stale "thirteen collaborators".
+  - `tests/Support/TagJoins::positionOf()` replaces three copies of the join-position helper.
+  - Comments that restate code are gone (`joinTag()`, `takeFeedPositionIn()`'s prose, `BulkSubscribeBatch`'s class docblock).
+
 ## Status
 
 | Task | State |
