@@ -255,6 +255,24 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 531,
             ],
             [self::takesADto(), 563],
+            [
+                self::message(
+                    'passHome',
+                    'App\Service\Knot\Counter',
+                    'is built per call',
+                    'App\Service\Knot\Pass\Counter',
+                ),
+                577,
+            ],
+            [
+                self::message(
+                    'modelHome',
+                    'App\Service\Knot\Label',
+                    'is data built per call',
+                    'App\Service\Knot\Model\LabelModel',
+                ),
+                587,
+            ],
         ]);
     }
 

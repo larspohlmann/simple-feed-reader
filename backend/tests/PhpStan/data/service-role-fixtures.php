@@ -572,3 +572,42 @@ namespace App\Service\Wrap {
         }
     }
 }
+
+namespace App\Service\Knot {
+    final class Counter
+    {
+        private int $count = 0;
+
+        public function next(): int
+        {
+            return ++$this->count;
+        }
+    }
+
+    final readonly class Label
+    {
+        public function __construct(private Counter $counter)
+        {
+        }
+
+        public function text(): string
+        {
+            return 'knot ' . $this->counter->next();
+        }
+    }
+
+    final readonly class Labeller
+    {
+        private Counter $counter;
+
+        public function __construct()
+        {
+            $this->counter = new Counter();
+        }
+
+        public function label(): Label
+        {
+            return new Label($this->counter);
+        }
+    }
+}

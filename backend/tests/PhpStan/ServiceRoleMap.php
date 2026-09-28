@@ -104,7 +104,10 @@ final readonly class ServiceRoleMap
         if ($reflection->isInterface()) {
             return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
         }
-        return !isset($this->builtPerCall[$type]) && ServiceRoleClass::declaresPublicInstanceMethod($reflection);
+        $class = $this->classes[$type] ?? null;
+        $isPerCall = null === $class ? isset($this->builtPerCall[$type]) : $this->isPerCall($class);
+
+        return !$isPerCall && ServiceRoleClass::declaresPublicInstanceMethod($reflection);
     }
 
     /** @return list<string> the interfaces of its own module it implements, outside Factory/, Model/, Exception/ */
