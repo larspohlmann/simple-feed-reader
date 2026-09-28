@@ -561,6 +561,7 @@ final class ArticleExtractorTest extends TestCase
 
         $result = $extractor->extract('https://site.test/post');
 
+        self::assertNull((new EntrySanitizer())->sanitize('<svg><text>' . $prose . '</text></svg>'));
         self::assertFalse($result->ok);
         self::assertSame(ExtractionFailure::Empty, $result->reason);
         self::assertSame('https://site.test/post', $result->url);
