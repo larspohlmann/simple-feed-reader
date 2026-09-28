@@ -25,8 +25,6 @@ use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Exception\ORMException;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
@@ -77,8 +75,6 @@ final class RefreshRunner implements RefreshRunnerInterface
      * @param RefreshRequest $request
      *
      * @return RefreshReport
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws \DateMalformedStringException
      */
     public function run(RefreshRequest $request): RefreshReport
@@ -99,8 +95,6 @@ final class RefreshRunner implements RefreshRunnerInterface
      * @param RefreshRequest $request
      *
      * @return RefreshReport
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws \DateMalformedStringException
      */
     private function refresh(RefreshRequest $request): RefreshReport
@@ -211,8 +205,6 @@ final class RefreshRunner implements RefreshRunnerInterface
      * @param BudgetedFeedQueue $queue
      *
      * @return RefreshTally
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws \DateMalformedStringException
      */
     private function processOutcomes(array $feeds, BudgetedFeedQueue $queue, \DateTimeImmutable $now): RefreshTally
@@ -239,8 +231,6 @@ final class RefreshRunner implements RefreshRunnerInterface
 
     /**
      * @throws \DateMalformedStringException
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      */
     private function applyOutcome(Feed $feed, FetchOutcome $outcome, \DateTimeImmutable $now): FeedRefreshResult
     {
@@ -302,11 +292,6 @@ final class RefreshRunner implements RefreshRunnerInterface
         return $this->feedRepository->countDue($criteria->excluding($queue->startedFeedIds()));
     }
 
-    /**
-     * @throws \DateMalformedStringException
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
-     */
     private function persistOutcome(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedRefreshResult
     {
         try {

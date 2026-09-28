@@ -10,14 +10,11 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\ParsedFeed;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 
 /**
- * Dispatches a feed's body to the parser owning its sourceFormat. The keyed
- * locator is fed by the app.feed_body_parser tag with each parser's static
- * format() as its index, so the dispatcher never needs to know the concrete
- * strategies — see FeedBodyParserInterface for the extension contract.
+ * Dispatches a feed's body to the parser owning its sourceFormat, through the app.feed_body_parser keyed locator
+ * (see FeedBodyParserInterface for the extension contract).
  */
 final readonly class FeedBodyParser
 {
@@ -27,10 +24,7 @@ final readonly class FeedBodyParser
     ) {
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
+    /** @throws FeedParseException */
     public function parse(Feed $feed, string $body): ParsedFeed
     {
         $format = $feed->getSourceFormat();
@@ -38,16 +32,11 @@ final readonly class FeedBodyParser
             return $this->resolve($format)->parse($body, $feed);
         }
 
-        // Defensive fallback for rows whose format has no parser here -- written by
-        // a newer deployment, or left by a removed strategy. 'xml' is what every row
-        // meant before the seam existed, and its parse failure lands in the runner's
-        // normal error handling instead of a locator NotFoundException escaping.
+        // A row whose format has no parser here (a newer deployment's, or a removed strategy's) is read as xml,
+        // which is what every row meant before the seam existed.
         try {
             return $this->resolve(SourceFormat::XML)->parse($body, $feed);
         } catch (FeedParseException $e) {
-            // Name the actual gap: a bare xml-parse error in lastErrorMessage
-            // would make a stale-format row indistinguishable from a broken
-            // feed. A body that happens to BE xml still just succeeds above.
             throw new FeedParseException(
                 sprintf('No parser for source format "%s"; tried xml: %s', $format, $e->getMessage()),
                 0,
@@ -56,13 +45,13 @@ final readonly class FeedBodyParser
         }
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     private function resolve(string $format): FeedBodyParserInterface
     {
-        $parser = $this->parsers->get($format);
+        try {
+            $parser = $this->parsers->get($format);
+        } catch (ContainerExceptionInterface $e) {
+            throw new \LogicException(sprintf('No feed body parser is wired for "%s".', $format), 0, $e);
+        }
         \assert($parser instanceof FeedBodyParserInterface);
 
         return $parser;
