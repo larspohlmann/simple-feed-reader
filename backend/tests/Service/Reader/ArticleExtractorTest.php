@@ -553,6 +553,39 @@ final class ArticleExtractorTest extends TestCase
         self::assertSame(ExtractionFailure::Empty, $result->reason);
     }
 
+    /**
+     * The gate exits before the media that survives it ever pays for network verification (#800): the mock
+     * client below answers only the page request, so a stream candidate resolved before the gate would reach
+     * it for a second, unmocked request.
+     */
+    public function testMediaVerificationNeverRunsBeforeTheContentGate(): void
+    {
+        $html = '<html lang="en"><body><script type="application/ld+json">'
+            . '{"@type":"VideoObject","contentUrl":"https://example.test/master.m3u8",'
+            . '"thumbnailUrl":"https://example.test/poster.jpg"}'
+            . '</script></body></html>';
+        $verificationRequested = false;
+        $responses = function (string $method, string $url) use ($html, &$verificationRequested): MockResponse {
+            if (str_contains($url, 'master.m3u8')) {
+                $verificationRequested = true;
+
+                return new MockResponse('#EXTM3U', ['http_code' => 200]);
+            }
+
+            return new MockResponse($html, ['http_code' => 200]);
+        };
+        $extractor = $this->extractor(
+            $responses,
+            ['site.test' => ['93.184.216.34'], 'example.test' => ['93.184.216.35']],
+        );
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertFalse($verificationRequested);
+        self::assertFalse($result->ok);
+        self::assertSame(ExtractionFailure::Empty, $result->reason);
+    }
+
     public function testAnArticleTheSanitizerStripsToNothingFailsAsEmpty(): void
     {
         $prose = str_repeat('Words that make up a real paragraph of an article body here. ', 8);
