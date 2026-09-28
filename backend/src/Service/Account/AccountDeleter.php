@@ -9,7 +9,7 @@ use App\Service\Account\Exception\LastAdminException;
 use App\Repository\FeedRepository;
 use App\Repository\UserRepository;
 use App\Service\Admin\SelfActionGuard;
-use App\Service\OrphanedFeedReclaimer;
+use App\Service\Feed\OrphanedFeedReclaimer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

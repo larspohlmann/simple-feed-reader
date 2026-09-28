@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service;
+namespace App\Tests\Service\Feed;
 
 use App\Entity\Feed;
 use App\Enum\FeedStatus;
 use App\Service\Fetch\HostThrottle;
-use App\Service\FeedScheduler;
+use App\Service\Feed\FeedScheduler;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;

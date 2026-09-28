@@ -7,7 +7,7 @@ namespace App\Service\Refresh;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\FeedRepository;
-use App\Service\FeedScheduler;
+use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FetchException;
