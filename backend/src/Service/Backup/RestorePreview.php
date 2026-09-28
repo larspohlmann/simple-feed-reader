@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
-use App\Service\Backup\Dto\BackupHeader;
+use App\Service\Backup\Model\RestoreSourceModel;
 
 /**
  * What a restore would do, before it does anything: the file's provenance,
@@ -14,7 +14,7 @@ use App\Service\Backup\Dto\BackupHeader;
 final readonly class RestorePreview
 {
     public function __construct(
-        public BackupHeader $header,
+        public RestoreSourceModel $source,
         public BackupInventory $toLoad,
         public int $currentSubscriptions,
         public int $currentTags,

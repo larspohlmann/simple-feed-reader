@@ -20,11 +20,11 @@ final readonly class RestorePreviewJson
     {
         return [
             'backup' => [
-                'backupId' => $preview->header->backupId,
-                'parts' => $preview->header->parts,
-                'createdAt' => $preview->header->createdAt->format(\DateTimeInterface::ATOM),
-                'sourceUrl' => $preview->header->sourceUrl,
-                'sourceEmail' => $preview->header->sourceEmail,
+                'backupId' => $preview->source->backupId,
+                'parts' => $preview->source->parts,
+                'createdAt' => $preview->source->createdAt->format(\DateTimeInterface::ATOM),
+                'sourceUrl' => $preview->source->sourceUrl,
+                'sourceEmail' => $preview->source->sourceEmail,
             ],
             'toLoad' => [
                 'tags' => $preview->toLoad->tags,

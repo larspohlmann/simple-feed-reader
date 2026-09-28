@@ -60,7 +60,7 @@ final class BackupTally
             ?? throw new InvalidBackupException('The restore starts with part 0, the foundation.');
 
         return new BackupInventory(
-            header: $header,
+            source: $header->toSource(),
             tags: $this->counts['tags'],
             savedSearches: $this->counts['savedSearches'],
             feeds: $this->counts['feeds'],

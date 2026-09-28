@@ -37,7 +37,7 @@ final readonly class RestorePreviewer
         $userId = $user->requireId();
 
         return new RestorePreview(
-            header: $inventory->header,
+            source: $inventory->source,
             toLoad: $inventory,
             currentSubscriptions: $this->subscriptions->countForUser($userId),
             currentTags: $this->tags->countForUser($userId),

@@ -176,7 +176,7 @@ final class RestorePreviewerTest extends DbTestCase
     private static function inventoryOf(array $counts): BackupInventory
     {
         return new BackupInventory(
-            header: self::someHeader(),
+            source: self::someHeader()->toSource(),
             tags: $counts['tags'] ?? 0,
             savedSearches: $counts['savedSearches'] ?? 0,
             feeds: $counts['feeds'] ?? 1,
@@ -261,7 +261,7 @@ final class RestorePreviewerTest extends DbTestCase
 
         $preview = $this->previewer()->preview($user, $gzip);
 
-        self::assertSame('source@example.com', $preview->header->sourceEmail);
+        self::assertSame('source@example.com', $preview->source->sourceEmail);
         self::assertSame(1, $preview->toLoad->feeds);
         self::assertSame(1, $preview->toLoad->subscriptions);
         self::assertSame(1, $preview->currentSubscriptions);
