@@ -504,6 +504,31 @@ final class ArticleExtractorTest extends TestCase
         self::assertContains($result->reason, [ExtractionFailure::Unextractable, ExtractionFailure::Empty]);
     }
 
+    /** The extractor's own result fields, and the hint the entry passes in, survive the pipeline unmangled. */
+    public function testTheFinalUrlExcerptAndByLineArePinnedAndTheEntryAuthorReachesTheBody(): void
+    {
+        $caption = str_repeat('Real caption prose that documents the scene in detail. ', 4);
+        $html = '<html lang="en"><head><meta name="description" content="A short excerpt of the story.">'
+            . '<meta name="author" content="Jana Steger"></head>'
+            . '<body><article><p>Von <a href="https://example.test/jana">Jana Steger</a></p>'
+            . '<figure><img src="https://example.test/photo.jpg" alt="A"><figcaption>' . $caption
+            . '</figcaption></figure></article></body></html>';
+        $extractor = $this->extractor([
+            new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => 'https://site.test/post-final']]),
+            new MockResponse($html, ['http_code' => 200]),
+        ]);
+
+        $result = $extractor->extract('https://site.test/post', new EntryHints(author: 'Jana Steger'));
+        $content = (string) $result->contentHtml;
+
+        self::assertTrue($result->ok);
+        self::assertSame('https://site.test/post-final', $result->url);
+        self::assertSame('A short excerpt of the story.', $result->excerpt);
+        self::assertSame('Jana Steger', $result->byline);
+        self::assertStringNotContainsString('Jana Steger', $content);
+        self::assertStringContainsString('<p>A short excerpt of the story.</p>', $content);
+    }
+
     public function testABlankPageStopsAsUnextractable(): void
     {
         $extractor = $this->extractor([new MockResponse('   ', ['http_code' => 200])]);
