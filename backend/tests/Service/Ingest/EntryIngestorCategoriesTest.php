@@ -4,23 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
-use App\Entity\Category;
-use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Repository\CategoryRepository;
-use App\Repository\EntryRepository;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\ParsedCategory;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryIngestors;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryIngestorCategoriesTest extends DbTestCase
@@ -31,19 +22,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-        /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $this->em->getRepository(Category::class);
-        $this->ingestor = new EntryIngestor(
-            $this->em,
-            $entryRepository,
-            new EntrySanitizer(),
-            new UrlNormalizer(),
-            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
-            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
-            new PlatformEntryRules([]),
-        );
+        $this->ingestor = EntryIngestors::build($this->em, new MockClock('2026-09-21 12:00:00'));
 
         $this->feed = new Feed('https://example.com/feed');
         $this->em->persist($this->feed);
