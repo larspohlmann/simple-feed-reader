@@ -3,10 +3,9 @@
 declare(strict_types=1);
 
 // php ../docs/superpowers/plans/2026-09-28-1202-scripts/stale-names.php var/refactor-1202/<map>.php
-// POSIX EREs for `git grep -E \( -f … \) --and --not -e '^namespace '`, one per old FQCN, spelled with one backslash
-// between segments (PHP, YAML, neon, Markdown) or two (quoted PHP strings, infection.json5), and one per old path
-// reference (infection.json5's excludes, comments). The `--not` keeps a moved file's own namespace, which can be an old
-// FQCN (`…\SearchIndexReader` becomes a folder).
+// POSIX EREs for `git grep -E \( -f … \) --and --not -e '^namespace '`: one per old FQCN in either backslash spelling,
+// and one per old path reference. The `--not` spares a moved file's own namespace, which can be an old FQCN
+// (`…\SearchIndexReader` becomes a folder).
 
 require __DIR__ . '/class-names.php';
 
