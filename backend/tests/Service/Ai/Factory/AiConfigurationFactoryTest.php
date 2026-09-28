@@ -47,7 +47,6 @@ final class AiConfigurationFactoryTest extends DbTestCase
         $source = $this->factory()->create($user, 'Mine', $this->credentials());
         $verifiedAt = $source->getVerifiedAt();
 
-        usleep(2_000);
         $copy = $this->factory()->duplicate($source, $this->credentials());
 
         self::assertSame($verifiedAt, $copy->getVerifiedAt());
