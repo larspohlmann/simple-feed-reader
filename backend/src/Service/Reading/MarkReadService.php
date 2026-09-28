@@ -6,7 +6,6 @@ namespace App\Service\Reading;
 
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Exception\ValidationException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 
@@ -20,24 +19,22 @@ final readonly class MarkReadService
     ) {
     }
 
-    public function mark(User $user, string $scope, ?int $id, \DateTimeImmutable $until): void
-    {
-        $subscriptions = $this->resolveScope($user, $scope, $id);
-        $this->readMarker->markSubscriptionsReadUntil($user->requireId(), $subscriptions, $until);
-    }
-
-    /**
-     * @return list<Subscription>
-     */
-    private function resolveScope(User $user, string $scope, ?int $id): array
+    public function mark(User $user, ReadScope $scope, \DateTimeImmutable $until): void
     {
         $userId = $user->requireId();
+        $this->readMarker->markSubscriptionsReadUntil($userId, $this->subscriptionsIn($userId, $scope), $until);
+    }
 
-        return match ($scope) {
-            'all' => $this->includedInAllItems($this->subscriptions->findForUserWithTags($userId)),
-            'feed' => [$this->requireSubscription($id, $userId)],
-            'tag' => $this->subscriptions->findForUserByTagId($userId, $this->requireTag($id, $userId)),
-            default => throw new ValidationException(['scope' => [sprintf('Unknown scope "%s".', $scope)]]),
+    /** @return list<Subscription> */
+    private function subscriptionsIn(int $userId, ReadScope $scope): array
+    {
+        return match ($scope->kind) {
+            ReadScopeKind::All => $this->includedInAllItems($this->subscriptions->findForUserWithTags($userId)),
+            ReadScopeKind::Feed => [$this->subscriptions->getOneForUser($userId, $scope->targetId())],
+            ReadScopeKind::Tag => $this->subscriptions->findForUserByTagId(
+                $userId,
+                $this->tags->getOneForUser($userId, $scope->targetId())->requireId(),
+            ),
         };
     }
 
@@ -54,25 +51,5 @@ final readonly class MarkReadService
             $subscriptions,
             static fn (Subscription $subscription): bool => $subscription->isIncludeInAllItems(),
         ));
-    }
-
-    private function requireSubscription(?int $id, int $userId): Subscription
-    {
-        if ($id === null) {
-            // Same validation_error contract as every other bad field, so the
-            // client's type-switch handles a missing id uniformly.
-            throw new ValidationException(['id' => ['An id is required when scope is "feed".']]);
-        }
-
-        return $this->subscriptions->getOneForUser($userId, $id);
-    }
-
-    private function requireTag(?int $id, int $userId): int
-    {
-        if ($id === null) {
-            throw new ValidationException(['id' => ['An id is required when scope is "tag".']]);
-        }
-
-        return $this->tags->getOneForUser($userId, $id)->requireId();
     }
 }

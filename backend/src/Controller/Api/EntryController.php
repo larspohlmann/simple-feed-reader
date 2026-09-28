@@ -101,7 +101,7 @@ final readonly class EntryController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MarkReadRequest $request,
     ): JsonResponse {
-        $this->markRead->mark($user, $request->scope, $request->id, $request->until);
+        $this->markRead->mark($user, $request->toScope(), $request->until);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
