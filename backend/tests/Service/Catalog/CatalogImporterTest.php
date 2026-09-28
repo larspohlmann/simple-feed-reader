@@ -275,14 +275,15 @@ final class CatalogImporterTest extends DbTestCase
     {
         $this->importer()->import($this->parsed(
             '<outline text="Technology" key="technology" icon="memory" color="#3b82f6">'
-            . '<outline type="rss" text="Filler" xmlUrl="https://filler.example.com/rss.xml"/>'
             . '<outline type="rss" text="Old title" xmlUrl="https://moved.example.com/rss.xml"/>'
+            . '<outline type="rss" text="Filler" xmlUrl="https://filler.example.com/rss.xml"/>'
             . '</outline>',
         ), CatalogImportMode::Merge);
 
         $result = $this->importer()->import($this->parsed(
             '<outline text="Science" key="science" icon="science" color="#10b981"></outline>'
             . '<outline text="Tech and Gadgets" key="technology" icon="devices" color="#ef4444">'
+            . '<outline type="rss" text="Ahead" xmlUrl="https://ahead.example.com/rss.xml"/>'
             . '<outline type="rss" text="New title" xmlUrl="https://moved.example.com/rss.xml"'
             . ' htmlUrl="https://moved.example.com/" description="A description" sourceFormat="scraped"/>'
             . '</outline>',
@@ -290,7 +291,7 @@ final class CatalogImporterTest extends DbTestCase
 
         self::assertSame(1, $result->categoriesCreated);
         self::assertSame(1, $result->categoriesUpdated);
-        self::assertSame(0, $result->feedsCreated);
+        self::assertSame(1, $result->feedsCreated);
         self::assertSame(1, $result->feedsUpdated);
         self::assertSame(0, $result->lockedSkipped);
 
@@ -310,7 +311,7 @@ final class CatalogImporterTest extends DbTestCase
         self::assertSame('https://moved.example.com/', $feed->getSiteUrl());
         self::assertSame('A description', $feed->getDescription());
         self::assertSame('scraped', $feed->getSourceFormat());
-        self::assertSame(0, $feed->getPosition());
+        self::assertSame(1, $feed->getPosition());
     }
 
     public function testAFeedListedUnderAnotherCategoryMovesThere(): void
