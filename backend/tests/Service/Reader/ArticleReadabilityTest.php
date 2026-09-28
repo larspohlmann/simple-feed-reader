@@ -18,12 +18,7 @@ final class ArticleReadabilityTest extends TestCase
 
     public function testDropsTheRelatedTeaserGridFromTheCollapsedVariantToo(): void
     {
-        // article-block-components.html only wins its extraction through the
-        // wrapper-chain collapse (#235): the fixture's deeply wrapped rich-text
-        // blocks score too low uncollapsed, so richest() picks the collapsed
-        // variant. A related-teaser grid appended to that same article (#1002)
-        // must be stripped from the collapsed document too, or its orphan
-        // thumbnails leak into the winning extraction.
+        // article-block-components.html only wins its extraction through the wrapper-chain collapse (#235).
         $html = str_replace(
             '</article>',
             $this->relatedTeaserGrid() . '</article>',
@@ -37,6 +32,7 @@ final class ArticleReadabilityTest extends TestCase
 
         self::assertNotNull($article);
         self::assertStringNotContainsString('t1.webp', (string) $article->content);
+        self::assertStringContainsString('Second Section', (string) $article->content);
     }
 
     private function relatedTeaserGrid(): string
