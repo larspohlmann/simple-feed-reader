@@ -65,3 +65,11 @@ services:
         class: App\Tests\PhpStan\ControllerMutatesNoEntityThroughStaticCallableRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ServiceModuleDependencyCollector
+        tags:
+            - phpstan.collector
+    -
+        class: App\Tests\PhpStan\ServiceModuleCycleRule
+        tags:
+            - phpstan.rules.rule
