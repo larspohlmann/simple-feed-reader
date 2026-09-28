@@ -35,19 +35,17 @@ final readonly class RestoreEntryLoaderFactory
      */
     public function create(User $user, array $feedIdsByUrl): RestoreEntryLoader
     {
-        $loader = new RestoreEntryLoader(
+        return new RestoreEntryLoader(
             $this->em,
             $this->entries,
             $this->entryStates,
             $this->inserter,
             $this->indexer,
             $this->clock,
+            new RestoreDestination(
+                $user,
+                new RestoreFeedTargets($user->requireId(), $feedIdsByUrl, $this->feeds, $this->entries),
+            ),
         );
-        $loader->begin(
-            new RestoreFeedTargets($user->requireId(), $feedIdsByUrl, $this->feeds, $this->entries),
-            $user,
-        );
-
-        return $loader;
     }
 }

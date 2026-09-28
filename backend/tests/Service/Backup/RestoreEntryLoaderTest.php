@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\RestoreDestination;
 use App\Service\Backup\RestoreEntryLoader;
 use App\Service\Backup\RestoreFeedTargets;
 use App\Service\Search\EntryIndexer;
@@ -37,13 +38,12 @@ final class RestoreEntryLoaderTest extends TestCase
         $fresh = $this->line('guid-fresh');
         $entries = $this->createMock(EntryRepository::class);
         $entries->method('guidHashToIdMapForFeed')->with(7)->willReturn([$known->guidHash => 1]);
-        $entries->expects(self::once())
+        $entries->expects($this->once())
             ->method('entryIdsByGuidHash')
             ->with(7, [$fresh->guidHash])
             ->willReturn([$fresh->guidHash => 42]);
         $entries->method('entriesAfterId')->willReturn([]);
         $loader = $this->loader($entries);
-        $loader->begin($this->targets($entries), $this->user());
 
         $loader->bufferEntry($known);
         $loader->bufferEntry($fresh);
@@ -59,11 +59,11 @@ final class RestoreEntryLoaderTest extends TestCase
         $entries->method('entryIdsByGuidHash')->willReturn([]);
         $entries->method('guidHashToIdMapForFeed')->willReturn([]);
         $loader = $this->loader($entries);
-        $loader->begin($this->targets($entries), $this->user());
 
         $loader->bufferEntry($fresh);
 
         $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('An entry this restore just wrote cannot be read back.');
         $loader->finish();
     }
 
@@ -76,6 +76,7 @@ final class RestoreEntryLoaderTest extends TestCase
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             new MockClock('2026-08-01 00:00:00', 'UTC'),
+            new RestoreDestination($this->user(), $this->targets($entries)),
         );
     }
 

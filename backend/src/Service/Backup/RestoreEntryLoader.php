@@ -28,9 +28,9 @@ final class RestoreEntryLoader
 {
     private const int BATCH = 500;
 
-    private ?RestoreFeedTargets $targets = null;
+    private readonly RestoreFeedTargets $targets;
 
-    private ?User $user = null;
+    private User $user;
 
     private string $bufferedFeedUrl = '';
 
@@ -54,13 +54,10 @@ final class RestoreEntryLoader
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
         private readonly ClockInterface $clock,
+        RestoreDestination $destination,
     ) {
-    }
-
-    public function begin(RestoreFeedTargets $targets, User $user): void
-    {
-        $this->targets = $targets;
-        $this->user = $user;
+        $this->targets = $destination->feeds;
+        $this->user = $destination->user;
     }
 
     public function bufferEntry(EntryLine $line): void
@@ -116,7 +113,7 @@ final class RestoreEntryLoader
     {
         $entry = $this->em->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
-        $state = new EntryState($this->userReference(), $entry);
+        $state = new EntryState($this->user, $entry);
         $state->restoreReadMark(new BackedUpReadMark($line->isHidden, $line->hiddenAt));
         if ($line->isFavorite) {
             $state->markFavorite();
@@ -134,12 +131,7 @@ final class RestoreEntryLoader
 
     private function target(string $feedUrl): RestoreFeedTarget
     {
-        return $this->targetsOrThrow()->for($feedUrl);
-    }
-
-    private function targetsOrThrow(): RestoreFeedTargets
-    {
-        return $this->targets ?? throw new \LogicException('begin() must run before entries are loaded.');
+        return $this->targets->for($feedUrl);
     }
 
     private function closeBufferedFeed(): void
@@ -232,7 +224,7 @@ final class RestoreEntryLoader
         }
 
         $entryIds = array_map(static fn (array $pair): int => $pair[1], $held);
-        $userId = $this->userReference()->requireId();
+        $userId = $this->user->requireId();
         $alreadyStated = array_flip($this->entryStates->entryIdsWithStateForUser($userId, $entryIds));
         foreach ($held as [$line, $entryId]) {
             if (isset($alreadyStated[$entryId])) {
@@ -254,9 +246,10 @@ final class RestoreEntryLoader
             throw BackupLoadFailedException::duringEntries($e);
         }
 
-        $userId = $this->userReference()->requireId();
+        $userId = $this->user->requireId();
         $this->em->clear();
-        $this->user = $this->em->getReference(User::class, $userId);
+        $this->user = $this->em->getReference(User::class, $userId)
+            ?? throw new \LogicException('A user just referenced by id cannot be re-acquired after clear().');
     }
 
     /**
@@ -284,10 +277,5 @@ final class RestoreEntryLoader
             $batchSize = \count($batch);
             $this->em->clear();
         } while (self::BATCH === $batchSize);
-    }
-
-    private function userReference(): User
-    {
-        return $this->user ?? throw new \LogicException('begin() must run before entries are loaded.');
     }
 }
