@@ -40,6 +40,15 @@ Reconciled against `origin/develop` at `e9953e96` (#1163: PRs #1201, #1203, #120
 - **D-reconcile-9:** B1 gains checks for the first-site rule and the namespace guard, A3 gets one per test and row, and `UrlResolverTest` drops its bare-host row, because the `'/'` default and the `=== ''` fallback cover for each other.
 - **D-reconcile-10:** B1 Step 9's report site stays `AdvanceRecommendationRunsHandler.php:8`, because that file is unchanged at `e9953e96` and A2 rewrites the import in place.
 
+## Execution rulings (PR A)
+
+- **A0:** the anchor scan was skipped (the planner reconciled at `e9953e96`). The baseline graph matched: 118 edges and the four expected `tsort` blocks.
+- **Pure moves (A1, A1b, A2, A4):** the controller checked that every changed line is a `use`, `namespace` or FQCN line (A1b: `CatalogFaviconFetcher` → `FaviconFetcher` only). Pre-existing PhpStorm warnings on untouched lines of moved files do not block (D7). `config/services_test.yaml`'s schema "Key not expected" errors predate this plan.
+- **A3:** the `CastInt` escape on `UrlResolver.php:38` (`(int) strrpos(…) + 1`) is equivalent: `+` coerces `false` to 0. The line is untouched, so it was reported to the planner and gets no ignore.
+- **Final review (Critical):** `docker/php/worker-healthcheck.php` still imported `App\Service\Worker\{RecommendationDriverKind,WorkerPresence}`, so the worker reported unhealthy ("Class not found"). The move script, PHPStan and the stale-name grep only look at `src`, `tests` and `config`. Both imports were rewritten. A repo-wide grep finds no other stale name, and the recreated worker is healthy. Later move plans grep the whole repository.
+- **/simplify:** `CorsListener` uses `UrlOrigin::of()` instead of its identical private `originOf()`. The trailing-slash warning survives as one line at the call site.
+- **Real recommendation run** (user 2, `qwen/qwen3.7-flash` on OpenRouter, after the dev `cache:clear` and a worker restart): run 129 completed 6/6 steps (distill, 4 batches, consolidate), all `usable`, with 0 attempts and 0 transport failures.
+
 ## Status
 
 | Task | State |
