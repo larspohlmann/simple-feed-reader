@@ -113,6 +113,8 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+        # Data, per-call objects, static helpers and exceptions are never services (#1202).
+        exclude: '../src/Service/**/{Model,Dto,Pass,Support,Exception}/'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
