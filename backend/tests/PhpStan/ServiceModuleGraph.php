@@ -50,7 +50,7 @@ final readonly class ServiceModuleGraph
     {
         $cameFrom = [];
         $queue = [$start];
-        for ($next = 0; $next < \count($queue); ++$next) {
+        for ($next = 0; isset($queue[$next]); ++$next) {
             $module = $queue[$next];
             $dependencies = $this->dependenciesOf($module);
             if (\in_array($start, $dependencies, true)) {
