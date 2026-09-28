@@ -21,18 +21,20 @@ final readonly class ServiceModuleGraph
                 $sites[$module][$dependency] ??= ['file' => $file, 'line' => $line];
             }
         }
+        ksort($sites);
+        foreach (array_keys($sites) as $module) {
+            ksort($sites[$module]);
+        }
 
         return new self($sites);
     }
 
-    /** @return list<ServiceModuleCycle> the shortest cycle through each module no earlier cycle passed through */
+    /** @return list<ServiceModuleCycle> */
     public function cycles(): array
     {
-        $modules = array_keys($this->sites);
-        sort($modules);
         $cycles = [];
         $covered = [];
-        foreach ($modules as $module) {
+        foreach (array_keys($this->sites) as $module) {
             if (isset($covered[$module])) {
                 continue;
             }
@@ -52,11 +54,10 @@ final readonly class ServiceModuleGraph
         $queue = [$start];
         for ($next = 0; isset($queue[$next]); ++$next) {
             $module = $queue[$next];
-            $dependencies = $this->dependenciesOf($module);
-            if (\in_array($start, $dependencies, true)) {
+            if (isset($this->sites[$module][$start])) {
                 return $this->cycleClosedBy($module, $start, $cameFrom);
             }
-            foreach (array_diff($dependencies, [$start, ...array_keys($cameFrom)]) as $unseen) {
+            foreach (array_diff($this->dependenciesOf($module), [$start, ...array_keys($cameFrom)]) as $unseen) {
                 $cameFrom[$unseen] = $module;
                 $queue[] = $unseen;
             }
@@ -96,9 +97,6 @@ final readonly class ServiceModuleGraph
     /** @return list<string> */
     private function dependenciesOf(string $module): array
     {
-        $dependencies = array_keys($this->sites[$module] ?? []);
-        sort($dependencies);
-
-        return $dependencies;
+        return array_keys($this->sites[$module] ?? []);
     }
 }
