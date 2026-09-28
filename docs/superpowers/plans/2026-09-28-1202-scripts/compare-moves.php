@@ -7,19 +7,7 @@ declare(strict_types=1);
 // origin/develop), without comments, whitespace, the namespace line or the imports, and with the map applied to the
 // old side's names. Prints each file that still differs, and where.
 
-function pathOf(string $class): string
-{
-    $relative = str_starts_with($class, 'App\\Tests\\')
-        ? 'tests/' . substr($class, strlen('App\\Tests\\'))
-        : 'src/' . substr($class, strlen('App\\'));
-
-    return str_replace('\\', '/', $relative) . '.php';
-}
-
-function shortNameOf(string $class): string
-{
-    return substr($class, (int) strrpos($class, '\\') + 1);
-}
+require __DIR__ . '/class-names.php';
 
 /** @return list<string> */
 function codeTokens(string $code): array

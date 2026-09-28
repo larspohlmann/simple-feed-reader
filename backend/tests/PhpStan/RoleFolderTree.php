@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
-/** One Factory/ or Model/ folder and everything below it. */
 final readonly class RoleFolderTree
 {
     /** @var list<ServiceRoleClass> */

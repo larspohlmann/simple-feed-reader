@@ -28,7 +28,7 @@ final readonly class ServiceRoleRule implements Rule
     /** @param list<string> $checks */
     public function __construct(private ReflectionProvider $reflectionProvider, array $checks)
     {
-        $this->checks = array_map(ServiceRoleCheck::from(...), array_values(array_unique($checks)));
+        $this->checks = array_map(ServiceRoleCheck::from(...), $checks);
         $this->checkers = [
             new InterfacePlacement(),
             new RoleFolderNames(),

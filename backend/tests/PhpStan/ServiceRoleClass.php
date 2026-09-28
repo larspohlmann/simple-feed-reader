@@ -7,7 +7,6 @@ namespace App\Tests\PhpStan;
 use App\DependencyInjection\ProcessLifetimeState;
 use PHPStan\Reflection\ClassReflection;
 
-/** One class the ServiceRoleClassCollector saw, with the facts the role checks read off its reflection. */
 final readonly class ServiceRoleClass
 {
     private const array RESET_CONTRACTS = [
@@ -76,7 +75,6 @@ final readonly class ServiceRoleClass
         return $this->reflection->isFinalByKeyword() && $this->reflection->isReadOnly();
     }
 
-    /** A readonly class cannot extend a class that is not readonly. */
     public function mayBeReadonly(): bool
     {
         $parent = $this->reflection->getParentClass();

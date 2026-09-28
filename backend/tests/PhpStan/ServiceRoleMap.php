@@ -8,7 +8,6 @@ use PHPStan\Node\CollectedDataNode;
 use PHPStan\Reflection\ClassReflection;
 use PHPStan\Reflection\ReflectionProvider;
 
-/** Every collected class and every `new` in production code: what the role checks compare a class against. */
 final readonly class ServiceRoleMap
 {
     private const array VALUE_NAMESPACES = [
@@ -63,7 +62,7 @@ final readonly class ServiceRoleMap
         return array_values($this->classes);
     }
 
-    /** @return list<ServiceRoleClass> the classes directly in $namespace */
+    /** @return list<ServiceRoleClass> */
     public function classesIn(string $namespace): array
     {
         return array_values(array_filter(
@@ -72,7 +71,7 @@ final readonly class ServiceRoleMap
         ));
     }
 
-    /** @return list<ServiceRoleClass> the classes in $namespace and below it */
+    /** @return list<ServiceRoleClass> */
     public function classesUnder(string $namespace): array
     {
         return array_values(array_filter(
@@ -145,7 +144,6 @@ final readonly class ServiceRoleMap
         return $this->interfaceFolder($interface) . '\\' . $base . 'Interface';
     }
 
-    /** Whether $namespace is the folder of an interface declared in it and named after it. */
     public function folderInterfaceOf(string $namespace): ?string
     {
         $interface = $namespace . '\\' . ServiceRoleNames::shortNameOf($namespace) . 'Interface';

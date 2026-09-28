@@ -9,24 +9,7 @@ declare(strict_types=1);
 
 const HOME = '/^Service role "(?<check>\w+)": (?<class>App\\\\[\w\\\\]+) .*Its home is (?<home>App\\\\[\w\\\\]+)\.$/s';
 
-function namespaceOf(string $class): string
-{
-    return substr($class, 0, (int) strrpos($class, '\\'));
-}
-
-function shortNameOf(string $class): string
-{
-    return substr($class, (int) strrpos($class, '\\') + 1);
-}
-
-function pathOf(string $class): string
-{
-    $relative = str_starts_with($class, 'App\\Tests\\')
-        ? 'tests/' . substr($class, strlen('App\\Tests\\'))
-        : 'src/' . substr($class, strlen('App\\'));
-
-    return str_replace('\\', '/', $relative) . '.php';
-}
+require __DIR__ . '/class-names.php';
 
 function testNamespaceOf(string $class): string
 {
