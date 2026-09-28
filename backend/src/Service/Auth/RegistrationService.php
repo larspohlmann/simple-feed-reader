@@ -6,19 +6,17 @@ namespace App\Service\Auth;
 
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
-use App\Enum\SupportedLocale;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
+use App\Service\Auth\Factory\SignupUserFactory;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 use Random\RandomException;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final readonly class RegistrationService
@@ -26,13 +24,12 @@ final readonly class RegistrationService
     public function __construct(
         private EntityManagerInterface $em,
         private UserRepository $users,
-        private UserPasswordHasherInterface $hasher,
         private ActionTokenService $tokens,
         private AccountMailerInterface $mailer,
-        private ClockInterface $clock,
         private PasswordWorkEqualizerInterface $work,
         private EventDispatcherInterface $events,
-        private RegistrationPolicy $policy,
+        private SignupUserFactory $signupUsers,
+        private PasswordResetter $passwords,
     ) {
     }
 
@@ -59,14 +56,7 @@ final readonly class RegistrationService
             return;
         }
 
-        $now = $this->clock->now();
-        $user = new User($email, $now);
-        $user->setLocale(\in_array($locale, SupportedLocale::ALL, true) ? $locale : SupportedLocale::ENGLISH);
-        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $now);
-
-        $status = $this->policy->prospectiveStatusForEmailSignup();
-        $this->enterSignupStatus($user, $status, $now);
-
+        $user = $this->signupUsers->create($email, $plainPassword, $locale);
         $this->em->persist($user);
 
         try {
@@ -78,25 +68,16 @@ final readonly class RegistrationService
             return;
         }
 
-        $this->completeRegistration($user, $status);
-    }
-
-    private function enterSignupStatus(User $user, UserStatus $status, \DateTimeImmutable $now): void
-    {
-        match ($status) {
-            UserStatus::Active => $user->approve($now),
-            UserStatus::PendingApproval => $user->queueForApproval(),
-            default => null,
-        };
+        $this->completeRegistration($user);
     }
 
     /**
      * The one post-flush side effect that each resulting status implies. Active
      * needs none — the account can log in already.
      */
-    private function completeRegistration(User $user, UserStatus $status): void
+    private function completeRegistration(User $user): void
     {
-        match ($status) {
+        match ($user->getStatus()) {
             UserStatus::PendingVerification => $this->mailer->sendVerification(
                 $user,
                 $this->tokens->issue($user, TokenPurpose::VerifyEmail),
@@ -106,36 +87,6 @@ final readonly class RegistrationService
             ),
             default => null,
         };
-    }
-
-    /** The status after verification: an admin may have approved the account while the mail was in flight. */
-    public function verifyEmail(string $plainToken): UserStatus
-    {
-        $user = $this->tokens->consume($plainToken, TokenPurpose::VerifyEmail);
-
-        // Re-verifying an already-approved account must not demote it back to
-        // the admin queue.
-        if (UserStatus::PendingVerification === $user->getStatus()) {
-            $now = $this->clock->now();
-            // The token was just consumed, which proves the address regardless
-            // of which status the account lands in next.
-            $user->markEmailVerified($now);
-
-            if ($this->policy->approvalRequired()) {
-                $user->queueForApproval();
-                $this->em->flush();
-
-                // After the flush: the account is now persisted in the queue, so
-                // a listener that counts it sees the true number, and a failed
-                // flush above means no notification goes out.
-                $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
-            } else {
-                $user->approve($now);
-                $this->em->flush();
-            }
-        }
-
-        return $user->getStatus();
     }
 
     /**
@@ -198,7 +149,6 @@ final readonly class RegistrationService
         $user = $this->tokens->consume($plainToken, TokenPurpose::ResetPassword);
 
         // The timestamp evicts JWTs minted before the reset (PasswordChangeTokenInvalidator).
-        $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $this->clock->now());
-        $this->em->flush();
+        $this->passwords->setPassword($user, $plainPassword);
     }
 }

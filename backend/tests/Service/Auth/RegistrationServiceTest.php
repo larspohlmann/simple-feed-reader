@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth;
 
-use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
@@ -13,15 +12,16 @@ use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizer;
 use App\Service\Auth\ActionTokenService;
+use App\Service\Auth\EmailVerifier;
 use App\Service\Auth\Exception\InvalidTokenException;
+use App\Service\Auth\Factory\SignupUserFactory;
+use App\Service\Auth\PasswordResetter;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
-use App\Service\Settings\InstanceSettings;
 use App\Tests\DbTestCase;
+use App\Tests\Support\RegistrationPolicies;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -29,6 +29,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class RegistrationServiceTest extends DbTestCase
 {
+    use RegistrationPolicies;
+
     /**
      * Builds the service against a repository that always reports "no such
      * user". That is exactly what two concurrent requests for the same fresh
@@ -59,32 +61,13 @@ final class RegistrationServiceTest extends DbTestCase
         return new RegistrationService(
             $this->em,
             $blindRepository,
-            $hasher,
             $tokens,
             $mailer,
-            $clock,
             $work,
             new EventDispatcher(),
-            $this->policy(confirm: true, approve: true),
+            new SignupUserFactory($hasher, $clock, $this->registrationPolicy(confirm: true, approve: true)),
+            new PasswordResetter($this->em, $hasher, $clock),
         );
-    }
-
-    /**
-     * Drives the real InstanceSettings service (final, like its repository, so
-     * it cannot be doubled — see RegistrationPolicyTest for the same
-     * workaround) and pairs it with a MailCapability that always reports mail
-     * as enabled, so the confirm/approve toggles alone decide the outcome.
-     */
-    private function policy(bool $confirm, bool $approve): RegistrationPolicy
-    {
-        /** @var InstanceSettings $settings */
-        $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(new InstanceSettingsUpdate($confirm, $approve, null, null, null));
-
-        $mailSettings = $this->createStub(MailSendingSettingsInterface::class);
-        $mailSettings->method('isSendingEnabled')->willReturn(true);
-
-        return new RegistrationPolicy(new MailCapability($mailSettings), $settings);
     }
 
     /**
@@ -113,14 +96,25 @@ final class RegistrationServiceTest extends DbTestCase
         return new RegistrationService(
             $this->em,
             $users,
-            $hasher,
             $tokens,
             $mailer ?? $this->createMock(AccountMailerInterface::class),
-            $clock,
             $work,
             $events ?? new EventDispatcher(),
-            $policy,
+            new SignupUserFactory($hasher, $clock, $policy),
+            new PasswordResetter($this->em, $hasher, $clock),
         );
+    }
+
+    private function verifierUnderPolicy(
+        RegistrationPolicy $policy,
+        ?EventDispatcherInterface $events = null,
+    ): EmailVerifier {
+        /** @var ActionTokenService $tokens */
+        $tokens = self::getContainer()->get(ActionTokenService::class);
+        /** @var ClockInterface $clock */
+        $clock = self::getContainer()->get(ClockInterface::class);
+
+        return new EmailVerifier($tokens, $policy, $this->em, $events ?? new EventDispatcher(), $clock);
     }
 
     /**
@@ -142,7 +136,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testConfirmationOnLandsInPendingVerificationAndMails(): void
     {
-        $policy = $this->policy(confirm: true, approve: true);
+        $policy = $this->registrationPolicy(confirm: true, approve: true);
 
         $capturedToken = null;
         $mailer = $this->createMock(AccountMailerInterface::class);
@@ -177,7 +171,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testConfirmationOffApprovalOnLandsInPendingApprovalAndDispatches(): void
     {
-        $policy = $this->policy(confirm: false, approve: true);
+        $policy = $this->registrationPolicy(confirm: false, approve: true);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
         $mailer->expects(self::never())->method('sendVerification');
@@ -203,7 +197,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testBothGatesOffLandsActiveWithApprovedAtAndNoEventNoMail(): void
     {
-        $policy = $this->policy(confirm: false, approve: false);
+        $policy = $this->registrationPolicy(confirm: false, approve: false);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
         $mailer->expects(self::never())->method('sendVerification');
@@ -226,7 +220,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testVerifyEmailWithApprovalOnQueuesForApprovalAndDispatches(): void
     {
-        $policy = $this->policy(confirm: true, approve: true);
+        $policy = $this->registrationPolicy(confirm: true, approve: true);
 
         $capturedToken = null;
         $mailer = $this->createStub(AccountMailerInterface::class);
@@ -243,7 +237,7 @@ final class RegistrationServiceTest extends DbTestCase
         $service->register('verifier-approval-on@example.com', 'correct-horse-battery');
 
         self::assertIsString($capturedToken);
-        $status = $service->verifyEmail($capturedToken);
+        $status = $this->verifierUnderPolicy($policy, $events)->verify($capturedToken);
 
         self::assertSame(UserStatus::PendingApproval, $status);
 
@@ -260,7 +254,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     public function testVerifyEmailWithApprovalOffActivatesDirectlyWithoutEvent(): void
     {
-        $policy = $this->policy(confirm: true, approve: false);
+        $policy = $this->registrationPolicy(confirm: true, approve: false);
 
         $capturedToken = null;
         $mailer = $this->createStub(AccountMailerInterface::class);
@@ -277,7 +271,7 @@ final class RegistrationServiceTest extends DbTestCase
         $service->register('verifier-approval-off@example.com', 'correct-horse-battery');
 
         self::assertIsString($capturedToken);
-        $status = $service->verifyEmail($capturedToken);
+        $status = $this->verifierUnderPolicy($policy, $events)->verify($capturedToken);
 
         self::assertSame(UserStatus::Active, $status);
 
@@ -288,21 +282,28 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertTrue($user->isEmailVerified());
 
         self::assertSame([], $captured);
+
+        // Reads past the identity map: proves the approval was flushed, not
+        // merely set on the in-memory entity the calls above already held.
+        $this->em->clear();
+        $reloaded = $this->users()->findOneByEmail('verifier-approval-off@example.com');
+        self::assertInstanceOf(User::class, $reloaded);
+        self::assertSame(UserStatus::Active, $reloaded->getStatus());
     }
 
     public function testVerifyingWithAnUnknownTokenIsRefused(): void
     {
-        $policy = $this->policy(confirm: true, approve: false);
-        $service = $this->serviceUnderPolicy($policy, $this->createStub(AccountMailerInterface::class));
+        $policy = $this->registrationPolicy(confirm: true, approve: false);
+        $verifier = $this->verifierUnderPolicy($policy);
 
         $this->expectException(InvalidTokenException::class);
 
-        $service->verifyEmail('never-issued');
+        $verifier->verify('never-issued');
     }
 
     public function testResettingWithAnUnknownTokenIsRefused(): void
     {
-        $policy = $this->policy(confirm: true, approve: false);
+        $policy = $this->registrationPolicy(confirm: true, approve: false);
         $service = $this->serviceUnderPolicy($policy, $this->createStub(AccountMailerInterface::class));
 
         $this->expectException(InvalidTokenException::class);
