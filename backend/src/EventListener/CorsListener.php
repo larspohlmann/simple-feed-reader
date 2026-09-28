@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Service\Url\UrlOrigin;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpFoundation\Request;
@@ -82,7 +83,8 @@ final class CorsListener
     public function __construct(
         #[Autowire('%env(APP_FRONTEND_URL)%')] string $frontendUrl,
     ) {
-        $this->allowedOrigin = self::originOf($frontendUrl);
+        // An Origin header carries no path, so the raw APP_FRONTEND_URL would never match one with a trailing slash.
+        $this->allowedOrigin = UrlOrigin::of($frontendUrl);
     }
 
     /**
@@ -186,25 +188,5 @@ final class CorsListener
     {
         return Request::METHOD_OPTIONS === $request->getMethod()
             && $request->headers->has('Access-Control-Request-Method');
-    }
-
-    /**
-     * Reduces a configured URL to the origin a browser would send: scheme, host
-     * and non-default port, with any path, query or fragment dropped. An
-     * `Origin` header never carries those, so comparing against the raw
-     * APP_FRONTEND_URL would silently never match on a value with a trailing
-     * slash — the most likely way for an operator to write it.
-     */
-    private static function originOf(string $url): ?string
-    {
-        $parts = parse_url($url);
-
-        if (!\is_array($parts) || !isset($parts['scheme'], $parts['host'])) {
-            return null;
-        }
-
-        $origin = $parts['scheme'] . '://' . $parts['host'];
-
-        return isset($parts['port']) ? $origin . ':' . $parts['port'] : $origin;
     }
 }
