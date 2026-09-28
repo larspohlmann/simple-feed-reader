@@ -77,6 +77,19 @@ final class TeaserPlayerScannerTest extends TestCase
         self::assertCount(1, $this->scanner->scan($document, 'https://x.test/a-100.html'));
     }
 
+    public function testTheFirstBlockNamingAPlayerUrlGivesTheTeaserItsStill(): void
+    {
+        $block = static fn (string $still): string => '<div class="block">'
+            . '<picture><img src="https://x.test/' . $still . '.jpg" alt=""></picture>'
+            . '<div data-v="https://x.test/clip.mp4"></div></div>';
+        $document = $this->document('<body>' . $block('first') . $block('second') . '</body>');
+
+        $found = $this->scanner->scan($document, 'https://x.test/a-100.html');
+
+        self::assertCount(1, $found);
+        self::assertSame('https://x.test/first.jpg', $found[0]->posterUrl);
+    }
+
     /** The still is looked for close to the player, not across the whole page. */
     public function testDoesNotReachBeyondThePlayersNearAncestorsForAStill(): void
     {

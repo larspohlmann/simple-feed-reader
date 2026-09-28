@@ -55,6 +55,20 @@ final class SiblingIdRuleTest extends TestCase
         self::assertSame('https://a.test/api/video/sgs-lange-wiesel-100.m3u8', $derived[1]->url);
     }
 
+    public function testASiblingNamedTwiceTakesTheStillBesideItsFirstMention(): void
+    {
+        $html = self::page(
+            self::config('taktik-analyse-video-100', 'taktik'),
+            self::config('reaktion-anschlag-video-100', 'reaktion-first-100'),
+            self::config('reaktion-anschlag-video-100', 'reaktion-second-100'),
+        );
+
+        $derived = (new SiblingIdRule())->derive($this->seed(), $html);
+
+        self::assertCount(1, $derived);
+        self::assertSame('https://a.test/assets/reaktion-first-100~1920x1080?cb=1', $derived[0]->posterUrl);
+    }
+
     public function testAContextWithMoreThanFiveSiblingsIsAListNotTheArticle(): void
     {
         $configs = [self::config('taktik-analyse-video-100', 'taktik')];

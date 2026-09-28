@@ -10,6 +10,7 @@ use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageMediaInserter;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaInserterTest extends TestCase
@@ -155,6 +156,17 @@ final class PageMediaInserterTest extends TestCase
 
         self::assertStringNotContainsString('<audio', $out);
         self::assertStringContainsString('Teaser', $out);
+    }
+
+    public function testADocumentWithoutABodyPlansNothing(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $plan = $this->inserter->plan(HTMLDocument::createEmpty(), $media);
+
+        self::assertSame([], $plan->reconcilePairs);
+        self::assertSame([], $plan->anchoredPairs);
+        self::assertSame([], $plan->topPlaced);
     }
 
     public function testKeepsSourceOrder(): void

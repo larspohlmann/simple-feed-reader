@@ -50,6 +50,7 @@ use App\Service\Reader\RelatedTeaserGridRemover;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
+use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Tests\Service\Reader\FetchedPageNormalizerTest;
@@ -216,6 +217,24 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('prozessdrogenurteil-100', $contentHtml);
         self::assertStringNotContainsString('kokain510', $contentHtml);
         self::assertStringNotContainsString('kokainurteil-100', $contentHtml);
+    }
+
+    public function testDropsTheTeaserGridBesideASlideshowWhoseCarouselCarriesNoSignature(): void
+    {
+        $page = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/related-teaser-grid.html');
+        $carousel = (string) file_get_contents(__DIR__ . '/../../../Fixtures/Slideshow/tagesschau-carousel.html');
+        $unsignedCarousel = (string) preg_replace('/ class="v-instance [^"]*"/', '', $carousel);
+        $html = str_replace('</body>', strip_tags($unsignedCarousel, '<div>') . '</body>', $page);
+        $extractor = $this->extractor(
+            [new MockResponse($html, ['http_code' => 200])],
+            slideshowScanner: new SlideshowScanner([new TagesschauCarouselRecognizer()]),
+        );
+
+        $result = $extractor->extract('https://site.test/post');
+
+        self::assertTrue($result->ok);
+        self::assertStringContainsString('sieben Jahren Haft', (string) $result->contentHtml);
+        self::assertStringNotContainsString('kokainurteil-100', (string) $result->contentHtml);
     }
 
     public function testStampsFeedDeclaredDimensionsOnAMatchingBodyImage(): void

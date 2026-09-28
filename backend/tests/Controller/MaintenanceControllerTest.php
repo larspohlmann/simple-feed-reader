@@ -9,10 +9,15 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Tests\Support\DuplicateKeyViolation;
+use App\Tests\Support\FlushFailingEntityManager;
+use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Lock\LockFactory;
 
 final class MaintenanceControllerTest extends WebTestCase
@@ -133,6 +138,42 @@ final class MaintenanceControllerTest extends WebTestCase
 
         self::assertResponseStatusCodeSame(409);
         $lock->release();
+    }
+
+    public function testAnAbortedRefreshReturnsServerError(): void
+    {
+        $client = self::createClient();
+        $feed = $this->feedFor($client, 'https://maint.example.com/feed');
+
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponseModel::fetched(
+                $feed->getUrl(),
+                false,
+                /** @lang TEXT */ '<?xml version="1.0"?><rss version="2.0"><channel><title>F</title>'
+                    . '<item><title>Post</title><link>https://maint.example.com/p</link><guid>g-1</guid></item>'
+                    . '</channel></rss>',
+                null,
+                null,
+            ),
+        );
+        /** @var EntityManagerInterface $em */
+        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $failingEm = new FlushFailingEntityManager($em, thrown: DuplicateKeyViolation::exception());
+        self::getContainer()->set(
+            RefreshRunner::class,
+            RefreshRunners::fromContainer(self::getContainer(), $em, new MockClock())
+                ->flushingThrough($failingEm)
+                ->build($fetcher, $fetcher),
+        );
+
+        $client->request('POST', '/maintenance/refresh?token=test-maintenance-token');
+
+        self::assertResponseStatusCodeSame(500);
+        /** @var array{status: string} $payload */
+        $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('aborted', $payload['status']);
     }
 
     public function testUnknownActionIs404(): void

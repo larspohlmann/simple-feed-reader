@@ -97,6 +97,29 @@ final class ReaderAuditCommandTest extends DbTestCase
         );
     }
 
+    public function testTheSummaryCountsTheSampleItsDistinctFeedsAndTheShard(): void
+    {
+        $entries = $this->subscribedEntries('audit-summary@example.com', 2);
+        self::getContainer()->set(
+            ArticleExtractorInterface::class,
+            $this->extractorReturningOk('https://cli.example.com/article-0'),
+        );
+        $entryIds = array_map(static fn (Entry $entry): string => (string) $entry->requireId(), $entries);
+
+        $tester = $this->tester();
+        $tester->execute([
+            '--entries' => implode(',', $entryIds),
+            '--shards' => '2',
+            '--shard' => '0',
+            '--out' => $this->outputPath('summary'),
+        ]);
+
+        self::assertMatchesRegularExpression(
+            '/user \d+ — 2 articles sampled over 1 feeds, 1 in this shard/',
+            $tester->getDisplay(),
+        );
+    }
+
     public function testAnExplicitBeforeCutoffExcludesLaterEntries(): void
     {
         $this->subscribedEntries('audit-before@example.com', 1);
