@@ -308,5 +308,24 @@ check(
     "  file:\n{$untouched}",
 );
 
+$functionImport = "use function App\Service\Backup\Model\checksumOf;\n";
+$root = plantRepository([
+    'backend/src/Service/Backup/Model/ChecksumModel.php' => phpClass('App\Service\Backup\Model', 'ChecksumModel'),
+    'backend/src/Service/Backup/BackupNote.php' => phpClass(
+        'App\Service\Backup',
+        'BackupNote',
+        "use App\Service\Backup\Model\ChecksumModel;\n{$functionImport}",
+    ),
+]);
+$result = runMove($root, ['App\Service\Backup\BackupNote' => 'App\Service\Backup\Model\BackupNoteModel']);
+$note = (string) @file_get_contents("{$root}/backend/src/Service/Backup/Model/BackupNoteModel.php");
+check(
+    '(g) a use function line stays when every class import of its block drops',
+    0 === $result['status']
+        && str_contains($note, "\n{$functionImport}")
+        && !str_contains($note, 'use App\Service\Backup\Model\ChecksumModel;'),
+    "  exit {$result['status']}, output: {$result['output']}\n  moved file:\n{$note}",
+);
+
 echo 0 === $failures ? "All checks passed.\n" : "{$failures} checks failed.\n";
 exit(0 === $failures ? 0 : 1);

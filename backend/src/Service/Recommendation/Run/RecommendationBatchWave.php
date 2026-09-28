@@ -129,13 +129,10 @@ final readonly class RecommendationBatchWave
         foreach ($pending as $position) {
             $waveBatch = $wave->batches[$position];
             $messages = $this->batchMessages($wave, $waveBatch, $correctiveReply[$position] ?? null);
+            $validIdCount = \count($waveBatch->validIds());
             $request = $this->requestFactory->create(
                 $tick->connection,
-                new CallPromptModel(
-                    $messages,
-                    \count($waveBatch->validIds()),
-                    RecommendationResponseSchema::BatchScore,
-                ),
+                new CallPromptModel($messages, $validIdCount, RecommendationResponseSchema::BatchScore),
             );
             $slot = CallSlotModel::batch($waveBatch->index + 1);
             $recordedCall = $this->callRecorder->begin($tick->run, $slot, $request);

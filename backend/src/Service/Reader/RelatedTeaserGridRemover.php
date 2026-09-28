@@ -54,13 +54,23 @@ final readonly class RelatedTeaserGridRemover
     private function isClaimedBySlideshow(Element $container, array $slideshowContainers): bool
     {
         for ($element = $container; $element !== null; $element = $element->parentElement) {
-            $isSlideshow = static fn (ContainerSignatureModel $s): bool => $s->matches($element);
-            if (array_any($slideshowContainers, $isSlideshow)) {
+            if ($this->anySignatureMatches($slideshowContainers, $element)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * @param list<ContainerSignatureModel> $signatures
+     */
+    private function anySignatureMatches(array $signatures, Element $element): bool
+    {
+        return array_any(
+            $signatures,
+            static fn (ContainerSignatureModel $signature): bool => $signature->matches($element),
+        );
     }
 
     /**

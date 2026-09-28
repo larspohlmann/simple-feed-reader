@@ -69,13 +69,25 @@ function declaredNamespace(string $code): string
     return 1 === preg_match('/^namespace ([^;]+);$/m', $code, $match) ? $match[1] : '';
 }
 
+/** @return array{class: string, alias: ?string}|null a plain class import; `use function` and `use const` are not one */
+function parseImport(string $line): ?array
+{
+    if (1 !== preg_match('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/', $line, $import)) {
+        return null;
+    }
+
+    return ['class' => $import[1], 'alias' => $import[2] ?? null];
+}
+
 /** @return array<string, true> the short names a file imports, aliases included */
 function importedNames(string $code): array
 {
-    preg_match_all('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/m', $code, $matches, PREG_SET_ORDER);
     $names = [];
-    foreach ($matches as $match) {
-        $names[$match[2] ?? shortNameOf($match[1])] = true;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null !== $import) {
+            $names[$import['alias'] ?? shortNameOf($import['class'])] = true;
+        }
     }
 
     return $names;
@@ -258,12 +270,13 @@ function referencedNames(string $code): array
 /** A plain import of a direct member of the namespace, or one aliased to its own short name, changes nothing. */
 function isOwnNamespaceImport(string $line, string $namespace): bool
 {
-    if (1 !== preg_match('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/', $line, $import)) {
+    $import = parseImport($line);
+    if (null === $import) {
         return false;
     }
-    $short = shortNameOf($import[1]);
+    $short = shortNameOf($import['class']);
 
-    return namespaceOf($import[1]) === $namespace && ($import[2] ?? $short) === $short;
+    return namespaceOf($import['class']) === $namespace && ($import['alias'] ?? $short) === $short;
 }
 
 /** A use block that loses every line takes the blank line after it along. */
@@ -313,10 +326,12 @@ function addImport(string $code, string $class): string
 /** @return array<string, string> short name => class, for the imports that carry no alias */
 function importedClasses(string $code): array
 {
-    preg_match_all('/^use (?!function |const )([\w\\\\]+);$/m', $code, $matches);
     $classes = [];
-    foreach ($matches[1] as $class) {
-        $classes[shortNameOf($class)] = $class;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null !== $import && null === $import['alias']) {
+            $classes[shortNameOf($import['class'])] = $import['class'];
+        }
     }
 
     return $classes;
@@ -509,11 +524,14 @@ function namesAfterMoves(string $code, string $destination, array $moves, array 
         $class = $moves[declaredNamespace($code) . '\\' . $short] ?? namespaceOf($destination) . '\\' . $short;
         $names[shortNameOf($class)][$class] = 'the file declares';
     }
-    preg_match_all('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/m', $code, $imports, PREG_SET_ORDER);
-    foreach ($imports as $import) {
-        $class = $moves[$import[1]] ?? $import[1];
-        $short = $import[2] ?? shortNameOf($import[1]);
-        $isRenamedBareImport = !isset($import[2]) && shortNameOf($class) !== $short;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null === $import) {
+            continue;
+        }
+        $class = $moves[$import['class']] ?? $import['class'];
+        $short = $import['alias'] ?? shortNameOf($import['class']);
+        $isRenamedBareImport = null === $import['alias'] && shortNameOf($class) !== $short;
         if (!$isRenamedBareImport) {
             $names[$short][$class] = 'an import names';
         }
