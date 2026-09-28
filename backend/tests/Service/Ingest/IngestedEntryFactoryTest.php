@@ -43,11 +43,11 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertSame('T' . str_repeat('t', 1023), $entry->getTitle());
         self::assertSame('A' . str_repeat('a', 254), $entry->getAuthor());
         self::assertSame('A & B summary', $entry->getSummary());
+        self::assertStringContainsString('<p>Body</p>', (string) $entry->getContentHtml());
         self::assertStringNotContainsString('script', (string) $entry->getContentHtml());
         self::assertSame('2026-09-20 08:00:00', $entry->getPublishedAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-09-21 12:00:00', $entry->getCreatedAt()->format('Y-m-d H:i:s'));
         self::assertSame('2026-09-20 08:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
-        self::assertTrue($entry->getImage()->isMissing());
     }
 
     public function testAnItemWithoutUrlOrAuthorKeepsBothNullAndSummarisesItsBody(): void

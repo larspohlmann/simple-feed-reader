@@ -456,6 +456,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(2, $entries);
 
         $first = $entries[0];
+        self::assertStringContainsString('<p>Body</p>', (string) $first->getContentHtml());
         self::assertStringNotContainsString('script', (string) $first->getContentHtml());
         self::assertSame('A & B summary', $first->getSummary());
         self::assertSame('Feed Title', $feed->getTitle());
