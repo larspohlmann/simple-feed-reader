@@ -8,7 +8,6 @@ use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\PageMediaPlacement;
-use App\Service\Reader\FeedMedia;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\MediaCandidate;
@@ -49,7 +48,7 @@ final class PageMediaPlacementTest extends TestCase
             'Watch',
         );
 
-        $out = $this->placed(new BodyCleaningInput([], $this->hero(), new ArticleMedia([$embed]), FeedMedia::none()));
+        $out = $this->placed(BodyCleaningInputs::withLeadImageAndMedia($this->hero(), new ArticleMedia([$embed])));
 
         self::assertStringNotContainsString('cdn.test/hero.jpg', $out);
         self::assertStringContainsString('i.ytimg.example/hqdefault.jpg', $out);
@@ -60,7 +59,7 @@ final class PageMediaPlacementTest extends TestCase
     {
         $audio = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
-        $out = $this->placed(new BodyCleaningInput([], $this->hero(), $audio, FeedMedia::none()));
+        $out = $this->placed(BodyCleaningInputs::withLeadImageAndMedia($this->hero(), $audio));
 
         self::assertStringContainsString('cdn.test/hero.jpg', $out);
         self::assertLessThan(strpos($out, '<audio'), strpos($out, 'cdn.test/hero.jpg'));

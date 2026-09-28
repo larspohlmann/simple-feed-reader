@@ -17,66 +17,80 @@ final class BodyCleaningInputs
 {
     public static function nothingKnown(): BodyCleaningInput
     {
-        return new BodyCleaningInput([], self::noLeadImage(), ArticleMedia::none(), FeedMedia::none());
+        return self::build();
     }
 
     /** @param list<string|null> $titleCandidates */
     public static function withTitles(array $titleCandidates): BodyCleaningInput
     {
-        return new BodyCleaningInput($titleCandidates, self::noLeadImage(), ArticleMedia::none(), FeedMedia::none());
+        return self::build(titleCandidates: $titleCandidates);
     }
 
     public static function withLeadImage(LeadImageCandidate $leadImage): BodyCleaningInput
     {
-        return new BodyCleaningInput([], $leadImage, ArticleMedia::none(), FeedMedia::none());
+        return self::build(leadImage: $leadImage);
     }
 
     public static function withMedia(ArticleMedia $media): BodyCleaningInput
     {
-        return new BodyCleaningInput([], self::noLeadImage(), $media, FeedMedia::none());
+        return self::build(media: $media);
+    }
+
+    public static function withLeadImageAndMedia(LeadImageCandidate $leadImage, ArticleMedia $media): BodyCleaningInput
+    {
+        return self::build(leadImage: $leadImage, media: $media);
     }
 
     public static function withFeedMedia(FeedMedia $feedMedia): BodyCleaningInput
     {
-        return new BodyCleaningInput([], self::noLeadImage(), ArticleMedia::none(), $feedMedia);
+        return self::build(feedMedia: $feedMedia);
     }
 
     public static function withEntryAuthor(?string $entryAuthor): BodyCleaningInput
     {
-        return new BodyCleaningInput(
-            [],
-            self::noLeadImage(),
-            ArticleMedia::none(),
-            FeedMedia::none(),
-            entryAuthor: $entryAuthor,
-        );
+        return self::build(entryAuthor: $entryAuthor);
     }
 
     /** @param list<Slideshow> $slideshows */
     public static function withSlideshows(array $slideshows): BodyCleaningInput
     {
-        return new BodyCleaningInput(
-            [],
-            self::noLeadImage(),
-            ArticleMedia::none(),
-            FeedMedia::none(),
-            slideshows: $slideshows,
-        );
+        return self::build(slideshows: $slideshows);
     }
 
     /** @param list<TeaserPlayer> $teasers the teasers to rebuild, beside the media the pipeline already placed */
     public static function withTeasers(array $teasers, ArticleMedia $placedMedia): BodyCleaningInput
     {
-        return new BodyCleaningInput([], self::noLeadImage(), $placedMedia, FeedMedia::none(), teasers: $teasers);
+        return self::build(media: $placedMedia, teasers: $teasers);
     }
 
     public static function withExcerpt(?string $excerpt): BodyCleaningInput
     {
+        return self::build(excerpt: $excerpt);
+    }
+
+    /**
+     * @param list<string|null>  $titleCandidates
+     * @param list<Slideshow>    $slideshows
+     * @param list<TeaserPlayer> $teasers
+     */
+    private static function build(
+        array $titleCandidates = [],
+        ?LeadImageCandidate $leadImage = null,
+        ?ArticleMedia $media = null,
+        ?FeedMedia $feedMedia = null,
+        ?string $entryAuthor = null,
+        array $slideshows = [],
+        array $teasers = [],
+        ?string $excerpt = null,
+    ): BodyCleaningInput {
         return new BodyCleaningInput(
-            [],
-            self::noLeadImage(),
-            ArticleMedia::none(),
-            FeedMedia::none(),
+            $titleCandidates,
+            $leadImage ?? self::noLeadImage(),
+            $media ?? ArticleMedia::none(),
+            $feedMedia ?? FeedMedia::none(),
+            entryAuthor: $entryAuthor,
+            slideshows: $slideshows,
+            teasers: $teasers,
             excerpt: $excerpt,
         );
     }

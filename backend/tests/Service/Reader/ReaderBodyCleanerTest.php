@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
-use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Reader\BodyCleaning\PageMediaPlacement;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FeedDimensionStamper;
-use App\Service\Reader\FeedMedia;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
 use App\Service\Reader\LeadingTitleRemover;
@@ -358,7 +356,7 @@ final class ReaderBodyCleanerTest extends TestCase
             ),
         ]);
 
-        $out = $this->cleaner->clean($html, new BodyCleaningInput([], $lead, $discovered, FeedMedia::none()));
+        $out = $this->cleaner->clean($html, BodyCleaningInputs::withLeadImageAndMedia($lead, $discovered));
 
         self::assertStringNotContainsString('heise.cloudimg.example', $out);
         self::assertStringContainsString('i.ytimg.example/hqdefault.jpg', $out);
