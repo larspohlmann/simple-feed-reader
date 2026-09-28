@@ -54,6 +54,7 @@ use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\OptimisticLockException;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -1235,6 +1236,36 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->fetched);
         self::assertSame(0, $report->pruned);
         self::assertSame(0, $report->skippedForBudget);
+        self::assertSame(0, $report->remaining);
+    }
+
+    /**
+     * The favicon flush's catch also covers plain ORMException, not just the DBAL
+     * constraint violations: a versioned entity's flush can fail this way too, and
+     * it must degrade to `aborted` exactly like the constraint-violation case.
+     */
+    public function testFaviconFlushOrmExceptionAbortsTheRunWithoutThrowing(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+        $this->fetcher->willReturn(
+            $feed->getUrl(),
+            FetchResponse::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
+        );
+
+        $flushes = 0;
+        $failingEm = $this->createStub(EntityManagerInterface::class);
+        $failingEm->method('flush')->willReturnCallback(function () use (&$flushes, $feed): void {
+            $flushes++;
+            if ($flushes === 2) {
+                throw OptimisticLockException::lockFailed($feed);
+            }
+            $this->em->flush();
+        });
+
+        $report = $this->runner($failingEm)->run(RefreshRequest::allDue(300));
+
+        self::assertSame('aborted', $report->status);
         self::assertSame(0, $report->remaining);
     }
 

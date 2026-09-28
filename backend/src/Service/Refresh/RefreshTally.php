@@ -6,36 +6,24 @@ namespace App\Service\Refresh;
 
 use App\Entity\Feed;
 
-/** Running counts for one refresh pass. Mutable: it is a tally. */
+/** Running counts for one refresh pass; only record() moves them. */
 final class RefreshTally
 {
-    public int $fetched = 0;
-    public int $notModified = 0;
-    public int $failed = 0;
-    public int $throttled = 0;
-    public int $processed = 0;
-    public int $entriesCreated = 0;
-    public bool $aborted = false;
+    private int $fetched = 0;
+    private int $notModified = 0;
+    private int $failed = 0;
+    private int $throttled = 0;
+    private int $processed = 0;
+    private int $entriesCreated = 0;
+    private bool $aborted = false;
 
-    /**
-     * Feeds phase two may fetch a homepage for, in outcome order. Narrower than
-     * "processed": a budget-deferred feed never fetched, and a FAILED feed has
-     * nothing new to show an icon beside — retrying its homepage every sweep would
-     * add a permanent round trip for a site that may never recover (a 404 feed
-     * behind a 403 crawler block, say). Keep "counted" and "favicon-eligible" as
-     * separate sets so a future change can't conflate them.
-     *
-     * @var list<Feed>
-     */
-    public array $faviconEligibleFeeds = [];
+    /** @var list<Feed> not "processed": a failed or throttled feed has nothing new to show an icon beside */
+    private array $faviconEligibleFeeds = [];
 
     public function record(FeedRefreshResult $result, Feed $feed): void
     {
         $outcome = $result->outcome;
-        // An aborted feed is deliberately NOT counted as processed: its flush
-        // rolled back, so it is still due and must appear in `remaining`.
-        // Counting it here would under-report by one and let a polling client
-        // believe a feed was handled when nothing was persisted.
+        // An aborted feed's flush rolled back, so it is still due: it counts as failed, never as processed.
         if (FeedOutcome::Aborted === $outcome) {
             $this->failed++;
             $this->aborted = true;
@@ -56,5 +44,46 @@ final class RefreshTally
         if ($outcome->broughtContent()) {
             $this->faviconEligibleFeeds[] = $feed;
         }
+    }
+
+    public function fetched(): int
+    {
+        return $this->fetched;
+    }
+
+    public function notModified(): int
+    {
+        return $this->notModified;
+    }
+
+    public function failed(): int
+    {
+        return $this->failed;
+    }
+
+    public function throttled(): int
+    {
+        return $this->throttled;
+    }
+
+    public function processed(): int
+    {
+        return $this->processed;
+    }
+
+    public function entriesCreated(): int
+    {
+        return $this->entriesCreated;
+    }
+
+    public function isAborted(): bool
+    {
+        return $this->aborted;
+    }
+
+    /** @return list<Feed> */
+    public function faviconEligibleFeeds(): array
+    {
+        return $this->faviconEligibleFeeds;
     }
 }

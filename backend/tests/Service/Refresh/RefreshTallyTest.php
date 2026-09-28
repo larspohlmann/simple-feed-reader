@@ -16,14 +16,14 @@ final class RefreshTallyTest extends TestCase
     {
         $tally = new RefreshTally();
 
-        self::assertSame(0, $tally->fetched);
-        self::assertSame(0, $tally->notModified);
-        self::assertSame(0, $tally->failed);
-        self::assertSame(0, $tally->throttled);
-        self::assertSame(0, $tally->processed);
-        self::assertSame(0, $tally->entriesCreated);
-        self::assertFalse($tally->aborted);
-        self::assertSame([], $tally->faviconEligibleFeeds);
+        self::assertSame(0, $tally->fetched());
+        self::assertSame(0, $tally->notModified());
+        self::assertSame(0, $tally->failed());
+        self::assertSame(0, $tally->throttled());
+        self::assertSame(0, $tally->processed());
+        self::assertSame(0, $tally->entriesCreated());
+        self::assertFalse($tally->isAborted());
+        self::assertSame([], $tally->faviconEligibleFeeds());
     }
 
     public function testEachOutcomeLandsInItsOwnCount(): void
@@ -35,13 +35,13 @@ final class RefreshTallyTest extends TestCase
         $tally->record(FeedRefreshResult::of(FeedOutcome::Failed), new Feed('https://c.example.com/feed'));
         $tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
 
-        self::assertSame(1, $tally->fetched);
-        self::assertSame(1, $tally->notModified);
-        self::assertSame(1, $tally->failed);
-        self::assertSame(1, $tally->throttled);
-        self::assertSame(4, $tally->processed);
-        self::assertSame(3, $tally->entriesCreated);
-        self::assertFalse($tally->aborted);
+        self::assertSame(1, $tally->fetched());
+        self::assertSame(1, $tally->notModified());
+        self::assertSame(1, $tally->failed());
+        self::assertSame(1, $tally->throttled());
+        self::assertSame(4, $tally->processed());
+        self::assertSame(3, $tally->entriesCreated());
+        self::assertFalse($tally->isAborted());
     }
 
     public function testAnAbortedFeedCountsAsFailedButNotAsProcessed(): void
@@ -52,11 +52,11 @@ final class RefreshTallyTest extends TestCase
         $tally->record(FeedRefreshResult::fetched(2), $fetched);
         $tally->record(FeedRefreshResult::of(FeedOutcome::Aborted), new Feed('https://b.example.com/feed'));
 
-        self::assertSame(1, $tally->failed);
-        self::assertSame(1, $tally->processed);
-        self::assertSame(2, $tally->entriesCreated);
-        self::assertTrue($tally->aborted);
-        self::assertSame([$fetched], $tally->faviconEligibleFeeds);
+        self::assertSame(1, $tally->failed());
+        self::assertSame(1, $tally->processed());
+        self::assertSame(2, $tally->entriesCreated());
+        self::assertTrue($tally->isAborted());
+        self::assertSame([$fetched], $tally->faviconEligibleFeeds());
     }
 
     public function testOnlyFeedsThatBroughtContentAreFaviconEligible(): void
@@ -70,6 +70,6 @@ final class RefreshTallyTest extends TestCase
         $tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $unchanged);
         $tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
 
-        self::assertSame([$fetched, $unchanged], $tally->faviconEligibleFeeds);
+        self::assertSame([$fetched, $unchanged], $tally->faviconEligibleFeeds());
     }
 }

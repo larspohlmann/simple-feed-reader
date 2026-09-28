@@ -122,111 +122,61 @@ final class RefreshRunner implements RefreshRunnerInterface
         // request, so a run can overrun this budget by up to 20 s, or a multiple on
         // a pathological redirect chain. The serial fetcher had the identical
         // bound, so this is not a regression -- but `budgetSeconds` is no ceiling.
-        $queue = new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
-        $tally = $this->processOutcomes($feeds, $queue, $now);
+        $pass = new RefreshPass(
+            $feeds,
+            new BudgetedFeedQueue($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds),
+        );
+        $this->processOutcomes($pass, $now);
 
         // The point of the poll's static marker: move it only when a real import
         // stored new content, so a tick that finds it unmoved does no PHP work
         // (#720). An all-NotModified sweep must leave it. Checked before the abort
         // branch on purpose: entries created before an abort were already committed.
-        if ($tally->entriesCreated > 0) {
+        if ($pass->tally->entriesCreated() > 0) {
             $this->changeMarker->markChanged();
         }
 
-        if ($tally->aborted) {
-            // The EntityManager is likely closed: no favicons, no countDue, no
-            // prune. Everything unprocessed stays due for the next run.
-            return RefreshReport::aborted(
-                \count($feeds),
-                $tally->fetched,
-                $tally->notModified,
-                $tally->failed,
-                $tally->throttled,
-                \count($feeds) - $tally->processed,
-            );
+        if ($pass->tally->isAborted()) {
+            // The EntityManager is likely closed: no favicons, no countDue, no prune.
+            return $pass->abortedDuringOutcomes();
         }
 
-        return $this->resolveFaviconsAndReport($request, $feeds, $tally, $queue, $criteria);
+        return $this->resolveFaviconsAndReport($request, $pass, $criteria);
     }
 
-    /**
-     * Resolves favicons, then assembles the completed report. Split out so the
-     * favicon flush's failure mode is visible next to the code that handles it:
-     * every fetch outcome is already flushed individually, so nothing persisted
-     * is at risk here, but RefreshController's contract still promises the
-     * client a JSON `status` field, never an opaque 500 its poll loop can't handle.
-     *
-     * @param list<Feed> $feeds
-     *
-     * @throws \DateMalformedStringException
-     */
+    /** @throws \DateMalformedStringException */
     private function resolveFaviconsAndReport(
         RefreshRequest $request,
-        array $feeds,
-        RefreshTally $tally,
-        BudgetedFeedQueue $queue,
+        RefreshPass $pass,
         DueFeedCriteria $criteria,
     ): RefreshReport {
         try {
-            $this->resolveMissingFavicons($tally->faviconEligibleFeeds);
+            $this->resolveMissingFavicons($pass->tally->faviconEligibleFeeds());
         } catch (UniqueConstraintViolationException | ORMException $e) {
             $this->logger->error(
                 'Refresh aborted: persistence failed while resolving favicons',
                 ['exception' => $e],
             );
 
-            return RefreshReport::aborted(
-                \count($feeds),
-                $tally->fetched,
-                $tally->notModified,
-                $tally->failed,
-                $tally->throttled,
-                $queue->skippedCount(),
-            );
+            return $pass->abortedAfterOutcomes();
         }
 
-        return RefreshReport::finished(
-            \count($feeds),
-            $tally->fetched,
-            $tally->notModified,
-            $tally->failed,
-            $tally->throttled,
-            $queue->skippedCount(),
-            $this->countRemaining($criteria, $queue),
+        return $pass->finished(
+            $this->countRemaining($criteria, $pass),
             $request->prune ? $this->pruner->prune() : 0,
         );
     }
 
-    /**
-     * Drives the concurrent fetch and applies each result serially as it lands.
-     * Breaking out of the loop cancels whatever is still in flight.
-     *
-     * @param list<Feed>        $feeds
-     * @param BudgetedFeedQueue $queue
-     *
-     * @return RefreshTally
-     * @throws \DateMalformedStringException
-     */
-    private function processOutcomes(array $feeds, BudgetedFeedQueue $queue, \DateTimeImmutable $now): RefreshTally
+    /** @throws \DateMalformedStringException */
+    private function processOutcomes(RefreshPass $pass, \DateTimeImmutable $now): void
     {
-        $byId = [];
-        foreach ($feeds as $feed) {
-            $byId[$feed->requireId()] = $feed;
-        }
-
-        $tally = new RefreshTally();
-
-        foreach ($this->fetcher->fetchAll($queue->tickets()) as $feedId => $outcome) {
-            $feed = $byId[$feedId];
-            $result = $this->applyOutcome($feed, $outcome, $now);
-            $tally->record($result, $feed);
-
-            if (FeedOutcome::Aborted === $result->outcome) {
+        foreach ($this->fetcher->fetchAll($pass->tickets()) as $feedId => $outcome) {
+            $feed = $pass->feed($feedId);
+            $pass->tally->record($this->applyOutcome($feed, $outcome, $now), $feed);
+            if ($pass->tally->isAborted()) {
                 break;
             }
         }
-
-        return $tally;
     }
 
     /**
@@ -274,22 +224,11 @@ final class RefreshRunner implements RefreshRunnerInterface
         }
     }
 
-    /**
-     * What this run left undone, which is what the client polls on.
-     *
-     * Feeds the run took on are excluded by id, not trusted to fall out of the
-     * due query alone: a 429 writes no fetch time on purpose (#290), so without
-     * the exclusion a rationed feed would stay `remaining` forever and the client
-     * would re-poll without pause (89 requests to one Reddit feed in production,
-     * #302).
-     *
-     * The exclusion also fixes the single-feed scope: matching on id alone made
-     * countDue ignore the schedule and keep answering 1 after a successful
-     * refresh. Excluded, the feed counts like any other handled feed.
-     */
-    private function countRemaining(DueFeedCriteria $criteria, BudgetedFeedQueue $queue): int
+    // Started feeds are excluded by id: a 429 writes no fetch time (#290), so the due query alone would count a
+    // rationed feed as remaining forever and keep the client polling (#302).
+    private function countRemaining(DueFeedCriteria $criteria, RefreshPass $pass): int
     {
-        return $this->feedRepository->countDue($criteria->excluding($queue->startedFeedIds()));
+        return $this->feedRepository->countDue($criteria->excluding($pass->startedFeedIds()));
     }
 
     private function persistOutcome(Feed $feed, FetchOutcome $outcome, FeedIngestContext $context): FeedRefreshResult
