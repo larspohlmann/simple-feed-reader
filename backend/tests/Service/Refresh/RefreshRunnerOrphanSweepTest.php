@@ -4,49 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
-use App\Tests\Support\RecordingContentChangeMarker;
-use App\Entity\Category;
-use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Repository\EntryRepository;
-use App\Repository\FeedRepository;
-use App\Repository\OrphanedFeedRepository;
-use App\Repository\RetentionRepository;
-use App\Repository\RowIds;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\FeedScheduler;
-use App\Service\Fetch\FaviconResolver;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Ingest\EntryCategoryWriter;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Platform\PlatformEntryRules;
-use App\Service\OrphanedFeedReclaimer;
-use App\Service\Parser\Atom03Parser;
-use App\Service\Parser\Atom10Parser;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\FeedParserFactory;
-use App\Service\Parser\Rss1Parser;
-use App\Service\Parser\Rss2Parser;
-use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
-use App\Service\Refresh\ScrapedBodyParser;
-use App\Service\Refresh\XmlBodyParser;
-use App\Service\Retention\EntryPruner;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Search\EntryIndexer;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
-use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
-use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\DependencyInjection\ServiceLocator;
-use Symfony\Component\Lock\LockFactory;
-use Symfony\Component\Lock\Store\InMemoryStore;
 
 /**
  * The safety net behind the immediate reclaim: a pruning refresh must sweep
@@ -58,7 +22,6 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
     private MockClock $clock;
     private StubFeedFetcher $fetcher;
     private StubFeedFetcher $faviconFetcher;
-    private LockFactory $lockFactory;
 
     protected function setUp(): void
     {
@@ -66,61 +29,12 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->fetcher = new StubFeedFetcher($this->clock);
         $this->faviconFetcher = new StubFeedFetcher();
-        $this->lockFactory = new LockFactory(new InMemoryStore());
-    }
-
-    private function indexer(): EntryIndexer
-    {
-        return new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger());
     }
 
     private function runner(): RefreshRunner
     {
-        /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->em->getRepository(Feed::class);
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
-        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
-
-        return new RefreshRunner(
-            $feedRepository,
-            $this->em,
-            $this->fetcher,
-            new FeedBodyParser(new ServiceLocator([
-                XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
-                    new FeedParser(new FeedParserFactory([
-                        new Rss2Parser(),
-                        new Atom10Parser(),
-                        new Atom03Parser(),
-                        new Rss1Parser(),
-                    ])),
-                ),
-                ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
-            ])),
-            new EntryIngestor(
-                $this->em,
-                $entryRepository,
-                new EntrySanitizer(),
-                new UrlNormalizer(),
-                new EntryCategoryWriter(
-                    $this->em,
-                    $this->em->getRepository(Category::class),
-                    new CategoryNormalizer(),
-                ),
-                new NaiveUtcClock($this->clock),
-                new PlatformEntryRules([]),
-            ),
-            new FaviconResolver($this->faviconFetcher, new NullLogger()),
-            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
-            new EntryPruner(new RetentionRepository($this->em, new RowIds($this->em)), $this->clock, $this->indexer()),
-            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
-            $this->indexer(),
-            $this->lockFactory,
-            $this->clock,
-            new NullLogger(),
-            new RecordingContentChangeMarker(),
-        );
+        return RefreshRunners::fromContainer(self::getContainer(), $this->em, $this->clock)
+            ->build($this->fetcher, $this->faviconFetcher);
     }
 
     public function testAPruningRefreshDeletesAnOrphanedFeed(): void

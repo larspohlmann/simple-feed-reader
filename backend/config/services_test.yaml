@@ -275,13 +275,9 @@ services:
         autowire: true
         public: true
 
-    # FeedBodyParserWiringTest fetches this to prove the app.feed_body_parser
-    # keyed locator actually collects both format parsers — an empty locator
-    # builds fine and every refresh would then take the xml fallback, which
-    # looks exactly like a working deployment until a scraped feed errors.
-    # RefreshRunner is its only injection point, so without this entry the
-    # compiler would inline it away and the test container could not fetch
-    # it. Same `autowire` caveat as above.
+    # FeedBodyParserWiringTest proves the keyed locator collects both format parsers, and FeedOutcomePersisterTest
+    # builds the persister around it. That persister is its only injection point, so without this entry the
+    # compiler would inline it away. Same `autowire` caveat as above.
     App\Service\Refresh\FeedBodyParser:
         autowire: true
         public: true

@@ -5,49 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Tests\Support\RecordingContentChangeMarker;
-use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedStatus;
-use App\Repository\EntryRepository;
-use App\Repository\FeedRepository;
-use App\Repository\OrphanedFeedRepository;
-use App\Repository\RetentionRepository;
-use App\Repository\RowIds;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\FeedScheduler;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedThrottledException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\FetchResponse;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Ingest\EntryCategoryWriter;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Platform\PlatformEntryRules;
-use App\Service\OrphanedFeedReclaimer;
-use App\Service\Parser\Atom03Parser;
-use App\Service\Parser\Atom10Parser;
-use App\Service\Parser\FeedParser;
-use App\Service\Parser\FeedParserFactory;
-use App\Service\Parser\Rss1Parser;
-use App\Service\Parser\Rss2Parser;
-use App\Service\Refresh\FeedBodyParser;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Refresh\RefreshRunner;
-use App\Service\Refresh\ScrapedBodyParser;
-use App\Service\Refresh\XmlBodyParser;
-use App\Service\Retention\EntryPruner;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Search\EntryIndexer;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Scraper\ScrapedFixtures;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
 use Doctrine\DBAL\Driver\AbstractException as DriverAbstractException;
@@ -56,10 +28,7 @@ use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\OptimisticLockException;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\Lock\Store\InMemoryStore;
 
 final class RefreshRunnerTest extends DbTestCase
@@ -94,68 +63,14 @@ final class RefreshRunnerTest extends DbTestCase
         $this->em->persist($this->subscriber);
     }
 
-    private function indexer(): EntryIndexer
-    {
-        return new EntryIndexer($this->indexWriter, new NullLogger());
-    }
-
     private function runner(?EntityManagerInterface $runnerEm = null): RefreshRunner
     {
-        /** @var FeedRepository $feedRepository */
-        $feedRepository = $this->em->getRepository(Feed::class);
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-
-        return new RefreshRunner(
-            $feedRepository,
-            $runnerEm ?? $this->em,
-            $this->fetcher,
-            $this->bodyParser(),
-            new EntryIngestor(
-                $this->em,
-                $entryRepository,
-                new EntrySanitizer(),
-                new UrlNormalizer(),
-                new EntryCategoryWriter(
-                    $this->em,
-                    $this->em->getRepository(Category::class),
-                    new CategoryNormalizer(),
-                ),
-                new NaiveUtcClock($this->clock),
-                new PlatformEntryRules([]),
-            ),
-            new FaviconResolver($this->faviconFetcher, new NullLogger()),
-            new FeedScheduler($this->clock, new HostThrottle(new ArrayAdapter(clock: $this->clock), $this->clock)),
-            new EntryPruner(new RetentionRepository($this->em, new RowIds($this->em)), $this->clock, $this->indexer()),
-            new OrphanedFeedReclaimer(new OrphanedFeedRepository($this->em)),
-            $this->indexer(),
-            $this->lockFactory,
-            $this->clock,
-            new NullLogger(),
-            $this->changeMarker,
-        );
-    }
-
-    /**
-     * Hand-built locator with the same keys the container's tagged one carries
-     * — FeedBodyParserWiringTest proves the real container routes identically.
-     */
-    private function bodyParser(): FeedBodyParser
-    {
-        $extractor = self::getContainer()->get(HtmlItemExtractor::class);
-        self::assertInstanceOf(HtmlItemExtractor::class, $extractor);
-
-        return new FeedBodyParser(new ServiceLocator([
-            XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
-                new FeedParser(new FeedParserFactory([
-                    new Rss2Parser(),
-                    new Atom10Parser(),
-                    new Atom03Parser(),
-                    new Rss1Parser(),
-                ])),
-            ),
-            ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),
-        ]));
+        return RefreshRunners::fromContainer(self::getContainer(), $this->em, $this->clock)
+            ->flushingThrough($runnerEm ?? $this->em)
+            ->lockingWith($this->lockFactory)
+            ->markingChangesOn($this->changeMarker)
+            ->indexingInto($this->indexWriter)
+            ->build($this->fetcher, $this->faviconFetcher);
     }
 
     private function scrapedDueFeed(string $url): Feed
@@ -440,10 +355,9 @@ final class RefreshRunnerTest extends DbTestCase
 
     public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
     {
-        // A functional guard on the #148 wiring: FillMissingImagesTest exercises
-        // the ingestor method directly, which cannot prove the refresh path
-        // actually calls it inside persistOutcome's unit of work. Pre-store an
-        // imageless entry, then serve the same guid carrying a media image.
+        // A functional guard on the #148 wiring: FillMissingImagesTest calls the ingestor directly, which cannot
+        // prove the refresh calls it inside FeedOutcomePersister's unit of work. Pre-store an imageless entry,
+        // then serve the same guid carrying a media image.
         $feed = $this->dueFeed('https://img.example.com/feed');
         $stored = new Entry(
             $feed,
