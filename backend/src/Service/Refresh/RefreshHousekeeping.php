@@ -18,7 +18,6 @@ final readonly class RefreshHousekeeping
     ) {
     }
 
-    /** Runs before the due query: a feed nobody subscribes to must not cost the run an HTTP request. */
     public function reclaimOrphanedFeeds(RefreshRequest $request): void
     {
         if (!$request->prune) {

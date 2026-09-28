@@ -31,7 +31,6 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
-/** The per-feed policies in isolation; RefreshRunnerTest drives the same code through whole runs. */
 final class FeedOutcomePersisterTest extends DbTestCase
 {
     use ReloadsEntities;
