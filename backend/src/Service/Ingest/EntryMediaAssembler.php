@@ -14,7 +14,7 @@ use App\Service\Url\HttpsImageUrl;
 
 /**
  * Turns the feed's parsed media into the entity's two stored lists. The lead
- * passes the same https-upgrading gate `EntryIngestor::storeImage` uses, so
+ * passes the same https-upgrading gate `EntryImageWriter::write` uses, so
  * `media[0]` stays equal to `getImageUrl()` — guarded by EntryIngestorTest.
  */
 final class EntryMediaAssembler

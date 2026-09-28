@@ -11,9 +11,6 @@ use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedMediaBundle;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\DeclaredImage;
-use App\Service\Url\HttpsImageUrl;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -47,7 +44,7 @@ final class EntryIngestor
         private readonly EntrySanitizer $sanitizer,
         private readonly UrlNormalizer $urlNormalizer,
         private readonly EntryCategoryWriter $categoryWriter,
-        private readonly NaiveUtcClock $clock,
+        private readonly EntryImageWriter $imageWriter,
         private readonly PlatformEntryRules $platformRules,
     ) {
     }
@@ -104,7 +101,7 @@ final class EntryIngestor
             $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
             $entry->setPublishedAt($parsedEntry->publishedAt);
             $entry->setDiscussion($parsedEntry->discussion);
-            $this->applyImage($entry, $parsedEntry->media->image);
+            $this->imageWriter->writeOrMarkNone($entry, $parsedEntry->media->image);
             $this->applyMedia($entry, $parsedEntry);
 
             $this->em->persist($entry);
@@ -146,7 +143,7 @@ final class EntryIngestor
             if ($entry === null || !$entry->getImage()->isMissing()) {
                 continue;
             }
-            if ($this->storeImage($entry, $image)) {
+            if ($this->imageWriter->write($entry, $image)) {
                 $updated++;
             }
         }
@@ -174,37 +171,7 @@ final class EntryIngestor
         }
     }
 
-    private function applyImage(Entry $entry, ?DeclaredImage $image): void
-    {
-        if ($image === null || !$this->storeImage($entry, $image)) {
-            $entry->getImage()->storePending(null, null, null);
-        }
-    }
-
-    private function storeImage(Entry $entry, DeclaredImage $image): bool
-    {
-        $url = HttpsImageUrl::orNullUpgrading($image->url);
-        if ($url === null) {
-            return false;
-        }
-        if (self::trustedAtIngest($image)) {
-            $entry->getImage()->storeVerified($url, $image->width, $image->height, $this->clock->now());
-        } else {
-            $entry->getImage()->storePending($url, $image->width, $image->height);
-        }
-
-        return true;
-    }
-
-    private static function trustedAtIngest(DeclaredImage $image): bool
-    {
-        return $image->width !== null
-            && $image->height !== null
-            && !$image->declaresBeacon()
-            && HttpsImageUrl::isNativeHttps($image->url);
-    }
-
-    /** The lead passes the same https-upgrading gate applyImage uses, so media[0] stays the persisted lead. */
+    /** The lead passes EntryImageWriter::write's https-upgrading gate too, so media[0] stays the stored lead. */
     private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
     {
         $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
