@@ -17,6 +17,7 @@ use App\Service\Reader\Slideshow\ContainerSignature;
 use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use fivefilters\Readability\Article;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -60,21 +61,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         $article = $this->readability->richest($articlePage->normalized, $page, $containers)
             ?? throw new ArticleNotExtractedException(ExtractionFailure::Unextractable);
         $content = ArticleContentGate::contentOf($article, $articlePage->media);
-        $input = new BodyCleaningInput(
-            titleCandidates: [$article->title, $hints->title],
-            leadImage: new LeadImageCandidate(
-                $article->image,
-                $articlePage->pageImages,
-                $articlePage->leadCaptions->captionFor($article->image),
-            ),
-            media: $this->bodyMedia->resolveForBody($articlePage->media, $page->html),
-            feedMedia: $hints->feedMedia,
-            entryAuthor: $hints->author,
-            slideshows: $articlePage->slideshows,
-            teasers: $articlePage->teasers,
-            excerpt: $article->excerpt,
-        );
-        $body = $this->bodyCleaner->clean($content, $input);
+        $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $articlePage, $hints));
         $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 
         return ExtractionResult::ok(
@@ -96,6 +83,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         $rawPage = RawPage::parse($page->html, $page->finalUrl);
 
         return new ArticlePage(
+            page: $page,
             normalized: $normalized,
             pageImages: $pageImages,
             leadCaptions: $leadCaptions,
@@ -103,6 +91,24 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             media: $this->mediaScanner->scan($rawPage, $feedMedia),
             slideshows: $this->slideshowScanner->scan($normalized),
             teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
+        );
+    }
+
+    private function bodyCleaningInput(Article $article, ArticlePage $articlePage, EntryHints $hints): BodyCleaningInput
+    {
+        return new BodyCleaningInput(
+            titleCandidates: [$article->title, $hints->title],
+            leadImage: new LeadImageCandidate(
+                $article->image,
+                $articlePage->pageImages,
+                $articlePage->leadCaptions->captionFor($article->image),
+            ),
+            media: $this->bodyMedia->resolveForBody($articlePage->media, $articlePage->page->html),
+            feedMedia: $hints->feedMedia,
+            entryAuthor: $hints->author,
+            slideshows: $articlePage->slideshows,
+            teasers: $articlePage->teasers,
+            excerpt: $article->excerpt,
         );
     }
 

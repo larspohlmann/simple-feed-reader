@@ -17,6 +17,7 @@ final readonly class ArticlePage
      * @param list<TeaserPlayer> $teasers
      */
     public function __construct(
+        public PageResponse $page,
         public HTMLDocument $normalized,
         public PageImageInventory $pageImages,
         public LeadFigureCaptions $leadCaptions,
