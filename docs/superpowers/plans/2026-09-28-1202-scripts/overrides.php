@@ -21,6 +21,14 @@ return [
         'App\\Service\\ReaderAudit\\Pass\\AuditFindingsFile',
     ],
     'App\\Service\\Backup\\RestoreDestination' => ['passHome', 'App\\Service\\Backup\\Pass\\RestoreDestination'],
+    'App\\Service\\Reader\\ShareLinkMatcher' => ['passHome', 'App\\Service\\Reader\\Pass\\ShareLinkMatcher'],
+    // A mailer transport: its collaborators are defaulted and its state is inherited, so the rule reads it as data.
+    'App\\Service\\Mail\\Transport\\CurlSmtpTransport' => [
+        'passHome',
+        'App\\Service\\Mail\\Transport\\Pass\\CurlSmtpTransport',
+    ],
+    // An immutable pair of counts: its `Tally` name alone sends it to Pass/.
+    'App\\Service\\Search\\SavedSearchTally' => ['modelHome', 'App\\Service\\Search\\Model\\SavedSearchTallyModel'],
     // The Source/ folder dissolves into MediaCandidateSource/; its one non-source class joins Media's models.
     'App\\Service\\Reader\\Media\\Source\\ScannedPage' => [
         'modelHome',
