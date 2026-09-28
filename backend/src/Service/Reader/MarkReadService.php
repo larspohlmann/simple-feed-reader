@@ -7,52 +7,23 @@ namespace App\Service\Reader;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Exception\ValidationException;
-use App\Repository\EntryReadMarkRepository;
-use App\Repository\ReadMarking;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
-use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 
-/**
- * "Mark all read until T" for a scope: advances each affected subscription's
- * watermark and flips existing EntryState rows already marked unread.
- */
+/** "Mark all read until T" for a scope: every subscription the scope covers is marked by watermark. */
 final readonly class MarkReadService
 {
     public function __construct(
-        private EntityManagerInterface $em,
-        private EntryReadMarkRepository $readMarks,
+        private EntryReadMarker $readMarker,
         private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
-        private ClockInterface $clock,
     ) {
     }
 
     public function mark(User $user, string $scope, ?int $id, \DateTimeImmutable $until): void
     {
-        $subs = $this->resolveScope($user, $scope, $id);
-        if ($subs === []) {
-            return;
-        }
-
-        $feedIds = [];
-        foreach ($subs as $sub) {
-            $feedIds[] = $sub->getFeed()->requireId();
-            $current = $sub->getMarkedReadUntil();
-            if ($current === null || $current < $until) {
-                $sub->setMarkedReadUntil($until);
-            }
-        }
-
-        // Atomic: the read-flip joins the transaction, which flushes the watermark changes before it commits.
-        $this->em->wrapInTransaction(function () use ($user, $feedIds, $until): void {
-            $this->readMarks->hideUnreadInFeedsUntil(
-                new ReadMarking($user->requireId(), $this->clock->now()),
-                $feedIds,
-                $until,
-            );
-        });
+        $subscriptions = $this->resolveScope($user, $scope, $id);
+        $this->readMarker->markSubscriptionsReadUntil($user->requireId(), $subscriptions, $until);
     }
 
     /**

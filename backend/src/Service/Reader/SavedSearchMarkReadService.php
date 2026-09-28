@@ -19,7 +19,7 @@ final readonly class SavedSearchMarkReadService
     public function __construct(
         private SavedSearchRepository $savedSearches,
         private SavedSearchEntryRepository $entries,
-        private BulkEntryReadMarker $readMarker,
+        private EntryReadMarker $readMarker,
     ) {
     }
 
@@ -37,6 +37,6 @@ final readonly class SavedSearchMarkReadService
     /** @param list<int> $searchIds */
     private function markSearches(int $userId, array $searchIds, \DateTimeImmutable $until): void
     {
-        $this->readMarker->markRead($userId, $this->entries->unreadMemberIdsUpTo($userId, $searchIds, $until));
+        $this->readMarker->markEntriesRead($userId, $this->entries->unreadMemberIdsUpTo($userId, $searchIds, $until));
     }
 }

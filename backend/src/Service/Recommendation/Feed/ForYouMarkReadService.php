@@ -6,7 +6,7 @@ namespace App\Service\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Reader\BulkEntryReadMarker;
+use App\Service\Reader\EntryReadMarker;
 
 /**
  * Marks the caller's for-you picks read.
@@ -21,7 +21,7 @@ final readonly class ForYouMarkReadService
 {
     public function __construct(
         private RecommendationItemRepository $items,
-        private BulkEntryReadMarker $readMarker,
+        private EntryReadMarker $readMarker,
     ) {
     }
 
@@ -29,6 +29,6 @@ final readonly class ForYouMarkReadService
     {
         $userId = $user->requireId();
 
-        $this->readMarker->markRead($userId, $this->items->unreadEntryIdsForYou($userId, $until));
+        $this->readMarker->markEntriesRead($userId, $this->items->unreadEntryIdsForYou($userId, $until));
     }
 }

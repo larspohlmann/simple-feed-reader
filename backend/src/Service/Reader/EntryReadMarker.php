@@ -6,6 +6,7 @@ namespace App\Service\Reader;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
+use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryReadMarkRepository;
 use App\Repository\EntryStateRepository;
@@ -14,10 +15,10 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Marks entries read by entry state alone, for lists no subscription watermark can scope (search, For You): flips
- * an explicit unread, creates a missing row. Batched so a broad search cannot pull every id into memory at once.
+ * The one way entries are marked read: by subscription watermark for a feed or tag scope, or by entry state for
+ * the lists no watermark can scope (search, saved searches, For You, a batch of ids).
  */
-final readonly class BulkEntryReadMarker
+final readonly class EntryReadMarker
 {
     private const int BATCH = 500;
 
@@ -29,9 +30,32 @@ final readonly class BulkEntryReadMarker
     ) {
     }
 
-    /** @param list<int> $entryIds Distinct ids of existing entries: a missing state row
-     *  is persisted by reference, so a pruned or repeated id fails the insert. */
-    public function markRead(int $userId, array $entryIds): void
+    /** @param list<Subscription> $subscriptions */
+    public function markSubscriptionsReadUntil(int $userId, array $subscriptions, \DateTimeImmutable $until): void
+    {
+        if ($subscriptions === []) {
+            return;
+        }
+
+        $feedIds = [];
+        foreach ($subscriptions as $subscription) {
+            $feedIds[] = $subscription->getFeed()->requireId();
+            $this->advanceWatermark($subscription, $until);
+        }
+
+        // Atomic: the read-flip joins the transaction, which flushes the watermark changes before it commits.
+        $this->em->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
+            $this->readMarks->hideUnreadInFeedsUntil(new ReadMarking($userId, $this->clock->now()), $feedIds, $until);
+        });
+    }
+
+    /**
+     * Batched, so a broad list never loads every id at once. The ids must be distinct and exist: a missing state
+     * row is persisted by reference, so a pruned or repeated id fails the insert.
+     *
+     * @param list<int> $entryIds
+     */
+    public function markEntriesRead(int $userId, array $entryIds): void
     {
         if ($entryIds === []) {
             return;
@@ -43,6 +67,14 @@ final readonly class BulkEntryReadMarker
             $this->createMissing($marking, $chunk);
             $this->em->flush();
             $this->em->clear();
+        }
+    }
+
+    private function advanceWatermark(Subscription $subscription, \DateTimeImmutable $until): void
+    {
+        $current = $subscription->getMarkedReadUntil();
+        if ($current === null || $current < $until) {
+            $subscription->setMarkedReadUntil($until);
         }
     }
 

@@ -10,7 +10,7 @@ use App\Repository\EntryRepository;
 final readonly class MarkEntriesReadService
 {
     public function __construct(
-        private BulkEntryReadMarker $readMarker,
+        private EntryReadMarker $readMarker,
         private EntryRepository $entries,
     ) {
     }
@@ -18,6 +18,6 @@ final readonly class MarkEntriesReadService
     /** @param list<int> $entryIds */
     public function mark(User $user, array $entryIds): void
     {
-        $this->readMarker->markRead($user->requireId(), $this->entries->findExistingIds($entryIds));
+        $this->readMarker->markEntriesRead($user->requireId(), $this->entries->findExistingIds($entryIds));
     }
 }
