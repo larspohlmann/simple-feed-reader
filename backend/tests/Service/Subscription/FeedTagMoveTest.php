@@ -13,6 +13,7 @@ use App\Service\Subscription\FeedMove;
 use App\Service\Subscription\FeedTagMove;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\TagJoins;
 
 final class FeedTagMoveTest extends DbTestCase
 {
@@ -30,9 +31,9 @@ final class FeedTagMoveTest extends DbTestCase
         $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 1));
         $this->em->flush();
 
-        self::assertSame(0, $this->joinPosition($x, $tech));
-        self::assertSame(1, $this->joinPosition($moved, $tech));
-        self::assertSame(2, $this->joinPosition($y, $tech));
+        self::assertSame(0, TagJoins::positionOf($x, $tech));
+        self::assertSame(1, TagJoins::positionOf($moved, $tech));
+        self::assertSame(2, TagJoins::positionOf($y, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
 
@@ -48,7 +49,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->move($moved, new FeedMove($news->requireId(), $tech->requireId()));
         $this->em->flush();
 
-        self::assertSame(2, $this->joinPosition($moved, $tech));
+        self::assertSame(2, TagJoins::positionOf($moved, $tech));
     }
 
     public function testRepositionsAFeedAlreadyInTheTargetTagWithoutDuplicating(): void
@@ -63,9 +64,9 @@ final class FeedTagMoveTest extends DbTestCase
         $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 0));
         $this->em->flush();
 
-        self::assertSame(0, $this->joinPosition($moved, $tech));
-        self::assertSame(1, $this->joinPosition($x, $tech));
-        self::assertSame(2, $this->joinPosition($y, $tech));
+        self::assertSame(0, TagJoins::positionOf($moved, $tech));
+        self::assertSame(1, TagJoins::positionOf($x, $tech));
+        self::assertSame(2, TagJoins::positionOf($y, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
 
@@ -110,7 +111,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->move($moved, new FeedMove($news->requireId(), $tech->requireId(), 99));
         $this->em->flush();
 
-        self::assertSame(1, $this->joinPosition($moved, $tech));
+        self::assertSame(1, TagJoins::positionOf($moved, $tech));
     }
 
     public function testDoesNothingWhenTheSourceAndTargetAreTheSameTag(): void
@@ -123,7 +124,7 @@ final class FeedTagMoveTest extends DbTestCase
         $this->move($moved, new FeedMove($tech->requireId(), $tech->requireId(), 0));
         $this->em->flush();
 
-        self::assertSame(1, $this->joinPosition($moved, $tech));
+        self::assertSame(1, TagJoins::positionOf($moved, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
 
@@ -185,16 +186,6 @@ final class FeedTagMoveTest extends DbTestCase
         $this->em->persist($feed);
 
         return $feed;
-    }
-
-    private function joinPosition(Subscription $subscription, Tag $tag): int
-    {
-        foreach ($subscription->getSubscriptionTags() as $join) {
-            if ($join->getTag() === $tag) {
-                return $join->getPosition();
-            }
-        }
-        self::fail('Subscription is not tagged with ' . $tag->getName());
     }
 
     /** @return list<string> */

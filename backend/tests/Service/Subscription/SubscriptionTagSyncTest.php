@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Service\Subscription\SubscriptionTagSync;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
+use App\Tests\Support\TagJoins;
 
 final class SubscriptionTagSyncTest extends DbTestCase
 {
@@ -31,8 +32,8 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->sync()->sync($feed, [$news->requireId(), $tech->requireId()], $user->requireId());
         $this->em->flush();
 
-        self::assertSame(0, $this->joinPosition($feed, $news));
-        self::assertSame(0, $this->joinPosition($feed, $tech));
+        self::assertSame(0, TagJoins::positionOf($feed, $news));
+        self::assertSame(0, TagJoins::positionOf($feed, $tech));
     }
 
     public function testRemovesATagNoLongerRequested(): void
@@ -109,7 +110,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
 
         self::assertSame(
             1,
-            $this->joinPosition($freshlyTagged, $news),
+            TagJoins::positionOf($freshlyTagged, $news),
             'the no-op resync above must not have advanced the shared News position counter.',
         );
     }
@@ -167,16 +168,6 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->em->flush();
 
         return $subscription;
-    }
-
-    private function joinPosition(Subscription $subscription, Tag $tag): int
-    {
-        foreach ($subscription->getSubscriptionTags() as $join) {
-            if ($join->getTag() === $tag) {
-                return $join->getPosition();
-            }
-        }
-        self::fail('Subscription is not tagged with ' . $tag->getName());
     }
 
     private function now(): \DateTimeImmutable
