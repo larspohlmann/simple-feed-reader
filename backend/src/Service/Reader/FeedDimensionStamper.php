@@ -4,28 +4,24 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
 use Dom\Element;
-use Dom\HTMLDocument;
 
 /**
- * Stamps the feed-declared pixel size onto a reader image or video whose URL the
- * feed enumerated (#914). The reader otherwise emits no dimensions at all — the
- * rendition machinery spends the declared width only to pick the sharpest URL,
- * then discards it — so every picture reflows the article as it loads. The feed
- * already stated the real size for exactly these assets; stamping it once, over
- * the assembled body, gives the browser the box to reserve. A picture the reader
- * already sized (readability carried its width) is left untouched.
+ * Stamps the feed-declared pixel size onto a reader image or video the feed enumerated (#914), so the browser
+ * reserves its box instead of reflowing the article. A picture the reader already sized is left untouched.
  */
-final class FeedDimensionStamper
+final readonly class FeedDimensionStamper implements BodyCleaningStep
 {
-    public static function stampInto(HTMLDocument $document, FeedMedia $feedMedia): void
+    public function cleanIn(BodyCleaningPass $pass): void
     {
-        foreach ($document->querySelectorAll('img[src], video[src]') as $element) {
-            self::stamp($element, $feedMedia);
+        foreach ($pass->document->querySelectorAll('img[src], video[src]') as $element) {
+            $this->stamp($element, $pass->input->feedMedia);
         }
     }
 
-    private static function stamp(Element $element, FeedMedia $feedMedia): void
+    private function stamp(Element $element, FeedMedia $feedMedia): void
     {
         if ($element->hasAttribute('width') || $element->hasAttribute('height')) {
             return;

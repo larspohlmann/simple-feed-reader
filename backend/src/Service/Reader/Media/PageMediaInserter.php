@@ -9,15 +9,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Places media the source page offers but the extracted body never had.
- *
- * Two phases run around ReaderLeadImage::restore() (see ReaderBodyCleaner).
- * `plan()` classifies each candidate: reconcilable (poster matches a body
- * `<img>`, so the player replaces it), anchored (body still holds the prose
- * block the media followed, so the player goes after it), or top-placed (no
- * trace in the body). `apply()` mutates in that order, then prepends
- * top-placed candidates in source order — split so restore() can check
- * `topPlacesLeadVisual()` before either mutation runs.
+ * Places media the page offers but the extracted body lost: in place of a body `<img>` its poster matches, after
+ * the prose block it followed, or at the top. `plan()` only classifies and `apply()` mutates, so
+ * PageMediaPlacement decides the hero restore between them (#755).
  */
 final readonly class PageMediaInserter
 {

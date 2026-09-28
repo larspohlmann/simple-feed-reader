@@ -7,8 +7,10 @@ namespace App\Tests\Service\Reader;
 use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
+use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\FeedDimensionStamper;
 use App\Service\Reader\FeedMedia;
+use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
@@ -36,7 +38,9 @@ final class FeedDimensionStamperTest extends TestCase
             '<!doctype html><html><body>' . $bodyHtml . '</body></html>',
             \LIBXML_NOERROR,
         );
-        FeedDimensionStamper::stampInto($document, $feed);
+        (new FeedDimensionStamper())->cleanIn(
+            new BodyCleaningPass($document, BodyCleaningInputs::withFeedMedia($feed)),
+        );
 
         return $document->saveHtml();
     }

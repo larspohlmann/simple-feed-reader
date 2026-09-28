@@ -5,37 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
-use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\DuplicateBlockCollapser;
-use App\Service\Reader\EdgeBoilerplateTrimmer;
 use App\Service\Reader\FeedMedia;
-use App\Service\Reader\LeadingEngagementCleaner;
-use App\Service\Reader\LeadingTitleRemover;
-use App\Service\Reader\MediaOnlyLede;
 use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\InBodyEmbedRewriter;
-use App\Service\Reader\Media\MediaMarkup;
-use App\Service\Reader\Media\Teaser\TeaserPlayerInserter;
-use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
-use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Provider\YouTubeEmbedProvider;
-use App\Service\Reader\Media\SubstackPosterLink;
-use App\Service\Reader\NavigationChromeTrimmer;
-use App\Service\Reader\PlayerChromeCleaner;
-use App\Service\Reader\RecipeFacts\RecipeFactsCleaner;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\SlideshowInserter;
-use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Reader\Slideshow\TagesschauCarouselRecognizer;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
@@ -143,25 +125,8 @@ final class SlideshowExtractionTest extends TestCase
 
     private function cleaner(): ReaderBodyCleaner
     {
-        $markup = new MediaMarkup();
         $embedProviders = new EmbedProviders([new YouTubeEmbedProvider()]);
 
-        return new ReaderBodyCleaner(
-            new NavigationChromeTrimmer(),
-            new LeadingTitleRemover(),
-            new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
-            new ReaderLeadImage(),
-            new InBodyEmbedRewriter($embedProviders, $markup),
-            new SubstackPosterLink(),
-            new PlayerChromeCleaner(),
-            new PageMediaInserter($markup),
-            new SlideshowInserter(new SlideshowMarkup()),
-            new RecipeFactsCleaner(),
-            new TeaserPlayerInserter(new TeaserPlayerMarkup()),
-            new MediaOnlyLede(),
-            new DuplicateBlockCollapser($embedProviders),
-            new AuthorBioSeparator(),
-        );
+        return new ReaderBodyCleaner(ReaderBodyCleanerTest::steps($embedProviders));
     }
 }

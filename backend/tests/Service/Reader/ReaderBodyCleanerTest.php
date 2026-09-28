@@ -6,9 +6,12 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\AuthorBio\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningInput;
+use App\Service\Reader\BodyCleaning\BodyCleaningStep;
+use App\Service\Reader\BodyCleaning\PageMediaPlacement;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\DuplicateBlockCollapser;
 use App\Service\Reader\EdgeBoilerplateTrimmer;
+use App\Service\Reader\FeedDimensionStamper;
 use App\Service\Reader\FeedMedia;
 use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\LeadingEngagementCleaner;
@@ -48,25 +51,33 @@ final class ReaderBodyCleanerTest extends TestCase
 
     protected function setUp(): void
     {
-        $markup = new MediaMarkup();
-        $embedProviders = new EmbedProviders([new YouTubeEmbedProvider(), new SpotifyEmbedProvider()]);
         $this->cleaner = new ReaderBodyCleaner(
-            new NavigationChromeTrimmer(),
-            new LeadingTitleRemover(),
-            new LeadingEngagementCleaner(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
-            new ReaderLeadImage(),
+            self::steps(new EmbedProviders([new YouTubeEmbedProvider(), new SpotifyEmbedProvider()])),
+        );
+    }
+
+    /** @return list<BodyCleaningStep> the steps in the order services.yaml wires them */
+    public static function steps(EmbedProviders $embedProviders): array
+    {
+        $markup = new MediaMarkup();
+
+        return [
             new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
-            new PageMediaInserter($markup),
+            new NavigationChromeTrimmer(),
+            new LeadingEngagementCleaner(),
+            new LeadingTitleRemover(),
+            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(),
+            new DuplicateBlockCollapser($embedProviders),
+            new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new DuplicateBlockCollapser($embedProviders),
             new AuthorBioSeparator(),
-        );
+            new FeedDimensionStamper(),
+        ];
     }
 
     /**

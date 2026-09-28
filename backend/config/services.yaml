@@ -151,6 +151,32 @@ services:
                 - '@App\Service\Reader\Repair\ImageWrapperClassRemover'
                 - '@App\Service\Reader\Repair\HeadingClassRemover'
                 - '@App\Service\Reader\Repair\HorizontalRuleUnwrapper'
+
+    # The reader body's cleaning steps, run in this order over one shared document. The order is
+    # behaviour (ReaderBodyCleanerWiringTest pins it): a new step joins at its place in this list.
+    App\Service\Reader\ReaderBodyCleaner:
+        arguments:
+            $steps:
+                # Media first: no trimmer may drop a block that now holds a recovered player.
+                - '@App\Service\Reader\Media\InBodyEmbedRewriter'
+                - '@App\Service\Reader\Media\SubstackPosterLink'
+                - '@App\Service\Reader\PlayerChromeCleaner'
+                - '@App\Service\Reader\NavigationChromeTrimmer'
+                # Engagement before the title: its kickers hide the title from the remover.
+                - '@App\Service\Reader\LeadingEngagementCleaner'
+                - '@App\Service\Reader\LeadingTitleRemover'
+                - '@App\Service\Reader\EdgeBoilerplateTrimmer'
+                # After the trimmers, which could drop its anchor; before media placement, which must see it.
+                - '@App\Service\Reader\Slideshow\SlideshowInserter'
+                - '@App\Service\Reader\RecipeFacts\RecipeFactsCleaner'
+                - '@App\Service\Reader\DuplicateBlockCollapser'
+                - '@App\Service\Reader\BodyCleaning\PageMediaPlacement'
+                # After placement, so a teaser is never rebuilt over placed lead media (#948).
+                - '@App\Service\Reader\Media\Teaser\TeaserPlayerInserter'
+                # These judge the settled body; the feed's pixel sizes go on last.
+                - '@App\Service\Reader\MediaOnlyLede'
+                - '@App\Service\Reader\AuthorBio\AuthorBioSeparator'
+                - '@App\Service\Reader\FeedDimensionStamper'
     App\Service\Search\EntrySearchInterface: '@App\Service\Search\EntrySearchWithFallback'
     # Both interfaces resolve to the one adapter that knows Meilisearch's wire
     # format (#432, see MeilisearchIndex).
