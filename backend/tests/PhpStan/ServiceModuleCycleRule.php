@@ -12,8 +12,8 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Service modules depend on each other without a cycle (docs/architecture.md §9). Each cycle is reported once, where
- * its last module names its first, the first being the earliest module by name that lies on a cycle.
+ * Service modules depend on each other without a cycle (docs/architecture.md §9). In name order, each module that no
+ * reported cycle covers yet reports the shortest cycle through it, where that cycle's last module names it.
  *
  * @implements Rule<CollectedDataNode>
  */

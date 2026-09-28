@@ -194,9 +194,9 @@ Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `
 
 ## 9. Service modules form no cycle
 
-A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with its `Prompt`, `Run`,
-`Feed` and `Settings` subdirectories is one module. Every service belongs to a module, and the modules depend on
-each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with all its
+subdirectories is one module. Every service belongs to a module, and the modules depend on each other without a
+cycle, so each one can be read, tested and moved without the others. Decided in #1161.
 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it,
   the class moves to the module that owns the concept, or the lower module owns an interface the higher one
@@ -212,5 +212,5 @@ each other without a cycle, so each one can be read, tested and moved without th
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
-strings, not comments), and the cycle rule reports each cycle once and names its path. A class loose in the `Service`
-root counts as a module of its own.
+strings, not comments), and the cycle rule fails while any cycle is left, naming the path of each one it reports.
+A class loose in the `Service` root counts as a module of its own.
