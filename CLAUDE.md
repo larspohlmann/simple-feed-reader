@@ -15,6 +15,7 @@ composer md          # PHPMD, codesize ruleset
 composer tramp       # phptramp, tramp-data chains (thresholds in phptramp.dist.json)
 composer tramp:update     # re-resolve phptramp to the tip of its develop branch
 composer check       # cs + stan + tramp
+composer roles       # ServiceRoleRule's full report while #1202 lands the roles one PR at a time
 php bin/phpunit      # unit/integration suite (SQLite natively)
 composer test        # phpunit with OpenTelemetry off — use this in Docker (see below)
 composer infection   # mutation testing over all of src (needs pcov or xdebug)
@@ -54,7 +55,7 @@ Pyroscope, for viewing app logs, traces and profiles.
 | Path | What |
 |---|---|
 | `backend/src/Controller/Api`, `Controller/Admin` | HTTP entry points; thin, they delegate to services |
-| `backend/src/Service/**` | The domain work, one subdirectory per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Reading`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`) |
+| `backend/src/Service/**` | The domain work, one module per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Reading`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`); inside a module the folder names the role: services in the root, `Model/`, `Dto/`, `Factory/`, `Pass/`, `Support/`, `Exception/`, and a folder per interface ([docs/architecture.md](docs/architecture.md) §10) |
 | `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
@@ -71,7 +72,11 @@ passes the linters but leaves unclear, oversized, or duplicated code is not done
 Non-negotiables:
 
 - **Names reveal intent.** No abbreviations, no `$data`/`$info`/`$tmp`, no
-  encodings. If a name needs a comment to be understood, rename it.
+  encodings — except two sanctioned role suffixes that always go with their
+  folder: `…Model` in `Model/` and `…Factory` in `Factory/` (#1202). An
+  interface ends in `Interface`, with the role before it in a role folder
+  (`…FactoryInterface`, `…ModelInterface`, `…ExceptionInterface`). If a name
+  needs a comment to be understood, rename it.
 - **Functions do one thing**, at a single level of abstraction, and stay short.
   Extract until each method reads as a sentence about *what*, not *how*.
 - **Few parameters.** Three is a lot; more means a DTO or value object is missing.
@@ -81,6 +86,15 @@ Non-negotiables:
 - **Immutability by default.** `final readonly class` with constructor promotion is
   the house style (the majority of `src/` already is); prefer new instances over
   setters. `final` unless the class is designed for extension.
+- **One role per folder** ([docs/architecture.md](docs/architecture.md) §10).
+  A service module's root holds stateless `final readonly` services; domain
+  data goes to `Model/` (never importing a `Dto/`), transfer shapes to `Dto/`,
+  factories (build, never persist) to `Factory/`, per-call objects built with
+  `new` to `Pass/`, static-only helpers to `Support/`, and each interface with
+  its same-module implementations to a folder named after it. A service that
+  builds an entity with real construction logic and saves it is split into a
+  `…Factory` and a service that persists. A stateful service implements
+  `ResetInterface` or carries `#[ProcessLifetimeState]`.
 - **Depend on interfaces, inject them.** No service locators in domain code, no
   `new` on a collaborator inside a method. Strategies get a tag + keyed locator
   (see `Service/Refresh/FeedBodyParser.php` for the pattern).
@@ -167,6 +181,12 @@ Enforced mechanically by `composer check` and `composer md`:
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
   the two dependencies #1163 removed (`Reader → Search`, `Recommendation → Reader`).
+- **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
+  `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
+  `composer stan`) — reports every class in `src/Service` and `src/Http` that
+  sits outside its role, and names its home. While #1202 lands, it enforces
+  only the checks in `phpstan.dist.neon`'s `serviceRoleChecks`; `composer
+  roles` reports all of them.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

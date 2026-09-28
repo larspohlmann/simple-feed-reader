@@ -3,8 +3,13 @@ includes:
     - vendor/phpstan/phpstan-doctrine/extension.neon
     - vendor/phpstan/phpstan-doctrine/rules.neon
 
+parametersSchema:
+    # ServiceRoleRule's enforced checks; phpstan-service-roles.neon lists every one (#1202).
+    serviceRoleChecks: listOf(string())
+
 parameters:
     level: max
+    serviceRoleChecks: []
     paths:
         - src
         - tests
@@ -75,5 +80,19 @@ services:
             - phpstan.rules.rule
     -
         class: App\Tests\PhpStan\ServiceModuleBoundaryRule
+        tags:
+            - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\ServiceRoleClassCollector
+        tags:
+            - phpstan.collector
+    -
+        class: App\Tests\PhpStan\ServiceRoleInstantiationCollector
+        tags:
+            - phpstan.collector
+    -
+        class: App\Tests\PhpStan\ServiceRoleRule
+        arguments:
+            checks: %serviceRoleChecks%
         tags:
             - phpstan.rules.rule
