@@ -16,28 +16,14 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Subscribes a batch of feeds in one unit of work, WITHOUT fetching or
- * discovering anything. Shared by OPML import and the onboarding catalog so the
- * cap, the duplicate checks and the position arithmetic exist exactly once.
- *
- * Nothing flushes until the end, so a repository lookup cannot see rows created
- * earlier in THIS batch. Two batch-local maps stand in for that, guarding the
- * unique constraints the deferred flush would otherwise trip:
- *  - $tagCache (uniq_tag_user_name): several items naming one tag reuse a single
- *    Tag row instead of persisting duplicates.
- *  - $seen (uniq_subscription_user_feed): a URL listed twice subscribes once and
- *    counts as alreadySubscribed.
+ * Subscribes a batch of feeds in one unit of work without fetching anything, for OPML import and the onboarding
+ * catalog alike. Nothing flushes until the end, so a BulkSubscribeBatch stands in for the rows this batch created.
  */
 final readonly class BulkSubscriber
 {
     private const int MAX_TAG_NAME = 100;
 
-    /**
-     * Feed.url is VARCHAR(750); a longer URL would pass a naive scheme/host check
-     * yet blow up the deferred flush with "data too long" on MySQL (strict mode),
-     * losing the whole batch. Bound it here so an over-long URL is merely counted
-     * invalid and the rest still lands.
-     */
+    /** Feed.url is VARCHAR(750): a longer URL counts as invalid instead of failing the whole batch's flush. */
     private const int MAX_FEED_URL = 750;
 
     public function __construct(
@@ -56,109 +42,123 @@ final readonly class BulkSubscriber
      */
     public function subscribeAll(User $user, iterable $items): BulkSubscribeResult
     {
-        $userId = $user->requireId();
-        $state = new BulkSubscribeState(
-            existing: $this->subscriptions->countForUser($userId),
-            nextSubscriptionPosition: $this->subscriptions->nextPositionForUser($userId),
-            nextTagPosition: $this->tags->nextPositionForUser($userId),
-        );
-        $result = new BulkSubscribeResult();
-
+        $batch = $this->open($user);
         foreach ($items as $item) {
-            $result = $this->subscribeOne($user, $item, $state, $result);
+            $this->subscribeOne($batch, $item);
         }
 
         $this->em->flush();
 
-        return $result;
+        return $batch->result();
     }
 
-    private function subscribeOne(
-        User $user,
-        BulkSubscribeItem $item,
-        BulkSubscribeState $state,
-        BulkSubscribeResult $result,
-    ): BulkSubscribeResult {
+    private function open(User $user): BulkSubscribeBatch
+    {
+        $userId = $user->requireId();
+
+        return new BulkSubscribeBatch(
+            $user,
+            $this->subscriptionLimits->resolve($user) - $this->subscriptions->countForUser($userId),
+            new BulkSubscribePositions(
+                $this->subscriptions->nextPositionForUser($userId),
+                $this->tags->nextPositionForUser($userId),
+            ),
+        );
+    }
+
+    private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItem $item): void
+    {
         $url = $item->feedUrl;
-
         if (!$this->isSubscribableUrl($url)) {
-            return $result->with(invalid: 1);
+            $batch->countInvalid();
+
+            return;
         }
-        if (isset($state->seen[$url])) {
-            return $result->with(alreadySubscribed: 1);
+        if ($batch->hasSubscribed($url)) {
+            $batch->countAlreadySubscribed();
+
+            return;
         }
 
-        // Look up but do NOT create yet: an over-limit batch must not leave orphan
-        // Feed rows behind for feeds it never subscribes to.
+        // Looked up, not created yet: an item over the cap must not leave an orphan Feed row behind.
         $feed = $this->feeds->findOneBy(['url' => $url]);
-        if (null !== $feed && $this->subscriptions->existsForUserAndFeed($user->requireId(), $feed->requireId())) {
-            return $result->with(alreadySubscribed: 1);
+        if ($this->isSubscribedTo($batch->user, $feed)) {
+            $batch->countAlreadySubscribed();
+
+            return;
         }
-        if ($state->existing >= $this->subscriptionLimits->resolve($user)) {
-            return $result->with(skippedOverLimit: 1);
+        if ($batch->isFull()) {
+            $batch->countOverLimit();
+
+            return;
         }
 
-        if (null === $feed) {
-            $feed = new Feed($url);
-            $feed->setSourceFormat($item->sourceFormat);
-            // Seeded from the catalog so the sidebar reads properly before the
-            // first fetch. Only on creation: a shared row another user already
-            // has is not ours to retitle.
-            $feed->setTitle($item->feedTitle);
-            $feed->scheduleNextFetchAt($this->clock->now());
-            $this->em->persist($feed);
-        }
+        $subscription = $this->persistSubscription($batch, $feed ?? $this->persistNewFeed($item));
+        $batch->recordSubscribed($url, $subscription, $this->attachTag($batch, $subscription, $item));
+    }
 
-        $subscription = new Subscription($user, $feed, $this->clock->now());
-        $subscription->setPosition($state->nextSubscriptionPosition++);
+    private function isSubscribedTo(User $user, ?Feed $feed): bool
+    {
+        return null !== $feed && $this->subscriptions->existsForUserAndFeed($user->requireId(), $feed->requireId());
+    }
+
+    private function persistNewFeed(BulkSubscribeItem $item): Feed
+    {
+        $feed = new Feed($item->feedUrl);
+        $feed->setSourceFormat($item->sourceFormat);
+        // Seeded for the sidebar before the first fetch; only on creation, since a shared row is not ours to retitle.
+        $feed->setTitle($item->feedTitle);
+        $feed->scheduleNextFetchAt($this->clock->now());
+        $this->em->persist($feed);
+
+        return $feed;
+    }
+
+    private function persistSubscription(BulkSubscribeBatch $batch, Feed $feed): Subscription
+    {
+        $subscription = new Subscription($batch->user, $feed, $this->clock->now());
+        $subscription->setPosition($batch->positions->takeSubscriptionPosition());
         $this->em->persist($subscription);
 
-        $created = $this->attachTag($user, $subscription, $item, $state);
-
-        $state->seen[$url] = true;
-        ++$state->existing;
-
-        return $result->with(imported: 1, tagsCreated: $created);
+        return $subscription;
     }
 
     /**
      * @return list<Tag> the tag if this call brought it into being, else empty
      */
-    private function attachTag(
-        User $user,
-        Subscription $subscription,
-        BulkSubscribeItem $item,
-        BulkSubscribeState $state,
-    ): array {
+    private function attachTag(BulkSubscribeBatch $batch, Subscription $subscription, BulkSubscribeItem $item): array
+    {
         if (null === $item->tagName) {
             return [];
         }
 
         $name = mb_substr($item->tagName, 0, self::MAX_TAG_NAME);
-        $key = mb_strtolower($name);
+        $existing = $batch->tagNamed($name) ?? $this->tags->findOneByNameForUser($batch->user->requireId(), $name);
+        $tag = $existing ?? $this->persistNewTag($batch, $name, $item->tagStyle);
+        $batch->rememberTag($name, $tag);
+        $this->joinTag($batch->positions, $subscription, $tag);
 
-        $created = [];
-        $tag = $state->tagCache[$key] ?? $this->tags->findOneByNameForUser($user->requireId(), $name);
-        if (null === $tag) {
-            $tag = new Tag($user, $name);
-            $tag->setColor($item->tagStyle?->color);
-            $tag->setIcon($item->tagStyle?->icon);
-            $tag->setPosition($state->nextTagPosition++);
-            $this->em->persist($tag);
-            $created[] = $tag;
-        }
-        $state->tagCache[$key] = $tag;
+        return null === $existing ? [$tag] : [];
+    }
 
-        // Nothing is flushed yet, so DB MAX(position) cannot see joins made in
-        // this batch: a tag created here starts at 0, an existing one appends
-        // past its committed feeds.
-        $oid = spl_object_id($tag);
-        $state->nextFeedPositionInTag[$oid] ??= null === $tag->getId()
-            ? 0
-            : $this->subscriptionTags->nextPositionForTag($tag);
-        $subscription->addTag($tag, $state->nextFeedPositionInTag[$oid]++);
+    private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyle $style): Tag
+    {
+        $tag = new Tag($batch->user, $name);
+        $tag->setColor($style?->color);
+        $tag->setIcon($style?->icon);
+        $tag->setPosition($batch->positions->takeTagPosition());
+        $this->em->persist($tag);
 
-        return $created;
+        return $tag;
+    }
+
+    private function joinTag(BulkSubscribePositions $positions, Subscription $subscription, Tag $tag): void
+    {
+        // A tag created in this batch starts at 0; an existing one appends past its committed feeds.
+        $subscription->addTag($tag, $positions->takeFeedPositionIn(
+            $tag,
+            fn (): int => null === $tag->getId() ? 0 : $this->subscriptionTags->nextPositionForTag($tag),
+        ));
     }
 
     private function isSubscribableUrl(string $url): bool
