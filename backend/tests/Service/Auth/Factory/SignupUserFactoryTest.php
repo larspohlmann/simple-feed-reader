@@ -41,7 +41,7 @@ final class SignupUserFactoryTest extends DbTestCase
             ->willReturnCallback(static fn (User $user, string $plain): string => 'hashed:' . $plain);
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
-        $factory = new SignupUserFactory($hasher, $clock, $this->registrationPolicy(true, true));
+        $factory = new SignupUserFactory($hasher, $clock, $this->registrationPolicy(confirm: true, approve: true));
 
         $user = $factory->create('h@example.test', self::PASSWORD, 'en');
 
@@ -63,7 +63,7 @@ final class SignupUserFactoryTest extends DbTestCase
         UserStatus $status,
         bool $approved,
     ): void {
-        $user = $this->factory($confirm, $approve)->create('s@example.test', self::PASSWORD, 'en');
+        $user = $this->factory(confirm: $confirm, approve: $approve)->create('s@example.test', self::PASSWORD, 'en');
 
         self::assertSame($status, $user->getStatus());
         self::assertSame($approved, null !== $user->getApprovedAt());
@@ -76,6 +76,6 @@ final class SignupUserFactoryTest extends DbTestCase
         /** @var ClockInterface $clock */
         $clock = self::getContainer()->get(ClockInterface::class);
 
-        return new SignupUserFactory($hasher, $clock, $this->registrationPolicy($confirm, $approve));
+        return new SignupUserFactory($hasher, $clock, $this->registrationPolicy(confirm: $confirm, approve: $approve));
     }
 }

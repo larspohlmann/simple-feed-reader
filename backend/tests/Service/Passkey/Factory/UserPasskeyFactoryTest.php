@@ -12,6 +12,7 @@ use ParagonIE\ConstantTime\Base64UrlSafe;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Uid\NilUuid;
+use Symfony\Component\Uid\Uuid;
 use Webauthn\CredentialRecord;
 use Webauthn\PublicKeyCredentialDescriptor;
 use Webauthn\TrustPath\EmptyTrustPath;
@@ -48,6 +49,15 @@ final class UserPasskeyFactoryTest extends TestCase
         self::assertNull($passkey->getAaguid());
     }
 
+    public function testARealAaguidIsStoredAsItsRfc4122String(): void
+    {
+        $aaguid = Uuid::v4();
+
+        $passkey = $this->factory()->create($this->user(), $this->record('credential-id', ['usb'], $aaguid), 'Real');
+
+        self::assertSame($aaguid->toRfc4122(), $passkey->getAaguid());
+    }
+
     public function testOnlyTheSpecsTransportsAreKept(): void
     {
         $record = $this->record('credential-id', ['usb', 'carrier-pigeon', 'nfc']);
@@ -66,7 +76,7 @@ final class UserPasskeyFactoryTest extends TestCase
     }
 
     /** @param list<string> $transports */
-    private function record(string $credentialId, array $transports): CredentialRecord
+    private function record(string $credentialId, array $transports, ?Uuid $aaguid = null): CredentialRecord
     {
         return CredentialRecord::create(
             $credentialId,
@@ -74,7 +84,7 @@ final class UserPasskeyFactoryTest extends TestCase
             $transports,
             'none',
             EmptyTrustPath::create(),
-            new NilUuid(),
+            $aaguid ?? new NilUuid(),
             'public-key',
             'user-handle',
             7,

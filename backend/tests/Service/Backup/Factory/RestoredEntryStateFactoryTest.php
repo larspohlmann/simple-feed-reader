@@ -20,17 +20,17 @@ final class RestoredEntryStateFactoryTest extends TestCase
     {
         $viewedAt = new \DateTimeImmutable('2026-08-10 10:00:00');
 
-        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(true, true, $viewedAt));
+        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(favorite: true, kept: true, viewedAt: $viewedAt));
 
         self::assertTrue($state->isFavorite());
         self::assertTrue($state->isKept());
         self::assertTrue($state->isViewed());
-        self::assertEquals($viewedAt, $state->getViewedAt());
+        self::assertSame($viewedAt, $state->getViewedAt());
     }
 
     public function testAPlainLineRestoresNoMark(): void
     {
-        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(false, false, null, false));
+        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(favorite: false, kept: false, viewedAt: null, viewed: false));
 
         self::assertFalse($state->isFavorite());
         self::assertFalse($state->isKept());
@@ -39,11 +39,11 @@ final class RestoredEntryStateFactoryTest extends TestCase
 
     public function testAViewedLineWithoutItsTimeTakesTheRestoresOwn(): void
     {
-        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(false, false, null));
+        $state = $this->factory()->create($this->user(), $this->entry(), $this->line(favorite: false, kept: false, viewedAt: null));
 
-        self::assertEquals(
-            new \DateTimeImmutable(self::RESTORED_AT, new \DateTimeZone('UTC')),
-            $state->getViewedAt(),
+        self::assertSame(
+            (new \DateTimeImmutable(self::RESTORED_AT, new \DateTimeZone('UTC')))->format(\DATE_ATOM),
+            $state->getViewedAt()?->format(\DATE_ATOM),
         );
     }
 

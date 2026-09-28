@@ -49,7 +49,10 @@ final class OAuthUserFactoryTest extends DbTestCase
         $user = $this->factory(approve: false)->create(new OAuthIdentity('google', 'sub-1', 'ann@example.test', true));
 
         self::assertSame(UserStatus::Active, $user->getStatus());
-        self::assertEquals(new \DateTimeImmutable(self::NOW), $user->getApprovedAt());
+        self::assertSame(
+            (new \DateTimeImmutable(self::NOW))->format(\DATE_ATOM),
+            $user->getApprovedAt()?->format(\DATE_ATOM),
+        );
     }
 
     private function factory(bool $approve): OAuthUserFactory
