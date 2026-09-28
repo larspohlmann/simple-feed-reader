@@ -111,6 +111,7 @@ final class InBodyEmbedRewriterTest extends TestCase
         self::assertStringNotContainsString('Video — open the original article to watch', $out);
     }
 
+    /** @return iterable<string, array{0: string}> */
     public static function iframeOrderProvider(): iterable
     {
         yield 'unknown first' => [
