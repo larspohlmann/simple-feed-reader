@@ -5482,6 +5482,24 @@ Run: `gh issue view 1163 --json state --jq .state`. Expected: `OPEN`.
 
 ---
 
+### Execution rulings (PR B)
+
+- B0's Step 3 anchor scan was replaced by a drift check. `git diff 566ee103 ff41fc1d` over PR B's paths touched only PR A's mark-read files, so the reconcile's checks still held, and each task's own anchors held.
+- Tests added outside the briefs to kill escaped mutants on touched lines:
+  - `ArticleReadabilityTest` (B2): the collapsed variant wins, and its teaser grid is removed.
+  - `ArticleExtractorTest::testDropsTheDuplicateHeadingFromReadabilitysOwnTitleAlone` (B3).
+  - Two in `InBodyEmbedRewriterTest` and two in `ReaderBodyCleanerTest` (B5: the Substack poster and navigation-chrome steps). The existing fixtures there reached the same output through other steps.
+- B6's deletion check 3 did not fail at first. The brief's `assertLessThan(strpos(…))` passes when the hero is absent (`false` compares as 0). The review round added an assertion that the hero is present, and the check now fails as intended.
+- The final review dropped each of the 15 steps from the pipeline in turn. Every removal breaks at least one pipeline-level test.
+- `FetchedPageNormalizer::normalize()` carries `#[WithSpan]`. Its span now records an error on an unparseable page, where the old code returned null. This affects observability only and was accepted.
+- Simplify findings:
+  - Applied: `BodyCleaningInputs` builds on one builder, and `ParsesHtml::document()` calls `HtmlDocumentParser::parse()`.
+  - Skipped: dropping `PageMediaPlacementTest`'s own tests, since that is the new step's contract.
+  - Left for #1169: the ten copies of the `PROSE` fixture, which predate this PR.
+- The group-2 data provider needed a PHPStan `@return` type. The shared checkout rules out amending, so it arrived as a follow-up commit.
+
+---
+
 # PR C — Typed extraction failures; the extractor reads as orchestration
 
 ### Task C0: Preflight (PR B merged)
