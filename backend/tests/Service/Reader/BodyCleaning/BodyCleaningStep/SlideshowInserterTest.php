@@ -7,9 +7,9 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
-use App\Service\Reader\Slideshow\ContainerSignature;
-use App\Service\Reader\Slideshow\Slide;
-use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Slideshow\Model\SlideModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;
@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 
 final class SlideshowInserterTest extends TestCase
 {
-    /** @param list<Slideshow> $slideshows */
+    /** @param list<SlideshowModel> $slideshows */
     private function insert(HTMLDocument $document, array $slideshows): void
     {
         (new SlideshowInserter(new SlideshowMarkup()))->cleanIn(
@@ -25,10 +25,10 @@ final class SlideshowInserterTest extends TestCase
         );
     }
 
-    /** @return list<Slide> */
+    /** @return list<SlideModel> */
     private function slides(): array
     {
-        return [new Slide('https://img/1.jpg', 'a'), new Slide('https://img/2.jpg', 'b')];
+        return [new SlideModel('https://img/1.jpg', 'a'), new SlideModel('https://img/2.jpg', 'b')];
     }
 
     public function testSeatsAfterTheAnchorAndRemovesTheOriginal(): void
@@ -38,11 +38,11 @@ final class SlideshowInserterTest extends TestCase
             . '<div class="swiper broken-original">leftover</div></body>',
         );
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
+        $show = SlideshowModel::fromSlides(
             $this->slides(),
             null,
             'The anchor paragraph that is comfortably past forty characters.',
-            ContainerSignature::fromClassAttribute('swiper broken-original'),
+            ContainerSignatureModel::fromClassAttribute('swiper broken-original'),
         );
         self::assertNotNull($show);
 
@@ -59,7 +59,12 @@ final class SlideshowInserterTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body><p>short</p></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides($this->slides(), null, 'A heading that did not survive extraction here.', null);
+        $show = SlideshowModel::fromSlides(
+            $this->slides(),
+            null,
+            'A heading that did not survive extraction here.',
+            null,
+        );
         self::assertNotNull($show);
 
         $this->insert($document, [$show]);
@@ -76,9 +81,9 @@ final class SlideshowInserterTest extends TestCase
             . "<p>{$secondAnchor}</p><div class=\"swiper broken\">leftover two</div></body>",
         );
         self::assertNotNull($document);
-        $signature = ContainerSignature::fromClassAttribute('swiper broken');
-        $first = Slideshow::fromSlides($this->slides(), null, $firstAnchor, $signature);
-        $second = Slideshow::fromSlides($this->slides(), null, $secondAnchor, $signature);
+        $signature = ContainerSignatureModel::fromClassAttribute('swiper broken');
+        $first = SlideshowModel::fromSlides($this->slides(), null, $firstAnchor, $signature);
+        $second = SlideshowModel::fromSlides($this->slides(), null, $secondAnchor, $signature);
         self::assertNotNull($first);
         self::assertNotNull($second);
 

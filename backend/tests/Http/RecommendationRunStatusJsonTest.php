@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Http\RecommendationRunStatusJson;
-use App\Service\Recommendation\Feed\RecommendationForYouSummary;
-use App\Service\Recommendation\Feed\RecommendationRunStatus;
-use App\Service\Recommendation\Run\RecommendationRunReport;
+use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
+use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationRunStatusJsonTest extends TestCase
@@ -17,10 +17,10 @@ final class RecommendationRunStatusJsonTest extends TestCase
     public function testElapsedSecondsIsWholeSecondsSinceStartedAt(): void
     {
         $startedAt = new \DateTimeImmutable('2026-08-09T10:00:00');
-        $report = RecommendationRunReport::fromRun(new RecommendationRun($this->user(), $startedAt));
+        $report = RecommendationRunReportModel::fromRun(new RecommendationRun($this->user(), $startedAt));
 
         $json = RecommendationRunStatusJson::report(
-            new RecommendationRunStatus($report, $this->emptySummary(), $startedAt->modify('+90 seconds'), null),
+            new RecommendationRunStatusModel($report, $this->emptySummary(), $startedAt->modify('+90 seconds'), null),
         );
 
         self::assertSame(90, $json['elapsedSeconds']);
@@ -28,8 +28,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     public function testEtaSecondsEchoesTheEstimatePassedIn(): void
     {
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::none(),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::none(),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             42,
@@ -44,8 +44,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
         $run->snapshot([[1]]);
         $run->markFirstBatchStarted();
 
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::fromRun($run),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             42,
@@ -60,8 +60,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
         $run->snapshot([[1]]);
         $run->recordBatchWinners([]);
 
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::fromRun($run),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             42,
@@ -73,10 +73,10 @@ final class RecommendationRunStatusJsonTest extends TestCase
     public function testElapsedSecondsClampsToZeroWhenTheClockIsBehindStartedAt(): void
     {
         $startedAt = new \DateTimeImmutable('2026-08-09T10:00:00');
-        $report = RecommendationRunReport::fromRun(new RecommendationRun($this->user(), $startedAt));
+        $report = RecommendationRunReportModel::fromRun(new RecommendationRun($this->user(), $startedAt));
 
         $json = RecommendationRunStatusJson::report(
-            new RecommendationRunStatus($report, $this->emptySummary(), $startedAt->modify('-5 seconds'), null),
+            new RecommendationRunStatusModel($report, $this->emptySummary(), $startedAt->modify('-5 seconds'), null),
         );
 
         self::assertSame(0, $json['elapsedSeconds']);
@@ -84,8 +84,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     public function testElapsedSecondsIsNullWhenThereIsNoRun(): void
     {
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::none(),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::none(),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             null,
@@ -96,10 +96,10 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     public function testForYouCarriesTheNewestCompletedRunId(): void
     {
-        $summary = new RecommendationForYouSummary(4, 9, new \DateTimeImmutable('2026-08-09T10:00:00Z'), 42);
+        $summary = new RecommendationForYouSummaryModel(4, 9, new \DateTimeImmutable('2026-08-09T10:00:00Z'), 42);
 
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::none(),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::none(),
             $summary,
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             null,
@@ -112,8 +112,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
 
     public function testItSendsTheRunReportFieldsInTheirWireOrder(): void
     {
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::busy()->waitingForLock(),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::busy()->waitingForLock(),
             $this->emptySummary(),
             new \DateTimeImmutable('2026-08-09T10:00:00'),
             null,
@@ -149,8 +149,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
         $run->recordBatchWinners([]);
         $run->fail('boom', $startedAt);
 
-        $json = RecommendationRunStatusJson::report(new RecommendationRunStatus(
-            RecommendationRunReport::fromRun($run),
+        $json = RecommendationRunStatusJson::report(new RecommendationRunStatusModel(
+            RecommendationRunReportModel::fromRun($run),
             $this->emptySummary(),
             $startedAt->modify('+90 seconds'),
             42,
@@ -179,8 +179,8 @@ final class RecommendationRunStatusJsonTest extends TestCase
         return new User('eta@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
     }
 
-    private function emptySummary(): RecommendationForYouSummary
+    private function emptySummary(): RecommendationForYouSummaryModel
     {
-        return new RecommendationForYouSummary(0, 0, null, null);
+        return new RecommendationForYouSummaryModel(0, 0, null, null);
     }
 }

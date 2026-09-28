@@ -6,7 +6,7 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\RelatedTeaserGridRemover;
-use App\Service\Reader\Slideshow\ContainerSignature;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use PHPUnit\Framework\TestCase;
 
 final class RelatedTeaserGridRemoverTest extends TestCase
@@ -87,7 +87,7 @@ final class RelatedTeaserGridRemoverTest extends TestCase
             ])
             . '</div>';
 
-        $signature = ContainerSignature::fromClassAttribute('contentbox list');
+        $signature = ContainerSignatureModel::fromClassAttribute('contentbox list');
         self::assertNotNull($signature);
 
         $result = $this->removed($html, [$signature]);
@@ -224,7 +224,7 @@ final class RelatedTeaserGridRemoverTest extends TestCase
     }
 
     /**
-     * @param list<ContainerSignature> $slideshowContainers
+     * @param list<ContainerSignatureModel> $slideshowContainers
      */
     private function removed(string $html, array $slideshowContainers = []): string
     {

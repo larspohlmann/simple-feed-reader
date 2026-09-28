@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Service\ReaderAudit\AuditFindingsFile;
-use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
-use App\Service\ReaderAudit\AuditShard;
 use App\Service\ReaderAudit\AuditUserResolver;
+use App\Service\ReaderAudit\Model\AuditSampleModel;
+use App\Service\ReaderAudit\Model\AuditShardModel;
+use App\Service\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use App\Service\ReaderAudit\ReaderAuditRunner;
-use App\Service\ReaderAudit\ReaderLink;
-use App\Service\ReaderAudit\SampledEntry;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -76,18 +76,18 @@ final class ReaderAuditCommand extends Command
 
         $userId = $this->users->resolve(ConsoleOption::text($input, 'user'));
         $sample = $this->articlesToAudit($input, $userId);
-        $mine = (new AuditShard($this->number($input, 'shard'), $this->number($input, 'shards')))->pick($sample);
+        $mine = (new AuditShardModel($this->number($input, 'shard'), $this->number($input, 'shards')))->pick($sample);
 
         $io->text(\sprintf(
             'user %d — %d articles sampled over %d feeds, %d in this shard',
             $userId,
             \count($sample),
-            \count(array_unique(array_map(static fn (SampledEntry $e): int => $e->feedId, $sample))),
+            \count(array_unique(array_map(static fn (SampledEntryModel $e): int => $e->feedId, $sample))),
             \count($mine),
         ));
 
         $file = AuditFindingsFile::create((string) ConsoleOption::text($input, 'out'));
-        $link = new ReaderLink((string) ConsoleOption::text($input, 'base-url'));
+        $link = new ReaderLinkModel((string) ConsoleOption::text($input, 'base-url'));
 
         $io->progressStart(\count($mine));
         $flagged = 0;
@@ -104,7 +104,7 @@ final class ReaderAuditCommand extends Command
         return Command::SUCCESS;
     }
 
-    /** @return list<SampledEntry> */
+    /** @return list<SampledEntryModel> */
     private function articlesToAudit(InputInterface $input, int $userId): array
     {
         $named = ConsoleOption::text($input, 'entries');
@@ -112,7 +112,7 @@ final class ReaderAuditCommand extends Command
             return $this->sampler->pick(array_map(intval(...), explode(',', $named)), $userId);
         }
 
-        return $this->sampler->sample(new AuditSample(
+        return $this->sampler->sample(new AuditSampleModel(
             $userId,
             $this->number($input, 'limit'),
             $this->number($input, 'per-feed'),

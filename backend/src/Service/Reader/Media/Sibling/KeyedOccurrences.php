@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Sibling;
 
+use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
+
 /**
  * Where a page names an id as a keyed value — `"key":"id"` in a script payload
  * (escaped quotes allowed) or `key="id"` on an element. An id inside a URL path
@@ -15,7 +17,7 @@ final readonly class KeyedOccurrences
     private const string ANY_KEY = '/\\\\?"?([A-Za-z_][A-Za-z0-9_-]*)\\\\?"?\s*[:=]\s*/';
     private const int WINDOW = 200;
 
-    /** @return list<KeyedOccurrence> */
+    /** @return list<KeyedOccurrenceModel> */
     public static function of(string $html, string $id): array
     {
         $found = [];
@@ -31,7 +33,7 @@ final readonly class KeyedOccurrences
         return $found;
     }
 
-    public static function at(string $html, string $id, int $position): ?KeyedOccurrence
+    public static function at(string $html, string $id, int $position): ?KeyedOccurrenceModel
     {
         $before = substr($html, max(0, $position - self::WINDOW), min(self::WINDOW, $position));
         if (preg_match(self::KEY_BEFORE_VALUE, $before, $key) !== 1) {
@@ -39,7 +41,7 @@ final readonly class KeyedOccurrences
         }
         $after = substr($html, $position + \strlen($id), self::WINDOW);
 
-        return new KeyedOccurrence(
+        return new KeyedOccurrenceModel(
             $key[1],
             self::lastKeyIn(substr($before, 0, -\strlen($key[0]))),
             self::firstKeyIn($after),

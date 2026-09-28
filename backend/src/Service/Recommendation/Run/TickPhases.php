@@ -10,6 +10,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\ProviderPhase\BatchPhase;
 use App\Service\Recommendation\Run\ProviderPhase\ConsolidationPhase;
 use App\Service\Recommendation\Run\ProviderPhase\DistillationPhase;
@@ -29,7 +30,7 @@ final readonly class TickPhases
     ) {
     }
 
-    public function advance(TickContext $tick): RecommendationRunReport
+    public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
         if (RunStatus::Pending === $run->getStatus()) {
@@ -37,7 +38,7 @@ final readonly class TickPhases
         }
 
         if ($run->mustWaitBeforeRetry($this->clock->now())) {
-            return RecommendationRunReport::fromRun($run);
+            return RecommendationRunReportModel::fromRun($run);
         }
 
         return $this->advanceWithinTheEnvelope($this->providerPhaseFor($run), $tick);
@@ -54,8 +55,10 @@ final readonly class TickPhases
         };
     }
 
-    private function advanceWithinTheEnvelope(ProviderPhaseInterface $phase, TickContext $tick): RecommendationRunReport
-    {
+    private function advanceWithinTheEnvelope(
+        ProviderPhaseInterface $phase,
+        TickContext $tick,
+    ): RecommendationRunReportModel {
         try {
             return $phase->advance($tick);
         } catch (ProviderRateLimitedException $e) {

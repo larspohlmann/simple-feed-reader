@@ -7,19 +7,19 @@ namespace App\Tests\Service\Reader\Media;
 use App\Entity\Entry;
 use App\Entity\EntryAttachment;
 use App\Entity\Feed;
-use App\Service\Reader\FeedMedia;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Model\FeedMediaModel;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaScannerTest extends TestCase
 {
     /** @param list<EntryAttachment> $attachments */
-    private function feed(?string $leadPoster = null, array $attachments = []): FeedMedia
+    private function feed(?string $leadPoster = null, array $attachments = []): FeedMediaModel
     {
         $entry = new Entry(
             new Feed('https://feed.test/rss.xml'),
@@ -34,37 +34,37 @@ final class PageMediaScannerTest extends TestCase
         }
         $entry->setMedia([], $attachments);
 
-        return FeedMedia::fromEntry($entry);
+        return FeedMediaModel::fromEntry($entry);
     }
 
-    /** @param list<MediaCandidate> $candidates */
+    /** @param list<MediaCandidateModel> $candidates */
     private function source(array $candidates): MediaCandidateSourceInterface
     {
         return new class ($candidates) implements MediaCandidateSourceInterface {
-            /** @param list<MediaCandidate> $candidates */
+            /** @param list<MediaCandidateModel> $candidates */
             public function __construct(private readonly array $candidates)
             {
             }
 
-            public function find(RawPage $page): array
+            public function find(RawPageModel $page): array
             {
                 return $this->candidates;
             }
         };
     }
 
-    private function page(): RawPage
+    private function page(): RawPageModel
     {
-        return RawPage::parse('<html></html>', 'https://x.test/a');
+        return RawPageModel::parse('<html></html>', 'https://x.test/a');
     }
 
-    /** @return MediaCandidateSourceInterface&object{page: ?RawPage} */
+    /** @return MediaCandidateSourceInterface&object{page: ?RawPageModel} */
     private function recordingSource(): MediaCandidateSourceInterface
     {
         return new class implements MediaCandidateSourceInterface {
-            public ?RawPage $page = null;
+            public ?RawPageModel $page = null;
 
-            public function find(RawPage $page): array
+            public function find(RawPageModel $page): array
             {
                 $this->page = $page;
 
@@ -88,7 +88,7 @@ final class PageMediaScannerTest extends TestCase
     public function testRescuesAPosterlessVideoWithTheFallbackPoster(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
         ]);
 
         $media = $scanner->scan($this->page(), $this->feed('https://feed.test/poster.jpg'));
@@ -100,7 +100,7 @@ final class PageMediaScannerTest extends TestCase
     public function testDropsAPosterlessVideoWhenNoFallbackPosterExists(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
         ]);
 
         $media = $scanner->scan($this->page());
@@ -112,8 +112,8 @@ final class PageMediaScannerTest extends TestCase
     public function testKeepsACrossSourcePosterOverTheFallback(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/og.jpg')]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', null, null, 'Prose.')]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/og.jpg')]),
         ]);
 
         $media = $scanner->scan($this->page(), $this->feed('https://feed.test/poster.jpg'));
@@ -124,7 +124,9 @@ final class PageMediaScannerTest extends TestCase
     public function testAFeedEnumeratedCandidateAdoptsTheDeclaredMimeType(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://cdn.test/clip.mp4', 'https://x.test/p.jpg')]),
+            $this->source([
+                new MediaCandidateModel(MediaKind::Video, 'https://cdn.test/clip.mp4', 'https://x.test/p.jpg'),
+            ]),
         ]);
         $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
 
@@ -136,7 +138,9 @@ final class PageMediaScannerTest extends TestCase
     public function testAnUnenumeratedCandidateKeepsNoMimeType(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://cdn.test/other.mp4', 'https://x.test/p.jpg')]),
+            $this->source([
+                new MediaCandidateModel(MediaKind::Video, 'https://cdn.test/other.mp4', 'https://x.test/p.jpg'),
+            ]),
         ]);
         $feed = $this->feed(null, [new EntryAttachment('https://cdn.test/clip.mp4', 'video/mp4')]);
 
@@ -150,10 +154,10 @@ final class PageMediaScannerTest extends TestCase
     {
         $scanner = new PageMediaScanner([
             $this->source([
-                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/declared.jpg'),
+                new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/declared.jpg'),
             ]),
             $this->source([
-                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/scanned.jpg'),
+                new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/scanned.jpg'),
             ]),
         ]);
 
@@ -169,10 +173,10 @@ final class PageMediaScannerTest extends TestCase
         $url = 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa';
         $scanner = new PageMediaScanner([
             $this->source([
-                new MediaCandidate(MediaKind::Embed, $url, 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg'),
+                new MediaCandidateModel(MediaKind::Embed, $url, 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg'),
             ]),
             $this->source([
-                new MediaCandidate(MediaKind::Embed, $url, null, null, 'The section the player follows.'),
+                new MediaCandidateModel(MediaKind::Embed, $url, null, null, 'The section the player follows.'),
             ]),
         ]);
 
@@ -186,7 +190,7 @@ final class PageMediaScannerTest extends TestCase
     /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds. */
     public function testALaterSourceAddsTheUrlsTheEarlierOneNeverNamed(): void
     {
-        $embed = static fn (string $id): MediaCandidate => new MediaCandidate(
+        $embed = static fn (string $id): MediaCandidateModel => new MediaCandidateModel(
             MediaKind::Embed,
             'https://www.youtube-nocookie.com/embed/' . $id,
         );
@@ -196,7 +200,7 @@ final class PageMediaScannerTest extends TestCase
         ]);
 
         $urls = array_map(
-            static fn (MediaCandidate $c): string => $c->url,
+            static fn (MediaCandidateModel $c): string => $c->url,
             $scanner->scan($this->page())->candidates,
         );
 
@@ -213,8 +217,8 @@ final class PageMediaScannerTest extends TestCase
     {
         $poster = 'https://x.test/p.jpg';
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/declared.webxxl.mp4', $poster)]),
-            $this->source([new MediaCandidate(MediaKind::Video, 'https://x.test/scanned.webs.mp4', $poster)]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/declared.webxxl.mp4', $poster)]),
+            $this->source([new MediaCandidateModel(MediaKind::Video, 'https://x.test/scanned.webs.mp4', $poster)]),
         ]);
 
         $media = $scanner->scan($this->page());
@@ -227,23 +231,25 @@ final class PageMediaScannerTest extends TestCase
     {
         // The second source re-confirms e0 so the guard trusts the rest of its embeds.
         $first = [];
-        $second = [new MediaCandidate(MediaKind::Embed, 'https://x.test/e0')];
+        $second = [new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e0')];
         for ($i = 0; $i < 15; $i++) {
-            $first[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/e' . $i);
-            $second[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/f' . $i);
+            $first[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $i);
+            $second[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/f' . $i);
         }
 
         $scanner = new PageMediaScanner([$this->source($first), $this->source($second)]);
 
-        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan($this->page())->candidates);
+        self::assertCount(ArticleMediaModel::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
     /** Kinds are independent, so NPR keeps both its video embed and its audio. */
     public function testADifferentKindStillComesThroughALaterSource(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa')]),
-            $this->source([new MediaCandidate(MediaKind::Audio, 'https://x.test/companion.mp3')]),
+            $this->source([
+                new MediaCandidateModel(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa'),
+            ]),
+            $this->source([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/companion.mp3')]),
         ]);
 
         $media = $scanner->scan($this->page());
@@ -256,8 +262,8 @@ final class PageMediaScannerTest extends TestCase
     {
         $scanner = new PageMediaScanner([
             $this->source([
-                new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa'),
-                new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
+                new MediaCandidateModel(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa'),
+                new MediaCandidateModel(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
             ]),
         ]);
 
@@ -267,26 +273,26 @@ final class PageMediaScannerTest extends TestCase
     public function testTheCapStillApplies(): void
     {
         $many = [];
-        for ($i = 0; $i < ArticleMedia::MAX_ITEMS + 5; $i++) {
-            $many[] = new MediaCandidate(MediaKind::Embed, 'https://x.test/e' . $i);
+        for ($i = 0; $i < ArticleMediaModel::MAX_ITEMS + 5; $i++) {
+            $many[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $i);
         }
 
         $scanner = new PageMediaScanner([$this->source($many)]);
 
-        self::assertCount(ArticleMedia::MAX_ITEMS, $scanner->scan($this->page())->candidates);
+        self::assertCount(ArticleMediaModel::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
     /** The guard is per-source: a new URL from a source that re-confirms nothing is dropped even when a still-later source re-confirms the kind (#788). */
     public function testANewUrlFromANonReconfirmingSourceIsDroppedEvenIfALaterSourceReconfirms(): void
     {
         $scanner = new PageMediaScanner([
-            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/a')]),
-            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/b')]),
-            $this->source([new MediaCandidate(MediaKind::Embed, 'https://x.test/a')]),
+            $this->source([new MediaCandidateModel(MediaKind::Embed, 'https://x.test/a')]),
+            $this->source([new MediaCandidateModel(MediaKind::Embed, 'https://x.test/b')]),
+            $this->source([new MediaCandidateModel(MediaKind::Embed, 'https://x.test/a')]),
         ]);
 
         $urls = array_map(
-            static fn (MediaCandidate $candidate): string => $candidate->url,
+            static fn (MediaCandidateModel $candidate): string => $candidate->url,
             $scanner->scan($this->page())->candidates,
         );
 
@@ -298,10 +304,10 @@ final class PageMediaScannerTest extends TestCase
     {
         $scanner = new PageMediaScanner([
             $this->source([
-                new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+                new MediaCandidateModel(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
             ]),
             $this->source([
-                new MediaCandidate(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg'),
+                new MediaCandidateModel(MediaKind::Video, 'https://x.test/a.mp4', 'https://x.test/p.jpg'),
             ]),
         ]);
 

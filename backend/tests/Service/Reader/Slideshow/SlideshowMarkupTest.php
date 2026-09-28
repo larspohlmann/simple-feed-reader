@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Slideshow\Slide;
-use App\Service\Reader\Slideshow\SlideCaption;
-use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
+use App\Service\Reader\Slideshow\Model\SlideModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use PHPUnit\Framework\TestCase;
 
@@ -17,8 +17,8 @@ final class SlideshowMarkupTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
-            [new Slide('https://img/1.jpg', 'first chart'), new Slide('https://img/2.jpg', 'second chart')],
+        $show = SlideshowModel::fromSlides(
+            [new SlideModel('https://img/1.jpg', 'first chart'), new SlideModel('https://img/2.jpg', 'second chart')],
             'Poll gallery',
             null,
             null,
@@ -40,8 +40,8 @@ final class SlideshowMarkupTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
-            [new Slide('https://img/1.jpg', 'a'), new Slide('https://img/2.jpg', 'b')],
+        $show = SlideshowModel::fromSlides(
+            [new SlideModel('https://img/1.jpg', 'a'), new SlideModel('https://img/2.jpg', 'b')],
             null,
             null,
             null,
@@ -58,10 +58,14 @@ final class SlideshowMarkupTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
+        $show = SlideshowModel::fromSlides(
             [
-                new Slide('https://img/1.jpg', 'a', new SlideCaption('Linked headline', 'https://example.com/one')),
-                new Slide('https://img/2.jpg', 'b', new SlideCaption('Plain headline', null)),
+                new SlideModel(
+                    'https://img/1.jpg',
+                    'a',
+                    new SlideCaptionModel('Linked headline', 'https://example.com/one'),
+                ),
+                new SlideModel('https://img/2.jpg', 'b', new SlideCaptionModel('Plain headline', null)),
             ],
             null,
             null,
@@ -81,8 +85,8 @@ final class SlideshowMarkupTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
-            [new Slide('https://img/1.jpg', 'a'), new Slide('https://img/2.jpg', 'b')],
+        $show = SlideshowModel::fromSlides(
+            [new SlideModel('https://img/1.jpg', 'a'), new SlideModel('https://img/2.jpg', 'b')],
             null,
             null,
             null,
@@ -101,11 +105,11 @@ final class SlideshowMarkupTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull('<body></body>');
         self::assertNotNull($document);
-        $show = Slideshow::fromSlides(
+        $show = SlideshowModel::fromSlides(
             [
-                new Slide('https://img/1.jpg', 'a'),
-                new Slide('https://img/2.jpg', 'b'),
-                new Slide('https://img/3.jpg', 'c'),
+                new SlideModel('https://img/1.jpg', 'a'),
+                new SlideModel('https://img/2.jpg', 'b'),
+                new SlideModel('https://img/3.jpg', 'c'),
             ],
             null,
             null,

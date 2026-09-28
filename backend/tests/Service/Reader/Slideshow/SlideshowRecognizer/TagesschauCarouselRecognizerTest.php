@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +20,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
         self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
-            ->recognize($document, PageTextBlocks::fromDocument($document));
+            ->recognize($document, PageTextBlocksModel::fromDocument($document));
 
         self::assertCount(1, $shows);
         $show = $shows[0];
@@ -49,7 +49,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
         self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
-            ->recognize($document, PageTextBlocks::fromDocument($document));
+            ->recognize($document, PageTextBlocksModel::fromDocument($document));
 
         self::assertSame(
             'Er war Europas ältester amtierender Monarch. (via REUTERS)',
@@ -67,7 +67,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
         self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
-            ->recognize($document, PageTextBlocks::fromDocument($document));
+            ->recognize($document, PageTextBlocksModel::fromDocument($document));
 
         self::assertSame('(via REUTERS)', $shows[0]->slides[0]->caption->text);
     }
@@ -90,7 +90,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
         self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
-            ->recognize($document, PageTextBlocks::fromDocument($document));
+            ->recognize($document, PageTextBlocksModel::fromDocument($document));
 
         self::assertSame([], $shows);
     }

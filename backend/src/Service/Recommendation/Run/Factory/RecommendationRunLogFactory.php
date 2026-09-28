@@ -8,7 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
-use App\Service\Recommendation\Run\CallSlot;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
 use Symfony\Component\Clock\ClockInterface;
 
 final readonly class RecommendationRunLogFactory
@@ -21,7 +21,7 @@ final readonly class RecommendationRunLogFactory
 
     public function create(
         RecommendationRun $run,
-        CallSlot $slot,
+        CallSlotModel $slot,
         CompletionRequestModel $request,
     ): RecommendationRunLog {
         return new RecommendationRunLog(
@@ -35,7 +35,7 @@ final readonly class RecommendationRunLogFactory
     }
 
     /** Derived from the rows already recorded, so the recorder cannot disagree with its own rows. */
-    private function nextAttempt(RecommendationRun $run, CallSlot $slot): int
+    private function nextAttempt(RecommendationRun $run, CallSlotModel $slot): int
     {
         return $this->logs->countAttempts($run, $slot->phase, $slot->batchNumber) + 1;
     }

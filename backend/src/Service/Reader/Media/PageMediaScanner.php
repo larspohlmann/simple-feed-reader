@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
-use App\Service\Reader\FeedMedia;
 use App\Service\Reader\Media\MediaCandidateSource\MediaCandidateSourceInterface;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Model\FeedMediaModel;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
@@ -29,9 +32,9 @@ final readonly class PageMediaScanner
     }
 
     #[WithSpan]
-    public function scan(RawPage $page, ?FeedMedia $feedMedia = null): ArticleMedia
+    public function scan(RawPageModel $page, ?FeedMediaModel $feedMedia = null): ArticleMediaModel
     {
-        $feedMedia ??= FeedMedia::none();
+        $feedMedia ??= FeedMediaModel::none();
         $byUrl = [];
         foreach ($this->sources as $source) {
             $this->mergeSource($source->find($page), $byUrl);
@@ -44,7 +47,7 @@ final readonly class PageMediaScanner
         // rescues it, or it is dropped before it reaches the client (#913).
         $withPosters = $this->withResolvedPosters($reconciled, $feedMedia->posterFallback());
 
-        return (new ArticleMedia(\array_slice($withPosters, 0, ArticleMedia::MAX_ITEMS)))
+        return (new ArticleMediaModel(\array_slice($withPosters, 0, ArticleMediaModel::MAX_ITEMS)))
             ->withoutRedundantStreams();
     }
 
@@ -54,14 +57,14 @@ final readonly class PageMediaScanner
      * <source>. A candidate the feed never named keeps its guessed kind, so
      * extension sniffing stays the default and the fallback for the rest.
      *
-     * @param list<MediaCandidate> $candidates
+     * @param list<MediaCandidateModel> $candidates
      *
-     * @return list<MediaCandidate>
+     * @return list<MediaCandidateModel>
      */
-    private function reconciledWithFeed(array $candidates, FeedMedia $feedMedia): array
+    private function reconciledWithFeed(array $candidates, FeedMediaModel $feedMedia): array
     {
         return array_map(
-            static fn (MediaCandidate $candidate): MediaCandidate => $candidate->withMimeType(
+            static fn (MediaCandidateModel $candidate): MediaCandidateModel => $candidate->withMimeType(
                 $feedMedia->declaredAttachmentFor($candidate->url)?->mimeType,
             ),
             $candidates,
@@ -69,9 +72,9 @@ final readonly class PageMediaScanner
     }
 
     /**
-     * @param list<MediaCandidate> $candidates
+     * @param list<MediaCandidateModel> $candidates
      *
-     * @return list<MediaCandidate>
+     * @return list<MediaCandidateModel>
      */
     private function withResolvedPosters(array $candidates, ?string $fallbackPoster): array
     {
@@ -87,8 +90,8 @@ final readonly class PageMediaScanner
     }
 
     /**
-     * @param list<MediaCandidate>          $candidates
-     * @param array<string, MediaCandidate> $byUrl
+     * @param list<MediaCandidateModel>          $candidates
+     * @param array<string, MediaCandidateModel> $byUrl
      */
     private function mergeSource(array $candidates, array &$byUrl): void
     {
@@ -112,14 +115,14 @@ final readonly class PageMediaScanner
      * @param array<string, true> $claimedKinds
      * @param array<string, true> $reconfirmedKinds
      */
-    private function mayAdd(MediaCandidate $candidate, array $claimedKinds, array $reconfirmedKinds): bool
+    private function mayAdd(MediaCandidateModel $candidate, array $claimedKinds, array $reconfirmedKinds): bool
     {
         return !isset($claimedKinds[$candidate->kind->value])
             || isset($reconfirmedKinds[$candidate->kind->value]);
     }
 
     /**
-     * @param array<string, MediaCandidate> $byUrl
+     * @param array<string, MediaCandidateModel> $byUrl
      *
      * @return array<string, true> the kinds an earlier source has already set
      */
@@ -134,8 +137,8 @@ final readonly class PageMediaScanner
     }
 
     /**
-     * @param list<MediaCandidate>          $candidates
-     * @param array<string, MediaCandidate> $byUrl
+     * @param list<MediaCandidateModel>          $candidates
+     * @param array<string, MediaCandidateModel> $byUrl
      *
      * @return array<string, true> the kinds this source re-confirms by naming an already-set URL
      */

@@ -11,13 +11,16 @@ use App\Service\Ai\Completion\Model\RateLimitedResultModel;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
-use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
-use App\Service\Recommendation\Prompt\RecommendationPick;
+use App\Service\Recommendation\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\RecommendationPickParser;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
-use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
+use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 
 /**
  * The batch phase's concurrent fan-out (#344): an unusable batch retries alone up to MAX_ATTEMPTS rounds, then
@@ -43,7 +46,7 @@ final readonly class RecommendationBatchWave
      * @throws \App\Service\Ai\Exception\RetryableProviderException
      * @throws ProviderRateLimitedException
      */
-    public function resolve(WaveContext $wave): BatchWaveResult
+    public function resolve(WaveContext $wave): BatchWaveResultModel
     {
         $correctiveReply = [];
         $rateLimitObserved = false;
@@ -72,11 +75,11 @@ final readonly class RecommendationBatchWave
             }
         }
 
-        return new BatchWaveResult($this->degradeUnresolved($winners, $pending), $rateLimitObserved);
+        return new BatchWaveResultModel($this->degradeUnresolved($winners, $pending), $rateLimitObserved);
     }
 
     /**
-     * @param list<WaveBatch> $waveBatches
+     * @param list<WaveBatchModel> $waveBatches
      *
      * @return array{0: array<int, list<array{id: int, score: int, reason: string}>>, 1: list<int>}
      */
@@ -128,9 +131,14 @@ final readonly class RecommendationBatchWave
             $messages = $this->batchMessages($wave, $waveBatch, $correctiveReply[$position] ?? null);
             $request = $this->requestFactory->create(
                 $tick->connection,
-                new CallPrompt($messages, \count($waveBatch->validIds()), RecommendationResponseSchema::BatchScore),
+                new CallPromptModel(
+                    $messages,
+                    \count($waveBatch->validIds()),
+                    RecommendationResponseSchema::BatchScore,
+                ),
             );
-            $recordedCall = $this->callRecorder->begin($tick->run, CallSlot::batch($waveBatch->index + 1), $request);
+            $slot = CallSlotModel::batch($waveBatch->index + 1);
+            $recordedCall = $this->callRecorder->begin($tick->run, $slot, $request);
             $calls[] = new ConcurrentCompletion($request, $recordedCall);
             $recordedCalls[] = $recordedCall;
         }
@@ -239,7 +247,7 @@ final readonly class RecommendationBatchWave
     }
 
     /** @return list<array{role: string, content: string}> */
-    private function batchMessages(WaveContext $wave, WaveBatch $waveBatch, ?string $lastInvalidReply): array
+    private function batchMessages(WaveContext $wave, WaveBatchModel $waveBatch, ?string $lastInvalidReply): array
     {
         $messages = $this->promptBuilder->batchMessages(
             $wave->prompt,
@@ -255,14 +263,14 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * @param list<RecommendationPick> $picks
+     * @param list<RecommendationPickModel> $picks
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
     private static function asWinners(array $picks): array
     {
         return array_map(
-            static fn (RecommendationPick $pick): array => [
+            static fn (RecommendationPickModel $pick): array => [
                 'id' => $pick->entryId,
                 'score' => $pick->score,
                 'reason' => $pick->reason,

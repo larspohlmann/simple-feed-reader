@@ -6,7 +6,7 @@ namespace App\Service\Search\EntrySearch;
 
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\EntrySearchResult;
+use App\Service\Search\Model\EntrySearchResultModel;
 
 /**
  * Matching by an AND of escaped LIKE predicates — the one implementation the
@@ -19,8 +19,8 @@ final readonly class LikeEntrySearch implements EntrySearchInterface
     {
     }
 
-    public function search(EntrySearchQuery $query): EntrySearchResult
+    public function search(EntrySearchQuery $query): EntrySearchResultModel
     {
-        return EntrySearchResult::rowsOnly($this->entries->searchForUser($query));
+        return EntrySearchResultModel::rowsOnly($this->entries->searchForUser($query));
     }
 }

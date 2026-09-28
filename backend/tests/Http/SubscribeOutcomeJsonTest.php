@@ -7,14 +7,14 @@ namespace App\Tests\Http;
 use App\Http\SubscribeOutcomeJson;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Discovery\Model\ScrapeFailureReason;
-use App\Service\Subscription\SubscribeOutcome;
+use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use PHPUnit\Framework\TestCase;
 
 final class SubscribeOutcomeJsonTest extends TestCase
 {
     public function testListsEveryCandidateWithoutAReasonWhenNoneWasGiven(): void
     {
-        $outcome = SubscribeOutcome::candidates([
+        $outcome = SubscribeOutcomeModel::candidates([
             new FeedCandidateModel('https://example.com/rss', 'Example', 'rss'),
             new FeedCandidateModel('https://example.com/atom', null, 'atom'),
         ]);
@@ -30,7 +30,7 @@ final class SubscribeOutcomeJsonTest extends TestCase
 
     public function testCarriesTheScrapeFailureReasonWhenThereIsOne(): void
     {
-        $outcome = SubscribeOutcome::candidates([], ScrapeFailureReason::Blocked);
+        $outcome = SubscribeOutcomeModel::candidates([], ScrapeFailureReason::Blocked);
 
         self::assertSame(
             ['candidates' => [], 'scrapeFailureReason' => 'blocked'],

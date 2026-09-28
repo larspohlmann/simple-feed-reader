@@ -10,9 +10,9 @@ use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Recommendation\Run\ForYouSweepReport;
-use App\Service\Refresh\RefreshReport;
-use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
+use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class MaintenanceTickJsonTest extends TestCase
@@ -20,12 +20,12 @@ final class MaintenanceTickJsonTest extends TestCase
     public function testACompletedTickSendsEveryHalfUnderItsKey(): void
     {
         $report = new MaintenanceTickReportModel(
-            RefreshReport::finished(9, 1, 2, 3, 4, 5, 0, 7),
+            RefreshReportModel::finished(9, 1, 2, 3, 4, 5, 0, 7),
             new MaintenanceSweepsModel(
-                new ForYouSweepReport(1, 2, 3),
+                new ForYouSweepReportModel(1, 2, 3),
                 new DigestSweepReportModel(4, 5, 6),
                 new ImageVerificationReportModel(7, 8, 9, 10),
-                new SavedSearchMembershipSweepReport(11, 12, 13, true),
+                new SavedSearchMembershipSweepReportModel(11, 12, 13, true),
             ),
             new LokiSpoolReportModel(14, 15),
         );
@@ -61,7 +61,7 @@ final class MaintenanceTickJsonTest extends TestCase
     public function testSweepsSkippedAfterAnAbortedRefreshSayWhy(): void
     {
         $report = new MaintenanceTickReportModel(
-            RefreshReport::aborted(5, 1, 1, 1, 0, 2),
+            RefreshReportModel::aborted(5, 1, 1, 1, 0, 2),
             MaintenanceSweepsModel::skippedAfterAbortedRefresh(),
             new LokiSpoolReportModel(0, 0),
         );

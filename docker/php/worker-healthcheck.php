@@ -28,7 +28,7 @@
 
 declare(strict_types=1);
 
-use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\WorkerPresence;
 
 // Absolute, not relative to __DIR__: the file is mounted into the image's bin

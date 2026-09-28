@@ -6,6 +6,11 @@ namespace App\Service\Recommendation\Feed;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunHistoryRepository;
+use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Recommendation\Feed\Model\MonthWindowModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
+use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 
 /**
  * The run history (#409): the overview card and the month pages it expands into. The limit-plus-one
@@ -28,22 +33,22 @@ final readonly class RecommendationRunHistory
      * does. Deriving the total from the timeline would silently reduce it to
      * "the total of what the timeline still covers".
      */
-    public function overview(User $user, ViewerTimeZone $viewer): RunHistoryOverview
+    public function overview(User $user, ViewerTimeZoneModel $viewer): RunHistoryOverviewModel
     {
         $months = $this->summariser->summarise($this->runs->spendTimeline($user), $viewer);
 
-        return new RunHistoryOverview(
+        return new RunHistoryOverviewModel(
             $this->runs->totalCostNanoCredits($user),
             $months,
             $this->latestMonthPage($user, $viewer, $months[0] ?? null),
         );
     }
 
-    public function month(User $user, MonthWindow $window, ?int $beforeRunId): RunHistoryMonthPage
+    public function month(User $user, MonthWindowModel $window, ?int $beforeRunId): RunHistoryMonthPageModel
     {
         [$rows, $nextCursor] = $this->truncate($this->runs->pageForMonth($user, $window, $beforeRunId));
 
-        return new RunHistoryMonthPage($window->month, $rows, $nextCursor);
+        return new RunHistoryMonthPageModel($window->month, $rows, $nextCursor);
     }
 
     /**
@@ -53,14 +58,14 @@ final readonly class RecommendationRunHistory
      */
     private function latestMonthPage(
         User $user,
-        ViewerTimeZone $viewer,
-        ?HistoryMonth $newestMonth,
-    ): ?RunHistoryMonthPage {
+        ViewerTimeZoneModel $viewer,
+        ?HistoryMonthModel $newestMonth,
+    ): ?RunHistoryMonthPageModel {
         if (null === $newestMonth) {
             return null;
         }
 
-        return $this->month($user, MonthWindow::of($newestMonth->month, $viewer), null);
+        return $this->month($user, MonthWindowModel::of($newestMonth->month, $viewer), null);
     }
 
     /**

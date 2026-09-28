@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\RawPageModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -30,7 +30,7 @@ final readonly class MetaMediaSource implements MediaCandidateSourceInterface
     {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $found = [];
         foreach (self::PROPERTIES as $property) {
@@ -43,12 +43,12 @@ final readonly class MetaMediaSource implements MediaCandidateSourceInterface
         return array_values($found);
     }
 
-    private function candidateFor(\Dom\HTMLDocument $document, string $property): ?MediaCandidate
+    private function candidateFor(\Dom\HTMLDocument $document, string $property): ?MediaCandidateModel
     {
         $url = $this->content($document, $property);
         $resolved = $url === null ? null : $this->mediaUrlKind->resolve($url);
 
-        return $resolved === null ? null : new MediaCandidate($resolved->kind, $resolved->url);
+        return $resolved === null ? null : new MediaCandidateModel($resolved->kind, $resolved->url);
     }
 
     private function content(\Dom\HTMLDocument $document, string $property): ?string

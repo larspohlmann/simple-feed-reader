@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\Tag;
-use App\Service\Subscription\BulkSubscribeResult;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
 
 final class OnboardingJson
 {
     /** @return array<string, mixed> */
-    public static function subscribed(BulkSubscribeResult $result): array
+    public static function subscribed(BulkSubscribeResultModel $result): array
     {
         return [
             'subscribed' => $result->imported,

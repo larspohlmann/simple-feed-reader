@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Reader\ImageIdentity;
+use App\Service\Reader\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -62,7 +62,8 @@ final readonly class NoscriptImageUnwrapper implements PageRepairInterface
         $noscriptImageSource = $this->imageSource($noscript);
 
         return $noscriptImageSource !== ''
-            && ImageIdentity::fromUrl($placeholderSource)->isSameAsset(ImageIdentity::fromUrl($noscriptImageSource));
+            && ImageIdentityModel::fromUrl($placeholderSource)
+                ->isSameAsset(ImageIdentityModel::fromUrl($noscriptImageSource));
     }
 
     /** An <img>, or a wrapper around exactly one and no text of its own. */

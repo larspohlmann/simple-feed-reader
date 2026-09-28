@@ -10,6 +10,7 @@ use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Scraper\Exception\HtmlExtractionException;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -41,7 +42,7 @@ final readonly class HtmlItemExtractor
     {
         $doc = $this->parse($html);
         $entries = array_map(
-            fn (ScrapedItem $item): ParsedEntryModel => $this->toEntry($item),
+            fn (ScrapedItemModel $item): ParsedEntryModel => $this->toEntry($item),
             \array_slice($this->firstSuccessfulLayer($doc, $baseUrl), 0, self::MAX_ITEMS),
         );
 
@@ -69,7 +70,7 @@ final readonly class HtmlItemExtractor
         }
     }
 
-    /** @return list<ScrapedItem> */
+    /** @return list<ScrapedItemModel> */
     private function firstSuccessfulLayer(HTMLDocument $doc, string $baseUrl): array
     {
         foreach ($this->layers as $layer) {
@@ -86,8 +87,8 @@ final readonly class HtmlItemExtractor
      * Drops items linking back to the page itself and URL duplicates (first
      * occurrence wins), keeping document order.
      *
-     * @param list<ScrapedItem> $items
-     * @return list<ScrapedItem>
+     * @param list<ScrapedItemModel> $items
+     * @return list<ScrapedItemModel>
      */
     private function guarded(array $items, string $baseUrl): array
     {
@@ -127,7 +128,7 @@ final readonly class HtmlItemExtractor
         return $description === '' ? null : $description;
     }
 
-    private function toEntry(ScrapedItem $item): ParsedEntryModel
+    private function toEntry(ScrapedItemModel $item): ParsedEntryModel
     {
         // The teaser cap is applied once here, at the funnel every layer's
         // output passes through — a clamp inside one layer (CardFields) let

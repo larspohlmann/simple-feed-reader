@@ -7,9 +7,9 @@ namespace App\Tests\Service\ReaderAudit;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
-use App\Service\ReaderAudit\CleanupMarker;
-use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
@@ -64,7 +64,7 @@ final class LeadingEngagementMarkersTest extends TestCase
         $html = '<div><p><time>31.08.2026 21:15</time></p><p>1.251 Klicks</p><p>0 Reaktionen</p>'
             . '<p>❤️️</p><p>😂️</p><p>Von Jana Steger</p><p>' . self::PROSE . '</p></div>';
 
-        $markers = $this->markers->detect(ExtractedBody::fromHtml($html), 'Jana Steger');
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml($html), 'Jana Steger');
 
         self::assertCount(1, $markers);
         self::assertSame(3, $markers[0]->weight);
@@ -94,8 +94,8 @@ final class LeadingEngagementMarkersTest extends TestCase
     private function codesFor(string $html, ?string $entryAuthor): array
     {
         return array_map(
-            static fn (CleanupMarker $marker): string => $marker->code,
-            $this->markers->detect(ExtractedBody::fromHtml($html), $entryAuthor),
+            static fn (CleanupMarkerModel $marker): string => $marker->code,
+            $this->markers->detect(ExtractedBodyModel::fromHtml($html), $entryAuthor),
         );
     }
 

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Slideshow\ContainerSignature;
+use App\Service\Reader\Model\PageResponseModel;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;
@@ -31,10 +32,10 @@ final readonly class ArticleReadability
      * The conservative document arrives already normalised: the caller reads it before readability consumes
      * it (#684).
      *
-     * @param list<ContainerSignature> $slideshowContainers
+     * @param list<ContainerSignatureModel> $slideshowContainers
      */
     #[WithSpan]
-    public function richest(HTMLDocument $normalized, PageResponse $page, array $slideshowContainers): ?Article
+    public function richest(HTMLDocument $normalized, PageResponseModel $page, array $slideshowContainers): ?Article
     {
         $collapsed = $this->normalizer->collapseWrapperChains($page->html);
         $this->teaserGridRemover->removeFrom($normalized, $slideshowContainers);

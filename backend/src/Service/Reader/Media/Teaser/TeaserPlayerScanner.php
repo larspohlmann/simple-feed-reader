@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\Teaser;
 
 use App\Service\Fetch\UrlResolver;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\PlayerPoster;
-use App\Service\Reader\Media\ResolvedMediaUrl;
+use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -37,7 +38,7 @@ final readonly class TeaserPlayerScanner
     {
     }
 
-    /** @return list<TeaserPlayer> */
+    /** @return list<TeaserPlayerModel> */
     public function scan(HTMLDocument $document, string $pageUrl): array
     {
         $teasers = [];
@@ -55,7 +56,7 @@ final readonly class TeaserPlayerScanner
             $poster = PlayerPoster::near($player);
             if ($poster !== null) {
                 [$caption, $link] = $this->captionAndLink($player);
-                $teasers[$file->url] ??= new TeaserPlayer(
+                $teasers[$file->url] ??= new TeaserPlayerModel(
                     $file->kind,
                     $file->url,
                     $poster,
@@ -72,7 +73,7 @@ final readonly class TeaserPlayerScanner
      * The first playable file — a video or audio, not the bare stream beside it,
      * since the file plays without a library — that an element's attributes hold.
      */
-    private function playableFileOn(Element $element): ?ResolvedMediaUrl
+    private function playableFileOn(Element $element): ?ResolvedMediaUrlModel
     {
         foreach ($element->attributes as $attribute) {
             $decoded = html_entity_decode($attribute->value, \ENT_QUOTES | \ENT_HTML5);

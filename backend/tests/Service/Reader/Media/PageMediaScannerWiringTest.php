@@ -12,8 +12,8 @@ use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
 use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\RawPage;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -56,7 +56,10 @@ final class PageMediaScannerWiringTest extends KernelTestCase
     #[DataProvider('mediaFixtureProvider')]
     public function testNoSourceChangesTheSharedDocument(string $fixturePath): void
     {
-        $page = RawPage::parse((string) file_get_contents($fixturePath), 'https://www.zdfheute.de/article-100.html');
+        $page = RawPageModel::parse(
+            (string) file_get_contents($fixturePath),
+            'https://www.zdfheute.de/article-100.html',
+        );
         $before = $page->document->saveHtml();
 
         $this->scanner()->scan($page);

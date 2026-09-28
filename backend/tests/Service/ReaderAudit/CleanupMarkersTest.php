@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SampledEntry;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
 use PHPUnit\Framework\TestCase;
 
@@ -37,7 +37,7 @@ final class CleanupMarkersTest extends TestCase
         // the user the original. That is a real outcome and no cleaner changes
         // it; listing it filled the report with work nobody could do (#744).
         foreach (ExtractionFailure::cases() as $reason) {
-            $failed = ExtractionResult::failed(null, $reason);
+            $failed = ExtractionResultModel::failed(null, $reason);
 
             self::assertSame([], $this->markers->detect($failed, $this->entry(), null), $reason->value);
         }
@@ -45,7 +45,7 @@ final class CleanupMarkersTest extends TestCase
 
     public function testABodyThatCouldNotBeMeasuredEarnsNothingEither(): void
     {
-        $ok = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null);
+        $ok = ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null);
 
         self::assertSame([], $this->markers->detect($ok, $this->entry(), null));
     }
@@ -54,11 +54,11 @@ final class CleanupMarkersTest extends TestCase
     {
         $html = '<ul>' . str_repeat('<li><a href="/x">Ressort</a></li>', 4) . '</ul>'
             . '<p><a href="https://x.com/intent/tweet?url=https://example.test/a">Teilen</a></p>';
-        $result = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, $html, null);
+        $result = ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, $html, null);
 
         $codes = array_map(
             static fn ($marker): string => $marker->code,
-            $this->markers->detect($result, $this->entry(), ExtractedBody::fromHtml($html)),
+            $this->markers->detect($result, $this->entry(), ExtractedBodyModel::fromHtml($html)),
         );
 
         self::assertContains('leading_link_list', $codes);
@@ -68,18 +68,18 @@ final class CleanupMarkersTest extends TestCase
     public function testIncludesTheLeadingEngagementMarker(): void
     {
         $html = '<p>1.251 Klicks</p><p>' . str_repeat('Artikeltext. ', 20) . '</p>';
-        $result = ExtractionResult::ok('https://example.test/a', 'Titel', null, null, $html, null);
+        $result = ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, $html, null);
 
         $codes = array_map(
             static fn ($marker): string => $marker->code,
-            $this->markers->detect($result, $this->entry(), ExtractedBody::fromHtml($html)),
+            $this->markers->detect($result, $this->entry(), ExtractedBodyModel::fromHtml($html)),
         );
 
         self::assertContains('leading_engagement_chrome', $codes);
     }
 
-    private function entry(): SampledEntry
+    private function entry(): SampledEntryModel
     {
-        return new SampledEntry(7, 3, 11, 'Ein Feed', 'Eine Schlagzeile', 'https://example.test/a', null, false);
+        return new SampledEntryModel(7, 3, 11, 'Ein Feed', 'Eine Schlagzeile', 'https://example.test/a', null, false);
     }
 }

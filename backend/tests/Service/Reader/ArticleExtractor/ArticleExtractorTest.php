@@ -15,41 +15,41 @@ use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor\ArticleExtractor;
 use App\Service\Reader\ArticleReadability;
-use App\Service\Reader\EntryHints;
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\Media\BodyMediaResolver;
 use App\Service\Reader\Media\DurableMediaUrl;
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaLanding;
-use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use App\Service\Reader\Media\MediaRelevance;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\PageMediaScanner;
 use App\Service\Reader\Media\EmbedProvider\BrightcoveEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\DailymotionEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
-use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
-use App\Service\Reader\Media\Sibling\SiblingIdRule;
-use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
+use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\PageEmbedSource;
-use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
+use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
+use App\Service\Reader\Media\MediaLanding;
+use App\Service\Reader\Media\MediaRelevance;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\Sibling\SiblingIdRule;
+use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\StreamLocationResolver;
+use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Service\Reader\Model\EntryHintsModel;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Reader\Model\FeedMediaModel;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\RelatedTeaserGridRemover;
-use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
+use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Tests\Service\Reader\FetchedPageNormalizerTest;
@@ -232,7 +232,7 @@ final class ArticleExtractorTest extends TestCase
         );
         $entry->setMedia([new EntryMedium('https://site.test/img/photo.jpg', 'image', 1600, 900)], []);
 
-        $hints = new EntryHints(feedMedia: FeedMedia::fromEntry($entry));
+        $hints = new EntryHintsModel(feedMedia: FeedMediaModel::fromEntry($entry));
         $result = $extractor->extract('https://site.test/post', $hints);
 
         self::assertStringContainsString('width="1600"', (string) $result->contentHtml);
@@ -523,7 +523,7 @@ final class ArticleExtractorTest extends TestCase
             new MockResponse($html, ['http_code' => 200]),
         ]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(author: 'Jana Steger'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(author: 'Jana Steger'));
         $content = (string) $result->contentHtml;
 
         self::assertTrue($result->ok);
@@ -610,7 +610,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-header.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $hints = new EntryHints(title: 'The Haiku Challenge', author: 'Clark Strand');
+        $hints = new EntryHintsModel(title: 'The Haiku Challenge', author: 'Clark Strand');
         $result = $extractor->extract('https://site.test/post', $hints);
         $content = (string) $result->contentHtml;
 
@@ -649,7 +649,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-breadcrumb.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Political Balancing Act'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Political Balancing Act'));
         $content = (string) $result->contentHtml;
 
         self::assertStringNotContainsString('2026/36', $content);
@@ -665,7 +665,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-toolbar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Shoulder to Shoulder'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Shoulder to Shoulder'));
         $content = (string) $result->contentHtml;
 
         self::assertStringContainsString('reaffirmed its course', $content);
@@ -685,7 +685,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-masthead-metabar.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'September Wallpapers'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'September Wallpapers'));
         $content = (string) $result->contentHtml;
 
         self::assertStringNotContainsString('11 min read', $content);
@@ -699,7 +699,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-block-components.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Block Component Headline'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Block Component Headline'));
 
         self::assertTrue($result->ok);
         // Subheadings and the figure survive the wrapper-chain layout.
@@ -823,7 +823,7 @@ final class ArticleExtractorTest extends TestCase
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-inline-video.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
-        $result = $extractor->extract('https://site.test/post', new EntryHints(title: 'Inline video headline'));
+        $result = $extractor->extract('https://site.test/post', new EntryHintsModel(title: 'Inline video headline'));
 
         $body = (string) $result->contentHtml;
         self::assertTrue($result->ok);
@@ -1153,7 +1153,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('Thank you for subscribing', $body);
     }
 
-    private function extractFixture(string $fixture): ExtractionResult
+    private function extractFixture(string $fixture): ExtractionResultModel
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/' . $fixture);
 

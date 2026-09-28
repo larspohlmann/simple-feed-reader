@@ -11,7 +11,7 @@ use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
-use App\Service\Search\EntrySearchResult;
+use App\Service\Search\Model\EntrySearchResultModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -22,7 +22,7 @@ final class SearchPageTest extends TestCase
 {
     public function testAnEmptyResultCarriesNoEntriesAndNoMatchedWords(): void
     {
-        $page = SearchPage::of(EntrySearchResult::rowsOnly([]), 50);
+        $page = SearchPage::of(EntrySearchResultModel::rowsOnly([]), 50);
 
         self::assertSame([], $page['entries']);
         self::assertNull($page['nextCursor']);
@@ -31,7 +31,7 @@ final class SearchPageTest extends TestCase
 
     public function testTheMatchedWordsReachThePage(): void
     {
-        $result = new EntrySearchResult([$this->row(7)], ['Angular', 'signals']);
+        $result = new EntrySearchResultModel([$this->row(7)], ['Angular', 'signals']);
 
         $page = SearchPage::of($result, 50);
 
@@ -46,7 +46,7 @@ final class SearchPageTest extends TestCase
      */
     public function testAResultWithoutMatchedWordsStillCarriesTheKey(): void
     {
-        $page = SearchPage::of(EntrySearchResult::rowsOnly([$this->row(7)]), 50);
+        $page = SearchPage::of(EntrySearchResultModel::rowsOnly([$this->row(7)]), 50);
 
         self::assertArrayHasKey('matchedWords', $page);
         self::assertSame([], $page['matchedWords']);
@@ -61,7 +61,7 @@ final class SearchPageTest extends TestCase
      */
     public function testAFullEngineMatchStillOffersACursorWhenARowWasDropped(): void
     {
-        $result = new EntrySearchResult([$this->row(7)], ['angular'], matchCount: 2);
+        $result = new EntrySearchResultModel([$this->row(7)], ['angular'], matchCount: 2);
 
         $page = SearchPage::of($result, 2);
 
@@ -77,7 +77,7 @@ final class SearchPageTest extends TestCase
      */
     public function testAShortEngineMatchOffersNoNextCursor(): void
     {
-        $result = new EntrySearchResult([$this->row(7)], ['angular'], matchCount: 1);
+        $result = new EntrySearchResultModel([$this->row(7)], ['angular'], matchCount: 1);
 
         $page = SearchPage::of($result, 2);
 
@@ -92,7 +92,7 @@ final class SearchPageTest extends TestCase
      */
     public function testTheDatabasePathOffersACursorFromRowCountAlone(): void
     {
-        $result = EntrySearchResult::rowsOnly([$this->row(7)]);
+        $result = EntrySearchResultModel::rowsOnly([$this->row(7)]);
 
         $page = SearchPage::of($result, 1);
 
@@ -107,7 +107,7 @@ final class SearchPageTest extends TestCase
      */
     public function testTheContinuationRowDecidesTheCursor(): void
     {
-        $result = new EntrySearchResult([], ['angular'], matchCount: 1, continuationRow: $this->row(4));
+        $result = new EntrySearchResultModel([], ['angular'], matchCount: 1, continuationRow: $this->row(4));
 
         $page = SearchPage::of($result, 1);
 

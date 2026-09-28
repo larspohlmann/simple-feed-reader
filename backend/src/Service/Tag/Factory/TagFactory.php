@@ -6,11 +6,11 @@ namespace App\Service\Tag\Factory;
 
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Tag\TagDetails;
+use App\Service\Tag\Model\TagDetailsModel;
 
 final readonly class TagFactory
 {
-    public function create(User $user, TagDetails $details, int $position): Tag
+    public function create(User $user, TagDetailsModel $details, int $position): Tag
     {
         $tag = new Tag($user, $details->name);
         $tag->setColor($details->color);

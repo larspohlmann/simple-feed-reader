@@ -9,8 +9,8 @@ use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SweepBudget;
 use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
@@ -121,7 +121,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(422);
         // The violation must come from the DTO's own Length constraint
         // (property path "term"), not from the redundant length check
-        // SavedSearchTallies's SearchTerms::fromInput() would apply
+        // SavedSearchTallies's SearchTermsModel::fromInput() would apply
         // downstream (property path "q") — that only fires once the entity
         // is already persisted, which a request this short must never reach.
         $body = $this->payload($client);
@@ -226,7 +226,7 @@ final class SavedSearchControllerTest extends ApiTestCase
         // These searches are persisted directly rather than through the
         // create endpoint, so nothing has swept them into the membership
         // table yet; run the sweep the create endpoint would trigger.
-        self::getContainer()->get(SavedSearchMembershipSweep::class)->sweep(SweepBudget::seconds(10));
+        self::getContainer()->get(SavedSearchMembershipSweep::class)->sweep(SweepBudgetModel::seconds(10));
 
         $client->request('GET', '/api/saved-searches', server: $headers);
         self::assertResponseIsSuccessful();

@@ -10,8 +10,8 @@ use App\Http\MaintenanceTokenGuard;
 use App\Http\RefreshReportJson;
 use App\Service\Maintenance\MaintenanceTick;
 use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -42,11 +42,11 @@ final readonly class MaintenanceController
             return $rejection;
         }
 
-        $report = $this->refreshRunner->run(RefreshRequest::allDue(MaintenanceTick::REFRESH_BUDGET_SECONDS));
+        $report = $this->refreshRunner->run(RefreshRequestModel::allDue(MaintenanceTick::REFRESH_BUDGET_SECONDS));
 
         $status = match ($report->status) {
             'busy' => Response::HTTP_CONFLICT,
-            RefreshReport::STATUS_ABORTED => Response::HTTP_INTERNAL_SERVER_ERROR,
+            RefreshReportModel::STATUS_ABORTED => Response::HTTP_INTERNAL_SERVER_ERROR,
             default => Response::HTTP_OK,
         };
 

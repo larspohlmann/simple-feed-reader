@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
+
 /**
  * What a URL is, and the durable form a layer must emit for it.
  *
@@ -27,17 +30,17 @@ final readonly class MediaUrlKind
     ) {
     }
 
-    public function resolve(string $url): ?ResolvedMediaUrl
+    public function resolve(string $url): ?ResolvedMediaUrlModel
     {
         $embed = $this->providers->resolve($url);
         if ($embed !== null) {
-            return new ResolvedMediaUrl(MediaKind::Embed, $embed->url);
+            return new ResolvedMediaUrlModel(MediaKind::Embed, $embed->url);
         }
 
         return $this->resolveFile($url);
     }
 
-    private function resolveFile(string $url): ?ResolvedMediaUrl
+    private function resolveFile(string $url): ?ResolvedMediaUrlModel
     {
         $bare = $this->withoutQuery($url);
         if ($bare === null || !$this->durable->accepts($bare)) {
@@ -51,7 +54,7 @@ final readonly class MediaUrlKind
             return null;
         }
 
-        return $kind === null ? null : new ResolvedMediaUrl($kind, $bare);
+        return $kind === null ? null : new ResolvedMediaUrlModel($kind, $bare);
     }
 
     private function withoutQuery(string $url): ?string

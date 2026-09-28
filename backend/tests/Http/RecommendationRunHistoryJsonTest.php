@@ -7,9 +7,9 @@ namespace App\Tests\Http;
 use App\Enum\RunStatus;
 use App\Http\RecommendationRunHistoryJson;
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\Feed\HistoryMonth;
-use App\Service\Recommendation\Feed\RunHistoryMonthPage;
-use App\Service\Recommendation\Feed\RunHistoryOverview;
+use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -145,13 +145,13 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
     public function testAnOverviewWithTwoMonthsAndALatestRendersAllThreeKeysInOrder(): void
     {
-        $latest = new RunHistoryMonthPage('2026-08', [$this->completedRow()], 361);
+        $latest = new RunHistoryMonthPageModel('2026-08', [$this->completedRow()], 361);
 
-        $payload = RecommendationRunHistoryJson::overview(new RunHistoryOverview(
+        $payload = RecommendationRunHistoryJson::overview(new RunHistoryOverviewModel(
             918_200_000,
             [
-                new HistoryMonth('2026-08', 47, 2_431_200_000),
-                new HistoryMonth('2026-07', 3, 100_000),
+                new HistoryMonthModel('2026-08', 47, 2_431_200_000),
+                new HistoryMonthModel('2026-07', 3, 100_000),
             ],
             $latest,
         ));
@@ -170,7 +170,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
 
     public function testAnOverviewForAnAccountThatNeverRanIsEmpty(): void
     {
-        $payload = RecommendationRunHistoryJson::overview(new RunHistoryOverview(null, [], null));
+        $payload = RecommendationRunHistoryJson::overview(new RunHistoryOverviewModel(null, [], null));
 
         self::assertSame([], $payload['months']);
         self::assertNull($payload['latest']);
@@ -184,7 +184,7 @@ final class RecommendationRunHistoryJsonTest extends TestCase
      */
     private static function monthPage(string $month, array $rows, ?int $nextCursor): array
     {
-        return RecommendationRunHistoryJson::monthPage(new RunHistoryMonthPage($month, $rows, $nextCursor));
+        return RecommendationRunHistoryJson::monthPage(new RunHistoryMonthPageModel($month, $rows, $nextCursor));
     }
 
     /** @return HistoryRow */

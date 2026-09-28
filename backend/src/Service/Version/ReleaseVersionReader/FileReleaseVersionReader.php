@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Version\ReleaseVersionReader;
 
 use App\Service\Version\Exception\MalformedVersionFileException;
-use App\Service\Version\ReleaseVersion;
+use App\Service\Version\Model\ReleaseVersionModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
@@ -21,15 +21,15 @@ final readonly class FileReleaseVersionReader implements ReleaseVersionReaderInt
     ) {
     }
 
-    public function read(): ReleaseVersion
+    public function read(): ReleaseVersionModel
     {
         if (!is_file($this->versionFilePath)) {
-            return ReleaseVersion::development();
+            return ReleaseVersionModel::development();
         }
 
         $fields = $this->decode($this->contents());
 
-        return new ReleaseVersion(
+        return new ReleaseVersionModel(
             $this->stringField($fields, 'version'),
             $this->stringField($fields, 'commit'),
             $this->stringField($fields, 'builtAt'),

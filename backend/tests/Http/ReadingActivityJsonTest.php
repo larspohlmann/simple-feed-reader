@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\ReadingActivityJson;
-use App\Service\Reading\ReadingActivity;
+use App\Service\Reading\Model\ReadingActivityModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -16,7 +16,7 @@ final class ReadingActivityJsonTest extends TestCase
 {
     public function testZeroFillsQuietDaysKeepsTheDayOrderAndCarriesTheFeedRanking(): void
     {
-        $payload = ReadingActivityJson::of(new ReadingActivity(
+        $payload = ReadingActivityJson::of(new ReadingActivityModel(
             ['2026-09-05', '2026-09-06', '2026-09-07'],
             ['2026-09-06' => 3, '2026-09-07' => 1],
             [['feedId' => 7, 'readCount' => 42], ['feedId' => 3, 'readCount' => 10]],
@@ -39,7 +39,7 @@ final class ReadingActivityJsonTest extends TestCase
 
     public function testAnAccountWithNoReadsGetsAllZerosAZeroTotalAndAnEmptyRanking(): void
     {
-        $payload = ReadingActivityJson::of(new ReadingActivity(['2026-09-06', '2026-09-07'], [], []));
+        $payload = ReadingActivityJson::of(new ReadingActivityModel(['2026-09-06', '2026-09-07'], [], []));
 
         self::assertSame(
             [

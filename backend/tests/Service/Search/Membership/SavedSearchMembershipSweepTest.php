@@ -10,15 +10,15 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchEntryMembershipRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SweepBudget;
+use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Tests\DbTestCase;
-use App\Tests\Support\StoredMark;
 use App\Tests\Support\MembershipSweepFactory;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RecordingSavedSearchMatcher;
+use App\Tests\Support\StoredMark;
 use App\Tests\Support\TickingClock;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
@@ -48,7 +48,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $miss = $this->entry('b');
         $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertSame(
             ['searchesSwept' => 1, 'entriesScanned' => 2, 'matchesInserted' => 1, 'caughtUp' => true],
@@ -66,7 +66,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $young = $this->entry('b', createdAt: '2026-09-22T09:59:01');
         $matcher = new RecordingSavedSearchMatcher();
 
-        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertSame([[$settled->getId()]], array_column($matcher->calls, 'candidates'));
         self::assertSame($settled->getId(), $this->markOf($search));
@@ -80,7 +80,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->entry('a');
         $matcher = new RecordingSavedSearchMatcher();
 
-        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertCount(1, $matcher->calls);
         self::assertSame([$first->getId(), $second->getId()], $matcher->calls[0]['searchIds']);
@@ -97,7 +97,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
-        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertSame([
             ['searchIds' => [$behind->getId()], 'candidates' => [$first->getId(), $second->getId()]],
@@ -119,13 +119,13 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
         $matcher = new RecordingSavedSearchMatcher();
 
-        $first = $this->sweep($matcher, $clock)->sweep(SweepBudget::seconds(10));
+        $first = $this->sweep($matcher, $clock)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertFalse($first->caughtUp);
         self::assertSame(SavedSearchMembershipSweep::CHUNK, $first->entriesScanned);
         self::assertSame($ids[SavedSearchMembershipSweep::CHUNK - 1], $this->markOf($search));
 
-        $second = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $second = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertTrue($second->caughtUp);
         self::assertSame(1, $second->entriesScanned);
@@ -140,7 +140,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         }
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(1000));
+        $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(1000));
 
         self::assertTrue($report->caughtUp);
         self::assertCount(2, $matcher->calls);
@@ -159,7 +159,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
             $second->requireId() => [$firstHitForSecond->requireId(), $secondHitForSecond->requireId()],
         ]);
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertSame(3, $report->matchesInserted);
     }
@@ -175,7 +175,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $clock = new TickingClock(new \DateTimeImmutable(self::NOW), 6);
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher, $clock)->sweep(SweepBudget::seconds(6));
+        $report = $this->sweep($matcher, $clock)->sweep(SweepBudgetModel::seconds(6));
 
         self::assertFalse($report->caughtUp);
         self::assertSame([], $matcher->calls);
@@ -190,7 +190,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $matcher = new RecordingSavedSearchMatcher([], new SearchEngineUnavailableException('down'));
         $logger = new RecordingLogger();
 
-        $report = $this->sweep($matcher, logger: $logger)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher, logger: $logger)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertFalse($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
@@ -222,7 +222,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $logger = new RecordingLogger();
 
         $report = $this->sweep($matcher, memberships: $failingAfterInsert, logger: $logger)
-            ->sweep(SweepBudget::seconds(10));
+            ->sweep(SweepBudgetModel::seconds(10));
 
         self::assertFalse($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
@@ -237,10 +237,10 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $search = $this->search('climate');
         $hit = $this->entry('a');
         $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
-        $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
         $this->em->getConnection()->executeStatement('UPDATE saved_search SET matched_up_to_entry_id = 0');
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertTrue($report->caughtUp);
         self::assertSame(0, $report->matchesInserted);
@@ -254,7 +254,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->entry('a');
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher)->sweepOne($only, SweepBudget::seconds(8));
+        $report = $this->sweep($matcher)->sweepOne($only, SweepBudgetModel::seconds(8));
 
         self::assertSame(1, $report->searchesSwept);
         self::assertSame([[$only->getId()]], array_column($matcher->calls, 'searchIds'));
@@ -269,7 +269,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $this->em->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher)->sweepOne($search, SweepBudget::seconds(8));
+        $report = $this->sweep($matcher)->sweepOne($search, SweepBudgetModel::seconds(8));
 
         self::assertSame(0, $report->searchesSwept);
         self::assertSame([], $matcher->calls);
@@ -281,7 +281,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $matcher = new RecordingSavedSearchMatcher();
 
-        $report = $this->sweep($matcher)->sweep(SweepBudget::seconds(10));
+        $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
         self::assertTrue($report->caughtUp);
         self::assertSame([], $matcher->calls);

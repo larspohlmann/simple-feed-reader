@@ -6,9 +6,9 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Html\PictureSources;
+use App\Service\Reader\Model\LeadImageCandidateModel;
+use App\Service\Reader\Model\PageImageInventoryModel;
 use App\Service\Reader\PageRepair\LazyImageSources;
-use App\Service\Reader\LeadImageCandidate;
-use App\Service\Reader\PageImageInventory;
 use App\Service\Reader\ReaderLeadImage;
 use PHPUnit\Framework\TestCase;
 
@@ -22,36 +22,36 @@ final class ReaderLeadImageTest extends TestCase
     }
 
     /** An inventory of a page that draws exactly these plain image URLs. */
-    private function pageDrawing(string ...$urls): PageImageInventory
+    private function pageDrawing(string ...$urls): PageImageInventoryModel
     {
         $images = '';
         foreach ($urls as $url) {
             $images .= '<img src="' . $url . '">';
         }
 
-        return PageImageInventory::fromDocument(HtmlDocumentParser::parse('<body>' . $images . '</body>'));
+        return PageImageInventoryModel::fromDocument(HtmlDocumentParser::parse('<body>' . $images . '</body>'));
     }
 
-    private function pageDrawingNothing(): PageImageInventory
+    private function pageDrawingNothing(): PageImageInventoryModel
     {
         return $this->pageDrawing();
     }
 
     /** The inventory of a raw page after LazyImageSources has resolved it. */
-    private function inventoryOfResolvedPage(string $pageHtml): PageImageInventory
+    private function inventoryOfResolvedPage(string $pageHtml): PageImageInventoryModel
     {
         $document = HtmlDocumentParser::parseOrNull($pageHtml);
         self::assertNotNull($document);
         (new LazyImageSources(new PictureSources()))->repairIn($document);
 
-        return PageImageInventory::fromDocument($document);
+        return PageImageInventoryModel::fromDocument($document);
     }
 
-    private function restoredBody(string $bodyHtml, PageImageInventory $pageImages, ?string $leadUrl): string
+    private function restoredBody(string $bodyHtml, PageImageInventoryModel $pageImages, ?string $leadUrl): string
     {
         $document = HtmlDocumentParser::parseOrNull($bodyHtml);
         self::assertNotNull($document);
-        $this->leadImage->restore($document, new LeadImageCandidate($leadUrl, $pageImages));
+        $this->leadImage->restore($document, new LeadImageCandidateModel($leadUrl, $pageImages));
 
         return (string) $document->body?->innerHTML;
     }
@@ -262,7 +262,7 @@ final class ReaderLeadImageTest extends TestCase
         $lead = 'https://cdn.test/hero-photo.jpg';
         $document = HtmlDocumentParser::parseOrNull('<p>Just words.</p>');
         self::assertNotNull($document);
-        $candidate = new LeadImageCandidate($lead, $this->pageDrawingNothing(), 'Bild: Berti Kolbow-Lehradt');
+        $candidate = new LeadImageCandidateModel($lead, $this->pageDrawingNothing(), 'Bild: Berti Kolbow-Lehradt');
 
         $this->leadImage->restore($document, $candidate);
         $body = (string) $document->body?->innerHTML;

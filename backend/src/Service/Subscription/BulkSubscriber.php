@@ -13,8 +13,11 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
 use App\Service\Feed\Factory\FeedFactory;
+use App\Service\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Subscription\Model\TagStyleModel;
 use App\Service\Tag\Factory\TagFactory;
-use App\Service\Tag\TagDetails;
+use App\Service\Tag\Model\TagDetailsModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -43,9 +46,9 @@ final readonly class BulkSubscriber
     }
 
     /**
-     * @param iterable<BulkSubscribeItem> $items
+     * @param iterable<BulkSubscribeItemModel> $items
      */
-    public function subscribeAll(User $user, iterable $items): BulkSubscribeResult
+    public function subscribeAll(User $user, iterable $items): BulkSubscribeResultModel
     {
         $batch = $this->open($user);
         foreach ($items as $item) {
@@ -71,7 +74,7 @@ final readonly class BulkSubscriber
         );
     }
 
-    private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItem $item): void
+    private function subscribeOne(BulkSubscribeBatch $batch, BulkSubscribeItemModel $item): void
     {
         $url = $item->feedUrl;
         if (!$this->isSubscribableUrl($url)) {
@@ -107,7 +110,7 @@ final readonly class BulkSubscriber
         return null !== $feed && $this->subscriptions->existsForUserAndFeed($user->requireId(), $feed->requireId());
     }
 
-    private function persistNewFeed(BulkSubscribeItem $item): Feed
+    private function persistNewFeed(BulkSubscribeItemModel $item): Feed
     {
         // Seeded for the sidebar before the first fetch; only on creation, since a shared row is not ours to retitle.
         $feed = $this->feedFactory->create($item->feedUrl, $item->sourceFormat, $item->feedTitle);
@@ -129,8 +132,11 @@ final readonly class BulkSubscriber
     /**
      * @return list<Tag> the tag if this call brought it into being, else empty
      */
-    private function attachTag(BulkSubscribeBatch $batch, Subscription $subscription, BulkSubscribeItem $item): array
-    {
+    private function attachTag(
+        BulkSubscribeBatch $batch,
+        Subscription $subscription,
+        BulkSubscribeItemModel $item,
+    ): array {
         if (null === $item->tagName) {
             return [];
         }
@@ -144,11 +150,11 @@ final readonly class BulkSubscriber
         return null === $existing ? [$tag] : [];
     }
 
-    private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyle $style): Tag
+    private function persistNewTag(BulkSubscribeBatch $batch, string $name, ?TagStyleModel $style): Tag
     {
         $tag = $this->tagFactory->create(
             $batch->user,
-            new TagDetails($name, $style?->color, $style?->icon),
+            new TagDetailsModel($name, $style?->color, $style?->icon),
             $batch->positions->takeTagPosition(),
         );
         $this->em->persist($tag);

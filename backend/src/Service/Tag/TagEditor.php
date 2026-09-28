@@ -10,6 +10,7 @@ use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
 use App\Service\Tag\Exception\TagNameTakenException;
 use App\Service\Tag\Factory\TagFactory;
+use App\Service\Tag\Model\TagDetailsModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class TagEditor
@@ -22,7 +23,7 @@ final readonly class TagEditor
     ) {
     }
 
-    public function create(User $user, TagDetails $details): Tag
+    public function create(User $user, TagDetailsModel $details): Tag
     {
         if ($this->tags->existsForUserAndName($user->requireId(), $details->name)) {
             throw new TagNameTakenException();
@@ -35,7 +36,7 @@ final readonly class TagEditor
         return $tag;
     }
 
-    public function update(Tag $tag, TagDetails $details): void
+    public function update(Tag $tag, TagDetailsModel $details): void
     {
         if ($this->tags->existsForUserAndName($tag->getUser()->requireId(), $details->name, $tag->requireId())) {
             throw new TagNameTakenException();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow;
 
+use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
 use App\Service\Text\Whitespace;
 use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
@@ -17,9 +18,9 @@ use Dom\Text;
  */
 final readonly class SlideCaptionResolver
 {
-    public function resolve(Element $slide): SlideCaption
+    public function resolve(Element $slide): SlideCaptionModel
     {
-        return new SlideCaption($this->visibleText($slide), $this->firstLink($slide));
+        return new SlideCaptionModel($this->visibleText($slide), $this->firstLink($slide));
     }
 
     private function visibleText(Element $slide): string

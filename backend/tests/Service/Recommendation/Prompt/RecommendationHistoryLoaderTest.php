@@ -12,8 +12,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\DbTestCase;
 
 final class RecommendationHistoryLoaderTest extends DbTestCase
@@ -205,8 +205,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         int $favoritesCap = 40,
         int $keptCap = 40,
         int $viewedCap = 80,
-    ): EffectiveRecommendationSettings {
-        return new EffectiveRecommendationSettings(
+    ): EffectiveRecommendationSettingsModel {
+        return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
             favoritesCap: $favoritesCap,
             keptCap: $keptCap,
@@ -214,11 +214,11 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
             candidatePoolSize: 500,
             lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: 50,
-            packing: new RecommendationPackingSettings(
+            packing: new RecommendationPackingSettingsModel(
                 contextWindow: 32768,
                 contextWindowSource: 'fallback',
                 batchSize: RecommendationBatchSize::Medium,
-                maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+                maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,
         );

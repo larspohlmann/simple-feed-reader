@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\ReaderAudit\AuditFindings;
 use App\Service\ReaderAudit\AuditReportHtml;
-use App\Service\ReaderAudit\CleanupMarker;
+use App\Service\ReaderAudit\Model\AuditFindingsModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -58,7 +58,7 @@ final class ReaderAuditReportCommand extends Command
             return Command::FAILURE;
         }
 
-        $findings = AuditFindings::fromJsonlFiles($paths);
+        $findings = AuditFindingsModel::fromJsonlFiles($paths);
         $reportPath = ConsoleOption::text($input, 'out') ?? '';
         $report = new AuditReportHtml(ConsoleOption::wholeNumber($input, 'top') ?? 0);
         file_put_contents($reportPath, $report->render($findings, $this->clock->now()->format('Y-m-d H:i')));
@@ -69,7 +69,7 @@ final class ReaderAuditReportCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function printSummary(SymfonyStyle $io, AuditFindings $findings): void
+    private function printSummary(SymfonyStyle $io, AuditFindingsModel $findings): void
     {
         $io->section(\sprintf(
             '%d articles over %d feeds, %d flagged',
@@ -78,8 +78,8 @@ final class ReaderAuditReportCommand extends Command
             \count($findings->ranked()),
         ));
 
-        $bySuspect = $findings->tally(static fn (CleanupMarker $m): string => $m->suspect);
-        $byCode = $findings->tally(static fn (CleanupMarker $m): string => $m->code);
+        $bySuspect = $findings->tally(static fn (CleanupMarkerModel $m): string => $m->suspect);
+        $byCode = $findings->tally(static fn (CleanupMarkerModel $m): string => $m->code);
         $io->table(['stage to look at', 'articles'], $this->rowsOf($bySuspect));
         $io->table(['marker', 'articles'], $this->rowsOf($byCode));
 

@@ -6,8 +6,8 @@ namespace App\Tests\Service\Reader\Media\Teaser;
 
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

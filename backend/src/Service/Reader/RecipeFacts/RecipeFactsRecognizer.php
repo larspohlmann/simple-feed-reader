@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\RecipeFacts;
 
+use App\Service\Reader\RecipeFacts\Model\RecipeCardModel;
+use App\Service\Reader\RecipeFacts\Model\RecipeFactModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -27,7 +29,7 @@ final readonly class RecipeFactsRecognizer
         ],
     ];
 
-    /** @return list<RecipeCard> */
+    /** @return list<RecipeCardModel> */
     public function recognize(HTMLDocument $document): array
     {
         $cards = [];
@@ -35,7 +37,7 @@ final readonly class RecipeFactsRecognizer
             foreach ($document->querySelectorAll('.' . $rule['container']) as $container) {
                 $facts = $this->factsOf($container, $rule);
                 if ($facts !== []) {
-                    $cards[] = new RecipeCard($container, $facts);
+                    $cards[] = new RecipeCardModel($container, $facts);
                 }
             }
         }
@@ -46,7 +48,7 @@ final readonly class RecipeFactsRecognizer
     /**
      * @param array{item: string, label: string, value: string, unit: string} $rule
      *
-     * @return list<RecipeFact>
+     * @return list<RecipeFactModel>
      */
     private function factsOf(Element $container, array $rule): array
     {
@@ -62,7 +64,7 @@ final readonly class RecipeFactsRecognizer
     }
 
     /** @param array{label: string, value: string, unit: string} $rule */
-    private function factOf(Element $item, array $rule): ?RecipeFact
+    private function factOf(Element $item, array $rule): ?RecipeFactModel
     {
         $label = $this->textOf($item, $rule['label']);
         $value = $this->joinValueAndUnit($this->textOf($item, $rule['value']), $this->textOf($item, $rule['unit']));
@@ -70,7 +72,7 @@ final readonly class RecipeFactsRecognizer
             return null;
         }
 
-        return new RecipeFact($label, $value);
+        return new RecipeFactModel($label, $value);
     }
 
     private function joinValueAndUnit(string $value, string $unit): string

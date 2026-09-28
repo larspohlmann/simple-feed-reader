@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\Sibling\NearbyPoster;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -36,7 +36,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
     {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $host = parse_url($page->url, \PHP_URL_HOST);
         if (!\is_string($host) || preg_match(self::ZDF_HOST, $host) !== 1) {
@@ -55,7 +55,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
         return array_values($found);
     }
 
-    private function candidateFor(string $host, string $id, int $position, string $pageHtml): ?MediaCandidate
+    private function candidateFor(string $host, string $id, int $position, string $pageHtml): ?MediaCandidateModel
     {
         $resolved = $this->mediaUrlKind->resolve(sprintf(self::STREAM_URL, $host, $id));
         if ($resolved?->kind !== MediaKind::Stream) {
@@ -66,6 +66,6 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
             return null;
         }
 
-        return new MediaCandidate($resolved->kind, $resolved->url, $poster);
+        return new MediaCandidateModel($resolved->kind, $resolved->url, $poster);
     }
 }

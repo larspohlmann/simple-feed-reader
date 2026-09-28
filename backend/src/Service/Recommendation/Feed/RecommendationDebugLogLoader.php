@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
 use App\Service\Recommendation\Run\RunLogRetention;
 
 /**
@@ -31,18 +32,18 @@ final readonly class RecommendationDebugLogLoader
      *                            stale pick lands on something real rather
      *                            than on an empty panel
      */
-    public function forUser(User $user, int $requestedRunId): RecommendationDebugLog
+    public function forUser(User $user, int $requestedRunId): RecommendationDebugLogModel
     {
         $runs = $this->runs->findNewestForUser($user, RunLogRetention::RUNS);
         $selected = self::select($runs, $requestedRunId);
 
         if (null === $selected) {
-            return RecommendationDebugLog::empty();
+            return RecommendationDebugLogModel::empty();
         }
 
         $selectedId = $selected->requireId();
 
-        return new RecommendationDebugLog(
+        return new RecommendationDebugLogModel(
             $this->logs->listForRun($user, $selectedId),
             $this->logs->streamingTextForRun($user, $selectedId),
             $selected,

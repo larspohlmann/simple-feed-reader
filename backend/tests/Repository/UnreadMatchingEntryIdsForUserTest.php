@@ -11,7 +11,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
@@ -72,7 +72,7 @@ final class UnreadMatchingEntryIdsForUserTest extends DbTestCase
     private function ids(string $input, string $until = '2100-01-01T00:00:00Z'): array
     {
         return $this->repo()->unreadMatchingEntryIdsForUser(
-            new EntrySearchQuery($this->user->requireId(), SearchTerms::fromInput($input)),
+            new EntrySearchQuery($this->user->requireId(), SearchTermsModel::fromInput($input)),
             new \DateTimeImmutable($until),
         );
     }

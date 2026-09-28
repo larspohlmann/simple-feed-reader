@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
@@ -20,12 +21,12 @@ final readonly class EmbedProviders
     ) {
     }
 
-    public function resolve(string $url): ?EmbedTarget
+    public function resolve(string $url): ?EmbedTargetModel
     {
         foreach ($this->providers as $provider) {
             $normalized = $provider->matches($url) ? $provider->normalize($url) : null;
             if ($normalized !== null) {
-                return new EmbedTarget($normalized, $provider->poster($url), $provider->label());
+                return new EmbedTargetModel($normalized, $provider->poster($url), $provider->label());
             }
         }
 

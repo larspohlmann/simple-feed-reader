@@ -16,6 +16,7 @@ final class EveryApplicationServiceBuildsTest extends KernelTestCase
         'App\\Service\\Backup\\BackupPartGuard',
         'App\\Service\\Backup\\BackupPartWalk',
         'App\\Service\\Mail\\Transport\\CurlSmtpTransport',
+        'App\\Service\\Recommendation\\Prompt\\PromptContext',
     ];
 
     public function testTheContainerBuildsEveryApplicationServiceItExposes(): void

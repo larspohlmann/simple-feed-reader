@@ -8,6 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Prompt\PromptContext;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 
 final readonly class WaveContextLoader
 {
@@ -40,7 +41,7 @@ final readonly class WaveContextLoader
         return array_merge(...$run->getCandidateBatches());
     }
 
-    /** @return list<WaveBatch> */
+    /** @return list<WaveBatchModel> */
     private function nextBatches(TickContext $tick, int $waveSize): array
     {
         $startIndex = $tick->run->progress()->nextBatchIndex;
@@ -55,7 +56,7 @@ final readonly class WaveContextLoader
 
         $batches = [];
         foreach ($idsByPosition as $index => $ids) {
-            $batches[] = new WaveBatch($index, $ids, array_intersect_key($linesById, array_flip($ids)));
+            $batches[] = new WaveBatchModel($index, $ids, array_intersect_key($linesById, array_flip($ids)));
         }
 
         return $batches;

@@ -9,8 +9,8 @@ use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\JsonSchemaModel;
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Run\CallSlot;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use Symfony\Component\Clock\MockClock;
@@ -21,7 +21,7 @@ final class RecommendationRunLogFactoryTest extends DbTestCase
 
     public function testTheRequestIsRenderedAsSentWithoutTheTransportFraming(): void
     {
-        $log = $this->factory()->create($this->newRun(), CallSlot::batch(1), $this->request());
+        $log = $this->factory()->create($this->newRun(), CallSlotModel::batch(1), $this->request());
 
         self::assertSame(
             "{\n    \"model\": \"m\",\n    \"messages\": [\n        {\n            \"role\": \"user\",\n"
@@ -33,11 +33,11 @@ final class RecommendationRunLogFactoryTest extends DbTestCase
     public function testASlotsNextCallIsNumberedAfterTheAttemptsItRecorded(): void
     {
         $run = $this->newRun();
-        $first = $this->factory()->create($run, CallSlot::batch(2), $this->request());
+        $first = $this->factory()->create($run, CallSlotModel::batch(2), $this->request());
         $this->em->persist($first);
         $this->em->flush();
 
-        $second = $this->factory()->create($run, CallSlot::batch(2), $this->request());
+        $second = $this->factory()->create($run, CallSlotModel::batch(2), $this->request());
 
         self::assertSame(1, $first->getAttempt());
         self::assertSame(2, $second->getAttempt());

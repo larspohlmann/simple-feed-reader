@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Recommendation\Prompt\Model\PickParseResultModel;
+
 /**
  * Turns one raw assistant reply into validated picks — the defensive
  * boundary between an unreliable language model and the run state machine.
@@ -24,26 +26,26 @@ final readonly class RecommendationPickParser
     }
 
     /** @param list<int> $validIds */
-    public function parse(string $content, array $validIds): PickParseResult
+    public function parse(string $content, array $validIds): PickParseResultModel
     {
         $decoded = $this->decoder->decode($content);
 
         if (null === $decoded) {
-            return PickParseResult::unusable();
+            return PickParseResultModel::unusable();
         }
 
         $entries = $decoded['recommendations'] ?? null;
 
         if (!\is_array($entries)) {
-            return PickParseResult::unusable();
+            return PickParseResultModel::unusable();
         }
 
         $picks = $this->salvager->salvage($entries, $validIds);
 
         if ([] === $picks) {
-            return PickParseResult::unusable();
+            return PickParseResultModel::unusable();
         }
 
-        return PickParseResult::usable($picks);
+        return PickParseResultModel::usable($picks);
     }
 }

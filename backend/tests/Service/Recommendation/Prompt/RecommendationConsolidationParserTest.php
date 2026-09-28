@@ -229,7 +229,7 @@ final class RecommendationConsolidationParserTest extends TestCase
      * shown-pool check. shownIds is sized to three so the single named
      * duplicate stays within PlausibleDuplicateShare's bound (max 1 of 3) --
      * a one-shown pool would trip that guard first and mask the coercion
-     * this test targets behind ConsolidationParseResult::unusable()'s own
+     * this test targets behind ConsolidationParseResultModel::unusable()'s own
      * empty duplicateIds.
      */
     public function testDuplicateIdsGivenAsNumericStringsAreCoerced(): void

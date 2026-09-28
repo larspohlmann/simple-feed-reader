@@ -6,6 +6,7 @@ namespace App\Service\Scraper;
 
 use App\Service\Fetch\PageUrls;
 use App\Service\Parser\DateParser;
+use App\Service\Scraper\Model\ScrapedItemModel;
 
 /**
  * The articles one page's JSON-LD blocks describe, collected node by node.
@@ -30,7 +31,7 @@ final class JsonLdArticles
      */
     private const int MAX_COLLECT = 200;
 
-    /** @var list<ScrapedItem> */
+    /** @var list<ScrapedItemModel> */
     private array $items = [];
 
     public function __construct(private readonly PageUrls $pageUrls)
@@ -77,7 +78,7 @@ final class JsonLdArticles
         return \count($this->items) >= self::MAX_COLLECT;
     }
 
-    /** @return list<ScrapedItem> */
+    /** @return list<ScrapedItemModel> */
     public function all(): array
     {
         return $this->items;
@@ -150,9 +151,9 @@ final class JsonLdArticles
     /**
      * @param array<mixed> $node
      *
-     * @return ScrapedItem|null
+     * @return ScrapedItemModel|null
      */
-    private function article(array $node): ?ScrapedItem
+    private function article(array $node): ?ScrapedItemModel
     {
         $url = $this->pageUrls->httpUrl($this->url($node));
         if ($url === null) {
@@ -164,7 +165,7 @@ final class JsonLdArticles
         }
         $published = $node['datePublished'] ?? null;
 
-        return new ScrapedItem(
+        return new ScrapedItemModel(
             url: $url,
             title: $title,
             teaser: $this->teaser($node),

@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Search\Membership\SavedSearchMatcher;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexMatches;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexMatchesModel;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
-use App\Service\Search\SavedSearchTerm;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\Service\Search\FakeMultiSearchReader;
 use PHPUnit\Framework\TestCase;
 
@@ -18,8 +18,8 @@ final class IndexedSavedSearchMatcherTest extends TestCase
     public function testAsksOneQueryPerSearchAmongExactlyTheCandidatesAndMapsAnswersBySearchId(): void
     {
         $engine = new FakeMultiSearchReader([[
-            new IndexMatches([12, 5], []),
-            new IndexMatches([], []),
+            new IndexMatchesModel([12, 5], []),
+            new IndexMatchesModel([], []),
         ]]);
 
         $matches = (new IndexedSavedSearchMatcher($engine))->matchingIds(
@@ -31,7 +31,7 @@ final class IndexedSavedSearchMatcherTest extends TestCase
         self::assertCount(1, $engine->receivedRounds);
         $round = $engine->receivedRounds[0];
         self::assertCount(2, $round);
-        self::assertInstanceOf(IndexSearch::class, $round[0]);
+        self::assertInstanceOf(IndexSearchModel::class, $round[0]);
         self::assertSame([5, 9, 12], $round[0]->entryIds);
         self::assertNull($round[0]->feedIds);
         self::assertSame(3, $round[0]->limit);
@@ -57,8 +57,8 @@ final class IndexedSavedSearchMatcherTest extends TestCase
         (new IndexedSavedSearchMatcher($engine))->matchingIds([$this->search(7, 'climate')], [1]);
     }
 
-    private function search(int $id, string $term): SavedSearchTerm
+    private function search(int $id, string $term): SavedSearchTermModel
     {
-        return new SavedSearchTerm($id, SearchTerms::fromInput($term));
+        return new SavedSearchTermModel($id, SearchTermsModel::fromInput($term));
     }
 }

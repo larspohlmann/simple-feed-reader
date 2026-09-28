@@ -13,7 +13,7 @@ use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Tag\Factory\TagFactory;
-use App\Service\Tag\TagDetails;
+use App\Service\Tag\Model\TagDetailsModel;
 
 /** The rows a backup's foundation lines describe, as the file states them. */
 final readonly class RestoredFoundationFactory
@@ -24,7 +24,7 @@ final readonly class RestoredFoundationFactory
 
     public function tag(User $user, TagLine $line): Tag
     {
-        return $this->tags->create($user, new TagDetails($line->name, $line->color, $line->icon), $line->position);
+        return $this->tags->create($user, new TagDetailsModel($line->name, $line->color, $line->icon), $line->position);
     }
 
     public function feed(FeedLine $line): Feed

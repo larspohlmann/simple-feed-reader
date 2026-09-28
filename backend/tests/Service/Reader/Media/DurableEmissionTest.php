@@ -15,7 +15,7 @@ use App\Service\Reader\Media\MediaCandidateSource\MetaMediaSource;
 use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\Model\RawPageModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -72,7 +72,7 @@ final class DurableEmissionTest extends TestCase
     {
         $source = $this->sourceFor($layer);
 
-        $found = $source->find(RawPage::parse($html, $pageUrl));
+        $found = $source->find(RawPageModel::parse($html, $pageUrl));
 
         self::assertNotSame([], $found);
         self::assertStringNotContainsString('?', $found[0]->url);

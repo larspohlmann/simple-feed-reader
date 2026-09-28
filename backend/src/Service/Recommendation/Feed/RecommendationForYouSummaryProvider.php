@@ -8,6 +8,7 @@ use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
 
 /**
  * Builds the for-you summary from two independent reads: the deduped item
@@ -22,11 +23,11 @@ final readonly class RecommendationForYouSummaryProvider
     ) {
     }
 
-    public function forUser(User $user): RecommendationForYouSummary
+    public function forUser(User $user): RecommendationForYouSummaryModel
     {
         $newestCompletedRun = $this->runs->findLatestForUser($user, RunStatus::Completed);
 
-        return new RecommendationForYouSummary(
+        return new RecommendationForYouSummaryModel(
             $this->items->countForYou($user->requireId()),
             $this->items->countForYouIncludingRead($user->requireId()),
             $newestCompletedRun?->getCompletedAt(),

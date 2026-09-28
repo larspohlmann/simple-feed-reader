@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\SavedSearch;
-use App\Service\Search\SavedSearchTally;
+use App\Service\Search\Model\SavedSearchTallyModel;
 
 final class SavedSearchJson
 {
@@ -22,7 +22,7 @@ final class SavedSearchJson
      *     includeInDigest: bool,
      * }
      */
-    public static function one(SavedSearch $savedSearch, SavedSearchTally $tally): array
+    public static function one(SavedSearch $savedSearch, SavedSearchTallyModel $tally): array
     {
         return [
             'id' => $savedSearch->getId(),

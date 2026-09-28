@@ -11,14 +11,14 @@ use App\Pagination\EntryCursor;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
-use App\Service\Search\SavedSearchEntriesResult;
+use App\Service\Search\Model\SavedSearchEntriesResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class SavedSearchPageTest extends TestCase
 {
     public function testAFullPageAdvancesTheCursorPastItsLastRow(): void
     {
-        $result = new SavedSearchEntriesResult([$this->row(4)]);
+        $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
         $page = SavedSearchPage::of($result, 1);
 
@@ -29,7 +29,7 @@ final class SavedSearchPageTest extends TestCase
 
     public function testAShortPageEndsTheList(): void
     {
-        $result = new SavedSearchEntriesResult([$this->row(4)]);
+        $result = new SavedSearchEntriesResultModel([$this->row(4)]);
 
         self::assertNull(SavedSearchPage::of($result, 50)['nextCursor']);
     }
@@ -37,7 +37,7 @@ final class SavedSearchPageTest extends TestCase
     public function testEachEntryCarriesItsOwnSavedSearchMembership(): void
     {
         $row = $this->row(7)->withSavedSearches([['id' => 3, 'slug' => 'climate', 'term' => 'climate']]);
-        $result = new SavedSearchEntriesResult([$row]);
+        $result = new SavedSearchEntriesResultModel([$row]);
 
         $page = SavedSearchPage::of($result, 50);
 

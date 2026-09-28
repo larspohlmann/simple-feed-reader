@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Version\LatestReleaseReader;
 
 use App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader;
-use App\Service\Version\LatestRelease;
+use App\Service\Version\Model\LatestReleaseModel;
+use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use PHPUnit\Framework\TestCase;
 
 final class GitHubLatestReleaseReaderTest extends TestCase
 {
@@ -26,7 +26,7 @@ final class GitHubLatestReleaseReaderTest extends TestCase
 
         $latest = $this->reader($client)->read();
 
-        self::assertInstanceOf(LatestRelease::class, $latest);
+        self::assertInstanceOf(LatestReleaseModel::class, $latest);
         self::assertSame('v1.4.2', $latest->version);
         self::assertSame(
             'https://github.com/larspohlmann/simple-feed-reader/releases/tag/v1.4.2',
@@ -89,7 +89,7 @@ final class GitHubLatestReleaseReaderTest extends TestCase
         $reader->read();
         $second = $reader->read();
 
-        self::assertInstanceOf(LatestRelease::class, $second);
+        self::assertInstanceOf(LatestReleaseModel::class, $second);
         self::assertSame('v1.4.2', $second->version);
         self::assertSame(1, $client->getRequestsCount());
     }

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\ReaderAudit\Model\BodyLinkModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+
 /**
  * Share bars and social rows the widget remover missed, found by where the
  * links point rather than what they say — an icon-only share button carries
@@ -40,15 +44,15 @@ final readonly class SocialWidgetMarkers
     /** A query value that is itself an address — http(s), plain or percent-encoded. */
     private const string PAGE_URL_PATTERN = '#https?(://|%3a%2f%2f)#i';
 
-    /** @return list<CleanupMarker> */
-    public function detect(ExtractedBody $body): array
+    /** @return list<CleanupMarkerModel> */
+    public function detect(ExtractedBodyModel $body): array
     {
         $candidates = [$this->shareIntent($body), $this->socialRow($body)];
 
         return array_values(array_filter($candidates));
     }
 
-    private function shareIntent(ExtractedBody $body): ?CleanupMarker
+    private function shareIntent(ExtractedBodyModel $body): ?CleanupMarkerModel
     {
         foreach ($body->links as $link) {
             $href = strtolower($link->href);
@@ -57,7 +61,7 @@ final readonly class SocialWidgetMarkers
                 fn (string $intent): bool => str_contains($href, $intent),
             );
             if ($matchesAnIntent && $this->carriesThePageUrl($link->href)) {
-                return new CleanupMarker(
+                return new CleanupMarkerModel(
                     'share_intent_link',
                     4,
                     'ShareWidgetRemover',
@@ -80,7 +84,7 @@ final readonly class SocialWidgetMarkers
         return $query !== false && preg_match(self::PAGE_URL_PATTERN, $query) === 1;
     }
 
-    private function socialRow(ExtractedBody $body): ?CleanupMarker
+    private function socialRow(ExtractedBodyModel $body): ?CleanupMarkerModel
     {
         $hosts = [];
         foreach ($body->blocks as $block) {
@@ -99,7 +103,7 @@ final readonly class SocialWidgetMarkers
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'social_row',
             3,
             'ShareWidgetRemover',
@@ -107,7 +111,7 @@ final readonly class SocialWidgetMarkers
         );
     }
 
-    private function socialHostOf(BodyLink $link): ?string
+    private function socialHostOf(BodyLinkModel $link): ?string
     {
         $host = $link->host();
         foreach (self::SOCIAL_HOSTS as $social) {

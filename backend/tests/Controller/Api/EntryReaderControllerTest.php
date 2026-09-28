@@ -12,8 +12,8 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Tests\Support\FakeArticleExtractor;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;
@@ -89,7 +89,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-ok@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
             title: 'The Title',
             byline: 'A. Writer',
@@ -130,7 +130,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-paywalled@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
             title: 'The Title',
             byline: null,
@@ -156,7 +156,11 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-fail@example.com');
         $fake = $this->installFake();
         $fake->willReturn(
-            ExtractionResult::failed('https://example.com/article', ExtractionFailure::Fetch, 'HTTP 403 Forbidden'),
+            ExtractionResultModel::failed(
+                'https://example.com/article',
+                ExtractionFailure::Fetch,
+                'HTTP 403 Forbidden',
+            ),
         );
         $entry = $this->seedEntry($user, 'https://example.com/article');
 
@@ -183,7 +187,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-author@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
             'The Title',
             null,
@@ -206,7 +210,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-poster@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             'https://example.com/article',
             'The Title',
             null,
@@ -233,7 +237,7 @@ final class EntryReaderControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('reader-mismatch@example.com');
         $fake = $this->installFake();
         // Readability grabbed page furniture, not the story (#654).
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
             title: 'The Title',
             byline: null,
@@ -259,7 +263,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-reflects@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
             title: 'The Title',
             byline: null,
@@ -284,7 +288,7 @@ final class EntryReaderControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('reader-opening-post@example.com');
         $fake = $this->installFake();
-        $fake->willReturn(ExtractionResult::ok(
+        $fake->willReturn(ExtractionResultModel::ok(
             url: 'https://example.com/article',
             title: 'The Title',
             byline: null,

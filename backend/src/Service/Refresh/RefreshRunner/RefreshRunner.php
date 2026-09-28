@@ -10,10 +10,10 @@ use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
 use App\Service\Refresh\FeedOutcomePersister;
 use App\Service\Refresh\MissingFaviconResolver;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Refresh\RefreshPass;
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRequest;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\Exception\ORMException;
 use Psr\Log\LoggerInterface;
@@ -45,11 +45,11 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     }
 
     /** @throws \DateMalformedStringException */
-    public function run(RefreshRequest $request): RefreshReport
+    public function run(RefreshRequestModel $request): RefreshReportModel
     {
         $lock = $this->lockFactory->createLock(self::LOCK_NAME, self::LOCK_TTL_SECONDS);
         if (!$lock->acquire()) {
-            return RefreshReport::busy();
+            return RefreshReportModel::busy();
         }
 
         try {
@@ -60,7 +60,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     }
 
     /** @throws \DateMalformedStringException */
-    private function refresh(RefreshRequest $request): RefreshReport
+    private function refresh(RefreshRequestModel $request): RefreshReportModel
     {
         // Before the due query: a feed nobody subscribes to must not cost the run an HTTP request.
         $this->housekeeping->reclaimOrphanedFeeds($request);
@@ -86,7 +86,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     }
 
     /** @throws \DateMalformedStringException */
-    private function dueCriteria(RefreshRequest $request, \DateTimeImmutable $now): DueFeedCriteria
+    private function dueCriteria(RefreshRequestModel $request, \DateTimeImmutable $now): DueFeedCriteria
     {
         $cooldownCutoff = $request->force
             ? $now->modify(sprintf('-%d minutes', self::COOLDOWN_MINUTES))
@@ -115,10 +115,10 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     }
 
     private function resolveFaviconsAndReport(
-        RefreshRequest $request,
+        RefreshRequestModel $request,
         RefreshPass $pass,
         DueFeedCriteria $criteria,
-    ): RefreshReport {
+    ): RefreshReportModel {
         try {
             $this->missingFavicons->resolveFor($pass->tally->faviconEligibleFeeds());
         } catch (UniqueConstraintViolationException | ORMException $e) {

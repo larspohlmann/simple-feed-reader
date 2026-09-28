@@ -7,7 +7,7 @@ namespace App\Http;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Feed\RecommendationDebugLog;
+use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
 
 /**
  * Response shapes for the recommendation debug log (#309): poll-cheap, bodies never ride along, only sizes, except
@@ -21,7 +21,7 @@ final class RecommendationDebugLogJson
      * @return array{entries: list<array<string, mixed>>, run: ?array<string, mixed>,
      *     runs: list<array<string, mixed>>}
      */
-    public static function list(RecommendationDebugLog $log): array
+    public static function list(RecommendationDebugLogModel $log): array
     {
         return [
             'entries' => array_map(

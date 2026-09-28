@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Refresh\RefreshReport;
+use App\Service\Refresh\Model\RefreshReportModel;
 
 /** A whole refresh run, `total` included, as the maintenance endpoints report it. */
 final class RefreshReportJson
@@ -13,7 +13,7 @@ final class RefreshReportJson
      * @return array{status: string, total: int, fetched: int, notModified: int, failed: int, throttled: int,
      *     skippedForBudget: int, remaining: int, pruned: int}
      */
-    public static function report(RefreshReport $report): array
+    public static function report(RefreshReportModel $report): array
     {
         return [
             'status' => $report->status,

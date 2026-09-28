@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidate;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
-use App\Service\Reader\Media\ResolvedMediaUrl;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -28,7 +28,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
     {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $found = [];
         foreach ($page->document->querySelectorAll('audio, video') as $element) {
@@ -44,7 +44,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         return $found;
     }
 
-    private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidate
+    private function candidateFor(Element $element, ?string $precedingText): ?MediaCandidateModel
     {
         $resolved = $this->resolvedSourceOf($element);
         if ($resolved === null) {
@@ -53,18 +53,18 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
         if (!$resolved->kind->isVideo()) {
             $narrated = NarrationSignals::narrates($resolved->url, $element);
 
-            return new MediaCandidate($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
+            return new MediaCandidateModel($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
         }
 
         // The poster may be absent or empty here; the scanner rescues or drops a
         // still-poster-less video once every source has been merged (#913).
         $poster = $element->getAttribute('poster') ?: null;
 
-        return new MediaCandidate($resolved->kind, $resolved->url, $poster, null, $precedingText);
+        return new MediaCandidateModel($resolved->kind, $resolved->url, $poster, null, $precedingText);
     }
 
     /** The element's own src or its first <source> whose kind fits the element: a <video> plays files and streams, an <audio> plays audio. */
-    private function resolvedSourceOf(Element $element): ?ResolvedMediaUrl
+    private function resolvedSourceOf(Element $element): ?ResolvedMediaUrlModel
     {
         $urls = [$element->getAttribute('src')];
         foreach ($element->querySelectorAll('source') as $source) {

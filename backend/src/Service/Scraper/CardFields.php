@@ -7,10 +7,11 @@ namespace App\Service\Scraper;
 use App\Service\Fetch\PageUrls;
 use App\Service\Html\Srcset;
 use App\Service\Parser\DateParser;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use Dom\Element;
 
 /**
- * Extracts ScrapedItem fields from one card container + its anchor.
+ * Extracts ScrapedItemModel fields from one card container + its anchor.
  *
  * Bound to the page the cards were found on: every URL a card carries resolves
  * against it, so a layer builds one instance per pass instead of handing the
@@ -40,7 +41,7 @@ final readonly class CardFields
     {
     }
 
-    public function item(Element $container, Element $anchor): ?ScrapedItem
+    public function item(Element $container, Element $anchor): ?ScrapedItemModel
     {
         $url = $this->pageUrls->httpUrl($anchor->getAttribute('href'));
         if ($url === null) {
@@ -52,7 +53,7 @@ final readonly class CardFields
             return null;
         }
 
-        return new ScrapedItem(
+        return new ScrapedItemModel(
             url: $url,
             title: $title,
             teaser: self::teaser($container, $title),

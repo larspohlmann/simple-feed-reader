@@ -7,6 +7,8 @@ namespace App\Service\Subscription;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Service\Ordering\PositionReorderer;
+use App\Service\Subscription\Model\FeedMoveModel;
+use App\Service\Subscription\Model\SubscriptionChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SubscriptionEditor
@@ -20,7 +22,7 @@ final readonly class SubscriptionEditor
     ) {
     }
 
-    public function update(Subscription $subscription, SubscriptionChange $change): void
+    public function update(Subscription $subscription, SubscriptionChangeModel $change): void
     {
         $subscription->setCustomTitle('' === $change->customTitle ? null : $change->customTitle);
         $this->tagSync->sync($subscription, $change->tagIds, $subscription->getUser()->requireId());
@@ -28,7 +30,7 @@ final readonly class SubscriptionEditor
         $this->entityManager->flush();
     }
 
-    public function moveToTag(Subscription $subscription, FeedMove $move): void
+    public function moveToTag(Subscription $subscription, FeedMoveModel $move): void
     {
         $this->feedTagMove->move($subscription, $move);
         $this->entityManager->flush();
@@ -43,7 +45,7 @@ final readonly class SubscriptionEditor
         );
     }
 
-    private function applyFlags(Subscription $subscription, SubscriptionChange $change): void
+    private function applyFlags(Subscription $subscription, SubscriptionChangeModel $change): void
     {
         if (null !== $change->includeInAllItems) {
             $subscription->setIncludeInAllItems($change->includeInAllItems);

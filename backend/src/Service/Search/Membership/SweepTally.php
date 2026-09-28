@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Membership;
 
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+
 /** The counters one sweep run accumulates; the report is their read-only end state. */
 final class SweepTally
 {
@@ -11,19 +13,19 @@ final class SweepTally
     public int $entriesScanned = 0;
     public int $matchesInserted = 0;
 
-    public function caughtUp(): SavedSearchMembershipSweepReport
+    public function caughtUp(): SavedSearchMembershipSweepReportModel
     {
         return $this->report(true);
     }
 
-    public function stoppedShort(): SavedSearchMembershipSweepReport
+    public function stoppedShort(): SavedSearchMembershipSweepReportModel
     {
         return $this->report(false);
     }
 
-    private function report(bool $caughtUp): SavedSearchMembershipSweepReport
+    private function report(bool $caughtUp): SavedSearchMembershipSweepReportModel
     {
-        return new SavedSearchMembershipSweepReport(
+        return new SavedSearchMembershipSweepReportModel(
             $this->searchesSwept,
             $this->entriesScanned,
             $this->matchesInserted,

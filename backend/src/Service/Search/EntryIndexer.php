@@ -6,7 +6,7 @@ namespace App\Service\Search;
 
 use App\Entity\Entry;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexedEntry;
+use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Service\Text\PlainText;
 use Psr\Log\LoggerInterface;
@@ -80,7 +80,7 @@ final class EntryIndexer
     }
 
     /**
-     * The Entry-to-IndexedEntry mapping alone: no engine call, nothing swallowed.
+     * The Entry-to-IndexedEntryModel mapping alone: no engine call, nothing swallowed.
      * `app:search:reindex` needs the exact same mapping this class uses at ingest
      * time (a second, drifting mapping is the bug DRY prevents), but must let
      * SearchEngineUnavailableException reach its caller rather than disappear
@@ -89,7 +89,7 @@ final class EntryIndexer
      *
      * @param list<Entry> $entries
      *
-     * @return list<IndexedEntry>
+     * @return list<IndexedEntryModel>
      */
     public static function toIndexedEntries(array $entries): array
     {
@@ -121,9 +121,9 @@ final class EntryIndexer
      * propagate renames onto entries indexed under the old title. Accepted: a
      * renamed feed is rare next to the ingest volume per-entry propagation would cost.
      */
-    private static function toIndexedEntry(Entry $entry): IndexedEntry
+    private static function toIndexedEntry(Entry $entry): IndexedEntryModel
     {
-        return new IndexedEntry(
+        return new IndexedEntryModel(
             id: $entry->requireId(),
             feedId: $entry->getFeed()->requireId(),
             title: $entry->getTitle(),

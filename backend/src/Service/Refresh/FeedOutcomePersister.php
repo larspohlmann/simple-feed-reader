@@ -16,6 +16,8 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
@@ -40,7 +42,7 @@ final readonly class FeedOutcomePersister
     }
 
     /** @throws \DateMalformedStringException */
-    public function persist(Feed $feed, FetchOutcomeModel $outcome, \DateTimeImmutable $now): FeedRefreshResult
+    public function persist(Feed $feed, FetchOutcomeModel $outcome, \DateTimeImmutable $now): FeedRefreshResultModel
     {
         // Read before recordSuccess() stamps the new lastSuccessfulFetchAt (#384).
         $context = new FeedIngestContext($now, $feed->getLastSuccessfulFetchAt());
@@ -55,11 +57,11 @@ final readonly class FeedOutcomePersister
                 ['url' => $feed->getUrl(), 'exception' => $e],
             );
 
-            return FeedRefreshResult::of(FeedOutcome::Aborted);
+            return FeedRefreshResultModel::of(FeedOutcome::Aborted);
         }
     }
 
-    private function record(Feed $feed, FetchOutcomeModel $outcome, FeedIngestContext $context): FeedRefreshResult
+    private function record(Feed $feed, FetchOutcomeModel $outcome, FeedIngestContext $context): FeedRefreshResultModel
     {
         try {
             $response = $outcome->responseOrThrow();
@@ -83,14 +85,14 @@ final readonly class FeedOutcomePersister
     }
 
     /** @throws \DateMalformedStringException */
-    private function storeNotModified(Feed $feed, FetchResponseModel $response): FeedRefreshResult
+    private function storeNotModified(Feed $feed, FetchResponseModel $response): FeedRefreshResultModel
     {
         // A moved feed can answer 304 at its new address; without this the redirect chain is re-walked every time.
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordSuccess($feed, 0);
         $this->em->flush();
 
-        return FeedRefreshResult::of(FeedOutcome::NotModified);
+        return FeedRefreshResultModel::of(FeedOutcome::NotModified);
     }
 
     /**
@@ -98,8 +100,11 @@ final readonly class FeedOutcomePersister
      *
      * @throws \DateMalformedStringException
      */
-    private function storeFetched(Feed $feed, FetchResponseModel $response, array $createdEntries): FeedRefreshResult
-    {
+    private function storeFetched(
+        Feed $feed,
+        FetchResponseModel $response,
+        array $createdEntries,
+    ): FeedRefreshResultModel {
         $feed->recordCacheValidators($response->etag, $response->lastModified);
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
@@ -107,36 +112,36 @@ final readonly class FeedOutcomePersister
         // Only the flush assigns ids, so indexing has to follow it (#432).
         $this->indexer->index($createdEntries);
 
-        return FeedRefreshResult::fetched(\count($createdEntries));
+        return FeedRefreshResultModel::fetched(\count($createdEntries));
     }
 
     /** @throws \DateMalformedStringException */
-    private function recordThrottled(Feed $feed, FeedThrottledException $throttled): FeedRefreshResult
+    private function recordThrottled(Feed $feed, FeedThrottledException $throttled): FeedRefreshResultModel
     {
         $this->scheduler->recordThrottled($feed, $throttled->retryAfterSeconds);
         $this->em->flush();
         $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
 
-        return FeedRefreshResult::of(FeedOutcome::Throttled);
+        return FeedRefreshResultModel::of(FeedOutcome::Throttled);
     }
 
-    private function recordGone(Feed $feed, FeedGoneException $gone): FeedRefreshResult
+    private function recordGone(Feed $feed, FeedGoneException $gone): FeedRefreshResultModel
     {
         $this->scheduler->recordGone($feed, $gone->getMessage());
         $this->em->flush();
         $this->logger->warning('Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
 
-        return FeedRefreshResult::of(FeedOutcome::Failed);
+        return FeedRefreshResultModel::of(FeedOutcome::Failed);
     }
 
     /** @throws \DateMalformedStringException */
-    private function recordFailure(Feed $feed, FetchException|FeedParseException $failure): FeedRefreshResult
+    private function recordFailure(Feed $feed, FetchException|FeedParseException $failure): FeedRefreshResultModel
     {
         $this->scheduler->recordFailure($feed, $failure->getMessage());
         $this->em->flush();
         $this->logger->warning('Feed refresh failed: {url}', ['url' => $feed->getUrl(), 'exception' => $failure]);
 
-        return FeedRefreshResult::of(FeedOutcome::Failed);
+        return FeedRefreshResultModel::of(FeedOutcome::Failed);
     }
 
     private function applyPermanentRedirect(Feed $feed, FetchResponseModel $response): void

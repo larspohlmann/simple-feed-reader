@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+
 /**
  * A stream is fetched by script, not by the media element, so it plays only from
  * the URL that finally serves it: a cross-origin fetch dies on a redirect hop
@@ -18,12 +22,12 @@ final readonly class StreamLocationResolver
     ) {
     }
 
-    public function resolve(ArticleMedia $media): ArticleMedia
+    public function resolve(ArticleMediaModel $media): ArticleMediaModel
     {
-        return new ArticleMedia(array_map($this->located(...), $media->candidates));
+        return new ArticleMediaModel(array_map($this->located(...), $media->candidates));
     }
 
-    private function located(MediaCandidate $candidate): MediaCandidate
+    private function located(MediaCandidateModel $candidate): MediaCandidateModel
     {
         if ($candidate->kind !== MediaKind::Stream) {
             return $candidate;

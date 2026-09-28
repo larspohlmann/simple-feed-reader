@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SampledEntry;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
 use PHPUnit\Framework\TestCase;
 
@@ -53,7 +53,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
         $standfirst = 'Muss man im Pflegeheim künftig ins Doppelzimmer? Angesichts fehlender Plätze und '
             . 'steigender Kosten stellt sich die Frage, wie viel Privatsphäre bleibt.';
 
-        $body = ExtractedBody::fromHtml('<h1>Der Abschied vom Einzelzimmer</h1><p>' . $standfirst . '</p>');
+        $body = ExtractedBodyModel::fromHtml('<h1>Der Abschied vom Einzelzimmer</h1><p>' . $standfirst . '</p>');
 
         self::assertCount(1, $body->leadingBlocks());
     }
@@ -167,7 +167,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
             new BodyShapeMarkers(),
             new PhraseMarkers(),
         );
-        $entry = new SampledEntry(
+        $entry = new SampledEntryModel(
             7,
             42,
             11,
@@ -177,11 +177,11 @@ final class ConfirmedGoodArticlesTest extends TestCase
             $feedContentHtml,
             false,
         );
-        $result = ExtractionResult::ok('https://example.test/a', $entryTitle, null, null, $html, null);
+        $result = ExtractionResultModel::ok('https://example.test/a', $entryTitle, null, null, $html, null);
 
         return array_map(
             static fn ($marker): string => $marker->code,
-            $markers->detect($result, $entry, ExtractedBody::fromHtml($html)),
+            $markers->detect($result, $entry, ExtractedBodyModel::fromHtml($html)),
         );
     }
 

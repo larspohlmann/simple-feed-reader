@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Reader\Media\ArticleMedia;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\RawPage;
 
 trait ScansWithTheWiredSources
 {
@@ -19,8 +19,8 @@ trait ScansWithTheWiredSources
         return $scanner;
     }
 
-    private function scan(string $html, string $url): ArticleMedia
+    private function scan(string $html, string $url): ArticleMediaModel
     {
-        return $this->scanner()->scan(RawPage::parse($html, $url));
+        return $this->scanner()->scan(RawPageModel::parse($html, $url));
     }
 }

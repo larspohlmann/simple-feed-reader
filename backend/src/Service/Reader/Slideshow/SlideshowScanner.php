@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow;
 
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
@@ -22,10 +23,10 @@ final readonly class SlideshowScanner
     ) {
     }
 
-    /** @return list<Slideshow> */
+    /** @return list<SlideshowModel> */
     public function scan(HTMLDocument $document): array
     {
-        $textBlocks = PageTextBlocks::fromDocument($document);
+        $textBlocks = PageTextBlocksModel::fromDocument($document);
         $found = [];
         foreach ($this->recognizers as $recognizer) {
             foreach ($recognizer->recognize($document, $textBlocks) as $slideshow) {

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Refresh\FeedOutcome;
-use App\Service\Refresh\FeedRefreshResult;
+use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\RefreshPass;
 use App\Tests\DbTestCase;
 use Symfony\Component\Clock\MockClock;
@@ -50,16 +50,16 @@ final class RefreshPassTest extends DbTestCase
         $pass = $this->pass($feeds, self::WHOLE_BATCH_BUDGET);
         iterator_to_array($pass->tickets());
         // Every count gets a distinct value, so a swapped argument in RefreshPass::aborted() fails this test.
-        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[0]);
-        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[1]);
-        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[2]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[3]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[4]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[5]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[6]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[7]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[8]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Aborted), $feeds[9]);
+        $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[0]);
+        $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[1]);
+        $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[2]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $feeds[3]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $feeds[4]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $feeds[5]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[6]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[7]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[8]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Aborted), $feeds[9]);
 
         $report = $pass->abortedDuringOutcomes();
 
@@ -79,7 +79,7 @@ final class RefreshPassTest extends DbTestCase
         [$one, $two, $three] = $this->feeds(3);
         $pass = $this->pass([$one, $two, $three], self::ONE_FEED_BUDGET);
         iterator_to_array($pass->tickets());
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $one);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $one);
 
         $report = $pass->abortedAfterOutcomes();
 
@@ -110,16 +110,16 @@ final class RefreshPassTest extends DbTestCase
         $pass = $this->pass($feeds, self::ONE_FEED_BUDGET);
         iterator_to_array($pass->tickets());
         // Every count gets a distinct value, so a swapped argument in RefreshPass::finished() fails this test.
-        $pass->tally->record(FeedRefreshResult::fetched(1), $feeds[0]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[1]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $feeds[2]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Failed), $feeds[3]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[4]);
-        $pass->tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), $feeds[5]);
+        $pass->tally->record(FeedRefreshResultModel::fetched(1), $feeds[0]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $feeds[1]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $feeds[2]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), $feeds[3]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $feeds[4]);
+        $pass->tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), $feeds[5]);
 
         $report = $pass->finished(7, 8);
 

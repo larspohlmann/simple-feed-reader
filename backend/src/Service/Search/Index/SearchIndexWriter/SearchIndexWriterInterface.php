@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\Index\SearchIndexWriter;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexedEntry;
+use App\Service\Search\Index\Model\IndexedEntryModel;
 
 /**
  * The write side of the index gateway. See SearchIndexReaderInterface for why this is
@@ -22,7 +22,7 @@ interface SearchIndexWriterInterface
     public function configure(): void;
 
     /**
-     * @param list<IndexedEntry> $entries
+     * @param list<IndexedEntryModel> $entries
      *
      * @throws SearchEngineUnavailableException
      */

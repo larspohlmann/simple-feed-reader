@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\RawPage;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -29,7 +29,7 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
     {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $found = [];
         foreach ($page->document->querySelectorAll('[src]') as $element) {
@@ -38,7 +38,7 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
             }
             $target = $this->providers->resolve($element->getAttribute('src') ?? '');
             if ($target !== null) {
-                $found[$target->url] ??= new MediaCandidate(
+                $found[$target->url] ??= new MediaCandidateModel(
                     MediaKind::Embed,
                     $target->url,
                     $target->posterUrl,

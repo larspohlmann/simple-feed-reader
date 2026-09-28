@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Refresh\TrackedRefreshReport;
+use App\Service\Refresh\Model\TrackedRefreshReportModel;
 
 /**
  * The refresh endpoint's response.
@@ -15,7 +15,7 @@ use App\Service\Refresh\TrackedRefreshReport;
  *
  * There is deliberately no `total`. It was this slice's batch size, capped by
  * RefreshRunner::BATCH_LIMIT, sitting next to a run-wide `remaining` and inviting the
- * division that produced #721. RefreshReport still carries it for the worker's log,
+ * division that produced #721. RefreshReportModel still carries it for the worker's log,
  * which is a different audience with a different question.
  */
 final class RefreshJson
@@ -25,7 +25,7 @@ final class RefreshJson
      *     notModified: int, failed: int, throttled: int, skippedForBudget: int,
      *     remaining: int, pruned: int}
      */
-    public static function slice(TrackedRefreshReport $tracked): array
+    public static function slice(TrackedRefreshReportModel $tracked): array
     {
         $report = $tracked->report;
 

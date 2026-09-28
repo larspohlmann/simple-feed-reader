@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Worker\Handler;
 
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Worker\Message\AdvanceRecommendationRuns;
-use App\Service\Recommendation\Run\RecommendationDriverKind;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 

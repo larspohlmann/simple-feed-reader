@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
 
 /**
  * The page's other media, named beside a found one by a bare id: the found URL
@@ -14,8 +14,8 @@ use App\Service\Reader\Media\MediaCandidate;
  */
 final readonly class SiblingIdRule
 {
-    /** @return list<MediaCandidate> */
-    public function derive(ArticleMedia $found, string $pageHtml): array
+    /** @return list<MediaCandidateModel> */
+    public function derive(ArticleMediaModel $found, string $pageHtml): array
     {
         $search = new SiblingSearch($pageHtml);
         $derived = [];

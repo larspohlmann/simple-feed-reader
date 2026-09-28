@@ -8,8 +8,8 @@ use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationSettingsJsonTest extends TestCase
@@ -117,8 +117,8 @@ final class RecommendationSettingsJsonTest extends TestCase
     private function effectiveSettings(
         ?string $profileText = null,
         bool $showReasons = false,
-    ): EffectiveRecommendationSettings {
-        return new EffectiveRecommendationSettings(
+    ): EffectiveRecommendationSettingsModel {
+        return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
             favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
             keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
@@ -126,11 +126,11 @@ final class RecommendationSettingsJsonTest extends TestCase
             candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
             lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
-            packing: new RecommendationPackingSettings(
-                contextWindow: EffectiveRecommendationSettings::FALLBACK_CONTEXT_WINDOW,
+            packing: new RecommendationPackingSettingsModel(
+                contextWindow: EffectiveRecommendationSettingsModel::FALLBACK_CONTEXT_WINDOW,
                 contextWindowSource: 'fallback',
                 batchSize: RecommendationBatchSize::Medium,
-                maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+                maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             ),
             debugEnabled: false,
             profileText: $profileText,

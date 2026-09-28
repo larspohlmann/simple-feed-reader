@@ -5,9 +5,14 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\EntryHintsModel;
+use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\ReaderAudit\Model\AuditFindingModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
  * Runs the reader pipeline over sampled articles exactly as the reader endpoint
@@ -25,11 +30,11 @@ final readonly class ReaderAuditRunner
     }
 
     /**
-     * @param iterable<SampledEntry> $entries
+     * @param iterable<SampledEntryModel> $entries
      *
-     * @return \Generator<int, AuditFinding>
+     * @return \Generator<int, AuditFindingModel>
      */
-    public function run(iterable $entries, ReaderLink $link): \Generator
+    public function run(iterable $entries, ReaderLinkModel $link): \Generator
     {
         foreach ($entries as $entry) {
             try {
@@ -43,16 +48,16 @@ final readonly class ReaderAuditRunner
         }
     }
 
-    private function audit(SampledEntry $entry, ReaderLink $link): AuditFinding
+    private function audit(SampledEntryModel $entry, ReaderLinkModel $link): AuditFindingModel
     {
         $result = $this->coverageGate->verify(
-            $this->extractor->extract($entry->url, new EntryHints(title: $entry->title, author: $entry->author)),
+            $this->extractor->extract($entry->url, new EntryHintsModel(title: $entry->title, author: $entry->author)),
             $entry->feedContentHtml,
         );
 
-        $body = $result->ok ? ExtractedBody::fromHtml((string) $result->contentHtml) : null;
+        $body = $result->ok ? ExtractedBodyModel::fromHtml((string) $result->contentHtml) : null;
 
-        return new AuditFinding(
+        return new AuditFindingModel(
             entryId: $entry->entryId,
             feedId: $entry->feedId,
             feedTitle: $entry->feedTitle,
@@ -65,9 +70,9 @@ final readonly class ReaderAuditRunner
         );
     }
 
-    private function crashed(SampledEntry $entry, ReaderLink $link, \Throwable $error): AuditFinding
+    private function crashed(SampledEntryModel $entry, ReaderLinkModel $link, \Throwable $error): AuditFindingModel
     {
-        return new AuditFinding(
+        return new AuditFindingModel(
             entryId: $entry->entryId,
             feedId: $entry->feedId,
             feedTitle: $entry->feedTitle,
@@ -75,13 +80,13 @@ final readonly class ReaderAuditRunner
             sourceUrl: $entry->url,
             readerLink: $link->to($entry),
             extracted: false,
-            markers: [new CleanupMarker('audit_error', 4, 'the pipeline threw', $error->getMessage())],
+            markers: [new CleanupMarkerModel('audit_error', 4, 'the pipeline threw', $error->getMessage())],
             metrics: ['chars' => 0],
         );
     }
 
     /** @return array<string, int|float> */
-    private function metrics(ExtractionResult $result, ?ExtractedBody $body): array
+    private function metrics(ExtractionResultModel $result, ?ExtractedBodyModel $body): array
     {
         if ($body === null) {
             return [

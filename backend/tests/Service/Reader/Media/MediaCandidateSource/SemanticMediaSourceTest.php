@@ -9,8 +9,8 @@ use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\MediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class SemanticMediaSourceTest extends TestCase

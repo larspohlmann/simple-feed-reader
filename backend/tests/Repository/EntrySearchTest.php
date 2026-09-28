@@ -13,7 +13,7 @@ use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
@@ -87,7 +87,7 @@ final class EntrySearchTest extends DbTestCase
     {
         return $this->guidsOf(new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput($input),
+            terms: SearchTermsModel::fromInput($input),
             cursor: $cursor,
             limit: $limit,
         ));
@@ -98,7 +98,7 @@ final class EntrySearchTest extends DbTestCase
     {
         return $this->guidsOf(new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput($input),
+            terms: SearchTermsModel::fromInput($input),
             cursor: $cursor,
             limit: $limit,
             unread: true,
@@ -110,7 +110,7 @@ final class EntrySearchTest extends DbTestCase
     {
         return $this->guidsOf(new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput($input),
+            terms: SearchTermsModel::fromInput($input),
             cursor: $cursor,
             order: ListOrder::OldestFirst,
         ));

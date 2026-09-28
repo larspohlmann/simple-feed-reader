@@ -5,24 +5,27 @@ declare(strict_types=1);
 namespace App\Service\Search;
 
 use App\Entity\SavedSearch;
+use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Search\Model\SearchMode;
+use App\Service\Search\Model\SearchTermsModel;
 
 /**
  * A saved search's stored shape — a bare term plus two mode columns — read as
- * the SearchTerms the search domain runs on. One mapping, so every matcher
+ * the SearchTermsModel the search domain runs on. One mapping, so every matcher
  * reads a saved search the same way.
  */
 final readonly class SavedSearchTerms
 {
-    public static function of(SavedSearch $savedSearch): SearchTerms
+    public static function of(SavedSearch $savedSearch): SearchTermsModel
     {
-        return SearchTerms::fromTermAndMode(
+        return SearchTermsModel::fromTermAndMode(
             $savedSearch->getTerm(),
             SearchMode::fromFlags($savedSearch->isWholeWord(), $savedSearch->isPhrase()),
         );
     }
 
-    public static function termOf(SavedSearch $savedSearch): SavedSearchTerm
+    public static function termOf(SavedSearch $savedSearch): SavedSearchTermModel
     {
-        return new SavedSearchTerm($savedSearch->requireId(), self::of($savedSearch));
+        return new SavedSearchTermModel($savedSearch->requireId(), self::of($savedSearch));
     }
 }

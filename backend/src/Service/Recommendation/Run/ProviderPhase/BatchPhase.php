@@ -7,12 +7,12 @@ namespace App\Service\Recommendation\Run\ProviderPhase;
 use App\Entity\RecommendationRun;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\RetryableProviderException;
-use App\Service\Recommendation\Run\BatchWaveResult;
+use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\RecommendationBatchWave;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Service\Recommendation\Run\RecommendationWaveConcurrency;
 use App\Service\Recommendation\Run\TickContext;
-use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Run\WaveContextLoader;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -29,7 +29,7 @@ final readonly class BatchPhase implements ProviderPhaseInterface
     ) {
     }
 
-    public function advance(TickContext $tick): RecommendationRunReport
+    public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
         $this->markFirstBatchBeforeCallingProvider($run);
@@ -39,11 +39,11 @@ final readonly class BatchPhase implements ProviderPhaseInterface
         }
         $this->entityManager->flush();
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 
     /** A 429 anywhere in the wave halves the run's concurrency, whether the plan recovered or defers (#947). */
-    private function resolveWave(TickContext $tick): BatchWaveResult
+    private function resolveWave(TickContext $tick): BatchWaveResultModel
     {
         try {
             $result = $this->batchWave->resolve($this->waves->load($tick, $this->waveSize($tick)));

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Reader\Slideshow\ContainerSignature;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -37,7 +37,7 @@ final readonly class RelatedTeaserGridRemover
     private const array ARTICLE_ROOTS = ['body', 'html', 'article', 'main'];
 
     /**
-     * @param list<ContainerSignature> $slideshowContainers
+     * @param list<ContainerSignatureModel> $slideshowContainers
      */
     public function removeFrom(HTMLDocument $document, array $slideshowContainers): void
     {
@@ -49,12 +49,13 @@ final readonly class RelatedTeaserGridRemover
     }
 
     /**
-     * @param list<ContainerSignature> $slideshowContainers
+     * @param list<ContainerSignatureModel> $slideshowContainers
      */
     private function isClaimedBySlideshow(Element $container, array $slideshowContainers): bool
     {
         for ($element = $container; $element !== null; $element = $element->parentElement) {
-            if (array_any($slideshowContainers, static fn (ContainerSignature $s): bool => $s->matches($element))) {
+            $isSlideshow = static fn (ContainerSignatureModel $s): bool => $s->matches($element);
+            if (array_any($slideshowContainers, $isSlideshow)) {
                 return true;
             }
         }

@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Feed;
 
+use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
+
 /**
- * Folds a repository's spend timeline into one HistoryMonth per calendar month, newest
+ * Folds a repository's spend timeline into one HistoryMonthModel per calendar month, newest
  * first, for the run-history card's collapsible sections (#409).
  *
  * Pure data shaping, no persistence: the timeline is already every run the account owns
@@ -19,9 +22,9 @@ final readonly class HistoryMonthSummariser
     /**
      * @param list<array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}> $spendTimeline
      *
-     * @return list<HistoryMonth> newest month first
+     * @return list<HistoryMonthModel> newest month first
      */
-    public function summarise(array $spendTimeline, ViewerTimeZone $viewer): array
+    public function summarise(array $spendTimeline, ViewerTimeZoneModel $viewer): array
     {
         $totals = [];
 
@@ -31,7 +34,7 @@ final readonly class HistoryMonthSummariser
             // PHP's default zone and Kernel::boot() pins that to UTC (KernelTimezoneTest).
             // Lose the pin and the rows still cut correctly (the window binds
             // explicit-UTC boundaries), but these headers drift by the host offset —
-            // the header-contradicts-its-rows failure ViewerTimeZone's docblock warns of.
+            // the header-contradicts-its-rows failure ViewerTimeZoneModel's docblock warns of.
             $month = $row['createdAt']->setTimezone($viewer->zone)->format('Y-m');
             $totals[$month] = $this->foldRowInto($totals[$month] ?? null, $row['costNanoCredits']);
         }
@@ -39,7 +42,7 @@ final readonly class HistoryMonthSummariser
         krsort($totals);
 
         return array_map(
-            static fn (string $month, array $total): HistoryMonth => new HistoryMonth(
+            static fn (string $month, array $total): HistoryMonthModel => new HistoryMonthModel(
                 $month,
                 $total['runCount'],
                 $total['costNanoCredits'],
@@ -53,7 +56,7 @@ final readonly class HistoryMonthSummariser
      * One row's contribution to its month's running total. The count grows
      * on every row, priced or not; the cost only grows on a priced one, and
      * stays null for as long as none of them are — null and zero are
-     * different answers here, see HistoryMonth.
+     * different answers here, see HistoryMonthModel.
      *
      * @param ?array{runCount: int, costNanoCredits: ?int} $runningTotal
      *

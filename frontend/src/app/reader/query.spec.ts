@@ -581,7 +581,7 @@ describe('isWholeWordTerm (#408 follow-up)', () => {
   it('is false for an empty term', () => {
     expect(isWholeWordTerm('')).toBe(false);
   });
-  // The backend's class is [\s\p{Z}] (SearchTerms::WHITESPACE) because PHP's
+  // The backend's class is [\s\p{Z}] (SearchTermsModel::WHITESPACE) because PHP's
   // \s is ASCII-only under /u; \p{Z} alone drops these ASCII control
   // whitespace characters, which is exactly what round 1 got wrong.
   it('is true for a term ending in a tab', () => {

@@ -6,8 +6,8 @@ namespace App\Service\Recommendation\Run\ProviderPhase;
 
 use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Run\InvalidReplyRetry;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\RecommendationProfileDistiller;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Service\Recommendation\Run\TickContext;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -21,7 +21,7 @@ final readonly class DistillationPhase implements ProviderPhaseInterface
     ) {
     }
 
-    public function advance(TickContext $tick): RecommendationRunReport
+    public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
         $outcome = $this->distiller->distill($tick);
@@ -30,18 +30,18 @@ final readonly class DistillationPhase implements ProviderPhaseInterface
             return $this->invalidReplies->retryOrDegrade(
                 $run,
                 $outcome->requireUnusableReply(),
-                fn (): RecommendationRunReport => $this->recordProfile($run, null),
+                fn (): RecommendationRunReportModel => $this->recordProfile($run, null),
             );
         }
 
         return $this->recordProfile($run, $outcome->profileText);
     }
 
-    private function recordProfile(RecommendationRun $run, ?string $profileText): RecommendationRunReport
+    private function recordProfile(RecommendationRun $run, ?string $profileText): RecommendationRunReportModel
     {
         $run->recordProfile($profileText);
         $this->entityManager->flush();
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 }

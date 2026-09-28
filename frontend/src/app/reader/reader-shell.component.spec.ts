@@ -3054,7 +3054,7 @@ describe('ReaderShellComponent', () => {
       const req = ctrl.expectOne('https://api.test/api/entries/search/mark-read');
       expect(req.request.method).toBe('POST');
       // The trailing space is the whole-word-match signal the backend reads
-      // via SearchTerms::fromInput; it must reach the request body unchanged.
+      // via SearchTermsModel::fromInput; it must reach the request body unchanged.
       expect(req.request.body).toEqual({ q: 'climate ', until: expect.any(String) });
       req.flush(null);
 

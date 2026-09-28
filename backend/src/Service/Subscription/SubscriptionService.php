@@ -11,6 +11,7 @@ use App\Enum\SourceFormat;
 use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\Subscription\Model\SubscribeOutcomeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SubscriptionService
@@ -99,7 +100,7 @@ final readonly class SubscriptionService
         ?string $format = null,
         array $tags = [],
         ?string $initialTitle = null,
-    ): SubscribeOutcome {
+    ): SubscribeOutcomeModel {
         // A 'scraped' or 'wp-json' subscribe re-posts a candidate URL discovery
         // itself just produced: the URL IS the source. Running discovery again
         // would re-fetch for nothing — or fail this time and block a subscribe
@@ -124,13 +125,13 @@ final readonly class SubscriptionService
 
         $discovered = $result->feed;
         if (null === $discovered) {
-            return SubscribeOutcome::candidates($result->candidates, $result->scrapeFailureReason);
+            return SubscribeOutcomeModel::candidates($result->candidates, $result->scrapeFailureReason);
         }
 
         $subscription = $this->creator->create($user, $discovered->url, SourceFormat::XML, $tags);
         $unread = $this->firstFetch->record($subscription->getFeed(), $discovered);
 
-        return SubscribeOutcome::subscribed($subscription, $unread);
+        return SubscribeOutcomeModel::subscribed($subscription, $unread);
     }
 
     /**
@@ -146,7 +147,7 @@ final readonly class SubscriptionService
         string $format,
         array $tags,
         ?string $initialTitle = null,
-    ): SubscribeOutcome {
-        return SubscribeOutcome::subscribed($this->creator->create($user, $url, $format, $tags, $initialTitle));
+    ): SubscribeOutcomeModel {
+        return SubscribeOutcomeModel::subscribed($this->creator->create($user, $url, $format, $tags, $initialTitle));
     }
 }

@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase
@@ -132,7 +132,7 @@ final class AiSettingsJsonTest extends TestCase
         self::assertFalse($shape['configs'][1]['active']);
         self::assertSame(1, $shape['activeId']);
         self::assertSame(
-            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $shape['defaultMaxBatchSize'],
         );
     }

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\ReaderAudit\CleanupMarker;
-use App\Service\ReaderAudit\ExtractedBody;
-use App\Service\ReaderAudit\PhraseFamily;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\PhraseFamilyModel;
+use App\Service\ReaderAudit\Model\PhraseScope;
 use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\PhraseScope;
 use App\Service\ReaderAudit\SuspiciousPhrases;
 use PHPUnit\Framework\TestCase;
 
@@ -51,7 +51,7 @@ final class PhraseMarkersTest extends TestCase
 
     public function testNamesTheOffendingLineSoTheFindingCanBeJudgedWithoutOpeningThePage(): void
     {
-        $markers = $this->markers->detect(ExtractedBody::fromHtml('<p>Mehr zum Thema</p>'));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml('<p>Mehr zum Thema</p>'));
 
         self::assertStringContainsString('Mehr zum Thema', $markers[0]->detail);
         self::assertSame('EdgeBoilerplateTrimmer', $markers[0]->suspect);
@@ -168,7 +168,7 @@ final class PhraseMarkersTest extends TestCase
 
     private function detailFor(string $blockText): string
     {
-        $markers = $this->markers->detect(ExtractedBody::fromHtml('<p>' . $blockText . '</p>'));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml('<p>' . $blockText . '</p>'));
 
         return $markers[0]->detail;
     }
@@ -176,14 +176,14 @@ final class PhraseMarkersTest extends TestCase
     public function testALongOffendingLineIsShortenedButStillNamesThePhrase(): void
     {
         $long = 'Mehr zum Thema ' . str_repeat('a', 200);
-        $markers = $this->markers->detect(ExtractedBody::fromHtml('<p>' . $long . '</p><p>x</p>'));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml('<p>' . $long . '</p><p>x</p>'));
 
         self::assertSame([], $markers);
     }
 
     public function testTheDetailQuotesThePhraseAndTheWholeShortLine(): void
     {
-        $markers = $this->markers->detect(ExtractedBody::fromHtml('<p>Anzeige</p>'));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml('<p>Anzeige</p>'));
 
         self::assertSame('"anzeige" in: Anzeige', $markers[0]->detail);
         self::assertSame(2, $markers[0]->weight);
@@ -193,8 +193,8 @@ final class PhraseMarkersTest extends TestCase
     private function codesFor(string $html): array
     {
         return array_map(
-            static fn (CleanupMarker $marker): string => $marker->code,
-            $this->markers->detect(ExtractedBody::fromHtml($html)),
+            static fn (CleanupMarkerModel $marker): string => $marker->code,
+            $this->markers->detect(ExtractedBodyModel::fromHtml($html)),
         );
     }
 }

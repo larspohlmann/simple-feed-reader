@@ -8,6 +8,8 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
+use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
+use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
@@ -26,15 +28,15 @@ final readonly class ForYouFeed
     }
 
     #[WithSpan]
-    public function page(ForYouFeedQuery $query): ForYouFeedPage
+    public function page(ForYouFeedQuery $query): ForYouFeedPageModel
     {
         $page = $this->pager->page($query);
 
-        $visibility = new FeedAnnotationVisibility(
+        $visibility = new FeedAnnotationVisibilityModel(
             showExplanation: $this->settings->forUser($query->user)->showReasons,
         );
 
-        return new ForYouFeedPage(
+        return new ForYouFeedPageModel(
             $this->enrichedRows($page->rows, $query->userId()),
             $page->nextCursor,
             $visibility,

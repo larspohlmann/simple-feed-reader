@@ -30,7 +30,7 @@ doctrine:
         auto_mapping: true
         dql:
             string_functions:
-                # Backs the whole-word entry search (SearchTerms::isWholeWord);
+                # Backs the whole-word entry search (SearchTermsModel::isWholeWord);
                 # see the function class for the punctuation list it normalizes.
                 NORMALIZE_WORD_BOUNDARIES: App\Doctrine\NormalizeWordBoundariesFunction
         mappings:

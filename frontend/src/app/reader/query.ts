@@ -28,12 +28,12 @@ export interface Selection {
 export const MIN_SEARCH_LENGTH = 3;
 
 /** Whether a search term ends in whitespace, which the backend
- *  (`SearchTerms::fromInput`) reads as "match whole words only" rather than
+ *  (`SearchTermsModel::fromInput`) reads as "match whole words only" rather than
  *  substrings. Exported rather than inlined: this exact question already had
  *  three drifted answers on this branch (#408); `normalizeSearchInput` and the
  *  whole-word badge both call this one function instead.
  *
- *  The class is `[\s\p{Z}]`, matching the backend's `SearchTerms::WHITESPACE`
+ *  The class is `[\s\p{Z}]`, matching the backend's `SearchTermsModel::WHITESPACE`
  *  exactly. PHP's `\s` under `/u` is ASCII-only, so the backend adds `\p{Z}`
  *  for Unicode separators (e.g. NBSP); JS's `\s` covers `\p{Z}` already but
  *  also ASCII control whitespace (tab, newline, etc.) that `\p{Z}` alone
@@ -43,7 +43,7 @@ export function isWholeWordTerm(term: string): boolean {
   return /[\s\p{Z}]$/u.test(term);
 }
 
-/** Whether a search term (`SearchTerms::fromInput`) is wrapped in double quotes,
+/** Whether a search term (`SearchTermsModel::fromInput`) is wrapped in double quotes,
  *  read as "match this exact phrase" rather than each word anywhere. A phrase
  *  overrides whole-word mode when both signals are present, so any "is this
  *  whole-word?" check must set a phrase aside first. */
@@ -52,7 +52,7 @@ export function isPhraseTerm(term: string): boolean {
 }
 
 /** The exact phrase inside a quoted query, or null when not a phrase (including
- *  a quoted-but-blank one). Mirrors the server's `SearchTerms::phraseWithin`:
+ *  a quoted-but-blank one). Mirrors the server's `SearchTermsModel::phraseWithin`:
  *  trimmed input opens/closes with a quote, inner quotes become boundaries,
  *  inner whitespace collapses to one space. */
 function phraseWithin(term: string): string | null {

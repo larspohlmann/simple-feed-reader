@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\MediaRelevance;
+use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\Model\ScannedPageModel;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\PlayerPoster;
-use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
-use App\Service\Reader\Media\Source\ScannedPage;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -38,9 +38,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     ) {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
-        return $this->candidates($this->originsByKind($page->document), ScannedPage::from($page));
+        return $this->candidates($this->originsByKind($page->document), ScannedPageModel::from($page));
     }
 
     /**
@@ -94,9 +94,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     /**
      * @param array<value-of<MediaKind>, array<string, Element>> $originsByKind
      *
-     * @return list<MediaCandidate>
+     * @return list<MediaCandidateModel>
      */
-    private function candidates(array $originsByKind, ScannedPage $page): array
+    private function candidates(array $originsByKind, ScannedPageModel $page): array
     {
         $candidates = [];
         foreach ($originsByKind as $kindValue => $origins) {
@@ -107,20 +107,20 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     }
 
     /** @param array<string, Element> $origins durable url => the element holding it */
-    private function bestCandidate(MediaKind $kind, array $origins, ScannedPage $page): MediaCandidate
+    private function bestCandidate(MediaKind $kind, array $origins, ScannedPageModel $page): MediaCandidateModel
     {
         $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
         $precedingText = $page->blocks->before($origins[$best]);
         if ($kind === MediaKind::Audio) {
             $narrated = NarrationSignals::narrates($best, $origins[$best]);
 
-            return new MediaCandidate(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
+            return new MediaCandidateModel(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
         }
 
         // The poster may be absent here; the scanner rescues or drops a
         // still-poster-less video once every source has been merged (#913).
         $poster = $page->posterUrl ?? PlayerPoster::near($origins[$best]);
 
-        return new MediaCandidate($kind, $best, $poster, null, $precedingText);
+        return new MediaCandidateModel($kind, $best, $poster, null, $precedingText);
     }
 }

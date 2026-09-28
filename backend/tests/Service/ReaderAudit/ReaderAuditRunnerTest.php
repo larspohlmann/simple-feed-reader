@@ -5,19 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\EntryHints;
 use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
-use App\Service\ReaderAudit\AuditFinding;
+use App\Service\Reader\Model\EntryHintsModel;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
+use App\Service\ReaderAudit\Model\AuditFindingModel;
+use App\Service\ReaderAudit\Model\ReaderLinkModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\ReaderAuditRunner;
-use App\Service\ReaderAudit\ReaderLink;
-use App\Service\ReaderAudit\SampledEntry;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\TestCase;
@@ -31,7 +31,7 @@ final class ReaderAuditRunnerTest extends TestCase
     {
         $extractor = new FakeArticleExtractor();
         $extractor->willReturn(
-            ExtractionResult::ok('https://example.test/a', 'Titel', null, null, self::CHROME_BODY, null),
+            ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, self::CHROME_BODY, null),
         );
 
         $finding = $this->auditOne($extractor);
@@ -46,7 +46,7 @@ final class ReaderAuditRunnerTest extends TestCase
         // A thousand publishers produce markup no fixture holds; the sweep has to
         // survive the one page that throws.
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+            public function extract(string $url, EntryHintsModel $hints = new EntryHintsModel()): ExtractionResultModel
             {
                 throw new \RuntimeException('lexbor gave up');
             }
@@ -62,7 +62,9 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testCarriesTheSampledEntrysIdentityIntoTheFinding(): void
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null));
+        $extractor->willReturn(
+            ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null),
+        );
 
         $finding = $this->auditOne($extractor);
 
@@ -76,9 +78,11 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testCarriesTheSampledEntryAuthorIntoTheReaderExtraction(): void
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null));
+        $extractor->willReturn(
+            ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null),
+        );
         $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
-        $entry = new SampledEntry(
+        $entry = new SampledEntryModel(
             7,
             42,
             11,
@@ -90,7 +94,7 @@ final class ReaderAuditRunnerTest extends TestCase
             'Jana Steger',
         );
 
-        iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
+        iterator_to_array($runner->run([$entry], new ReaderLinkModel('http://localhost:4200')));
 
         self::assertSame('Jana Steger', $extractor->hints[0]->author);
     }
@@ -98,7 +102,7 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testMeasuresTheCleanedBodyForTheReport(): void
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
+        $extractor->willReturn(ExtractionResultModel::ok(
             'https://example.test/a',
             'Titel',
             null,
@@ -122,7 +126,7 @@ final class ReaderAuditRunnerTest extends TestCase
         // The report prints the metric line for every candidate; a missing key
         // there would be an undefined index in the renderer, not a blank.
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::failed('https://example.test/a', ExtractionFailure::Mismatch));
+        $extractor->willReturn(ExtractionResultModel::failed('https://example.test/a', ExtractionFailure::Mismatch));
 
         $finding = $this->auditOne($extractor);
 
@@ -137,7 +141,7 @@ final class ReaderAuditRunnerTest extends TestCase
         // A paywall is not a cleaner defect: the sweep separates previews from
         // over-trims by this metric, and the score must not rise for it.
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
+        $extractor->willReturn(ExtractionResultModel::ok(
             'https://example.test/a',
             'Titel',
             null,
@@ -159,7 +163,7 @@ final class ReaderAuditRunnerTest extends TestCase
         // clean, which is the one failure the reader already knows how to catch.
         $feedArticle = str_repeat('Ein Satz, den die Extraktion ebenfalls enthalten muesste. ', 30);
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok(
+        $extractor->willReturn(ExtractionResultModel::ok(
             'https://example.test/a',
             'Titel',
             null,
@@ -169,7 +173,7 @@ final class ReaderAuditRunnerTest extends TestCase
         ));
 
         $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
-        $entry = new SampledEntry(
+        $entry = new SampledEntryModel(
             7,
             42,
             11,
@@ -179,7 +183,7 @@ final class ReaderAuditRunnerTest extends TestCase
             $feedArticle,
             false,
         );
-        $findings = iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
+        $findings = iterator_to_array($runner->run([$entry], new ReaderLinkModel('http://localhost:4200')));
 
         // The gate's verdict reaches the finding as `extracted: false`, which is
         // how the report tells a fallback from a cleaned article. It earns no
@@ -191,22 +195,24 @@ final class ReaderAuditRunnerTest extends TestCase
     public function testEveryEntryHandedInComesBackAsAFinding(): void
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null));
+        $extractor->willReturn(
+            ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null),
+        );
         $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
 
         $entries = [
-            new SampledEntry(1, 42, 11, 'A', 'Eins', 'https://example.test/1', null, false),
-            new SampledEntry(2, 42, 11, 'A', 'Zwei', 'https://example.test/2', null, false),
+            new SampledEntryModel(1, 42, 11, 'A', 'Eins', 'https://example.test/1', null, false),
+            new SampledEntryModel(2, 42, 11, 'A', 'Zwei', 'https://example.test/2', null, false),
         ];
-        $findings = iterator_to_array($runner->run($entries, new ReaderLink('http://localhost:4200')));
+        $findings = iterator_to_array($runner->run($entries, new ReaderLinkModel('http://localhost:4200')));
 
-        self::assertSame([1, 2], array_map(static fn (AuditFinding $f): int => $f->entryId, $findings));
+        self::assertSame([1, 2], array_map(static fn (AuditFindingModel $f): int => $f->entryId, $findings));
     }
 
     public function testACrashedPageStillCarriesItsLinkSoItCanBeOpened(): void
     {
         $throwing = new class implements ArticleExtractorInterface {
-            public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+            public function extract(string $url, EntryHintsModel $hints = new EntryHintsModel()): ExtractionResultModel
             {
                 throw new \RuntimeException('lexbor gave up');
             }
@@ -231,7 +237,7 @@ final class ReaderAuditRunnerTest extends TestCase
         );
     }
 
-    private function auditOne(ArticleExtractorInterface $extractor): AuditFinding
+    private function auditOne(ArticleExtractorInterface $extractor): AuditFindingModel
     {
         $runner = new ReaderAuditRunner(
             $extractor,
@@ -245,8 +251,17 @@ final class ReaderAuditRunnerTest extends TestCase
             ),
         );
 
-        $entry = new SampledEntry(7, 42, 11, 'Ein Feed', 'Eine Schlagzeile', 'https://example.test/a', null, false);
-        $findings = iterator_to_array($runner->run([$entry], new ReaderLink('http://localhost:4200')));
+        $entry = new SampledEntryModel(
+            7,
+            42,
+            11,
+            'Ein Feed',
+            'Eine Schlagzeile',
+            'https://example.test/a',
+            null,
+            false,
+        );
+        $findings = iterator_to_array($runner->run([$entry], new ReaderLinkModel('http://localhost:4200')));
 
         return $findings[0];
     }

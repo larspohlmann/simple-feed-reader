@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search;
 
-use App\Service\Search\Index\IndexMatches;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexMatchesModel;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
@@ -19,9 +19,9 @@ use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
  */
 final class FakeSearchIndexReader implements SearchIndexReaderInterface
 {
-    public ?IndexSearch $received = null;
+    public ?IndexSearchModel $received = null;
 
-    /** @var list<IndexSearch>|null */
+    /** @var list<IndexSearchModel>|null */
     public ?array $receivedMany = null;
 
     /**
@@ -35,7 +35,7 @@ final class FakeSearchIndexReader implements SearchIndexReaderInterface
     ) {
     }
 
-    public function find(IndexSearch $search): IndexMatches
+    public function find(IndexSearchModel $search): IndexMatchesModel
     {
         $this->received = $search;
 
@@ -43,13 +43,13 @@ final class FakeSearchIndexReader implements SearchIndexReaderInterface
             throw $this->failure;
         }
 
-        return new IndexMatches($this->entryIds, $this->matchedWords);
+        return new IndexMatchesModel($this->entryIds, $this->matchedWords);
     }
 
     /**
-     * @param list<IndexSearch> $searches
+     * @param list<IndexSearchModel> $searches
      *
-     * @return list<IndexMatches>
+     * @return list<IndexMatchesModel>
      */
     public function findMany(array $searches): array
     {
@@ -59,6 +59,9 @@ final class FakeSearchIndexReader implements SearchIndexReaderInterface
             throw $this->failure;
         }
 
-        return array_map(fn (): IndexMatches => new IndexMatches($this->entryIds, $this->matchedWords), $searches);
+        return array_map(
+            fn (): IndexMatchesModel => new IndexMatchesModel($this->entryIds, $this->matchedWords),
+            $searches,
+        );
     }
 }

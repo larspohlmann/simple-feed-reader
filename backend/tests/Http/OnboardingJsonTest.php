@@ -8,7 +8,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Http\OnboardingJson;
 use App\Http\TagJson;
-use App\Service\Subscription\BulkSubscribeResult;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class OnboardingJsonTest extends TestCase
@@ -16,7 +16,7 @@ final class OnboardingJsonTest extends TestCase
     public function testSkippedSumsEverySkipReasonAndTheCreatedTagsAreMapped(): void
     {
         $tag = new Tag(new User('onboarding@example.test', new \DateTimeImmutable('2026-08-01T00:00:00Z')), 'Science');
-        $result = new BulkSubscribeResult(
+        $result = new BulkSubscribeResultModel(
             imported: 3,
             alreadySubscribed: 1,
             invalid: 2,

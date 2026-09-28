@@ -11,9 +11,9 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\CommentsLoad;
 use App\Repository\ReaderAuditRepository;
-use App\Service\ReaderAudit\AuditSample;
 use App\Service\ReaderAudit\AuditSampler;
-use App\Service\ReaderAudit\SampledEntry;
+use App\Service\ReaderAudit\Model\AuditSampleModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use App\Tests\DbTestCase;
 use Doctrine\DBAL\Connection;
 
@@ -131,26 +131,29 @@ final class AuditSamplerTest extends DbTestCase
     }
 
     /**
-     * @param list<SampledEntry> $sample
+     * @param list<SampledEntryModel> $sample
      *
      * @return list<string>
      */
     private function feedTitlesOf(array $sample): array
     {
-        $titles = array_values(array_unique(array_map(static fn (SampledEntry $e): string => $e->feedTitle, $sample)));
+        $titles = array_values(array_unique(array_map(
+            static fn (SampledEntryModel $e): string => $e->feedTitle,
+            $sample,
+        )));
         sort($titles);
 
         return $titles;
     }
 
     /**
-     * @param list<SampledEntry> $sample
+     * @param list<SampledEntryModel> $sample
      *
      * @return list<int>
      */
     private function entryIdsOf(array $sample): array
     {
-        return array_map(static fn (SampledEntry $e): int => $e->entryId, $sample);
+        return array_map(static fn (SampledEntryModel $e): int => $e->entryId, $sample);
     }
 
     private function userId(): int
@@ -203,16 +206,16 @@ final class AuditSamplerTest extends DbTestCase
         $picked = $this->sampler()->pick([$article->requireId(), $thread->requireId()], $this->userId());
 
         self::assertSame(['<p>The article.</p>', null], array_map(
-            static fn (SampledEntry $sampled): ?string => $sampled->feedContentHtml,
+            static fn (SampledEntryModel $sampled): ?string => $sampled->feedContentHtml,
             $picked,
         ));
     }
 
-    /** @return list<SampledEntry> */
+    /** @return list<SampledEntryModel> */
     private function drawn(int $limit, int $perFeed, int $seed, string $before = '2030-01-01T00:00:00Z'): array
     {
         return $this->sampler()->sample(
-            new AuditSample($this->userId(), $limit, $perFeed, $seed, new \DateTimeImmutable($before)),
+            new AuditSampleModel($this->userId(), $limit, $perFeed, $seed, new \DateTimeImmutable($before)),
         );
     }
 

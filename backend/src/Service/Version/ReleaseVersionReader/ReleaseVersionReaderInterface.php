@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Version\ReleaseVersionReader;
 
 use App\Service\Version\Exception\MalformedVersionFileException;
-use App\Service\Version\ReleaseVersion;
+use App\Service\Version\Model\ReleaseVersionModel;
 
 interface ReleaseVersionReaderInterface
 {
@@ -13,5 +13,5 @@ interface ReleaseVersionReaderInterface
      * @throws MalformedVersionFileException when a version file exists
      *                                                 but cannot be trusted
      */
-    public function read(): ReleaseVersion;
+    public function read(): ReleaseVersionModel;
 }

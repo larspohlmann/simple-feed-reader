@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\RecipeFacts;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\RecipeFacts\RecipeCard;
+use App\Service\Reader\RecipeFacts\Model\RecipeCardModel;
 use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use PHPUnit\Framework\TestCase;
 
 final class RecipeFactsRecognizerTest extends TestCase
 {
-    /** @return list<RecipeCard> */
+    /** @return list<RecipeCardModel> */
     private function recognize(string $html): array
     {
         $document = HtmlDocumentParser::parseOrNull($html);

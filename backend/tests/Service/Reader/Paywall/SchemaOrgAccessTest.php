@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Paywall;
 
-use App\Service\Reader\Paywall\AccessDeclaration;
+use App\Service\Reader\Paywall\Model\AccessDeclaration;
 use App\Service\Reader\Paywall\SchemaOrgAccess;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;

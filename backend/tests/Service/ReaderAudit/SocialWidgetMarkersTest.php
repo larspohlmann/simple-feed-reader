@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\ReaderAudit\CleanupMarker;
-use App\Service\ReaderAudit\ExtractedBody;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
 use PHPUnit\Framework\TestCase;
 
@@ -138,10 +138,10 @@ final class SocialWidgetMarkersTest extends TestCase
 
     public function testEachMarkerCarriesItsWeightStageAndTheEvidence(): void
     {
-        $intent = $this->markers->detect(ExtractedBody::fromHtml(
+        $intent = $this->markers->detect(ExtractedBodyModel::fromHtml(
             '<p><a href="https://x.com/intent/tweet?url=https://example.test/a">t</a></p>',
         ));
-        $row = $this->markers->detect(ExtractedBody::fromHtml(
+        $row = $this->markers->detect(ExtractedBodyModel::fromHtml(
             '<p><a href="https://facebook.com/a">f</a><a href="https://x.com/a">x</a>'
             . '<a href="https://reddit.com/a">r</a></p>',
         ));
@@ -157,8 +157,8 @@ final class SocialWidgetMarkersTest extends TestCase
     private function codesFor(string $html): array
     {
         return array_map(
-            static fn (CleanupMarker $marker): string => $marker->code,
-            $this->markers->detect(ExtractedBody::fromHtml($html)),
+            static fn (CleanupMarkerModel $marker): string => $marker->code,
+            $this->markers->detect(ExtractedBodyModel::fromHtml($html)),
         );
     }
 }

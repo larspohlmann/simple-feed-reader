@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
+
 /**
  * Turns one raw consolidation reply into validated picks and duplicate ids -- the call
  * answers both in one reply. Salvages picks via the shared RecommendationPickSalvager the
@@ -25,33 +27,33 @@ final readonly class RecommendationConsolidationParser
     }
 
     /** @param list<int> $shownIds */
-    public function parse(string $content, array $shownIds): ConsolidationParseResult
+    public function parse(string $content, array $shownIds): ConsolidationParseResultModel
     {
         $decoded = $this->decoder->decode($content);
 
         if (null === $decoded) {
-            return ConsolidationParseResult::unusable();
+            return ConsolidationParseResultModel::unusable();
         }
 
         $entries = $decoded['recommendations'] ?? null;
 
         if (!\is_array($entries)) {
-            return ConsolidationParseResult::unusable();
+            return ConsolidationParseResultModel::unusable();
         }
 
         $picks = $this->salvager->salvage($entries, $shownIds);
 
         if ([] === $picks) {
-            return ConsolidationParseResult::unusable();
+            return ConsolidationParseResultModel::unusable();
         }
 
         $duplicateIds = $this->salvageDuplicateIds($decoded['duplicates'] ?? [], $shownIds);
 
         if (PlausibleDuplicateShare::exceededBy(\count($duplicateIds), \count($shownIds))) {
-            return ConsolidationParseResult::unusable();
+            return ConsolidationParseResultModel::unusable();
         }
 
-        return ConsolidationParseResult::usable($picks, $duplicateIds);
+        return ConsolidationParseResultModel::usable($picks, $duplicateIds);
     }
 
     /**

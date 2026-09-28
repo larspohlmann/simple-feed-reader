@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Recommendation\Prompt\Model\ProfileParseResultModel;
+
 /**
  * Turns one raw distillation reply into a validated preference profile — the
  * same defensive boundary RecommendationPickParser and
@@ -18,20 +20,20 @@ final readonly class RecommendationProfileParser
     {
     }
 
-    public function parse(string $content): ProfileParseResult
+    public function parse(string $content): ProfileParseResultModel
     {
         $decoded = $this->decoder->decode($content);
 
         if (null === $decoded) {
-            return ProfileParseResult::unusable();
+            return ProfileParseResultModel::unusable();
         }
 
         $profile = $decoded['profile'] ?? null;
 
         if (!\is_string($profile) || '' === trim($profile)) {
-            return ProfileParseResult::unusable();
+            return ProfileParseResultModel::unusable();
         }
 
-        return ProfileParseResult::usable($profile);
+        return ProfileParseResultModel::usable($profile);
     }
 }

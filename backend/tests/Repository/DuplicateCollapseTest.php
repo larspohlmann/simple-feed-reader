@@ -13,7 +13,7 @@ use App\Enum\EntryView;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 final class DuplicateCollapseTest extends DbTestCase
@@ -108,7 +108,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
-            SearchTerms::fromInput('Zugausfälle'),
+            SearchTermsModel::fromInput('Zugausfälle'),
         ));
 
         self::assertCount(1, $rows);
@@ -141,7 +141,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
-            SearchTerms::fromInput('Zugausfälle'),
+            SearchTermsModel::fromInput('Zugausfälle'),
         ));
 
         self::assertCount(1, $rows);

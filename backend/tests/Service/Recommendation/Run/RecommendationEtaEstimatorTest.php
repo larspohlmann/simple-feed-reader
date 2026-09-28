@@ -11,8 +11,8 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\RecommendationEtaEstimator;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 use App\Tests\Support\UserFactory;
@@ -76,7 +76,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $run->snapshot([[1], [2], [3]]);
 
         $eta = $this->estimatorAt('+20 seconds')->estimateSeconds(
-            RecommendationRunReport::fromRun($run),
+            RecommendationRunReportModel::fromRun($run),
             $this->user,
         );
 
@@ -88,7 +88,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         $this->seedHistoricalRun(distill: 10, batchWall: 40, batches: 4, consolidate: 30);
 
         self::assertNull(
-            $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReport::none(), $this->user),
+            $this->estimatorAt('+20 seconds')->estimateSeconds(RecommendationRunReportModel::none(), $this->user),
         );
     }
 
@@ -103,13 +103,13 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
         );
     }
 
-    private function liveReportWithBatches(int $batches): RecommendationRunReport
+    private function liveReportWithBatches(int $batches): RecommendationRunReportModel
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
         $run->snapshot(array_map(static fn (int $i): array => [$i], range(1, $batches)));
         $run->markFirstBatchStarted();
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 
     private function seedHistoricalRun(int $distill, int $batchWall, int $batches, int $consolidate): void

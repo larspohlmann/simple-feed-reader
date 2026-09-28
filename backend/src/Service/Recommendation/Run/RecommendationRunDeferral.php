@@ -6,6 +6,7 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\RecommendationRun;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -25,12 +26,12 @@ final readonly class RecommendationRunDeferral
     public function defer(
         RecommendationRun $run,
         ProviderRateLimitedException $rateLimited,
-    ): RecommendationRunReport {
+    ): RecommendationRunReportModel {
         $this->checkpoint->guard($run);
         $run->deferRetryUntil($this->clock->now()->add(self::waitInterval($rateLimited->waitSeconds())));
         $this->entityManager->flush();
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 
     private static function waitInterval(float $seconds): \DateInterval

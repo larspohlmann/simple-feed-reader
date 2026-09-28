@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RefreshReportJson;
-use App\Service\Refresh\RefreshReport;
+use App\Service\Refresh\Model\RefreshReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshReportJsonTest extends TestCase
 {
     public function testAFinishedRunSendsEveryCounterUnderItsOwnKey(): void
     {
-        $report = RefreshReport::finished(
+        $report = RefreshReportModel::finished(
             total: 9,
             fetched: 1,
             notModified: 2,
@@ -53,7 +53,7 @@ final class RefreshReportJsonTest extends TestCase
                 'remaining' => 0,
                 'pruned' => 0,
             ],
-            RefreshReportJson::report(RefreshReport::busy()),
+            RefreshReportJson::report(RefreshReportModel::busy()),
         );
     }
 }

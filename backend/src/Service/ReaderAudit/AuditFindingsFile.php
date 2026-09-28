@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
+use App\Service\ReaderAudit\Model\AuditFindingModel;
 
 final readonly class AuditFindingsFile
 {
@@ -32,7 +33,7 @@ final readonly class AuditFindingsFile
         return new self($handle);
     }
 
-    public function append(AuditFinding $finding): void
+    public function append(AuditFindingModel $finding): void
     {
         $line = json_encode($finding->toFindingsFileRecord(), \JSON_UNESCAPED_SLASHES | \JSON_UNESCAPED_UNICODE);
         fwrite($this->handle, $line . "\n");

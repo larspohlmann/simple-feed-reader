@@ -79,7 +79,7 @@ final class EntrySearchMarkReadTest extends ApiTestCase
     {
         // The whole-word request raw `q` carries a trailing space
         // (`term . ' '`), so a 100-char term sends 101 raw characters. The
-        // trimmed length SearchTerms::fromInput() enforces stays within
+        // trimmed length SearchTermsModel::fromInput() enforces stays within
         // bounds; a redundant Length constraint on this DTO used to reject
         // it at 101 (#581 off-by-one).
         $client = self::createClient();

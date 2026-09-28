@@ -12,7 +12,7 @@ final class ClusterLayerTest extends TestCase
 {
     use ScrapedFixtures;
 
-    /** @return list<\App\Service\Scraper\ScrapedItem> */
+    /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
         $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);

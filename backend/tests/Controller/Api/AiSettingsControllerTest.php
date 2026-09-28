@@ -9,7 +9,7 @@ use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Model\ProviderCredentialsModel;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use App\Tests\Support\ApiTestCase;
 use App\Tests\Support\StubModelCatalog;
@@ -135,7 +135,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertSame([], $payload['configs']);
         self::assertNull($payload['activeId']);
         self::assertSame(
-            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $payload['defaultMaxBatchSize'],
         );
     }

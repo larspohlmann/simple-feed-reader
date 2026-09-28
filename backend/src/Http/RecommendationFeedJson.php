@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\Feed\FeedAnnotationVisibility;
-use App\Service\Recommendation\Feed\ForYouFeedPage;
+use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
+use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 
 final class RecommendationFeedJson
 {
@@ -15,12 +15,12 @@ final class RecommendationFeedJson
      * `runGeneratedAt` unconditionally — the run-boundary divider is a
      * normal-user feature (#348) — then `recommendationReason` and
      * `recommendationScore` together, iff the reader asked to see why an
-     * article was picked (#576; see FeedAnnotationVisibility for why the two
+     * article was picked (#576; see FeedAnnotationVisibilityModel for why the two
      * travel as one).
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
-    public static function page(ForYouFeedPage $page): array
+    public static function page(ForYouFeedPageModel $page): array
     {
         return [
             'entries' => self::entries($page->rows, $page->visibility),
@@ -33,7 +33,7 @@ final class RecommendationFeedJson
      *
      * @return list<array<string, mixed>>
      */
-    private static function entries(array $rows, FeedAnnotationVisibility $visibility): array
+    private static function entries(array $rows, FeedAnnotationVisibilityModel $visibility): array
     {
         return array_map(static function (RecommendationFeedRow $row) use ($visibility): array {
             // runId + runGeneratedAt are unconditional: the divider needs the

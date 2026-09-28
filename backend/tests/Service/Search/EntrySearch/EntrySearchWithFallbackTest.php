@@ -15,8 +15,8 @@ use App\Service\Search\EntrySearch\IndexedEntrySearch;
 use App\Service\Search\EntrySearch\LikeEntrySearch;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\SearchEngineCapability;
-use App\Service\Search\SearchTerms;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\FakeSearchIndexReader;
 use Monolog\Handler\TestHandler;
@@ -82,7 +82,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     {
         return new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         );
     }
 
@@ -90,7 +90,7 @@ final class EntrySearchWithFallbackTest extends DbTestCase
     {
         return new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             unread: true,
         );
     }

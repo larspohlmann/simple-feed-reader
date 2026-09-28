@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

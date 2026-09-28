@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Subscription\SubscriptionTallies;
+use App\Service\Subscription\Model\SubscriptionTalliesModel;
 
 /**
  * The sidebar poll's cheap payload (#720): every subscription's unread count
@@ -21,7 +21,7 @@ final class SubscriptionCountsJson
      *   favoritesCount: int, keptCount: int, viewedCount: int
      * }
      */
-    public static function from(SubscriptionTallies $tallies): array
+    public static function from(SubscriptionTalliesModel $tallies): array
     {
         $subscriptions = [];
         foreach ($tallies->entryCounts as $id => $entryCount) {
@@ -36,7 +36,7 @@ final class SubscriptionCountsJson
     }
 
     /** @return array{favoritesCount: int, keptCount: int, viewedCount: int} */
-    public static function surfaceTotals(SubscriptionTallies $tallies): array
+    public static function surfaceTotals(SubscriptionTalliesModel $tallies): array
     {
         return [
             'favoritesCount' => $tallies->flags['favorites'],

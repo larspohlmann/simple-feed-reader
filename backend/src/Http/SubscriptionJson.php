@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Subscription\SubscriptionTallies;
+use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Service\Text\PlainText;
 use App\Service\Url\FeedWebsite;
 
@@ -24,7 +24,7 @@ final class SubscriptionJson
      *
      * @return array<string, mixed>
      */
-    public static function list(array $subscriptions, SubscriptionTallies $tallies): array
+    public static function list(array $subscriptions, SubscriptionTalliesModel $tallies): array
     {
         return [
             'subscriptions' => array_map(

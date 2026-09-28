@@ -7,6 +7,9 @@ namespace App\Service\Recommendation\Run;
 use App\Entity\RecommendationRun;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -46,7 +49,7 @@ final readonly class ForYouSweep
         return $started;
     }
 
-    public function sweepOnce(): ForYouSweepReport
+    public function sweepOnce(): ForYouSweepReportModel
     {
         $startedRuns = $this->startDueRuns();
         $advancedRuns = $this->advanceEveryActiveRunAsTheDriver();
@@ -55,7 +58,7 @@ final readonly class ForYouSweep
         // the remaining-active count below is a fresh read from the database.
         $this->entityManager->clear();
 
-        return new ForYouSweepReport($startedRuns, $advancedRuns, \count($this->runs->findAllActive()));
+        return new ForYouSweepReportModel($startedRuns, $advancedRuns, \count($this->runs->findAllActive()));
     }
 
     /**

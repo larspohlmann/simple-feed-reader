@@ -9,7 +9,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\ReaderAudit\DatabaseValue;
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
 use App\Tests\DbTestCase;
@@ -223,7 +223,7 @@ final class ReaderAuditCommandTest extends DbTestCase
     private function extractorReturningOk(string $url): FakeArticleExtractor
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok($url, 'An article', null, null, '<p>Body.</p>', null));
+        $extractor->willReturn(ExtractionResultModel::ok($url, 'An article', null, null, '<p>Body.</p>', null));
 
         return $extractor;
     }

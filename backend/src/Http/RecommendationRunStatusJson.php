@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\Feed\RecommendationRunStatus;
+use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 
 /**
  * The wire shape every /api/recommendations/runs* action returns: the run
@@ -16,7 +16,7 @@ use App\Service\Recommendation\Feed\RecommendationRunStatus;
 final class RecommendationRunStatusJson
 {
     /** @return array<string, mixed> */
-    public static function report(RecommendationRunStatus $status): array
+    public static function report(RecommendationRunStatusModel $status): array
     {
         $report = $status->report;
         $summary = $status->forYou;

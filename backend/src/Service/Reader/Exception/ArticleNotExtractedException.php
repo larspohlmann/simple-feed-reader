@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Exception;
 
-use App\Service\Reader\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionFailure;
 
 final class ArticleNotExtractedException extends \RuntimeException
 {

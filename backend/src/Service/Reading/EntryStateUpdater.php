@@ -8,6 +8,7 @@ use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
+use App\Service\Reading\Model\EntryStateChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -25,7 +26,7 @@ final readonly class EntryStateUpdater
     ) {
     }
 
-    public function apply(User $user, EntryListRow $row, EntryStateChange $change): EntryState
+    public function apply(User $user, EntryListRow $row, EntryStateChangeModel $change): EntryState
     {
         $state = $this->states->resolve($user, $row);
         $this->applyTo($state, $change);
@@ -35,7 +36,7 @@ final readonly class EntryStateUpdater
         return $state;
     }
 
-    private function applyTo(EntryState $state, EntryStateChange $change): void
+    private function applyTo(EntryState $state, EntryStateChangeModel $change): void
     {
         if ($change->isHidden !== null) {
             // Unread also clears "opened" (EntryState::markUnread, #478), so the
@@ -55,7 +56,7 @@ final readonly class EntryStateUpdater
         }
     }
 
-    private function mirror(User $user, EntryListRow $row, EntryStateChange $change): void
+    private function mirror(User $user, EntryListRow $row, EntryStateChangeModel $change): void
     {
         if ($change->isHidden === null && $change->isViewed === null) {
             return;
@@ -71,7 +72,7 @@ final readonly class EntryStateUpdater
         }
     }
 
-    private function mirrorOnto(EntryState $sibling, EntryStateChange $change): void
+    private function mirrorOnto(EntryState $sibling, EntryStateChangeModel $change): void
     {
         // Same isHidden/isViewed invariants as applyTo() above (#478,
         // ViewedImpliesHiddenListener): mirroring must not sidestep them.

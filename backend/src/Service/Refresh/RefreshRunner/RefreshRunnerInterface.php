@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh\RefreshRunner;
 
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
 
 /**
  * One budgeted slice of refresh work.
@@ -17,5 +17,5 @@ use App\Service\Refresh\RefreshRequest;
  */
 interface RefreshRunnerInterface
 {
-    public function run(RefreshRequest $request): RefreshReport;
+    public function run(RefreshRequestModel $request): RefreshReportModel;
 }

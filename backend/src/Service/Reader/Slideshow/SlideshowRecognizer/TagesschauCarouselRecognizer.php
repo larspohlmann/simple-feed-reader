@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Reader\Media\PageTextBlocks;
-use App\Service\Reader\Slideshow\ContainerSignature;
-use App\Service\Reader\Slideshow\Slide;
-use App\Service\Reader\Slideshow\SlideCaption;
-use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
+use App\Service\Reader\Slideshow\Model\SlideModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -21,7 +21,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
     /** Widest first: pick the largest rendition the sanitizer will keep as a bare src. */
     private const array RENDITIONS = ['l', 'm', 's', 'xs'];
 
-    public function recognize(HTMLDocument $document, PageTextBlocks $textBlocks): array
+    public function recognize(HTMLDocument $document, PageTextBlocksModel $textBlocks): array
     {
         $found = [];
         foreach ($document->querySelectorAll('[data-v-type="Carousel"]') as $carousel) {
@@ -34,7 +34,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
         return $found;
     }
 
-    private function fromCarousel(Element $carousel, PageTextBlocks $textBlocks): ?Slideshow
+    private function fromCarousel(Element $carousel, PageTextBlocksModel $textBlocks): ?SlideshowModel
     {
         $data = json_decode($carousel->getAttribute('data-v') ?? '', true);
         if (!is_array($data) || !isset($data['images']) || !is_array($data['images'])) {
@@ -49,15 +49,15 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
             }
         }
 
-        return Slideshow::fromSlides(
+        return SlideshowModel::fromSlides(
             $slides,
             is_string($data['name'] ?? null) ? $data['name'] : null,
             $textBlocks->before($carousel),
-            ContainerSignature::fromElement($carousel),
+            ContainerSignatureModel::fromElement($carousel),
         );
     }
 
-    private function slide(mixed $image): ?Slide
+    private function slide(mixed $image): ?SlideModel
     {
         if (!is_array($image) || !is_array($image['imageUrls'] ?? null)) {
             return null;
@@ -66,7 +66,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
         foreach (self::RENDITIONS as $size) {
             $url = $image['imageUrls'][$size] ?? null;
             if (is_string($url) && $url !== '') {
-                return new Slide(
+                return new SlideModel(
                     $url,
                     $this->stringOf($image['alttext'] ?? null),
                     $this->captionFrom($image['description'] ?? null, $image['title'] ?? null),
@@ -78,12 +78,12 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
     }
 
     /** The caption is the slide's description; the photo credit trails its title after a "|". */
-    private function captionFrom(mixed $description, mixed $title): SlideCaption
+    private function captionFrom(mixed $description, mixed $title): SlideCaptionModel
     {
         $text = $this->stringOf($description);
         $credit = $this->creditFrom($this->stringOf($title));
 
-        return new SlideCaption(trim($credit === '' ? $text : "$text ($credit)"), null);
+        return new SlideCaptionModel(trim($credit === '' ? $text : "$text ($credit)"), null);
     }
 
     private function creditFrom(string $title): string

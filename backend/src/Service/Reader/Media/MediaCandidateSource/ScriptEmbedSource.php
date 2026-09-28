@@ -6,11 +6,11 @@ namespace App\Service\Reader\Media\MediaCandidateSource;
 
 use App\Service\Html\JsonLd;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\EmbedTarget;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\RawPage;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -35,7 +35,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
     {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $found = [];
         foreach ($page->document->querySelectorAll('script') as $script) {
@@ -48,7 +48,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
                 continue;
             }
             foreach ($this->embedTargets($script->textContent ?? '') as $target) {
-                $found[$target->url] ??= new MediaCandidate(
+                $found[$target->url] ??= new MediaCandidateModel(
                     MediaKind::Embed,
                     $target->url,
                     $target->posterUrl,
@@ -60,7 +60,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
         return array_values($found);
     }
 
-    /** @return list<EmbedTarget> */
+    /** @return list<EmbedTargetModel> */
     private function embedTargets(string $scriptText): array
     {
         preg_match_all(self::URL_PATTERN, $scriptText, $matches);

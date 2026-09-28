@@ -8,6 +8,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Exception\InvalidSelectionException;
 use App\Repository\TagRepository;
+use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -37,7 +38,7 @@ final readonly class BulkSubscriptionUpdater
     /**
      * @return list<Subscription> the changed subscriptions, in request order
      */
-    public function apply(BulkSubscriptionChange $change, int $userId): array
+    public function apply(BulkSubscriptionChangeModel $change, int $userId): array
     {
         $this->assertNoContradictoryTagChange($change);
 
@@ -62,7 +63,7 @@ final readonly class BulkSubscriptionUpdater
         return $changed;
     }
 
-    private function assertNoContradictoryTagChange(BulkSubscriptionChange $change): void
+    private function assertNoContradictoryTagChange(BulkSubscriptionChangeModel $change): void
     {
         if ([] === array_intersect($change->addTagIds, $change->removeTagIds)) {
             return;
@@ -114,7 +115,7 @@ final readonly class BulkSubscriptionUpdater
         return array_values(array_diff(array_unique([...$current, ...$addTagIds]), $removeTagIds));
     }
 
-    private function applyFlags(Subscription $subscription, BulkSubscriptionChange $change): void
+    private function applyFlags(Subscription $subscription, BulkSubscriptionChangeModel $change): void
     {
         if (null !== $change->includeInAllItems) {
             $subscription->setIncludeInAllItems($change->includeInAllItems);

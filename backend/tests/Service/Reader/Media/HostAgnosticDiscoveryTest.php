@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\MediaKind;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**

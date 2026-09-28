@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
+use App\Service\Reader\Media\Sibling\Model\SiblingModel;
 
 /**
  * One page's sibling search: the raw HTML is per-pass state, bound once here
@@ -22,8 +24,8 @@ final readonly class SiblingSearch
     {
     }
 
-    /** @return list<MediaCandidate> */
-    public function siblingsOf(MediaCandidate $seed): array
+    /** @return list<MediaCandidateModel> */
+    public function siblingsOf(MediaCandidateModel $seed): array
     {
         $id = $seed->kind === MediaKind::Embed ? null : self::idOf($seed->url);
         if ($id === null) {
@@ -46,9 +48,9 @@ final readonly class SiblingSearch
     /**
      * Every other value under the seed's key whose own occurrence shares the seed's context.
      *
-     * @return list<Sibling>
+     * @return list<SiblingModel>
      */
-    private function siblingsIn(KeyedOccurrence $seedOccurrence, string $seedId): array
+    private function siblingsIn(KeyedOccurrenceModel $seedOccurrence, string $seedId): array
     {
         $suffix = preg_match(self::NUMBERED_SUFFIX, $seedId) === 1 ? '-\d+' : '';
         $key = preg_quote($seedOccurrence->key, '/');
@@ -59,7 +61,7 @@ final readonly class SiblingSearch
         foreach ($matches[1] as [$id, $position]) {
             $occurrence = $id === $seedId ? null : KeyedOccurrences::at($this->pageHtml, $id, $position);
             if ($occurrence !== null && $occurrence->sharesContextWith($seedOccurrence)) {
-                $siblings[$id] ??= new Sibling($id, $position);
+                $siblings[$id] ??= new SiblingModel($id, $position);
             }
         }
 
@@ -67,8 +69,11 @@ final readonly class SiblingSearch
         return \count($siblings) > self::MAX_SIBLINGS ? [] : array_values($siblings);
     }
 
-    private function candidateFor(MediaCandidate $seed, string $seedId, Sibling $sibling): ?MediaCandidate
-    {
+    private function candidateFor(
+        MediaCandidateModel $seed,
+        string $seedId,
+        SiblingModel $sibling,
+    ): ?MediaCandidateModel {
         if ($this->namedInsideAUrl($sibling->id)) {
             return null;
         }
@@ -76,7 +81,7 @@ final readonly class SiblingSearch
 
         return $poster === null
             ? null
-            : new MediaCandidate($seed->kind, str_replace($seedId, $sibling->id, $seed->url), $poster);
+            : new MediaCandidateModel($seed->kind, str_replace($seedId, $sibling->id, $seed->url), $poster);
     }
 
     private static function idOf(string $url): ?string

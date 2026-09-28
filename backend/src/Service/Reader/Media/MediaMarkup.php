@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
+use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -17,7 +18,7 @@ use Dom\HTMLDocument;
  */
 final readonly class MediaMarkup
 {
-    public function embedLink(HTMLDocument $document, EmbedTarget $target): Element
+    public function embedLink(HTMLDocument $document, EmbedTargetModel $target): Element
     {
         $link = $document->createElement('a');
         $link->setAttribute('href', $target->url);

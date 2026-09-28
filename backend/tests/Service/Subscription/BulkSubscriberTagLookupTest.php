@@ -6,8 +6,8 @@ namespace App\Tests\Service\Subscription;
 
 use App\Entity\Feed;
 use App\Entity\Subscription;
-use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
+use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
@@ -26,9 +26,9 @@ final class BulkSubscriberTagLookupTest extends DbTestCase
         $recorder->reset();
 
         $result = $subscriber->subscribeAll($user, [
-            new BulkSubscribeItem('https://a.example.com/rss.xml', 'A Feed', 'Technology', null),
-            new BulkSubscribeItem('https://b.example.com/rss.xml', 'B Feed', 'TECHNOLOGY', null),
-            new BulkSubscribeItem('https://c.example.com/rss.xml', 'C Feed', 'technology', null),
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', 'Technology', null),
+            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', 'TECHNOLOGY', null),
+            new BulkSubscribeItemModel('https://c.example.com/rss.xml', 'C Feed', 'technology', null),
         ]);
 
         self::assertSame(3, $result->imported);

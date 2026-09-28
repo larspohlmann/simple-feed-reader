@@ -9,10 +9,10 @@ use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Completion\Model\Reasoning;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\TickContext;
-use App\Service\Recommendation\Run\TickDriver;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -39,7 +39,7 @@ final class TickContextTest extends TestCase
         return new TickContext(
             new RecommendationRun($connection->getUser(), new \DateTimeImmutable(self::AT)),
             $connection,
-            new EffectiveRecommendationSettings(
+            new EffectiveRecommendationSettingsModel(
                 guidancePrompt: null,
                 favoritesCap: 40,
                 keptCap: 40,
@@ -47,11 +47,11 @@ final class TickContextTest extends TestCase
                 candidatePoolSize: 500,
                 lookbackDays: 2,
                 picksLimit: 50,
-                packing: new RecommendationPackingSettings(
+                packing: new RecommendationPackingSettingsModel(
                     contextWindow: 32768,
                     contextWindowSource: 'fallback',
                     batchSize: RecommendationBatchSize::Medium,
-                    maximumBatchSize: RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+                    maximumBatchSize: RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
                 ),
                 debugEnabled: false,
             ),

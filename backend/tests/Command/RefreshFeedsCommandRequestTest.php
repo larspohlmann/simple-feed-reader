@@ -6,8 +6,8 @@ namespace App\Tests\Command;
 
 use App\Command\Exception\MalformedOptionException;
 use App\Command\RefreshFeedsCommand;
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Tests\Service\Refresh\FakeRefreshRunner;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -57,7 +57,7 @@ final class RefreshFeedsCommandRequestTest extends TestCase
 
     public function testAMalformedFeedIdIsRefusedInsteadOfRefreshingEveryDueFeed(): void
     {
-        $runner = new FakeRefreshRunner(RefreshReport::busy());
+        $runner = new FakeRefreshRunner(RefreshReportModel::busy());
 
         try {
             (new CommandTester(new RefreshFeedsCommand($runner)))->execute(['--budget' => '45', '--feed' => 'abc']);
@@ -68,9 +68,9 @@ final class RefreshFeedsCommandRequestTest extends TestCase
     }
 
     /** @param array<string, string|bool> $input */
-    private function requestFor(array $input): RefreshRequest
+    private function requestFor(array $input): RefreshRequestModel
     {
-        $runner = new FakeRefreshRunner(RefreshReport::busy());
+        $runner = new FakeRefreshRunner(RefreshReportModel::busy());
         (new CommandTester(new RefreshFeedsCommand($runner)))->execute($input);
 
         return $runner->requests[0] ?? self::fail('The command never asked for a refresh.');

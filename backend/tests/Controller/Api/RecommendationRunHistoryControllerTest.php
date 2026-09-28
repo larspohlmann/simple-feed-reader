@@ -343,7 +343,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * ViewerTimeZone fails soft on an identifier the server's tzdata does not
+     * ViewerTimeZoneModel fails soft on an identifier the server's tzdata does not
      * know -- this is a display preference, not a security boundary -- so the
      * request still answers 200, bucketed as if in UTC.
      */
