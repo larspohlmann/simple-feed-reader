@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Backup;
 
-use App\Entity\BackedUpReadMark;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
@@ -14,10 +13,10 @@ use App\Repository\EntryStateRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 
 /**
  * Loads one entry part's entries and entry states. Constructed per request,
@@ -53,7 +52,7 @@ final class RestoreEntryLoader
         private readonly EntryStateRepository $entryStates,
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
-        private readonly ClockInterface $clock,
+        private readonly RestoredEntryStateFactory $states,
         RestoreDestination $destination,
     ) {
         $this->targets = $destination->feeds;
@@ -113,20 +112,8 @@ final class RestoreEntryLoader
     {
         $entry = $this->em->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
-        $state = new EntryState($this->user, $entry);
-        $state->restoreReadMark(new BackedUpReadMark($line->isHidden, $line->hiddenAt));
-        if ($line->isFavorite) {
-            $state->markFavorite();
-        }
-        if ($line->isKept) {
-            $state->markKept();
-        }
-        if ($line->isViewed) {
-            // A "viewed" line without its timestamp keeps the flag and takes the restore's own time (#307).
-            $state->markViewed($line->viewedAt ?? $this->clock->now());
-        }
 
-        return $state;
+        return $this->states->create($this->user, $entry, $line);
     }
 
     private function target(string $feedUrl): RestoreFeedTarget

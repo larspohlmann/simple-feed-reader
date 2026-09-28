@@ -10,8 +10,11 @@ use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\RestoreLoadPass;
+use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Search\SavedSearchSlug;
+use App\Service\Tag\Factory\TagFactory;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -44,7 +47,7 @@ final class RestoreLoadPassTest extends TestCase
             ->with(['https://known.example/feed.xml', 'https://new.example/feed.xml'])
             ->willReturn(['https://known.example/feed.xml' => new Feed('https://known.example/feed.xml')]);
         $feeds->expects($this->never())->method('findOneBy');
-        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug());
+        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug(), self::rows());
 
         $result = $pass->run($user, (function () {
             yield $this->feedLine('https://known.example/feed.xml');
@@ -66,7 +69,7 @@ final class RestoreLoadPassTest extends TestCase
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://orphan-one.example/feed.xml', 'https://orphan-two.example/feed.xml'])
             ->willReturn([]);
-        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug());
+        $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug(), self::rows());
 
         // No subscription line ever runs, so loadSubscription() never gets a
         // chance to call resolveHeldFeeds() itself — only the final flush can
@@ -111,7 +114,12 @@ final class RestoreLoadPassTest extends TestCase
     {
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('flush')->willThrowException($this->dbalException());
-        $pass = new RestoreLoadPass($em, $this->createStub(FeedRepository::class), $this->savedSearchSlug());
+        $pass = new RestoreLoadPass(
+            $em,
+            $this->createStub(FeedRepository::class),
+            $this->savedSearchSlug(),
+            self::rows(),
+        );
 
         $this->expectException(BackupLoadFailedException::class);
         $pass->run(new User('flush-fails@example.com', new \DateTimeImmutable('2026-08-01')), (function () {
@@ -133,5 +141,10 @@ final class RestoreLoadPassTest extends TestCase
     private function savedSearchSlug(): SavedSearchSlug
     {
         return new SavedSearchSlug(new AsciiSlugger());
+    }
+
+    private static function rows(): RestoredFoundationFactory
+    {
+        return new RestoredFoundationFactory(new TagFactory(), new FeedFactory());
     }
 }

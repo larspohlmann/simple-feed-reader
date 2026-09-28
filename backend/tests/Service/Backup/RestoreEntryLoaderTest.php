@@ -10,6 +10,7 @@ use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\EntryLine;
+use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Backup\RestoreDestination;
 use App\Service\Backup\RestoreEntryLoader;
 use App\Service\Backup\RestoreFeedTargets;
@@ -75,7 +76,7 @@ final class RestoreEntryLoaderTest extends TestCase
             $this->createStub(EntryStateRepository::class),
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
-            new MockClock('2026-08-01 00:00:00', 'UTC'),
+            new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
             new RestoreDestination($this->user(), $this->targets($entries)),
         );
     }

@@ -22,6 +22,7 @@ use App\Service\Backup\EntryPartRestorer;
 use App\Service\Backup\Exception\BackupDoesNotFitException;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
+use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -432,7 +433,7 @@ final class EntryPartRestorerTest extends DbTestCase
             $entryStates,
             $inserter,
             new EntryIndexer($this->indexWriter, new NullLogger()),
-            new MockClock('2026-08-20 00:00:00', 'UTC'),
+            new RestoredEntryStateFactory(new MockClock('2026-08-20 00:00:00', 'UTC')),
             $feeds,
         );
 

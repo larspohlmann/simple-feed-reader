@@ -6,6 +6,7 @@ namespace App\Service\Backup;
 
 use App\Entity\User;
 use App\Repository\FeedRepository;
+use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -25,12 +26,13 @@ final readonly class RestoreLoader
         private BackupReader $reader,
         private FeedRepository $feeds,
         private SavedSearchSlug $savedSearchSlug,
+        private RestoredFoundationFactory $rows,
     ) {
     }
 
     public function load(User $user, string $gzipBytes): RestoreResult
     {
-        $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug);
+        $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug, $this->rows);
 
         return $pass->run($user, $this->reader->read($gzipBytes));
     }

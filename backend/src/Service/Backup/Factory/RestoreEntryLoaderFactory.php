@@ -14,7 +14,6 @@ use App\Service\Backup\RestoreEntryLoader;
 use App\Service\Backup\RestoreFeedTargets;
 use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
-use Psr\Clock\ClockInterface;
 
 /**
  * Builds the per-request RestoreEntryLoader, so EntryPartRestorer does not
@@ -28,7 +27,7 @@ final readonly class RestoreEntryLoaderFactory
         private EntryStateRepository $entryStates,
         private EntryBatchInserter $inserter,
         private EntryIndexer $indexer,
-        private ClockInterface $clock,
+        private RestoredEntryStateFactory $states,
         private FeedRepository $feeds,
     ) {
     }
@@ -44,7 +43,7 @@ final readonly class RestoreEntryLoaderFactory
             $this->entryStates,
             $this->inserter,
             $this->indexer,
-            $this->clock,
+            $this->states,
             new RestoreDestination(
                 $user,
                 new RestoreFeedTargets($user->requireId(), $feedIdsByUrl, $this->feeds, $this->entries),
