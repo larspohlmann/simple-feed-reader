@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace App\Service\Html;
 
+use App\Service\Html\Exception\UnparseableHtmlException;
 use Dom\HTMLDocument;
 
 /**
- * Parses HTML into the HTML5-spec DOM (`\Dom\HTMLDocument`, lexbor) that the
- * reader pipeline, feed discovery and the scraper layers all read.
- *
- * Blank or unparseable input yields null — a page too broken to parse is an
- * answer every caller can handle (skip it, fall back) rather than a fatal. The
- * parser resolves no entities and opens no connections, so it needs no
- * LIBXML_NONET — which it rejects as an invalid flag.
+ * Parses HTML into the HTML5 DOM (`\Dom\HTMLDocument`, lexbor) the reader, discovery and scraper read. It
+ * resolves no entities and opens no connections, so it needs no LIBXML_NONET, which it rejects as a flag.
  */
 final class HtmlDocumentParser
 {
+    public static function parse(string $html): HTMLDocument
+    {
+        return self::parseOrNull($html)
+            ?? throw new UnparseableHtmlException('The HTML is blank or could not be parsed.');
+    }
+
     public static function parseOrNull(string $html): ?HTMLDocument
     {
         if (trim($html) === '') {
