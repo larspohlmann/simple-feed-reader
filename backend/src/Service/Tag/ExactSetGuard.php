@@ -2,19 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Tag;
 
 use App\Exception\InvalidSelectionException;
 
-/**
- * Validates that a reorder request lists exactly the set it reorders.
- */
+/** A reorder must list exactly the set it reorders: a missing, extra or repeated id leaves the positions ambiguous. */
 final readonly class ExactSetGuard
 {
     /**
-     * A reorder must be a permutation of the exact set it reorders — no missing,
-     * extra, or duplicate ids — otherwise the resulting positions are ambiguous.
-     *
      * @param list<int> $requested
      * @param list<int> $owned
      */

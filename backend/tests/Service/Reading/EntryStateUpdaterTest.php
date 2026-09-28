@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -10,8 +10,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Service\Reader\EntryStateChange;
-use App\Service\Reader\EntryStateUpdater;
+use App\Service\Reading\EntryStateChange;
+use App\Service\Reading\EntryStateUpdater;
 use App\Tests\DbTestCase;
 
 final class EntryStateUpdaterTest extends DbTestCase
@@ -78,10 +78,8 @@ final class EntryStateUpdaterTest extends DbTestCase
     }
 
     /**
-     * The persisted row, or null when a mirror that should have skipped this
-     * sibling never created one. stateOf() cannot tell the two apart: its
-     * unpersisted fallback reads all-false, same as a row that was created
-     * but never written to.
+     * Null when no row was ever created. stateOf() cannot tell that apart from a row created but never written
+     * to: its unpersisted fallback reads all-false too.
      */
     private function persistedStateOf(User $user, Entry $entry): ?EntryState
     {

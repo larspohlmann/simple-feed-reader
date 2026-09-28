@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Reader\SearchMarkReadService;
+use App\Service\Reading\SearchMarkReadService;
 use App\Tests\DbTestCase;
 
 final class SearchMarkReadServiceTest extends DbTestCase

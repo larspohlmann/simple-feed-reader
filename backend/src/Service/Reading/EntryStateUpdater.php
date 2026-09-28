@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reading;
 
 use App\Entity\EntryState;
 use App\Entity\User;
@@ -12,9 +12,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Mirrors isHidden/isViewed onto every other subscribed copy of the same
- * article (#496) so a collapse-hidden duplicate cannot resurface as unread;
- * isFavorite/isKept stay per-copy.
+ * Mirrors isHidden/isViewed onto every other subscribed copy of the same article (#496), so a collapse-hidden
+ * duplicate cannot resurface as unread; isFavorite/isKept stay per copy.
  */
 final readonly class EntryStateUpdater
 {

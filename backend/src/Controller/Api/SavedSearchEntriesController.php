@@ -13,7 +13,7 @@ use App\Pagination\EntryCursor;
 use App\Repository\EntryListRowEnricher;
 use App\Repository\SavedSearchListQuery;
 use App\Repository\SavedSearchRepository;
-use App\Service\Reader\SavedSearchMarkReadService;
+use App\Service\Reading\SavedSearchMarkReadService;
 use App\Service\Search\SavedSearchEntries;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

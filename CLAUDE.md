@@ -54,7 +54,7 @@ Pyroscope, for viewing app logs, traces and profiles.
 | Path | What |
 |---|---|
 | `backend/src/Controller/Api`, `Controller/Admin` | HTTP entry points; thin, they delegate to services |
-| `backend/src/Service/**` | The domain work, one subdirectory per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`) |
+| `backend/src/Service/**` | The domain work, one subdirectory per concern (`Fetch`, `Parser`, `Scraper`, `Reader`, `Reading`, `Refresh`, `OAuth`, `Auth`, `Opml`, `Preview`, `Discovery`, `Subscription`, `Mail`) |
 | `backend/src/Dto/**` | Request/response shapes, grouped by feature |
 | `backend/src/Http/**` | Outbound response shapes (`*Json` mappers), problem mapping, and the helpers that read a `Request` or build a `Response` |
 | `backend/src/Pagination/**` | The keyset cursors repositories, services and `src/Http` share |
