@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Catalog;
+namespace App\Tests\Service\Image;
 
-use App\Service\Catalog\CatalogFaviconFetcher;
-use App\Service\Catalog\Exception\FaviconRejectedException;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\FaviconFetcher;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
@@ -18,7 +18,7 @@ use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-final class CatalogFaviconFetcherTest extends TestCase
+final class FaviconFetcherTest extends TestCase
 {
     use NoEgressProxy;
 
@@ -35,7 +35,7 @@ final class CatalogFaviconFetcherTest extends TestCase
     private function fetcher(
         MockHttpClient $client,
         array $dnsMap = ['www.theverge.com' => ['93.184.216.34']],
-    ): CatalogFaviconFetcher {
+    ): FaviconFetcher {
         $resolver = new class ($dnsMap) implements DnsResolverInterface {
             /** @param array<string, list<string>> $map */
             public function __construct(private readonly array $map)
@@ -48,7 +48,7 @@ final class CatalogFaviconFetcherTest extends TestCase
             }
         };
 
-        return new CatalogFaviconFetcher(
+        return new FaviconFetcher(
             new FailoverRequestSender($client, $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
@@ -102,7 +102,7 @@ final class CatalogFaviconFetcherTest extends TestCase
     public function testRejectsAnOversizedResponse(): void
     {
         $client = new MockHttpClient(new MockResponse(
-            str_repeat('x', CatalogFaviconFetcher::MAX_BYTES + 1),
+            str_repeat('x', FaviconFetcher::MAX_BYTES + 1),
             ['response_headers' => ['content-type' => ['image/png']]],
         ));
 
@@ -294,7 +294,7 @@ final class CatalogFaviconFetcherTest extends TestCase
     public function testABodyOverTheSizeCapIsRejected(): void
     {
         $client = new MockHttpClient(new MockResponse(
-            str_repeat('x', CatalogFaviconFetcher::MAX_BYTES + 1),
+            str_repeat('x', FaviconFetcher::MAX_BYTES + 1),
             ['response_headers' => ['content-type' => ['image/png']]],
         ));
 

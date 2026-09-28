@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog\Exception;
+namespace App\Service\Image\Exception;
 
 /**
  * No usable icon could be fetched for a catalog row. The caller records

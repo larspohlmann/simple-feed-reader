@@ -418,7 +418,7 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClient
             'max_duration' => $connection->timeouts->wallClockSeconds,
             'max_redirects' => 0,
             // The codebase's one size-cap mechanism (ConcurrentFeedFetcher::send(),
-            // HtmlPageFetcher, CatalogFaviconFetcher): a gigabyte answer is refused
+            // HtmlPageFetcher, FaviconFetcher): a gigabyte answer is refused
             // as bytes arrive, not truncated into an unparseable body; the transport
             // reports the abort as a failure readBody() translates into a refusal.
             'on_progress' => static function (int $downloaded): void {

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Worker;
+namespace App\Service\Recommendation\Run;
 
 use App\Service\Ai\Completion\CompletionStreamHeartbeat;
 use Symfony\Component\Clock\ClockInterface;

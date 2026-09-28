@@ -29,7 +29,7 @@ services:
     # could not fetch it. Same `autowire` caveat as the entries below: naming
     # a class here replaces the definition rather than amending it, and this
     # file has no `_defaults`.
-    App\Service\Worker\WorkerPresence:
+    App\Service\Recommendation\Run\WorkerPresence:
         autowire: true
         public: true
 
@@ -485,7 +485,7 @@ services:
         autowire: true
         public: true
 
-    App\Service\Worker\SweepStreamHeartbeat:
+    App\Service\Recommendation\Run\SweepStreamHeartbeat:
         autowire: true
         public: true
 

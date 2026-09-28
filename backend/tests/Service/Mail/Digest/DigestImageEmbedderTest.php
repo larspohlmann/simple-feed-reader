@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
-use App\Service\Catalog\FetchedFavicon;
+use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\FetchedFavicon;
 use App\Service\Mail\Digest\DigestEntry;
 use App\Service\Mail\Digest\DigestImageEmbedder;
 use App\Service\Mail\Digest\DigestImageResizerInterface;
@@ -49,7 +49,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testDedupesASharedFaviconToOneEmbed(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturnCallback(
             static fn (string $url): FetchedFavicon => new FetchedFavicon($url, 'RAW', 'image/png'),
         );
@@ -70,7 +70,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAFetchFailureDropsThatImageOnly(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturnCallback(
             static function (string $url): FetchedFavicon {
                 if ($url === 'https://cdn/bad.jpg') {
@@ -99,7 +99,7 @@ final class DigestImageEmbedderTest extends TestCase
      */
     public function testAFetchFailureDoesNotStopLaterImagesInTheLoop(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturnCallback(
             static function (string $url): FetchedFavicon {
                 if ($url === 'https://site/bad.ico') {
@@ -123,7 +123,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlSeenOnlyAsAFaviconIsResizedWithContainPngToPng(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon('u', 'RAW', 'image/png'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
@@ -139,7 +139,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlSeenOnlyAsAnImageIsResizedWithCoverJpegToJpeg(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
@@ -155,7 +155,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlFirstSeenAsAThumbnailStaysAThumbnailWhenLaterUsedAsAFavicon(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
@@ -172,7 +172,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAUrlFirstSeenAsAFaviconStaysAFaviconWhenLaterUsedAsAThumbnail(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon('u', 'RAW', 'image/png'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPEGBYTES');
@@ -190,7 +190,7 @@ final class DigestImageEmbedderTest extends TestCase
     public function testCidIsDerivedFromASixteenCharacterHashOfTheSourceUrl(): void
     {
         $url = 'https://cdn/1.jpg';
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon($url, 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willReturn('JPG');
@@ -203,7 +203,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAnImageProcessingExceptionAlsoDropsOnlyThatImage(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willReturn(new FetchedFavicon('u', 'RAW', 'image/jpeg'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $resizer->method('coverJpeg')->willThrowException(new ImageProcessingException('broken image'));
@@ -217,7 +217,7 @@ final class DigestImageEmbedderTest extends TestCase
 
     public function testAFailureIsLoggedWithTheOffendingUrl(): void
     {
-        $fetcher = $this->createStub(CatalogFaviconFetcherInterface::class);
+        $fetcher = $this->createStub(FaviconFetcherInterface::class);
         $fetcher->method('download')->willThrowException(new FaviconUnavailableException('boom'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $logger = $this->createMock(LoggerInterface::class);

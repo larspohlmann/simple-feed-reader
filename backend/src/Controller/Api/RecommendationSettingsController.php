@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Http\RecommendationSettingsJson;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Recommendation\Run\WorkerPresence;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;

@@ -11,7 +11,7 @@ use App\Repository\FeedRepository;
 use App\Repository\SubscriptionRepository;
 use App\Service\Discovery\FeedDiscoveryInterface;
 use App\Service\Discovery\ScrapeFallbackPolicy;
-use App\Service\OrphanedFeedReclaimer;
+use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Subscription\FirstFetchRecorder;
 use App\Service\Subscription\SubscriptionCreator;
 use App\Service\Subscription\SubscriptionService;

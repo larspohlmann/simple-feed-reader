@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
-use App\Service\OrphanedFeedReclaimer;
+use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Retention\EntryPruner;
 use Psr\Log\LoggerInterface;
 

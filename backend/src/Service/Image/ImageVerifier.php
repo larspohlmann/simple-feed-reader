@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Image;
 
 use App\Entity\Entry;
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconRejectedException;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Clock\NaiveUtcClock;
 
 /**
@@ -20,7 +19,7 @@ final readonly class ImageVerifier
     private const int MAX_ATTEMPTS = 3;
 
     public function __construct(
-        private CatalogFaviconFetcherInterface $fetcher,
+        private FaviconFetcherInterface $fetcher,
         private NaiveUtcClock $clock,
     ) {
     }

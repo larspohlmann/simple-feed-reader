@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Digest;
 
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use Psr\Log\LoggerInterface;
 
@@ -21,7 +21,7 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
     private const int FAVICON_SIZE = 32;
 
     public function __construct(
-        private CatalogFaviconFetcherInterface $downloader,
+        private FaviconFetcherInterface $downloader,
         private DigestImageResizerInterface $resizer,
         private LoggerInterface $logger,
     ) {

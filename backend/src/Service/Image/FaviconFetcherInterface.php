@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Image;
 
-use App\Service\Catalog\Exception\FaviconRejectedException;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
 
-interface CatalogFaviconFetcherInterface
+interface FaviconFetcherInterface
 {
     /**
      * Download the bytes of one already-resolved icon URL under the SSRF/size/type guards.

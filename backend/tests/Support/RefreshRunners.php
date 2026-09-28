@@ -11,7 +11,7 @@ use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Fetch\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver;
-use App\Service\OrphanedFeedReclaimer;
+use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Parser\Atom03Parser;
 use App\Service\Parser\Atom10Parser;
 use App\Service\Parser\FeedParser;

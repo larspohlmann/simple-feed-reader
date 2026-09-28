@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Catalog;
+namespace App\Service\Image;
 
-use App\Service\Catalog\Exception\FaviconRejectedException;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
+use App\Service\Image\Exception\FaviconRejectedException;
+use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
@@ -32,7 +32,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * digest thumbnails/favicons — neither caller is a live HTTP request path,
  * both run in the worker/CLI.
  */
-final readonly class CatalogFaviconFetcher implements CatalogFaviconFetcherInterface
+final readonly class FaviconFetcher implements FaviconFetcherInterface
 {
     /** Also bounds digest article thumbnails (#726), not only favicons — the
      *  pixel cap in GdImageResizer is the real memory guard. */

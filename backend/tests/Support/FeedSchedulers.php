@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\FeedScheduler;
+use App\Service\Feed\FeedScheduler;
 use App\Service\Fetch\HostThrottle;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\ClockInterface;

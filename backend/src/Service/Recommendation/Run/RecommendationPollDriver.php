@@ -6,7 +6,6 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
-use App\Service\Worker\WorkerPresence;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Psr\Log\LoggerInterface;
 

@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use App\Service\Catalog\CatalogFaviconFetcherInterface;
-use App\Service\Catalog\Exception\FaviconUnavailableException;
-use App\Service\Catalog\FetchedFavicon;
+use App\Service\Image\FaviconFetcherInterface;
+use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Image\FetchedFavicon;
 
-final class StubFaviconFetcher implements CatalogFaviconFetcherInterface
+final class StubFaviconFetcher implements FaviconFetcherInterface
 {
     /** @var array<string, string|\Throwable> */
     private array $byUrl = [];

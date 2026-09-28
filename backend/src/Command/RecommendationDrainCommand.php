@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Worker\RecommendationDriverKind;
-use App\Service\Worker\WorkerPresence;
+use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\WorkerPresence;
 use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;

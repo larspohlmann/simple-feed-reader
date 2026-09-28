@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
-use App\Service\OrphanedFeedReclaimer;
+use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Refresh\RefreshHousekeeping;
 use App\Service\Refresh\RefreshRequest;
 use App\Service\Retention\EntryPruner;
