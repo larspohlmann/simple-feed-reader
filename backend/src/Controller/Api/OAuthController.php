@@ -6,8 +6,8 @@ namespace App\Controller\Api;
 
 use App\Dto\OAuth\OAuthExchangeRequest;
 use App\Http\OAuth\CallbackParameters;
+use App\Http\OAuth\Factory\OAuthRedirectFactory;
 use App\Http\OAuth\FlowCookie;
-use App\Http\OAuth\OAuthRedirectFactory;
 use App\Service\OAuth\Exception\OAuthCallbackRefusedException;
 use App\Service\OAuth\OAuthCallback;
 use App\Service\OAuth\OAuthCallbackAttempt;

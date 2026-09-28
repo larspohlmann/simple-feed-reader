@@ -316,7 +316,7 @@ services:
             $includeStacktraces: true
 
     App\Service\Profiling\ProfileSampler\ProfileSamplerInterface:
-        factory: ['@App\Service\Profiling\ProfileSamplerFactory', 'create']
+        factory: ['@App\Service\Profiling\Factory\ProfileSamplerFactory', 'create']
 
     App\Service\Profiling\PyroscopeEndpoint\PyroscopeEndpointInterface: '@App\Service\Grafana\SettingsPyroscopeEndpoint'
 
@@ -333,7 +333,7 @@ services:
             $spoolDirectory: '%app.loki_spool_directory%'
 
     App\Service\Logging\Loki\LokiSink\LokiSinkInterface:
-        factory: ['@App\Service\Logging\Loki\LokiSinkFactory', 'create']
+        factory: ['@App\Service\Logging\Loki\Factory\LokiSinkFactory', 'create']
 
     App\Service\Logging\Loki\LokiPushHandler:
         arguments:

@@ -105,7 +105,7 @@ final class AttestationVerifierTest extends KernelTestCase
     /**
      * Every other test in this feature enrols against PasskeyFixtures' fixed
      * all-zero AAGUID (the spec's "none assigned" sentinel), which
-     * aaguidOrNull() normalises to a stored null — so none of them can tell
+     * UserPasskeyFactory::aaguidOrNull() normalises to a stored null — so none of them can tell
      * the ternary is the right way round. This pins the other branch: a real,
      * non-nil AAGUID must round-trip to its RFC 4122 string, not to null.
      */

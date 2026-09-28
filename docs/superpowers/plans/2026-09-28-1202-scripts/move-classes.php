@@ -463,6 +463,135 @@ function depthOf(string $path): int
     return substr_count(dirname($path), '/');
 }
 
+/** @return list<string> the short names of the classes, interfaces, traits and enums a file declares */
+function declaredShortNames(string $code): array
+{
+    $tokens = token_get_all($code);
+    $names = [];
+    foreach ($tokens as $index => $token) {
+        if (is_array($token) && T_STRING === $token[0] && isDeclaredName($tokens, $index)) {
+            $names[] = $token[1];
+        }
+    }
+
+    return $names;
+}
+
+/**
+ * The names a file already gives classes once the moves are done: its imports, its declarations and its namespace.
+ *
+ * @param array<string, string> $moves
+ * @param array<string, string> $namespaceClasses short name => class, for the classes of the file's final namespace
+ *
+ * @return array<string, array<string, string>> short name => class => what gives the file that name
+ */
+function namesAfterMoves(string $code, string $destination, array $moves, array $namespaceClasses): array
+{
+    $names = [];
+    foreach ($namespaceClasses as $short => $class) {
+        $names[$short][$class] = 'its namespace holds';
+    }
+    foreach (declaredShortNames($code) as $short) {
+        $class = $moves[declaredNamespace($code) . '\\' . $short] ?? namespaceOf($destination) . '\\' . $short;
+        $names[shortNameOf($class)][$class] = 'the file declares';
+    }
+    preg_match_all('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/m', $code, $imports, PREG_SET_ORDER);
+    foreach ($imports as $import) {
+        $class = $moves[$import[1]] ?? $import[1];
+        $short = $import[2] ?? shortNameOf($import[1]);
+        $isRenamedBareImport = !isset($import[2]) && shortNameOf($class) !== $short;
+        if (!$isRenamedBareImport) {
+            $names[$short][$class] = 'an import names';
+        }
+    }
+
+    return $names;
+}
+
+/**
+ * @param array<string, array<string, true>> $introduced short name => the classes the moves make the file name by it
+ * @param array<string, array<string, string>> $existing short name => class => what gives the file that name
+ *
+ * @return list<string>
+ */
+function collisionsIn(string $file, array $introduced, array $existing): array
+{
+    $collisions = [];
+    foreach ($introduced as $short => $classes) {
+        $classes = array_keys($classes);
+        if (count($classes) > 1) {
+            $collisions[] = sprintf('%s: %s would name %s', $file, $short, implode(' and ', $classes));
+        }
+        foreach ($classes as $class) {
+            foreach ($existing[$short] ?? [] as $other => $source) {
+                if ($other !== $class) {
+                    $collisions[] = sprintf('%s: %s would name %s, but %s %s', $file, $short, $class, $source, $other);
+                }
+            }
+        }
+    }
+
+    return $collisions;
+}
+
+/**
+ * @param array<string, string> $moves
+ *
+ * @return list<string> the paths two moved classes, or a moved class and an existing file, would share
+ */
+function landingCollisions(array $moves): array
+{
+    $landings = [];
+    foreach ($moves as $old => $new) {
+        $landings[pathOf($new)][] = $old;
+    }
+    $collisions = [];
+    foreach ($landings as $path => $classes) {
+        if (count($classes) > 1) {
+            $collisions[] = sprintf('%s: %s would both land there', $path, implode(' and ', $classes));
+        }
+        if (is_file($path)) {
+            $collisions[] = sprintf('%s: %s would land on an existing file', $path, implode(' and ', $classes));
+        }
+    }
+
+    return $collisions;
+}
+
+function importBlocks(string $code): string
+{
+    preg_match_all('/(?:^use [^;\n]+;\n)+/m', $code, $blocks);
+
+    return implode("\n", $blocks[0]);
+}
+
+/** php-cs-fixer's `ordered_imports` alpha order: case-insensitive, a backslash as a space, functions and constants last */
+function importSortKey(string $line): string
+{
+    $statement = rtrim($line, ';');
+    $group = match (true) {
+        str_starts_with($statement, 'use function ') => '1',
+        str_starts_with($statement, 'use const ') => '2',
+        default => '0',
+    };
+
+    return $group . strtolower(str_replace('\\', ' ', $statement));
+}
+
+function sortImports(string $code): string
+{
+    return (string) preg_replace_callback(
+        '/(?:^use [^;\n]+;\n)+/m',
+        static function (array $block): string {
+            $lines = explode("\n", rtrim($block[0], "\n"));
+            usort($lines, static fn (string $a, string $b): int => strcmp(importSortKey($a), importSortKey($b)));
+
+            return implode("\n", $lines) . "\n";
+        },
+        $code,
+    );
+}
+
 /** @var array<string, string> $moves */
 $moves = require $argv[1];
 $oldNamespaces = array_flip(array_map('namespaceOf', array_keys($moves)));
@@ -472,13 +601,19 @@ $renames = array_filter(
     ARRAY_FILTER_USE_BOTH,
 );
 
-// Where every class of an affected namespace lives once the moves are done.
+// Where every class lives once the moves are done: by its old namespace in an affected one, and by its new namespace.
 $destinations = [];
+$finalClasses = [];
 foreach (phpFiles() as $file) {
     $namespace = declaredNamespace((string) file_get_contents($file));
     $class = $namespace . '\\' . basename($file, '.php');
-    if (isset($oldNamespaces[$namespace]) && pathOf($class) === $file) {
-        $destinations[$namespace][basename($file, '.php')] = $moves[$class] ?? $class;
+    if (pathOf($class) !== $file) {
+        continue;
+    }
+    $final = $moves[$class] ?? $class;
+    $finalClasses[namespaceOf($final)][shortNameOf($final)] = $final;
+    if (isset($oldNamespaces[$namespace])) {
+        $destinations[$namespace][basename($file, '.php')] = $final;
     }
 }
 
@@ -487,12 +622,18 @@ foreach (phpFiles() as $file) {
 $importsFor = [];
 $bareRenamesIn = [];
 $relativeNamesIn = [];
+$introducedIn = [];
+$namesIn = [];
+$importBlocksBefore = [];
 foreach (phpFiles() as $file) {
     $code = (string) file_get_contents($file);
     $namespace = declaredNamespace($code);
     $class = $namespace . '\\' . basename($file, '.php');
     $destination = $moves[$class] ?? $class;
     $destinationFile = destinationOf($file, $class, $moves);
+    $namespaceClasses = $finalClasses[namespaceOf($destination)] ?? [];
+    $namesIn[$destinationFile] = namesAfterMoves($code, $destination, $moves, $namespaceClasses);
+    $importBlocksBefore[$destinationFile] = importBlocks($code);
     $imported = importedClasses($code);
     $importedShortNames = importedNames($code);
     foreach ($renames as $old => $new) {
@@ -501,6 +642,7 @@ foreach (phpFiles() as $file) {
             || (namespaceOf($old) === $namespace && !isset($importedShortNames[$short]));
         if ($namesIt) {
             $bareRenamesIn[$destinationFile][$short] = shortNameOf($new);
+            $introducedIn[$destinationFile][shortNameOf($new)][$new] = true;
         }
     }
     foreach (array_keys(namespaceRelativeNames($code)) as $relative) {
@@ -510,6 +652,9 @@ foreach (phpFiles() as $file) {
         }
         $isTaken = isset($importedShortNames[shortNameOf($target)]) || shortNameOf($destination) === shortNameOf($target);
         $relativeNamesIn[$destinationFile][$relative] = $isTaken ? '\\' . $target : shortNameOf($target);
+        if (!$isTaken) {
+            $introducedIn[$destinationFile][shortNameOf($target)][$target] = true;
+        }
         if (!$isTaken && namespaceOf($target) !== namespaceOf($destination)) {
             $importsFor[$destinationFile][$target] = true;
         }
@@ -526,6 +671,23 @@ foreach (phpFiles() as $file) {
             $importsFor[$destinationFile][$target] = true;
         }
     }
+}
+
+// A name the moves bring into a file must not be one it already gives another class: stop before anything changes.
+foreach ($importsFor as $file => $classes) {
+    foreach (array_keys($classes) as $imported) {
+        $introducedIn[$file][shortNameOf((string) $imported)][(string) $imported] = true;
+    }
+}
+$collisions = landingCollisions($moves);
+foreach ($introducedIn as $file => $introduced) {
+    array_push($collisions, ...collisionsIn($file, $introduced, $namesIn[$file]));
+}
+foreach ($collisions as $collision) {
+    fwrite(STDERR, "Failed: {$collision}\n");
+}
+if ([] !== $collisions) {
+    exit(1);
 }
 
 // 2. Each file moves, and its namespace line and its relative paths with it.
@@ -602,13 +764,24 @@ foreach ($bareRenamesIn as $file => $shortRenames) {
     }
 }
 
+// 8. An import block the moves changed is sorted again; one they left alone keeps its order.
+$sorted = 0;
+foreach ($importBlocksBefore as $file => $before) {
+    $code = (string) file_get_contents($file);
+    if (importBlocks($code) !== $before) {
+        file_put_contents($file, sortImports($code));
+        ++$sorted;
+    }
+}
+
 printf(
     "Moved %d classes (%d renamed); rewrote names in %d files; added %d imports in %d files; "
-        . "renamed bare names in %d files.\n",
+        . "renamed bare names in %d files; sorted imports in %d files.\n",
     count($moves),
     count($renames),
     $rewrittenFiles,
     $added,
     count($importsFor),
     count($bareRenamesIn),
+    $sorted,
 );

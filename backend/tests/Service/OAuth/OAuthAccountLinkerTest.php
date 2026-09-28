@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\OAuth;
 
-use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
 use App\Service\Auth\RegistrationPolicy;
-use App\Service\Mail\MailCapability;
-use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
+use App\Service\OAuth\Factory\OAuthUserFactory;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Service\OAuth\OAuthIdentity;
-use App\Service\Settings\InstanceSettings;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;
+use App\Tests\Support\RegistrationPolicies;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -28,6 +26,8 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
  */
 final class OAuthAccountLinkerTest extends DbTestCase
 {
+    use RegistrationPolicies;
+
     private const NOW = '2026-07-21 12:00:00';
 
     public function testAKnownIdentityResolvesToItsUser(): void
@@ -338,7 +338,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $resolved = $this->linker($events, $this->policy(approve: false))
+        $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
             ->resolve(new OAuthIdentity('google', 'sub-1', 'new@example.com', true));
 
         self::assertSame(UserStatus::Active, $resolved->getStatus());
@@ -355,7 +355,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $events = $recording[0];
         $captured = &$recording[1];
 
-        $resolved = $this->linker($events, $this->policy(approve: false))
+        $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
             ->resolve(new OAuthIdentity('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($planted->getId(), $resolved->getId());
@@ -377,33 +377,18 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $users = $this->em->getRepository(User::class);
         /** @var \App\Repository\UserIdentityRepository $identities */
         $identities = $this->em->getRepository(UserIdentity::class);
+        $policy ??= $this->registrationPolicy(confirm: true, approve: true);
+        $clock = new MockClock(self::NOW);
 
         return new OAuthAccountLinker(
             $this->em,
             $users,
             $identities,
-            new MockClock(self::NOW),
+            $clock,
             $events ?? new EventDispatcher(),
-            $policy ?? $this->policy(approve: true),
+            $policy,
+            new OAuthUserFactory($clock, $policy),
         );
-    }
-
-    /**
-     * Drives the real InstanceSettings service (final, so it cannot be
-     * doubled — see RegistrationServiceTest for the same workaround) and
-     * pairs it with a MailCapability that always reports mail as enabled, so
-     * only the approval toggle decides the outcome.
-     */
-    private function policy(bool $approve): RegistrationPolicy
-    {
-        /** @var InstanceSettings $settings */
-        $settings = self::getContainer()->get(InstanceSettings::class);
-        $settings->update(new InstanceSettingsUpdate(true, $approve, null, null, null));
-
-        $mailSettings = $this->createStub(MailSendingSettingsInterface::class);
-        $mailSettings->method('isSendingEnabled')->willReturn(true);
-
-        return new RegistrationPolicy(new MailCapability($mailSettings), $settings);
     }
 
     /**

@@ -18,6 +18,7 @@ use App\Service\Discovery\FeedDiscovery\FeedDiscoveryInterface;
 use App\Service\Discovery\FeedDiscoveryResult;
 use App\Service\Discovery\ScrapeFallback;
 use App\Service\Discovery\ScrapeFallbackPolicy;
+use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
@@ -94,6 +95,7 @@ final class SubscriptionServiceTest extends DbTestCase
                 $this->em,
                 $clock,
                 new SubscriptionLimitResolver(),
+                new FeedFactory(),
             ),
             new ScrapeFallbackPolicy(),
             new FirstFetchRecorder(

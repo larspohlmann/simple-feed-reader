@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
-use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProviders;
 use App\Tests\Support\BodyCleaningPasses;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;

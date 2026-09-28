@@ -6,9 +6,9 @@ namespace App\Tests\Service\Settings\PasskeyRelyingParty;
 
 use App\Entity\InstanceSettingsUpdate;
 use App\Http\RequestServingHost;
-use App\Service\Settings\PasskeyRelyingParty\ConfiguredPasskeyRelyingParty;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\InstanceSettings;
+use App\Service\Settings\PasskeyRelyingParty\ConfiguredPasskeyRelyingParty;
 use App\Tests\Support\FixedPublicBaseUrl;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;

@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ai\Completion\ChatCompletionClient;
 
+use App\Service\Ai\Completion\ChatCompletionClient\OpenAiCompatibleChatClient;
 use App\Service\Ai\Completion\CompletionBodyDecoder;
 use App\Service\Ai\Completion\CompletionOutcome;
 use App\Service\Ai\Completion\CompletionRequest;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
 use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\JsonSchema;
-use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
-use App\Service\Ai\Completion\ChatCompletionClient\OpenAiCompatibleChatClient;
 use App\Service\Ai\Completion\Reasoning;
 use App\Service\Ai\Exception\CredentialsRejectedException;
 use App\Service\Ai\Exception\ProviderRunawayException;

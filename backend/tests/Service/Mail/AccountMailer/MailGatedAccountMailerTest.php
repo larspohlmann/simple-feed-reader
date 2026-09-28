@@ -6,8 +6,8 @@ namespace App\Tests\Service\Mail\AccountMailer;
 
 use App\Entity\User;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
-use App\Service\Mail\MailCapability;
 use App\Service\Mail\AccountMailer\MailGatedAccountMailer;
+use App\Service\Mail\MailCapability;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;

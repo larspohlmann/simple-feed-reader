@@ -11,7 +11,7 @@ namespace App\Enum;
  * list every call site checks against, not a new type to convert.
  *
  * Shared between {@see \App\Dto\Me\UpdateLocaleRequest} (rejects an unsupported
- * value) and {@see \App\Service\Auth\RegistrationService} (falls back to
+ * value) and {@see \App\Service\Auth\Factory\SignupUserFactory} (falls back to
  * English) — those two used to keep their own copies and had already drifted on
  * what to do with an unsupported value. Also wired into
  * config/packages/translation.yaml's `enabled_locales` via `!php/const`.

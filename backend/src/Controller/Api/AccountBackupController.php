@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Controller\Api;
 
 use App\Entity\User;
-use App\Http\BackupDownloadResponseFactory;
+use App\Http\Factory\BackupDownloadResponseFactory;
 use App\Http\RestorePreviewJson;
 use App\Http\RestoreResultJson;
 use App\Service\Backup\AccountBackupExporter;

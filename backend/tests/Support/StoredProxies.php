@@ -6,8 +6,8 @@ namespace App\Tests\Support;
 
 use App\Entity\ProxyServerSettings;
 use App\Repository\ProxyServerSettingsRepository;
-use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\ConfiguredProxySource\StoredProxy;
+use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 
 trait StoredProxies
 {

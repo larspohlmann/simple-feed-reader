@@ -17,12 +17,12 @@ use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestMailBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use App\Service\Mail\Digest\DigestModel;
-use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
+use App\Service\Mail\Digest\Factory\DigestMailFactory;
+use App\Service\Mail\Digest\Factory\DigestPageFactory;
 use App\Service\Mail\Digest\SendTestDigest;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\MailIdentity;
@@ -141,7 +141,7 @@ final class SendTestDigestTest extends DbTestCase
     }
 
     /**
-     * A real DigestMailer/DigestMailBuilder chain (task 8's pattern), fed by a
+     * A real DigestMailer/DigestMailFactory chain (task 8's pattern), fed by a
      * stubbed transport, proves SendTestDigest routes through the format
      * branch end to end rather than through a mocked mailer.
      */
@@ -162,8 +162,8 @@ final class SendTestDigestTest extends DbTestCase
         $embedder = $this->createStub(DigestImageEmbedderInterface::class);
         $embedder->method('embed')->willReturn(new DigestImageSet([], []));
 
-        $builder = new DigestMailBuilder(
-            new DigestPageBuilder(),
+        $builder = new DigestMailFactory(
+            new DigestPageFactory(),
             $embedder,
             new DigestTextRenderer($translator),
             new DigestHtmlRenderer(

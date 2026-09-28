@@ -11,7 +11,7 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
-use App\Service\Ai\ProviderConnectionFactory;
+use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\ProviderTimeouts;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;

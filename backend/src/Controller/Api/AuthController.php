@@ -10,6 +10,7 @@ use App\Dto\Auth\RegisterRequest;
 use App\Dto\Auth\VerifyEmailRequest;
 use App\Http\AltchaChallengeJson;
 use App\Service\Auth\AltchaService;
+use App\Service\Auth\EmailVerifier;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
 use App\Service\RateLimit\RateLimitGuard;
@@ -28,6 +29,7 @@ final readonly class AuthController
 {
     public function __construct(
         private RegistrationService $registration,
+        private EmailVerifier $emailVerifier,
         private RegistrationPolicy $policy,
         private AltchaService $altcha,
         private RateLimitGuard $rateLimitGuard,
@@ -87,7 +89,7 @@ final readonly class AuthController
     #[Route('/verify-email', name: 'api_auth_verify_email', methods: ['POST'])]
     public function verifyEmail(#[MapRequestPayload] VerifyEmailRequest $request): JsonResponse
     {
-        return new JsonResponse(['status' => $this->registration->verifyEmail($request->token)->value]);
+        return new JsonResponse(['status' => $this->emailVerifier->verify($request->token)->value]);
     }
 
     /**

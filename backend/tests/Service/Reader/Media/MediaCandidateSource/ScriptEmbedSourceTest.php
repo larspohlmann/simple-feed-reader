@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
+use App\Service\Reader\Media\EmbedProviders;
+use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
+use App\Service\Reader\Media\MediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class ScriptEmbedSourceTest extends TestCase

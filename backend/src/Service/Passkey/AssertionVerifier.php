@@ -9,6 +9,7 @@ use App\Repository\UserPasskeyRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\Exception\AssertionRejectedException;
 use App\Service\Passkey\Exception\UnknownPasskeyCredentialException;
+use App\Service\Passkey\Factory\AssertionOptionsFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 use Psr\Cache\InvalidArgumentException;
@@ -202,7 +203,7 @@ final readonly class AssertionVerifier
     }
 
     /**
-     * Mirrors AttestationVerifier::aaguidOrNull() in reverse: this column is
+     * Mirrors UserPasskeyFactory::aaguidOrNull() in reverse: this column is
      * nullable for the same "no AAGUID assigned" reason, so a null stored
      * value rehydrates to the spec's all-zero sentinel the library's own
      * Uuid type expects.

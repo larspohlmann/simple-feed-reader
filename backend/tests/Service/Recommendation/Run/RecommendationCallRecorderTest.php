@@ -16,6 +16,7 @@ use App\Service\Ai\Completion\CompletionStreamProgress;
 use App\Service\Ai\Completion\JsonSchema;
 use App\Service\Ai\Completion\Reasoning;
 use App\Service\Recommendation\Run\CallSlot;
+use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -54,9 +55,9 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $this->recorder = new RecommendationCallRecorder(
             $this->em,
-            $this->logs,
             new RecommendationCallRepository($this->em->getConnection()),
             $this->clock,
+            new RecommendationRunLogFactory($this->logs, $this->clock),
         );
     }
 

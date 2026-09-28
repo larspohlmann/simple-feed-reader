@@ -7,6 +7,7 @@ namespace App\Service\Mail\Transport;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
+use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Envelope;

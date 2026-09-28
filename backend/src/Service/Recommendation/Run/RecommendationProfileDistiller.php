@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 use App\Service\Recommendation\Prompt\CallPrompt;
-use App\Service\Recommendation\Prompt\RecommendationCompletionRequestFactory;
+use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;

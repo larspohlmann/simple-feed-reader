@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\OAuth\OAuthProvider;
 
-use App\Service\OAuth\AppleClientSecretFactory;
+use App\Service\OAuth\Factory\AppleClientSecretFactory;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

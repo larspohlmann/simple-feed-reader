@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
-use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
+use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use PHPUnit\Framework\TestCase;
 

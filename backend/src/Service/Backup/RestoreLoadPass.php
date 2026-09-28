@@ -6,7 +6,6 @@ namespace App\Service\Backup;
 
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
-use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Repository\FeedRepository;
@@ -16,6 +15,7 @@ use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
+use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -54,6 +54,7 @@ final class RestoreLoadPass
         private readonly EntityManagerInterface $em,
         private readonly FeedRepository $feeds,
         private readonly SavedSearchSlug $slug,
+        private readonly RestoredFoundationFactory $rows,
     ) {
     }
 
@@ -100,10 +101,7 @@ final class RestoreLoadPass
 
     private function loadTag(TagLine $line): void
     {
-        $tag = new Tag($this->user, $line->name);
-        $tag->setColor($line->color);
-        $tag->setIcon($line->icon);
-        $tag->setPosition($line->position);
+        $tag = $this->rows->tag($this->user, $line);
         $this->em->persist($tag);
         $this->tagsByName[$line->name] = $tag;
         ++$this->counts['tags'];
@@ -169,13 +167,7 @@ final class RestoreLoadPass
 
     private function createFeed(FeedLine $line): Feed
     {
-        $feed = new Feed($line->url);
-        $feed->setSiteUrl($line->siteUrl);
-        $feed->setTitle($line->title);
-        $feed->setDescription($line->description);
-        $feed->setFaviconUrl($line->faviconUrl);
-        $feed->setImageUrl($line->imageUrl);
-        $feed->setSourceFormat($line->sourceFormat);
+        $feed = $this->rows->feed($line);
         $this->em->persist($feed);
         ++$this->counts['feeds'];
 
@@ -190,12 +182,7 @@ final class RestoreLoadPass
             $line->feedUrl,
         ));
 
-        $subscription = new Subscription($this->user, $feed, $line->createdAt);
-        $subscription->setCustomTitle($line->customTitle);
-        $subscription->setPosition($line->position);
-        $subscription->setMarkedReadUntil($line->markedReadUntil);
-        $subscription->setIncludeInAllItems($line->includeInAllItems);
-        $subscription->setIncludeInForYou($line->includeInForYou);
+        $subscription = $this->rows->subscription($this->user, $feed, $line);
         foreach ($line->tags as $ref) {
             $subscription->addTag($this->tagNamed($ref->name), $ref->position);
         }

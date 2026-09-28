@@ -13,11 +13,11 @@ use App\Service\Mail\Digest\DigestHtmlRenderer;
 use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestImageSet;
 use App\Service\Mail\Digest\DigestLinkBuilder;
-use App\Service\Mail\Digest\DigestMailBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailer;
 use App\Service\Mail\Digest\DigestModel;
-use App\Service\Mail\Digest\DigestPageBuilder;
 use App\Service\Mail\Digest\DigestTextRenderer;
+use App\Service\Mail\Digest\Factory\DigestMailFactory;
+use App\Service\Mail\Digest\Factory\DigestPageFactory;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\MailIdentity;
 use App\Tests\Support\DigestTwigEnvironment;
@@ -30,7 +30,7 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /**
- * DigestMailer is now a thin transport: DigestMailBuilder decides the message
+ * DigestMailer is now a thin transport: DigestMailFactory decides the message
  * shape from the recipient's digest_format (#726), so this test wraps a REAL
  * builder and asserts what survives through the stubbed MailerInterface.
  */
@@ -59,8 +59,8 @@ final class DigestMailerTest extends TestCase
         $embedder = $this->createStub(DigestImageEmbedderInterface::class);
         $embedder->method('embed')->willReturn(new DigestImageSet([], []));
 
-        $builder = new DigestMailBuilder(
-            new DigestPageBuilder(),
+        $builder = new DigestMailFactory(
+            new DigestPageFactory(),
             $embedder,
             new DigestTextRenderer($translator),
             new DigestHtmlRenderer(
