@@ -107,6 +107,10 @@ Non-negotiables:
   share. Module enums, including ones several `Service/*` modules share, stay in their
   owning module for now ([docs/architecture.md](docs/architecture.md) §8,
   `PersistenceKnowsNoServiceRule`).
+- **Service modules form no cycle.** A module is the first directory under
+  `src/Service`, and every service belongs to one. When two modules need each other,
+  the class moves to the module that owns it, or the lower module owns an interface
+  the higher one implements ([docs/architecture.md](docs/architecture.md) §9).
 - **Default to no comment, and mean it.** A clear name, a smaller method, a
   typed value, or the git history beats a sentence about the code — reach for
   those first, and prefer them even when a comment would be easy. Write a
@@ -159,6 +163,10 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.
+- **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
+  `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
+  modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
+  the two dependencies #1163 removed (`Reader → Search`, `Recommendation → Reader`).
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design

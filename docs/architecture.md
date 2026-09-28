@@ -191,3 +191,26 @@ Repository → Service value imports (`SearchTerms`, `LikePattern`, `NormalizedC
 Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
 `DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code), both in `backend/tests/PhpStan/` and run by
 `composer stan`.
+
+## 9. Service modules form no cycle
+
+A `Service/*` module is the first directory under `backend/src/Service`: `Recommendation` with its `Prompt`, `Run`,
+`Feed` and `Settings` subdirectories is one module. Every service belongs to a module, and the modules depend on
+each other without a cycle, so each one can be read, tested and moved without the others. Decided in #1161.
+
+- **What both sides need lives on the lower side.** When a module needs something from a module that depends on it,
+  the class moves to the module that owns the concept, or the lower module owns an interface the higher one
+  implements (`Ai\Completion\CompletionStreamHeartbeat`, implemented in `Recommendation\Run`).
+- **The cycles #1161 broke.** The favicon fetcher moved from `Catalog` to `Image` (now `FaviconFetcher`), ending a
+  nine-module cycle through `Category`, `Discovery`, `Ingest`, `Opml`, `Parser`, `Scraper` and `Subscription`.
+  The recommendation driver liveness (`WorkerPresence`, `SweepStreamHeartbeat`, `RecommendationDriverKind`) moved
+  from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin`.
+  `FeedScheduler` and `OrphanedFeedReclaimer` left the `Service` root for `Service/Feed`. #1159 had already removed
+  `Fetch ↔ Proxy` and `Grafana ↔ Profiling`.
+- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163) closed no cycle, so the cycle rule
+  would not stop them coming back; `ServiceModuleBoundaryRule` names them.
+
+Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
+`composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
+strings, not comments), and the cycle rule reports each cycle once and names its path. A class loose in the `Service`
+root counts as a module of its own.
