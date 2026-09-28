@@ -10,6 +10,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
+use App\Enum\FeedStatus;
 use App\Repository\EntryRepository;
 use App\Repository\FeedRepository;
 use App\Repository\OrphanedFeedRepository;
@@ -204,6 +205,37 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             <item><title>Post</title><link>https://example.com/p</link><guid>{$guid}</guid></item>
             </channel></rss>
             XML;
+    }
+
+    /**
+     * A 304 answering a request that carried no validator confirms nothing, so the engine turns it into an empty
+     * fetch, and the empty body fails the parse like any other unreadable document (#1165).
+     */
+    public function testANotModifiedToAnUnconditionalRequestIsRecordedAsAFailure(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $this->em->flush();
+
+        $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
+        $report = $this->runner($fetcher)->run(RefreshRequest::allDue(300));
+
+        self::assertSame(0, $report->notModified);
+        self::assertSame(1, $report->failed);
+        self::assertSame(FeedStatus::Erroring, $feed->getStatus());
+    }
+
+    public function testANotModifiedToAConditionalRequestKeepsTheFeedHealthy(): void
+    {
+        $feed = $this->dueFeed('https://one.example.com/feed');
+        $feed->recordCacheValidators('"v1"', null);
+        $this->em->flush();
+
+        $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
+        $report = $this->runner($fetcher)->run(RefreshRequest::allDue(300));
+
+        self::assertSame(1, $report->notModified);
+        self::assertSame(0, $report->failed);
+        self::assertSame(FeedStatus::Active, $feed->getStatus());
     }
 
     /**
