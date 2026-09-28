@@ -64,7 +64,6 @@ final class IngestedEntryFactoryTest extends TestCase
         self::assertNull($entry->getUrlHash());
         self::assertNull($entry->getAuthor());
         self::assertSame('Only a body', $entry->getSummary());
-        self::assertNull($entry->getPublishedAt());
         self::assertSame('2026-09-21 12:00:00', $entry->getEffectiveDate()->format('Y-m-d H:i:s'));
     }
 

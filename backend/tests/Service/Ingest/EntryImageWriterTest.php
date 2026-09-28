@@ -35,6 +35,8 @@ final class EntryImageWriterTest extends TestCase
 
         self::assertTrue($stored);
         self::assertSame('https://img.example.com/a.jpg', $entry->getImage()->getUrl());
+        self::assertSame(800, $entry->getImage()->getWidth());
+        self::assertSame(600, $entry->getImage()->getHeight());
         self::assertNull($entry->getImage()->getCheckedAt());
     }
 
