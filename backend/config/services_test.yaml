@@ -330,8 +330,8 @@ services:
         autowire: true
         public: true
 
-    # MailCapabilityWiringTest fetches this to prove the service actually
-    # resolves through the real container, including its MailSendingSettingsInterface
+    # MailCapabilityWiringTest fetches this to prove the service actually resolves
+    # through the real container, including its MailSendingSettingsInterface
     # collaborator, which a hand-constructed MailCapability cannot catch.
     App\Service\Mail\MailCapability:
         autowire: true
@@ -356,8 +356,9 @@ services:
         autowire: true
         public: true
 
-    # Test environment only: the whole container speaks to the stub instead of
-    # OpenAiCompatibleChatClient, same swap pattern as ModelCatalogInterface above.
+    # Test environment only: the whole container speaks to the
+    # stub instead of OpenAiCompatibleChatClient, same swap
+    # pattern as ModelCatalogInterface above.
     App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
         public: true
@@ -476,8 +477,8 @@ services:
         public: true
 
     # CompletionStreamHeartbeatWiringTest arms each composite member by class
-    # name and beats it through the CompletionStreamHeartbeatInterface alias, to prove
-    # the container hands the advancer and the sweep the SAME instances the
+    # name and beats it through the CompletionStreamHeartbeatInterface alias, to
+    # prove the container hands the advancer and the sweep the SAME instances the
     # composite fans out to. `self::getContainer()->get(...)` refuses a
     # private service, so all three need the same public override as the
     # entries above. Test environment only — production keeps them private.
