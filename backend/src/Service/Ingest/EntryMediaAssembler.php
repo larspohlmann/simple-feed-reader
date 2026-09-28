@@ -14,7 +14,7 @@ use App\Service\Url\HttpsImageUrl;
 
 /**
  * Turns the feed's parsed media into the entity's two stored lists. The lead
- * passes the same https-upgrading gate `EntryIngestor::storeImage` uses, so
+ * passes the same https-upgrading gate `EntryImageWriter::write` uses, so
  * `media[0]` stays equal to `getImageUrl()` — guarded by EntryIngestorTest.
  */
 final class EntryMediaAssembler
@@ -65,7 +65,6 @@ final class EntryMediaAssembler
         return $kept;
     }
 
-    /** The lead is not yet verified, so it is upgraded rather than merely accepted — the same gate storeImage uses. */
     private static function leadMedium(?DeclaredImage $lead): ?EntryMedium
     {
         if ($lead === null) {

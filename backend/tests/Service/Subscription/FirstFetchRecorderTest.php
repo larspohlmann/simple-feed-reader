@@ -4,27 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Subscription;
 
-use App\Entity\Category;
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Discovery\DiscoveredFeed;
-use App\Service\FeedScheduler;
-use App\Service\Fetch\HostThrottle;
-use App\Service\Ingest\EntryCategoryWriter;
-use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
-use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Search\EntryIndexer;
 use App\Service\Subscription\FirstFetchRecorder;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
+use App\Tests\Support\EntryIngestors;
+use App\Tests\Support\FeedSchedulers;
 use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
 final class FirstFetchRecorderTest extends DbTestCase
@@ -39,20 +30,8 @@ final class FirstFetchRecorderTest extends DbTestCase
         $clock = new MockClock('2026-06-01T00:00:00Z');
         $this->indexWriter = new RecordingSearchIndexWriter();
         $this->recorder = new FirstFetchRecorder(
-            new EntryIngestor(
-                $this->em,
-                $this->em->getRepository(Entry::class),
-                new EntrySanitizer(),
-                new UrlNormalizer(),
-                new EntryCategoryWriter(
-                    $this->em,
-                    $this->em->getRepository(Category::class),
-                    new CategoryNormalizer(),
-                ),
-                new NaiveUtcClock($clock),
-                new PlatformEntryRules([]),
-            ),
-            new FeedScheduler($clock, new HostThrottle(new ArrayAdapter(clock: $clock), $clock)),
+            EntryIngestors::build($this->em, $clock),
+            FeedSchedulers::build($clock),
             $this->em,
             $clock,
             new EntryIndexer($this->indexWriter, new NullLogger()),

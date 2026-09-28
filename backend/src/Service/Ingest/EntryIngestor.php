@@ -10,11 +10,6 @@ use App\Repository\EntryRepository;
 use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Parser\ParsedEntry;
 use App\Service\Parser\ParsedFeed;
-use App\Service\Parser\ParsedMediaBundle;
-use App\Service\Clock\NaiveUtcClock;
-use App\Service\Image\DeclaredImage;
-use App\Service\Url\HttpsImageUrl;
-use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -24,12 +19,10 @@ use Doctrine\ORM\EntityManagerInterface;
  * content, truncates to column limits, and refreshes feed metadata. Caller
  * flushes.
  */
-final class EntryIngestor
+final readonly class EntryIngestor
 {
-    private const int TITLE_MAX = 1024;
-    private const int AUTHOR_MAX = 255;
-    private const int URL_MAX = 2048;
     private const int FEED_TITLE_MAX = 512;
+    private const int SITE_URL_MAX = 2048;
 
     /**
      * feed.description is a TEXT column, so nothing but this bounds it. It is
@@ -42,13 +35,13 @@ final class EntryIngestor
     private const int FEED_DESCRIPTION_MAX = 4000;
 
     public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly EntryRepository $entryRepository,
-        private readonly EntrySanitizer $sanitizer,
-        private readonly UrlNormalizer $urlNormalizer,
-        private readonly EntryCategoryWriter $categoryWriter,
-        private readonly NaiveUtcClock $clock,
-        private readonly PlatformEntryRules $platformRules,
+        private EntityManagerInterface $em,
+        private EntryRepository $entryRepository,
+        private UrlNormalizer $urlNormalizer,
+        private EntryCategoryWriter $categoryWriter,
+        private PlatformEntryRules $platformRules,
+        private IngestedEntryFactory $entryFactory,
+        private EntryImageWriter $imageWriter,
     ) {
     }
 
@@ -68,48 +61,24 @@ final class EntryIngestor
             return [];
         }
 
-        $entries = array_map($this->platformRules->apply(...), $parsed->entries);
-
-        $deduplicator = new EntryDeduplicator(
-            $this->entryRepository->existingGuidHashesForFeed(
-                $feed->requireId(),
-                $this->guidHashesOf($entries),
-            ),
-            $this->entryRepository->findExistingUrlHashes($feed, $this->urlHashesOf($entries)),
+        $incoming = array_map(
+            fn (ParsedEntry $parsedEntry): IncomingEntry => $this->incoming($this->platformRules->apply($parsedEntry)),
+            $parsed->entries,
         );
+        $deduplicator = $this->deduplicatorFor($feed, $incoming);
 
         $created = [];
         $newPairs = [];
-        foreach ($entries as $parsedEntry) {
-            $guidHash = self::guidHash($parsedEntry->guid);
-            $urlHash = $this->urlHash($parsedEntry->url);
-            if ($deduplicator->isDuplicate($guidHash, $urlHash)) {
+        foreach ($incoming as $candidate) {
+            if ($deduplicator->isDuplicate($candidate->guidHash, $candidate->urlHash)) {
                 continue;
             }
-            $deduplicator->remember($guidHash, $urlHash);
+            $deduplicator->remember($candidate->guidHash, $candidate->urlHash);
 
-            $entry = new Entry(
-                $feed,
-                $parsedEntry->guid,
-                $parsedEntry->url === null ? null : mb_substr($parsedEntry->url, 0, self::URL_MAX),
-                mb_substr($parsedEntry->title, 0, self::TITLE_MAX),
-                $context->fetchedAt,
-                EntryEffectiveDate::for($parsedEntry->publishedAt, $context),
-                $urlHash,
-            );
-            $entry->setAuthor(
-                $parsedEntry->author === null ? null : mb_substr($parsedEntry->author, 0, self::AUTHOR_MAX),
-            );
-            $entry->setSummary(EntrySnippet::from($parsedEntry->summary ?? $parsedEntry->contentHtml));
-            $entry->setContentHtml($this->sanitizer->sanitize($parsedEntry->contentHtml));
-            $entry->setPublishedAt($parsedEntry->publishedAt);
-            $entry->setDiscussion($parsedEntry->discussion);
-            $this->applyImage($entry, $parsedEntry->media->image);
-            $this->applyMedia($entry, $parsedEntry);
-
+            $entry = $this->entryFactory->create($feed, $candidate, $context);
             $this->em->persist($entry);
             $created[] = $entry;
-            $newPairs[] = [$entry, $parsedEntry];
+            $newPairs[] = [$entry, $candidate->parsed];
         }
 
         $this->categoryWriter->attach($newPairs);
@@ -146,7 +115,7 @@ final class EntryIngestor
             if ($entry === null || !$entry->getImage()->isMissing()) {
                 continue;
             }
-            if ($this->storeImage($entry, $image)) {
+            if ($this->imageWriter->write($entry, $image)) {
                 $updated++;
             }
         }
@@ -160,7 +129,7 @@ final class EntryIngestor
             $feed->setTitle(mb_substr($parsed->title, 0, self::FEED_TITLE_MAX));
         }
         if ($parsed->siteUrl !== null) {
-            $feed->setSiteUrl(mb_substr($parsed->siteUrl, 0, self::URL_MAX));
+            $feed->setSiteUrl(mb_substr($parsed->siteUrl, 0, self::SITE_URL_MAX));
         }
         if ($parsed->description !== null) {
             $feed->setDescription(mb_substr($parsed->description, 0, self::FEED_DESCRIPTION_MAX));
@@ -174,42 +143,23 @@ final class EntryIngestor
         }
     }
 
-    private function applyImage(Entry $entry, ?DeclaredImage $image): void
+    private function incoming(ParsedEntry $entry): IncomingEntry
     {
-        if ($image === null || !$this->storeImage($entry, $image)) {
-            $entry->getImage()->storePending(null, null, null);
-        }
+        return new IncomingEntry($entry, self::guidHash($entry->guid), $this->urlNormalizer->hash($entry->url));
     }
 
-    private function storeImage(Entry $entry, DeclaredImage $image): bool
+    /**
+     * @param list<IncomingEntry> $incoming
+     */
+    private function deduplicatorFor(Feed $feed, array $incoming): EntryDeduplicator
     {
-        $url = HttpsImageUrl::orNullUpgrading($image->url);
-        if ($url === null) {
-            return false;
-        }
-        if (self::trustedAtIngest($image)) {
-            $entry->getImage()->storeVerified($url, $image->width, $image->height, $this->clock->now());
-        } else {
-            $entry->getImage()->storePending($url, $image->width, $image->height);
-        }
-
-        return true;
-    }
-
-    private static function trustedAtIngest(DeclaredImage $image): bool
-    {
-        return $image->width !== null
-            && $image->height !== null
-            && !$image->declaresBeacon()
-            && HttpsImageUrl::isNativeHttps($image->url);
-    }
-
-    /** The lead passes the same https-upgrading gate applyImage uses, so media[0] stays the persisted lead. */
-    private function applyMedia(Entry $entry, ParsedEntry $parsedEntry): void
-    {
-        $bundle = $parsedEntry->media->mediaBundle ?? new ParsedMediaBundle();
-        $assembled = EntryMediaAssembler::assemble($parsedEntry->media->image, $bundle->media, $bundle->attachments);
-        $entry->setMedia($assembled->media, $assembled->attachments);
+        return new EntryDeduplicator(
+            $this->entryRepository->existingGuidHashesForFeed(
+                $feed->requireId(),
+                array_map(static fn (IncomingEntry $candidate): string => $candidate->guidHash, $incoming),
+            ),
+            $this->entryRepository->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
+        );
     }
 
     /**
@@ -223,28 +173,20 @@ final class EntryIngestor
     }
 
     /**
-     * @param list<ParsedEntry> $entries
+     * @param list<IncomingEntry> $incoming
      *
-     * @return list<string> the url hashes of the entries that have a URL —
-     *                      url-less items dedupe on GUID alone, so they add no
-     *                      hash here
+     * @return list<string> the url hashes of the entries that have one: a url-less item dedupes on GUID alone
      */
-    private function urlHashesOf(array $entries): array
+    private static function urlHashesOf(array $incoming): array
     {
         $hashes = [];
-        foreach ($entries as $entry) {
-            $urlHash = $this->urlHash($entry->url);
-            if ($urlHash !== null) {
-                $hashes[] = $urlHash;
+        foreach ($incoming as $candidate) {
+            if ($candidate->urlHash !== null) {
+                $hashes[] = $candidate->urlHash;
             }
         }
 
         return $hashes;
-    }
-
-    private function urlHash(?string $url): ?string
-    {
-        return $this->urlNormalizer->hash($url);
     }
 
     private static function guidHash(string $guid): string

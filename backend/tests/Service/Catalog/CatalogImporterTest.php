@@ -45,17 +45,22 @@ final class CatalogImporterTest extends DbTestCase
             );
         }
 
-        $parser = self::getContainer()->get(CatalogDocument::class);
-        self::assertInstanceOf(CatalogDocument::class, $parser);
-
-        return $parser->parse(\sprintf(
-            '<opml version="2.0"><head><title>t</title></head><body>'
-            . '<outline text="%s" key="%s" icon="memory" color="#3b82f6">%s</outline>'
-            . '</body></opml>',
+        return $this->parsed(\sprintf(
+            '<outline text="%s" key="%s" icon="memory" color="#3b82f6">%s</outline>',
             $name,
             $key,
             $outlines,
         ));
+    }
+
+    private function parsed(string $categoryOutlines): ParsedCatalog
+    {
+        $parser = self::getContainer()->get(CatalogDocument::class);
+        self::assertInstanceOf(CatalogDocument::class, $parser);
+
+        return $parser->parse(
+            '<opml version="2.0"><head><title>t</title></head><body>' . $categoryOutlines . '</body></opml>',
+        );
     }
 
     /**
@@ -65,14 +70,9 @@ final class CatalogImporterTest extends DbTestCase
      */
     private function twoCategoryDocumentInReverseAlphabeticalOrder(): ParsedCatalog
     {
-        $parser = self::getContainer()->get(CatalogDocument::class);
-        self::assertInstanceOf(CatalogDocument::class, $parser);
-
-        return $parser->parse(
-            '<opml version="2.0"><head><title>t</title></head><body>'
-            . '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
-            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>'
-            . '</body></opml>',
+        return $this->parsed(
+            '<outline text="Zebra" key="zebra" icon="memory" color="#3b82f6"></outline>'
+            . '<outline text="Apple" key="apple" icon="memory" color="#3b82f6"></outline>',
         );
     }
 
@@ -239,6 +239,7 @@ final class CatalogImporterTest extends DbTestCase
         $result = $this->importer()->import($this->document([]), CatalogImportMode::Replace);
 
         self::assertSame(0, $result->categoriesRemoved);
+        self::assertSame(2, $result->lockedSkipped);
 
         $this->em()->clear();
         self::assertCount(1, $this->em()->getRepository(CatalogFeed::class)->findAll());
@@ -258,6 +259,126 @@ final class CatalogImporterTest extends DbTestCase
 
         self::assertSame(0, $result->categoriesRemoved);
         self::assertSame(1, $result->lockedSkipped);
+    }
+
+    public function testAnUpdateRewritesTheCategoryAndTheFeedFromTheDocument(): void
+    {
+        $this->importer()->import($this->parsed(
+            '<outline text="Technology" key="technology" icon="memory" color="#3b82f6">'
+            . '<outline type="rss" text="Old title" xmlUrl="https://moved.example.com/rss.xml"/>'
+            . '<outline type="rss" text="Filler" xmlUrl="https://filler.example.com/rss.xml"/>'
+            . '</outline>',
+        ), CatalogImportMode::Merge);
+
+        $result = $this->importer()->import($this->parsed(
+            '<outline text="Science" key="science" icon="science" color="#10b981"></outline>'
+            . '<outline text="Tech and Gadgets" key="technology" icon="devices" color="#ef4444">'
+            . '<outline type="rss" text="Ahead" xmlUrl="https://ahead.example.com/rss.xml"/>'
+            . '<outline type="rss" text="New title" xmlUrl="https://moved.example.com/rss.xml"'
+            . ' htmlUrl="https://moved.example.com/" description="A description" sourceFormat="scraped"/>'
+            . '</outline>',
+        ), CatalogImportMode::Merge);
+
+        self::assertSame(1, $result->categoriesCreated);
+        self::assertSame(1, $result->categoriesUpdated);
+        self::assertSame(1, $result->feedsCreated);
+        self::assertSame(1, $result->feedsUpdated);
+        self::assertSame(0, $result->lockedSkipped);
+
+        $this->em()->clear();
+        $category = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($category);
+        self::assertSame('Tech and Gadgets', $category->getName());
+        self::assertSame('devices', $category->getIcon());
+        self::assertSame('#ef4444', $category->getColor());
+        self::assertSame(1, $category->getPosition());
+        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://moved.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('New title', $feed->getTitle());
+        self::assertSame('technology', $feed->getCategory()->getKey());
+        self::assertSame('https://moved.example.com/', $feed->getSiteUrl());
+        self::assertSame('A description', $feed->getDescription());
+        self::assertSame('scraped', $feed->getSourceFormat());
+        self::assertSame(1, $feed->getPosition());
+    }
+
+    public function testAFeedListedUnderAnotherCategoryMovesThere(): void
+    {
+        $this->importer()->import(
+            $this->document([['title' => 'Wanderer', 'url' => 'https://wanderer.example.com/rss.xml']]),
+            CatalogImportMode::Merge,
+        );
+
+        $result = $this->importer()->import(
+            $this->document(
+                [['title' => 'Wanderer', 'url' => 'https://wanderer.example.com/rss.xml']],
+                'science',
+                'Science',
+            ),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(1, $result->categoriesCreated);
+        self::assertSame(1, $result->feedsUpdated);
+
+        $this->em()->clear();
+        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://wanderer.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('science', $feed->getCategory()->getKey());
+    }
+
+    public function testALockedCategoryKeepsItsRowWhileItsFeedsAreStillImported(): void
+    {
+        $this->importer()->import($this->document([]), CatalogImportMode::Merge);
+        $category = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($category);
+        $category->setLocked(true);
+        $this->em()->flush();
+
+        $result = $this->importer()->import(
+            $this->document(
+                [['title' => 'Inside', 'url' => 'https://inside.example.com/rss.xml']],
+                'technology',
+                'Renamed',
+            ),
+            CatalogImportMode::Merge,
+        );
+
+        self::assertSame(1, $result->lockedSkipped);
+        self::assertSame(0, $result->categoriesUpdated);
+        self::assertSame(1, $result->feedsCreated);
+
+        $this->em()->clear();
+        $reloaded = $this->em()->getRepository(CatalogCategory::class)->findOneBy(['key' => 'technology']);
+        self::assertNotNull($reloaded);
+        self::assertSame('Technology', $reloaded->getName());
+        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy([
+            'url' => 'https://inside.example.com/rss.xml',
+        ]);
+        self::assertNotNull($feed);
+        self::assertSame('technology', $feed->getCategory()->getKey());
+    }
+
+    public function testReplaceCountsALockedFeedTheDocumentStillListsOnce(): void
+    {
+        $document = $this->document([['title' => 'Mine', 'url' => 'https://mine.example.com/rss.xml']]);
+        $this->importer()->import($document, CatalogImportMode::Merge);
+        $feed = $this->em()->getRepository(CatalogFeed::class)->findOneBy(['title' => 'Mine']);
+        self::assertNotNull($feed);
+        $feed->setLocked(true);
+        $this->em()->flush();
+
+        $result = $this->importer()->import($document, CatalogImportMode::Replace);
+
+        self::assertSame(1, $result->lockedSkipped);
+        self::assertSame(0, $result->feedsUpdated);
+        self::assertSame(0, $result->feedsRemoved);
+        self::assertSame(1, $result->categoriesUpdated);
+        self::assertSame(0, $result->categoriesRemoved);
     }
 
     public function testPositionsFollowDocumentOrder(): void

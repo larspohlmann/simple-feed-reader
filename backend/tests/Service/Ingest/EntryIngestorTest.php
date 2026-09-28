@@ -4,17 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Ingest;
 
-use App\Entity\Category;
 use App\Entity\Discussion;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Enum\CommentsLoad;
-use App\Repository\CategoryRepository;
-use App\Repository\EntryRepository;
-use App\Service\Category\CategoryNormalizer;
-use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\DeclaredImage;
-use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\FeedIngestContext;
 use App\Service\Ingest\Platform\PlatformEntryRules;
@@ -26,9 +20,8 @@ use App\Service\Parser\ParsedFeed;
 use App\Service\Parser\ParsedMediaBundle;
 use App\Service\Parser\ParsedMedium;
 use App\Service\Parser\VisualMediaKind;
-use App\Service\Sanitize\EntrySanitizer;
-use App\Service\Url\UrlNormalizer;
 use App\Tests\DbTestCase;
+use App\Tests\Support\EntryIngestors;
 use Symfony\Component\Clock\MockClock;
 
 final class EntryIngestorTest extends DbTestCase
@@ -43,20 +36,7 @@ final class EntryIngestorTest extends DbTestCase
 
     private function ingestorWith(PlatformEntryRules $rules): EntryIngestor
     {
-        /** @var EntryRepository $entryRepository */
-        $entryRepository = $this->em->getRepository(Entry::class);
-        /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $this->em->getRepository(Category::class);
-
-        return new EntryIngestor(
-            $this->em,
-            $entryRepository,
-            new EntrySanitizer(),
-            new UrlNormalizer(),
-            new EntryCategoryWriter($this->em, $categoryRepository, new CategoryNormalizer()),
-            new NaiveUtcClock(new MockClock('2026-09-21 12:00:00')),
-            $rules,
-        );
+        return EntryIngestors::withPlatformRules($this->em, new MockClock('2026-09-21 12:00:00'), $rules);
     }
 
     private function parsedEntryAt(string $guid, string $url): ParsedEntry
@@ -476,6 +456,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(2, $entries);
 
         $first = $entries[0];
+        self::assertStringContainsString('<p>Body</p>', (string) $first->getContentHtml());
         self::assertStringNotContainsString('script', (string) $first->getContentHtml());
         self::assertSame('A & B summary', $first->getSummary());
         self::assertSame('Feed Title', $feed->getTitle());
@@ -548,6 +529,43 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame(2048, mb_strlen((string) $entry->getUrl()));
         self::assertLessThanOrEqual(500, mb_strlen((string) $entry->getSummary()));
         self::assertSame(512, mb_strlen((string) $feed->getTitle()));
+    }
+
+    public function testOverlongFeedMetadataIsCutToItsColumns(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed(
+            'A' . str_repeat('T', 899),
+            'https://example.com/' . str_repeat('s', 3000),
+            'D' . str_repeat('d', 4999),
+            null,
+            [],
+        );
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame('A' . str_repeat('T', 511), $feed->getTitle());
+        self::assertSame('https://example.com/' . str_repeat('s', 2028), $feed->getSiteUrl());
+        self::assertSame('D' . str_repeat('d', 3999), $feed->getDescription());
+    }
+
+    public function testAMultibyteSiteUrlIsCutByCharactersNotBytes(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed(null, 'https://example.com/' . str_repeat('ä', 3000), null, null, []);
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame('https://example.com/' . str_repeat('ä', 2028), $feed->getSiteUrl());
+    }
+
+    public function testAnItemWithoutUrlOrAuthorIsStoredWithBothNull(): void
+    {
+        $entry = $this->ingestOne(new ParsedEntry('no-url', null, 'Title', null, null, '<p>body</p>', null));
+
+        self::assertNull($entry->getUrl());
+        self::assertNull($entry->getUrlHash());
+        self::assertNull($entry->getAuthor());
     }
 
     public function testPersistsTheFeedSuppliedImage(): void
