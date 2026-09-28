@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Auth\Factory;
 
+use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Service\Auth\Factory\SignupUserFactory;
 use App\Tests\DbTestCase;
@@ -33,13 +34,18 @@ final class SignupUserFactoryTest extends DbTestCase
         self::assertSame($stored, $user->getLocale());
     }
 
-    public function testThePasswordIsStoredHashed(): void
+    public function testThePasswordIsStoredAsTheHashersOutput(): void
     {
-        $user = $this->factory(confirm: true, approve: true)->create('h@example.test', self::PASSWORD, 'en');
+        $hasher = $this->createStub(UserPasswordHasherInterface::class);
+        $hasher->method('hashPassword')
+            ->willReturnCallback(static fn (User $user, string $plain): string => 'hashed:' . $plain);
+        /** @var ClockInterface $clock */
+        $clock = self::getContainer()->get(ClockInterface::class);
+        $factory = new SignupUserFactory($hasher, $clock, $this->registrationPolicy(true, true));
 
-        /** @var UserPasswordHasherInterface $hasher */
-        $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        self::assertTrue($hasher->isPasswordValid($user, self::PASSWORD));
+        $user = $factory->create('h@example.test', self::PASSWORD, 'en');
+
+        self::assertSame('hashed:' . self::PASSWORD, $user->getPasswordHash());
     }
 
     /** @return iterable<string, array{bool, bool, UserStatus, bool}> */
