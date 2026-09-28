@@ -9,6 +9,7 @@ use App\Entity\User;
 use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Ai\Exception\AiKeyUnreadableException;
+use App\Service\Ai\Factory\AiConfigurationFactory;
 use App\Service\Ai\ModelCatalog\ModelCatalogInterface;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Ai\Exception\AiNotConfiguredException;
@@ -38,9 +39,7 @@ use Psr\Clock\ClockInterface;
  */
 final readonly class AiProviderConfigurator
 {
-    private const int HINT_LENGTH = 4;
     private const int MAX_CONFIGURATIONS = 20;
-    private const int NAME_MAX_LENGTH = 120; // matches AiProviderSettings::$name column length
 
     public function __construct(
         private ModelCatalogInterface $catalog,
@@ -48,6 +47,7 @@ final readonly class AiProviderConfigurator
         private AiProviderSettingsRepository $repository,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private AiConfigurationFactory $configurations,
     ) {
     }
 
@@ -94,17 +94,7 @@ final readonly class AiProviderConfigurator
         $credentials = ProviderCredentials::fromAccountInput($baseUrl, $apiKey);
         $descriptors = $this->catalog->listModels($credentials);
 
-        $sealed = $this->cipher->seal($user->requireId(), $credentials->apiKey);
-        $hint = substr($credentials->apiKey, -self::HINT_LENGTH);
-
-        $configuration = new AiProviderSettings(
-            $user,
-            $name,
-            $credentials->baseUrl,
-            $sealed,
-            $hint,
-            $this->clock->now(),
-        );
+        $configuration = $this->configurations->create($user, $name, $credentials);
         $this->entityManager->persist($configuration);
         $this->entityManager->flush();
 
@@ -132,19 +122,7 @@ final readonly class AiProviderConfigurator
             );
         }
 
-        $sealed = $this->cipher->seal($user->requireId(), $this->credentials($source)->apiKey);
-
-        $copy = new AiProviderSettings(
-            $user,
-            $this->copyName($source->getName()),
-            $source->getBaseUrl(),
-            $sealed,
-            $source->getApiKeyHint(),
-            $source->getVerifiedAt() ?? $this->clock->now(),
-        );
-        $copy->setSuppressReasoning($source->suppressesReasoning());
-        $copy->copyRunTuningFrom($source);
-
+        $copy = $this->configurations->duplicate($source, $this->credentials($source));
         $this->entityManager->persist($copy);
         $this->entityManager->flush();
 
@@ -270,18 +248,5 @@ final readonly class AiProviderConfigurator
     private function ids(array $descriptors): array
     {
         return array_map(static fn (ModelDescriptor $descriptor): string => $descriptor->id, $descriptors);
-    }
-
-    /**
-     * The `name` column holds 120 characters, so a long source name is trimmed
-     * to keep the prefixed copy inside it.
-     */
-    private function copyName(?string $sourceName): string
-    {
-        if (null === $sourceName || '' === $sourceName) {
-            return 'Copy';
-        }
-
-        return mb_substr('Copy of ' . $sourceName, 0, self::NAME_MAX_LENGTH);
     }
 }
