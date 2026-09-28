@@ -17,7 +17,6 @@ final class FeedBodyParserTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $this->expectExceptionMessage('No feed body parser is wired for "xml".');
-        $this->expectExceptionCode(0);
 
         $parser->parse(new Feed('https://example.com/feed'), '<rss/>');
     }

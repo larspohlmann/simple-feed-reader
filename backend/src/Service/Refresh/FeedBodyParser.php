@@ -50,7 +50,7 @@ final readonly class FeedBodyParser
         try {
             $parser = $this->parsers->get($format);
         } catch (ContainerExceptionInterface $e) {
-            throw new \LogicException(sprintf('No feed body parser is wired for "%s".', $format), 0, $e);
+            throw new \LogicException(sprintf('No feed body parser is wired for "%s".', $format), previous: $e);
         }
         \assert($parser instanceof FeedBodyParserInterface);
 
