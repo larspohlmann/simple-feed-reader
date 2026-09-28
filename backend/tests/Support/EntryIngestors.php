@@ -13,6 +13,7 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Ingest\EntryCategoryWriter;
 use App\Service\Ingest\EntryImageWriter;
 use App\Service\Ingest\EntryIngestor;
+use App\Service\Ingest\IngestedEntryFactory;
 use App\Service\Ingest\Platform\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Url\UrlNormalizer;
@@ -36,15 +37,16 @@ final class EntryIngestors
         $entryRepository = $em->getRepository(Entry::class);
         /** @var CategoryRepository $categoryRepository */
         $categoryRepository = $em->getRepository(Category::class);
+        $imageWriter = new EntryImageWriter(new NaiveUtcClock($clock));
 
         return new EntryIngestor(
             $em,
             $entryRepository,
-            new EntrySanitizer(),
             new UrlNormalizer(),
             new EntryCategoryWriter($em, $categoryRepository, new CategoryNormalizer()),
-            new EntryImageWriter(new NaiveUtcClock($clock)),
             $platformRules,
+            new IngestedEntryFactory(new EntrySanitizer(), $imageWriter),
+            $imageWriter,
         );
     }
 }

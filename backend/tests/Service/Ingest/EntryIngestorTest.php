@@ -548,6 +548,16 @@ final class EntryIngestorTest extends DbTestCase
         self::assertSame('D' . str_repeat('d', 3999), $feed->getDescription());
     }
 
+    public function testAMultibyteSiteUrlIsCutByCharactersNotBytes(): void
+    {
+        $feed = $this->feed();
+        $parsed = new ParsedFeed(null, 'https://example.com/' . str_repeat('ä', 3000), null, null, []);
+
+        $this->ingestor->ingest($feed, $parsed, self::context());
+
+        self::assertSame('https://example.com/' . str_repeat('ä', 2028), $feed->getSiteUrl());
+    }
+
     public function testAnItemWithoutUrlOrAuthorIsStoredWithBothNull(): void
     {
         $entry = $this->ingestOne(new ParsedEntry('no-url', null, 'Title', null, null, '<p>body</p>', null));
