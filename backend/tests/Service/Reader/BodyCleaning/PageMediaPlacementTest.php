@@ -62,6 +62,7 @@ final class PageMediaPlacementTest extends TestCase
 
         $out = $this->placed(new BodyCleaningInput([], $this->hero(), $audio, FeedMedia::none()));
 
+        self::assertStringContainsString('cdn.test/hero.jpg', $out);
         self::assertLessThan(strpos($out, '<audio'), strpos($out, 'cdn.test/hero.jpg'));
     }
 
