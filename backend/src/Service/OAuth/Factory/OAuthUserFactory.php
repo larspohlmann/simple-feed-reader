@@ -67,9 +67,10 @@ final readonly class OAuthUserFactory
      * held by a local account we just refused to link to.
      *
      * When the address IS linkable, OAuthAccountLinker::findLinkTarget() has
-     * just established that no account holds it. A concurrent request for the same address can
-     * still lose that race and hit uniq_user_email, surfacing as a 500 on a
-     * retryable request, as RegistrationService does with the same race.
+     * just established that no account holds it. A concurrent request for the
+     * same address can still lose that race and hit uniq_user_email,
+     * surfacing as a 500 on a retryable request, as RegistrationService does
+     * with the same race.
      */
     private function loginIdentifierFor(OAuthIdentity $identity): string
     {
