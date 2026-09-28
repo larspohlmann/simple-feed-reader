@@ -6,7 +6,6 @@ namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\SuspiciousPhrases;
