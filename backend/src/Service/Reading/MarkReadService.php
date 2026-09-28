@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reading;
 
 use App\Entity\Subscription;
 use App\Entity\User;

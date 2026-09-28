@@ -2,20 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed;
+namespace App\Service\Reading;
 
 use App\Entity\User;
 use App\Repository\RecommendationItemRepository;
-use App\Service\Reader\EntryReadMarker;
 
 /**
- * Marks the caller's for-you picks read.
- *
- * Deliberately NOT `MarkReadService`: that one advances each subscription's
- * read watermark, and the for-you feed is not scoped to a feed. A watermark
- * here would mark entries read in All items that the reader never saw among
- * their picks — and the watermark is what emptied the recommendation candidate
- * pool in #665. Only the picked entries' own states change.
+ * Marks the caller's for-you picks read by entry state only. A watermark would also mark read what All items
+ * shows but the picks never did, and it emptied the recommendation candidate pool in #665.
  */
 final readonly class ForYouMarkReadService
 {

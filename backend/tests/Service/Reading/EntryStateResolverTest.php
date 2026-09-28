@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -14,8 +14,9 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\EntryStateRepository;
-use App\Service\Reader\EntryStateResolver;
+use App\Service\Reading\EntryStateResolver;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 
 final class EntryStateResolverTest extends DbTestCase
 {
@@ -95,11 +96,8 @@ final class EntryStateResolverTest extends DbTestCase
     }
 
     /**
-     * The #496 concurrency bug: two requests touching the same duplicate group
-     * both find no state row, both lazily create one, and the second flush dies
-     * on the composite primary key. Here the concurrent winner commits the row
-     * (through the idempotent insert) after this request already resolved it;
-     * the fix reloads the winning row, so the flush issues only an UPDATE.
+     * #496: a concurrent writer inserts the row after this request resolved it. resolve() reloads the winning
+     * row, so the flush issues an UPDATE, not a duplicate-key INSERT.
      */
     public function testResolveSurvivesAConcurrentInsertOfTheSameRow(): void
     {
@@ -147,5 +145,25 @@ final class EntryStateResolverTest extends DbTestCase
 
         self::assertSame($existing, $resolved);
         self::assertTrue($resolved->isKept());
+    }
+
+    public function testResolveSkipsTheInsertWhenTheRowAlreadyExists(): void
+    {
+        $entry = $this->entry('already-there');
+        $this->em->persist(new EntryState($this->user, $entry));
+        $this->em->flush();
+
+        /** @var QueryRecorder $recorder */
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        $recorder->reset();
+
+        $this->resolver()->resolve($this->user, $this->listRow($entry, false, null));
+
+        self::assertCount(
+            0,
+            $recorder->queriesMatching('insert'),
+            "resolve() must not attempt an insert when the row already exists, got:\n"
+                . implode("\n", $recorder->queries()),
+        );
     }
 }

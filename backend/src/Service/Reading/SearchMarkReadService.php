@@ -2,19 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reading;
 
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Service\Search\SearchTerms;
 
-/**
- * Marks read every unread entry matching a search term for one user. A search
- * spans every feed and is a content filter, so — unlike feed/tag mark-read —
- * there is no watermark to bump: each matching entry needs an EntryState row,
- * which is what `EntryReadMarker` writes.
- */
+/** Marks read every unread entry matching a search term. A search spans every feed, so no watermark scopes it. */
 final readonly class SearchMarkReadService
 {
     public function __construct(

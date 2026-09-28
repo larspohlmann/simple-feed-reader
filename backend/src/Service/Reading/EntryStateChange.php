@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader;
+namespace App\Service\Reading;
 
 /** A partial state change: a null flag stays as it is. */
 final readonly class EntryStateChange

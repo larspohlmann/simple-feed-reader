@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader;
+namespace App\Tests\Service\Reading;
 
 use App\Entity\Entry;
 use App\Entity\EntryState;
@@ -12,7 +12,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Repository\Exception\RecordNotFoundException;
-use App\Service\Reader\MarkReadService;
+use App\Service\Reading\MarkReadService;
 use App\Tests\DbTestCase;
 
 final class MarkReadServiceTest extends DbTestCase
