@@ -69,4 +69,21 @@ final class MediaRelevanceTest extends TestCase
 
         self::assertStringContainsString('schule-episode', $ranked[0]);
     }
+
+    public function testAFourLetterSlugTokenCountsAsAMatch(): void
+    {
+        $ranked = $this->relevance->rank(
+            ['https://x.test/other.mp3', 'https://x.test/wave.mp3'],
+            'https://x.test/wave.html',
+        );
+
+        self::assertSame('https://x.test/wave.mp3', $ranked[0]);
+    }
+
+    public function testNeitherAShortWordNorALongNumberIsASlugToken(): void
+    {
+        $urls = ['https://x.test/other.mp3', 'https://x.test/big.mp3', 'https://x.test/2026.mp3'];
+
+        self::assertSame($urls, $this->relevance->rank($urls, 'https://x.test/big-story-2026.html'));
+    }
 }
