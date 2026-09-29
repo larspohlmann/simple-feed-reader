@@ -69,7 +69,7 @@ final class UserStatusChangerTest extends DbTestCase
     {
         $user = $this->factory()->create('grant@example.com', status: $startingStatus);
         $mailer = $this->mailer();
-        $mailer->expects(self::once())->method('sendApproved')->with($user);
+        $mailer->expects($this->once())->method('sendApproved')->with($user);
 
         $this->service($mailer)->approve($user);
 
@@ -91,7 +91,7 @@ final class UserStatusChangerTest extends DbTestCase
     {
         $user = $this->factory()->create('silent@example.com', status: $startingStatus);
         $mailer = $this->mailer();
-        $mailer->expects(self::never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendApproved');
 
         $this->service($mailer)->approve($user);
 

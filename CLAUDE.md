@@ -185,6 +185,8 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`NoCollaboratorDefaultRule`** (`tests/PhpStan/NoCollaboratorDefaultRule.php`) — a service, controller,
   listener, command or HTTP class never defaults a constructor parameter with `new`; tests pass the
   collaborator in. Models, DTOs and per-call objects may default a value.
+- **`InvocationMatchersOnThisRule`** — PHPUnit's invocation matchers are called on `$this`
+  (`$this->once()`, `$this->never()`); PhpStorm's EA warning on `self::once()` blocks the lint gate.
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out

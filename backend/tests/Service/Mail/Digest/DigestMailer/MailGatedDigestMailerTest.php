@@ -22,7 +22,7 @@ final class MailGatedDigestMailerTest extends TestCase
         $user = new User('a@b.test', new \DateTimeImmutable());
 
         $inner = $this->createMock(DigestMailerInterface::class);
-        $inner->expects(self::once())->method('send')->with($user, $model);
+        $inner->expects($this->once())->method('send')->with($user, $model);
 
         $gated = new MailGatedDigestMailer($inner, $this->mailCapability(true), new NullLogger());
         $gated->send($user, $model);
@@ -31,10 +31,10 @@ final class MailGatedDigestMailerTest extends TestCase
     public function testSkipsAndDoesNotDelegateWhenMailDisabled(): void
     {
         $inner = $this->createMock(DigestMailerInterface::class);
-        $inner->expects(self::never())->method('send');
+        $inner->expects($this->never())->method('send');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')->with(
+        $logger->expects($this->once())->method('info')->with(
             'Mail disabled; skipped digest mail to {email}.',
             ['email' => 'a@b.test'],
         );

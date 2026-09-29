@@ -25,12 +25,12 @@ final class CompositeCompletionStreamHeartbeatTest extends TestCase
         $order = [];
 
         $first = $this->createMock(CompletionStreamHeartbeatInterface::class);
-        $first->expects(self::once())->method('beat')->willReturnCallback(static function () use (&$order): void {
+        $first->expects($this->once())->method('beat')->willReturnCallback(static function () use (&$order): void {
             $order[] = 'first';
         });
 
         $second = $this->createMock(CompletionStreamHeartbeatInterface::class);
-        $second->expects(self::once())->method('beat')->willReturnCallback(static function () use (&$order): void {
+        $second->expects($this->once())->method('beat')->willReturnCallback(static function () use (&$order): void {
             $order[] = 'second';
         });
 

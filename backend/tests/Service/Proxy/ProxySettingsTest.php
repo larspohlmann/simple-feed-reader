@@ -134,7 +134,7 @@ final class ProxySettingsTest extends TestCase
         $repository->method('findSingleton')->willReturn(new ProxyServerSettings());
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::once())->method('flush');
+        $em->expects($this->once())->method('flush');
 
         (new ProxySettings($repository, $em, ProxyPasswordCiphers::withTestSecret()))
             ->update(SettingsRequests::proxy(host: 'proxy.example', password: 'pw123456')->toUpdate());

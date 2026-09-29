@@ -146,7 +146,7 @@ final class GrafanaSettingsTest extends TestCase
         $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::once())->method('flush');
+        $em->expects($this->once())->method('flush');
         $settings = new GrafanaSettings(
             $repository,
             $em,

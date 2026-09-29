@@ -141,15 +141,15 @@ final class RegistrationServiceTest extends DbTestCase
 
         $capturedToken = null;
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::once())
+        $mailer->expects($this->once())
             ->method('sendVerification')
             ->with(self::isInstanceOf(User::class), self::isString())
             ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
                 self::assertSame('newcomer@example.com', $user->getEmail());
                 $capturedToken = $token;
             });
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
         $recording = $this->recordingDispatcher();
         $events = $recording[0];
@@ -175,9 +175,9 @@ final class RegistrationServiceTest extends DbTestCase
         $policy = $this->registrationPolicy(confirm: false, approve: true);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::never())->method('sendVerification');
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendVerification');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
         $recording = $this->recordingDispatcher();
         $events = $recording[0];
@@ -201,9 +201,9 @@ final class RegistrationServiceTest extends DbTestCase
         $policy = $this->registrationPolicy(confirm: false, approve: false);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::never())->method('sendVerification');
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendVerification');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
         $recording = $this->recordingDispatcher();
         $events = $recording[0];

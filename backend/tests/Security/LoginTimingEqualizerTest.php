@@ -114,7 +114,7 @@ final class LoginTimingEqualizerTest extends TestCase
         foreach ([null, $this->userWithoutPassword(), $this->userWithPassword()] as $found) {
             $work = new HashCountingWork();
             $users = $this->createMock(UserByEmailInterface::class);
-            $users->expects(self::once())->method('findOneByEmail')->willReturn($found);
+            $users->expects($this->once())->method('findOneByEmail')->willReturn($found);
 
             (new LoginTimingEqualizer($work, $users))
                 ->equalize(new BadCredentialsException(), 'someone@example.com');
@@ -132,7 +132,7 @@ final class LoginTimingEqualizerTest extends TestCase
     {
         $work = new HashCountingWork();
         $users = $this->createMock(UserByEmailInterface::class);
-        $users->expects(self::never())->method('findOneByEmail');
+        $users->expects($this->never())->method('findOneByEmail');
 
         (new LoginTimingEqualizer($work, $users))->equalize(
             new TooManyLoginAttemptsAuthenticationException(),

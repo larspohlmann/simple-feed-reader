@@ -221,7 +221,7 @@ final class DigestImageEmbedderTest extends TestCase
         $fetcher->method('download')->willThrowException(new FaviconUnavailableException('boom'));
         $resizer = $this->createStub(DigestImageResizerInterface::class);
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('debug')->with(
+        $logger->expects($this->once())->method('debug')->with(
             self::anything(),
             self::callback(static fn (array $context): bool => ($context['url'] ?? null) === 'https://cdn/broken.jpg'),
         );

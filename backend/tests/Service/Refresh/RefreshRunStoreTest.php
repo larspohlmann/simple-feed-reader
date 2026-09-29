@@ -141,7 +141,7 @@ final class RefreshRunStoreTest extends TestCase
     {
         $item = $this->createMock(CacheItemInterface::class);
         $item->method('set')->willReturnSelf();
-        $item->expects(self::once())->method('expiresAfter')->with(600);
+        $item->expects($this->once())->method('expiresAfter')->with(600);
 
         $cache = $this->createStub(CacheItemPoolInterface::class);
         $cache->method('getItem')->willReturn($item);

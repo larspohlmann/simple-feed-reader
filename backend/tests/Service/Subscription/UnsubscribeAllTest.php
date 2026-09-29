@@ -184,8 +184,8 @@ final class UnsubscribeAllTest extends KernelTestCase
         self::assertInstanceOf(OrphanedFeedReclaimer::class, $orphanedFeeds);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::never())->method('flush');
-        $em->expects(self::never())->method('remove');
+        $em->expects($this->never())->method('flush');
+        $em->expects($this->never())->method('remove');
 
         $service = new SubscriptionService(
             $discovery,

@@ -90,7 +90,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $resolver = $this->resolverReturning([0 => 'https://example.com/favicon.ico']);
 
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::once())
+        $fetcher->expects($this->once())
             ->method('download')
             ->with('https://example.com/favicon.ico')
             ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
@@ -113,7 +113,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $resolver = $this->resolverReturning([0 => null]);
 
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::never())->method('download');
+        $fetcher->expects($this->never())->method('download');
 
         $report = $this->warmer($resolver, $fetcher)->warm(120);
 
@@ -149,7 +149,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $resolver = $this->resolverReturning([0 => null]);
 
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::never())->method('download');
+        $fetcher->expects($this->never())->method('download');
 
         $this->warmer($resolver, $fetcher)->refresh($feed);
 
