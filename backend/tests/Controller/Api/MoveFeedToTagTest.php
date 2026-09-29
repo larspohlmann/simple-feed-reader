@@ -45,6 +45,29 @@ final class MoveFeedToTagTest extends WebTestCase
         self::assertArrayNotHasKey($moved->requireId(), $newsFeeds);
     }
 
+    public function testMoveAnswersWithTheMovedSubscription(): void
+    {
+        $client = self::createClient();
+        $user = $this->user('mover-body@example.com');
+        $news = $this->makeTag($user, 'News', 0);
+        $tech = $this->makeTag($user, 'Tech', 1);
+        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $this->entityManager()->flush();
+
+        $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
+            'fromTagId' => $news->getId(),
+            'toTagId' => $tech->getId(),
+            'position' => 0,
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $body = json_decode((string) $client->getResponse()->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertIsArray($body);
+        self::assertIsArray($body['subscription']);
+        self::assertSame($moved->getId(), $body['subscription']['id']);
+        self::assertSame('https://m.example.com/rss', $body['subscription']['feedUrl']);
+    }
+
     public function testAForeignTargetTagIsRejectedAndNothingChanges(): void
     {
         $client = self::createClient();
