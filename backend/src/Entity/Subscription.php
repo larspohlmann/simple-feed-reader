@@ -54,11 +54,11 @@ final class Subscription implements PositionedInterface
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
-    /** Whether this feed appears in "All items" and its unread badge (#688). */
+    /** Whether this feed appears in "All items" and its unread badge. */
     #[ORM\Column(name: 'include_in_all_items', options: ['default' => true])]
     private bool $includeInAllItems = true;
 
-    /** Whether this feed feeds the "For You" recommendation pool (#688). */
+    /** Whether this feed feeds the "For You" recommendation pool. */
     #[ORM\Column(name: 'include_in_for_you', options: ['default' => true])]
     private bool $includeInForYou = true;
 
@@ -141,9 +141,7 @@ final class Subscription implements PositionedInterface
     }
 
     /**
-     * The tags on this subscription, ordered by their per-tag position. Kept as
-     * the public read shape so callers that only need tags are unaffected by the
-     * join being an entity now.
+     * The tags on this subscription, ordered by their per-tag position.
      *
      * @return Collection<int, Tag>
      */

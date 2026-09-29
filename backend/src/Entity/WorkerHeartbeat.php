@@ -9,10 +9,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One named liveness signal. The worker's sweep touches its row every
- * firing; the poll driver treats a fresh row as "a worker owns execution".
- * This is an efficiency signal only — the per-user run lock stays the
- * correctness guarantee (#311).
+ * One named liveness signal: the worker's sweep touches its row every firing, and a fresh row tells the poll driver a
+ * worker owns execution. An efficiency signal only; the per-user run lock stays the correctness guarantee.
  */
 #[ORM\Entity(repositoryClass: WorkerHeartbeatRepository::class)]
 #[ORM\Table(name: 'worker_heartbeat')]

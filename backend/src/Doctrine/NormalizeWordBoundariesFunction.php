@@ -12,18 +12,8 @@ use Doctrine\ORM\Query\SqlWalker;
 use Doctrine\ORM\Query\TokenType;
 
 /**
- * DQL: NORMALIZE_WORD_BOUNDARIES(stringExpression)
- *
- * Turns punctuation that borders a word into a space, so a padded haystack
- * (" " . normalized . " ") can be tested for " term " to find a whole-word
- * match with plain LIKE — MySQL and SQLite have no negated character class,
- * so "not followed by a letter" cannot be written directly.
- *
- * This is the SQL half of the rule. `WordBoundaries` owns the character list
- * and performs the same replacement in PHP on the search term; the two must
- * stay identical, which is why neither spells the list out itself. SQLite
- * runs that PHP directly, as a function SqliteConnectionSetupDriver registers
- * on every connection; MySQL gets the list as a REPLACE chain.
+ * NORMALIZE_WORD_BOUNDARIES(expr) turns word-bordering punctuation into spaces, so LIKE finds " term " in " value " as
+ * a whole word. WordBoundaries owns the characters for this SQL half and the PHP half alike; neither spells them out.
  */
 final class NormalizeWordBoundariesFunction extends FunctionNode
 {

@@ -10,12 +10,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One suggestion in the onboarding catalog. The URL is a VERIFIED direct feed
- * URL, which is what lets the subscribe path skip discovery entirely.
- *
- * The favicon bytes live on the row rather than on disk so the cache shares the
- * catalog's backup/restore unit and needs no writable var/ path on Strato. They
- * are filled exclusively by app:catalog:warm-favicons — never by a request.
+ * One onboarding-catalog suggestion. Its URL is a verified direct feed URL, so subscribing skips discovery.
+ * The favicon bytes live on the row, backed up with the catalog and needing no writable var/ on Strato;
+ * only app:catalog:warm-favicons fills them.
  */
 #[ORM\Entity(repositoryClass: CatalogFeedRepository::class)]
 #[ORM\Table(name: 'catalog_feed')]

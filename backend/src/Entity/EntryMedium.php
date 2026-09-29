@@ -7,10 +7,8 @@ namespace App\Entity;
 use App\Entity\Exception\IncompleteStoredMediaException;
 
 /**
- * One visual media item stored on an entry: an image or a video, with whatever
- * dimensions and poster the feed declared. `kind` is the string the API emits
- * (`image` or `video`). Unknown fields are omitted from the JSON, so a bare
- * image stores just its URL and kind.
+ * One image or video on an entry, with the dimensions and poster the feed declared. `kind` is the API's string
+ * (`image` or `video`); unset fields stay out of the JSON.
  */
 final readonly class EntryMedium implements \JsonSerializable
 {

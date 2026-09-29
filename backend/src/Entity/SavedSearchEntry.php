@@ -9,7 +9,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One entry a saved search's terms match (#1116). A derived row: the sweep
+ * One entry a saved search's terms match. A derived row: the sweep
  * writes it, every reader joins it, and it is safe to rebuild at any time.
  */
 #[ORM\Entity(repositoryClass: SavedSearchEntryMembershipRepository::class)]

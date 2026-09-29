@@ -12,10 +12,7 @@ final class EntryLocation
     #[ORM\Column(name: 'url', length: 2048, nullable: true)]
     private ?string $url = null;
 
-    /**
-     * Null means either a URL-less entry or a row from before #484 added this
-     * column; the ingest dedup treats both as "no URL match".
-     */
+    /** Null for a URL-less entry or a row older than this column; the ingest dedup treats both as "no URL match". */
     #[ORM\Column(name: 'url_hash', length: 64, nullable: true)]
     private ?string $urlHash = null;
 

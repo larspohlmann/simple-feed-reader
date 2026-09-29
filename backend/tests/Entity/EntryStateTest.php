@@ -82,7 +82,7 @@ final class EntryStateTest extends TestCase
 
         $state->clearViewed();
 
-        // Un-ticking (#482) drops "Recently read" but keeps the entry read.
+        // Un-ticking drops "Recently read" but keeps the entry read.
         self::assertFalse($state->isViewed());
         self::assertNull($state->getViewedAt());
         self::assertTrue($state->isHidden());

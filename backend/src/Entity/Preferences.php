@@ -29,16 +29,10 @@ final class Preferences
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private User $user;
 
-    /**
-     * Whether feed discovery may fall back to scraping a plain HTML page.
-     * Off by default: extraction quality depends entirely on the target page
-     * and can break whenever that page changes, so the feature is opt-in and
-     * presented as experimental.
-     */
+    /** Off by default and presented as experimental: scraped extraction breaks whenever the target page changes. */
     #[ORM\Column(options: ['default' => false])]
     private bool $scrapeFallbackEnabled = false;
 
-    /** Boxed by default: what every existing account already sees (#723). */
     #[ORM\Column(name: 'magazine_style', length: 10, enumType: MagazineStyle::class, options: ['default' => 'boxed'])]
     private MagazineStyle $magazineStyle = MagazineStyle::Boxed;
 
@@ -63,10 +57,7 @@ final class Preferences
     #[ORM\Column(name: 'digest_last_sent_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $digestLastSentAt = null;
 
-    /**
-     * Naive UTC. Null until the account answers the one-time passkey
-     * enrolment offer (#624); once set, the offer must never show again.
-     */
+    /** Naive UTC. Null until the account answers the one-time passkey enrolment offer, which then never shows again. */
     #[ORM\Column(name: 'passkey_offer_answered_at', type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $passkeyOfferAnsweredAt = null;
 

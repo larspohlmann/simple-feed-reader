@@ -14,7 +14,7 @@ enum RunStatus: string
     /** Terminal, and reached only by the user stopping the run themselves. */
     case Cancelled = 'cancelled';
 
-    /** Over for good. resume() keeps completedAt, so "has a completion time" is not this question (#409). */
+    /** Over for good. resume() keeps completedAt, so "has a completion time" is not this question. */
     public function isTerminal(): bool
     {
         return match ($this) {

@@ -13,18 +13,8 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
     private const array SQLITE_DRIVERS = ['pdo_sqlite', 'sqlite3'];
 
     /**
-     * What every SQLite connection needs before use: these pragmas, plus the
-     * word-boundary function (see registerWordBoundariesFunction).
-     *
-     * foreign_keys: SQLite ignores FK constraints unless asked, so without this
-     * a cascade never fires and deletes leave orphaned rows.
-     *
-     * journal_mode: the default (DELETE) locks readers out for a whole write
-     * transaction; a refresh sweep writes for as long as it takes to ingest
-     * every feed, and SQLite's busy timeout turns that wait into a stall
-     * (worse to diagnose than a failure). WAL lets readers read during a
-     * write. It's a property of the file, not the session, so re-applying it
-     * each connect just reports the mode back.
+     * foreign_keys: SQLite ignores FK constraints, and so every cascade, unless asked. journal_mode=WAL: the default
+     * locks readers out for a whole write transaction, and a refresh sweep writes for as long as ingesting takes.
      */
     private const array PRAGMAS = [
         'PRAGMA foreign_keys = ON',
@@ -48,11 +38,8 @@ final class SqliteConnectionSetupDriver extends AbstractDriverMiddleware
     }
 
     /**
-     * NORMALIZE_WORD_BOUNDARIES as one native call on SQLite. Spelled out as
-     * nested REPLACEs (the MySQL rendering) it is 26 levels deep, and SQLite
-     * before 3.46 parses with a fixed 100-entry stack: one whole-word search
-     * fits, two ORed together overflow it (#584). PHP's own normalize() is the
-     * rule, so the two engines cannot drift.
+     * One native call on SQLite: the nested-REPLACE rendering is 26 levels deep, and SQLite before 3.46 overflows its
+     * parser stack on two ORed whole-word searches (#584). WordBoundaries::normalize() stays the one rule.
      */
     private function registerWordBoundariesFunction(Connection $connection): void
     {
