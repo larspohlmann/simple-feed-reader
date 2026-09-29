@@ -12,23 +12,18 @@ use PHPStan\Rules\IdentifierRuleError;
 use PHPStan\Rules\Rule;
 
 /**
- * Every class in src/Service and src/Http has one role, and its folder and name say which (#1202,
- * docs/architecture.md §10). Until #1202 closes, a run reports only the checks it is given.
+ * Every class in src/Service and src/Http, and every event listener in src, has one role, and its folder and name
+ * say which (#1202, docs/architecture.md §10).
  *
  * @implements Rule<CollectedDataNode>
  */
 final readonly class ServiceRoleRule implements Rule
 {
-    /** @var list<ServiceRoleCheck> */
-    private array $checks;
-
     /** @var list<ServiceRoleChecker> */
     private array $checkers;
 
-    /** @param list<string> $checks */
-    public function __construct(private ReflectionProvider $reflectionProvider, array $checks)
+    public function __construct(private ReflectionProvider $reflectionProvider)
     {
-        $this->checks = array_map(ServiceRoleCheck::from(...), $checks);
         $this->checkers = [
             new InterfacePlacement(),
             new RoleFolderNames(),
@@ -56,9 +51,7 @@ final readonly class ServiceRoleRule implements Rule
         );
         foreach ($this->checkers as $checker) {
             foreach ($checker->violationsIn($map) as $violation) {
-                if (\in_array($violation->check, $this->checks, true)) {
-                    $errors[] = $violation->toError();
-                }
+                $errors[] = $violation->toError();
             }
         }
 

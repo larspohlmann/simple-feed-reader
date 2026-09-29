@@ -26,24 +26,17 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string WRONG_MODEL_FOLDER = 'sits in the wrong Model/ folder';
     private const string LISTENER = 'App\EventListener\Fixtures\NotifyTheShop';
 
-    /** @var list<string> */
-    private array $checks = [];
-
     protected function setUp(): void
     {
         parent::setUp();
         // ServiceRoleMap resolves collected names through ReflectionProvider::hasClass(), which only
         // recognises a fixture-only class once it is genuinely declared; analysing the file only parses it.
         require_once self::FIXTURES;
-        $this->checks = array_map(
-            static fn (ServiceRoleCheck $check): string => $check->value,
-            ServiceRoleCheck::cases(),
-        );
     }
 
     protected function getRule(): Rule
     {
-        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class), $this->checks);
+        return new ServiceRoleRule(self::getContainer()->getByType(ReflectionProvider::class));
     }
 
     protected function getCollectors(): array
@@ -351,22 +344,6 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 807,
             ],
-        ]);
-    }
-
-    public function testARunReportsOnlyTheChecksItIsGiven(): void
-    {
-        $this->checks = ['listenerName', 'rootService'];
-
-        $this->analyse([self::FIXTURES], [
-            [self::shop('rootService', 'Cashier', self::NOT_READONLY), 162],
-            [self::shop('rootService', 'Porter', self::NOT_FINAL), 170],
-            [self::shop('rootService', 'Register', self::TAKES_A_MODEL), 178],
-            [self::listenerMessage(), 493],
-            [self::takesADto(), 563],
-            [self::securityListener('GuardTheDoor'), 741],
-            [self::securityListener('WatchTheWindow'), 749],
-            [self::securityListener('CountTheVisitors'), 757],
         ]);
     }
 
