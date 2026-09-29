@@ -14,6 +14,8 @@ final readonly class RootPlacement implements ServiceRoleChecker
         ServiceRoleNames::EXCEPTION, ServiceRoleNames::MESSAGE, ServiceRoleNames::MODEL, ServiceRoleNames::PASS,
     ];
 
+    private const array DATA_ROLES = [ServiceRoleNames::MODEL, ServiceRoleNames::PASS];
+
     private const string PER_CALL_NAMES = '/(Pass|Context|Tally)$/';
 
     public function violationsIn(ServiceRoleMap $map): array
@@ -43,13 +45,10 @@ final readonly class RootPlacement implements ServiceRoleChecker
             );
         }
         if (\in_array($role, self::SETTLED_ROLES, true)) {
-            return null;
+            return self::isHelperInADataRole($class) ? self::staticOnlyViolation($class) : null;
         }
         if ($class->isStaticOnly()) {
-            return new ServiceRoleViolation(ServiceRoleCheck::SupportHome, $class, 'is static-only', self::homeIn(
-                $class,
-                ServiceRoleNames::SUPPORT,
-            ));
+            return self::staticOnlyViolation($class);
         }
         if (ServiceRoleNames::DTO === $role) {
             return null;
@@ -62,6 +61,21 @@ final readonly class RootPlacement implements ServiceRoleChecker
         }
 
         return self::isPlacedByItsInterfaceOrName($map, $class) ? null : self::perCallViolation($map, $class);
+    }
+
+    private static function isHelperInADataRole(ServiceRoleClass $class): bool
+    {
+        return \in_array($class->role(), self::DATA_ROLES, true)
+            && $class->isStaticOnly()
+            && $class->declaresStaticMethod();
+    }
+
+    private static function staticOnlyViolation(ServiceRoleClass $class): ServiceRoleViolation
+    {
+        return new ServiceRoleViolation(ServiceRoleCheck::SupportHome, $class, 'is static-only', self::homeIn(
+            $class,
+            ServiceRoleNames::SUPPORT,
+        ));
     }
 
     private static function isPlacedByItsInterfaceOrName(ServiceRoleMap $map, ServiceRoleClass $class): bool

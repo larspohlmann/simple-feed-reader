@@ -101,6 +101,17 @@ final readonly class ServiceRoleClass
             && (null === $constructor || 0 === $constructor->getNumberOfParameters());
     }
 
+    public function declaresStaticMethod(): bool
+    {
+        foreach ($this->reflection->getNativeReflection()->getMethods(\ReflectionMethod::IS_STATIC) as $method) {
+            if ($method->getDeclaringClass()->getName() === $this->name()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static function declaresPublicInstanceMethod(ClassReflection $reflection): bool
     {
         foreach ($reflection->getNativeReflection()->getMethods() as $method) {

@@ -310,6 +310,24 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 682,
             ],
             [self::till('Receipt', 'is a helper, so it is final'), 696],
+            [
+                self::message(
+                    'supportHome',
+                    'App\Service\Till\Pass\OpeningFloat',
+                    'is static-only',
+                    'App\Service\Till\Support\OpeningFloat',
+                ),
+                710,
+            ],
+            [
+                self::message(
+                    'supportHome',
+                    'App\Service\Till\Model\TaxRateModel',
+                    'is static-only',
+                    'App\Service\Till\Support\TaxRateModel',
+                ),
+                724,
+            ],
         ]);
     }
 

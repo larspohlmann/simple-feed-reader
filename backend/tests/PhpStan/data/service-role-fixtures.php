@@ -705,3 +705,31 @@ namespace App\Service\Till\Support {
         }
     }
 }
+
+namespace App\Service\Till\Pass {
+    final class OpeningFloat
+    {
+        private function __construct()
+        {
+        }
+
+        public static function opening(): int
+        {
+            return 100;
+        }
+    }
+}
+
+namespace App\Service\Till\Model {
+    final readonly class TaxRateModel
+    {
+        private function __construct()
+        {
+        }
+
+        public static function standard(): int
+        {
+            return 19;
+        }
+    }
+}
