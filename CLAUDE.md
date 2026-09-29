@@ -249,9 +249,9 @@ Enforced mechanically by `composer check` and `composer md`:
   patch would leave behind. Let the user choose; don't silently default to the
   band-aid. (Case in point: #128 — three successive patches to the shared
   header state lost to one layer-isolation redesign.)
-- **Hex colours are forbidden in `.scss` outside `src/app/theme/`** (Stylelint
-  `color-no-hex`), and so are ad-hoc `px` spacing values and media-query
-  literals — both fail `npm run check`.
+- **Hex colours are forbidden in `.scss` outside `src/app/theme/`, `src/styles/`
+  and `src/styles.scss`** (Stylelint `color-no-hex`), and so are ad-hoc `px`
+  spacing values and media-query literals — both fail `npm run check`.
 - **Component styles live in a sibling `.scss` file** (`styleUrl`), never inline
   in the `.ts`: Stylelint has no TS syntax installed, so inline styles are
   silently unlinted.
