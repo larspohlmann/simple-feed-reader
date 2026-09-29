@@ -18,11 +18,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * Against the real repositories and entity manager, not mocks: the resolver's
- * job is to combine two rows that may or may not exist, and a mock would have
- * to encode that combination logic itself instead of proving it.
- */
 final class RecommendationSettingsResolverTest extends DbTestCase
 {
     private User $user;
@@ -106,9 +101,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     }
 
     /**
-     * The batch ceiling follows the connection's own cap, because how long a
-     * list a model holds in order is a property of the endpoint, not of the
-     * account's taste (#437).
+     * The batch ceiling follows the connection's own cap: how long a list a model holds in order is a property of the
+     * endpoint, not of the account's taste.
      */
     public function testAConnectionWithACapPacksToThatCap(): void
     {
@@ -132,11 +126,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         );
     }
 
-    /**
-     * The regression test for #445: `slow_model` used to double as the batch
-     * ceiling's switch. Now it governs timeouts alone, so a connection marked
-     * slow with no cap of its own still gets the default ceiling.
-     */
+    /** `slow_model` governs timeouts alone: a slow connection with no cap of its own keeps the default ceiling. */
     public function testAConnectionMarkedSlowWithNoCapKeepsTheDefaultBatchCeiling(): void
     {
         $this->seedAiSettingsWithModel($this->user, contextWindow: 200000);
@@ -183,10 +173,6 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         self::assertTrue($settings->showReasons);
     }
 
-    /**
-     * A fresh user out of setUp() never had a settings row created for it;
-     * this name exists to make that precondition explicit at the call site.
-     */
     private function userWithoutSettingsRow(): User
     {
         return $this->user;

@@ -11,10 +11,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use Symfony\Component\Clock\MockClock;
 
-/**
- * The mechanism that lets WorkerPresence::FRESH_SECONDS stay short while a
- * single provider call runs for an hour (#433).
- */
 final class SweepStreamHeartbeatTest extends DbTestCase
 {
     use ProvidesWorkerHeartbeats;
@@ -86,10 +82,8 @@ final class SweepStreamHeartbeatTest extends DbTestCase
     }
 
     /**
-     * The interval is a minimum, not a strict gap: a beat exactly on the
-     * boundary writes. Pinned because the difference between `>=` and `>` here
-     * is one whole interval of extra silence in the worst case, and nothing
-     * else would notice.
+     * A beat exactly on the interval writes: `>` instead of `>=` would add a whole interval of silence that nothing
+     * else notices.
      */
     public function testABeatExactlyOnTheIntervalWrites(): void
     {

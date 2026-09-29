@@ -21,13 +21,6 @@ use App\Service\Recommendation\Run\RecommendationRunPurger;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
-/**
- * Children delete in an explicit order (logs, then items, then runs) rather
- * than leaning on DB-level cascades, so the order is part of the code and
- * portable across both suite dialects. A second user's rows must survive
- * untouched, and an active run must block the purge outright rather than
- * deleting rows a live tick is still writing to.
- */
 final class RecommendationRunPurgerTest extends DbTestCase
 {
     private User $user;
