@@ -364,6 +364,21 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertSame('WordPress Example', $outcome->subscription->getFeed()->getTitle());
     }
 
+    public function testAVerbatimSubscribeIsStoredByTheTimeItReturns(): void
+    {
+        $user = $this->factory()->create('wpjson-stored@example.com');
+        $service = $this->service($this->discoveryReturning(FeedDiscoveryResultModel::candidates([])));
+
+        $outcome = $service->subscribe($user, 'https://wp.example/wp-json/wp/v2/posts', SourceFormat::WP_JSON);
+        $this->entityManager->clear();
+
+        self::assertNotNull($outcome->subscription);
+        self::assertInstanceOf(
+            Subscription::class,
+            $this->entityManager->find(Subscription::class, $outcome->subscription->requireId()),
+        );
+    }
+
     public function testWpJsonSubscribeDoesNotChangeTheTitleOfAnExistingSharedFeed(): void
     {
         $shared = new Feed('https://wp.example/wp-json/wp/v2/posts');
