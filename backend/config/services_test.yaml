@@ -1,59 +1,27 @@
 services:
-    # MailDeliveryHealthTest fetches this to drive recordFailure()/
-    # recordSuccess()/view() through the real repository/entity-manager
-    # graph. It has production callers (AdminMailController, the send paths)
-    # and would survive compilation on its own — `public: true` here is only
-    # so the test container's `self::getContainer()->get(...)` can fetch it,
-    # which the container refuses on a private service. Same `autowire`
-    # caveat as the entries below: naming a class here replaces the
-    # definition rather than amending it, and this file has no `_defaults`.
+    # Test-only: `public: true` keeps a service the compiler would inline or remove, so a test can fetch or replace
+    # it through self::getContainer(). Naming a class here replaces its services.yaml definition, and this file has
+    # no `_defaults`, so a class with constructor arguments needs `autowire: true`.
     App\Service\Mail\MailFailureRecorder\MailDeliveryHealth:
         autowire: true
         public: true
 
-    # MailConnectionTesterTest fetches this to drive test() through the real
-    # settings/security graph. Its only production caller is a controller
-    # action argument, so the compiler would inline it away and the test
-    # container could not fetch it. Same `autowire` caveat as the entries
-    # below: naming a class here replaces the definition rather than amending
-    # it, and this file has no `_defaults`.
     App\Service\Mail\Settings\MailConnectionTester:
         autowire: true
         public: true
 
-    # WorkerPresenceTest constructs a second instance by hand with a MockClock
-    # to pin the freshness boundary exactly, but also drives the
-    # container-built instance to prove the real wiring resolves. Its only
-    # production caller (the poll-side arbitration) arrives in a later task,
-    # so until then the compiler would inline it away and the test container
-    # could not fetch it. Same `autowire` caveat as the entries below: naming
-    # a class here replaces the definition rather than amending it, and this
-    # file has no `_defaults`.
     App\Service\Recommendation\Run\WorkerPresence:
         autowire: true
         public: true
 
-    # EmbedProvidersWiringTest drives resolve() through the real tagged
-    # iterator. Its only production caller arrives in a later #748 task, so
-    # until then the compiler would inline it away and the test container
-    # could not fetch it. Same `autowire` caveat as the entries below.
     App\Service\Reader\Media\EmbedProviders:
         autowire: true
         public: true
 
-    # PageMediaScannerWiringTest drives scan() through the real tagged
-    # iterator. Its only production caller arrives in a later #748 task, so
-    # until then the compiler would inline it away and the test container
-    # could not fetch it. Same `autowire` caveat as the entries below.
     App\Service\Reader\Media\PageMediaScanner:
         autowire: true
         public: true
 
-    # AiProviderConfiguratorTest swaps the real catalog for a stub via
-    # `self::getContainer()->set(...)`, which the container only allows on
-    # public services, and fetches the configurator itself with `->get(...)`,
-    # which the container refuses on a private service. Test environment only
-    # — production keeps both private.
     App\Service\Ai\ModelCatalog\ModelCatalogInterface:
         alias: App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog
         public: true
@@ -62,79 +30,40 @@ services:
         autowire: true
         public: true
 
-    # AiConfigurationForUserTest drives require() directly against the real
-    # repository and entity manager to prove the ownership-scoped 404. Public
-    # so the test container's `self::getContainer()->get(...)` can fetch it
-    # directly, which the container refuses on a private service. Same
-    # `autowire` caveat as the entries above.
     App\Service\Ai\AiConfigurationForUser:
         autowire: true
         public: true
 
-    # RecommendationSettingsResolverTest seals a throwaway API key directly to
-    # seed an AiProviderSettings row without a live provider call. Same
-    # `autowire` caveat as the entries below: naming a class here replaces the
-    # definition rather than amending it, and this file has no `_defaults`.
     App\Service\Ai\Crypto\ApiKeyCipher:
         autowire: true
         public: true
 
-    # RecommendationSettingsResolverTest drives forUser() directly to prove the
-    # user-override / provider-window / fallback precedence. Its only
-    # production caller arrives with the settings API in a later task, so
-    # until then the compiler would inline it away and the test container
-    # could not fetch it. Same `autowire` caveat as above.
     App\Service\Recommendation\Settings\RecommendationSettingsResolver:
         autowire: true
         public: true
 
-    # RecommendationHistoryLoaderTest drives load() directly to prove the
-    # section-precedence dedup (favorites beat kept beat viewed) and each
-    # section's ordering/cap. Its only production caller arrives with the
-    # prompt-building task later on this branch, so until then the compiler
-    # would inline it away and the test container could not fetch it. Same
-    # `autowire` caveat as above.
     App\Service\Recommendation\Prompt\RecommendationHistoryLoader:
         autowire: true
         public: true
 
-    # RecommendationCandidateLoaderTest drives load() and linesForIds()
-    # directly to prove the unread/subscribed filter and the pruned-id drop.
-    # Same "no production caller yet" caveat as RecommendationHistoryLoader
-    # above.
     App\Service\Recommendation\Prompt\RecommendationCandidateLoader:
         autowire: true
         public: true
 
-    # Functional tests swap the real fetcher for a stub via
-    # `self::getContainer()->set(...)`, which the container only allows on
-    # public services. Test environment only — production keeps them private.
     App\Service\Fetch\FeedFetcher\FeedFetcherInterface:
         alias: App\Service\Fetch\FeedFetcher\HttpFeedFetcher
         public: true
 
-    # HttpFeedFetcher depends on BatchFeedFetcherInterface today, so swapping the
-    # batch in a test stubs the discovery, preview and favicon paths in one call.
-    # The functional tests swap it for a stub via
-    # `self::getContainer()->set(...)`, which the container only allows on
-    # public services. Test environment only.
+    # HttpFeedFetcher sends through this too, so replacing it stubs discovery, preview and favicon fetches at once.
     App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface:
         alias: App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher
         public: true
 
-    # The reader-endpoint test swaps a fake extractor via
-    # `self::getContainer()->set(...)` so no outbound page fetch happens; the
-    # container only permits that on a public service. Test environment only.
     App\Service\Reader\ArticleExtractor\ArticleExtractorInterface:
         alias: App\Service\Reader\ArticleExtractor\ArticleExtractor
         public: true
 
-    # MailGatedAccountMailerWiringTest fetches this to prove the container
-    # resolves the interface to the decorator (MailGatedAccountMailer), not the
-    # plain AccountMailer it wraps — the ambiguity that made the explicit alias
-    # in services.yaml necessary in the first place. `self::getContainer()->
-    # get(...)` refuses a private service, so this needs the same public
-    # override as the aliases above. Test environment only.
+    # services.yaml's target: #[AsDecorator] turns AccountMailer's id into MailGatedAccountMailer.
     App\Service\Mail\AccountMailer\AccountMailerInterface:
         alias: App\Service\Mail\AccountMailer\AccountMailer
         public: true
@@ -144,55 +73,28 @@ services:
         alias: lock.default.factory
         public: true
 
-    # login_throttling counts attempts in a FILESYSTEM cache pool, which
-    # survives both the kernel reboot between requests and the end of the test
-    # run. Without clearing it, the per-IP global limiter (5 x max_attempts)
-    # fills up with every login test ever executed and the suite starts
-    # returning 429 for everything. Tests clear this between cases.
+    # login_throttling's FILESYSTEM pool outlives the kernel reboot and the test run; tests clear it between cases,
+    # or the per-IP limiter fills up and every login answers 429.
     test.cache.rate_limiter:
         alias: cache.rate_limiter
         public: true
 
-    # UserFactory hashes passwords when seeding fixtures. No application code
-    # injects the hasher yet (registration arrives in a later task), so the
-    # compiler removes it entirely and the test container cannot fetch it.
-    # Test environment only.
     Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface:
         alias: security.user_password_hasher
         public: true
 
-    # Functional tests for registration, verification and password reset need to
-    # mint or inspect a real token, because the plaintext value only ever exists
-    # inside the email the service hands back. Test environment only.
-    #
-    # `autowire` is not redundant: naming the class here *replaces* the
-    # definition produced by the App\ resource in services.yaml rather than
-    # amending it, and this file has no _defaults to inherit from, so without it
-    # the service is built with zero constructor arguments and blows up on first
-    # fetch instead of at compile time.
     App\Service\Auth\ActionTokenService:
         autowire: true
         public: true
 
-    # Registration and password-reset tests must build a *solved* ALTCHA payload,
-    # which means issuing a real challenge from the same service the controller
-    # verifies against. Same `autowire` caveat as above. Test environment only.
     App\Service\Auth\AltchaService:
         autowire: true
         public: true
 
-    # Registration tests assert on rows and statuses the service wrote, and the
-    # concurrency test drives register() directly to reproduce a race the HTTP
-    # client cannot stage. Same `autowire` caveat as above. Test environment only.
     App\Service\Auth\RegistrationService:
         autowire: true
         public: true
 
-    # The replay guard is a FILESYSTEM pool, so spent-solution markers outlive
-    # the test run. Entries are keyed by a signature derived from 12 random
-    # bytes, so a stale marker can never collide with a fresh challenge and the
-    # rate-limiter's cross-run bleed problem does not arise here. Exposed anyway
-    # so a test that wants a guaranteed-clean pool can clear it.
     App\Security\PasswordWorkEqualizer:
         autowire: true
         public: true
@@ -205,32 +107,8 @@ services:
         alias: altcha.replay.cache
         public: true
 
-    # The OAuth flow tests must mint and inspect state and login codes, whose
-    # plaintext values exist only inside a redirect URL, and must swap a real
-    # provider for a fake via `self::getContainer()->set(...)`, which the
-    # container only allows on public services.
-    #
-    # Only list an `App\Service\OAuth\*` class here once its file exists. Naming
-    # a class that does not compiles fine (`cache:clear` stays green) and then
-    # fails `lint:container` with "class does not exist" — or, worse, fails
-    # confusingly on first fetch.
-    #
-    # `autowire: true` on each is not redundant — same caveat as the entries
-    # above: naming a class here REPLACES the definition the App\ resource
-    # produced rather than amending it, and this file has no _defaults to
-    # inherit from, so without it the service is built with zero constructor
-    # arguments.
-
-    # Records the SQL each request actually executed, so "the admin list reads
-    # every user's providers in ONE query" is counted rather than eyeballed. An
-    # N+1 produces a byte-identical response, so nothing asserted on the body
-    # can ever fail when somebody replaces the batched lookup with a loop.
-    #
-    # Tagged explicitly rather than relying on autoconfiguration: `tests/` is
-    # not in the `App\` resource that services.yaml registers, so nothing here
-    # is autoconfigured. Priority is left at the default, which puts it inside
-    # dama/doctrine-test-bundle's StaticDriver — it therefore sees the real
-    # statements and not the wrapping transaction's bookkeeping.
+    # tests/ is outside services.yaml's App\ resource, so the tag is explicit. At the default priority the recorder
+    # wraps dama's StaticDriver (priority 100) from outside: it records the app's statements, not dama's savepoints.
     App\Tests\Support\QueryRecorder:
         public: true
         tags:
@@ -240,10 +118,6 @@ services:
         alias: oauth.state.cache
         public: true
 
-    # The flow tests drive start() to obtain a state they can replay into the
-    # callback, and consume() to assert the callback burned it. Neither value
-    # exists anywhere a test could otherwise reach: the state lives only in a
-    # redirect URL and the verifier never leaves the server at all.
     App\Service\OAuth\OAuthStateStore:
         autowire: true
         public: true
@@ -252,57 +126,26 @@ services:
         alias: oauth.login_code.cache
         public: true
 
-    # The flow tests read the code out of the callback's redirect and trade it
-    # for a JWT, and assert a second exchange fails. The plaintext code exists
-    # only in that redirect URL, so there is no other seam to reach it from.
     App\Service\OAuth\LoginCodeStore:
         autowire: true
         public: true
 
-    # The flow tests assert which account a callback landed on — linked, claimed
-    # or freshly created — and the linking rules are easier to drive directly
-    # than through a full provider round trip. Same `autowire` caveat as above.
     App\Service\OAuth\OAuthAccountLinker:
         autowire: true
         public: true
 
-    # HtmlItemExtractorWiringTest fetches this to prove the app.scrape_layer
-    # tagged iterator actually collects the extraction layers in priority
-    # order — an empty iterator builds fine and only fails on first use.
-    # Several service tests also borrow the container-built extractor instead
-    # of assembling the layer stack by hand. Same `autowire` caveat as above.
     App\Service\Scraper\HtmlItemExtractor:
         autowire: true
         public: true
 
-    # FeedBodyParserWiringTest proves the keyed locator collects both format parsers, and FeedOutcomePersisterTest
-    # builds the persister around it. That persister is its only injection point, so without this entry the
-    # compiler would inline it away. Same `autowire` caveat as above.
     App\Service\Refresh\FeedBodyParser:
         autowire: true
         public: true
 
-    # The flow tests resolve a provider by URL segment, and OAuthProviderWiring
-    # Test fetches this to prove the container's tagged iterator actually finds
-    # the providers — an empty one would build a registry that offers nothing
-    # and looks exactly like a deployment with no credentials.
-    #
-    # Public is also what lets OAuthFlowTest replace the whole registry with one
-    # holding a fake provider, in a single `self::getContainer()->set()` — the
-    # seam that keeps the flow tests off the network without depending on
-    # whether the container's tagged iterator has collected anything yet.
     App\Service\OAuth\OAuthProviderRegistry:
         autowire: true
         public: true
 
-    # CatalogImporterTest parses documents and runs imports through the
-    # container rather than constructing these by hand, so it exercises the
-    # real autowired graph (repositories, entity manager). Both services now
-    # have production callers (AdminCatalogImportController, ImportCatalogCommand)
-    # and would survive compilation on their own — `public: true` here is only
-    # so the test container's `self::getContainer()->get(...)` can fetch them,
-    # which the container refuses on a private service. Same `autowire` caveat
-    # as above.
     App\Service\Catalog\CatalogDocument:
         autowire: true
         public: true
@@ -311,178 +154,82 @@ services:
         autowire: true
         public: true
 
-    # CatalogSubscriberTest turns a picker selection into subscriptions through
-    # the real autowired graph (catalog repository, BulkSubscriber). Its only
-    # production caller arrives with the onboarding endpoint in a later task, so
-    # until then the compiler would inline it away and the test container could
-    # not fetch it. Same `autowire` caveat as above.
     App\Service\Catalog\CatalogSubscriber:
         autowire: true
         public: true
 
-    # BootstrapAdminProvisionerTest drives provision() directly to assert the
-    # Active + ROLE_ADMIN + approvedAt shape and the idempotent-by-email
-    # behaviour. Its production callers (the app:admin:create command and the
-    # web setup endpoint) arrive in later tasks, so until then the compiler
-    # would inline it away and the test container could not fetch it. Same
-    # `autowire` caveat as above.
     App\Service\Auth\BootstrapAdminProvisioner:
         autowire: true
         public: true
 
-    # MailCapabilityWiringTest fetches this to prove the service actually resolves
-    # through the real container, including its MailSendingSettingsInterface
-    # collaborator, which a hand-constructed MailCapability cannot catch.
     App\Service\Mail\MailCapability:
         autowire: true
         public: true
 
-    # InstanceSettingsTest drives update()/requireEmailConfirmation()/
-    # requireApproval() directly to prove the "no row yet" default and the
-    # single-row create-or-update behaviour. Production callers (Registration
-    # Policy, the admin settings endpoint) arrive in later tasks, so until then
-    # the compiler would inline this away and the test container could not
-    # fetch it. Same `autowire` caveat as above.
     App\Service\Settings\InstanceSettings:
         autowire: true
         autoconfigure: true
         public: true
 
-    # StubChatClient replaces the real provider call for every recommendation
-    # test: RecommendationRunAdvancerTest asserts the snapshot phase makes NO
-    # call to it, and later tasks queue its scripted replies to drive the
-    # provider/merge phases without a network call. Public so tests can fetch
-    # it directly to queue content/failures and inspect calls().
     App\Tests\Support\StubChatClient:
         autowire: true
         public: true
 
-    # Test environment only: the whole container speaks to the
-    # stub instead of OpenAiCompatibleChatClient, same swap
-    # pattern as ModelCatalogInterface above.
+    # Every test talks to StubChatClient, never to a real provider.
     App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface:
         alias: App\Tests\Support\StubChatClient
         public: true
 
-    # RecommendationRunStarterTest drives start() directly against the real
-    # repository and entity manager to prove the idempotent/resume rules. Its
-    # only production caller arrives with the "for you" endpoint in a later
-    # task, so until then the compiler would inline it away and the test
-    # container could not fetch it. Same `autowire` caveat as above.
     App\Service\Recommendation\Run\RecommendationRunStarter:
         autowire: true
         public: true
 
-    # Test environment only: no container-wired code path may ever exec() a
-    # real drainer child process against the test database. Same swap pattern
-    # as StubChatClient above.
+    # No container-wired code path may exec() a real drainer process against the test database.
     App\Tests\Support\NullShellCommandRunner:
         autowire: true
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface:
         alias: App\Tests\Support\NullShellCommandRunner
 
-    # RecommendationRunAdvancerTest drives advance() directly to prove the
-    # lock, the snapshot-phase batching and the zero-candidate completion. Same
-    # "no production caller yet" caveat as RecommendationRunStarter above.
     App\Service\Recommendation\Run\RecommendationRunAdvancer:
         autowire: true
         public: true
 
-    # AdvanceRecommendationRunsHandlerTest builds an advancer by hand around the container's phases. The advancer
-    # is their only user, so without this the compiler would inline them away.
     App\Service\Recommendation\Run\TickPhases:
         autowire: true
         public: true
 
-    # Public so tests can drive poll()/current() directly against the real
-    # advancer/repository/presence graph, the same seam RecommendationRun
-    # AdvancerTest uses on advance() above -- useful for #311's worker-side
-    # tests still to come on this branch, which have no HTTP route to go
-    # through at all.
     App\Service\Recommendation\Run\RecommendationPollDriver:
         autowire: true
         public: true
 
-    # DueRecommendationRunFinderTest fetches this to drive due() directly
-    # against the real settings/run repositories and AI configurator, the
-    # same "no mocks" stance as RecommendationRunStarter above. Its only
-    # production caller arrives with the scheduled-sweep wiring in a later
-    # task, so until then the compiler would inline it away and the test
-    # container could not fetch it. Same `autowire` caveat as the entries
-    # above.
     App\Service\Recommendation\Run\DueRecommendationRunFinder:
         autowire: true
         public: true
 
-    # ForYouSweepTest fetches this to drive startDueRuns()/sweepOnce()
-    # directly against the real finder/starter/advancer/repository graph, the
-    # same "no mocks" stance as DueRecommendationRunFinder above -- its own
-    # collaborators are final classes that cannot be doubled. Its only
-    # production caller arrives with the worker handler and cron endpoint in
-    # a later task, so until then the compiler would inline it away and the
-    # test container could not fetch it. Same `autowire` caveat as the
-    # entries above.
     App\Service\Recommendation\Run\ForYouSweep:
         autowire: true
         public: true
 
-    # WorkerScheduleWiringTest fetches this to prove the container actually
-    # wires the `worker` schedule with the three decided entries in order —
-    # an autoconfigured #[AsSchedule] service builds fine even with an entry
-    # silently dropped, and only a booted container catches that. Handlers
-    # for the three messages arrive in later tasks, so until then the
-    # compiler would inline this away and the test container could not fetch
-    # it. Same `autowire` caveat as the entries above.
     App\Service\Worker\WorkerSchedule:
         autowire: true
         public: true
 
-    # AdvanceRecommendationRunsHandlerTest fetches this to drive __invoke()
-    # directly against the real repository/advancer/presence/entity-manager
-    # graph, the same "no mocks" stance as RecommendationRunAdvancerTest on
-    # advance() above. Messenger handlers are never called through the
-    # container by anything else, so without this the compiler would inline
-    # it away and the test container could not fetch it. Same `autowire`
-    # caveat as the entries above.
     App\Service\Worker\Handler\AdvanceRecommendationRunsHandler:
         autowire: true
         public: true
 
-    # RefreshDueFeedsHandlerTest fetches this to drive __invoke() directly
-    # against the container's real RefreshRunner, the same "no mocks" stance
-    # as AdvanceRecommendationRunsHandlerTest above. Messenger handlers are
-    # never called through the container by anything else, so without this
-    # the compiler would inline it away and the test container could not
-    # fetch it. Same `autowire` caveat as the entries above.
     App\Service\Worker\Handler\RefreshDueFeedsHandler:
         autowire: true
         public: true
 
-    # PurgeFailedMessagesHandlerTest fetches this to drive __invoke() against
-    # a schema with and without `messenger_messages` present. Same
-    # "no production caller through the container" and `autowire` caveats as
-    # RefreshDueFeedsHandler above.
     App\Service\Worker\Handler\PurgeFailedMessagesHandler:
         autowire: true
         public: true
 
-    # RecommendationDrainOnTerminateListenerTest swaps the real launcher for a
-    # RecordingProcessLauncher via `self::getContainer()->set(...)`, which the
-    # container only allows on public services. The listener is wired
-    # entirely through #[AsEventListener] with no injection point a test can
-    # reach directly, so this is the only seam that lets a kernel-level test
-    # observe whether the terminate hook actually spawned. Test environment
-    # only — production keeps this alias private.
     App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface:
         alias: App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher
         public: true
 
-    # CompletionStreamHeartbeatWiringTest arms each composite member by class
-    # name and beats it through the CompletionStreamHeartbeatInterface alias, to
-    # prove the container hands the advancer and the sweep the SAME instances the
-    # composite fans out to. `self::getContainer()->get(...)` refuses a
-    # private service, so all three need the same public override as the
-    # entries above. Test environment only — production keeps them private.
     App\Service\Recommendation\Run\TickLockKeepalive:
         autowire: true
         autoconfigure: true
@@ -497,51 +244,18 @@ services:
         alias: App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat
         public: true
 
-    # EntryListTest, EntryRowsByIdsTest, EntrySearchTest and IndexedEntrySearch
-    # Test fetch this directly to drive the list/search projection through the
-    # real query graph rather than a fake. It has production callers
-    # (EntryController, LikeEntrySearch, IndexedEntrySearch) and would survive
-    # compilation on its own — `public: true` here is only so the test
-    # container's `self::getContainer()->get(...)` can fetch it, which the
-    # container refuses on a private service. It is not bound as Entry's
-    # `#[ORM\Entity(repositoryClass:)]`, so `$em->getRepository(Entry::class)`
-    # — the trick the rest of this file avoids needing — resolves to
-    # EntryRepository, not this class.
     App\Repository\EntryListRepository:
         autowire: true
         public: true
 
-    # AccountBackupExporterTest drives lines() directly against the real
-    # repository/entity-manager graph to prove the keyset batching and the
-    # NDJSON shape, and both the controller and restorer tests build their
-    # fixture files with it. It has a production caller
-    # (AccountBackupController) and would survive compilation on its own —
-    # `public: true` here is only so `self::getContainer()->get(...)` can
-    # fetch it, which the container refuses on a private service. Same
-    # `autowire` caveat as the entries above.
     App\Service\Backup\AccountBackupExporter:
         autowire: true
         public: true
 
-    # AccountResetTest drives reset() directly against the real
-    # entity-manager graph to prove the bulk-DQL wipe and the rows it leaves
-    # alone. It has a production caller (AccountRestorer) and would survive
-    # compilation on its own — `public: true` here is only so
-    # `self::getContainer()->get(...)` can fetch it, which the container
-    # refuses on a private service. Same `autowire` caveat as the entries
-    # above.
     App\Service\Account\AccountReset:
         autowire: true
         public: true
 
-    # RestorePreviewerTest drives BackupFitCheck and RestorePreviewer through
-    # the container to prove their real wiring (SubscriptionLimitResolver, the
-    # four count repositories) rather than a hand-assembled graph. Both have
-    # production callers (AccountBackupController, AccountRestorer) and would
-    # survive compilation on their own — `public: true` here is only so
-    # `self::getContainer()->get(...)` can fetch them, which the container
-    # refuses on a private service. Same `autowire` caveat as the entries
-    # above.
     App\Service\Backup\BackupFitCheck:
         autowire: true
         public: true
@@ -550,80 +264,32 @@ services:
         autowire: true
         public: true
 
-    # EntryBatchInserterTest drives insert() directly against the real
-    # entity-manager graph to prove the multi-row INSERT batching and the
-    # round-trip field preservation, and AccountRestorerTest borrows it to
-    # assemble a loader with a recording search index. It has a production
-    # caller (RestoreLoader) and would survive compilation on its own —
-    # `public: true` here is only so `self::getContainer()->get(...)` can
-    # fetch it, which the container refuses on a private service. Same
-    # `autowire` caveat as the entries above.
     App\Repository\EntryBatchInserter:
         autowire: true
         public: true
 
-    # AccountRestorerTest drives restore() directly against the real
-    # inspector/fit-check/reset/loader graph — the round trip the spec demands
-    # only means anything through the same wiring production will use. It has
-    # a production caller (AccountBackupController) and would survive
-    # compilation on its own — `public: true` here is only so
-    # `self::getContainer()->get(...)` can fetch it, which the container
-    # refuses on a private service. Same `autowire` caveat as the entries
-    # above.
-    #
-    # RestoreLoader needs no entry of its own: the restore endpoint injects
-    # it, and the one test that varies its search indexer constructs it by
-    # hand.
     App\Service\Backup\AccountRestorer:
         autowire: true
         public: true
 
-    # AccountRestorerTest and GoldenBackupRestoreTest drive load() directly
-    # against the real inspector/loader-factory graph, the same way
-    # AccountRestorer above is fetched for start() — a foundation-only restore
-    # is only half the round trip they prove. It has a production caller
-    # (AccountBackupController) and would survive compilation on its own —
-    # `public: true` here is only so `self::getContainer()->get(...)` can
-    # fetch it, which the container refuses on a private service. Same
-    # `autowire` caveat as the entries above.
     App\Service\Backup\EntryPartRestorer:
         autowire: true
         public: true
 
-    # PasskeyRegistrationTest seeds a registration challenge with a known
-    # value (the exact one a synthetic attestation fixture was signed
-    # against) and, for one case, an already-past `expires_at`. Same
-    # `autowire` caveat as the entries above, and the same "flow tests must
-    # reach a value that exists nowhere else" reasoning as OAuthStateStore.
     App\Service\Passkey\PasskeyChallengeStore:
         autowire: true
         public: true
 
-    # Backs the expired-handle test above: it builds a SECOND, throwaway
-    # PasskeyChallengeStore over this same pool with a MockClock set minutes
-    # in the past, so only that one seeded entry is affected — no test
-    # anywhere else has its clock swapped, matching OAuthFlowTest's stated
-    # reasoning for never driving expiry through a shared functional clock.
     test.cache.passkey_challenge:
         alias: passkey.challenge.cache
         public: true
 
-    # refresh.run.cache is a FILESYSTEM pool with a ten-minute TTL, so an entry
-    # from one test process outlives it. Auto-increment ids repeat between runs
-    # and tests/bootstrap.php rebuilds the database but never this pool, so a
-    # `refresh_run_<id>.<scope>` key a previous run left behind could be resumed
-    # by a same-id user in a later run and confuse the `progress` assertions.
-    # RefreshControllerTest clears this between cases the same way it already
-    # clears test.cache.rate_limiter.
+    # A FILESYSTEM pool that outlives the test run while ids repeat after tests/bootstrap.php rebuilds the database;
+    # RefreshControllerTest clears it, or a stale run could be resumed by a same-id user.
     test.cache.refresh_run:
         alias: refresh.run.cache
         public: true
 
-    # Public only so SavedSearchMembershipLoaderTest can fetch it from the test
-    # container and drive loadInto() against the real repository/entity-manager
-    # graph; production wires it privately. Same `autowire` caveat as the entries
-    # above: naming a class here replaces the definition rather than amending it,
-    # and this file has no `_defaults`.
     App\Repository\SavedSearchMembershipLoader:
         autowire: true
         public: true
