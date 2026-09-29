@@ -34,9 +34,10 @@ final class RecommendationItem
     #[ORM\Column(type: Types::TEXT)]
     private string $reason;
 
-    /** The model's 0-1000 score for this pick — 0-100 on rows written before
-     *  #403 rescaled it, which are never compared with newer ones. Null only
-     *  on rows written before the column existed (#321). */
+    /**
+     * The model's 0-1000 score; rows from before the rescale hold 0-100 and are never compared with newer ones. Null
+     * on rows older than the column.
+     */
     #[ORM\Column(nullable: true)]
     private ?int $score;
 
@@ -83,6 +84,4 @@ final class RecommendationItem
     {
         return $this->score;
     }
-
-    // No setters — items are written once at run completion and never edited.
 }

@@ -58,11 +58,6 @@ final class RecommendationRunTest extends TestCase
         self::assertSame(1, $run->getProgress()->nextBatchIndex);
     }
 
-    /**
-     * A run in flight across the deploy that introduced scores holds rows
-     * without one. Reading them must not fail: the column defaults them so
-     * every consumer sees a scored winner.
-     */
     public function testAWinnerRowStoredWithoutAScoreReadsBackAsZero(): void
     {
         $run = $this->makeRun();
@@ -114,8 +109,6 @@ final class RecommendationRunTest extends TestCase
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
-        // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
-        // again — pins the reset at 0, not -1 or 1.
         $run->getRunningCallAttempts()->recordInvalidReply('c');
         $run->getRunningCallAttempts()->recordInvalidReply('d');
         self::assertFalse($run->getProgress()->attemptsExhausted);
@@ -133,8 +126,6 @@ final class RecommendationRunTest extends TestCase
 
         $run->resume();
 
-        // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
-        // again — pins the reset at 0, not -1 or 1.
         $run->getRunningCallAttempts()->recordInvalidReply('c');
         $run->getRunningCallAttempts()->recordInvalidReply('d');
         self::assertFalse($run->getProgress()->attemptsExhausted);
@@ -160,9 +151,6 @@ final class RecommendationRunTest extends TestCase
         self::assertTrue($run->hasExhaustedTransportRetries());
     }
 
-    /** Unusable-reply attempts and transport failures are separate counters:
-     *  a corrective retry cycle must not push the transport ceiling closer,
-     *  and vice versa. */
     public function testTransportFailuresAndAttemptsCountIndependently(): void
     {
         $run = $this->makeRun();
@@ -185,8 +173,6 @@ final class RecommendationRunTest extends TestCase
 
         $run->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
 
-        // Exactly MAX_TRANSPORT_FAILURES (3) fresh failures are needed to
-        // exhaust again — pins the reset at 0, not -1 or 1.
         $run->getRunningCallAttempts()->recordTransportFailure();
         $run->getRunningCallAttempts()->recordTransportFailure();
         self::assertFalse($run->hasExhaustedTransportRetries());
@@ -272,13 +258,6 @@ final class RecommendationRunTest extends TestCase
         $run->complete(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
     }
 
-    /**
-     * #311 fix round 1: an account can lose its AI configuration before its
-     * run ever reaches its first snapshot (DELETE /api/me/ai has no "is
-     * there an active run" guard), so a run stuck PENDING must still be able
-     * to reach a terminal FAILED state instead of guardStatus rejecting the
-     * only transition that could ever get it out of PENDING.
-     */
     public function testFailBeforeSnapshotIsLegalAndTerminatesPending(): void
     {
         $run = $this->makeRun();
@@ -397,8 +376,6 @@ final class RecommendationRunTest extends TestCase
 
         $run->recordProfile('Likes Rust.');
 
-        // Exactly MAX_ATTEMPTS (3) fresh invalid replies are needed to exhaust
-        // again — pins the reset at 0, not -1 or 1.
         $run->getRunningCallAttempts()->recordInvalidReply('c');
         $run->getRunningCallAttempts()->recordInvalidReply('d');
         self::assertFalse($run->getProgress()->attemptsExhausted);
