@@ -14,16 +14,8 @@ use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * A publisher's own schema.org markup. `JsonLdArticles` reads the same blocks
- * but models only Article cards, so this source walks every node for a bare
- * media URL instead.
- *
- * schema.org nests `contentUrl`/`embedUrl` under many shapes (VideoObject,
- * AudioObject, an Article's "video" property, …), so every string value in
- * the decoded tree is inspected under those two keys rather than modelling
- * each shape. MediaUrlKind refuses anything not playable, which makes the
- * broad search safe — an ImageObject's contentUrl is simply discarded. A node
- * yields its first playable URL in URL_KEYS order: one asset, one candidate.
+ * A publisher's own schema.org markup: every node's URL_KEYS values, whatever the node's shape, with MediaUrlKind
+ * discarding anything not playable (an ImageObject's contentUrl). One node is one asset and yields one candidate.
  */
 #[AsTaggedItem(priority: 100)]
 final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
@@ -138,8 +130,6 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return new MediaCandidateModel(MediaKind::Audio, $resolved->url, null, null, $precedingText);
         }
         if ($resolved->kind->isVideo()) {
-            // The poster may be absent here; the scanner rescues or drops a
-            // still-poster-less video once every source has been merged (#913).
             return new MediaCandidateModel($resolved->kind, $resolved->url, $poster ?: null, null, $precedingText);
         }
 

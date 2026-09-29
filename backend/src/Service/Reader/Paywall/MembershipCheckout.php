@@ -7,10 +7,8 @@ namespace App\Service\Reader\Paywall;
 use Dom\HTMLDocument;
 
 /**
- * Whether the article body links out to a membership provider's checkout, the
- * reliable signal for a server-side member gate whose container class is too
- * generic to trust (psychedelicalpha.com's `<div class="join">`, #998). Keyed on
- * the provider endpoint, not one site's theme, so any Memberful-gated page flags.
+ * Whether the article body links to a membership provider's checkout: the signal for a member gate whose container
+ * class is too generic to trust. Keyed on the provider endpoint, not one site's theme.
  */
 final readonly class MembershipCheckout
 {

@@ -14,6 +14,6 @@ enum ExtractionFailure: string
     case Unextractable = 'unextractable';
     /** The extraction held too little to show, before or after sanitising. */
     case Empty = 'empty';
-    /** The extraction did not reflect the article the feed carries (#654). */
+    /** The extraction did not reflect the article the feed carries. */
     case Mismatch = 'mismatch';
 }

@@ -14,7 +14,7 @@ use Dom\HTMLDocument;
 
 /**
  * Decodes a tagesschau "Bildergalerie": its slides live only in the
- * HTML-entity-encoded JSON on a `[data-v-type="Carousel"]` element's `data-v` (#926).
+ * HTML-entity-encoded JSON on a `[data-v-type="Carousel"]` element's `data-v`.
  */
 final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizerInterface
 {

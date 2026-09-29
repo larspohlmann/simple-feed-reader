@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\Model;
 
 /**
- * One piece of media the source page offers for this article. `posterUrl` is the
- * still a video shows before playback; `label` is the link text an embed falls
- * back to when the provider has no cheap poster; `precedingText` is the prose
- * block the media followed on the page, the trace by which it finds its place
- * again in a body that lost the player itself (see PageTextBlocksModel). `narrated`
- * flags machine-generated narration (#903), so the client renders it small.
+ * One piece of media the page offers. `precedingText` is the prose block it followed, by which it finds its place in
+ * a body that lost the player (see PageTextBlocksModel); `narrated` marks machine narration, rendered small.
  */
 final readonly class MediaCandidateModel
 {
@@ -25,7 +21,7 @@ final readonly class MediaCandidateModel
     ) {
     }
 
-    /** The same media with the feed-declared MIME type the reader trusts over its own guess (#914). */
+    /** The same media with the feed-declared MIME type the reader trusts over its own guess. */
     public function withMimeType(?string $mimeType): self
     {
         if ($mimeType === null || $mimeType === $this->mimeType) {
@@ -44,12 +40,8 @@ final readonly class MediaCandidateModel
     }
 
     /**
-     * The candidate a video needs a still to be, or none. A video plays in a
-     * <video> element and rots into a dead frame in the reader's TTL-less cache
-     * without a poster; once every source has had its say and none supplied one,
-     * the feed-declared still rescues it (#913), and a video the feed cannot
-     * back either is dropped. A non-video passes through untouched — audio and
-     * an embed carry no poster of their own.
+     * A poster-less video takes $fallbackPoster, or is dropped (null) without one: it would rot into a dead frame in
+     * the TTL-less cache. Audio and embeds pass through untouched.
      */
     public function resolvePoster(?string $fallbackPoster): ?self
     {

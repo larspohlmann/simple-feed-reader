@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 /**
- * Decides whether a media URL is safe to write into a body the client caches
- * without a TTL. A signed URL that expires would rot into a dead player, so the
- * bar is deliberately high: https, no query at all, and none of the shapes that
- * are technically reachable but belong to something other than this article.
- *
- * Adapters strip known analytics parameters before the guard runs. Whatever
- * query survives that is unexplained, so it is refused rather than guessed at.
+ * Whether a media URL may enter a body the client caches without a TTL: https, no query, and no shape that belongs
+ * to something other than this article. An expiring signed URL would rot into a dead player.
  */
 final readonly class DurableMediaUrl
 {

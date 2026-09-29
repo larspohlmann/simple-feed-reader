@@ -8,17 +8,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Decides whether an `<a>` is a share control. Two shapes count: a link to a
- * known share endpoint (a sharer/intent URL, or `mailto:`) whose query carries
- * an address, and a link back to the page's own address that carries a share
- * action — Substack's Share button (`action=share`) and WordPress's sharing
- * links (`?share=…`), which no endpoint list could name (#627, #786).
- *
- * A share-host link carrying no page URL — POLITICO's WhatsApp "message the
- * hosts" contact link motivated the distinction — is editorial, not a
- * control, and stays; so does a self link without a share action (a
- * permalink, a comments anchor). The page's own address is its canonical
- * link, else its og:url; a page declaring neither has no self links to judge.
+ * A share control links to a share endpoint (or `mailto:`) whose query carries an address, or to the page's own
+ * address (canonical, else og:url) with a share action. A share-host link without an address, or a self link
+ * without a share action (a permalink, a comments anchor), is editorial and stays.
  */
 final readonly class ShareLinkMatcher
 {
@@ -100,11 +92,8 @@ final readonly class ShareLinkMatcher
     }
 
     /**
-     * A prefix match alone lets `reddit.com/submit-guidelines` match the
-     * `reddit.com/submit` endpoint. The path must end there — the next
-     * character is a separator, a file extension's dot (`facebook.com/sharer.php`,
-     * 5 Magazine and Nature's shape), or the string ends — so a longer,
-     * unrelated path segment is rejected.
+     * The path must end at the endpoint (a separator, an extension's dot as in `facebook.com/sharer.php`, or the
+     * end), so `reddit.com/submit-guidelines` does not match `reddit.com/submit`.
      */
     private function matchesEndpointBoundary(string $hostAndPath, string $endpoint): bool
     {

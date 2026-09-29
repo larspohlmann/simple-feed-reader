@@ -14,7 +14,7 @@ use Dom\Text;
 /**
  * Reads the caption that a markup carousel keeps beside each image: the slide's
  * visible text and, if the slide links somewhere, its first absolute link. One
- * place so every markup library inherits the same behaviour (#930).
+ * place so every markup library inherits the same behaviour.
  */
 final readonly class SlideCaptionResolver
 {

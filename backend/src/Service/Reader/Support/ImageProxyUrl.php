@@ -7,12 +7,8 @@ namespace App\Service\Reader\Support;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
- * Resolves the real image URL behind an image proxy or CDN wrapper. Publishers
- * route photos through a proxy that carries the true source URL in a query
- * parameter (Politico's dims4, NPR's brightspot), as a base64 path segment
- * (imgproxy) or as a percent-encoded one (Substack's `/image/fetch/`).
- * ImageIdentityModel fingerprints the resolved source, so two renditions behind the
- * same proxy compare as the one photo they are.
+ * Resolves the source URL an image proxy carries: a `?url=` query parameter, an imgproxy base64 path segment, or a
+ * percent-encoded `/image/fetch/` segment. ImageIdentityModel fingerprints the source, so renditions match.
  */
 final readonly class ImageProxyUrl
 {
@@ -32,7 +28,7 @@ final readonly class ImageProxyUrl
         return self::sourceFromEncodedPath($url) ?? $url;
     }
 
-    /** A `?url=` proxy (Politico's dims4, NPR's brightspot) carries the source verbatim. */
+    /** A `?url=` proxy carries the source verbatim. */
     private static function sourceFromQuery(string $url): ?string
     {
         $query = (string) (parse_url($url, PHP_URL_QUERY) ?? '');
@@ -56,7 +52,7 @@ final readonly class ImageProxyUrl
         return $decoded !== false && AbsoluteHttpUrl::matches($decoded) ? $decoded : null;
     }
 
-    /** A percent-encoded source as the final path segment (Substack's `/image/fetch/<transforms>/<source>`). */
+    /** A percent-encoded source as the final path segment (`/image/fetch/<transforms>/<source>`). */
     private static function sourceFromEncodedPath(string $url): ?string
     {
         $decoded = rawurldecode(basename((string) (parse_url($url, PHP_URL_PATH) ?? '')));

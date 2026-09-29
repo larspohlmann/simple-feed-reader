@@ -69,13 +69,8 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * A full UUID (8-4-4-4-12 hex) in the path is the CMS asset id (tagesschau
-     * and ARD carry it as a folder, BBC as the filename stem `<uuid>.jpg.webp`):
-     * different rendition folders, sizes and extensions around it still name the
-     * same photo, and two different UUIDs never do — which stops BBC's shared
-     * UUID node field from tying two photos through token matching. A
-     * per-rendition transform hash has no such shape and must not be mistaken
-     * for one.
+     * A full UUID (8-4-4-4-12 hex) in the path, as a folder or the filename stem, is the CMS asset id: renditions
+     * around it are one photo, and two different UUIDs never are. A per-rendition transform hash is not one.
      */
     private static function pathUuid(string $path): ?string
     {
@@ -85,10 +80,8 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * ZDF names a rendition with a trailing `~WxH` (`ki-162~384x216`); the same
-     * photo at another size differs only there, so it never belongs in the stem.
-     * The `~` separator keeps this off the `_`/`-` dimension suffixes #786 must
-     * still tell apart as different uploads.
+     * A trailing `~WxH` (ZDF's `ki-162~384x216`) is a rendition size and never belongs in the stem. Only after `~`:
+     * `_`/`-` dimension suffixes still tell different uploads apart (#786).
      */
     private static function stripRenditionSize(string $stem): string
     {
@@ -96,9 +89,8 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * heise (#894): a per-rendition hex hash must not survive into the stem.
-     * A decimal digit is valid hex too, so only a suffix with a genuine hex
-     * letter is stripped — a decimal asset id (timestamp, content id) stays.
+     * A per-rendition hex hash (heise) must not survive into the stem. A decimal digit is valid hex too, so only a
+     * suffix with a genuine hex letter is stripped: a decimal asset id (timestamp, content id) stays.
      */
     private static function stripRenderHash(string $stem): string
     {
@@ -132,13 +124,9 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * The same source file, at any transform or rendition: a shared path UUID, a
-     * shared explicit image id, or an identical filename stem, never a shared
-     * filename token. Two different stock photos whose filenames share only
-     * their library, a batch date and a "download" suffix are therefore kept
-     * apart (#1032, Utopia/Pixabay), which the token fallback in isSameAsset()
-     * cannot promise. This is the test for a responsive layout that repeats one
-     * image, not the broad asset equality.
+     * The same source file at any transform: a shared path UUID or image id, or an identical stem, never a shared
+     * filename token, so two stock photos that share only a library name and a date stay apart. For a layout that
+     * repeats one image; isSameAsset() is the broad equality.
      */
     private function isSameRendition(self $other): bool
     {
@@ -153,11 +141,8 @@ final readonly class ImageIdentityModel
     }
 
     /**
-     * A path UUID, when both sides have one, decides the outcome outright and
-     * overrides a stem/id/token match: same UUID is always the same asset,
-     * different UUID never is, even when the stem agrees. Beyond that
-     * authoritative rendition identity, a shared photo-specific token still
-     * counts, so a renamed copy of one photo matches its original.
+     * A path UUID on both sides decides outright, overriding any stem, id or token match. Otherwise a shared
+     * photo-specific token counts too, so a renamed copy of one photo matches its original.
      */
     public function isSameAsset(self $other): bool
     {

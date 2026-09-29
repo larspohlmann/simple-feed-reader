@@ -7,11 +7,7 @@ namespace App\Service\Reader\Support;
 use App\Service\Text\Support\Whitespace;
 use Dom\Element;
 
-/**
- * The two text measurements read off a block, both taken on
- * whitespace-collapsed text: indentation between list items is markup, not
- * content, and left in it dilutes a teaser list's link share below the bar (#779).
- */
+/** Block text measured collapsed: indentation between list items is markup and would dilute a list's link share. */
 final class BlockText
 {
     public static function collapsed(Element $element): string

@@ -20,20 +20,16 @@ final readonly class SiblingMediaExtender
     }
 
     /**
-     * $declared carries the page's own URLs, the shape SiblingIdRule needs to spot
-     * a sibling id; $resolved is the same media after StreamLocationResolver, the
-     * base the verified siblings are appended onto (#800 — a seed already moved to
-     * its landing no longer names its sibling's id).
+     * Siblings are derived from $declared, whose URLs still name the sibling id, and appended onto $resolved (after
+     * StreamLocationResolver): a seed already moved to its landing no longer names that id.
      */
     public function extend(
         ArticleMediaModel $declared,
         ArticleMediaModel $resolved,
         string $pageHtml,
     ): ArticleMediaModel {
-        // A page can name one clip twice — through its VideoObject and its player
-        // config (#1055) — so the search re-derives a seed already declared. Skip
-        // it before the network round-trip, not after: the derived URL is the
-        // declared template with the id swapped, so it matches a seed byte for byte.
+        // A page can name one clip twice (its VideoObject and its player config), so the rule re-derives a declared
+        // seed byte for byte. Skip it here, before the network round-trip.
         $seen = [];
         foreach ($declared->candidates as $candidate) {
             $seen[$candidate->url] = true;

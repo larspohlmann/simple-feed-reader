@@ -17,7 +17,7 @@ use Dom\HTMLDocument;
 /**
  * Places media the page offers but the extracted body lost: in place of a body `<img>` its poster matches, after
  * the prose block it followed, or at the top. `plan()` only classifies and `apply()` mutates, so
- * PageMediaPlacement decides the hero restore between them (#755).
+ * PageMediaPlacement decides the hero restore between them.
  */
 final readonly class PageMediaInserter
 {
@@ -35,7 +35,6 @@ final readonly class PageMediaInserter
         return $this->classify($media, $this->reconcilableImages($root), PageTextBlocksModel::fromDocument($document));
     }
 
-    /** @param ?Element $belowHero a restored lead hero the top-placed media seats under, not above (#907) */
     public function apply(HTMLDocument $document, MediaInsertionPlanModel $plan, ?Element $belowHero = null): void
     {
         foreach ($plan->reconcilePairs as $pair) {
@@ -129,10 +128,8 @@ final readonly class PageMediaInserter
             return;
         }
 
-        // Insert before a fixed slot — the top of the body, or right after a
-        // restored hero when there is one — so each lands after the last and
-        // source order holds. The ternary, not `?? firstChild`: a hero that is
-        // the body's last child has no nextSibling, and the players append (#907).
+        // Insert before a fixed slot (the body's top, or right after a restored hero) so source order holds. Not
+        // `?? firstChild`: a hero that is the body's last child has no nextSibling, and the players must then append.
         $reference = $belowHero !== null ? $belowHero->nextSibling : $root->firstChild;
         foreach ($topPlaced as $candidate) {
             $root->insertBefore($this->element($document, $candidate), $reference);
@@ -159,12 +156,10 @@ final readonly class PageMediaInserter
         // Never fetch megabytes for an article the reader may only be skimming.
         $player->setAttribute('preload', 'none');
         $this->attachSource($document, $player, $candidate);
-        // <audio> has no poster attribute; only a video ever gets one (defect i).
         if ($candidate->kind->isVideo() && $candidate->posterUrl !== null) {
             $player->setAttribute('poster', $candidate->posterUrl);
         }
-        // The client keys its compact, translated presentation off this class;
-        // it is the only mark that survives both sanitizers (#903).
+        // The client keys its compact, translated presentation off this class, the only mark both sanitizers keep.
         if ($candidate->kind === MediaKind::Audio && $candidate->narrated) {
             $player->setAttribute('class', 'reader-narration');
         }
@@ -173,9 +168,8 @@ final readonly class PageMediaInserter
     }
 
     /**
-     * The feed states the file's type authoritatively, so a matched candidate
-     * plays through a typed <source> the browser can accept or skip without a
-     * fetch (#914); a candidate the feed never enumerated keeps a bare src.
+     * A candidate the feed enumerated plays through a typed <source> the browser can accept or skip without a fetch;
+     * one the feed never named keeps a bare src.
      */
     private function attachSource(HTMLDocument $document, Element $player, MediaCandidateModel $candidate): void
     {

@@ -8,7 +8,7 @@ use App\Service\Html\Support\Srcset;
 use Dom\HTMLDocument;
 
 /**
- * The URLs a normalised page draws, read before readability consumes the document (#684). It tells
+ * The URLs a normalised page draws, read before readability consumes the document. It tells
  * ReaderLeadImage whether the page draws the lead or og:image is a meta-only share render; fingerprints are
  * computed lazily in draws(), stopping at the first match.
  */

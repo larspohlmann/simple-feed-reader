@@ -10,10 +10,8 @@ use App\Service\Reader\Media\Model\RawPageModel;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * A publisher's Open Graph and Twitter Player meta tags. `og:video` and
- * `og:audio` commonly point at a player PAGE rather than a file — ARD's
- * `og:video` is `…~player.html` — so every value goes through MediaUrlKind
- * and only what it recognises as playable media is emitted.
+ * A publisher's Open Graph and Twitter Player meta tags. `og:video` and `og:audio` often name a player page, not a
+ * file, so every value goes through MediaUrlKind and only playable media is emitted.
  */
 #[AsTaggedItem(priority: 90)]
 final readonly class MetaMediaSource implements MediaCandidateSourceInterface

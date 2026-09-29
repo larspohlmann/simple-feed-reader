@@ -9,10 +9,8 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 
 /**
- * A stream is fetched by script, not by the media element, so it plays only from
- * the URL that finally serves it: a cross-origin fetch dies on a redirect hop
- * without a CORS header. A chain that fails, or lands anywhere but on a durable
- * playlist, keeps the declared URL — the native client follows redirects itself.
+ * Moves a stream to the URL that finally serves it: a script fetches it, and a cross-origin fetch dies on a redirect
+ * without CORS. A chain that fails or lands off a durable playlist keeps the declared URL (native follows redirects).
  */
 final readonly class StreamLocationResolver
 {

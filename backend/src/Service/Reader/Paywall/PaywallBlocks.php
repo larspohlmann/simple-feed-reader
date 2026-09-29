@@ -7,10 +7,8 @@ namespace App\Service\Reader\Paywall;
 use Dom\HTMLDocument;
 
 /**
- * Whether the page carries a gated call to action, matched by class fragment on
- * the shared document before readability consumes it — exactly what body
- * cleaners remove. The presence of such a block, outside page furniture and the
- * document root, is the fallback signal for a page that declares nothing (#908).
+ * Whether the page carries a gated call to action outside page furniture, matched by class fragment before
+ * readability and the body cleaners remove it: the fallback signal for a page that declares nothing.
  */
 final readonly class PaywallBlocks
 {

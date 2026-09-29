@@ -13,14 +13,8 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Runs every source over the raw page, highest priority first, and merges by URL: the first to name a URL
- * sets the candidate and its place; a later source fills its gaps and adds new URLs of a kind only when it
- * re-confirms one an earlier source set — proof it sees this article's media, not a rendition (#788).
- *
- * It reads the raw HTML rather than FetchedPageNormalizer's document on purpose:
- * that pass is tuned for readability scoring and removes elements, so discovery
- * must not depend on it. Working from the source costs one extra parse, the
- * same trade collapseWrapperChains() already makes.
+ * Runs every source over the raw page, highest priority first, and merges by URL: the first to name a URL sets the
+ * candidate, later ones fill its gaps (see mayAdd()). Raw, because FetchedPageNormalizer's document drops elements.
  */
 final readonly class PageMediaScanner
 {
@@ -42,9 +36,8 @@ final readonly class PageMediaScanner
 
         $reconciled = $this->reconciledWithFeed(array_values($byUrl), $feedMedia);
 
-        // Every source has spoken and their posters are merged, so a video that
-        // is still poster-less has none from the page: the feed-declared still
-        // rescues it, or it is dropped before it reaches the client (#913).
+        // Every source has spoken, so a video still without a poster has none on the page: the feed-declared still
+        // rescues it, or it is dropped before it reaches the client.
         $withPosters = $this->withResolvedPosters($reconciled, $feedMedia->posterFallback());
 
         return (new ArticleMediaModel(\array_slice($withPosters, 0, ArticleMediaModel::MAX_ITEMS)))
@@ -52,10 +45,8 @@ final readonly class PageMediaScanner
     }
 
     /**
-     * A candidate whose URL the feed enumerated carries the feed-declared MIME
-     * over the reader's extension sniff (#914): it plays through a typed
-     * <source>. A candidate the feed never named keeps its guessed kind, so
-     * extension sniffing stays the default and the fallback for the rest.
+     * A candidate whose URL the feed enumerated takes the feed-declared MIME over the extension sniff; the rest keep
+     * their guessed kind.
      *
      * @param list<MediaCandidateModel> $candidates
      *
@@ -110,7 +101,7 @@ final readonly class PageMediaScanner
 
     /**
      * A new URL joins when no earlier source claimed its kind, or this source re-confirms that kind — proof
-     * it sees this article's media, not a rendition or an unrelated file of an already-claimed kind (#788).
+     * it sees this article's media, not a rendition or an unrelated file of an already-claimed kind.
      *
      * @param array<string, true> $claimedKinds
      * @param array<string, true> $reconfirmedKinds

@@ -7,14 +7,9 @@ namespace App\Service\Reader\Slideshow;
 use Dom\Element;
 
 /**
- * Finds the image URL each slide of a carousel points at. Real galleries carry it
- * as a plain <img>, a lazy attribute (Swiper/Owl/Flickity data-src etc), or a
- * lightbox <a href> — probed over real pages (#926). First hit wins; unresolved
- * slides don't count.
- *
- * `resolveAll` owns the placeholder case: a carousel whose slides all resolve to
- * one URL is a row of lazy placeholders, so each slide is resolved again past
- * that URL to reach the real image the lazy attribute or lightbox link holds (#1091).
+ * Finds each slide's image as a plain <img>, a lazy attribute or a lightbox <a href> (probed over real pages, #926);
+ * the first hit wins. Slides that all resolve to one URL are lazy placeholders, so resolveAll() resolves each again
+ * past that URL.
  */
 final readonly class SlideImageResolver
 {

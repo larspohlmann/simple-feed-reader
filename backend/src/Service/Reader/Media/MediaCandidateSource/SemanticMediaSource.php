@@ -14,12 +14,8 @@ use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * `<audio>` and `<video>` elements, read at face value. This layer is not here
- * to FIND the file — AttributeMediaSource reads `src` too and would find every
- * one of these. It is here for the element's own `poster`, which only element
- * context can supply: the attribute scan knows the page's og:image alone, so
- * on a two-video article it would give both videos the same still (#756).
- * That is why it must stay ABOVE AttributeMediaSource; the wiring test pins it.
+ * `<audio>` and `<video>` elements, for the element's own `poster`: AttributeMediaSource finds the same files but
+ * knows only og:image, so two videos would share one still. Keep it above that source (PageMediaScannerWiringTest).
  */
 #[AsTaggedItem(priority: 70)]
 final readonly class SemanticMediaSource implements MediaCandidateSourceInterface
@@ -59,8 +55,6 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return new MediaCandidateModel($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
         }
 
-        // The poster may be absent or empty here; the scanner rescues or drops a
-        // still-poster-less video once every source has been merged (#913).
         $poster = $element->getAttribute('poster') ?: null;
 
         return new MediaCandidateModel($resolved->kind, $resolved->url, $poster, null, $precedingText);
