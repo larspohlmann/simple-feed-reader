@@ -209,8 +209,8 @@ final class RestoreLoadPass
     {
         try {
             $this->entityManager->flush();
-        } catch (DbalException $e) {
-            throw BackupLoadFailedException::from($e);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::from($exception);
         }
     }
 }

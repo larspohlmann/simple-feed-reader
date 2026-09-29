@@ -84,8 +84,8 @@ final readonly class FaviconResolver implements FaviconResolverInterface
                     self::URL_MAX,
                 );
             }
-        } catch (\Throwable $e) {
-            $this->logger->error('Favicon batch fetch failed', ['exception' => $e]);
+        } catch (\Throwable $exception) {
+            $this->logger->error('Favicon batch fetch failed', ['exception' => $exception]);
         }
 
         foreach ($origins as $feedId => $origin) {

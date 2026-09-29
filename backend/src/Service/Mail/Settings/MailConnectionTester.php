@@ -42,10 +42,10 @@ final readonly class MailConnectionTester
     {
         try {
             $transport = $this->effectiveTransport($this->settings->configuredTransport());
-        } catch (SecretUnreadableException $e) {
+        } catch (SecretUnreadableException $exception) {
             // A config guard, not a failed send: nothing was ever attempted,
             // so the health log stays untouched.
-            return MailTestResultModel::failed(MailTestFailure::SecretUnreadable, $e->getMessage());
+            return MailTestResultModel::failed(MailTestFailure::SecretUnreadable, $exception->getMessage());
         }
         $recipient = $this->actingAdminEmail();
 
@@ -78,10 +78,10 @@ final readonly class MailConnectionTester
                     ->subject('Simple Feed Reader test message')
                     ->text('This confirms the outgoing mail configuration works.'),
             );
-        } catch (TransportExceptionInterface | RfcComplianceException $e) {
-            $this->health->recordFailure(MailKind::Test, $recipient, $e->getMessage());
+        } catch (TransportExceptionInterface | RfcComplianceException $exception) {
+            $this->health->recordFailure(MailKind::Test, $recipient, $exception->getMessage());
 
-            return MailTestResultModel::failed(MailTestFailure::SendRejected, $e->getMessage());
+            return MailTestResultModel::failed(MailTestFailure::SendRejected, $exception->getMessage());
         }
 
         $this->health->recordSuccess();

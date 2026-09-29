@@ -18,9 +18,9 @@ abstract class FetchException extends \RuntimeException
      */
     public static function from(string $url, \Throwable $previous): self
     {
-        for ($e = $previous; null !== $e; $e = $e->getPrevious()) {
-            if ($e instanceof ResponseTooLargeException) {
-                return $e;
+        for ($cause = $previous; null !== $cause; $cause = $cause->getPrevious()) {
+            if ($cause instanceof ResponseTooLargeException) {
+                return $cause;
             }
         }
 

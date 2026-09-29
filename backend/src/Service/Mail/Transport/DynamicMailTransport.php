@@ -51,13 +51,19 @@ final class DynamicMailTransport implements TransportInterface
         $resolved = $this->configuredTransport();
         try {
             return $this->transportFor($resolved);
-        } catch (IncompleteMailConfigurationException $e) {
+        } catch (IncompleteMailConfigurationException $exception) {
             // A row that routes through the egress proxy after that proxy's config
             // was removed. Surfaced as a transport failure so the send path degrades
             // the way a dead relay already does, not as an HTTP 422 in a worker.
-            throw new TransportException('The mail configuration is incomplete: ' . $e->getMessage(), previous: $e);
-        } catch (SecretUnreadableException $e) {
-            throw new TransportException('The stored proxy password is unreadable: ' . $e->getMessage(), previous: $e);
+            throw new TransportException(
+                'The mail configuration is incomplete: ' . $exception->getMessage(),
+                previous: $exception,
+            );
+        } catch (SecretUnreadableException $exception) {
+            throw new TransportException(
+                'The stored proxy password is unreadable: ' . $exception->getMessage(),
+                previous: $exception,
+            );
         }
     }
 
@@ -65,10 +71,14 @@ final class DynamicMailTransport implements TransportInterface
     {
         try {
             return $this->settings->configuredTransport();
-        } catch (SecretUnreadableException $e) {
+        } catch (SecretUnreadableException $exception) {
             // A rotated INSTANCE_SECRET_KEY. Surfaced as a transport failure so
             // every send path degrades the way a dead relay already does.
-            throw new TransportException('The stored mail password is unreadable: ' . $e->getMessage(), 0, $e);
+            throw new TransportException(
+                'The stored mail password is unreadable: ' . $exception->getMessage(),
+                0,
+                $exception,
+            );
         }
     }
 

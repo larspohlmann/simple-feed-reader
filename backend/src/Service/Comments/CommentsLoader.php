@@ -41,8 +41,8 @@ final readonly class CommentsLoader
             $body = $this->fetcher->fetch($feedUrl)->modifiedBody();
 
             return CommentsResultModel::ok($this->comments($entry, $this->parser->parse($body)->entries));
-        } catch (FeedThrottledException $e) {
-            $wait = $this->hostThrottle->record($feedUrl, $e->retryAfterSeconds);
+        } catch (FeedThrottledException $exception) {
+            $wait = $this->hostThrottle->record($feedUrl, $exception->retryAfterSeconds);
 
             return CommentsResultModel::throttled($wait);
         } catch (FetchException | FeedParseException) {

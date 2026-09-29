@@ -68,8 +68,8 @@ final readonly class LokiSpoolShipper
 
         try {
             $lines = json_decode($contents, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw new CorruptSpoolFileException($file, $e);
+        } catch (\JsonException $exception) {
+            throw new CorruptSpoolFileException($file, $exception);
         }
         if (!\is_array($lines)) {
             throw new CorruptSpoolFileException($file);

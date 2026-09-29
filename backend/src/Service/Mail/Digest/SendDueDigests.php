@@ -98,12 +98,12 @@ final readonly class SendDueDigests
     ): DigestAttempt {
         try {
             $this->mailer->send($user, $model);
-        } catch (TransportExceptionInterface $e) {
+        } catch (TransportExceptionInterface $exception) {
             $this->logger->error(
                 'Digest send failed: {userId} <{email}>',
-                ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $e],
+                ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $exception],
             );
-            $this->health->recordFailure(MailKind::Digest, $user->getEmail(), $e->getMessage());
+            $this->health->recordFailure(MailKind::Digest, $user->getEmail(), $exception->getMessage());
 
             return DigestAttempt::SendFailed;
         }

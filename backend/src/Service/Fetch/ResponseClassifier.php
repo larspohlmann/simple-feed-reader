@@ -153,8 +153,8 @@ final readonly class ResponseClassifier
     {
         try {
             return $response->getStatusCode();
-        } catch (ExceptionInterface $e) {
-            throw FetchException::from($url, $e);
+        } catch (ExceptionInterface $exception) {
+            throw FetchException::from($url, $exception);
         }
     }
 
@@ -162,8 +162,8 @@ final readonly class ResponseClassifier
     {
         try {
             return $response->getContent(false);
-        } catch (ExceptionInterface $e) {
-            throw FetchException::from($url, $e);
+        } catch (ExceptionInterface $exception) {
+            throw FetchException::from($url, $exception);
         }
     }
 }

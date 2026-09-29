@@ -40,8 +40,8 @@ final readonly class DigestImageEmbedder implements DigestImageEmbedderInterface
         foreach ($this->requests($page) as $url => $kind) {
             try {
                 $image = $this->embedOne($url, $kind);
-            } catch (FaviconUnavailableException | ImageProcessingException $e) {
-                $this->logger->debug('Digest image skipped: {url}', ['url' => $url, 'exception' => $e]);
+            } catch (FaviconUnavailableException | ImageProcessingException $exception) {
+                $this->logger->debug('Digest image skipped: {url}', ['url' => $url, 'exception' => $exception]);
                 continue;
             }
 

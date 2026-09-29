@@ -158,9 +158,9 @@ final readonly class OpenAiCompatibleChatClient implements ChatCompletionClientI
         foreach ($calls as $index => $call) {
             try {
                 $response = $this->request($connection, $call->request);
-            } catch (ExceptionInterface $e) {
+            } catch (ExceptionInterface $exception) {
                 $outcomes[$index] = CompletionOutcomeModel::failure(
-                    new ProviderUnreachableException('That address did not answer.', 0, $e),
+                    new ProviderUnreachableException('That address did not answer.', 0, $exception),
                 );
 
                 continue;
