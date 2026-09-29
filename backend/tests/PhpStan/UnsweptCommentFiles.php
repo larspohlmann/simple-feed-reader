@@ -8,30 +8,6 @@ namespace App\Tests\PhpStan;
 final class UnsweptCommentFiles
 {
     public const array FILES = [
-        // N
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/AuthorBioSeparator.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/DuplicateBlockCollapser.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/EdgeBoilerplateTrimmer.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/LeadingTitleRemover.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/MediaOnlyLede.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/NavigationChromeTrimmer.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/PlayerChromeCleaner.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/SubstackPosterLink.php',
-        'src/Service/Reader/BodyCleaning/BodyCleaningStep/TeaserPlayerInserter.php',
-        'src/Service/Reader/BoilerplateVerdict.php',
-        'src/Service/Reader/HtmlPageFetcher.php',
-        'src/Service/Reader/OriginalHeroResolver.php',
-        'src/Service/Reader/PageRepair/HeadingClassRemover.php',
-        'src/Service/Reader/PageRepair/HorizontalRuleUnwrapper.php',
-        'src/Service/Reader/PageRepair/ImageButtonUnwrapper.php',
-        'src/Service/Reader/PageRepair/LazyImageSources.php',
-        'src/Service/Reader/PageRepair/NoscriptImageUnwrapper.php',
-        'src/Service/Reader/PageRepair/OrphanIconGlyphRemover.php',
-        'src/Service/Reader/PageRepair/PageRepairInterface.php',
-        'src/Service/Reader/PageRepair/ShareIntentLinkRemover.php',
-        'src/Service/Reader/PageRepair/ShareWidgetRemover.php',
-        'src/Service/Reader/PageRepair/SubstackGatedVideoPlaceholder.php',
-        'src/Service/Reader/RelatedTeaserGridRemover.php',
         // O
         'src/Service/Reader/ExtractionCoverageGate.php',
         'src/Service/Reader/HeroImageSelector.php',

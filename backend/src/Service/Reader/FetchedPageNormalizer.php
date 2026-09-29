@@ -14,8 +14,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Parses a fetched page once and runs the PageRepairInterface pipeline over it, in the order services.yaml wires,
- * before readability scores it. <script>/<style> are cut from the raw source first, bounded by the real close tag the
- * tokenizer would use, to stay byte-identical to the pipeline this replaced.
+ * before readability scores it. <script>/<style> blocks are cut from the raw source first.
  */
 final readonly class FetchedPageNormalizer
 {
@@ -34,8 +33,8 @@ final readonly class FetchedPageNormalizer
     }
 
     /**
-     * The page with single-child <div> wrapper chains collapsed (#235), or null when there is none. A fresh
-     * parse, since readability consumes each document it reads and the collapse breaks some pages (#476).
+     * The page with single-child <div> wrapper chains collapsed, or null when there is none. A fresh parse, since
+     * readability consumes each document it reads and the collapse breaks some pages (#476).
      * @throws UnparseableHtmlException when the page is blank or cannot be parsed
      */
     public function collapseWrapperChains(string $html): ?HTMLDocument

@@ -8,10 +8,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Readability reads a `<div>` whose only child is an `<hr>` as empty and removes
- * it, taking the rule with it; Substack wraps every section break that way.
- * Promote the rule out of each such wrapper so it survives as a direct child
- * that scoring leaves alone.
+ * Promotes an <hr> out of the text-less <div>s that hold only it: readability removes such a <div> as empty, and
+ * the rule with it.
  */
 final readonly class HorizontalRuleUnwrapper implements PageRepairInterface
 {

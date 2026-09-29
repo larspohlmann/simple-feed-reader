@@ -12,30 +12,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Restores the real source of a lazy-loaded <img> before readability sees it.
- *
- * Lazy-loading sites ship a blank `data:` placeholder in `src` and keep the
- * true URL in a `data-*` attribute (#467: WP Rocket's `data-lazy-src`).
- * Neither survives EntrySanitizer — the placeholder is a forbidden scheme,
- * the data attribute isn't on the allow-list — so the reader rendered an
- * empty frame. Promoting the candidate here lets the sanitizer see an
- * ordinary image and keep its scheme guard intact.
- *
- * A responsive <picture> hides its URL the same way without being lazy: the
- * <img> carries no `src`, and candidates sit on sibling <source srcset>
- * elements (#498: ZDFheute). A lazy <picture> keeps those on `data-srcset`
- * (nature.com, #789), read by the same lazy attributes as the <img>. The last
- * resort looks one level out, into the picture the image belongs to.
- *
- * An image with no usable candidate is removed: an unloadable <img> is a
- * broken frame, and leaving it fools HeroImageSelector into thinking the body
- * already shows a picture, suppressing the hero.
- *
- * Once an image inside a <picture> owns a usable src, the picture is
- * flattened to that image so the sibling <source> set cannot override it.
- * NDR lists a 20w placeholder first with `sizes="1px"`; its script resizes
- * after layout, but the reader strips the script, so a surviving <source>
- * would leave the browser on the placeholder (entry 480204).
+ * Gives every <img> a usable src from its lazy `data-*` attributes, srcset or <picture> sources, since EntrySanitizer
+ * keeps neither a `data:` placeholder nor those attributes. An image with no candidate is removed (a broken frame
+ * would also suppress the hero), and a <picture> around a resolved image is flattened to it.
  */
 final readonly class LazyImageSources implements PageRepairInterface
 {
@@ -91,15 +70,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * A <picture>'s <source> set carries the real renditions; its <img> is
-     * only the fallback for clients without <picture> support, and
-     * publishers often make that fallback a tiny LQIP placeholder (taz ships
-     * a 14px webp, entry 486683). Adopt the widest <source> — unless the
-     * <img>'s own src is already at least as wide, the mirror case where the
-     * placeholder hides in a <source> and the real photo is the <img> (NDR,
-     * entry 480204). A <source> scoped by `media` to a narrower viewport is a
-     * mobile crop, not a desktop rendition, so it's no candidate at all (zeit
-     * lists those first and measures nothing, entry 497686).
+     * Adopts the widest <source>, since the <img> is only the fallback and often a tiny placeholder. An <img> that
+     * already measures as wide keeps its src: then the placeholder is the <source>.
      */
     private function preferWiderPictureSource(Element $image): void
     {
@@ -115,13 +87,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * A lazy-loaded <img> outside any <picture> can pin its own src to a tiny
-     * LQIP rendition and keep the real sizes in its srcset (heise ships the lead
-     * image so, inside a <noscript> the sanitizer would drop; entry 508092).
-     * EntrySanitizer strips srcset, so the widest rendition has to move into src
-     * here or the reader shows the placeholder. Unlike a <picture> fallback,
-     * a bare <img>'s src is the author's chosen rendition, so only a src that
-     * measurably undersizes the srcset is upgraded; an unmeasured one stays.
+     * Moves a bare <img>'s widest srcset rendition into src: EntrySanitizer strips srcset, and a lazy image may pin src
+     * to a placeholder. Only a src that measures narrower is replaced; an unmeasured src is the author's choice.
      */
     private function preferWiderOwnSrcset(Element $image): void
     {
@@ -141,10 +108,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * Moves a wider rendition into the <img>'s src, dropping the width and
-     * height the smaller rendition carried. The src stays when it already
-     * measures at least as wide, so a real photo is never traded for a
-     * narrower one (the NDR mirror case, entry 480204).
+     * Moves a wider rendition into src and drops the width and height the smaller one carried. A measured src stays
+     * unless the candidate measures wider, so a real photo is never traded for a narrower one.
      */
     private function adoptWiderRendition(Element $image, ImageRenditionModel $candidate): void
     {
@@ -164,13 +129,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * Replaces the enclosing <picture> with the image, dropping the sibling
-     * <source> elements. The image now carries an authoritative src, and a
-     * surviving <source> would override it: NDR lists a 20w placeholder with
-     * `sizes="1px"`, so once its resize script is stripped the browser picks
-     * the placeholder over the real photo (entry 480204). The reader shows one
-     * picture at a single column width, so the <source> set's responsive
-     * candidates have no use here.
+     * Replaces the enclosing <picture> with the image: a surviving <source> would override the resolved src, and
+     * with the page's resize script stripped the browser may pick a placeholder rendition from it.
      */
     private function flattenEnclosingPicture(Element $image): void
     {
@@ -202,10 +162,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * A responsive <picture> may leave its <img> bare and carry the URL on a
-     * sibling <source srcset> (ZDFheute is the case, #498). The <img> is the
-     * element the browser renders, so it has to survive with a source of its
-     * own — removing it drops the picture and the figure built around it.
+     * A src-less <img> in a <picture> takes its first usable <source> URL: removing the <img> the browser renders
+     * would drop the picture and the figure built around it (#498).
      */
     private function candidateFromEnclosingPicture(Element $image): ?string
     {
@@ -215,10 +173,8 @@ final readonly class LazyImageSources implements PageRepairInterface
     }
 
     /**
-     * The <picture> an image belongs to. The HTML5 parser treats <source> as a
-     * void element, so the candidates and the <img> stay siblings under the
-     * <picture> however the page spells its source tags — the image is the
-     * picture's direct child.
+     * The parent <picture>. The HTML5 parser treats <source> as void, so the <img> stays a direct child of its
+     * picture however the page spells its source tags.
      */
     private function enclosingPicture(Element $image): ?Element
     {
@@ -227,7 +183,6 @@ final readonly class LazyImageSources implements PageRepairInterface
         return $parent instanceof Element && $parent->localName === 'picture' ? $parent : null;
     }
 
-    /** The first candidate of a srcset list, or null when it yields nothing usable. */
     private function usableSrcsetHead(string $srcset): ?string
     {
         $candidate = Srcset::firstUrl($srcset);

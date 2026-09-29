@@ -8,11 +8,8 @@ use App\Service\Html\Support\ClassTokenMatcher;
 use Dom\Element;
 
 /**
- * Decides whether one edge block is boilerplate. Two or more independent
- * structural signals condemn it: a fingerprint class, a link list, a list of
- * picture cards, a form or email input. A single signal needs a corroborating
- * heading phrase, a phrase alone never condemns, and a standalone ad label
- * condemns on its own (#582, #779).
+ * Condemns an edge block on two structural signals (a fingerprint class, a link list, a picture-card list, a form or
+ * email input), or on one with a corroborating heading phrase. A phrase alone never condemns; an ad label alone does.
  */
 final readonly class BoilerplateVerdict
 {
@@ -96,8 +93,8 @@ final readonly class BoilerplateVerdict
     }
 
     /**
-     * Three or more links that each wrap a picture: a related-articles grid
-     * drawn as teaser cards, whether or not the publisher labels it (#779).
+     * Three or more links that each wrap a picture: a related-articles grid drawn as teaser cards, whether or not the
+     * publisher labels it.
      */
     private function isPictureCardList(Element $block): bool
     {

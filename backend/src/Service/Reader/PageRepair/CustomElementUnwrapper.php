@@ -7,9 +7,8 @@ namespace App\Service\Reader\PageRepair;
 use Dom\HTMLDocument;
 
 /**
- * Replaces every custom element (a hyphenated tag name) with its children.
- * The sanitizer drops an unknown element with its content, so unwrapping
- * first (#789) is what lets nature's <sh-background-transition> photos through.
+ * Replaces every custom element (a hyphenated tag name) with its children: the sanitizer drops an unknown element
+ * with its content, so a photo inside one would be lost.
  */
 final readonly class CustomElementUnwrapper implements PageRepairInterface
 {

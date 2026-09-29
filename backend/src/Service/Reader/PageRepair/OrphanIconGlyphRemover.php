@@ -10,10 +10,8 @@ use Dom\Text;
 use Dom\XPath;
 
 /**
- * Icon-font glyphs sit in a Private Use Area code point selected by a CSS class.
- * The sanitizer strips the class, so the glyph loses its font and the browser
- * paints a tofu box (taz's pull-quote mark, U+E80F). The dead code points are
- * removed here, with the now-empty element that held them.
+ * Removes Private Use Area code points and the elements they leave empty: the icon font that draws them is chosen by
+ * a class the sanitizer strips, so each would render as a tofu box.
  */
 final readonly class OrphanIconGlyphRemover implements PageRepairInterface
 {

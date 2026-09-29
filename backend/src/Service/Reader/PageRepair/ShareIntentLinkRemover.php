@@ -10,19 +10,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Removes hand-rolled social "share" links before readability sees them. Which
- * `<a>` counts as a share control is ShareLinkMatcher's call: a link to a share
- * endpoint carrying this page's address, or a link back to the page itself
- * carrying a share action (#627, #786).
- *
- * A share link rarely stands alone: it sits in a bar with sibling share links
- * and a "Share this article" label, often as a `<ul><li>` list. removeFrom()
- * climbs from each share link to the outermost ancestor that still holds only
- * share links and no more than a short label's worth of other text, so the
- * whole bar goes with its label. The climb sees through a plain
- * `<ul>`/`<ol>`/`<li>` wrapper (structure, not content) but stops at any other
- * container that is not itself link-only, so a real sibling paragraph is never
- * swept in, and at <main>/<article>/<body>, so it never reaches real prose.
+ * Removes hand-rolled share links, with their bar, before readability: each ShareLinkMatcher match climbs to the
+ * outermost ancestor holding only share links and a short label, seeing through <ul>/<ol>/<li> but no other
+ * container, and never into <main>, <article> or <body>.
  */
 final readonly class ShareIntentLinkRemover implements PageRepairInterface
 {
@@ -103,11 +93,8 @@ final readonly class ShareIntentLinkRemover implements PageRepairInterface
     }
 
     /**
-     * The <a> children of $element, plus any reached by descending through a
-     * <ul>/<ol>/<li> wrapper — list structure a share bar commonly uses. A
-     * wrapper of any other kind (a <div>, a <p>) is opaque: its links do not
-     * count here, so a genuine content container never gets treated as if its
-     * links belonged to its parent.
+     * The <a> children, plus those reached through <ul>/<ol>/<li>. Any other wrapper is opaque, so a content
+     * container's links never count for its parent.
      *
      * @return list<Element>
      */

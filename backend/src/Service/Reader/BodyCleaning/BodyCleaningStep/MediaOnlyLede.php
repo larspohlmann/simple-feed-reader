@@ -11,10 +11,8 @@ use Dom\Node;
 use Dom\Text;
 
 /**
- * Some articles keep their whole lede in a header block that readability discards
- * as chrome, leaving a body that is only media — a photo gallery, a lone video.
- * When nothing but figures survives, restore readability's excerpt as a lead
- * paragraph so the reader shows the words the page led with, not just the images.
+ * Puts readability's excerpt back as the lead paragraph when only figures survived, because the page kept its lede
+ * in a header block readability discarded as chrome.
  */
 final readonly class MediaOnlyLede implements BodyCleaningStepInterface
 {

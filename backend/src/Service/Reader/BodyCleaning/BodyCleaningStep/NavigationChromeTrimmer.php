@@ -12,25 +12,9 @@ use Dom\HTMLDocument;
 use Dom\Node;
 
 /**
- * Removes a site header / navigation region that readability kept as article
- * content. Theme builders that assemble the masthead from scored content
- * <div>s rather than a semantic <header> — Avada/Fusion is the case that
- * prompted this — leave the logo, an un-rendered search widget and the whole
- * menu sitting in front of the real article.
- *
- * A navigation landmark (<nav>, <header>, role=navigation/banner) anchors the
- * region: the trimmer climbs from it to the outermost still-link-dominated
- * ancestor and removes that whole container, so the logo and search widget
- * beside the menu go with it. The climb stops at the article body
- * (<main>/<article>) and at <body>, so it never reaches into real prose, and a
- * landmark already inside <main>/<article> — an article's own table of
- * contents — is left untouched. Runs on the shared document ReaderBodyCleaner
- * owns, before EntrySanitizer strips the roles this step reads.
- *
- * A second anchor covers a masthead menu with no landmark at all: a bare
- * <ul>/<ol> of outbound links before the first substantial paragraph
- * (Dissent, Democracy Now). The same link-dominated climb and content-body
- * guard apply.
+ * Removes a masthead readability kept. From each navigation landmark outside <main>/<article>, and each leading list
+ * of outbound links, it climbs to the outermost link-dominated ancestor and removes it, never crossing into <main>,
+ * <article> or <body>.
  */
 final readonly class NavigationChromeTrimmer implements BodyCleaningStepInterface
 {

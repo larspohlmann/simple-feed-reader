@@ -8,13 +8,8 @@ use App\Entity\Entry;
 use App\Service\Image\Model\DeclaredImageModel;
 
 /**
- * Resolves the picture that leads the Original (feed-body) view: the feed's own
- * item image, shown only when the feed body carries no image of its own.
- *
- * The Reader view no longer needs a resolver of its own — its lead picture now
- * rides inside the extracted body, restored by ReaderLeadImage during
- * extraction (#681). Only the original view, which renders the raw feed body the
- * client already holds, still needs a hero decided server-side.
+ * The Original (feed-body) view's lead picture: the feed's item image, shown only when the feed body carries no image
+ * of its own. The Reader view's lead rides inside the extracted body instead (ReaderLeadImage).
  */
 final readonly class OriginalHeroResolver
 {

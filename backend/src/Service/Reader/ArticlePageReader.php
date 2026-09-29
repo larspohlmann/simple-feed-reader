@@ -15,7 +15,7 @@ use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 
-/** Every read of a fetched page, taken before readability consumes the normalised document (#684, #748). */
+/** Every read of a fetched page, taken before readability consumes the normalised document. */
 final readonly class ArticlePageReader
 {
     public function __construct(

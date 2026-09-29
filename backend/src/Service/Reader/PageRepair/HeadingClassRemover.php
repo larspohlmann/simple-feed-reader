@@ -7,11 +7,8 @@ namespace App\Service\Reader\PageRepair;
 use Dom\HTMLDocument;
 
 /**
- * Readability strips a heading whose class or id matches its unlikely-candidate
- * regex — Substack marks every subheading `class="header-anchor-post"`, and the
- * "header" token drops each one, so the section headings vanish from the body. A
- * heading's meaning is its tag, not its class, so both attributes go before
- * scoring.
+ * Strips class and id from every heading before scoring: readability drops a heading whose class matches its
+ * unlikely-candidate regex (a `header-anchor-post` class does), and a heading's meaning is its tag.
  */
 final readonly class HeadingClassRemover implements PageRepairInterface
 {

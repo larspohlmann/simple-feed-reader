@@ -11,26 +11,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Removes a paragraph that repeats the one just before it. A responsive
- * publisher emits the dek once per breakpoint and hides all but one with CSS;
- * the scraper keeps every copy because it never runs the page styles, so the
- * reader would show the same words twice (#963, measured on The Verge). Only a
- * paragraph that repeats its immediate predecessor is dropped, so a sentence
- * reused elsewhere survives.
- *
- * Images are deliberately not de-duplicated. Deciding "same photo?" from URL
- * fingerprints repeatedly deleted distinct photos that shared only a generic
- * filename (#1032 Pixabay, #1051 YouTube posters, #1088 CBC `default.jpg`);
- * showing a responsive duplicate twice is a lesser harm than dropping the wrong
- * one, so a doubled image is left for the reader.
- *
- * A recovered embed is left out of the comparison: the reader injects a bare
- * `<a>` per in-body player, and a posterless embed (Vimeo, SoundCloud,
- * Brightcove) carries the provider's fixed label, so two in a row read as
- * identical prose that must not collapse (#1051).
- *
- * Mutates the shared document in place; ReaderBodyCleaner parses and serialises
- * once around it.
+ * Drops a paragraph that repeats its immediate predecessor, like a dek a responsive page prints once per breakpoint.
+ * Images are never de-duplicated: URL fingerprints deleted distinct photos (#1088). Recovered embed links never
+ * compare, since posterless ones share the provider's fixed label.
  */
 final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterface
 {
@@ -57,10 +40,7 @@ final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterfac
     }
 
     /**
-     * Paragraphs that carry prose, not a wrapped image, a blank line or a
-     * posterless embed: an empty line never marks a duplicate, an image block
-     * is not compared by its caption text, and an embed is media the reader
-     * injected.
+     * The paragraphs compared: those with text, minus image blocks (never judged by caption) and recovered embeds.
      *
      * @return list<Element>
      */
@@ -83,7 +63,6 @@ final readonly class DuplicateBlockCollapser implements BodyCleaningStepInterfac
         return $paragraphs;
     }
 
-    /** True when the anchor is a recovered embed link, keyed by the shared provider allow-list. */
     private function isRecoveredEmbedAnchor(?Element $anchor): bool
     {
         return $anchor !== null

@@ -11,7 +11,7 @@ use fivefilters\Readability\Article;
 
 /**
  * Readability's content, when there is enough of it to show. Recovered media is itself evidence of an article,
- * so a thin text with media passes (#748).
+ * so a thin text with media passes.
  */
 final readonly class ArticleContentGate
 {

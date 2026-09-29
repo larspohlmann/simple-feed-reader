@@ -10,18 +10,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Drops the first heading or paragraph of extracted content when it repeats
- * the article's title. The reader view renders the title itself, so a kept headline shows
- * twice. Readability's own duplicate check misses headlines that sit in their
- * own wrapper block (it demotes the page's <h1> to <h2> and only inspects the
- * top candidate), which is exactly the block-component layout of #235.
- *
- * Takes multiple title candidates because no single source is reliable: the
- * page <title> can be an SEO variant of the headline, while the feed entry's
- * title usually matches it verbatim.
- *
- * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
- * once around it). A document with no matching leading heading is left as is.
+ * Drops the first heading or paragraph when it repeats a title candidate: the reader renders the title itself, and
+ * readability misses a headline in its own wrapper block. Several candidates, because the page <title> can be an SEO
+ * variant of the headline the feed title matches.
  */
 final readonly class LeadingTitleRemover implements BodyCleaningStepInterface
 {
@@ -60,10 +51,8 @@ final readonly class LeadingTitleRemover implements BodyCleaningStepInterface
     }
 
     /**
-     * The first h1/h2/h3/p in document order with non-empty text. An
-     * element-named XPath expression would not match — the HTML5 parser puts
-     * elements in the XHTML namespace, which `//h1` does not select — so this
-     * reads the tree with a CSS selector.
+     * The first h1/h2/h3/p with text, by CSS selector: an XPath `//h1` misses the HTML5 parser's XHTML-namespaced
+     * elements.
      */
     private function findFirstTextBlock(HTMLDocument $document): ?Element
     {

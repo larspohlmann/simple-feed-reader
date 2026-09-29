@@ -13,8 +13,8 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Cleans readability's article HTML through one shared document: parse once, run the steps in the order
- * services.yaml lists them, serialise once for EntrySanitizer (#586, #684, #748). A body too broken to parse is
- * returned unchanged, so a degenerate readability output falls through instead of failing the extraction.
+ * services.yaml lists them, serialise once for EntrySanitizer. A body too broken to parse is returned unchanged, so
+ * a degenerate readability output falls through instead of failing the extraction.
  */
 final readonly class ReaderBodyCleaner
 {

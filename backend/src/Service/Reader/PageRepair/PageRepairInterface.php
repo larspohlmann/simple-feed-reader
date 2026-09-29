@@ -7,10 +7,8 @@ namespace App\Service\Reader\PageRepair;
 use Dom\HTMLDocument;
 
 /**
- * One repair applied to a fetched page's parsed document before readability
- * scores it — a defect of a real-world site that would otherwise cost the
- * extraction a figure, a heading or a whole article. FetchedPageNormalizer runs
- * the repairs in order; each mutates the document in place.
+ * One in-place repair of a fetched page's document before readability scores it, for a real-world page defect that
+ * would cost the extraction a figure, a heading or the whole article. FetchedPageNormalizer runs them in order.
  */
 interface PageRepairInterface
 {
