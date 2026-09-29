@@ -12,35 +12,9 @@ use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * The half of an OpenID Connect provider identical for Google and Apple —
- * two legs of the protocol:
- *
- * - **Outbound.** getAuthorizationUrl() assembles the consent request from the
- *   four things providers differ by — endpoint, client id, scope, and whatever
- *   extraAuthorizationParameters() adds.
- * - **Inbound.** exchangeCode() POSTs the authorization code to the token
- *   endpoint and reads the identity from the ID token that comes back.
- *
- * A subclass supplies configuration only. Both public methods are `final`, so a
- * provider cannot drop a standard parameter or alter how the token is obtained
- * or checked.
- *
- * ## Where the security argument lives
- *
- * The inbound leg does NOT verify the ID token's signature — permitted by
- * OpenID Connect Core §3.1.3.7 item 6, but only for a token fetched straight off
- * the token endpoint over validated TLS, a narrow carve-out with three
- * preconditions, each enforced by one of two collaborators:
- *
- * - {@see TokenEndpoint} enforces the preconditions (an `https` endpoint we
- *   hardcode, pinned TLS, no redirects) and is the only place that can mint an
- *   {@see \App\Service\OAuth\Oidc\Model\IdTokenModel}.
- * - {@see IdTokenVerifier} checks everything TLS says nothing about — `iss`,
- *   `aud`, `azp`, `exp`, `nonce`, `sub` — and accepts only an IdTokenModel, so it
- *   cannot be handed a token from another channel.
- *
- * Read both docblocks before changing how a token is fetched or trusted. The
- * boundary is load-bearing and pinned by OidcBoundaryTest.
+ * The OpenID Connect sign-in shared by Google and Apple; a subclass supplies configuration only, and both legs are
+ * `final`. How a token is fetched and trusted is a security boundary pinned by OidcBoundaryTest:
+ * docs/oauth-sign-in.md#the-id-token-trust-boundary
  */
 abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
 {
@@ -76,25 +50,12 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
      */
     abstract protected function getAuthorizationEndpoint(): string;
 
-    /**
-     * What this application asks the user to consent to.
-     *
-     * Abstract rather than defaulted: no scope string is right for an unknown
-     * provider, and a wrong default would be a silently over-broad consent
-     * screen. Google needs `openid email`; Apple needs `email` and mints an ID
-     * token regardless.
-     */
+    /** Abstract, not defaulted: a wrong default would be a silently over-broad consent screen. */
     abstract protected function getScope(): string;
 
     /**
-     * Anything this provider needs in the authorization request that OIDC does
-     * not define — Apple's `response_mode=form_post` is the only instance so far.
-     *
-     * Merged AFTER the standard parameters, so it can overwrite them: a provider
-     * needing a different `response_type` says so in one line rather than fork
-     * the method. That also means a careless override can weaken the request —
-     * e.g. dropping `code_challenge_method` to `plain` — so overriding a
-     * standard key needs the same justification the parameter had.
+     * Parameters OIDC does not define (Apple's `response_mode`). Merged last, so an override can replace a standard
+     * key: weakening one, say `code_challenge_method`, needs the justification the parameter had.
      *
      * @return array<string, string>
      */
@@ -103,15 +64,7 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
         return [];
     }
 
-    /**
-     * `final`, so a subclass cannot drop a standard parameter. PKCE is not
-     * optional here — `code_challenge_method` is `S256`; plain is offered
-     * nowhere in this codebase (see OAuthStateStore::challengeFor).
-     *
-     * PHP_QUERY_RFC3986 rather than the default RFC1738, so a space encodes as
-     * `%20` not `+` — `+` goes wrong once a value is read back out of a path or
-     * header, and the scope strings here contain spaces.
-     */
+    /** PKCE is always S256; RFC 3986 encoding makes a space in the scope `%20`, never `+`. */
     final public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
     {
         $queryParameters = [
@@ -134,11 +87,8 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
     }
 
     /**
-     * The redirect URI, built from configuration, never from the Host header.
-     * It is echoed to the token endpoint and must match what is registered
-     * with the provider byte for byte; deriving it from an attacker-settable
-     * header would, on a server that does not pin its host, redirect the
-     * authorization code elsewhere.
+     * Built from configuration, never the Host header, which on a server that does not pin its host would let a
+     * request redirect the authorization code elsewhere. Must match the provider's registration byte for byte.
      */
     final public function getRedirectUri(): string
     {
@@ -148,11 +98,8 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
     final public function exchangeCode(string $code, string $codeVerifier, string $nonce): OAuthIdentityModel
     {
         if ('' === $nonce) {
-            // Dangerous caller bug: '' === '' is true, so an empty expectation
-            // would silently accept a token with an empty nonce. Refused HERE,
-            // before the token endpoint runs, so a broken caller doesn't burn a
-            // single-use code on a doomed exchange. IdTokenVerifier refuses it
-            // again as the backstop.
+            // An empty expectation would accept a token with an empty nonce. Refused before the token call so a broken
+            // caller does not burn a single-use code; IdTokenVerifier refuses it again.
             throw new OAuthFailedException('no nonce to check the id_token against');
         }
 

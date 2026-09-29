@@ -8,19 +8,8 @@ use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
 
 /**
- * The decoded payload of an ID token, and the one place that knows what shape a
- * claim arrived in.
- *
- * The split from {@see IdTokenVerifier} is between reading and deciding: this
- * class answers "what did the provider send", the verifier answers "do we
- * accept it". Accessors return null for a claim of the wrong type rather than
- * throwing — absent and wrong-typed both mean "no usable value", and it is the
- * verifier that turns that into the rejection message for that claim. Reading
- * the shape here also keeps the verifier's guards to one decision each,
- * instead of an `is_string()` at every call site.
- *
- * Decoding is deliberately NOT signature verification — see {@see IdTokenModel} for
- * what stands behind these bytes.
+ * The decoded payload of an ID token: what the provider sent, never whether to accept it ({@see IdTokenVerifier}).
+ * Accessors return null for an absent or wrong-typed claim. Decoding is not signature verification.
  */
 final readonly class IdTokenClaimsModel
 {
@@ -31,14 +20,7 @@ final readonly class IdTokenClaimsModel
     {
     }
 
-    /**
-     * Splits the JWT and decodes its payload, refusing anything that is not a
-     * JSON object.
-     *
-     * The header and signature segments are never read; their presence is
-     * checked only so a string with the wrong number of dots isn't mistaken
-     * for a JWT before segment 1 is decoded.
-     */
+    /** Reads the payload segment only; the other two segments are counted, never read. */
     public static function decode(IdTokenModel $token): self
     {
         $segments = explode('.', $token->jwt);
@@ -55,14 +37,8 @@ final readonly class IdTokenClaimsModel
     }
 
     /**
-     * The claim as it arrived, for the two claims whose accepted shapes are
-     * themselves a trust decision rather than a matter of type.
-     *
-     * `email_verified` is why this exists: Google sends a boolean, Apple sends
-     * the string "true", and which spellings count as verified is a trust
-     * decision that belongs in the verifier, not here. Prefer the typed
-     * readers below for everything else, so a caller cannot forget a claim
-     * may be of any type.
+     * The raw claim, for claims whose accepted shapes are a trust decision (`email_verified`: Google sends a boolean,
+     * Apple the string "true"). Prefer the typed readers below for everything else.
      */
     public function claim(string $name): mixed
     {
@@ -80,11 +56,8 @@ final readonly class IdTokenClaimsModel
     }
 
     /**
-     * The claim if it is a JSON number with no fractional part, null otherwise.
-     *
-     * Deliberately not `is_numeric`: RFC 7519 defines `exp` as a JSON number,
-     * so a token spelling it as the string "1780000000" was not built by the
-     * provider — accepting it would accept a shape only a forger produces.
+     * The claim if it is a JSON integer, null otherwise. Not `is_numeric`: RFC 7519 makes `exp` a JSON number, so a
+     * numeric string is a shape only a forger produces.
      */
     public function int(string $name): ?int
     {
@@ -94,12 +67,8 @@ final readonly class IdTokenClaimsModel
     }
 
     /**
-     * The claim as a list of strings, for claims RFC 7519 §4.1.3 allows to be
-     * either one string or an array of them — `aud` being the one that matters.
-     *
-     * Non-string members are dropped rather than stringified, so no shape of
-     * `aud` can match a client id by accident. Anything neither a string nor
-     * an array reads as an empty list, which matches nothing either.
+     * The claim as a list of strings, for claims RFC 7519 §4.1.3 allows as a string or an array (`aud`). Non-string
+     * members are dropped, not cast, so no shape of `aud` can match a client id by accident.
      *
      * @return list<string>
      */

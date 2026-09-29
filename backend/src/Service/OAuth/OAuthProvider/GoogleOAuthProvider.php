@@ -8,12 +8,6 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/**
- * Google's endpoints, scopes and issuers. Everything security-relevant — the
- * code exchange and the reading of the ID token — lives in the parent; this
- * class is deliberately nothing but configuration, which is what makes "a third
- * provider is one class and one env block" true.
- */
 final readonly class GoogleOAuthProvider extends AbstractOidcProvider
 {
     private const string AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
