@@ -216,4 +216,34 @@ final class Rss1ParserTest extends TestCase
 
         self::assertSame('https://example.com/logo.png', $feed->imageUrl);
     }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://e/">
+                <title>Feed</title>
+                <link>https://e/</link>
+                <description>Feed</description>
+              </channel>
+              <item rdf:about="https://e/audio">
+                <title>Audio Item</title>
+                <link>https://e/audio</link>
+                <description>desc</description>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $entry = FeedFormatParsers::rss1()->parse($this->document($xml))->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
+    }
 }

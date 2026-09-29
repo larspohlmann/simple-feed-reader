@@ -73,4 +73,27 @@ final class Atom03ParserTest extends TestCase
             $feed->entries[0]->publishedAt,
         );
     }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <feed xmlns="http://purl.org/atom/ns#" xmlns:media="http://search.yahoo.com/mrss/" version="0.3">
+              <title>Feed</title>
+              <entry>
+                <title>Audio entry</title>
+                <link rel="alternate" href="https://e/audio"/>
+                <id>urn:uuid:audio</id>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </entry>
+            </feed>
+            XML;
+
+        $entry = $this->parse($xml)->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
+    }
 }

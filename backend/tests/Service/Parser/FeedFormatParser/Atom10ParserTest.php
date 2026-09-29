@@ -430,4 +430,27 @@ final class Atom10ParserTest extends TestCase
 
         self::assertSame('https://www.reddit.com/user/someone', $entry->authorUrl);
     }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+              <title>Feed</title>
+              <entry>
+                <title>Audio entry</title>
+                <link rel="alternate" href="https://e/audio"/>
+                <id>urn:uuid:audio</id>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </entry>
+            </feed>
+            XML;
+
+        $entry = $this->parse($xml)->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
+    }
 }
