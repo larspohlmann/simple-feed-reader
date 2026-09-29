@@ -77,13 +77,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
 
     private function subscription(User $owner): Subscription
     {
-        $feed = new Feed('https://example.com/owned-lookup.xml');
-        $this->em->persist($feed);
-        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($subscription);
-        $this->em->flush();
-
-        return $subscription;
+        return $this->subscriptionToFeed($owner, 'https://example.com/owned-lookup.xml');
     }
 
     private function subscriptionToFeed(User $owner, string $feedUrl): Subscription

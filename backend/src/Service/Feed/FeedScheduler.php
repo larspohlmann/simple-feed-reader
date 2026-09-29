@@ -39,8 +39,6 @@ final readonly class FeedScheduler
     }
 
     /**
-     * A 304: a successful fetch that carried nothing new.
-     *
      * @throws \DateMalformedStringException
      */
     public function recordNotModified(Feed $feed): void

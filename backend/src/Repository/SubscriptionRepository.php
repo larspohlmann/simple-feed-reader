@@ -8,7 +8,6 @@ use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Repository\Exception\RecordNotFoundException;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
@@ -63,7 +62,7 @@ final class SubscriptionRepository extends ServiceEntityRepository
         /** @var list<Subscription> $rows */
         $rows = $this->createQueryBuilder('s')
             ->andWhere('s.user = :userId')->setParameter('userId', $userId)
-            ->andWhere('s.includeInAllItems = :included')->setParameter('included', true, Types::BOOLEAN)
+            ->andWhere('s.includeInAllItems = true')
             ->orderBy('s.id', 'ASC')
             ->getQuery()
             ->getResult();
