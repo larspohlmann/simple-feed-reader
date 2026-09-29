@@ -25,14 +25,6 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         $this->factory = new RecommendationCompletionRequestFactory($this->answerBudget);
     }
 
-    /**
-     * A suppressed connection still keeps the reasoning headroom in max_tokens.
-     * suppressReasoning sends `reasoning: {effort: none}` as a hint, but a local
-     * reasoning model routinely thinks anyway; with no headroom its answer was
-     * guillotined at finish_reason: length once batches grew past ~45 items
-     * (#493 follow-up). The headroom is a ceiling, not a reservation: a model
-     * that honours the hint stops early and pays nothing for the unused room.
-     */
     public function testASuppressedConnectionKeepsAReducedReasoningHeadroom(): void
     {
         $request = $this->factory->create(
@@ -50,11 +42,6 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
     }
 
-    /**
-     * The other half: a connection that may reason gets the full headroom, so
-     * the suppress hint is a real, meaningful reduction of the budget (#327,
-     * #493) — the suppressed bound is strictly smaller.
-     */
     public function testAConnectionThatMayReasonKeepsTheFullReasoningHeadroom(): void
     {
         $request = $this->factory->create(

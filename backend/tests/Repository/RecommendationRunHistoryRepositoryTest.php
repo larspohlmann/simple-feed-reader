@@ -37,10 +37,8 @@ final class RecommendationRunHistoryRepositoryTest extends DbTestCase
     public function testABerlinViewersAugustExcludesTheRunThatPrintsAsSeptember(): void
     {
         $user = $this->user('berlin-boundary@example.com');
-        // A control run safely inside the month, so the assertions below prove
-        // the window is correctly PLACED (this one is kept) and not merely
-        // correctly ordered (the boundary run alone would also pass an empty
-        // result if the window excluded the whole month by mistake).
+        // A control run inside the month: without it, a window that excluded the whole month would still pass the
+        // boundary assertions.
         $control = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-15 12:00:00'));
         $boundary = $this->fixtures()->persistRunAt($user, new \DateTimeImmutable('2026-08-31 23:30:00'));
 

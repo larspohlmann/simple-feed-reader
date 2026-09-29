@@ -12,23 +12,12 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
-/**
- * The mechanism that lets RecommendationRunAdvancer's per-user lock TTL
- * shrink to the longest silence a live holder can produce, instead of the
- * longest call it can legally make (#439, #444).
- */
 #[CoversClass(TickLockKeepalive::class)]
 final class TickLockKeepaliveTest extends TestCase
 {
     private const string LOCK_RESOURCE = 'recommendation-run-1';
 
-    /**
-     * The null-lock guard covers two states that both mean "nothing to
-     * refresh": before the first hold() and after release(). Exercising it
-     * through hold() then release() gives the assertion a lock that really
-     * would have been touched had the guard broken, rather than one that was
-     * never wired in at all.
-     */
+    /** Through hold() then release(), so a broken null-lock guard would refresh a lock that really exists. */
     public function testABeatWithNothingHeldRefreshesNothing(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');
@@ -68,10 +57,8 @@ final class TickLockKeepaliveTest extends TestCase
     }
 
     /**
-     * A streamed answer delivers deltas many times a second and each refresh
-     * is a call to the lock store, so the beats are throttled. The throttle
-     * has to stay far below the lock's own TTL, which the interval between
-     * these two beats is.
+     * Beats arrive many times a second and each refresh is a lock-store call, so they are throttled, at an interval
+     * far below the lock's TTL.
      */
     public function testABeatFiveSecondsLaterDoesNotRefreshAgain(): void
     {
@@ -92,10 +79,8 @@ final class TickLockKeepaliveTest extends TestCase
     }
 
     /**
-     * The interval is a minimum, not a strict gap: a beat exactly on the
-     * boundary refreshes. Pinned because the difference between `>=` and `>`
-     * here is one whole interval of extra silence in the worst case, and
-     * nothing else would notice.
+     * A beat exactly on the interval refreshes: `>` instead of `>=` would add a whole interval of silence that nothing
+     * else notices.
      */
     public function testABeatExactlyOnTheIntervalRefreshes(): void
     {
@@ -131,12 +116,6 @@ final class TickLockKeepaliveTest extends TestCase
         self::assertSame(1, $lock->refreshCount());
     }
 
-    /**
-     * A fresh tick must never inherit the previous tick's beat clock: without
-     * the reset, the elapsed time since the first lock's last refresh would
-     * already satisfy the throttle and the second lock's opening seconds
-     * would go unrefreshed for a reason that has nothing to do with it.
-     */
     public function testHoldOnASecondLockResetsTheThrottle(): void
     {
         $clock = new MockClock('2026-08-16 12:00:00');
@@ -157,11 +136,8 @@ final class TickLockKeepaliveTest extends TestCase
     }
 
     /**
-     * A refresh the store rejects because someone else holds the lock is the
-     * one failure that is not a store problem: the double-bank is underway.
-     * beat() still may not throw -- it runs inside the streaming loop -- so
-     * the loss is recorded here for the tick checkpoint to find at the next
-     * safe place to stop.
+     * A refresh rejected because someone else holds the lock means the double-bank is underway. beat() runs inside
+     * the streaming loop and may not throw, so the loss is recorded for the tick checkpoint.
      */
     public function testARefreshRejectedByAnotherOwnerRecordsTheLockAsLost(): void
     {

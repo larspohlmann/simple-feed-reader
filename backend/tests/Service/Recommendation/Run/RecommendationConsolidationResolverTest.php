@@ -21,15 +21,6 @@ use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * Against the real ranker, candidate loader, history loader, prompt builder
- * and call recorder, not mocks -- mirrors RecommendationProfileDistillerTest's
- * rationale: resolve()'s job is to coordinate the pool cut, the prompt build,
- * the provider call and the ranked-list assembly, and a mock would have to
- * encode that coordination itself instead of proving it. The provider itself
- * is the one seam worth faking: StubChatClient stands in for it, registered
- * as the container's ChatCompletionClientInterface in the test environment.
- */
 final class RecommendationConsolidationResolverTest extends DbTestCase
 {
     use BuildsTickContexts;
@@ -77,13 +68,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         self::assertSame(950, $outcome->ranked[0]['score']);
     }
 
-    /**
-     * Both survivors pass through untouched by duplicate-dropping (no
-     * `duplicates` named at all), so a mutant that flips the usort comparator
-     * or deletes the sort outright still passes every other test in this
-     * file -- only this one, with 2+ survivors whose reply scores invert
-     * their batch order, actually exercises the sort.
-     */
+    /** The only case whose reply scores invert two survivors' batch order, so it alone exercises the sort. */
     public function testUsableReplySortsSurvivorsByReplyScoreWhenOrderInverts(): void
     {
         [$firstEntry, $secondEntry] = $this->fixtures->seedFeedWithEntries($this->user, 2);
@@ -117,11 +102,8 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     }
 
     /**
-     * RecommendationConsolidationParser::salvagePicks() can legitimately
-     * return fewer picks than the pool it was shown, so a pool entry the
-     * reply neither scores nor names a duplicate is a real, reachable case.
-     * It must survive the fallback to its own batch score and empty reason
-     * rather than silently vanishing.
+     * The parser may return fewer picks than it was shown. A pool entry the reply neither scores nor names as a
+     * duplicate is dropped: every recommendation shown carries a reason the consolidation wrote.
      */
     public function testUsableReplyDropsASurvivorTheReplyDidNotMention(): void
     {
@@ -136,10 +118,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
             ['id' => $thirdId, 'score' => 300, 'reason' => ''],
         ]);
 
-        // The reply scores only the first two and names no duplicates: the
-        // third pool entry is left unmentioned, so it is dropped -- only
-        // entries the consolidation actually scored and reasoned survive, so
-        // every recommendation shown to the reader carries a real reason.
+        // The reply scores only the first two and names no duplicates, leaving the third unmentioned.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [
                 ['id' => $firstId, 'score' => 900, 'reason' => 'Great fit.'],
@@ -226,13 +205,6 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         $this->resolveConsolidation($run);
     }
 
-    /**
-     * A transport failure has to abort the log row it opened, not merely
-     * propagate — a verdict left null forever reads to the debug panel as
-     * "still streaming" (mirrors RecommendationRunAdvancerTest's own
-     * testATransportFailureStampsItsLogRow, but exercised here at the
-     * resolver's own catch rather than through the full advancer).
-     */
     public function testTransportFailureAbortsTheOpenLogRow(): void
     {
         $this->fixtures->debugEnabledSettings($this->user);
@@ -302,10 +274,8 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
     }
 
     /**
-     * stillPresent() must leave the pool a genuine list even when the entry
-     * it drops sits in the middle: array_filter() alone keeps the surviving
-     * keys as they were (0, 2), and an unusable reply exposes that raw pool
-     * as the fallback pool unrenormalized by anything downstream.
+     * An unusable reply hands back stillPresent()'s pool as the fallback unchanged, so it must stay a list after a
+     * middle entry drops.
      */
     public function testUnusableReplyFallbackPoolStaysAListAfterAMiddleEntryIsPruned(): void
     {

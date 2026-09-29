@@ -137,9 +137,8 @@ final class RecommendationPickParserTest extends TestCase
     }
 
     /**
-     * The same parser serves the score-only batch reply and the reason-bearing
-     * consolidation reply: a row that never carries a "reason" key at all (not
-     * merely a blank one) must still salvage, with an empty-string reason (#493).
+     * The same parser serves the score-only batch reply and the reason-bearing consolidation reply: a row with no
+     * "reason" key at all still salvages, with an empty reason.
      */
     public function testParsesScoreOnlyPicksWithoutAReason(): void
     {
@@ -319,12 +318,7 @@ final class RecommendationPickParserTest extends TestCase
         self::assertFalse($result->usable);
     }
 
-    /**
-     * The end-to-end shape of #323: a reasoning model's answer arrives wrapped
-     * in its thinking prose (what the client hands over when only the reasoning
-     * channel carried an answer). The parser lifts the JSON out and salvages
-     * the picks, exactly as it would from a clean reply.
-     */
+    /** An answer wrapped in reasoning prose salvages the same picks as a clean reply, through the shared decoder. */
     public function testAnAnswerWrappedInReasoningProseIsUsable(): void
     {
         $content = 'Comparing the entries against the guidance… I will rank 2 above 1. '

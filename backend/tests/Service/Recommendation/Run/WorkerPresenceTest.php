@@ -61,19 +61,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * The invariant the whole arbitration rests on, pinned as a RELATIONSHIP
-     * rather than as a number: a window narrower than the longest silence a
-     * healthy worker can produce declares that worker dead. It did — 30 s
-     * against a 120 s ceiling — and the client then read the per-user lock as
-     * a user-facing failure and stopped polling a healthy run (#311 final
-     * review, Critical 2). Asserting a literal would have proved nothing;
-     * this fails the moment either bound moves the wrong way.
-     *
-     * The longest silence used to be a whole provider call, because the sweep
-     * touched the heartbeat only between runs. SweepStreamHeartbeat now pings
-     * it from the transport as chunks arrive (#433), so what is left is the
-     * wait before the first chunk — and the widest that can be is the most
-     * patient first-byte bound any connection may be configured with.
+     * Pinned as a relationship, not a number: a window narrower than the longest silence a healthy worker produces,
+     * one first-byte wait since the transport pings per chunk, declares that worker dead.
      */
     public function testTheFreshnessWindowOutlastsTheLongestSilenceBeforeAnAnswer(): void
     {
@@ -100,12 +89,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * The window is deliberately NOT sized against the wall clock any more. A
-     * slow connection may hold one call for an hour, and a freshness window
-     * that covered it would believe a dead worker for that hour. This pins
-     * that the streaming heartbeat is what carries the difference — if the
-     * window were ever re-derived from the wall clock, it would have to grow
-     * past this bound.
+     * The window is not sized against a whole call: a slow connection may hold one for an hour, and a window that
+     * covered it would believe a dead worker for that hour. The streaming heartbeat carries the difference.
      */
     public function testTheFreshnessWindowIsNotSizedAgainstAWholeCall(): void
     {
@@ -129,10 +114,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * The drainer surrenders liveness on the way out, and the exit paths that
-     * do so run whether or not it ever marked anything: a command that dies
-     * before its first sweep still reaches the same `finally`. Forgetting a
-     * name that was never touched must therefore be a no-op, not a failure.
+     * A drainer that dies before its first sweep still reaches the `finally` that forgets its name, so forgetting an
+     * untouched name is a no-op.
      */
     public function testForgettingAHeartbeatThatWasNeverTouchedDoesNothing(): void
     {
@@ -151,10 +134,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * "Somebody is driving" is asked of every driver kind, not of a named
-     * pair: a kind added later must count without anyone remembering to
-     * extend an OR chain. A live drainer alone is the case that proves the
-     * question is not simply the persistent worker's.
+     * "Somebody is driving" asks every driver kind, so a kind added later counts: a live drainer alone proves the
+     * question is not only the persistent worker's.
      */
     public function testALiveDrainerAloneCountsAsSomebodyDriving(): void
     {
@@ -202,10 +183,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * The persistent worker's key is the settings card's only evidence, and
-     * its owner is a process nobody can ask whether it is still there — so
-     * clearing it is refused rather than merely avoided by every current
-     * caller.
+     * The persistent worker's key is the settings card's only evidence, and its owner cannot be asked whether it is
+     * still there: clearing it is refused, not merely avoided.
      */
     public function testThePersistentWorkersKeyCannotBeSurrendered(): void
     {
@@ -222,12 +201,8 @@ final class WorkerPresenceTest extends DbTestCase
     }
 
     /**
-     * The poll path asks about every driver kind on every request from every
-     * open tab, so the read is one query rather than one per name. Every name
-     * that has a row comes back -- a read that stopped at the first would let
-     * a live drainer go unnoticed behind a dead worker -- and names without a
-     * row are absent rather than null, which is what lets the caller treat
-     * "present" as "has a touch instant".
+     * One query for every driver kind: every name with a row comes back, so a live drainer is not hidden behind a
+     * dead worker, and a name without a row is absent, not null, so "present" means "has a touch instant".
      */
     public function testTheBatchedHeartbeatReadReturnsEveryNameThatHasARow(): void
     {

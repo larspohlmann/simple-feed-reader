@@ -25,18 +25,8 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Task 12 (#493): the whole pipeline driven end to end -- snapshot, distill,
- * score-only batches, consolidate, finalize -- against the real container's
- * repository, entity manager and settings resolver, with only the provider
- * faked (StubChatClient, the same seam every other recommendation test in
- * this tree uses).
- *
- * RecommendationRunAdvancerTest already pins each tick's own behaviour in
- * isolation, one phase transition at a time; that is direct-invocation
- * coverage of the wiring, not proof the wiring holds together. This file is
- * the functional case CLAUDE.md asks for instead: it proves the phases
- * actually chain into each other through the advancer's real dispatch, not
- * through a test that calls each tick method by hand.
+ * The phases end to end through the advancer's real dispatch, only the provider faked. RecommendationRunAdvancerTest
+ * drives each tick on its own; this proves the phases hand over to each other.
  */
 final class RecommendationPipelineTest extends DbTestCase
 {
@@ -57,13 +47,7 @@ final class RecommendationPipelineTest extends DbTestCase
         $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
-    /**
-     * The full happy path across a two-batch plan: one distillation call,
-     * one call per batch, then one consolidation call that re-scores and
-     * re-reasons the pool -- the final RecommendationItem carries that
-     * consolidation reply's score and reason, not the batch's own, and the
-     * distilled profile survives on the account's settings past this run.
-     */
+    /** A two-batch plan: one distillation call, one call per batch, then one consolidation call. */
     public function testRunDistillsThenScoresThenConsolidates(): void
     {
         $entries = $this->seedTwoBatchCandidates();
@@ -94,11 +78,7 @@ final class RecommendationPipelineTest extends DbTestCase
         );
     }
 
-    /**
-     * #493's central behavioural change: a single-batch run is no longer a
-     * shortcut straight to the ranked pool. It still spends a consolidation
-     * call, and that call is still what supplies the reason the reader sees.
-     */
+    /** A single-batch run still spends a consolidation call, and that call supplies the reason the reader sees. */
     public function testConsolidationRunsEvenWhenThereIsOneBatch(): void
     {
         $entries = $this->seedSingleBatchCandidates();
@@ -122,10 +102,8 @@ final class RecommendationPipelineTest extends DbTestCase
     }
 
     /**
-     * A distillation call that never becomes usable spends every retry and
-     * then degrades to no profile at all (#493): the run still reaches every
-     * later phase and completes, just with an empty PROFILE block on every
-     * prompt from here on, and no profile frozen on the run itself.
+     * An unusable distillation spends every retry, then degrades to no profile: the run still completes, with an
+     * empty PROFILE block on every later prompt and no profile frozen on the run.
      */
     public function testDistillationFailureDegradesToNoProfileBatches(): void
     {
@@ -148,10 +126,8 @@ final class RecommendationPipelineTest extends DbTestCase
     }
 
     /**
-     * A consolidation call that never becomes usable spends every retry and
-     * then degrades to the plain batch-score pool, undeduped and unreasoned
-     * (#493): the run still completes, but the final list's reason is empty
-     * and its order and score are exactly the batch phase's own.
+     * An unusable consolidation spends every retry, then degrades to the undeduped batch-score pool: the run
+     * completes with empty reasons, in the batch phase's order and scores.
      */
     public function testConsolidationFailureDegradesToBatchOrderEmptyReasons(): void
     {
@@ -178,10 +154,7 @@ final class RecommendationPipelineTest extends DbTestCase
     {
         $this->fixtures->seedReadyAiSettings($this->user);
 
-        // Five candidates always pack into one batch (the packer only splits
-        // once a batch holds MINIMUM_BATCH_SIZE entries), regardless of the
-        // context window -- see RecommendationRunAdvancerTest's own fixture
-        // for the same reasoning.
+        // Five candidates always pack into one batch: the packer splits only once a batch holds MINIMUM_BATCH_SIZE.
         return $this->fixtures->seedFeedWithEntries($this->user, 5);
     }
 
@@ -200,10 +173,7 @@ final class RecommendationPipelineTest extends DbTestCase
         }
         $this->entityManager->flush();
 
-        // A connection ceiling of 10 caps each batch at 10 candidates, so the
-        // 20-candidate pool packs into exactly two batches under a wide window
-        // -- the same technique RecommendationRunAdvancerTest's
-        // seedForcedBatchCountFixture uses.
+        // A connection ceiling of 10 caps each batch at 10, so the 20 candidates pack into exactly two batches.
         $this->fixtures->capBatchesAt($this->user, 10);
 
         $settings = new RecommendationSettings($this->user);

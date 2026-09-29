@@ -17,13 +17,6 @@ final class RecommendationAnswerBudgetTest extends TestCase
         $this->answerBudget = new RecommendationAnswerBudget();
     }
 
-    /**
-     * A score-only batch reply is `{"id":123,"score":843}` — no `reason` — so
-     * it is charged a fifth of the reason-bearing pick rate. Distillation
-     * answers one profile string, so it is charged a fixed reserve regardless
-     * of how many items informed it. Consolidation still writes a `reason` per
-     * pick, so it keeps the full pick rate (#493).
-     */
     public function testAnswerBoundIsSchemaAware(): void
     {
         self::assertSame(

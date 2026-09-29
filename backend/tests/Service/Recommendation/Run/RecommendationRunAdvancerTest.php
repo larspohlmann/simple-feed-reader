@@ -56,10 +56,6 @@ use Symfony\Component\Lock\Store\InMemoryStore;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Against the real repository, entity manager and lock factory, not mocks:
- * advance()'s job is to coordinate all of them, and a mock would have to
- * encode that coordination itself instead of proving it.
- *
  * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunAdvancerTest extends DbTestCase
@@ -68,12 +64,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private const int SINGLE_BATCH_ENTRY_COUNT = 5;
     private const int MULTI_BATCH_CONTEXT_WINDOW = 2500;
 
-    /**
-     * What Strato kills a web request at. The poll driver runs there, so a
-     * tick that dies before it ever streams a chunk is bounded by this, and
-     * the lock TTL has to outlast it or the next tick starts while the killed
-     * one may still be finishing.
-     */
+    /** What Strato kills a web request at. */
     private const float STRATO_REQUEST_CAP_SECONDS = 240.0;
 
     private User $user;
@@ -190,11 +181,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Proves the window comes from the reader's own setting, not a hardcoded
-     * default: an entry 3 days old is outside DEFAULT_LOOKBACK_DAYS (2) but
-     * inside this reader's configured 5-day window, while an entry 10 days
-     * old is outside both. A snapshot that ignored lookbackDays, or that
-     * hardcoded any single window, would fail this assertion.
+     * A 3-day-old entry is outside DEFAULT_LOOKBACK_DAYS (2) but inside this reader's 5-day window, and a 10-day-old
+     * one is outside both: a snapshot that ignored lookbackDays, or hardcoded any window, fails.
      */
     public function testSnapshotUsesTheUsersConfiguredLookbackWindow(): void
     {
@@ -249,21 +237,14 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $lock->release();
         }
 
-        // A held lock is the healthy, frequent case down here: the advancer
-        // cannot tell it from a stall, because it never reads whether any
-        // driver claims to be alive. Warning on it flooded dev.log with the
-        // non-event and buried #439's real one, so the decision -- and the
-        // log line -- belongs to RecommendationPollDriver, which knows both
-        // halves (RecommendationRunControllerTest pins it there).
+        // The advancer cannot tell a held lock from a stall, since it never reads driver liveness: the log line is
+        // RecommendationPollDriver's, which knows both halves.
         self::assertSame([], $logSpy->getRecords());
     }
 
     /**
-     * Repeating the failed acquire must stay silent too, not merely be
-     * debounced: it is the second half of the same non-event, and a poll tab
-     * produces it every few seconds for as long as somebody else drives the
-     * run. The second `busy` result is asserted as well, so a busy answer
-     * stays a busy answer however often it is asked for.
+     * A poll tab repeats the failed acquire every few seconds while somebody else drives the run: it stays silent,
+     * and it stays `busy`.
      */
     public function testARepeatedLockContentionStaysSilentToo(): void
     {
@@ -286,12 +267,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The gate in tickActiveRun(): a run whose retry_not_before is still in
-     * the future must not spend a provider call, and must report as still
-     * running. Written straight to the DB, exactly like the cancellation
-     * race above -- the ticking side holds an entity that predates this
-     * write, which is the only way a cooperative test lands inside the
-     * cross-process window the gate defends.
+     * A run whose retry_not_before is in the future spends no provider call and reports running. Written straight to
+     * the database: the ticking side's entity predates the write, as it would in another process.
      */
     public function testATickWithinItsRetryWindowMakesNoProviderCall(): void
     {
@@ -316,28 +293,15 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function replaceLoggerWithASpy(): TestHandler
     {
         $logSpy = new TestHandler();
-        // The default channel logger is the one everything but
-        // TickLockKeepalive's own explicit wiring autowires (config/
-        // packages/monolog.yaml declares no per-class channel), and it must
-        // be swapped before the advancer -- or anything else that resolves
-        // it -- is first built this test.
+        // The default logger, which the advancer autowires, has to be swapped before anything first resolves it.
         self::getContainer()->set('monolog.logger', new Logger('test', [$logSpy]));
 
         return $logSpy;
     }
 
     /**
-     * Fix #311: RecommendationRun::fail() accepts RunStatus::Pending precisely so
-     * a run that never got as far as freezing a candidate pool can still end
-     * in a terminal state. Before this fix, that classification lived only
-     * in AdvanceRecommendationRunsHandler, so a poll-only install left a
-     * PENDING run stuck retried forever the moment its configuration
-     * disappeared -- the worker driver would have failed the very same run.
-     * The classification now lives in the shared tick(), so the poll driver
-     * fails it exactly the way AdvanceRecommendationRunsHandlerTest's
-     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
-     * the worker driver does; the exception still reaches the caller so the
-     * controller's HTTP mapping is unchanged.
+     * fail() accepts a pending run, so one whose configuration disappears before its first snapshot ends failed on a
+     * poll tick too. The exception still reaches the caller, so the controller's HTTP mapping is unchanged.
      */
     public function testAPollTickFailsAPendingRunWhenTheConfigurationDisappears(): void
     {
@@ -397,36 +361,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Pins the invariant lockTtlFor()'s doc comment declares since #444: a
-     * live holder refreshes its lock no more often than every
-     * TickLockKeepalive::MINIMUM_INTERVAL_SECONDS, and goes without a refresh
-     * only while its stream is silent, so the TTL has to clear the longest
-     * such silence rather than the longest tick. That silence is one
-     * first-byte wait: a beat fires per streamed chunk, and a provider that
-     * has not answered yet yields no chunk until the stream's idle timeout.
-     * A TTL below it would expire under a holder that is alive and waiting
-     * for its first token, and a second process could take the lock mid-call
-     * -- the double-bank the keepalive exists to prevent.
-     *
-     * Asserted as the exact sum rather than as bounds around it. Bounds are
-     * too easy to satisfy by accident: the two the invariant really asks for
-     * are both cleared by the wall-clock formula this replaced, and a
-     * regression to `wallClockSeconds + MARGIN` would clear them too while
-     * putting a fifteen-minute stall back on the standard profile.
-     *
-     * The Strato cap is asserted separately because the sum does not imply
-     * it: a later cut to LOCK_TTL_MARGIN_SECONDS would keep the sum true and
-     * silently drop the TTL under the 240 s at which a web request is killed,
-     * where the killed tick's own lock is all that bounds the stall. On the
-     * standard profile the margin is the only reason the TTL clears it at
-     * all, since a first-byte wait there is 180 s.
-     *
-     * Driven through advance() rather than read off a constant, because since
-     * #433 the TTL is decided per tick from the connection it is about to
-     * call. Both profiles are asserted: the standard one must not be sized for
-     * the slow ceiling (that would multiply every account's post-crash stall),
-     * and the slow one must not keep the standard TTL (that would expire the
-     * lock while a call it was told to expect is still silent).
+     * Exact, not bounded: bounds would also pass a TTL sized for a whole call. The Strato cap is asserted apart,
+     * because a smaller margin keeps the sum true and drops the TTL under it.
      */
     #[DataProvider('timeoutProfiles')]
     public function testLockTtlClearsTheLongestSilenceALiveHolderCanProduce(
@@ -470,14 +406,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A chunk arriving mid-call is the only evidence the tick is alive, and
-     * the keepalive turns it into a refresh. Without the arming in advance(),
-     * the beat reaches a keepalive holding nothing and the lock expires under
-     * a working tick.
-     *
-     * The lifetimes are read from inside the provider call on purpose: that
-     * is the only moment the lock is both held and observable, and after
-     * advance() returns it is released.
+     * A streamed chunk must refresh the lock, or it expires under a working tick. The lifetimes are read inside the
+     * provider call: the only moment the lock is both held and observable.
      */
     public function testATickThatStreamsRefreshesItsLock(): void
     {
@@ -490,10 +420,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $lifetimes = [];
         $this->stubChatClient()->duringNextCall(function () use ($lockFactory, &$lifetimes): void {
             $lock = $this->tickLock($lockFactory);
-            // The lock and its remaining lifetime both live in the real store,
-            // so each read is a DB round-trip. Let the freshly-acquired lock
-            // age past that round-trip's jitter first, or the refresh's bump is
-            // lost in it and the comparison below turns into a coin-flip.
+            // Each lifetime read is a database round-trip: let the fresh lock age past its jitter first, or the
+            // refresh's bump is lost in it and the comparison below is a coin-flip.
             usleep(250_000);
             $lifetimes[] = $lock->getRemainingLifetime();
             $this->streamHeartbeat()->beat();
@@ -513,10 +441,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The mirror image: once the tick is over, its lock is released and a
-     * beat must not touch it. A keepalive left armed would refresh a lock
-     * this process no longer owns -- or, once another process has taken the
-     * name, keep a stranger's lock alive.
+     * After the tick a beat must not touch the released lock: a keepalive left armed would refresh a lock this
+     * process no longer owns, or a stranger's.
      */
     public function testTheKeepaliveIsReleasedAfterATick(): void
     {
@@ -536,17 +462,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The narrower half of the same rule: advance() disarms the keepalive
-     * *before* it releases the lock, and the window that ordering defends is
-     * the single instant between the two statements. A beat landing there
-     * would refresh a lock already on its way out -- and once the name is
-     * free, another process may hold it, so the refresh would prop up a
-     * stranger's lock.
-     *
-     * The beat is delivered by the release itself (see BeatDuringReleaseLock),
-     * which is the only way a cooperative test can stand inside that window.
-     * With the disarm first the beat finds nothing held; reversed, it finds
-     * this very lock and the lifetime jumps back to a full TTL.
+     * advance() disarms the keepalive before it releases the lock. BeatDuringReleaseLock beats from inside the
+     * release: disarmed first, the beat finds nothing held; reversed, the lifetime jumps back to a full TTL.
      */
     public function testABeatArrivingAsTheLockIsReleasedRefreshesNothing(): void
     {
@@ -573,16 +490,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The other half of #444: a refresh the store rejects because another
-     * process now holds the name means the double-bank has already begun. The
-     * keepalive cannot throw -- it beats from inside the streaming loop, with
-     * nowhere safe to unwind to -- so the tick has to stop at its next
-     * RecommendationTickCheckpoint instead, before it banks a single winner
-     * against a lock it no longer owns.
-     *
-     * The theft happens during the provider call because that is the one
-     * window long enough for another process to get in, and the reply is
-     * queued as a perfectly usable one: without the stop, this run banks it.
+     * A refresh rejected because another process holds the name means the double-bank has begun: the tick stops at
+     * its next RecommendationTickCheckpoint, before banking the usable reply the theft interrupted.
      */
     public function testATickThatLostItsLockStopsBeforeBankingItsWinners(): void
     {
@@ -617,15 +526,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Losing the lock and hitting a transport failure in the same round is a
-     * reachable pair -- the beat that notices the loss fires per chunk, and
-     * the wave's failure is raised once the round resolves -- and the failure
-     * path used to write where the banking path was stopped: a counter
-     * increment, and the run failed outright once the ceiling was reached,
-     * over whatever the lock's new owner had made of the run meanwhile (#439).
-     *
-     * The counter is read from the row rather than from the entity, because
-     * the entity is exactly the unwritten in-memory copy under test.
+     * Losing the lock and a transport failure can meet in one round, and the failure path must not write to the run
+     * either. The counter is read from the row: the entity is the unwritten copy under test.
      */
     public function testATickThatLostItsLockRecordsNoTransportFailureAgainstTheRun(): void
     {
@@ -657,19 +559,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The same stop at the other checkpoint. The batch phase guards inside
-     * RecommendationBatchWave; the consolidation phase guards inside
-     * RecommendationConsolidationResolver, after it settles its reply and
-     * before it hands the advancer an outcome to write — and what that guard
-     * protects is bigger, because the advancer's next statement finalizes the
-     * run, writes its RecommendationItems and marks it completed. A tick that
-     * finalized against a lock it had lost would race the process that owns
-     * the run into the same ending.
-     *
-     * Guarded there rather than trusted from the batch-phase test because
-     * removing that one call leaves the whole suite green otherwise: the two
-     * checkpoints are separate statements and only their own tests hold them
-     * in place.
+     * The consolidation phase's own checkpoint, after it settles its reply and before the advancer finalizes: a
+     * separate statement from the batch wave's, held in place only by this test.
      */
     public function testATickThatLostItsLockDuringTheConsolidateCallDoesNotFinalize(): void
     {
@@ -716,11 +607,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Takes the running tick's lock name for a second process. The store
-     * keeps one row per name and the tick owns it, so the name only becomes
-     * free once that row is gone -- an eviction or an expiry, from the tick's
-     * side. Clearing it here is the shortest way to the state the tick has to
-     * survive: someone else holds its lock.
+     * Takes the running tick's lock name for a second process. The store keeps one row per name, so the row is
+     * cleared first, as an expiry would from the tick's side.
      */
     private function stealTheTickLock(): SharedLockInterface
     {
@@ -769,11 +657,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The same recording factory over the real store, for the tests that
-     * watch a lock's remaining lifetime rather than the TTL it was asked for:
-     * InMemoryStore never gives a key a lifetime at all -- its
-     * putOffExpiration is documented as a no-op, memory locks forever -- so a
-     * refresh through it leaves nothing to observe.
+     * The recording factory over the real store, for tests that watch a lock's remaining lifetime: InMemoryStore's
+     * putOffExpiration is a no-op, so a refresh through it leaves nothing to observe.
      */
     private function recordLocksOverTheRealStore(): TtlRecordingLockFactory
     {
@@ -819,19 +704,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         );
         self::assertStringContainsString('- [' . $firstBatch[0], $batchCall['messages'][1]['content']);
 
-        // The output bound travels with the prompt it belongs to: the cap sent
-        // is the reserve for exactly the candidates this batch asked about, so
-        // a bigger batch gets proportionally more room instead of being
-        // truncated by a fixed ceiling. Derived from the batch here rather than
-        // hardcoded, so the assertion still holds if the batch size changes for
-        // unrelated reasons.
-        //
-        // This fixture suppresses reasoning, so the bound is the answer reserve
-        // plus a REDUCED reasoning headroom, not none: the hint does not stop a
-        // local model from thinking, and a large batch's answer was otherwise
-        // truncated at finish_reason: length (#493). The headroom is a ceiling a
-        // compliant model never spends — RecommendationCompletionRequestFactoryTest
-        // holds both halves.
+        // The cap sent is the output bound for exactly this batch's candidates, derived from the batch, including
+        // the reduced reasoning headroom a suppressed connection keeps.
         self::assertTrue($batchCall['suppressReasoning']);
         self::assertSame(
             (new RecommendationAnswerBudget())->outputBoundTokens(
@@ -854,12 +728,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The run's first batch wave goes out as a single call, even when the
-     * connection's concurrency and the plan would allow a wider fan-out, so
-     * that one call writes the provider's prompt-prefix cache before the
-     * remaining batches race for it (#495). The very next tick then fans out
-     * every remaining batch at full width against the now-warm prefix, which
-     * proves the cap belongs to the first wave alone, not to a global clamp.
+     * The first batch wave is one call, so it writes the provider's prompt-prefix cache before the other batches race
+     * for it. The next tick fans out at full width, so the cap belongs to the first wave alone.
      */
     public function testFirstBatchWaveWarmsTheCacheWithOneCallThenFansOut(): void
     {
@@ -897,11 +767,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * After the warm-up wave, a fan-out wave banks every remaining batch in one
-     * tick (#344): with concurrency 3 and three batches, the warm-up tick banks
-     * batch 0 alone (#495), then a single worker tick fans out batches 1 and 2
-     * together, advancing batchesDone by the wave size and recording each
-     * batch's winners in plan order.
+     * With concurrency 3 and three batches, the warm-up tick banks batch 0 alone, then one worker tick fans out
+     * batches 1 and 2, advancing batchesDone by the wave size and keeping plan order.
      */
     public function testFanOutWaveBanksEveryRemainingBatchInOneTick(): void
     {
@@ -914,7 +781,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 91, 'reason' => 'zero']],
         ], \JSON_THROW_ON_ERROR));
@@ -953,12 +820,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * An unusable batch in a fan-out wave retries in-tick and degrades after
-     * MAX_ATTEMPTS without dropping its usable siblings (#344). The warm-up wave
-     * banks batch 0 first (#495); the fan-out wave then draws batches 1 and 2 in
-     * offset order each round, so the FIFO stub serves: round 1 [1-usable,
-     * 2-garbage], round 2 [2-garbage], round 3 [2-garbage] -- batch 1 once,
-     * batch 2 three times, all in one tick.
+     * An unusable batch in a fan-out wave retries in-tick and degrades after MAX_ATTEMPTS without dropping its usable
+     * siblings. The FIFO stub serves round 1 [1 usable, 2 garbage], then [2 garbage] twice, all in one tick.
      */
     public function testUnusableBatchRetriesInTickThenDegradesWithoutDroppingSiblings(): void
     {
@@ -971,7 +834,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(3, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1004,12 +867,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame([], $persisted->getWinners()[2]);
     }
 
-    /**
-     * A transport failure anywhere in a wave is atomic (#344): nothing is
-     * banked, the cursor does not move, and the ceiling counts exactly one for
-     * the whole wave -- not one per failed call -- so the next tick re-runs the
-     * same batches.
-     */
     public function testTransportFailureInWaveAdvancesNothingAndIncrementsCeilingOnce(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
@@ -1021,7 +878,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1064,14 +921,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(4, $rerun->batchesDone);
     }
 
-    /**
-     * providerTick() classifies both ProviderUnreachableException and
-     * CredentialsRejectedException as the wave's transport failure -- a
-     * rejected key never produced a reply either, so it must count against
-     * the same one-per-wave ceiling, not slip past uncounted (#344 final
-     * review: a catch narrowed to only ProviderUnreachableException would
-     * let this exception through without ever incrementing the ceiling).
-     */
+    /** A rejected key never produced a reply either, so it counts against the same one-per-wave ceiling. */
     public function testCredentialsRejectedInWaveAlsoCountsTheCeiling(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 3);
@@ -1103,10 +953,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(1, $persisted->getTransportFailures());
     }
 
-    /**
-     * Concurrency 1 keeps the pre-#344 behaviour exactly, even under the worker
-     * driver: a multi-batch run advances one batch per tick, waveSize 1.
-     */
+    /** Concurrency 1, even under the worker driver, advances a multi-batch run one batch per tick. */
     public function testConcurrencyOneTakesTheSequentialPath(): void
     {
         $this->seedMultiBatchFixture();
@@ -1134,11 +981,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A poll tick clamps concurrency to POLL_MAX_CONCURRENCY however high the
-     * connection is set (#344): after the warm-up wave banks batch 0 (#495),
-     * three batches remain, yet the next poll wave sends two, not three -- and
-     * a fourth batch is still left, so it is the clamp, not the plan length,
-     * that held it.
+     * A poll tick clamps concurrency to POLL_MAX_CONCURRENCY: after the warm-up wave three batches remain, the next
+     * wave sends two, and the batch left over shows that the clamp, not the plan length, held it.
      */
     public function testPollDriverClampsConcurrencyToTwo(): void
     {
@@ -1151,7 +995,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1172,14 +1016,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertFalse($this->activeRun()->getProgress()->isConsolidationPhase);
     }
 
-    /**
-     * ForYouSweep's cron-triggered call passes TickDriver::Sweep rather than
-     * relying on the Poll default, so the #439 stall log names it accurately
-     * (see TickDriver's docblock). That rename must not smuggle in a
-     * concurrency change: Sweep runs inside a bounded web request exactly
-     * like a poll tick, so it has to hit the very same clamp -- pinned here
-     * the same way testPollDriverClampsConcurrencyToTwo pins Poll's.
-     */
     public function testSweepDriverClampsConcurrencyToTwo(): void
     {
         $this->seedForcedBatchCountFixture(entryCount: 20, batchCount: 4);
@@ -1191,7 +1027,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1213,13 +1049,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The wave must never reach past the plan's last batch: on the tick that
-     * starts mid-plan, `waveSize` has to clamp to what is actually left
-     * (`batchesRemaining`), not the connection's cap, or it would try to read
-     * a batch index the plan does not have (#344 final review: a sign flip in
-     * the `batchesRemaining` subtraction would only show up once the cursor
-     * has already moved, which is why this needs its own second-tick test
-     * rather than relying on the always-zero-cursor first tick).
+     * Mid-plan the wave clamps to the batches actually left, not the connection's cap. It needs a later tick: on the
+     * first the cursor is zero, so a sign error in the subtraction would not show.
      */
     public function testWaveClampsToTheBatchesActuallyLeftOnALaterTick(): void
     {
@@ -1232,7 +1063,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1261,13 +1092,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A 429 met by a poll tick's fan-out wave must defer rather than strike
-     * (#947): the poll driver's plan never blocks, so RateLimitedCompletion
-     * reports the wave as deferred on its first call. The wave settles its
-     * recorded rows and throws ProviderRateLimitedException, the
-     * advancer halves the run's wave concurrency and defers via
-     * RecommendationRunDeferral -- no transport-failure strike, and nothing
-     * from the fan-out wave banks; only the warm-up batch (0) is done.
+     * A poll tick's plan never blocks, so a 429 in its fan-out wave defers: the batch phase halves the wave concurrency
+     * and RecommendationRunDeferral defers the run, with no strike and nothing banked past the warm-up batch.
      */
     public function testAPollBatchWaveDefersAndHalvesTheConcurrencyOnA429(): void
     {
@@ -1283,10 +1109,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user, TickDriver::Poll); // warm-up wave banks batch 0
 
-        // The poll driver clamps the fan-out wave to POLL_MAX_CONCURRENCY (2 of
-        // the 3 remaining batches), sent as one concurrent round: the first
-        // call meets a 429, the second answers normally but is discarded too
-        // -- a deferral settles every call the round opened, usable or not.
+        // The clamped wave (2 of the 3 remaining batches) is one concurrent round: the first call meets a 429, and
+        // the second's usable answer is discarded too, since a deferral settles every call the round opened.
         $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 20));
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'discarded']],
@@ -1303,14 +1127,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The worker's plan blocks and retries in-tick, so a 429 met mid-wave
-     * still halves the concurrency (rateLimitObserved) but the wave itself
-     * recovers and banks everything -- no strike, no deferral. Only the
-     * limited call is re-fired: RateLimitedCompletion re-sends the subset
-     * still pending, not the whole round, so the queue holds exactly one
-     * reply per call plus the one re-fire (#947). Retry-After 0 keeps the
-     * blocking retry's sleep at zero, so this exercises the real retry path
-     * without any wall-clock cost or clock double.
+     * The worker's plan retries in-tick: a 429 still halves the concurrency, but the wave banks everything, with no
+     * strike and no deferral. Only the limited call re-fires, and Retry-After 0 keeps the retry's sleep at zero.
      */
     public function testAWorkerBatchWaveHalvesButStillBanksWhenTheRetryRecovers(): void
     {
@@ -1326,9 +1144,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user, TickDriver::Worker); // warm-up
 
-        // Fan-out over batches 1..3: the call for batch 1 is limited once,
-        // then recovers on the re-fire; batches 2 and 3 answer on the first
-        // pass.
+        // Fan-out over batches 1..3: batch 1 is limited once, then recovers on the re-fire; 2 and 3 answer first time.
         $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'two']],
@@ -1468,9 +1284,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user); // snapshot tick
         $this->queueDistillReply();
         $this->advancer()->advance($this->user); // distill tick
-        // An empty ranking is unusable, so it retries in-tick (#344); queue one
-        // reply per attempt so the single batch degrades within the one tick.
-        // The reasoning flag this test pins rides on every call, first included.
+        // An empty ranking is unusable, so it retries in-tick: one reply per attempt degrades the single batch within
+        // the one tick. The reasoning flag this test pins rides on every call, first included.
         for ($attempt = 0; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
             $this->stubChatClient()->queueContent('{"recommendations":[]}');
         }
@@ -1482,10 +1297,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The batch phase retries an unusable reply in-tick now (#344): the
-     * unusable reply and its corrective retry are one tick, not two, and the
-     * corrective tail is built from that batch's own last invalid reply held
-     * in a local map, not the run's cross-tick lastInvalidReply.
+     * An unusable reply and its corrective retry are one tick, and the tail quotes that batch's own last invalid
+     * reply, not the run's cross-tick lastInvalidReply.
      */
     public function testInvalidReplyTriggersCorrectiveRetryInTheSameTick(): void
     {
@@ -1512,11 +1325,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A runaway is the model's failure, not the endpoint's, so it costs the
-     * one batch a retry rather than costing the whole wave a transport-failure
-     * ceiling increment. Treating it as transport re-ran the identical prompt
-     * against the identical model up to the ceiling, which in #437 was three
-     * hours to learn nothing.
+     * A runaway is the model's failure, not the endpoint's: it costs its one batch a retry, never the wave a
+     * transport-failure strike, which re-ran the identical prompt for three hours to learn nothing (#437).
      */
     public function testARunawayRetriesItsOwnBatchInsteadOfFailingTheWave(): void
     {
@@ -1538,12 +1348,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(0, $this->activeRun()->getTransportFailures());
     }
 
-    /**
-     * The retry has to differ from the attempt that ran away, and what it
-     * shows the model is the start of its own loop. Echoing the whole runaway
-     * back would re-prime the repetition it is meant to break, so the
-     * corrective tail carries a clipped head of it.
-     */
     public function testTheRetryAfterARunawayShowsTheModelWhereItWentWrong(): void
     {
         $this->seedMultiBatchFixture();
@@ -1567,11 +1371,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A batch the model cannot rank after every retry is dropped, not fatal:
-     * the batch phase degrades like the consolidation phase already does, so
-     * the batches that did rank still reach the reader instead of one stubborn
-     * batch throwing the whole run away (#329, seen live with qwen3-vl-4b
-     * returning {"recommendations": []} three times for one batch).
+     * A batch the model cannot rank after every retry is dropped, not fatal: the batches that did rank still reach
+     * the reader.
      */
     public function testAPersistentlyUnusableBatchIsDroppedNotFatal(): void
     {
@@ -1579,8 +1380,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill();
         $secondBatch = $run->getCandidateBatches()[1];
 
-        // In-tick now (#344): the three attempts for the first batch all run
-        // inside one tick, so one advance drops it -- no longer three ticks.
+        // The three attempts for the first batch all run inside one tick, so one advance drops it.
         $this->stubChatClient()->queueContent('garbage 1');
         $this->stubChatClient()->queueContent('garbage 2');
         $this->stubChatClient()->queueContent('garbage 3');
@@ -1621,9 +1421,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        // Batch two fails at the transport ceiling -- now that an unusable
-        // batch degrades instead of failing, this is the run's remaining fatal
-        // path, and it is what leaves a resumable failure at batch two.
+        // Batch two fails at the transport ceiling, the run's one fatal path, which leaves a resumable failure there.
         for ($index = 0; $index < RecommendationRun::MAX_TRANSPORT_FAILURES; $index++) {
             $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
             try {
@@ -1638,8 +1436,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
 
-        // resume() -- not start() -- is what continues a failed run now; start()
-        // would begin fresh at batch one.
+        // resume(), not start(), continues a failed run; start() would begin fresh at batch one.
         $this->starter()->resume($this->user);
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $secondBatch[0], 'score' => 90, 'reason' => 'r2']],
@@ -1678,11 +1475,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A provider that is simply unreachable never produces a reply for the
-     * parser to judge, so attemptsExhausted (unusable replies) never
-     * fires. Without its own ceiling, a persistently broken provider would
-     * leave the run wedged forever -- no cancel, no reaping (#308 final
-     * review, Important 2).
+     * An unreachable provider never yields a reply, so attemptsExhausted never fires: without its own ceiling the run
+     * would wedge forever.
      */
     public function testConsecutiveTransportFailuresReachingTheCeilingFailTheRun(): void
     {
@@ -1714,10 +1508,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
         self::assertSame(RunStatus::Failed, $run->getStatus());
-        // The run error names the real cause, not a hardcoded "could not be
-        // reached": the provider was reached on every call and refused each
-        // one, and the message that closes the run must say what actually
-        // happened -- here the last transport failure's own detail (#329).
+        // The run error carries the last transport failure's own detail, not a hardcoded "could not be reached": the
+        // provider was reached, and refused.
         $error = $run->getError();
         self::assertNotNull($error);
         self::assertStringContainsString('still down', $error);
@@ -1726,11 +1518,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Each provider phase asks for its own structured-output shape: the
-     * distillation call for the profile, a batch call for the ranking, the
-     * consolidation call for the final re-scored, deduped list. Sending one
-     * shared schema for the distillation call would let it demand the ranking
-     * shape and fail to parse (#329, #493).
+     * Each phase asks for its own response schema: one shared schema would make the distillation call demand the
+     * ranking shape.
      */
     public function testEachPhaseRequestsItsOwnResponseSchema(): void
     {
@@ -1830,15 +1619,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The all-pruned short-circuit reaches the same ending a usable reply
-     * would, just one tick further along than it used to: every plan --
-     * single batch or many, since #493 removed the single-batch shortcut --
-     * checkpoints once its last batch is done rather than finalizing inline,
-     * so the very next tick is what has to see isConsolidationPhase rather
-     * than reaching for a batch index the frozen plan does not have. That
-     * next tick finds an empty winner pool and finalizes it for free, with no
-     * provider call of its own -- the same all-pruned short-circuit
-     * RecommendationConsolidationResolver gives the consolidation phase.
+     * Every plan checkpoints once its last batch is done, so the tick after a fully pruned single batch sees the
+     * consolidation phase, finds an empty winner pool and finalizes it for free, without a provider call.
      */
     public function testSingleBatchRunWithEveryEntryPrunedCompletesInsteadOfWedging(): void
     {
@@ -1877,14 +1659,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The wave's winners must come back in plan order even when a middle
-     * batch is the one that needs a corrective retry: after the warm-up wave
-     * banks batch 0 (#495), the fan-out wave over batches 1..3 resolves
-     * positions 1 and 3 straight away and adds only position 2's winner later,
-     * in round 2. Insertion order into the internal winners map is therefore
-     * [1, 3, 2] -- if the position-keyed map were returned unsorted, batch 2's
-     * winners would land in batch 3's slot (#344 final review: this is what the
-     * wave's `ksort` before `array_values` exists to fix).
+     * The wave over batches 1..3 resolves positions 1 and 3 at once and 2 in round 2, so winners arrive as [1, 3, 2]:
+     * returned unsorted, batch 2's winners would land in batch 3's slot.
      */
     public function testWaveWinnersStayInPlanOrderWhenAMiddleBatchRetries(): void
     {
@@ -1897,7 +1673,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -1961,12 +1737,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A fully-pruned batch in the *middle* of a wave must not stop the wave
-     * from reaching the batches after it: every not-yet-pruned batch still
-     * gets sent, in plan order, alongside the pruned one's free empty winner
-     * set (#344 final review -- with concurrency 1 the pruned batch is
-     * always the wave's only batch, so this needs its own multi-batch wave
-     * to exercise the loop that walks past it to the rest).
+     * A fully pruned batch in the middle of a wave must not stop the batches after it: each is still sent, in plan
+     * order, beside the pruned one's free empty winner set.
      */
     public function testPrunedBatchInTheMiddleOfAWaveDoesNotSkipTheBatchesAfterIt(): void
     {
@@ -1979,7 +1751,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $batches = $this->activeRun()->getCandidateBatches();
         self::assertCount(4, $batches);
 
-        // The warm-up wave banks batch 0 alone (#495).
+        // The warm-up wave banks batch 0 alone.
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[0][0], 'score' => 90, 'reason' => 'warm']],
         ], \JSON_THROW_ON_ERROR));
@@ -2014,10 +1786,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A single-batch run has no shortcut left (#493): it still spends a
-     * distillation call before the batch and a consolidation call after it,
-     * and the final list's order, score and reason come from that
-     * consolidation reply, not straight from the ranked batch pool.
+     * A single-batch run still spends a distillation and a consolidation call, and the final list's order, score and
+     * reason come from the consolidation reply.
      */
     public function testSingleBatchRunStillRunsConsolidationBeforeFinalizing(): void
     {
@@ -2134,21 +1904,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The distillation phase's own transport failure. Unlike the batch wave
-     * -- which folds a failed call into an empty winner set and keeps going
-     * -- the distill call throws out of RecommendationProfileDistiller, and
-     * the advancer records it as one increment against the run's
-     * transport-failure ceiling, keeps the run RUNNING, and re-throws so the
-     * caller still sees the error this tick. The run is not failed until the
-     * ceiling is reached; the next tick retries the distill call from the
-     * unchanged distillation phase.
-     *
-     * distillTick is new with #493 and, unlike every other phase's transport
-     * catch, had no advancer-level regression guard of its own before this:
-     * RecommendationProfileDistillerTest only proves distill() itself throws,
-     * never that the advancer's own catch (recordTransportFailure + rethrow)
-     * actually wraps that call the same way providerTick() and consolidateTick
-     * do.
+     * A distillation transport failure counts once against the run's ceiling, keeps the run RUNNING and re-throws;
+     * the next tick retries the call from the unchanged distillation phase.
      */
     #[DataProvider('transportFailureArms')]
     public function testTransportFailureDuringDistillCallCountsTheCeilingAndKeepsRunRunning(
@@ -2180,11 +1937,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A poll tick never blocks (#947): a 429 during the distillation call must
-     * defer the run -- record "retry not before", leave the profile unwritten,
-     * keep the run RUNNING -- rather than burn a transport-failure strike the
-     * way ProviderUnreachableException does. The strike ceiling exists for a
-     * dead endpoint; a rate limit is a wait, not a failure.
+     * A poll tick never blocks, so a 429 on the distillation call defers the run, profile unwritten and still
+     * RUNNING: the strike ceiling is for a dead endpoint, and a rate limit is a wait.
      */
     public function testAPollDistillTickDefersOnA429WithoutStrikingOrCalling(): void
     {
@@ -2203,17 +1957,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * A worker tick owns its process, so RetryPlanModel lets it block and retry a
-     * 429 in place (#947): the same distill call that failed once recovers
-     * within the same tick, writes the profile, and never touches the
-     * transport-failure ceiling -- a retry that recovers is not a failure.
-     *
-     * The queued failure carries a zero-second Retry-After so the in-place
-     * retry costs no real wall-clock time: no test in this suite swaps the
-     * container's functional clock (see services_test.yaml's
-     * PasskeyChallengeStore note and OAuthFlowTest), and RecommendationRunAdvancerTest's
-     * own setUp() flush already resolves the real ClockInterface before any
-     * test body runs, so that swap is not available here either.
+     * A worker tick may block, so a 429 on the distillation call retries in place, writes the profile and never
+     * strikes. Retry-After 0 keeps the retry free: setUp() has resolved the real clock, so no MockClock can stand in.
      */
     public function testAWorkerDistillTickRetriesA429AndRecovers(): void
     {
@@ -2231,12 +1976,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * An unusable distillation reply must retry across ticks like every other
-     * phase's corrective envelope, not immediately degrade to no profile on
-     * its first miss -- that degrade path is reserved for attemptsExhausted.
-     * A run that recorded a profile (even a null one) after a single bad
-     * reply would read distillPending as false and race ahead into the
-     * batches on a phase that never actually finished.
+     * An unusable distillation reply retries across ticks; only attemptsExhausted degrades to no profile. A profile
+     * recorded after one bad reply, even a null one, would clear distillPending and skip an unfinished phase.
      */
     public function testAnUnusableDistillReplyRetriesInsteadOfImmediatelyDegrading(): void
     {
@@ -2260,20 +2001,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The consolidation phase's own transport failure. Unlike the batch wave
-     * -- which folds a failed call into an empty winner set and keeps going
-     * -- the consolidation call throws out of RecommendationConsolidationResolver,
-     * and the advancer records it as one increment against the run's
-     * transport-failure ceiling, keeps the run RUNNING, and re-throws so the
-     * caller still sees the error this tick. The run is not failed until the
-     * ceiling is reached; the next tick retries the consolidation call from
-     * the unchanged consolidation phase.
-     *
-     * Regression guard for #338: this catch used to sit inside the advancer's
-     * own callProvider. Lifting the call into RecommendationConsolidationResolver
-     * moved the transport classification to the resolve() boundary, and
-     * nothing else in the suite drives a consolidation-phase provider failure
-     * -- the wave tests only cover the batch phase.
+     * A consolidation transport failure counts once against the run's ceiling, keeps the run RUNNING and re-throws;
+     * the next tick retries the call from the unchanged consolidation phase.
      */
     #[DataProvider('transportFailureArms')]
     public function testTransportFailureDuringConsolidateCallCountsTheCeilingAndKeepsRunRunning(
@@ -2315,14 +2044,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The consolidation phase's own copy of the #947 deferral catch, parallel
-     * to distillTick's -- testAPollDistillTickDefersOnA429WithoutStrikingOrCalling
-     * proves that one, but nothing in the suite drove a 429 through
-     * consolidateTick's identical `catch (ProviderRateLimitedException)`
-     * block. A poll tick never blocks: the 429 must defer the run -- record
-     * "retry not before", keep the run RUNNING and still in the consolidation
-     * phase -- rather than burn a transport-failure strike or finalize on the
-     * degraded pool.
+     * A 429 on a poll tick's consolidation call defers the run, still RUNNING in the consolidation phase: no strike,
+     * and no finalizing on the degraded pool.
      */
     public function testAPollConsolidationTickDefersOnA429WithoutStriking(): void
     {
@@ -2353,12 +2076,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Both arms of the resolver's transport failure, exactly as the batch wave
-     * pair does: a rejected key never produced a reply either, so it must count
-     * against the same ceiling and not slip past the catch uncounted. Shared by
-     * the distillation and consolidation phase transport-failure tests -- both
-     * catches are the identical shape, so one data provider names both arms
-     * once rather than each test naming them again.
+     * Both transport-failure arms: a rejected key never produced a reply either, so it counts against the same
+     * ceiling.
      *
      * @return iterable<string, array{0: \RuntimeException}>
      */
@@ -2368,12 +2087,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         yield 'credentials rejected' => [new CredentialsRejectedException('bad key')];
     }
 
-    /**
-     * Mirrors providerTick's all-pruned short-circuit (#308 final review,
-     * Minor 4): if every winning entry from both batches is gone by the
-     * time consolidation runs, there is nothing to ask the model to check,
-     * so this is progress, not a call the model would inevitably fail.
-     */
     public function testConsolidateTickWithAllWinnersPrunedFinalizesWithoutAProviderCall(): void
     {
         $this->seedMultiBatchFixture();
@@ -2456,12 +2169,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The production failure of #396: a well-formed consolidation reply that
-     * names almost the whole list (98 of 100 there). It is read as a
-     * mistake, not obeyed, so the run spends its retries and then completes
-     * with the undeduped, batch-score list -- rather than handing the
-     * reader the one entry the old best-ranked exemption would have
-     * salvaged.
+     * A reply naming almost every pooled id as a duplicate is read as a mistake, not obeyed: the run spends its
+     * retries, then completes with the undeduped batch-score list.
      */
     public function testAConsolidationReplyNamingEveryPooledIdIsRejectedAndTheRunDegrades(): void
     {
@@ -2516,12 +2225,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ));
     }
 
-    /**
-     * The batch call is no longer capped at the picks limit -- it scores
-     * every candidate it is shown -- so the finalizer is the only place that
-     * cuts the ranked pool down to the size the reader asked for, and every
-     * plan reaches it through the consolidation phase now (#493).
-     */
+    /** The batch call scores every candidate it is shown, so only the finalizer cuts the ranked pool to picksLimit. */
     public function testSingleBatchRunTruncatesTheRankedPoolToThePicksLimit(): void
     {
         $this->seedSingleBatchFixture(picksLimit: 2);
@@ -2564,11 +2268,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The consolidation phase reads a single call rather than a wave, so it
-     * has its own runaway path. It ends the same way the batch phase's does:
-     * the model failed, not the endpoint, so the reply is unusable and the
-     * run degrades to the undeduped batch-score list instead of the
-     * exception escaping the tick (#437).
+     * The consolidation call has its own runaway path, ending as the batch phase's does: an unusable reply, then the
+     * undeduped batch-score list, never an exception escaping the tick.
      */
     public function testARunawayConsolidateReplyDegradesInsteadOfEscapingTheTick(): void
     {
@@ -2634,10 +2335,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertCount(4, $retryMessages);
         self::assertSame('garbage 1', $retryMessages[2]['content']);
 
-        // Read from the database, not the in-memory entity: an unpersisted
-        // retry counter would restart at zero on every poll, so the degrade
-        // ending would never arrive and each poll would spend one more
-        // provider call on the same run (the spend hazard of #302 and #308).
+        // Read from the database: an unpersisted retry counter restarts at zero on every poll, so the degrade ending
+        // never arrives and each poll spends one more provider call on the run.
         $this->entityManager->clear();
         self::assertSame(2, $this->persistedAttempts($run));
 
@@ -2754,7 +2453,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testDistillBatchAndConsolidateCallsAreLoggedWithVerdicts(): void
     {
         $this->seedMultiBatchFixture();
-        $run = $this->startSnapshotAndDistill(); // the distill call logs like every phase (#638)
+        $run = $this->startSnapshotAndDistill(); // the distill call logs like every phase
         $firstBatch = $run->getCandidateBatches()[0];
         $secondBatch = $run->getCandidateBatches()[1];
 
@@ -2798,9 +2497,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedMultiBatchFixture();
         $run = $this->startSnapshotAndDistill();
 
-        // In-tick retry (#344): the unusable reply and its corrective retry are
-        // one tick, so both queued replies are consumed by a single advance and
-        // each still gets its own log row with the right verdict.
+        // The unusable reply and its corrective retry are one tick, so a single advance consumes both queued replies,
+        // and each still gets its own log row with the right verdict.
         $firstEntryId = $run->getCandidateBatches()[0][0];
         $this->stubChatClient()->queueContent('not json');
         $this->stubChatClient()->queueContent(json_encode([
@@ -2808,8 +2506,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        // The distill call every run spends first (#493) logs its own row now
-        // (#638); this scenario is about the batch calls, so read only those.
+        // The distill call every run spends first logs its own row; this scenario reads only the batch calls.
         $rows = $this->batchLogRowsOfLatestRun();
         self::assertSame([1, 2], array_column($rows, 'attempt'));
         self::assertSame([CallVerdict::Unusable, CallVerdict::Usable], array_column($rows, 'verdict'));
@@ -2839,13 +2536,6 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertNotNull($log->getFinishedAt());
     }
 
-    /**
-     * A verdict that stays null forever reads to the debug panel as "still
-     * streaming" (streamingTextForUser() has no way to tell an abandoned
-     * call from a live one) -- so an exception that escapes callProvider()
-     * before a reply exists must still settle the row it opened, even one
-     * credentials() itself raises before the provider is ever called.
-     */
     public function testApiKeyUnreadableSettlesTheLogRowInsteadOfLeavingItStreamingForever(): void
     {
         $this->seedMultiBatchFixture();
@@ -2854,15 +2544,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $keyDonor = (new UserFactory($this->entityManager, $this->passwordHasher()))->create('key-donor@example.test');
         $this->fixtures->seedReadyAiSettings($keyDonor);
         $this->deleteAiSettings();
-        // The donor's key was sealed under the donor's own account id, so
-        // moving its settings row onto $this->user makes the stored
-        // ciphertext fail its integrity check the moment credentials() opens
-        // it. The active pointer is applied directly on the same in-memory
-        // $this->user instance advance() below receives, not through
-        // AiSettingsRowMover::pointActiveAt()'s DQL write: settingsFor()
-        // resolves through that property directly, and em->clear() (which
-        // moveOwnership() calls) detaches $this->user rather than refreshing
-        // it, so a database-only write would never become visible to it.
+        // The donor's key is sealed under the donor's account id, so on $this->user it fails its integrity check. The
+        // active pointer is set on this in-memory $this->user, not by pointActiveAt()'s DQL: moveOwnership() clears
+        // the entity manager, which detaches $this->user, so a database-only write would never reach it.
         $moved = (new AiSettingsRowMover($this->entityManager))->moveOwnership($keyDonor, $this->user);
         $this->user->setActiveAiProviderSettings($moved);
 
@@ -2892,12 +2576,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         return $items;
     }
 
-    /**
-     * The retry counter as the database holds it. Read over the connection
-     * because the entity exposes no getter, and because reading it through
-     * the entity manager would risk serving the very in-memory value this
-     * assertion exists to bypass.
-     */
+    /** The counter as the database holds it: the entity manager could serve the in-memory value under test. */
     private function persistedTransportFailures(RecommendationRun $run): int
     {
         $failures = $this->entityManager->getConnection()->fetchOne(
@@ -2940,12 +2619,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * candidatePoolSize 20 with a small context window forces the packer to
-     * split into two batches of 10. Every test that uses this fixture pins
-     * that split right after its own snapshot tick — through
-     * startSnapshotAndDistill(), or with its own assertion on getCandidateBatches()
-     * — so a future change to the packing maths fails loudly there instead
-     * of silently making these tests single-batch.
+     * Twenty candidates at MULTI_BATCH_CONTEXT_WINDOW pack into two batches of 10. Each user of this fixture pins that
+     * split after its snapshot tick, so a change to the packing maths fails loudly instead of going single-batch.
      */
     private function seedMultiBatchFixture(
         int $picksLimit = RecommendationSettings::DEFAULT_PICKS_LIMIT,
@@ -3002,10 +2677,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Forces an exact batch count through the connection's per-batch ceiling,
-     * so a wave test can pin how many batches a wave has to work with. Each cap
-     * here stays under the MINIMUM_BATCH_SIZE the token budget splits on, so the
-     * packer produces exactly $batchCount batches regardless of the context window.
+     * Forces an exact batch count through the connection's per-batch ceiling. Each cap stays under
+     * MINIMUM_BATCH_SIZE, below which the token budget never splits, so the context window cannot change the count.
      */
     private function seedForcedBatchCountFixture(int $entryCount, int $batchCount): void
     {
@@ -3038,12 +2711,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * Starts a run and drives it through the snapshot tick and the
-     * distillation tick that now precedes every batch (#493), pinning the
-     * fixture's batch count along the way so a future change to the packing
-     * maths fails loudly here instead of silently making these tests
-     * single-batch. Every caller lands ready for its own first batch call,
-     * with the canned distill reply already spent as the wave's calls()[0].
+     * Drives a run through the snapshot and distillation ticks, pinning the two-batch split on the way. The caller
+     * lands ready for its first batch call, the distill reply already spent as calls()[0].
      */
     private function startSnapshotAndDistill(): RecommendationRun
     {
@@ -3073,10 +2742,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The consolidation phase's reply shape (#493): the same recommendations
-     * envelope the batch phase uses, plus the duplicates list the old dedup
-     * phase alone used to carry. $recommendations already carries the id,
-     * score and reason for every pick the reply should name.
+     * The consolidation reply: the batch phase's recommendations envelope plus a duplicates list.
      *
      * @param list<array{id: int, score: int, reason: string}> $recommendations
      * @param list<int>                                        $duplicates
@@ -3108,8 +2774,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The log rows of the account's newest run. The log keeps ten runs
-     * (#401), so a read has to name one; every test here drives a single run.
+     * The log rows of the account's newest run: the log keeps ten runs, so a read names one.
      *
      * @return list<DebugLogRow>
      */
@@ -3122,9 +2787,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The batch-phase rows of the newest run only. Every run spends a distill
-     * call first (#493), and it logs like every phase (#638); a test that
-     * asserts on the batch calls its own scenario makes reads past that row.
+     * The batch-phase rows of the newest run: every run's distill call logs a row first.
      *
      * @return list<DebugLogRow>
      */
@@ -3170,21 +2833,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     }
 
     /**
-     * The race the checkpoint exists for: the user stops the run while a tick
-     * is inside a provider call that has already been paid for. The tick must
-     * not flush its result over the cancellation — without the guard it
-     * records the batch and the run marches on, so the button appears to do
-     * nothing.
-     *
-     * The stop is written straight to the database rather than through
-     * RecommendationRunCanceller on purpose. The two really do sit in
-     * different processes — a worker tick against a web request — so the
-     * ticking side holds an entity that still says "running" and cannot learn
-     * otherwise by itself. Cancelling through the service here would mutate
-     * the very entity under test and the run would stop for the wrong reason:
-     * the entity's own status guard, which the real cross-process case never
-     * reaches. (RecommendationRunCanceller is covered through POST
-     * /api/recommendations/runs/stop in the controller test.)
+     * The user stops the run while a tick is inside a paid provider call: the tick must not record the result. The
+     * stop is written straight to the database, as a web request would while a worker ticks, because cancelling
+     * through the service would stop the run by the entity's own status guard instead.
      */
     public function testARunStoppedDuringAProviderCallDoesNotRecordThatCallsResult(): void
     {

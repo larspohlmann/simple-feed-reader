@@ -20,15 +20,6 @@ use App\Tests\Support\StubChatClient;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * Against the real repository, entity manager and call recorder, not mocks --
- * mirrors RecommendationRunAdvancerTest's rationale: distill()'s job is to
- * coordinate the history load, the prompt build, the provider call and the
- * settings write, and a mock would have to encode that coordination itself
- * instead of proving it. The provider itself is the one seam worth faking:
- * StubChatClient stands in for it, registered as the container's
- * ChatCompletionClientInterface in the test environment.
- */
 final class RecommendationProfileDistillerTest extends DbTestCase
 {
     use BuildsTickContexts;
@@ -122,12 +113,6 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $this->distiller()->distill($this->tick($run));
     }
 
-    /**
-     * A transport failure has to abort the log row it opened, not merely
-     * propagate — a verdict left null forever reads to the debug panel as
-     * "still streaming" (mirrors RecommendationConsolidationResolverTest's own
-     * testTransportFailureAbortsTheOpenLogRow).
-     */
     public function testTransportFailureAbortsTheOpenLogRow(): void
     {
         $this->fixtures->debugEnabledSettings($this->user);

@@ -21,10 +21,6 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Against the real repository and entity manager, not mocks: start()'s job is
- * to decide between three existing-run states (none, active, failed) and a
- * mock would have to encode that decision itself instead of proving it.
- *
  * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository
  */
 final class RecommendationRunStarterTest extends DbTestCase
@@ -77,9 +73,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         $this->seedReadyAiSettings($this->user);
         $failed = $this->failedRunFor($this->user);
 
-        // start() no longer resumes: whether to pick up a failed run is the
-        // user's choice, made in the client, so start() always begins fresh
-        // and resume() is its own action (#329).
+        // Resuming a failed run is the user's choice, made in the client: start() always begins fresh.
         $report = $this->starter()->start($this->user);
 
         self::assertSame('pending', $report->status);
@@ -148,12 +142,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
     }
 
-    /**
-     * parse_url() returns false, not null, for a URL this malformed — a
-     * different falsy value than the "no host component" case above, and one
-     * that a naive `?:` collapse handles identically but for the wrong reason
-     * (#409 review).
-     */
+    /** parse_url() returns false, not null, for a URL this malformed: a different falsy value than the no-host case. */
     public function testStampsNoHostWhenTheBaseUrlIsMalformed(): void
     {
         $user = $this->userWithProvider('http:///v1', 'some-model');
@@ -163,11 +152,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertNull($this->runs()->findActiveForUser($user)?->getProviderHost());
     }
 
-    /**
-     * '0' is a valid hostname and a real, if unusual, base URL host. PHP
-     * treats the string '0' as falsy, so a `parse_url(...) ?: null` collapse
-     * silently turned this genuine host into null (#409 review).
-     */
+    /** '0' is a valid host, but PHP treats the string '0' as falsy: `parse_url(...) ?: null` would drop it. */
     public function testStampsTheHostZeroRatherThanTreatingItAsNoHost(): void
     {
         $user = $this->userWithProvider('http://0/v1', 'some-model');
@@ -177,12 +162,6 @@ final class RecommendationRunStarterTest extends DbTestCase
         self::assertSame('0', $this->runs()->findActiveForUser($user)?->getProviderHost());
     }
 
-    /**
-     * The window used to be one run wide, so this asserted the opposite: a new
-     * run wiped what the last one recorded. Prompt regressions are only
-     * visible as a difference between runs, so the previous run's log is
-     * exactly what the next investigation needs (#401).
-     */
     public function testANewRunKeepsThePreviousRunsDebugLog(): void
     {
         $this->seedReadyAiSettings($this->user);
@@ -324,9 +303,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         return $settings;
     }
 
-    /** Gives $this->user a ready configuration at the given endpoint, so the
-     *  provider-stamping tests (#409) don't have to build the settings row
-     *  themselves. */
+    /** Gives $this->user a ready configuration at the given endpoint, for the provider-stamping tests. */
     private function userWithProvider(string $baseUrl, string $model): User
     {
         $this->seedReadyAiSettings($this->user, $baseUrl, $model);

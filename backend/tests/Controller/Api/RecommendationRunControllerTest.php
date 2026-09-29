@@ -37,13 +37,6 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The controller in front of Task 9-11's run state machine. The provider is
- * never really called: StubChatClient stands in for it via the container
- * alias in services_test.yaml, so these cases prove the endpoints' own
- * behaviour — routing, auth, exception mapping, the limiter — without a
- * network.
- */
 final class RecommendationRunControllerTest extends WebTestCase
 {
     use ProvidesWorkerHeartbeats;
@@ -56,9 +49,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
     protected function setUp(): void
     {
-        // The limiter counts in a FILESYSTEM pool that outlives the run, so a
-        // prior case's spend would trip a 429 here too — see
-        // AiSettingsControllerTest for the same guard.
+        // The limiter counts in a filesystem pool that outlives the test, so a prior case's spend would trip a 429.
         self::bootKernel();
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         self::assertInstanceOf(CacheItemPoolInterface::class, $rateLimiterCache);
@@ -164,10 +155,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * Makes the #311 worker's heartbeat fresh by touching it through the real
-     * repository with the container's own clock, exactly like the poll
-     * driver reads it — a MockClock stand-in here would prove nothing about
-     * the wiring the request path actually uses.
+     * Touches the persistent worker's heartbeat through the real repository and the container's own clock, the
+     * wiring the poll driver reads: a MockClock stand-in would prove nothing about it.
      */
     private function touchWorkerHeartbeatNow(): void
     {
@@ -299,8 +288,7 @@ final class RecommendationRunControllerTest extends WebTestCase
 
         $this->stubChatClient()->queueContent(json_encode(['profile' => 'a distilled profile'], \JSON_THROW_ON_ERROR));
 
-        // The distillation tick spends the one queued profile reply, ahead of
-        // any batch call (#493).
+        // The distillation tick spends the one queued profile reply, ahead of any batch call.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
         self::assertSame('running', $this->payload($client->getResponse())['status']);
@@ -309,8 +297,7 @@ final class RecommendationRunControllerTest extends WebTestCase
             'recommendations' => [['id' => $entry->getId(), 'score' => 90, 'reason' => 'a good read']],
         ], \JSON_THROW_ON_ERROR));
 
-        // The batch tick spends the one queued reply and checkpoints for the
-        // consolidation phase every plan reaches now, one batch or many.
+        // The batch tick spends the one queued reply and checkpoints for the consolidation phase.
         $client->request('POST', '/api/recommendations/runs/tick', server: $headers);
         self::assertResponseIsSuccessful();
         self::assertSame('running', $this->payload($client->getResponse())['status']);
@@ -337,8 +324,8 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertIsArray($forYou);
         self::assertSame(1, $forYou['itemCount']);
         self::assertIsString($forYou['generatedAt']);
-        // The completed run's own id rides along, so the client can suppress its
-        // divider by identity rather than by matching timestamps (#348).
+        // The completed run's own id rides along, so the client can suppress its divider by identity rather than by
+        // matching timestamps.
         self::assertIsInt($forYou['newestRunId']);
     }
 
@@ -369,12 +356,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * #311's arbitration: with a fresh worker heartbeat in place, a tick
-     * becomes a pure status read instead of doing the worker's job — the run
-     * stays pending and the provider is never called. A worker owning the
-     * run is not a stall (#439): the fresh-heartbeat branch never even
-     * attempts the lock, so waitingForLock stays false here regardless of
-     * whether the worker actually holds it right now.
+     * With a fresh worker heartbeat a tick is a pure status read: the run stays pending and the provider is never
+     * called. That branch never attempts the lock, so waitingForLock stays false whether or not the worker holds it.
      */
     public function testTickDefersToAFreshWorkerHeartbeat(): void
     {
@@ -396,10 +379,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * A live on-demand drainer owns execution just as the persistent worker
-     * does, so the tick must defer to it too — driving the run from the
-     * request would only collide with the drainer on the per-user lock (#371
-     * follow-up, where the two liveness keys were split apart).
+     * A live on-demand drainer owns execution as the persistent worker does: a tick driving the run would only
+     * collide with it on the per-user lock.
      */
     public function testTickDefersToALiveDrainer(): void
     {
@@ -420,11 +401,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * Without a fresh heartbeat, the #308 poll behaviour applies untouched:
-     * the tick snapshots the run itself and reports it as foreground work.
-     * Nothing else was contending for the lock either, so this is the
-     * baseline #439 flags against: no contention at all reports
-     * waitingForLock false, same as background.
+     * Without a fresh heartbeat the tick snapshots the run itself and reports it as foreground work. Nothing contends
+     * for the lock, so waitingForLock is false: the baseline the stall case below differs from.
      */
     public function testTickAdvancesWhenTheHeartbeatIsStale(): void
     {
@@ -444,12 +422,9 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * #393's stated new behaviour: a tick on an active run whose drainer has
-     * gone quiet spawns a replacement instead of waiting for the next cron
-     * pass. The run is seeded directly through the fixtures rather than via
-     * start(), so nothing but this request's own kernel termination can
-     * produce a launch -- proving RecommendationDrainOnTerminateListener,
-     * not a side effect of starting the run.
+     * A tick on an active run with no fresh heartbeat spawns a replacement drainer. The run is seeded through the
+     * fixtures, not start(), so only this request's kernel termination (RecommendationDrainOnTerminateListener) can
+     * launch one.
      */
     public function testATickOnAnActiveRunWithNoFreshHeartbeatSpawnsAReplacementDrainer(): void
     {
@@ -468,12 +443,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * The heartbeat is a hint and the per-user lock is the truth, so the two
-     * must answer alike. A worker whose heartbeat has not landed yet still
-     * holds the lock while it works; reporting that as `busy` made the client
-     * spend five retries and then tell the user "another run is already in
-     * progress" about a perfectly healthy background run — and stop polling
-     * it (#311 final review, Critical 2c).
+     * The heartbeat is a hint and the per-user lock the truth: a held lock reports somebody else's work, never
+     * `busy`, which would make the client stop polling a healthy background run.
      */
     public function testATickThatFindsTheLockHeldReportsTheRunAsSomebodyElsesWork(): void
     {
@@ -497,17 +468,12 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertNotSame('busy', $report['status']);
         self::assertSame('pending', $report['status']);
         self::assertTrue($report['background']);
-        // The presence check just above found no fresh heartbeat either, so
-        // the lock and the heartbeat disagree: something holds it that no
-        // known driver kind is answering for -- #439's stall, distinct from
-        // a healthy worker background run (see the fresh-heartbeat case
-        // above, which never sets this).
+        // No fresh heartbeat either, so the lock and the heartbeat disagree: a holder no driver kind answers for is
+        // the stall.
         self::assertTrue($report['waitingForLock']);
         self::assertSame([], $this->stubChatClient()->calls());
 
-        // #439 was diagnosed from a stall that left no trace, so this one
-        // case -- and only this one -- must reach dev.log, naming the lock
-        // row an operator has to inspect.
+        // The stall, and only the stall, reaches dev.log, naming the lock row an operator has to inspect.
         $records = $logSpy->getRecords();
         self::assertCount(1, $records);
         self::assertSame('WARNING', $records[0]->level->getName());
@@ -519,11 +485,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * The healthy half of the same pair (#439): a live worker holds the lock
-     * while it advances the run, which is ordinary and frequent. Warning on
-     * it once flooded dev.log and buried the stall above, so the presence
-     * check answers this case before the lock is ever attempted and nothing
-     * is logged at all.
+     * A live worker holding the lock is ordinary and frequent: the presence check answers before the lock is
+     * attempted, so nothing is logged.
      */
     public function testATickDeferringToALiveWorkerHoldingTheLockLogsNothing(): void
     {
@@ -551,12 +514,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * Pushed onto the default channel logger rather than replacing it: the
-     * requests these cases make before the one under test have already
-     * resolved that service, and the test container refuses to swap an
-     * initialised one. The spy takes WARNING and above, which is the level
-     * the stall is reported at and keeps an unrelated info line from
-     * reading as one.
+     * Pushed onto the default logger, not swapped in: earlier requests have resolved it, and the test container
+     * refuses to replace an initialised service. WARNING and above is the stall's level, so no info line reads as one.
      */
     private function attachALogSpy(): TestHandler
     {
@@ -643,19 +602,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * advance() throws AiNotConfiguredException when a run is already active
-     * but the account's provider row has since been removed — a settings
-     * change racing an in-flight run. Distinct from start()'s own mapping of
-     * the same exception type: this pins that tick() carries the mapping too.
-     *
-     * Fix #311: it also pins the terminal-failure side of that same race.
-     * Before the fix, only the worker driver failed a run whose
-     * configuration disappeared mid-flight; a poll-only install left this
-     * exact run stuck retried forever, because RecommendationRunAdvancer's
-     * shared tick() only rethrew. The run must now be FAILED here too, the
-     * same way AdvanceRecommendationRunsHandlerTest's
-     * testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed proves
-     * the worker driver leaves it.
+     * advance() throws AiNotConfiguredException when the provider row disappears under an active run. tick() maps it
+     * as start() does, and fails the run the way the worker driver does, so a poll-only install never retries it.
      */
     public function testATickWhoseConfigurationDisappearedIsNotFound(): void
     {
@@ -687,11 +635,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertSame('The AI provider is no longer configured.', $run->getError());
     }
 
-    /**
-     * A stored key that no longer decrypts surfaces during the provider tick,
-     * once the run is past its snapshot phase and about to call the model —
-     * see AiSettingsControllerTest for the same corruption technique.
-     */
+    /** A stored key that no longer decrypts surfaces at the provider tick, once the run is past its snapshot phase. */
     public function testATickWithAnUnreadableStoredKeyIsUnprocessable(): void
     {
         $client = self::createClient();
@@ -719,12 +663,8 @@ final class RecommendationRunControllerTest extends WebTestCase
     }
 
     /**
-     * Pins that the ai_recommendation_starts budget is actually spent by
-     * start(). Every other case only proves the limiter does NOT fire, so a
-     * limiter argument bound to the wrong service — it autowires by parameter
-     * name — would leave the whole suite green with the endpoint uncapped.
-     * The two routes carry different budgets precisely so this case would fail
-     * if start() were wired to the loose tick limiter.
+     * start() spends the ai_recommendation_starts budget. Limiters autowire by parameter name, and the two routes'
+     * budgets differ so that a start() bound to the looser tick limiter fails here.
      */
     public function testAStartBeyondTheWindowsBudgetIsRateLimited(): void
     {
@@ -745,12 +685,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         self::assertGreaterThan(0, (int) $client->getResponse()->headers->get('Retry-After'));
     }
 
-    /**
-     * The same budget check on the tick action, proven independently of
-     * start()'s: with no AI configured, advance() is a harmless no-op
-     * ('none') so a run of ticks exercises the limiter alone, with nothing
-     * else that could turn a spent budget into a different status code.
-     */
+    /** With no AI configured advance() is a no-op ('none'), so the ticks exercise the tick limiter alone. */
     public function testATickBeyondTheWindowsBudgetIsRateLimited(): void
     {
         $client = self::createClient();

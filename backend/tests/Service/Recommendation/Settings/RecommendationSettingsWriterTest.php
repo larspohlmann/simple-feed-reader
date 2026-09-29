@@ -15,12 +15,6 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * Against the real repository and entity manager, not mocks: storeProfile()'s
- * job is precisely the load-or-create branch and the "touch only this field"
- * guarantee, both of which a mock would have to encode itself instead of
- * proving.
- */
 final class RecommendationSettingsWriterTest extends DbTestCase
 {
     private User $user;
@@ -93,10 +87,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     }
 
     /**
-     * Regression (#541): save() rebuilds the values twice on the way to the row
-     * -- once to normalise the guidance, once to re-attach the stored profile --
-     * and both rebuilds must carry showReasons, or the incoming flag is silently
-     * reset to its constructor default and the toggle never sticks.
+     * save() rebuilds the values twice, to normalise the guidance and to re-attach the stored profile: both rebuilds
+     * must carry showReasons, or the toggle silently resets to its default.
      */
     public function testSavingSettingsPersistsShowReasons(): void
     {
@@ -116,11 +108,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     }
 
     /**
-     * The regression case: save() is the settings-form path, and the form
-     * never carries profileText (it is read-only there), so
-     * SaveRecommendationSettingsRequest::values() always hands save() a
-     * RecommendationSettingsValues with profileText null. save() must not
-     * take that null at face value -- it has to preserve whatever
+     * The settings form never carries profileText, so save() always receives a null one: it must keep whatever
      * storeProfile() already wrote.
      */
     public function testSavingSettingsDoesNotWipeAnExistingProfile(): void
@@ -142,10 +130,6 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertSame('Only cats.', $reloaded->values()->guidancePrompt);
     }
 
-    /**
-     * A fresh user out of setUp() never had a settings row created for it;
-     * this name exists to make that precondition explicit at the call site.
-     */
     private function nonDefaultHistoryCaps(): RecommendationHistoryCaps
     {
         return new RecommendationHistoryCaps(10, 20, 30);

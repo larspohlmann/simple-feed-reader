@@ -18,11 +18,6 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The read side of the recommendation debug view (#309): a cheap list poll
- * and a per-row detail fetch. Both sit behind the same bearer auth as the
- * rest of the API and carry no rate limiter, same stance as `/current`.
- */
 final class RecommendationDebugLogControllerTest extends WebTestCase
 {
     /** @return array{0: array<string,string>, 1: User} */
@@ -192,11 +187,6 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         );
     }
 
-    /**
-     * The panel reads one run at a time, so the payload names the runs it may
-     * switch to (#401) -- newest first, and by default the newest is the one
-     * whose rows come with it.
-     */
     public function testListNamesTheRetainedRunsAndDefaultsToTheNewest(): void
     {
         $client = self::createClient();

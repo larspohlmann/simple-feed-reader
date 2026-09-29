@@ -100,9 +100,8 @@ final class RecommendationConsolidationParserTest extends TestCase
     }
 
     /**
-     * A reply naming most of the shortlist as duplicates is rejected whole —
-     * including its otherwise-valid picks — mirroring the PlausibleDuplicateShare
-     * guard (#396).
+     * A reply naming most of the shortlist as duplicates is rejected whole, its valid picks included, as
+     * PlausibleDuplicateShare rules.
      */
     public function testRejectsTheWholeReplyWhenTheDuplicateShareIsImplausible(): void
     {
@@ -162,12 +161,6 @@ final class RecommendationConsolidationParserTest extends TestCase
         self::assertSame(0, $result->picks[0]->score);
     }
 
-    /**
-     * is_int() and is_float() are mutually exclusive for any one PHP value,
-     * so a score has to genuinely be one or the other to reach the numeric
-     * branch — a non-numeric string must still be rejected outright rather
-     * than being silently cast to 0.
-     */
     public function testANonNumericScoreIsRejectedRatherThanCastToZero(): void
     {
         $json = '{"recommendations":[{"id":5,"score":"garbage","reason":"x"}],"duplicates":[]}';
@@ -227,12 +220,8 @@ final class RecommendationConsolidationParserTest extends TestCase
     }
 
     /**
-     * A duplicate id given as a numeric string is coerced to int before the
-     * shown-pool check. shownIds is sized to three so the single named
-     * duplicate stays within PlausibleDuplicateShare's bound (max 1 of 3) --
-     * a one-shown pool would trip that guard first and mask the coercion
-     * this test targets behind ConsolidationParseResultModel::unusable()'s own
-     * empty duplicateIds.
+     * Three shown ids keep the one named duplicate within PlausibleDuplicateShare's bound: a one-id pool would trip
+     * that guard first and hide the coercion.
      */
     public function testDuplicateIdsGivenAsNumericStringsAreCoerced(): void
     {

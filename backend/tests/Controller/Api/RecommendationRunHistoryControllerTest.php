@@ -16,15 +16,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The read side of the run cost history (#409): the overview the card opens
- * on -- one summary per calendar month, the newest month's own runs, and the
- * all-time total banked over every run the account ever made -- and the
- * month route a reader pages further into. Read-only, so ownership is proven
- * the same way the #309 debug log test proves it -- a second account's run
- * must not leak in, into the month summaries, the newest month's runs or the
- * total.
- */
+/** A second account's runs must never leak into the month summaries, the newest month's runs or the total. */
 final class RecommendationRunHistoryControllerTest extends WebTestCase
 {
     private const string HISTORY_ROUTE = '/api/recommendations/runs/history';
@@ -131,15 +123,8 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * The newest month's page is capped at
-     * RecommendationRunHistoryRepository::HISTORY_LIMIT (#409) even though
-     * the all-time total above it is not -- an unasserted cap is an unkilled
-     * mutant on both the constant's value and the view's truncation.
-     *
-     * Seeds through RecommendationRunFixtures::persistRunAt() rather than
-     * createRun() -- that method's date is shared with unrelated suites, so a
-     * test that owns its own dates cannot be broken by a change made to
-     * satisfy one of them.
+     * The newest month's page stops at RecommendationRunHistoryRepository::HISTORY_LIMIT; the all-time total does
+     * not. Seeded through persistRunAt(), not createRun(), whose shared date other suites may change.
      */
     public function testCapsTheNewestMonthAtTheLimitKeepingTheNewestRunsAndReportsANextCursor(): void
     {
@@ -179,11 +164,8 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * resume() deliberately does not clear completedAt, so the row really does
-     * reach the payload with a RUNNING status beside the timestamp of the
-     * attempt that failed. The endpoint must report neither that time nor the
-     * duration derived from it — a "47 s" beside a RUNNING badge measures a
-     * dead attempt (#409).
+     * resume() keeps the failed attempt's completedAt, so the endpoint reports neither that time nor a duration:
+     * beside a RUNNING badge they would measure a dead attempt.
      */
     public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
     {
@@ -236,15 +218,7 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
         self::assertResponseStatusCodeSame(401);
     }
 
-    /**
-     * Runs in two different months produce two `months` entries with their
-     * own counts and totals, and `latest` opens on the newer of the two --
-     * not on whichever happens to sort first in the array. This does not by
-     * itself rule out a wall-clock implementation, since both months here
-     * are 2026 and the newer one happens to be the current calendar month
-     * too; {@see testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast}
-     * is the test that rules that out.
-     */
+    /** Both months fall in 2026, so this cannot rule out a wall-clock `latest`; the years-in-the-past case does. */
     public function testRunsInTwoDifferentMonthsProduceTwoMonthEntriesWithLatestTheNewerOne(): void
     {
         $client = self::createClient();
@@ -280,13 +254,8 @@ final class RecommendationRunHistoryControllerTest extends WebTestCase
     }
 
     /**
-     * `latest` is the newest month that HAS runs, not the calendar month the
-     * server's clock currently reads (#409) -- an account whose only runs
-     * are years in the past still opens on that month. 2024-03 can never be
-     * "now" for this test, so unlike the two-months test above, a wall-clock
-     * implementation (`new \DateTimeImmutable('now', $viewer->zone)`) fails
-     * this one: it would answer with the current month instead of 2024-03,
-     * and `latest['runs']` would then be empty because no run exists in it.
+     * `latest` is the newest month that has runs, not the server clock's month: 2024-03 can never be "now", so a
+     * wall-clock implementation answers with the empty current month and fails.
      */
     public function testLatestOpensOnTheNewestMonthWithRunsEvenYearsInThePast(): void
     {
