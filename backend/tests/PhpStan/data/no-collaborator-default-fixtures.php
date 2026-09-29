@@ -53,3 +53,30 @@ namespace App\Entity\Fixtures {
         }
     }
 }
+
+namespace App\Service\Fixtures\Dto {
+    final readonly class DtoDefaultsAValue
+    {
+        public function __construct(public \App\Service\Fixtures\Helper $part = new \App\Service\Fixtures\Helper())
+        {
+        }
+    }
+}
+
+namespace App\Service\Fixtures\Pass {
+    final readonly class PassDefaultsAValue
+    {
+        public function __construct(public \App\Service\Fixtures\Helper $part = new \App\Service\Fixtures\Helper())
+        {
+        }
+    }
+}
+
+namespace App\Service\Fixtures\Message {
+    final readonly class MessageDefaultsAValue
+    {
+        public function __construct(public \App\Service\Fixtures\Helper $part = new \App\Service\Fixtures\Helper())
+        {
+        }
+    }
+}
