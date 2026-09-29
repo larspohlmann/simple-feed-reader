@@ -14,9 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * Read side of the recommendation debug view (#309). Both routes are plain
- * reads with no limiter — the ~2 s panel poll is the whole point, same
- * stance as the run status `current` route.
+ * Plain reads with no rate limiter: the debug panel polls every ~2 s while a run is in progress.
  */
 #[Route('/api/recommendations/runs/debug-log')]
 final readonly class RecommendationDebugLogController
@@ -27,11 +25,7 @@ final readonly class RecommendationDebugLogController
     ) {
     }
 
-    /**
-     * `?run=<id>` picks one of the retained runs (#401); without it the panel
-     * gets the newest, which is what it asked for before the log kept more
-     * than one.
-     */
+    /** `?run=<id>` picks one of the retained runs; without it, the newest. */
     #[Route('', name: 'api_recommendations_debug_log', methods: ['GET'])]
     public function list(#[CurrentUser] User $user, Request $request): JsonResponse
     {

@@ -12,14 +12,9 @@ use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * The client's write shape for a user's recommendation settings row, a 1:1
- * mirror of RecommendationSettingsValues. Blank-guidance normalisation is
- * deliberately not here: RecommendationSettingsWriter owns that decision, not
- * the wire format.
+ * The client's write shape for the settings row. RecommendationSettingsWriter, not this DTO, normalises blank guidance.
  *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
- * mirrors RecommendationSettingsValues field-for-field, not a behavioural
- * method.
+ * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier, not a behavioural method.
  */
 final readonly class SaveRecommendationSettingsRequest
 {

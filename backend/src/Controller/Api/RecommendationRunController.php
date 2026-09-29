@@ -20,7 +20,7 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
  * The poll loop the client drives. `current` is a plain read with no limiter. Starting a run commits outbound
- * spend; ticking is the progress loop and must stay generous enough never to throttle a long run (#308).
+ * spend; ticking is the progress loop and must stay generous enough never to throttle a long run.
  */
 #[Route('/api/recommendations/runs')]
 final readonly class RecommendationRunController

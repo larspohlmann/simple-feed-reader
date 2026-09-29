@@ -14,14 +14,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * How much the account has read lately (#896): one count per day for the last
- * thirty days, bucketed in the viewer's timezone, for the About page's reading
- * chart.
- *
- * Read-only and cheap — one scoped, bounded query against the current user — so
- * it carries no rate limiter, the same call RecommendationRunHistoryController
- * makes. Ownership is enforced in the service and repository: every query filters
- * on the authenticated user, and there is no id in the route to forge.
+ * Daily read counts for the last thirty days, bucketed in the viewer's zone. No rate limiter: one bounded query,
+ * scoped to the current user, with no id in the route to forge.
  */
 #[Route('/api/reading')]
 final readonly class ReadingActivityController

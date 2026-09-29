@@ -15,18 +15,6 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/**
- * The account's recommendation settings: the effective values every
- * recommendation service reads, plus the fixed prompt layers the settings
- * card shows as read-only context.
- *
- * `workerAlive` answers one narrow question for the card: does this install
- * run a persistent worker, and therefore need no cron entry for scheduled
- * auto-generation? A transient drainer deliberately does not count -- it
- * advances runs but never starts due ones -- so this reads the persistent
- * worker's key alone and not the "somebody is driving right now" signal the
- * poll driver uses (#371 follow-up).
- */
 #[Route('/api/me/ai/recommendations')]
 final readonly class RecommendationSettingsController
 {
