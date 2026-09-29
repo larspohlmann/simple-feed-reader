@@ -8,13 +8,8 @@ use App\Repository\InstanceSettingRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Instance-wide settings the admin edits at runtime, held in a single row.
- *
- * Deliberately NOT a key/value table: two typed booleans read and validate
- * without stringly-typed parsing, and PHPStan sees real types. A future flag
- * costs one nullable-safe migration, which is an honest price for that safety.
- * Absence of the row means "defaults" (see InstanceSettings), so a fresh
- * database needs no seeding.
+ * Instance-wide settings the admin edits at runtime, as typed columns in a single row rather than a key/value table.
+ * No row means the defaults (see InstanceSettings), so a fresh database needs no seeding.
  */
 #[ORM\Entity(repositoryClass: InstanceSettingRepository::class)]
 #[ORM\Table(name: 'instance_setting')]
@@ -32,44 +27,27 @@ final class InstanceSetting
     private bool $requireApproval = true;
 
     /**
-     * The externally reachable base URL used to build links in outgoing email
-     * (#636). Null means "no override" — email links fall back to the
+     * The externally reachable base URL used to build links in outgoing email.
+     * Null means "no override" — email links fall back to the
      * APP_FRONTEND_URL deploy env. See {@see \App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface}.
      */
     #[ORM\Column(name: 'public_base_url', length: 255, nullable: true)]
     private ?string $publicBaseUrl = null;
 
     /**
-     * The WebAuthn relying-party id every stored credential is bound to
-     * (#624). Null means "no override" — {@see \App\Service\Settings\PasskeyRelyingParty\ConfiguredPasskeyRelyingParty}
-     * derives it from the public base URL's host instead. It exists because
-     * an RP id is baked into every credential at registration time: changing
-     * it invalidates every passkey on the instance, which is why the write
-     * path guards a change with {@see \App\Service\Settings\RelyingPartyChangeGuard}.
+     * Every passkey is bound to this relying-party id at registration, so changing it invalidates them all; the write
+     * goes through {@see \App\Service\Settings\RelyingPartyChangeGuard}. Null takes the public base URL's host.
      */
     #[ORM\Column(name: 'passkey_rp_id', length: 255, nullable: true)]
     private ?string $passkeyRpId = null;
 
-    /**
-     * The relying-party display name shown by the authenticator's own UI.
-     * Purely cosmetic — unlike passkeyRpId, changing it does not affect any
-     * stored credential. Null means "no override", falling back to the
-     * literal "Simple Feed Reader".
-     */
+    /** What the authenticator's own UI shows; cosmetic, unlike passkeyRpId. Null means "Simple Feed Reader". */
     #[ORM\Column(name: 'passkey_rp_name', length: 100, nullable: true)]
     private ?string $passkeyRpName = null;
 
     /**
-     * The instance-wide passkey sign-in switch (#624). Defaults to false —
-     * a fresh install ships with passkey sign-in invisible until an admin
-     * opts in, even though the relying party would derive correctly with no
-     * configuration at all. See
-     * {@see \App\Service\Passkey\PasskeySignInAvailability}, which combines
-     * this with the relying-party validity check.
-     *
-     * This default is also declared in the migration's column DEFAULT (this
-     * property's own `options`) and in the constructor default of
-     * {@see InstanceSettingsUpdate}.
+     * Passkey sign-in stays off until an admin opts in; PasskeySignInAvailability adds the relying-party check.
+     * The same default sits in this column's DEFAULT and in InstanceSettingsUpdate's constructor: change all three.
      */
     #[ORM\Column(name: 'passkey_sign_in_enabled', options: ['default' => false])]
     private bool $passkeySignInEnabled = false;

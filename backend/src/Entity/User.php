@@ -44,7 +44,7 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     /**
      * When this account proved it can read mail at its address: a verify-email
-     * token was consumed, or an OIDC provider vouched for a real address (#636).
+     * token was consumed, or an OIDC provider vouched for a real address.
      * Null means unverified — the digest will not mail an unverified address.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
@@ -59,30 +59,16 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?\DateTimeImmutable $lastLoginAt = null;
 
     /**
-     * When the password hash last changed — what binds an issued JWT to a
-     * password.
-     *
-     * JWTs here are stateless, 7-day TTL, no refresh flow. The Doctrine provider
-     * reloads the user each request, so a STATUS change (suspension) revokes
-     * immediately, but a password change touched nothing the token was checked
-     * against: a phished user who reset their password evicted nobody — the
-     * attacker's token stayed live for a week. Password reset is the canonical
-     * compromise-recovery action, so this closes that gap.
-     *
-     * App\Security\InvalidatePasswordChangeTokensListener rejects any token whose `iat`
-     * is older than this. Nullable and additive: rows that predate the column
-     * have no recorded change, and null correctly revokes nothing.
+     * When the password hash last changed: every JWT issued before it is rejected, so a reset evicts a stolen token;
+     * null (a row older than the column) revokes nothing. Why: docs/security.md#password-change
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $passwordChangedAt = null;
 
     /**
-     * The recipient language for this account's emails ('en' | 'de'), captured
-     * from the UI at registration. The API itself is locale-agnostic; only the
-     * transactional mails vary by language.
+     * The language of this account's mails ('en' | 'de'), captured from the UI at registration. API responses never
+     * vary by it.
      */
-    // The DB default backfills rows that predate the column (see the migration);
-    // declaring it here keeps the mapping in sync with that DDL.
     #[ORM\Column(length: 5, options: ['default' => 'en'])]
     private string $locale = 'en';
 
@@ -91,25 +77,15 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     private AccountLimits $accountLimits;
 
     /**
-     * Per-account settings. The constructor creates the row, so every creation
-     * path gets one without knowing about preferences.
-     *
-     * Nullable only because Doctrine hydration bypasses the constructor: a
-     * hydrated row without preferences is a corrupt row, not a supported
-     * state, and getPreferences() says so.
+     * Created by the constructor, so every creation path has one. Nullable only because hydration bypasses the
+     * constructor: a row without preferences is corrupt, and getPreferences() says so.
      */
     #[ORM\OneToOne(mappedBy: 'user', cascade: ['persist'], orphanRemoval: true)]
     private ?Preferences $preferences = null;
 
     /**
-     * The one configuration AI features use. A pointer, not a per-row flag, so
-     * the model cannot say two configurations are active at once. No inverse
-     * Collection of every configuration an account owns — AiProviderSettingsRepository
-     * already answers that (findAllForUser()/countForUser()), so a second,
-     * always-in-sync path wasn't worth the field. ON DELETE SET NULL is the
-     * database floor here; AiProviderConfigurator clears it explicitly before
-     * removing the active row. The rows themselves cascade on account deletion
-     * through user_ai_settings.user_id's own FK ON DELETE CASCADE — see AccountDeleter.
+     * The one configuration AI features use: a pointer, so two cannot be active at once. AiProviderConfigurator clears
+     * it before removing that row; ON DELETE SET NULL is only the database floor.
      */
     #[ORM\ManyToOne(targetEntity: AiProviderSettings::class)]
     #[ORM\JoinColumn(name: 'active_ai_config_id', nullable: true, onDelete: 'SET NULL')]
@@ -133,21 +109,9 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * The single definition of what makes two addresses the same account.
-     *
-     * Exists because the storage layer disagrees with itself: SQLite (dev/test)
-     * compares VARCHAR case-sensitively, while MySQL production runs a utf8mb4
-     * _ci collation (also governing the uniq_user_email index) that does not.
-     * Left alone, `Bob@example.com` opens a second account on SQLite and
-     * collides on MySQL — CI green, production silently refusing a signup.
-     *
-     * Normalising to lowercase here, not at each call site, keeps the entity,
-     * repository and security provider from drifting apart; every lookup path
-     * must run input through this before comparing.
-     *
-     * strtolower, not mb_strtolower: Assert\Email in html5 mode already refuses
-     * non-ASCII addresses, and strtolower is locale-independent in PHP 8 — no
-     * Turkish-dotless-i hazard to inherit.
+     * The one definition of "same address"; every lookup runs input through it. SQLite compares case-sensitively and
+     * MySQL's _ci collation does not, so skipping it opens a second account on one engine and collides on the other.
+     * strtolower is enough: Assert\Email's html5 mode refuses non-ASCII addresses.
      */
     public static function normalizeEmail(string $email): string
     {
@@ -169,16 +133,7 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->passwordHash;
     }
 
-    /**
-     * $changedAt is mandatory on purpose, and injected rather than read from
-     * the system clock here (services never call `new \DateTimeImmutable`).
-     *
-     * The revocation guarantee is only as good as the stamp: a call site that
-     * rotates the hash without recording when would silently leave every
-     * previously issued token valid — exactly the bug this column was added to
-     * close, reintroduced quietly. Making the parameter required means that
-     * mistake does not compile.
-     */
+    /** $changedAt is required: a hash rotated without the stamp would leave every issued token valid. */
     public function setPasswordHash(?string $passwordHash, \DateTimeImmutable $changedAt): void
     {
         $this->passwordHash = $passwordHash;
@@ -323,13 +278,8 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * For AiProviderConfigurator only, which owns every write to the pointer.
-     *
-     * This is the owning side, but MeJson and every other reader takes the
-     * User instance a request already loaded rather than re-querying, so a
-     * caller that flips the pointer must also update it here — otherwise the
-     * same User instance would keep reporting the state it had before the
-     * write until the next request hydrated it fresh.
+     * For AiProviderConfigurator only, which owns every write to the pointer and must also set it here: MeJson and
+     * other readers use the User the request already loaded, not a fresh query.
      */
     public function setActiveAiProviderSettings(?AiProviderSettings $settings): void
     {
@@ -356,11 +306,7 @@ final class User implements UserInterface, PasswordAuthenticatedUserInterface
     }
 
     /**
-     * No transient credentials are held on the entity - the password only ever
-     * exists as a hash in $passwordHash - so there is nothing to erase.
-     *
-     * The #[\Deprecated] attribute is what stops Symfony's AuthenticatorManager
-     * from triggering a 7.3 deprecation (and from calling this at all).
+     * #[\Deprecated] stops Symfony 7.3's AuthenticatorManager from calling this and triggering its deprecation.
      *
      * @deprecated since Symfony 7.3, nothing to erase
      */

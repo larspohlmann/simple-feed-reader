@@ -27,13 +27,7 @@ final class UserTest extends DbTestCase
         self::assertSame(['ROLE_USER'], $reloaded->getRoles());
     }
 
-    /**
-     * Case and surrounding whitespace are normalised at construction, which is
-     * the single seam every other lookup relies on. Without it the unique index
-     * disagrees with itself across engines: SQLite compares case-sensitively
-     * and MySQL's utf8mb4 _ci collation does not, so `Bob@` and `bob@` are two
-     * accounts in dev and one collision in production.
-     */
+    /** Construction trims and lower-cases the address; every lookup relies on it (User::normalizeEmail()). */
     public function testEmailIsNormalisedOnConstruction(): void
     {
         $user = new User('  Bob.Smith@Example.COM  ', new \DateTimeImmutable('2026-07-21 10:00:00'));

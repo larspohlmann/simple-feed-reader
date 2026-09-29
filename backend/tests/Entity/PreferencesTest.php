@@ -20,8 +20,6 @@ final class PreferencesTest extends TestCase
 
     public function testDigestDefaultsAreOffDailyEightMonday(): void
     {
-        // Parenthesised new: PDepend (composer md) cannot parse a chained
-        // `new Foo()->bar()` yet — keep the parens (repo note #183).
         $preferences = (new User('a@b.example', new \DateTimeImmutable()))->getPreferences();
 
         self::assertFalse($preferences->isDigestEnabled());

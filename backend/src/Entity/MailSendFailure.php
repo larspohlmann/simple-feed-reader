@@ -9,10 +9,6 @@ use App\Repository\MailSendFailureRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * A persisted record of one failed outgoing-mail attempt (#882): recipient,
- * kind, explained transport message, and timestamp.
- */
 #[ORM\Entity(repositoryClass: MailSendFailureRepository::class)]
 #[ORM\Table(name: 'mail_send_failure')]
 final class MailSendFailure

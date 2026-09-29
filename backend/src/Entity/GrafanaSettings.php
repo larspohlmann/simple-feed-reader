@@ -8,12 +8,8 @@ use App\Repository\GrafanaSettingsRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * Instance-wide Grafana wiring, held in a single row (see InstanceSetting for the
- * singleton rationale). Absence of the row means "use the env defaults / not
- * configured". The URLs are nullable overrides: null falls back to the env
- * default the installer writes for the local container. The token is never
- * readable here; only whether one is stored, and its last four characters,
- * cross to the admin page.
+ * Instance-wide Grafana wiring in a single row; no row, or a null URL, falls back to the installer's env defaults.
+ * The token is never readable here: only whether one is stored, and its last four characters, reach the admin page.
  */
 #[ORM\Entity(repositoryClass: GrafanaSettingsRepository::class)]
 #[ORM\Table(name: 'grafana_settings')]

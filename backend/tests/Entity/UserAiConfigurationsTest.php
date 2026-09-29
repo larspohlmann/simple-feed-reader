@@ -9,13 +9,7 @@ use App\Entity\User;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
-/**
- * User <-> AiProviderSettings is unidirectional (#334 review): User carries
- * only the pointer to whichever configuration is active, not an inverse
- * Collection of every configuration it owns — nothing needed the whole set
- * through User, and AiProviderSettingsRepository already answers that
- * (findAllForUser()/countForUser()).
- */
+/** User holds only the active configuration; AiProviderSettingsRepository lists all of an account's configurations. */
 final class UserAiConfigurationsTest extends TestCase
 {
     private function user(): User
