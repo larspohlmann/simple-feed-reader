@@ -32,7 +32,7 @@ final class EntrySearchControllerTest extends ApiTestCase
 
     /**
      * Seeds a feed the given user is subscribed to, with $count entries whose
-     * titles are "$titlePrefix $i" and whose effective dates are distinct days,
+     * titles are "$titlePrefix $index" and whose effective dates are distinct days,
      * so ordering and cursor paging are both real.
      */
     private function seedSubscribedFeedWithEntries(User $user, string $titlePrefix, int $count): Subscription
@@ -43,16 +43,16 @@ final class EntrySearchControllerTest extends ApiTestCase
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
         $entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $entityManager->persist($subscription);
 
-        for ($i = 1; $i <= $count; $i++) {
-            $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i));
+        for ($index = 1; $index <= $count; $index++) {
+            $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $index));
             $entry = new Entry(
                 $feed,
-                "$titlePrefix-$i",
-                "https://example.com/$titlePrefix-$i",
-                "$titlePrefix Post $i",
+                "$titlePrefix-$index",
+                "https://example.com/$titlePrefix-$index",
+                "$titlePrefix Post $index",
                 new \DateTimeImmutable('2026-07-01T00:00:00Z'),
                 $publishedAt,
             );
@@ -61,7 +61,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         }
         $entityManager->flush();
 
-        return $sub;
+        return $subscription;
     }
 
     /** A feed the given user has NOT subscribed to, with one matching entry. */

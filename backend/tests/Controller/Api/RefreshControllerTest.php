@@ -164,9 +164,9 @@ final class RefreshControllerTest extends WebTestCase
         $entityManager->persist($tag);
         $feed = new Feed('https://example.com/tagged.xml');
         $entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $sub->addTag($tag);
-        $entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->addTag($tag);
+        $entityManager->persist($subscription);
         $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();

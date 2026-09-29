@@ -18,12 +18,12 @@ use App\Tests\DbTestCase;
  */
 final class PreferencesRepositoryTest extends DbTestCase
 {
-    private function repo(): PreferencesRepository
+    private function repository(): PreferencesRepository
     {
-        $repo = $this->entityManager->getRepository(Preferences::class);
-        self::assertInstanceOf(PreferencesRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Preferences::class);
+        self::assertInstanceOf(PreferencesRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     public function testFindWithDigestEnabledReturnsOnlyEnabledRows(): void
@@ -38,7 +38,7 @@ final class PreferencesRepositoryTest extends DbTestCase
         $this->entityManager->persist($disabledUser);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->findWithDigestEnabled();
+        $rows = $this->repository()->findWithDigestEnabled();
 
         self::assertCount(1, $rows);
         self::assertSame($enabledUser->getEmail(), $rows[0]->getUser()->getEmail());

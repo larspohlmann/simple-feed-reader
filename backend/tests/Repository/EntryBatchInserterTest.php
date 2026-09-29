@@ -73,8 +73,8 @@ final class EntryBatchInserterTest extends DbTestCase
     {
         $feedId = $this->createFeed('https://batch.example/feed.xml');
         $lines = [];
-        for ($i = 0; $i < 501; ++$i) {
-            $lines[] = $this->entryLine('guid-' . $i, 'Entry ' . $i);
+        for ($index = 0; $index < 501; ++$index) {
+            $lines[] = $this->entryLine('guid-' . $index, 'Entry ' . $index);
         }
 
         $this->inserter()->insert($feedId, $lines);

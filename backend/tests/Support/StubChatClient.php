@@ -47,9 +47,9 @@ final class StubChatClient implements ChatCompletionClientInterface
         $this->queue[] = $content;
     }
 
-    public function queueFailure(\RuntimeException $e): void
+    public function queueFailure(\RuntimeException $exception): void
     {
-        $this->queue[] = $e;
+        $this->queue[] = $exception;
     }
 
     /**

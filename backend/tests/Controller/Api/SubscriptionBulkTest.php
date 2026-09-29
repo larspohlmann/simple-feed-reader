@@ -245,11 +245,11 @@ final class SubscriptionBulkTest extends WebTestCase
         $user->setMaxSubscriptions(SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 50);
         $count = SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER + 10;
         $subscriptions = [];
-        for ($i = 0; $i < $count; ++$i) {
-            $subscriptions[] = $this->makeSub($user, "https://raised-cap-$i.example/feed.xml");
+        for ($index = 0; $index < $count; ++$index) {
+            $subscriptions[] = $this->makeSub($user, "https://raised-cap-$index.example/feed.xml");
         }
         $this->entityManager()->flush();
-        $ids = array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions);
+        $ids = array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $subscriptions);
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
             'subscriptionIds' => $ids,
@@ -277,8 +277,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $user = $this->user('bulk-endpoint-n1@example.com');
         $tech = $this->makeTag($user, 'Tech');
         $subscriptions = [];
-        for ($i = 0; $i < 5; ++$i) {
-            $subscriptions[] = $this->makeSub($user, "https://n1-{$i}.example/feed.xml", $tech);
+        for ($index = 0; $index < 5; ++$index) {
+            $subscriptions[] = $this->makeSub($user, "https://n1-{$index}.example/feed.xml", $tech);
         }
         $this->entityManager()->flush();
 
@@ -287,7 +287,10 @@ final class SubscriptionBulkTest extends WebTestCase
         $recorder->reset();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions),
+            'subscriptionIds' => array_map(
+                static fn (Subscription $subscription): int => $subscription->requireId(),
+                $subscriptions,
+            ),
             'includeInAllItems' => false,
         ]);
 
@@ -327,8 +330,8 @@ final class SubscriptionBulkTest extends WebTestCase
         $user = $this->user('bulk-endpoint-tag-n1@example.com');
         $tech = $this->makeTag($user, 'Tech');
         $subscriptions = [];
-        for ($i = 0; $i < 5; ++$i) {
-            $subscriptions[] = $this->makeSub($user, "https://tag-n1-{$i}.example/feed.xml");
+        for ($index = 0; $index < 5; ++$index) {
+            $subscriptions[] = $this->makeSub($user, "https://tag-n1-{$index}.example/feed.xml");
         }
         $this->entityManager()->flush();
 
@@ -337,7 +340,10 @@ final class SubscriptionBulkTest extends WebTestCase
         $recorder->reset();
 
         $this->send($client, $user, 'PATCH', '/api/subscriptions/bulk', [
-            'subscriptionIds' => array_map(static fn (Subscription $s): int => $s->requireId(), $subscriptions),
+            'subscriptionIds' => array_map(
+                static fn (Subscription $subscription): int => $subscription->requireId(),
+                $subscriptions,
+            ),
             'addTagIds' => [$tech->requireId()],
         ]);
 

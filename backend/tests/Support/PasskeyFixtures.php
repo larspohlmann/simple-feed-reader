@@ -198,9 +198,9 @@ final readonly class PasskeyFixtures
     private static function publicKeyCoordinates(\OpenSSLAsymmetricKey $privateKey): array
     {
         $details = openssl_pkey_get_details($privateKey);
-        $ec = \is_array($details) && \is_array($details['ec'] ?? null) ? $details['ec'] : null;
-        $x = $ec['x'] ?? null;
-        $y = $ec['y'] ?? null;
+        $ellipticCurve = \is_array($details) && \is_array($details['ec'] ?? null) ? $details['ec'] : null;
+        $x = $ellipticCurve['x'] ?? null;
+        $y = $ellipticCurve['y'] ?? null;
 
         (\is_string($x) && \is_string($y)) || throw new \RuntimeException(
             'Unable to read the EC P-256 public key coordinates for a passkey fixture.',

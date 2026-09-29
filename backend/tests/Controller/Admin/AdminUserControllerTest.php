@@ -144,14 +144,14 @@ final class AdminUserControllerTest extends WebTestCase
         /** @var EntityManagerInterface $entityManager */
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
-        for ($i = 0; $i < $subscriptionCount; ++$i) {
-            $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', $user->requireId(), $i));
+        for ($index = 0; $index < $subscriptionCount; ++$index) {
+            $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', $user->requireId(), $index));
             $entityManager->persist($feed);
             $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
         }
 
-        for ($i = 0; $i < $tagCount; ++$i) {
-            $entityManager->persist(new Tag($user, sprintf('footprint-tag-%d-%d', $user->requireId(), $i)));
+        for ($index = 0; $index < $tagCount; ++$index) {
+            $entityManager->persist(new Tag($user, sprintf('footprint-tag-%d-%d', $user->requireId(), $index)));
         }
 
         $entityManager->flush();
@@ -570,9 +570,9 @@ final class AdminUserControllerTest extends WebTestCase
     public function testTheProviderColumnCostsOneQueryHoweverManyUsersAreListed(): void
     {
         $admin = $this->admin();
-        for ($i = 0; $i < 7; ++$i) {
-            $user = $this->factory()->create("user{$i}@example.com", status: UserStatus::PendingApproval);
-            $this->link($user, 'google', "sub-{$i}");
+        for ($index = 0; $index < 7; ++$index) {
+            $user = $this->factory()->create("user{$index}@example.com", status: UserStatus::PendingApproval);
+            $this->link($user, 'google', "sub-{$index}");
         }
 
         $token = $this->tokenFor($admin);
@@ -710,8 +710,8 @@ final class AdminUserControllerTest extends WebTestCase
      */
     private function footprintReadCountsAfterListing(string $token, int $additionalUsers): array
     {
-        for ($i = 0; $i < $additionalUsers; ++$i) {
-            $this->factory()->create(\sprintf('counted%d-%d@example.com', $additionalUsers, $i));
+        for ($index = 0; $index < $additionalUsers; ++$index) {
+            $this->factory()->create(\sprintf('counted%d-%d@example.com', $additionalUsers, $index));
         }
 
         $this->call('GET', self::LIST, $token);
@@ -1064,11 +1064,11 @@ final class AdminUserControllerTest extends WebTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $user = $this->factory()->create(sprintf('detail-%d@example.com', $count));
 
-        for ($i = 0; $i < $count; ++$i) {
-            $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', $user->requireId(), $i));
+        for ($index = 0; $index < $count; ++$index) {
+            $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', $user->requireId(), $index));
             $entityManager->persist($feed);
             $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00'));
-            $tag = new Tag($user, sprintf('detail-tag-%d-%d', $user->requireId(), $i));
+            $tag = new Tag($user, sprintf('detail-tag-%d-%d', $user->requireId(), $index));
             $entityManager->persist($tag);
             $subscription->addTag($tag);
             $entityManager->persist($subscription);

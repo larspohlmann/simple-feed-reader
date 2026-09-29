@@ -100,7 +100,7 @@ final class RecommendationRunRepositoryTest extends DbTestCase
     {
         $user = $this->user('many@example.com');
         $ids = [];
-        for ($i = 0; $i < 12; $i++) {
+        for ($index = 0; $index < 12; $index++) {
             $ids[] = $this->persistRun($user, RunStatus::Running)->getId();
         }
 

@@ -155,9 +155,9 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $subscription = $created->toArray()['subscription'] ?? null;
             self::assertIsArray($subscription, 'a 201 must carry the created subscription');
 
-            $subId = $subscription['id'] ?? null;
+            $subscriptionId = $subscription['id'] ?? null;
             $feedUrl = $subscription['feedUrl'] ?? null;
-            self::assertIsInt($subId, 'the subscription needs an integer id');
+            self::assertIsInt($subscriptionId, 'the subscription needs an integer id');
             self::assertIsString($feedUrl, 'the subscription needs a feedUrl');
 
             $report = $this->driveRefreshToCompletion($token);
@@ -167,7 +167,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 'refresh loop should reach remaining=0; last=' . (string) json_encode($report),
             );
 
-            $mine = $this->findSubscription($token, $subId);
+            $mine = $this->findSubscription($token, $subscriptionId);
             self::assertNotNull($mine, 'the new subscription should appear in the list');
 
             $title = $mine['title'] ?? null;
@@ -180,11 +180,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             // passes whether or not THIS run did the fetching.
             if ('' !== trim($title) && $title !== $feedUrl) {
                 self::assertNotSame($feedUrl, $title, 'title should be the ingested feed <title>, not the feedUrl');
-                $this->deleteSubscription($token, $subId); // one verified journey is enough
+                $this->deleteSubscription($token, $subscriptionId); // one verified journey is enough
                 return;
             }
 
-            $this->deleteSubscription($token, $subId);
+            $this->deleteSubscription($token, $subscriptionId);
             $unresolved[] = $label . ' <' . $candidateUrl . '> title unresolved';
         }
 
@@ -234,8 +234,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $subscription = $created->toArray()['subscription'] ?? null;
             self::assertIsArray($subscription, 'a 201 must carry the created subscription');
 
-            $subId = $subscription['id'] ?? null;
-            self::assertIsInt($subId, 'the subscription needs an integer id');
+            $subscriptionId = $subscription['id'] ?? null;
+            self::assertIsInt($subscriptionId, 'the subscription needs an integer id');
 
             $report = $this->driveRefreshToCompletion($token);
             self::assertNotSame(
@@ -247,7 +247,10 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             // A feed that ingested nothing this run (empty, or Atom 0.3 which the
             // parser fetches but leaves without usable items) is not a stack
             // fault — move on to the next candidate.
-            $entries = $this->getJson('/api/entries?subscription=' . $subId, $token)->toArray()['entries'] ?? null;
+            $entries = $this->getJson(
+                '/api/entries?subscription=' . $subscriptionId,
+                $token,
+            )->toArray()['entries'] ?? null;
             if (!is_array($entries) || [] === $entries) {
                 $notes[] = $label . ' no entries';
                 continue;
@@ -264,15 +267,15 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $entryId = $first['id'];
             self::assertIsInt($entryId);
 
-            $unreadPath = '/api/entries?subscription=' . $subId . '&view=unread';
+            $unreadPath = '/api/entries?subscription=' . $subscriptionId . '&view=unread';
 
             // (a) Force the entry UNREAD → it appears in the unread view. Driving
             // the flag explicitly (rather than assuming a fresh ingest starts
             // unread) keeps this robust to re-runs: EntryState rows outlive the
             // subscription, so a prior run may have left this entry read.
-            $unreadResp = $this->patchState($token, $entryId, ['isHidden' => false]);
-            self::assertSame(200, $unreadResp->getStatusCode());
-            $unreadState = $unreadResp->toArray()['state'] ?? null;
+            $unreadResponse = $this->patchState($token, $entryId, ['isHidden' => false]);
+            self::assertSame(200, $unreadResponse->getStatusCode());
+            $unreadState = $unreadResponse->toArray()['state'] ?? null;
             self::assertIsArray($unreadState);
             self::assertFalse($unreadState['isHidden'] ?? null, 'PATCH isHidden=false clears the read flag');
             self::assertContains(
@@ -282,9 +285,9 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             );
 
             // (b) Mark it READ → it drops out of the unread view.
-            $readResp = $this->patchState($token, $entryId, ['isHidden' => true]);
-            self::assertSame(200, $readResp->getStatusCode());
-            $readState = $readResp->toArray()['state'] ?? null;
+            $readResponse = $this->patchState($token, $entryId, ['isHidden' => true]);
+            self::assertSame(200, $readResponse->getStatusCode());
+            $readState = $readResponse->toArray()['state'] ?? null;
             self::assertIsArray($readState);
             self::assertTrue($readState['isHidden'] ?? null, 'PATCH isHidden=true sets the read flag');
             self::assertNotContains(
@@ -295,11 +298,11 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             // (c) Favorite it → it appears in the favorites view.
             $this->patchState($token, $entryId, ['isFavorite' => true]);
-            $favIds = $this->entryIds($token, '/api/entries?view=favorites');
-            self::assertContains($entryId, $favIds, 'the favorited entry should appear in the favorites view');
+            $favoriteIds = $this->entryIds($token, '/api/entries?view=favorites');
+            self::assertContains($entryId, $favoriteIds, 'the favorited entry should appear in the favorites view');
 
             // (d) The per-subscription unread count is surfaced on the list.
-            $mine = $this->findSubscription($token, $subId);
+            $mine = $this->findSubscription($token, $subscriptionId);
             self::assertNotNull($mine, 'the new subscription should appear in the list');
             self::assertArrayHasKey('unreadCount', $mine);
 
@@ -504,7 +507,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
         self::assertIsArray($entries);
 
         return array_map(
-            static fn ($e) => is_array($e) ? ($e['id'] ?? null) : null,
+            static fn ($entry) => is_array($entry) ? ($entry['id'] ?? null) : null,
             $entries,
         );
     }

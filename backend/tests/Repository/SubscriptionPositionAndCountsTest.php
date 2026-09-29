@@ -89,7 +89,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],
-            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
+            array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $rows),
         );
     }
 
@@ -114,7 +114,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],
-            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
+            array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $rows),
         );
     }
 }

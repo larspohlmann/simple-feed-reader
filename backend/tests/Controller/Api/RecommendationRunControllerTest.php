@@ -774,7 +774,7 @@ final class RecommendationRunControllerTest extends WebTestCase
         $client->disableReboot();
         [$headers] = $this->auth('run-current-unlimited@example.test');
 
-        for ($i = 0; $i <= self::TICK_BUDGET; ++$i) {
+        for ($tick = 0; $tick <= self::TICK_BUDGET; ++$tick) {
             $client->request('GET', '/api/recommendations/runs/current', server: $headers);
             self::assertResponseIsSuccessful();
         }

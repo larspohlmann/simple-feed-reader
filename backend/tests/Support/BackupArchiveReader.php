@@ -46,8 +46,8 @@ final readonly class BackupArchiveReader
     public function entryParts(): array
     {
         $names = [];
-        for ($i = 0; $i < $this->archive->numFiles; ++$i) {
-            $name = $this->archive->getNameIndex($i);
+        for ($index = 0; $index < $this->archive->numFiles; ++$index) {
+            $name = $this->archive->getNameIndex($index);
             if (\is_string($name) && '000-foundation.ndjson.gz' !== $name) {
                 $names[] = $name;
             }

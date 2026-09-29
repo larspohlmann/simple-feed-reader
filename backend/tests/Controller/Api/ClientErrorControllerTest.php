@@ -105,7 +105,7 @@ final class ClientErrorControllerTest extends ApiTestCase
     {
         $client = self::createClient();
 
-        for ($i = 0; $i < 30; ++$i) {
+        for ($index = 0; $index < 30; ++$index) {
             $this->post($client, [$this->item()]);
             self::assertResponseStatusCodeSame(202);
         }

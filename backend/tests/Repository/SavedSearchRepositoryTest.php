@@ -12,12 +12,12 @@ use App\Tests\DbTestCase;
 
 final class SavedSearchRepositoryTest extends DbTestCase
 {
-    private function repo(): SavedSearchRepository
+    private function repository(): SavedSearchRepository
     {
-        $repo = $this->entityManager->getRepository(SavedSearch::class);
-        self::assertInstanceOf(SavedSearchRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(SavedSearch::class);
+        self::assertInstanceOf(SavedSearchRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     public function testFindForUserReturnsNewestFirstAndScopesToUser(): void
@@ -35,7 +35,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->entityManager->persist($strangers);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->findForUser($owner->requireId());
+        $rows = $this->repository()->findForUser($owner->requireId());
 
         self::assertCount(2, $rows);
         self::assertSame('rust lang', $rows[0]->getTerm()); // newest first
@@ -57,7 +57,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
 
         self::assertSame(
             [$second->getId(), $first->getId()],
-            $this->repo()->idsForUser($owner->requireId()),
+            $this->repository()->idsForUser($owner->requireId()),
         );
     }
 
@@ -70,10 +70,10 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         $userId = $user->requireId();
-        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', false, false));
-        self::assertNotNull($this->repo()->findOneForUserByTerm($userId, 'punk', true, false));
-        self::assertSame(true, $this->repo()->findOneForUserByTerm($userId, 'punk', true, false)->isWholeWord());
-        self::assertNull($this->repo()->findOneForUserByTerm($userId, 'missing', false, false));
+        self::assertNotNull($this->repository()->findOneForUserByTerm($userId, 'punk', false, false));
+        self::assertNotNull($this->repository()->findOneForUserByTerm($userId, 'punk', true, false));
+        self::assertSame(true, $this->repository()->findOneForUserByTerm($userId, 'punk', true, false)->isWholeWord());
+        self::assertNull($this->repository()->findOneForUserByTerm($userId, 'missing', false, false));
     }
 
     public function testFindOneForUserByTermDistinguishesPhrase(): void
@@ -88,8 +88,8 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         $userId = $user->requireId();
-        $substring = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, false);
-        $phrase = $this->repo()->findOneForUserByTerm($userId, 'climate change', false, true);
+        $substring = $this->repository()->findOneForUserByTerm($userId, 'climate change', false, false);
+        $phrase = $this->repository()->findOneForUserByTerm($userId, 'climate change', false, true);
         self::assertNotNull($substring);
         self::assertNotNull($phrase);
         self::assertFalse($substring->isPhrase());
@@ -104,7 +104,7 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->entityManager->persist($saved);
         $this->entityManager->flush();
 
-        self::assertSame($saved, $this->repo()->getOneForUser($owner->requireId(), $saved->requireId()));
+        self::assertSame($saved, $this->repository()->getOneForUser($owner->requireId(), $saved->requireId()));
     }
 
     public function testGetOneForUserRefusesAnotherUsersSavedSearch(): void
@@ -120,6 +120,6 @@ final class SavedSearchRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such saved search.');
 
-        $this->repo()->getOneForUser($stranger->requireId(), $saved->requireId());
+        $this->repository()->getOneForUser($stranger->requireId(), $saved->requireId());
     }
 }

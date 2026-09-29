@@ -74,7 +74,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
 
         self::assertSame(
             [$fresh->getId(), $behind->getId()],
-            array_map(static fn (SavedSearch $s): ?int => $s->getId(), $due),
+            array_map(static fn (SavedSearch $savedSearch): ?int => $savedSearch->getId(), $due),
         );
     }
 

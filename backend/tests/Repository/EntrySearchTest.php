@@ -66,18 +66,18 @@ final class EntrySearchTest extends DbTestCase
         return $entry;
     }
 
-    private function repo(): EntryListRepository
+    private function repository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     /** @return list<string> the guids a search query returned, in order */
     private function guidsOf(EntrySearchQuery $query): array
     {
-        $rows = $this->repo()->searchForUser($query);
+        $rows = $this->repository()->searchForUser($query);
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
     }

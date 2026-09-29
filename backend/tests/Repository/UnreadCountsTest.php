@@ -14,12 +14,12 @@ use App\Tests\DbTestCase;
 
 final class UnreadCountsTest extends DbTestCase
 {
-    private function repo(): EntryStateRepository
+    private function repository(): EntryStateRepository
     {
-        $repo = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     public function testCountsUnreadPerSubscriptionRespectingWatermarkAndState(): void
@@ -28,27 +28,34 @@ final class UnreadCountsTest extends DbTestCase
         $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/f.xml');
         $this->entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->entityManager->persist($subscription);
 
         // under watermark → read; above → unread; explicit read; explicit unread.
-        foreach ([['a', '2026-07-05'], ['b', '2026-07-20'], ['c', '2026-07-21'], ['d', '2026-07-22']] as [$g, $d]) {
-            $publishedAt = new \DateTimeImmutable($d . 'T00:00:00Z');
-            $e = new Entry($feed, $g, null, $g, new \DateTimeImmutable('2026-07-01T00:00:00Z'), $publishedAt);
-            $e->setPublishedAt($publishedAt);
-            $this->entityManager->persist($e);
-            if ($g === 'c') {
-                $st = new EntryState($user, $e);
-                $st->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-                $this->entityManager->persist($st);
+        foreach (
+            [
+                ['a', '2026-07-05'],
+                ['b', '2026-07-20'],
+                ['c', '2026-07-21'],
+                ['d', '2026-07-22'],
+            ] as [$guid, $publishedDay]
+        ) {
+            $publishedAt = new \DateTimeImmutable($publishedDay . 'T00:00:00Z');
+            $entry = new Entry($feed, $guid, null, $guid, new \DateTimeImmutable('2026-07-01T00:00:00Z'), $publishedAt);
+            $entry->setPublishedAt($publishedAt);
+            $this->entityManager->persist($entry);
+            if ($guid === 'c') {
+                $entryState = new EntryState($user, $entry);
+                $entryState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
+                $this->entityManager->persist($entryState);
             }
         }
         $this->entityManager->flush();
 
         // Unread: b and d (a is under watermark, c is explicitly read).
-        $counts = $this->repo()->unreadCountsForUser($user->requireId());
-        self::assertSame(2, $counts[$sub->requireId()] ?? 0);
+        $counts = $this->repository()->unreadCountsForUser($user->requireId());
+        self::assertSame(2, $counts[$subscription->requireId()] ?? 0);
     }
 
     public function testSubscriptionWithNoUnreadIsAbsentFromMap(): void
@@ -57,12 +64,12 @@ final class UnreadCountsTest extends DbTestCase
         $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/empty.xml');
         $this->entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
-        $counts = $this->repo()->unreadCountsForUser($user->requireId());
-        self::assertArrayNotHasKey($sub->requireId(), $counts);
+        $counts = $this->repository()->unreadCountsForUser($user->requireId());
+        self::assertArrayNotHasKey($subscription->requireId(), $counts);
     }
 
     public function testCrossFeedDuplicateCountsOnceAcrossSubscriptions(): void
@@ -75,10 +82,10 @@ final class UnreadCountsTest extends DbTestCase
         $feedB = new Feed('https://example.com/b.xml');
         $this->entityManager->persist($feedB);
 
-        $subA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($subA);
-        $subB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($subB);
+        $subscriptionA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscriptionA);
+        $subscriptionB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscriptionB);
 
         $publishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
         $entryA = new Entry(
@@ -107,12 +114,12 @@ final class UnreadCountsTest extends DbTestCase
         $this->entityManager->persist($entryB);
         $this->entityManager->flush();
 
-        $counts = $this->repo()->unreadCountsForUser($user->requireId());
-        $subAId = $subA->requireId();
-        $subBId = $subB->requireId();
+        $counts = $this->repository()->unreadCountsForUser($user->requireId());
+        $subscriptionAId = $subscriptionA->requireId();
+        $subscriptionBId = $subscriptionB->requireId();
 
-        self::assertSame(1, ($counts[$subAId] ?? 0) + ($counts[$subBId] ?? 0));
-        self::assertSame(1, $counts[$subAId] ?? 0);
+        self::assertSame(1, ($counts[$subscriptionAId] ?? 0) + ($counts[$subscriptionBId] ?? 0));
+        self::assertSame(1, $counts[$subscriptionAId] ?? 0);
     }
 
     public function testUnreadCopySurvivesWhenTheLowerIdDuplicateIsAlreadyRead(): void
@@ -125,10 +132,10 @@ final class UnreadCountsTest extends DbTestCase
         $feedB = new Feed('https://example.com/b.xml');
         $this->entityManager->persist($feedB);
 
-        $subA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($subA);
-        $subB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($subB);
+        $subscriptionA = new Subscription($user, $feedA, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscriptionA);
+        $subscriptionB = new Subscription($user, $feedB, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscriptionB);
 
         $publishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
         $lower = new Entry(
@@ -160,9 +167,9 @@ final class UnreadCountsTest extends DbTestCase
 
         // The collapse's inner scope must exclude the read lower copy, or it
         // wrongly suppresses the still-unread higher copy too.
-        $counts = $this->repo()->unreadCountsForUser($user->requireId());
+        $counts = $this->repository()->unreadCountsForUser($user->requireId());
 
-        self::assertSame(1, $counts[$subB->requireId()] ?? 0);
-        self::assertSame(0, $counts[$subA->requireId()] ?? 0);
+        self::assertSame(1, $counts[$subscriptionB->requireId()] ?? 0);
+        self::assertSame(0, $counts[$subscriptionA->requireId()] ?? 0);
     }
 }

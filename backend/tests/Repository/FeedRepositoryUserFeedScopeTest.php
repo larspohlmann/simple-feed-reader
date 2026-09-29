@@ -24,29 +24,29 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
 
         $feed = new Feed('https://example.com/feed.xml');
         $this->entityManager->persist($feed);
-        $sub = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
-        $repo = $this->entityManager->getRepository(Feed::class);
-        self::assertInstanceOf(FeedRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
 
         // Owner CAN reach the feed by id.
-        $ownerResult = $repo->findDue(
+        $ownerResult = $repository->findDue(
             new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // Stranger CANNOT reach it by id — the subscription EXISTS clause must still apply.
-        $strangerResult = $repo->findDue(
+        $strangerResult = $repository->findDue(
             new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(0, $strangerResult);
-        self::assertSame(0, $repo->countDue(
+        self::assertSame(0, $repository->countDue(
             new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
         ));
     }
@@ -62,26 +62,26 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
         $feed = new Feed('https://example.com/gone.xml');
         $feed->markGone(new \DateTimeImmutable('2026-01-01T00:00:00Z'), 'HTTP 410 Gone');
         $this->entityManager->persist($feed);
-        $sub = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
-        $repo = $this->entityManager->getRepository(Feed::class);
-        self::assertInstanceOf(FeedRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
 
         // Manual per-feed retry must ignore the "gone" filter: the owner can still
         // reach a dead feed by id. This guards against a refactor hoisting the
         // `status != gone` clause out of the else-branch.
-        $ownerResult = $repo->findDue(
+        $ownerResult = $repository->findDue(
             new DueFeedCriteria($now, $owner->requireId(), $feed->requireId(), force: true),
             50,
         );
         self::assertCount(1, $ownerResult);
 
         // The subscription scope still applies to the gone-feed retry path.
-        $strangerResult = $repo->findDue(
+        $strangerResult = $repository->findDue(
             new DueFeedCriteria($now, $stranger->requireId(), $feed->requireId(), force: true),
             50,
         );

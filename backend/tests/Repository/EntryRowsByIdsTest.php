@@ -57,12 +57,12 @@ final class EntryRowsByIdsTest extends DbTestCase
         return $entry;
     }
 
-    private function repo(): EntryListRepository
+    private function repository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     /**
@@ -72,7 +72,7 @@ final class EntryRowsByIdsTest extends DbTestCase
      */
     private function rowsByIds(array $ids): array
     {
-        $rows = $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids);
+        $rows = $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids);
 
         return array_map(static fn ($row) => $row->entry->getGuid(), $rows);
     }
@@ -113,11 +113,11 @@ final class EntryRowsByIdsTest extends DbTestCase
             ['newest', 'middle'],
             array_map(
                 static fn ($row) => $row->entry->getGuid(),
-                $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids, 2),
+                $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids, 2),
             ),
         );
         // No limit hydrates every given id.
-        self::assertCount(3, $this->repo()->rowsByIdsForUser($this->user->requireId(), $ids));
+        self::assertCount(3, $this->repository()->rowsByIdsForUser($this->user->requireId(), $ids));
     }
 
     public function testDropsAnIdInAFeedTheUserDoesNotSubscribeTo(): void
@@ -147,7 +147,7 @@ final class EntryRowsByIdsTest extends DbTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        self::assertSame([], $this->repo()->rowsByIdsForUser($this->user->requireId(), []));
+        self::assertSame([], $this->repository()->rowsByIdsForUser($this->user->requireId(), []));
         self::assertSame([], $recorder->queries());
     }
 }

@@ -55,7 +55,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($rocket, $both);
         $this->member($rocket, $onlyRocket);
 
-        $rows = $this->repo()->listMembers($this->query([$climate, $rocket]));
+        $rows = $this->repository()->listMembers($this->query([$climate, $rocket]));
 
         self::assertSame([$both->getId(), $onlyRocket->getId()], $this->ids($rows));
     }
@@ -72,7 +72,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->hide($newestRead);
         $this->hide($secondRead);
 
-        $rows = $this->repo()->listMembers($this->query([$climate], onlyUnread: true, limit: 2));
+        $rows = $this->repository()->listMembers($this->query([$climate], onlyUnread: true, limit: 2));
 
         self::assertSame([$olderUnread->getId()], $this->ids($rows));
     }
@@ -87,10 +87,10 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
             $this->member($climate, $entry);
         }
 
-        $page = $this->repo()->listMembers($this->query([$climate], limit: 2));
+        $page = $this->repository()->listMembers($this->query([$climate], limit: 2));
         self::assertSame([$first->getId(), $second->getId()], $this->ids($page));
 
-        $next = $this->repo()->listMembers($this->query(
+        $next = $this->repository()->listMembers($this->query(
             [$climate],
             limit: 2,
             cursor: new EntryCursor($second->getEffectiveDate(), $second->requireId()),
@@ -107,7 +107,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $foreign = $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed);
         $this->member($climate, $foreign);
 
-        self::assertSame([], $this->repo()->listMembers($this->query([$climate])));
+        self::assertSame([], $this->repository()->listMembers($this->query([$climate])));
     }
 
     public function testAForeignSearchIdYieldsNothing(): void
@@ -118,8 +118,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $entry = $this->entry('a', '2026-07-10T00:00:00Z');
         $this->member($theirs, $entry);
 
-        self::assertSame([], $this->repo()->listMembers($this->query([$theirs])));
-        self::assertSame([$theirs->requireId() => []], $this->repo()->unreadMemberIdsBySavedSearch(
+        self::assertSame([], $this->repository()->listMembers($this->query([$theirs])));
+        self::assertSame([$theirs->requireId() => []], $this->repository()->unreadMemberIdsBySavedSearch(
             $this->user->requireId(),
             [$theirs->requireId()],
         ));
@@ -127,7 +127,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
 
     public function testNoSearchIdsListsNothing(): void
     {
-        self::assertSame([], $this->repo()->listMembers($this->query([])));
+        self::assertSame([], $this->repository()->listMembers($this->query([])));
     }
 
     public function testDuplicateCopiesCollapseToTheLowestIdInTheList(): void
@@ -138,7 +138,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($climate, $original);
         $this->member($climate, $copy);
 
-        $rows = $this->repo()->listMembers($this->query([$climate]));
+        $rows = $this->repository()->listMembers($this->query([$climate]));
 
         self::assertSame([$original->getId()], $this->ids($rows));
     }
@@ -155,7 +155,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($rocket, $unread);
         $this->hide($read);
 
-        $ids = $this->repo()->unreadMemberIdsBySavedSearch(
+        $ids = $this->repository()->unreadMemberIdsBySavedSearch(
             $this->user->requireId(),
             [$climate->requireId(), $rocket->requireId(), $empty->requireId()],
         );
@@ -178,8 +178,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         }
         $this->hide($newestRead);
 
-        $badge = $this->repo()->unreadMemberIdsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
-        $list = $this->repo()->listMembers($this->query([$climate], onlyUnread: true));
+        $badge = $this->repository()->unreadMemberIdsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
+        $list = $this->repository()->listMembers($this->query([$climate], onlyUnread: true));
 
         self::assertCount(\count($badge[$climate->requireId()]), $list);
         self::assertEqualsCanonicalizing($badge[$climate->requireId()], $this->ids($list));
@@ -197,7 +197,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($rocket, $unread);
         $this->hide($read);
 
-        $counts = $this->repo()->memberCountsBySavedSearch(
+        $counts = $this->repository()->memberCountsBySavedSearch(
             $this->user->requireId(),
             [$climate->requireId(), $rocket->requireId(), $empty->requireId()],
         );
@@ -216,7 +216,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->entityManager->flush();
         $this->member($theirs, $this->entry('a', '2026-07-10T00:00:00Z'));
 
-        $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$theirs->requireId()]);
+        $counts = $this->repository()->memberCountsBySavedSearch($this->user->requireId(), [$theirs->requireId()]);
 
         self::assertSame([$theirs->requireId() => 0], $counts);
     }
@@ -229,7 +229,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->entityManager->flush();
         $this->member($climate, $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed));
 
-        $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
+        $counts = $this->repository()->memberCountsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
 
         self::assertSame([$climate->requireId() => 0], $counts);
     }
@@ -242,7 +242,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($climate, $newer);
         $this->member($climate, $older);
 
-        $ids = $this->repo()->unreadMemberIdsUpTo(
+        $ids = $this->repository()->unreadMemberIdsUpTo(
             $this->user->requireId(),
             [$climate->requireId()],
             new \DateTimeImmutable('2026-07-09T00:00:00Z'),
@@ -263,7 +263,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         }
         $this->hide($readInWindow);
 
-        $ids = $this->repo()->unreadMemberIdsForUserSince(
+        $ids = $this->repository()->unreadMemberIdsForUserSince(
             $this->user->requireId(),
             $climate->requireId(),
             new \DateTimeImmutable('2026-07-08T00:00:00Z'),
@@ -280,7 +280,7 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         $this->member($climate, $entry);
         self::assertNotSame($this->user->requireId(), $climate->requireId(), 'Equal ids would hide a swap.');
 
-        $ids = $this->repo()->unreadMemberIdsForUserSince(
+        $ids = $this->repository()->unreadMemberIdsForUserSince(
             $this->user->requireId(),
             $climate->requireId(),
             new \DateTimeImmutable('2026-07-08T00:00:00Z'),
@@ -298,7 +298,10 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     ): SavedSearchListQuery {
         return new SavedSearchListQuery(
             userId: $this->user->requireId(),
-            savedSearchIds: array_map(static fn (SavedSearch $s): int => $s->requireId(), $searches),
+            savedSearchIds: array_map(
+                static fn (SavedSearch $savedSearch): int => $savedSearch->requireId(),
+                $searches,
+            ),
             onlyUnread: $onlyUnread,
             cursor: $cursor,
             limit: $limit,
@@ -357,11 +360,11 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
         return array_map(static fn (EntryListRow $row): ?int => $row->entry->getId(), $rows);
     }
 
-    private function repo(): SavedSearchEntryRepository
+    private function repository(): SavedSearchEntryRepository
     {
-        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 }

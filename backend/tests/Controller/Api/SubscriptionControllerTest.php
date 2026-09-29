@@ -555,8 +555,8 @@ final class SubscriptionControllerTest extends WebTestCase
         $user = $this->userFactory()->create('atcap@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
-            $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
+        for ($index = 0; $index < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $index++) {
+            $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $index));
             $entityManager->persist($feed);
             $entityManager->persist(new Subscription($user, $feed, $when));
         }
@@ -659,8 +659,8 @@ final class SubscriptionControllerTest extends WebTestCase
         $stranger = $factory->create('stranger@example.com');
         $feed = new Feed('https://example.com/x.xml');
         $entityManager->persist($feed);
-        $sub = new Subscription($stranger, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $entityManager->persist($sub);
+        $subscription = new Subscription($stranger, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $entityManager->persist($subscription);
         $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -670,7 +670,7 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $client->request(
             'PATCH',
-            '/api/subscriptions/' . $sub->getId(),
+            '/api/subscriptions/' . $subscription->getId(),
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['customTitle' => 'hijacked', 'tagIds' => []], \JSON_THROW_ON_ERROR),
         );
@@ -690,8 +690,8 @@ final class SubscriptionControllerTest extends WebTestCase
         $user = $this->userFactory()->create('flagsetter@example.com');
         $feed = new Feed('https://flags.example.com/rss');
         $entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $entityManager->persist($subscription);
         $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -700,7 +700,7 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $client->request(
             'PATCH',
-            '/api/subscriptions/' . $sub->getId(),
+            '/api/subscriptions/' . $subscription->getId(),
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(
                 ['customTitle' => null, 'tagIds' => [], 'includeInAllItems' => false],
@@ -725,9 +725,9 @@ final class SubscriptionControllerTest extends WebTestCase
         $user = $this->userFactory()->create('flagkeeper@example.com');
         $feed = new Feed('https://flagkeeper.example.com/rss');
         $entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $sub->setIncludeInForYou(false);
-        $entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->setIncludeInForYou(false);
+        $entityManager->persist($subscription);
         $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -736,7 +736,7 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $client->request(
             'PATCH',
-            '/api/subscriptions/' . $sub->getId(),
+            '/api/subscriptions/' . $subscription->getId(),
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['customTitle' => 'Kept Title', 'tagIds' => []], \JSON_THROW_ON_ERROR),
         );
@@ -767,9 +767,9 @@ final class SubscriptionControllerTest extends WebTestCase
         $entityManager->persist($tag);
         $feed = new Feed('https://tagclearer.example.com/rss');
         $entityManager->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $sub->addTag($tag);
-        $entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->addTag($tag);
+        $entityManager->persist($subscription);
         $entityManager->flush();
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
@@ -778,7 +778,7 @@ final class SubscriptionControllerTest extends WebTestCase
 
         $client->request(
             'PATCH',
-            '/api/subscriptions/' . $sub->getId(),
+            '/api/subscriptions/' . $subscription->getId(),
             server: $headers + ['CONTENT_TYPE' => 'application/json'],
             content: json_encode(['customTitle' => null], \JSON_THROW_ON_ERROR),
         );

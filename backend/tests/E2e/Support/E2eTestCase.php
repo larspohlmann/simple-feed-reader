@@ -82,11 +82,11 @@ abstract class E2eTestCase extends TestCase
     {
         $body = $this->mailpit->latestBodyTo($recipient);
 
-        if (1 !== preg_match('/[?&]token=([A-Za-z0-9._\-]+)/', $body, $m)) {
+        if (1 !== preg_match('/[?&]token=([A-Za-z0-9._\-]+)/', $body, $matches)) {
             throw new \RuntimeException('No token link found in email to ' . $recipient);
         }
 
-        return $m[1];
+        return $matches[1];
     }
 
     /** Log in and return the JWT. */

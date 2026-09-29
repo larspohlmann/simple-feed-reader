@@ -47,18 +47,23 @@ final class ReorderTest extends WebTestCase
         return $tag;
     }
 
-    private function makeSub(User $user, string $url, int $position, ?Tag $tag = null, int $tagPos = 0): Subscription
-    {
+    private function makeSub(
+        User $user,
+        string $url,
+        int $position,
+        ?Tag $tag = null,
+        int $tagPosition = 0,
+    ): Subscription {
         $feed = new Feed($url);
         $this->entityManager()->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $sub->setPosition($position);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->setPosition($position);
         if (null !== $tag) {
-            $sub->addTag($tag, $tagPos);
+            $subscription->addTag($tag, $tagPosition);
         }
-        $this->entityManager()->persist($sub);
+        $this->entityManager()->persist($subscription);
 
-        return $sub;
+        return $subscription;
     }
 
     /** @param array<string, mixed> $body */
@@ -76,11 +81,11 @@ final class ReorderTest extends WebTestCase
     private function tagPositions(KernelBrowser $client, User $user): array
     {
         $client->request('GET', '/api/tags', server: $this->headers($user));
-        $data = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($data);
-        self::assertIsArray($data['tags']);
+        $responseBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($responseBody);
+        self::assertIsArray($responseBody['tags']);
         $out = [];
-        foreach ($data['tags'] as $tag) {
+        foreach ($responseBody['tags'] as $tag) {
             self::assertIsArray($tag);
             self::assertIsInt($tag['id']);
             self::assertIsInt($tag['position']);
@@ -94,19 +99,24 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-tags@example.com');
-        $a = $this->makeTag($user, 'Alpha', 0);
-        $b = $this->makeTag($user, 'Beta', 1);
-        $c = $this->makeTag($user, 'Gamma', 2);
+        $alpha = $this->makeTag($user, 'Alpha', 0);
+        $beta = $this->makeTag($user, 'Beta', 1);
+        $gamma = $this->makeTag($user, 'Gamma', 2);
         $this->entityManager()->flush();
 
         // New order: Gamma, Alpha, Beta.
-        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$c->getId(), $a->getId(), $b->getId()]]);
+        $this->patch(
+            $client,
+            $user,
+            '/api/tags/reorder',
+            ['tagIds' => [$gamma->getId(), $alpha->getId(), $beta->getId()]],
+        );
         self::assertResponseIsSuccessful();
 
         $positions = $this->tagPositions($client, $user);
-        self::assertSame(0, $positions[$c->requireId()]);
-        self::assertSame(1, $positions[$a->requireId()]);
-        self::assertSame(2, $positions[$b->requireId()]);
+        self::assertSame(0, $positions[$gamma->requireId()]);
+        self::assertSame(1, $positions[$alpha->requireId()]);
+        self::assertSame(2, $positions[$beta->requireId()]);
     }
 
     /**
@@ -123,20 +133,25 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-tags-db@example.com');
-        $a = $this->makeTag($user, 'Alpha', 0);
-        $b = $this->makeTag($user, 'Beta', 1);
-        $c = $this->makeTag($user, 'Gamma', 2);
+        $alpha = $this->makeTag($user, 'Alpha', 0);
+        $beta = $this->makeTag($user, 'Beta', 1);
+        $gamma = $this->makeTag($user, 'Gamma', 2);
         $this->entityManager()->flush();
 
-        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$c->getId(), $a->getId(), $b->getId()]]);
+        $this->patch(
+            $client,
+            $user,
+            '/api/tags/reorder',
+            ['tagIds' => [$gamma->getId(), $alpha->getId(), $beta->getId()]],
+        );
         self::assertResponseIsSuccessful();
 
         $this->entityManager()->clear();
         $reload = fn (int $id): Tag
             => $this->entityManager()->getRepository(Tag::class)->find($id) ?? self::fail("tag $id gone");
-        self::assertSame(0, $reload($c->requireId())->getPosition());
-        self::assertSame(1, $reload($a->requireId())->getPosition());
-        self::assertSame(2, $reload($b->requireId())->getPosition());
+        self::assertSame(0, $reload($gamma->requireId())->getPosition());
+        self::assertSame(1, $reload($alpha->requireId())->getPosition());
+        self::assertSame(2, $reload($beta->requireId())->getPosition());
     }
 
     /**
@@ -148,11 +163,11 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-tags-response@example.com');
-        $a = $this->makeTag($user, 'Alpha', 0);
-        $b = $this->makeTag($user, 'Beta', 1);
+        $alpha = $this->makeTag($user, 'Alpha', 0);
+        $beta = $this->makeTag($user, 'Beta', 1);
         $this->entityManager()->flush();
 
-        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$b->getId(), $a->getId()]]);
+        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$beta->getId(), $alpha->getId()]]);
         self::assertResponseIsSuccessful();
 
         $body = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -171,12 +186,12 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-partial@example.com');
-        $a = $this->makeTag($user, 'Alpha', 0);
+        $alpha = $this->makeTag($user, 'Alpha', 0);
         $this->makeTag($user, 'Beta', 1);
         $this->entityManager()->flush();
 
         // Missing Beta → ambiguous → 422.
-        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$a->getId()]]);
+        $this->patch($client, $user, '/api/tags/reorder', ['tagIds' => [$alpha->getId()]]);
         self::assertResponseStatusCodeSame(422);
     }
 
@@ -198,26 +213,30 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-feeds@example.com');
-        $s1 = $this->makeSub($user, 'https://f/1', 0);
-        $s2 = $this->makeSub($user, 'https://f/2', 1);
-        $s3 = $this->makeSub($user, 'https://f/3', 2);
+        $firstSubscription = $this->makeSub($user, 'https://f/1', 0);
+        $secondSubscription = $this->makeSub($user, 'https://f/2', 1);
+        $thirdSubscription = $this->makeSub($user, 'https://f/3', 2);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/reorder', [
-            'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
+            'subscriptionIds' => [
+                $thirdSubscription->getId(),
+                $firstSubscription->getId(),
+                $secondSubscription->getId(),
+            ],
         ]);
         self::assertResponseStatusCodeSame(204);
 
         $this->entityManager()->clear();
         $reload = function (int $id): Subscription {
-            $sub = $this->entityManager()->find(Subscription::class, $id);
-            self::assertInstanceOf(Subscription::class, $sub);
+            $subscription = $this->entityManager()->find(Subscription::class, $id);
+            self::assertInstanceOf(Subscription::class, $subscription);
 
-            return $sub;
+            return $subscription;
         };
-        self::assertSame(0, $reload($s3->requireId())->getPosition());
-        self::assertSame(1, $reload($s1->requireId())->getPosition());
-        self::assertSame(2, $reload($s2->requireId())->getPosition());
+        self::assertSame(0, $reload($thirdSubscription->requireId())->getPosition());
+        self::assertSame(1, $reload($firstSubscription->requireId())->getPosition());
+        self::assertSame(2, $reload($secondSubscription->requireId())->getPosition());
     }
 
     public function testFeedOrderWithinTagPersistsPerTagPosition(): void
@@ -225,34 +244,38 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('reorder-in-tag@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $s1 = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
-        $s2 = $this->makeSub($user, 'https://f/2', 1, $tag, 1);
-        $s3 = $this->makeSub($user, 'https://f/3', 2, $tag, 2);
+        $firstSubscription = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
+        $secondSubscription = $this->makeSub($user, 'https://f/2', 1, $tag, 1);
+        $thirdSubscription = $this->makeSub($user, 'https://f/3', 2, $tag, 2);
         $this->entityManager()->flush();
 
         // New within-tag order: s3, s1, s2.
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
-            'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
+            'subscriptionIds' => [
+                $thirdSubscription->getId(),
+                $firstSubscription->getId(),
+                $secondSubscription->getId(),
+            ],
         ]);
         self::assertResponseStatusCodeSame(204);
 
         // The embedded tag position on each subscription is the per-tag order.
         $client->request('GET', '/api/subscriptions', server: $this->headers($user));
-        $data = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($data);
-        self::assertIsArray($data['subscriptions']);
+        $responseBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($responseBody);
+        self::assertIsArray($responseBody['subscriptions']);
         $perTag = [];
-        foreach ($data['subscriptions'] as $sub) {
-            self::assertIsArray($sub);
-            self::assertIsArray($sub['tags']);
-            self::assertIsArray($sub['tags'][0]);
-            self::assertIsInt($sub['id']);
-            self::assertIsInt($sub['tags'][0]['position']);
-            $perTag[$sub['id']] = $sub['tags'][0]['position'];
+        foreach ($responseBody['subscriptions'] as $subscription) {
+            self::assertIsArray($subscription);
+            self::assertIsArray($subscription['tags']);
+            self::assertIsArray($subscription['tags'][0]);
+            self::assertIsInt($subscription['id']);
+            self::assertIsInt($subscription['tags'][0]['position']);
+            $perTag[$subscription['id']] = $subscription['tags'][0]['position'];
         }
-        self::assertSame(0, $perTag[$s3->requireId()]);
-        self::assertSame(1, $perTag[$s1->requireId()]);
-        self::assertSame(2, $perTag[$s2->requireId()]);
+        self::assertSame(0, $perTag[$thirdSubscription->requireId()]);
+        self::assertSame(1, $perTag[$firstSubscription->requireId()]);
+        self::assertSame(2, $perTag[$secondSubscription->requireId()]);
     }
 
     /**
@@ -267,13 +290,17 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('reorder-in-tag-db@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $s1 = $this->makeSub($user, 'https://db/1', 0, $tag, 0);
-        $s2 = $this->makeSub($user, 'https://db/2', 1, $tag, 1);
-        $s3 = $this->makeSub($user, 'https://db/3', 2, $tag, 2);
+        $firstSubscription = $this->makeSub($user, 'https://db/1', 0, $tag, 0);
+        $secondSubscription = $this->makeSub($user, 'https://db/2', 1, $tag, 1);
+        $thirdSubscription = $this->makeSub($user, 'https://db/3', 2, $tag, 2);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
-            'subscriptionIds' => [$s3->getId(), $s1->getId(), $s2->getId()],
+            'subscriptionIds' => [
+                $thirdSubscription->getId(),
+                $firstSubscription->getId(),
+                $secondSubscription->getId(),
+            ],
         ]);
         self::assertResponseStatusCodeSame(204);
 
@@ -288,9 +315,9 @@ final class ReorderTest extends WebTestCase
             }
             self::fail('subscription is not tagged');
         };
-        self::assertSame(0, $joinPosition($s3->requireId()));
-        self::assertSame(1, $joinPosition($s1->requireId()));
-        self::assertSame(2, $joinPosition($s2->requireId()));
+        self::assertSame(0, $joinPosition($thirdSubscription->requireId()));
+        self::assertSame(1, $joinPosition($firstSubscription->requireId()));
+        self::assertSame(2, $joinPosition($secondSubscription->requireId()));
     }
 
     public function testClearingTheLastTagAppendsTheFeedToTheUntaggedList(): void

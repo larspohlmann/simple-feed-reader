@@ -48,7 +48,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $this->entityManager->clear();
 
         $requestedIds = array_map(
-            static fn (CatalogFeed $f): int => $f->requireId(),
+            static fn (CatalogFeed $feed): int => $feed->requireId(),
             [$engadget, $wired, $deadFeed, $mitReview, $buriedFeed],
         );
         $requestedIds[] = 999_999; // an id nothing maps to
@@ -56,7 +56,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $rows = $this->catalogFeeds()->findEnabledByIds($requestedIds);
 
         self::assertSame(['Wired', 'Engadget', 'MIT Technology Review'], array_map(
-            static fn (CatalogFeed $f): string => $f->getTitle(),
+            static fn (CatalogFeed $feed): string => $feed->getTitle(),
             $rows,
         ));
     }
@@ -73,7 +73,7 @@ final class CatalogFeedRepositoryTest extends DbTestCase
         $rows = $this->catalogFeeds()->findNeedingFavicon($this->faviconCriteria(), null);
 
         self::assertSame(['Never Fetched Feed', 'Stale Icon Feed', 'Long Failed Feed'], array_map(
-            static fn (CatalogFeed $f): string => $f->getTitle(),
+            static fn (CatalogFeed $feed): string => $feed->getTitle(),
             $rows,
         ));
     }

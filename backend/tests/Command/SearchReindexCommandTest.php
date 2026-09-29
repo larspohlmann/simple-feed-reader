@@ -58,8 +58,8 @@ final class SearchReindexCommandTest extends DbTestCase
     private function persistEntries(int $count): void
     {
         $feed = $this->feed('Example Feed');
-        for ($i = 0; $i < $count; ++$i) {
-            $this->entry($feed, 'guid-' . $i);
+        for ($index = 0; $index < $count; ++$index) {
+            $this->entry($feed, 'guid-' . $index);
         }
         $this->entityManager->flush();
     }
