@@ -10,7 +10,7 @@ use App\Service\Reader\Media\Model\EmbedTargetModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -31,7 +31,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
 {
     private const string URL_PATTERN = '#https://[^"\'\s\\\\<>]+#i';
 
-    public function __construct(private EmbedProviders $providers)
+    public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
     {
     }
 
@@ -39,7 +39,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
     {
         $found = [];
         foreach ($page->document->querySelectorAll('script') as $script) {
-            if (PageFurniture::holds($script)) {
+            if ($this->furniture->holds($script)) {
                 continue;
             }
             // JSON-LD scripts are already handled by JsonLdMediaSource, which has

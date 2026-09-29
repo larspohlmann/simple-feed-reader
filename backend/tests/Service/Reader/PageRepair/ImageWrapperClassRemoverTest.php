@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\PageRepair\ImageWrapperClassRemover;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +15,7 @@ final class ImageWrapperClassRemoverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->remover = new ImageWrapperClassRemover();
+        $this->remover = new ImageWrapperClassRemover(new PageFurniture());
     }
 
     /** nature.com 495343: readability weights `ResponsiveMedia` −25 and removes the text-less wrapper, photo included. */

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Sibling\Support;
+namespace App\Tests\Service\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\Sibling\Support\NearbyPoster;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use PHPUnit\Framework\TestCase;
 
 final class NearbyPosterTest extends TestCase
@@ -15,7 +15,7 @@ final class NearbyPosterTest extends TestCase
             . '"1920x1080":"https://a.test/assets/still-100~1920x1080?cb=1",'
             . '"384x216":"https://a.test/assets/still-100~384x216"}';
 
-        self::assertSame('https://a.test/assets/still-100~1920x1080?cb=1', NearbyPoster::after($html, 0));
+        self::assertSame('https://a.test/assets/still-100~1920x1080?cb=1', (new NearbyPoster())->after($html, 0));
     }
 
     /** ZDF names an asset `<stem>-1x1-100~WxH`; the `1x1` marks the square source, not a rendition, so the size is the suffix, not the first dimensions in the URL (#952). */
@@ -24,14 +24,14 @@ final class NearbyPosterTest extends TestCase
         $html = 'id "layouts":{"1140x120":"https://a.test/assets/pisa-1x1-100~1140x120?cb=1",'
             . '"1920x1080":"https://a.test/assets/pisa-1x1-100~1920x1080?cb=1"}';
 
-        self::assertSame('https://a.test/assets/pisa-1x1-100~1920x1080?cb=1', NearbyPoster::after($html, 0));
+        self::assertSame('https://a.test/assets/pisa-1x1-100~1920x1080?cb=1', (new NearbyPoster())->after($html, 0));
     }
 
     public function testAnImageExtensionCountsWithoutDimensions(): void
     {
         $html = 'id … "src":"https://a.test/img/still.jpg?w=1"';
 
-        self::assertSame('https://a.test/img/still.jpg?w=1', NearbyPoster::after($html, 0));
+        self::assertSame('https://a.test/img/still.jpg?w=1', (new NearbyPoster())->after($html, 0));
     }
 
     public function testNeverTakesAPlaylistAFileAScriptOrAStylesheet(): void
@@ -39,18 +39,18 @@ final class NearbyPosterTest extends TestCase
         $html = 'id "a":"https://a.test/v/master.m3u8","b":"https://a.test/v/clip.mp4",'
             . '"c":"https://a.test/app.js?v=2x2","d":"https://a.test/s.css"';
 
-        self::assertNull(NearbyPoster::after($html, 0));
+        self::assertNull((new NearbyPoster())->after($html, 0));
     }
 
     public function testLooksOnlyWithinTheWindow(): void
     {
         $html = 'id' . str_repeat(' ', 2100) . '"src":"https://a.test/still.jpg"';
 
-        self::assertNull(NearbyPoster::after($html, 0));
+        self::assertNull((new NearbyPoster())->after($html, 0));
     }
 
     public function testNullWhenNothingImageLikeFollows(): void
     {
-        self::assertNull(NearbyPoster::after('id "href":"https://a.test/page"', 0));
+        self::assertNull((new NearbyPoster())->after('id "href":"https://a.test/page"', 0));
     }
 }

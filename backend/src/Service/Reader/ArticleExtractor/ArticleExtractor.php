@@ -5,31 +5,23 @@ declare(strict_types=1);
 namespace App\Service\Reader\ArticleExtractor;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
+use App\Service\Reader\ArticleContentGate;
+use App\Service\Reader\ArticlePageReader;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\Exception\ArticleNotExtractedException;
 use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\Media\BodyMediaResolver;
-use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Service\Reader\Model\ArticlePageModel;
 use App\Service\Reader\Model\EntryHintsModel;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Reader\Model\FeedMediaModel;
-use App\Service\Reader\Model\LeadFigureCaptionsModel;
 use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Reader\Model\PageImageInventoryModel;
 use App\Service\Reader\Model\PageResponseModel;
-use App\Service\Reader\Paywall\Support\PaywallSignals;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
-use App\Service\Reader\Slideshow\SlideshowScanner;
-use App\Service\Reader\Support\ArticleContentGate;
 use App\Service\Sanitize\EntrySanitizer;
 use fivefilters\Readability\Article;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -43,14 +35,12 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
 {
     public function __construct(
         private HtmlPageFetcher $fetcher,
-        private FetchedPageNormalizer $normalizer,
+        private ArticlePageReader $pageReader,
         private ReaderBodyCleaner $bodyCleaner,
         private EntrySanitizer $sanitizer,
-        private PageMediaScanner $mediaScanner,
         private BodyMediaResolver $bodyMedia,
-        private SlideshowScanner $slideshowScanner,
-        private TeaserPlayerScanner $teaserScanner,
         private ArticleReadability $readability,
+        private ArticleContentGate $contentGate,
     ) {
     }
 
@@ -70,11 +60,11 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
 
     private function extractPage(PageResponseModel $page, EntryHintsModel $hints): ExtractionResultModel
     {
-        $articlePage = $this->readPage($page, $hints->feedMedia);
+        $articlePage = $this->pageReader->read($page, $hints->feedMedia);
         $containers = $this->slideshowContainers($articlePage->slideshows);
         $article = $this->readability->richest($articlePage->normalized, $page, $containers)
             ?? throw new ArticleNotExtractedException(ExtractionFailure::Unextractable);
-        $content = ArticleContentGate::contentOf($article, $articlePage->media);
+        $content = $this->contentGate->contentOf($article, $articlePage->media);
         $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $articlePage, $hints));
         $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 
@@ -86,25 +76,6 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
             contentHtml: $clean,
             excerpt: $article->excerpt,
             paywalled: $articlePage->paywalled,
-        );
-    }
-
-    private function readPage(PageResponseModel $page, FeedMediaModel $feedMedia): ArticlePageModel
-    {
-        $normalized = $this->normalizer->normalize($page->html);
-        $pageImages = PageImageInventoryModel::fromDocument($normalized);
-        $leadCaptions = LeadFigureCaptionsModel::fromDocument($normalized);
-        $rawPage = RawPageModel::parse($page->html, $page->finalUrl);
-
-        return new ArticlePageModel(
-            page: $page,
-            normalized: $normalized,
-            pageImages: $pageImages,
-            leadCaptions: $leadCaptions,
-            paywalled: PaywallSignals::isPreview($rawPage->document, $normalized),
-            media: $this->mediaScanner->scan($rawPage, $feedMedia),
-            slideshows: $this->slideshowScanner->scan($normalized),
-            teasers: $this->teaserScanner->scan($normalized, $page->finalUrl),
         );
     }
 

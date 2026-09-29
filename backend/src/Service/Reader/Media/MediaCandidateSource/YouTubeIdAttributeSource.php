@@ -9,7 +9,7 @@ use App\Service\Reader\Media\Model\EmbedTargetModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
@@ -25,7 +25,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
     private const string ID_PATTERN = '#^[A-Za-z0-9_-]{11}$#';
     private const string YOUTUBE_MARKER = '#youtube|(?:^|[^a-z])yt[-_]#i';
 
-    public function __construct(private EmbedProviders $providers)
+    public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
     {
     }
 
@@ -51,7 +51,7 @@ final readonly class YouTubeIdAttributeSource implements MediaCandidateSourceInt
     private function targetOf(Element $element): ?EmbedTargetModel
     {
         $id = $element->getAttribute(self::VIDEO_ID_ATTRIBUTE) ?? '';
-        if (PageFurniture::holds($element)) {
+        if ($this->furniture->holds($element)) {
             return null;
         }
 

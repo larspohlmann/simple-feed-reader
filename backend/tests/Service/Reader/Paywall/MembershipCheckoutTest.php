@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall\Support;
+namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Paywall\Support\MembershipCheckout;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Paywall\MembershipCheckout;
+use App\Service\Reader\Paywall\OutsideFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class MembershipCheckoutTest extends TestCase
@@ -51,6 +53,6 @@ final class MembershipCheckoutTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
         self::assertNotNull($document);
 
-        return MembershipCheckout::foundOutsideFurnitureIn($document);
+        return (new MembershipCheckout(new OutsideFurniture(new PageFurniture())))->foundOutsideFurnitureIn($document);
     }
 }

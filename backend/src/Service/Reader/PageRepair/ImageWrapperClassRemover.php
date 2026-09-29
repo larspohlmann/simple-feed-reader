@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,10 +15,14 @@ use Dom\HTMLDocument;
  */
 final readonly class ImageWrapperClassRemover implements PageRepairInterface
 {
+    public function __construct(private PageFurniture $furniture)
+    {
+    }
+
     public function repairIn(HTMLDocument $document): void
     {
         foreach ($document->querySelectorAll('img') as $image) {
-            if ($image->closest('a') === null && !PageFurniture::holds($image)) {
+            if ($image->closest('a') === null && !$this->furniture->holds($image)) {
                 $this->stripWrappersOf($image);
             }
         }

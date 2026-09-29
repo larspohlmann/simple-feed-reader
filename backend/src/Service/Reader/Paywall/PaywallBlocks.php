@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
 use Dom\HTMLDocument;
 
@@ -20,9 +20,13 @@ final readonly class PaywallBlocks
     ];
     private const string LOWER_CLASS = 'translate(@class, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
 
-    public static function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    public function __construct(private OutsideFurniture $outsideFurniture)
     {
-        return OutsideFurniture::holdsMatchFor($document, self::paywallClassQuery());
+    }
+
+    public function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    {
+        return $this->outsideFurniture->holdsMatchFor($document, self::paywallClassQuery());
     }
 
     private static function paywallClassQuery(): string
@@ -33,9 +37,5 @@ final readonly class PaywallBlocks
         );
 
         return '//*[' . implode(' or ', $fragments) . ']';
-    }
-
-    private function __construct()
-    {
     }
 }

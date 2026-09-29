@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
 use App\Service\Reader\Paywall\Model\AccessDeclaration;
+use App\Service\Reader\Paywall\Support\SchemaOrgAccess;
 use Dom\HTMLDocument;
 
 /**
@@ -14,22 +15,24 @@ use Dom\HTMLDocument;
  */
 final readonly class PaywallSignals
 {
-    public static function isPreview(HTMLDocument $rawDocument, HTMLDocument $normalized): bool
+    public function __construct(
+        private PaywallBlocks $blocks,
+        private MembershipCheckout $checkout,
+    ) {
+    }
+
+    public function isPreview(HTMLDocument $rawDocument, HTMLDocument $normalized): bool
     {
         return match (SchemaOrgAccess::declaredIn($rawDocument)) {
             AccessDeclaration::Paywalled => true,
             AccessDeclaration::Free => false,
-            AccessDeclaration::Undeclared => self::gatedInBody($normalized),
+            AccessDeclaration::Undeclared => $this->gatedInBody($normalized),
         };
     }
 
-    private static function gatedInBody(HTMLDocument $normalized): bool
+    private function gatedInBody(HTMLDocument $normalized): bool
     {
-        return PaywallBlocks::foundOutsideFurnitureIn($normalized)
-            || MembershipCheckout::foundOutsideFurnitureIn($normalized);
-    }
-
-    private function __construct()
-    {
+        return $this->blocks->foundOutsideFurnitureIn($normalized)
+            || $this->checkout->foundOutsideFurnitureIn($normalized);
     }
 }

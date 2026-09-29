@@ -23,6 +23,10 @@ use App\Service\ReaderAudit\Support\SuspiciousPhrases;
  */
 final readonly class PhraseMarkers
 {
+    public function __construct(private LeadingRegion $leadingRegion)
+    {
+    }
+
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body): array
     {
@@ -41,7 +45,7 @@ final readonly class PhraseMarkers
     private function scopeFor(PhraseFamilyModel $family, ExtractedBodyModel $body): array
     {
         return match ($family->scope) {
-            PhraseScope::AboveTheArticle => $body->leadingBlocks(),
+            PhraseScope::AboveTheArticle => $this->leadingRegion->blocksOf($body),
             PhraseScope::OnlyWhenNoArticle => $body->hasArticleText() ? [] : $body->blocks,
         };
     }

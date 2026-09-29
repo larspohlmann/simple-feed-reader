@@ -12,6 +12,9 @@ use App\Service\Reader\Media\MediaCandidateSource\AttributeMediaSource;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\PlayerPoster;
 use PHPUnit\Framework\TestCase;
 
 final class AttributeMediaSourceTest extends TestCase
@@ -28,6 +31,9 @@ final class AttributeMediaSourceTest extends TestCase
         return new AttributeMediaSource(
             new MediaUrlKind(new DurableMediaUrl(), $providers),
             new MediaRelevance(),
+            new PageFurniture(),
+            new NarrationSignals(),
+            new PlayerPoster(),
         );
     }
 

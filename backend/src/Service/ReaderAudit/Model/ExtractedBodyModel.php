@@ -74,26 +74,6 @@ final readonly class ExtractedBodyModel
         return $this->textLength() >= self::ARTICLE_TEXT_CHARS;
     }
 
-    /**
-     * Everything above the article's first real paragraph. A body that never
-     * reaches one is leading region throughout — it is all chrome, which is
-     * exactly what the rules should then see.
-     *
-     * @return list<BodyBlockModel>
-     */
-    public function leadingBlocks(): array
-    {
-        $leading = [];
-        foreach ($this->blocks as $block) {
-            if ($block->isProse()) {
-                return $leading;
-            }
-            $leading[] = $block;
-        }
-
-        return $leading;
-    }
-
     /** @return list<BodyBlockModel> */
     private static function blocks(Element $body): array
     {

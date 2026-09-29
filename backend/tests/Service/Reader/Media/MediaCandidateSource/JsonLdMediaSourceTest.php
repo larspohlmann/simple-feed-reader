@@ -12,6 +12,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdMediaSourceTest extends TestCase
@@ -28,6 +29,7 @@ final class JsonLdMediaSourceTest extends TestCase
         return new JsonLdMediaSource(
             new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders($providers)),
             new EmbedProviders($providers),
+            new PageFurniture(),
         );
     }
 

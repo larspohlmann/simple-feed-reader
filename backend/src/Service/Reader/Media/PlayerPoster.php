@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Support;
+namespace App\Service\Reader\Media;
 
 use Dom\Element;
 
@@ -15,7 +15,7 @@ final readonly class PlayerPoster
 {
     private const int ANCESTOR_LEVELS = 3;
 
-    public static function near(Element $holder): ?string
+    public function near(Element $holder): ?string
     {
         $scope = $holder;
         for ($level = 0; $level <= self::ANCESTOR_LEVELS; $level++) {
@@ -42,9 +42,5 @@ final readonly class PlayerPoster
         }
 
         return null;
-    }
-
-    private function __construct()
-    {
     }
 }

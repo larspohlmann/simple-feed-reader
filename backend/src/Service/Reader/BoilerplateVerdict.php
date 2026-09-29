@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\Support\ClassTokenMatcher;
-use App\Service\Reader\Support\BlockText;
 use Dom\Element;
 
 /**
@@ -46,6 +45,10 @@ final readonly class BoilerplateVerdict
         'related posts', 'related articles', 'you might also like', 'read more',
         'more from', 'sign up', 'subscribe', 'leave a comment', 'comments',
     ];
+
+    public function __construct(private LinkListDetector $linkLists)
+    {
+    }
 
     public function condemns(Element $block): bool
     {
@@ -89,7 +92,7 @@ final readonly class BoilerplateVerdict
     private function isLinkList(Element $block): bool
     {
         return $block->getElementsByTagName('a')->length >= self::MIN_LINKS_FOR_LIST
-            && BlockText::isLinkDominated($block);
+            && $this->linkLists->isLinkDominated($block);
     }
 
     /**

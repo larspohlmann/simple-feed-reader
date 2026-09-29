@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
 use App\Service\Reader\BoilerplateVerdict;
+use App\Service\Reader\LinkListDetector;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
@@ -26,7 +27,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->trimmer = new EdgeBoilerplateTrimmer(new BoilerplateVerdict());
+        $this->trimmer = new EdgeBoilerplateTrimmer(
+            new BoilerplateVerdict(new LinkListDetector()),
+            new LinkListDetector(),
+        );
     }
 
     public function testKeepsEverythingWhenThereIsNoSubstantialParagraph(): void

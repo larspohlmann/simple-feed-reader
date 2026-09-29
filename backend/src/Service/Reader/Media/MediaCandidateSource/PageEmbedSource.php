@@ -8,7 +8,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -25,7 +25,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 80)]
 final readonly class PageEmbedSource implements MediaCandidateSourceInterface
 {
-    public function __construct(private EmbedProviders $providers)
+    public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
     {
     }
 
@@ -33,7 +33,7 @@ final readonly class PageEmbedSource implements MediaCandidateSourceInterface
     {
         $found = [];
         foreach ($page->document->querySelectorAll('[src]') as $element) {
-            if (PageFurniture::holds($element)) {
+            if ($this->furniture->holds($element)) {
                 continue;
             }
             $target = $this->providers->resolve($element->getAttribute('src') ?? '');

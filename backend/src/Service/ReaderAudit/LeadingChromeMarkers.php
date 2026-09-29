@@ -15,7 +15,7 @@ use App\Service\ReaderAudit\Model\ExtractedBodyModel;
  * the same shapes under the last paragraph are the site's related-articles tail
  * and are tolerated (#744).
  *
- * Every rule here reads ExtractedBodyModel::leadingBlocks() and nothing else, so no
+ * Every rule here reads LeadingRegion::blocksOf() and nothing else, so no
  * rule can be fooled by furniture that sits safely at the end.
  */
 final readonly class LeadingChromeMarkers
@@ -28,10 +28,14 @@ final readonly class LeadingChromeMarkers
     private const int MIN_LEADING_LINKS = 5;
     private const int MIN_LEADING_BLOCKS_FOR_WALL = 6;
 
+    public function __construct(private LeadingRegion $leadingRegion)
+    {
+    }
+
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body): array
     {
-        $leading = $body->leadingBlocks();
+        $leading = $this->leadingRegion->blocksOf($body);
         $candidates = [
             $this->linkList($leading),
             $this->navigationRun($leading),

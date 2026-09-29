@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\XPath;
@@ -18,10 +18,14 @@ final readonly class OutsideFurniture
 {
     private const array DOCUMENT_ROOTS = ['html', 'body'];
 
-    public static function holdsMatchFor(HTMLDocument $document, string $xpath): bool
+    public function __construct(private PageFurniture $furniture)
+    {
+    }
+
+    public function holdsMatchFor(HTMLDocument $document, string $xpath): bool
     {
         foreach ((new XPath($document))->query($xpath) as $element) {
-            if ($element instanceof Element && !self::isDocumentRoot($element) && !PageFurniture::holds($element)) {
+            if ($element instanceof Element && !self::isDocumentRoot($element) && !$this->furniture->holds($element)) {
                 return true;
             }
         }
@@ -32,9 +36,5 @@ final readonly class OutsideFurniture
     private static function isDocumentRoot(Element $element): bool
     {
         return \in_array($element->localName, self::DOCUMENT_ROOTS, true);
-    }
-
-    private function __construct()
-    {
     }
 }

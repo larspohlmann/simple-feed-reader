@@ -15,10 +15,14 @@ use App\Service\Reader\Media\Sibling\Pass\SiblingSearch;
  */
 final readonly class SiblingIdRule
 {
+    public function __construct(private NearbyPoster $nearbyPoster)
+    {
+    }
+
     /** @return list<MediaCandidateModel> */
     public function derive(ArticleMediaModel $found, string $pageHtml): array
     {
-        $search = new SiblingSearch($pageHtml);
+        $search = new SiblingSearch($pageHtml, $this->nearbyPoster);
         $derived = [];
         foreach ($found->candidates as $seed) {
             foreach ($search->siblingsOf($seed) as $candidate) {

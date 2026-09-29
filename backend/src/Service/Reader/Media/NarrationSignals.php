@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Support;
+namespace App\Service\Reader\Media;
 
 use Dom\Element;
 
@@ -24,14 +24,14 @@ final readonly class NarrationSignals
         'tts',            // ZEIT: wrapper data-audio-type="tts"
     ];
 
-    public static function narrates(string $fileUrl, ?Element $holder): bool
+    public function narrates(string $fileUrl, ?Element $holder): bool
     {
-        return self::declaresNarration($fileUrl) || self::holderChainDeclaresNarration($holder);
+        return self::declaresNarration($fileUrl) || $this->holderChainDeclaresNarration($holder);
     }
 
     /** Whether the element's own attributes name narration — the tell a silent
      *  text-to-speech widget carries on its container or icon (#959). */
-    public static function declaredOn(Element $element): bool
+    public function declaredOn(Element $element): bool
     {
         foreach ($element->attributes as $attribute) {
             if (self::declaresNarration($attribute->value)) {
@@ -42,10 +42,10 @@ final readonly class NarrationSignals
         return false;
     }
 
-    private static function holderChainDeclaresNarration(?Element $holder): bool
+    private function holderChainDeclaresNarration(?Element $holder): bool
     {
         for ($element = $holder; $element !== null; $element = $element->parentElement) {
-            if (self::declaredOn($element)) {
+            if ($this->declaredOn($element)) {
                 return true;
             }
         }
@@ -62,9 +62,5 @@ final readonly class NarrationSignals
     private static function tokenPattern(): string
     {
         return '/(?<![a-z0-9])(?:' . implode('|', self::NARRATION_TOKENS) . ')(?![a-z0-9])/i';
-    }
-
-    private function __construct()
-    {
     }
 }

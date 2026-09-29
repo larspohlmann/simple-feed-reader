@@ -8,8 +8,8 @@ use App\Service\Fetch\Support\UrlResolver;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
-use App\Service\Reader\Media\Support\PageFurniture;
-use App\Service\Reader\Media\Support\PlayerPoster;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\PlayerPoster;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Text\Support\Whitespace;
 use Dom\Element;
@@ -34,8 +34,11 @@ final readonly class TeaserPlayerScanner
     /** How far above the player its headline link may sit. */
     private const int ANCESTOR_LEVELS = 4;
 
-    public function __construct(private MediaUrlKind $kind)
-    {
+    public function __construct(
+        private MediaUrlKind $kind,
+        private PageFurniture $furniture,
+        private PlayerPoster $playerPoster,
+    ) {
     }
 
     /** @return list<TeaserPlayerModel> */
@@ -44,7 +47,7 @@ final readonly class TeaserPlayerScanner
         $teasers = [];
         $seen = [];
         foreach ($document->querySelectorAll('*') as $element) {
-            if (PageFurniture::holds($element)) {
+            if ($this->furniture->holds($element)) {
                 continue;
             }
             $file = $this->playableFileOn($element);
@@ -53,7 +56,7 @@ final readonly class TeaserPlayerScanner
                 continue;
             }
             $seen[spl_object_id($player)] = true;
-            $poster = PlayerPoster::near($player);
+            $poster = $this->playerPoster->near($player);
             if ($poster !== null) {
                 [$caption, $link] = $this->captionAndLink($player);
                 $teasers[$file->url] ??= new TeaserPlayerModel(

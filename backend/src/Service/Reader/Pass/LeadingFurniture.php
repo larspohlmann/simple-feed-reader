@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Reader\Pass;
 
 use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\LeadingBlockJudge;
+use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Reader\Support\BlockText;
 use App\Service\Reader\Support\LeadingEngagementBlocks;
-use App\Service\Reader\Support\LeadingEngagementRules;
 
 /**
  * Decides which leading blocks are article-head furniture rather than content,
@@ -17,8 +18,12 @@ use App\Service\Reader\Support\LeadingEngagementRules;
  */
 final readonly class LeadingFurniture
 {
-    public function __construct(private ?string $entryAuthor, private DateLineRecognizer $dateLines)
-    {
+    public function __construct(
+        private ?string $entryAuthor,
+        private DateLineRecognizer $dateLines,
+        private LeadingBlockJudge $judge,
+        private LeadingEngagementRules $rules,
+    ) {
     }
 
     /**
@@ -45,7 +50,7 @@ final readonly class LeadingFurniture
 
     public function matches(LeadingBlockModel $block): bool
     {
-        if (LeadingEngagementBlocks::isProtectedContent($block->element)) {
+        if ($this->judge->isProtectedContent($block->element)) {
             return false;
         }
 
@@ -58,21 +63,21 @@ final readonly class LeadingFurniture
     {
         $linkTextLength = BlockText::linkTextLength($block->element);
 
-        return LeadingEngagementRules::isSeparatorOnly($block->text)
-            || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
-            || LeadingEngagementRules::isKicker($block->text, $linkTextLength);
+        return $this->rules->isSeparatorOnly($block->text)
+            || $this->rules->isNavigationLabel($block->text, $linkTextLength)
+            || $this->rules->isKicker($block->text, $linkTextLength);
     }
 
     /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */
     private function isEngagementMeta(LeadingBlockModel $block): bool
     {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
-            || LeadingEngagementRules::isBareNumber($block->text)
-            || LeadingEngagementRules::isReadingTime($block->text)
+        return $this->rules->isEmojiOnly($block->text)
+            || $this->rules->isCounter($block->text)
+            || $this->rules->isBareNumber($block->text)
+            || $this->rules->isReadingTime($block->text)
             || $this->dateLines->isDateLine($block->text)
             || LeadingEngagementBlocks::isTimeOnly($block->element)
-            || ($this->hasAuthor() && LeadingEngagementRules::isByline($block->text));
+            || ($this->hasAuthor() && $this->rules->isByline($block->text));
     }
 
     /** @param list<LeadingBlockModel> $blocks */
@@ -80,7 +85,7 @@ final readonly class LeadingFurniture
     {
         $count = count($blocks);
         for ($index = $from; $index < $count; $index++) {
-            if (LeadingEngagementBlocks::isProse($blocks[$index])) {
+            if ($this->judge->isProse($blocks[$index])) {
                 return $index;
             }
         }
@@ -102,6 +107,6 @@ final readonly class LeadingFurniture
 
     private function hasAuthor(): bool
     {
-        return LeadingEngagementRules::hasAuthor($this->entryAuthor);
+        return $this->rules->hasAuthor($this->entryAuthor);
     }
 }

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Media\Support;
+namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class PageFurnitureTest extends TestCase
@@ -17,7 +17,7 @@ final class PageFurnitureTest extends TestCase
         $element = $document->querySelector('#x');
         self::assertNotNull($element);
 
-        return PageFurniture::holds($element);
+        return (new PageFurniture())->holds($element);
     }
 
     public function testASidebarIsFurniture(): void

@@ -9,16 +9,11 @@ use App\Service\Reader\ExtractionCoverageGate;
 use App\Service\Reader\Model\EntryHintsModel;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\BodyShapeMarkers;
-use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\LeadingChromeMarkers;
-use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\AuditFindingModel;
 use App\Service\ReaderAudit\Model\ReaderLinkModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\ReaderAuditRunner;
-use App\Service\ReaderAudit\SocialWidgetMarkers;
+use App\Tests\Support\AuditMarkers;
 use App\Tests\Support\FakeArticleExtractor;
 use PHPUnit\Framework\TestCase;
 
@@ -81,7 +76,12 @@ final class ReaderAuditRunnerTest extends TestCase
         $extractor->willReturn(
             ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null),
         );
-        $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
+        $runner = new ReaderAuditRunner(
+            $extractor,
+            new ExtractionCoverageGate(),
+            AuditMarkers::cleanupMarkers(),
+            AuditMarkers::leadingRegion(),
+        );
         $entry = new SampledEntryModel(
             7,
             42,
@@ -172,7 +172,12 @@ final class ReaderAuditRunnerTest extends TestCase
             null,
         ));
 
-        $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
+        $runner = new ReaderAuditRunner(
+            $extractor,
+            new ExtractionCoverageGate(),
+            AuditMarkers::cleanupMarkers(),
+            AuditMarkers::leadingRegion(),
+        );
         $entry = new SampledEntryModel(
             7,
             42,
@@ -198,7 +203,12 @@ final class ReaderAuditRunnerTest extends TestCase
         $extractor->willReturn(
             ExtractionResultModel::ok('https://example.test/a', 'Titel', null, null, '<p>x</p>', null),
         );
-        $runner = new ReaderAuditRunner($extractor, new ExtractionCoverageGate(), $this->markers());
+        $runner = new ReaderAuditRunner(
+            $extractor,
+            new ExtractionCoverageGate(),
+            AuditMarkers::cleanupMarkers(),
+            AuditMarkers::leadingRegion(),
+        );
 
         $entries = [
             new SampledEntryModel(1, 42, 11, 'A', 'Eins', 'https://example.test/1', null, false),
@@ -226,29 +236,13 @@ final class ReaderAuditRunnerTest extends TestCase
         self::assertSame(['chars' => 0], $finding->metrics);
     }
 
-    private function markers(): CleanupMarkers
-    {
-        return new CleanupMarkers(
-            new LeadingChromeMarkers(),
-            new LeadingEngagementMarkers(),
-            new SocialWidgetMarkers(),
-            new BodyShapeMarkers(),
-            new PhraseMarkers(),
-        );
-    }
-
     private function auditOne(ArticleExtractorInterface $extractor): AuditFindingModel
     {
         $runner = new ReaderAuditRunner(
             $extractor,
             new ExtractionCoverageGate(),
-            new CleanupMarkers(
-                new LeadingChromeMarkers(),
-                new LeadingEngagementMarkers(),
-                new SocialWidgetMarkers(),
-                new BodyShapeMarkers(),
-                new PhraseMarkers(),
-            ),
+            AuditMarkers::cleanupMarkers(),
+            AuditMarkers::leadingRegion(),
         );
 
         $entry = new SampledEntryModel(

@@ -10,7 +10,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -33,6 +33,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     public function __construct(
         private MediaUrlKind $mediaUrlKind,
         private EmbedProviders $embedProviders,
+        private PageFurniture $furniture,
     ) {
     }
 
@@ -40,7 +41,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     {
         $found = [];
         foreach (JsonLd::scriptsIn($page->document) as $script) {
-            if (PageFurniture::holds($script)) {
+            if ($this->furniture->holds($script)) {
                 continue;
             }
             foreach ($this->declarationsIn(JsonLd::decode($script)) as $declaration) {

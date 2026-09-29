@@ -8,8 +8,8 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
 use App\Service\Reader\Media\Sibling\Model\SiblingModel;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\Support\KeyedOccurrences;
-use App\Service\Reader\Media\Sibling\Support\NearbyPoster;
 
 /**
  * One page's sibling search: the raw HTML is per-pass state, bound once here
@@ -22,7 +22,7 @@ final readonly class SiblingSearch
     private const string NUMBERED_SUFFIX = '/-\d+$/';
     private const int MAX_SIBLINGS = 5;
 
-    public function __construct(private string $pageHtml)
+    public function __construct(private string $pageHtml, private NearbyPoster $nearbyPoster)
     {
     }
 
@@ -79,7 +79,7 @@ final readonly class SiblingSearch
         if ($this->namedInsideAUrl($sibling->id)) {
             return null;
         }
-        $poster = NearbyPoster::after($this->pageHtml, $sibling->position);
+        $poster = $this->nearbyPoster->after($this->pageHtml, $sibling->position);
 
         return $poster === null
             ? null

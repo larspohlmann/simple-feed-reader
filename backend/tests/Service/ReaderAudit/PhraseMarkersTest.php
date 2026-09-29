@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\Support\SuspiciousPhrases;
+use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 
 final class PhraseMarkersTest extends TestCase
@@ -22,7 +23,7 @@ final class PhraseMarkersTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markers = new PhraseMarkers();
+        $this->markers = AuditMarkers::phrases();
     }
 
     public function testReportsAShareRowTheWidgetRemoverLeftBehind(): void

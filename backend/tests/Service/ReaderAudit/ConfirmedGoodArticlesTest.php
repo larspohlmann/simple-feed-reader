@@ -5,14 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\BodyShapeMarkers;
-use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\LeadingChromeMarkers;
-use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SocialWidgetMarkers;
+use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -55,7 +50,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
 
         $body = ExtractedBodyModel::fromHtml('<h1>Der Abschied vom Einzelzimmer</h1><p>' . $standfirst . '</p>');
 
-        self::assertCount(1, $body->leadingBlocks());
+        self::assertCount(1, AuditMarkers::leadingRegion()->blocksOf($body));
     }
 
     public function testAKickerRunIntoTheHeadlineIsNotTheHeadlineRepeated(): void
@@ -160,13 +155,7 @@ final class ConfirmedGoodArticlesTest extends TestCase
         string $entryTitle = 'Eine Schlagzeile',
         ?string $feedContentHtml = null,
     ): array {
-        $markers = new CleanupMarkers(
-            new LeadingChromeMarkers(),
-            new LeadingEngagementMarkers(),
-            new SocialWidgetMarkers(),
-            new BodyShapeMarkers(),
-            new PhraseMarkers(),
-        );
+        $markers = AuditMarkers::cleanupMarkers();
         $entry = new SampledEntryModel(
             7,
             42,

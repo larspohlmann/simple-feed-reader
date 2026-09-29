@@ -6,8 +6,9 @@ namespace App\Tests\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\PictureSources;
-use App\Service\Reader\PageRepair\CustomElementUnwrapper;
 use App\Service\Reader\FetchedPageNormalizer;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\PageRepair\CustomElementUnwrapper;
 use App\Service\Reader\PageRepair\HeadingClassRemover;
 use App\Service\Reader\PageRepair\HorizontalRuleUnwrapper;
 use App\Service\Reader\PageRepair\ImageButtonUnwrapper;
@@ -45,7 +46,7 @@ final class FetchedPageNormalizerTest extends TestCase
             new SubstackGatedVideoPlaceholder(),
             new ScreenReaderOnlyElementRemover(),
             new OrphanIconGlyphRemover(),
-            new ImageWrapperClassRemover(),
+            new ImageWrapperClassRemover(new PageFurniture()),
             new HeadingClassRemover(),
             new HorizontalRuleUnwrapper(),
         ];

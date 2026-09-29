@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling\Support;
+namespace App\Service\Reader\Media\Sibling;
 
 /** The largest still declared within reach of a position — a player config lists its poster's renditions beside its id. */
 final readonly class NearbyPoster
@@ -13,7 +13,7 @@ final readonly class NearbyPoster
     private const string NEVER_AN_IMAGE = '#\.(m3u8|mp4|mp3|js|css|json)(\?|$)#i';
     private const string DIMENSIONS = '/(\d+)x(\d+)/';
 
-    public static function after(string $html, int $position): ?string
+    public function after(string $html, int $position): ?string
     {
         preg_match_all(self::HTTPS_URL, substr($html, $position, self::WINDOW), $matches);
         $best = null;
@@ -44,9 +44,5 @@ final readonly class NearbyPoster
         [, $width, $height] = $matches[$count - 1];
 
         return (int) $width * (int) $height;
-    }
-
-    private function __construct()
-    {
     }
 }
