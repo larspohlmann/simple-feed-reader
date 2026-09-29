@@ -25,6 +25,7 @@ final readonly class ArticleReadability
         private FetchedPageNormalizer $normalizer,
         private RelatedTeaserGridRemover $teaserGridRemover,
         private EmbedProviders $embedProviders,
+        private ArticleContentGate $contentGate,
     ) {
     }
 
@@ -76,7 +77,7 @@ final readonly class ArticleReadability
             return $conservative;
         }
 
-        return ArticleContentGate::textLength($collapsed) > ArticleContentGate::textLength($conservative)
+        return $this->contentGate->textLength($collapsed) > $this->contentGate->textLength($conservative)
             ? $collapsed
             : $conservative;
     }

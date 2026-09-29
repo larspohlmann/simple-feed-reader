@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
@@ -26,7 +27,7 @@ final class AuthorBioSeparatorTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->separator = new AuthorBioSeparator();
+        $this->separator = new AuthorBioSeparator(new AuthorProfileLink());
     }
 
     public function testWrapsTheTrailingBioContainerThatFollowsTheArticleBody(): void

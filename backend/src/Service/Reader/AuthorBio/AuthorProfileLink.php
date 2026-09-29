@@ -11,7 +11,7 @@ use Dom\Element;
  * by a path segment shared across publishers, not by host or link text. It is
  * the signal that marks the trailing furniture of an article as its author bio.
  */
-final class AuthorProfileLink
+final readonly class AuthorProfileLink
 {
     private const array PROFILE_SEGMENTS = [
         'author', 'authors', 'autor', 'autoren',
@@ -19,7 +19,7 @@ final class AuthorProfileLink
         'kolumnist', 'kolumnisten', 'profile', 'staff', 'redaktion', 'journalist',
     ];
 
-    public static function isPresentIn(Element $element): bool
+    public function isPresentIn(Element $element): bool
     {
         foreach ($element->getElementsByTagName('a') as $link) {
             if (self::pointsToProfile($link->getAttribute('href') ?? '')) {
@@ -40,9 +40,5 @@ final class AuthorProfileLink
         $segments = explode('/', strtolower($path));
 
         return array_intersect($segments, self::PROFILE_SEGMENTS) !== [];
-    }
-
-    private function __construct()
-    {
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
@@ -78,7 +79,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new AuthorBioSeparator(),
+            new AuthorBioSeparator(new AuthorProfileLink()),
             new FeedDimensionStamper(),
         ];
     }

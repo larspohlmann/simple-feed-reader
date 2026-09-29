@@ -24,6 +24,10 @@ final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
 {
     private const int SUBSTANTIAL_PROSE_LENGTH = 200;
 
+    public function __construct(private AuthorProfileLink $authorProfileLink)
+    {
+    }
+
     public function cleanIn(BodyCleaningPass $pass): void
     {
         $this->separateIn($pass->document);
@@ -121,7 +125,7 @@ final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
             return false;
         }
 
-        return array_any($tail, static fn (Element $block): bool => AuthorProfileLink::isPresentIn($block));
+        return array_any($tail, $this->authorProfileLink->isPresentIn(...));
     }
 
     /** @param non-empty-list<Element> $tail */

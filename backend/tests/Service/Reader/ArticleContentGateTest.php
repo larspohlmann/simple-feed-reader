@@ -19,7 +19,10 @@ final class ArticleContentGateTest extends TestCase
     {
         $article = $this->article('<p>body</p>', str_repeat('a', 200));
 
-        self::assertSame('<p>body</p>', ArticleContentGate::contentOf($article, ArticleMediaModel::none()));
+        self::assertSame('<p>body</p>', (new ArticleContentGate())->contentOf(
+            $article,
+            ArticleMediaModel::none(),
+        ));
     }
 
     public function testRefusesAnArticleReadabilityFoundNoContentFor(): void
@@ -36,8 +39,9 @@ final class ArticleContentGateTest extends TestCase
     public function testAcceptsAShortArticleWhoseMediaCarriesIt(): void
     {
         $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/clip.mp4')]);
+        $gate = new ArticleContentGate();
 
-        self::assertSame('<p>body</p>', ArticleContentGate::contentOf($this->article('<p>body</p>', 'short'), $media));
+        self::assertSame('<p>body</p>', $gate->contentOf($this->article('<p>body</p>', 'short'), $media));
     }
 
     public function testCountsTheCharactersOfTheTrimmedText(): void
@@ -50,7 +54,7 @@ final class ArticleContentGateTest extends TestCase
     private function assertRefused(Article $article, ArticleMediaModel $media): void
     {
         try {
-            ArticleContentGate::contentOf($article, $media);
+            (new ArticleContentGate())->contentOf($article, $media);
             self::fail('Expected the article to be refused.');
         } catch (ArticleNotExtractedException $refusal) {
             self::assertSame(ExtractionFailure::Empty, $refusal->failure);

@@ -13,6 +13,7 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
+use App\Service\Reader\ArticleContentGate;
 use App\Service\Reader\ArticleExtractor\ArticleExtractor;
 use App\Service\Reader\ArticlePageReader;
 use App\Service\Reader\ArticleReadability;
@@ -125,6 +126,7 @@ final class ArticleExtractorTest extends TestCase
                 new SiblingMediaExtender(new SiblingIdRule(new NearbyPoster()), $landing, $this->urlKind()),
             ),
             $this->articleReadability(),
+            new ArticleContentGate(),
         );
     }
 
@@ -172,6 +174,7 @@ final class ArticleExtractorTest extends TestCase
             new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             new RelatedTeaserGridRemover(),
             $this->providers(),
+            new ArticleContentGate(),
         );
     }
 
@@ -524,6 +527,7 @@ final class ArticleExtractorTest extends TestCase
                 new SiblingMediaExtender(new SiblingIdRule(new NearbyPoster()), $landing, $this->urlKind()),
             ),
             $this->articleReadability(),
+            new ArticleContentGate(),
         );
 
         $result = $extractor->extract('http://169.254.169.254/');

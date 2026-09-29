@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\ArticleContentGate;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\Media\EmbedProviders;
@@ -25,7 +26,12 @@ final class ArticleReadabilityTest extends TestCase
             (string) file_get_contents(__DIR__ . '/../../Fixtures/reader/article-block-components.html'),
         );
         $normalizer = new FetchedPageNormalizer([]);
-        $readability = new ArticleReadability($normalizer, new RelatedTeaserGridRemover(), new EmbedProviders([]));
+        $readability = new ArticleReadability(
+            $normalizer,
+            new RelatedTeaserGridRemover(),
+            new EmbedProviders([]),
+            new ArticleContentGate(),
+        );
         $page = new PageResponseModel('https://site.test/post', $html);
 
         $article = $readability->richest($normalizer->normalize($html), $page, []);
