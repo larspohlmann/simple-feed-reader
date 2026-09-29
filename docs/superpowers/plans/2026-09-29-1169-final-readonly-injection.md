@@ -285,7 +285,7 @@ All ruled; the plan is written as ruled.
 
 ## Execution rulings (PR C)
 
-- **F9: strict types everywhere (final review B, M-1 and M-2; planner ruling).** A new PR F tooling task. `declare(strict_types=1)` goes into the seven Symfony recipe entry points (`public/index.php`, `bin/console` and the others). `Generic.PHP.RequireStrictTypes` alone (not full PSR-12, which generated migrations would fail) is scoped to `migrations/`, `bin/` (`bin/console` listed explicitly: no `.php` extension) and `public/`, and to the `tests/PhpStan` fixtures unless that clashes with their deliberate PSR-12 exclusion. Control: before the declarations, the sniff over the new paths lists exactly the seven entry points. Deletion checks, FAIL quoted: drop the declaration from one migration; separately from `bin/console`.
+- **F9: strict types everywhere (final review B, M-1; planner ruling, revised on Lars's word).** A new PR F tooling task. Symfony's own recipe files stay as shipped: the seven entry points (`public/index.php`, `bin/console` and the others from Flex recipes) get no declaration, and `bin/` and `public/` stay outside the sniff. `Generic.PHP.RequireStrictTypes` alone (not full PSR-12, which generated migrations would fail) is extended to `migrations/` (every migration already declares strict types) and to the `tests/PhpStan` fixtures unless that clashes with their deliberate PSR-12 exclusion. Control: before any edit, the sniff over the new paths prints nothing. Deletion check, FAIL quoted: drop the declaration from one migration. PR F's body says in one line that the recipe entry points are deliberately left as shipped.
 
 ## Global Constraints
 
