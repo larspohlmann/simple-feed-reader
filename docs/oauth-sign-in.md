@@ -232,6 +232,57 @@ between a callback and its exchange: starting a fresh sign-in in that gap
 replaces the binding the pending code needs, and the pending exchange fails with
 `invalid_token`. Starting again works.
 
+#### The login code
+
+The code in the callback's redirect is 64 hex characters from
+`random_bytes(32)`. It expires 30 seconds after issue — a read never extends the
+window, or a code captured from a log would live as long as something kept
+touching it — and it dies on first use. The cache holds the user id, not a JWT:
+the token is minted at the exchange, so its `iat` is the moment the session
+began, which is what revoking tokens on a password change compares against.
+
+Issuing a code stores a digest of the flow cookie the callback authenticated,
+and the exchange compares the cookie it receives against that digest with
+`hash_equals`. The binding reuses the flow cookie rather than minting a second
+secret, so there is one cookie name, one set of attributes and one lifetime to
+keep in step.
+
+The account-status gate runs at the exchange, not at the callback: a
+`pending_approval` or `suspended` user still receives a login code, and the
+exchange answers with the `403` of section 7.4, which says why, instead of a
+redirect that could only say "something went wrong".
+
+#### Storage and the accepted race
+
+Neither store keeps a state, a login code or a flow cookie in readable form.
+The cache key is a SHA-256 digest of the state or the code, and the binding is a
+digest of the cookie: while a flow is live each of them is a bearer credential,
+and on shared hosting the cache pool is a directory of files this application
+does not own exclusively, so a directory listing must not be a list of usable
+values. A plain SHA-256 is enough — no salt, no work factor — because every
+input is 32 bytes from `random_bytes()`, with no guessable preimage to protect.
+The cookie's value is minted by the server when the flow starts and never
+accepted from the caller, or an attacker could pin the binding to a value they
+already know.
+
+Both stores delete an entry before validating it, so a failed check burns the
+state or the code instead of leaving it open to another guess. Single use is
+still best effort under concurrency: PSR-6 has no compare-and-swap, and
+`deleteItem()` reports success whether or not the key existed, so two requests
+arriving together can both read the entry.
+
+- Two callbacks carrying one state both spend the same authorization code at the
+  provider, which accepts it once. The race costs a round trip and cannot
+  produce two sessions.
+- Two exchanges carrying one login code both get a JWT for the same user. Both
+  racers already held the unguessable code, the second token is worth no more
+  than the first and expires on the same schedule, and nothing crosses a user
+  boundary.
+
+A lock on every callback and exchange would close the window at a real
+per-request cost on shared hosting, against no threat. The race is accepted, not
+overlooked.
+
 ### 4.3 `APP_FRONTEND_URL` is the CORS origin
 
 The SPA's exchange call is a **credentialed cross-origin request** whenever the
@@ -264,6 +315,32 @@ Those are different *origins*, so CORS applies and the configuration above is
 required. They are the same *site*, because ports play no part in a site — so
 the flow cookie is not a third-party cookie locally, and `SameSite` is not what
 makes local development work. See section 4.4.
+
+#### Why a hand-written listener
+
+`CorsListener` implements this policy in one class instead of using
+`nelmio/cors-bundle`. The bundle suits several client origins, per-path rules or
+wildcards; this API has exactly one origin, known at deployment. The bundle's
+headline options — `allow_origin: ['*']` and regex patterns — are precisely the
+mistakes that matter here, each one line away and caught by no test, while a
+listener with no wildcard to reach for shows the whole policy at once. Revisit
+this if a second origin ever becomes legitimate.
+
+Three details of the listener are load-bearing:
+
+- It writes the **configured** origin into `Access-Control-Allow-Origin`, never
+  the request's `Origin` header. The two are equal whenever anything is emitted,
+  but reflecting the request's origin is how a CORS configuration turns into
+  "any origin, with credentials".
+- An `APP_FRONTEND_URL` that does not parse as an absolute URL turns CORS off
+  entirely. A misconfiguration must break the SPA loudly, not widen who may call
+  the API with cookies attached.
+- It answers an allowed preflight ahead of the router and the firewall
+  (priority 250), because a preflight carries no cookie and no `Authorization`
+  header and would otherwise draw a `405` or a `401`. A preflight from any other
+  origin falls through to the router, so the listener never turns an unknown URL
+  into a `204`. Every response carries `Vary: Origin`, allowed or not, so a
+  shared cache cannot serve one origin's answer to another.
 
 ### 4.4 Third-party cookie restrictions: the honest position
 
@@ -541,7 +618,7 @@ none of which contain a decision worth agonising over:
 | `isConfigured()` | `false` when the deployment has no credentials, so the provider 404s instead of redirecting to a broken consent screen. |
 | `getAuthorizationEndpoint()` | A **constant**, never configuration. |
 | `getScope()` | The narrowest scope that yields a verified email. |
-| `getTokenEndpoint()` | A **constant**. See below — this one is load-bearing. |
+| `getTokenEndpointUrl()` | A **constant**. See below — this one is load-bearing. |
 | `getIssuers()` | Accepted `iss` values. A list, because Google mints two spellings. |
 | `getClientId()` / `getClientSecret()` | Usually constructor-injected env vars. Apple overrides the secret to mint a fresh ES256 JWT per exchange. |
 
@@ -551,13 +628,14 @@ current instance. Everything else about the authorization request, PKCE
 included, is assembled by the `final` `getAuthorizationUrl()` on the parent and
 is not yours to change.
 
-**`getTokenEndpoint()` and `getAuthorizationEndpoint()` must be constants, and
-that is a security requirement, not a style preference.** This codebase does not
-verify the ID token's signature; it relies on the OIDC §3.1.3.7 carve-out that
-lets validated TLS to a *pinned* endpoint stand in for one. A token endpoint
-that a deployment — or worse, a request — could move would withdraw the premise
-the whole exchange rests on. `AbstractOidcProvider`'s class docblock spells out
-all three conditions. Read it before you touch that method.
+**`getTokenEndpointUrl()` and `getAuthorizationEndpoint()` must be constants,
+and that is a security requirement, not a style preference.** This codebase does
+not verify the ID token's signature; it relies on the OIDC §3.1.3.7 carve-out
+that lets validated TLS to a *pinned* endpoint stand in for one. A token
+endpoint that a deployment — or worse, a request — could move would withdraw the
+premise the whole exchange rests on.
+[The ID-token trust boundary](#the-id-token-trust-boundary) spells out every
+condition. Read it before you touch either method.
 
 ### 8.2 The registration you do *not* write
 
@@ -625,3 +703,71 @@ unique on `(provider, provider_user_id)`. No admin change: the queue reads
 whatever names are in that column. No account-linking change: linking is by
 provider-verified email address, and a provider that returns no address gets the
 same `<provider>-<hash>@oauth.invalid` placeholder Apple already gets.
+
+### The ID-token trust boundary
+
+This application does not verify the signature of the ID tokens it accepts,
+and that is deliberate. OpenID Connect Core §3.1.3.7 item 6 allows it in one
+case only:
+
+> If the ID Token is received via direct communication between the Client and
+> the Token Endpoint (which it is in this flow), the TLS server validation MAY be
+> used to validate the issuer in place of checking the token signature.
+
+Read narrowly, the carve-out vouches only for who issued the token, and only for
+a token pulled straight off the token endpoint over TLS this application
+validated. It is not a general permission to skip signatures. Three classes keep
+the precondition true, and `OidcBoundaryTest` fails the build if one of them
+loosens:
+
+- **`TokenEndpoint`** makes the call. Its URL is a constant of the provider
+  class, so no claim, header or request parameter can nominate the authority
+  that vouches for a token. A non-`https` URL is refused before any request;
+  `verify_peer` and `verify_host` are restated at the call site so a
+  `framework.http_client.default_options` edit elsewhere cannot withdraw them;
+  and `max_redirects` is 0, because a followed redirect would mean the bytes came
+  from a host other than the pinned one. The class is `final`, and it is the
+  only place that constructs an `IdTokenModel`.
+- **`IdTokenModel`** is that precondition as a type. It parses nothing; it
+  exists so that "where did this token come from" is checked at every call site
+  instead of remembered.
+- **`IdTokenVerifier`** accepts only an `IdTokenModel`, never a string, and
+  checks everything TLS says nothing about: `iss`, `aud`, `azp`, `exp` (with 60
+  seconds of clock skew), `nonce` and `sub`. Every check throws the same
+  `OAuthFailedException`; only its log detail differs, so a caller cannot tell
+  "no such client" from "expired token".
+
+Neither the type nor the test stops someone deliberately writing
+`new IdTokenModel($jwt)` around a token from elsewhere. Apple's `form_post`
+callback carries exactly such a token in its body. It did not come from the
+token endpoint, so the carve-out does not cover it: reading it would need JWKS
+signature verification this codebase does not implement, and wrapping it in an
+`IdTokenModel` to reuse the verifier would skip the only check standing behind
+that channel. The callback reads only the `code`.
+
+Rules inside the verifier that look as if they could be relaxed, and must not
+be:
+
+- **`azp`.** Item 5 is enforced: a present `azp` must name this client. Item 4's
+  companion SHOULD — require `azp` when `aud` has several values — is
+  deliberately not: it identifies the presenter when several parties could
+  present a token, and here only this application ever can, from a hard-coded
+  endpoint with its own client secret. Enforcing it would reject nothing an
+  attacker can send, and would break the day a provider adds a second audience.
+- **`sub`.** The subject is half of `user_identity`'s unique key and is stored
+  byte for byte. An empty subject would put every such user on one row.
+  Surrounding whitespace is refused, not trimmed, because `"123"` and `" 123 "`
+  would be two rows for one provider account. C0 control characters are refused
+  because a NUL truncates in logs, monitoring and some database drivers, so
+  `"1\0a"` and `"1\0b"` may collide downstream. Neither Google (decimal strings)
+  nor Apple (opaque tokens) sends anything these rules reject.
+- **`email_verified`.** Only a JSON `true` (Google) or the string `"true"`
+  (Apple) counts. `"TRUE"` is not case-folded and nothing is cast —
+  `(bool) "false"` is `true`. The two mistakes are not symmetric: reading a
+  verified address as unverified turns an account link into a new signup, while
+  reading an unverified one as verified hands an existing account to whoever
+  typed the address.
+- **`nonce`.** An empty expected nonce would match a token carrying an empty
+  one. `AbstractOidcProvider::exchangeCode()` refuses it before the token call,
+  so a broken caller does not burn a single-use code, and the verifier refuses
+  it again.
