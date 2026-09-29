@@ -64,9 +64,6 @@ final class Rss2ParserTest extends TestCase
 
     public function testExtractsImageUrlFromMediaEnclosureOrInlineHtml(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
@@ -104,12 +101,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
     {
-        // A utopia.de-shaped item: no media:*, no enclosure, no inline <img> —
-        // only the non-standard <image>/<image_big> item elements. The larger
-        // variant wins, and its declared dimensions are kept.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
+        // Only the non-standard <image>/<image_big> item elements: the larger variant wins, with its dimensions.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0">
@@ -140,11 +132,7 @@ final class Rss2ParserTest extends TestCase
 
     public function testMediaImageWinsWhenEveryImageSourceIsPresent(): void
     {
-        // Media RSS outranks an enclosure, a custom <image_big> and an inline
-        // <img> alike: a dedicated feed image must never lose to a body picture.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
+        // A dedicated feed image must never lose to a body picture.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
@@ -171,9 +159,6 @@ final class Rss2ParserTest extends TestCase
 
     public function testEnclosureWinsOverCustomImageAndInlineImg(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0">
@@ -199,9 +184,6 @@ final class Rss2ParserTest extends TestCase
 
     public function testCustomImageElementWinsOverAnInlineImg(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0">
@@ -229,13 +211,6 @@ final class Rss2ParserTest extends TestCase
 
     public function testTitlesAreReducedToPlainText(): void
     {
-        // Both the feed and the item title carry entity-escaped HTML: the <em>
-        // markup and the &#8220;/&#8221; curly-quote references that real feeds
-        // ship. The XML reader decodes those one level, leaving literal tags and
-        // references that must not surface in the reader.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0">
@@ -267,10 +242,6 @@ final class Rss2ParserTest extends TestCase
 
     public function testPrefersTheRealLinkOverASelfReferencingAtomLink(): void
     {
-        // Al Jazeera and many other RSS 2.0 feeds open the channel with an
-        // <atom:link rel="self"/>. It shares the local name "link" and carries
-        // no text, and returning on that first match left those feeds with no
-        // site URL at all.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">

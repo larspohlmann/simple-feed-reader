@@ -21,9 +21,6 @@ final class ItemImageExtractorTest extends TestCase
     private function item(string $innerXml): \DOMElement
     {
         $document = new \DOMDocument();
-        // @lang TEXT: the `media` prefix is used by the `$innerXml` the callers
-        // splice in, which the XML PhpStorm injects here cannot see, so it
-        // reports the namespace declaration as unused.
         /** @noinspection XmlUnusedNamespaceDeclaration */
         $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
             . $innerXml
@@ -108,11 +105,8 @@ final class ItemImageExtractorTest extends TestCase
     }
 
     /**
-     * The Guardian's real format: a bare <media:content> with width first and no
-     * medium or type at all, the URL carrying an image extension before its query
-     * string. Every other test declares medium="image", which the live feed does
-     * not — this is the case that the extension inference exists for, and whose
-     * absence let the whole feed regress to zero images (#148).
+     * A bare <media:content> with no medium or type, its image extension before the query string: the live shape
+     * extension inference exists for, whose absence left a whole feed without images (#148).
      */
     public function testSelectsAWidestBareMediaContentByImageExtension(): void
     {
@@ -223,12 +217,6 @@ final class ItemImageExtractorTest extends TestCase
         self::assertSame('https://images.utopia.de/x/w:194/h:126/only.jpg', $image->url);
     }
 
-    /**
-     * The standard channel-level <image> nests a <url> child element rather
-     * than declaring a `url` attribute. Requiring the attribute keeps this
-     * source from colliding with it, so an item carrying that shape yields
-     * nothing here.
-     */
     public function testIgnoresAStandardImageElementThatNestsAUrlChild(): void
     {
         self::assertNull($this->extractor->fromCustomImageElement($this->item(
@@ -243,10 +231,6 @@ final class ItemImageExtractorTest extends TestCase
         )));
     }
 
-    /**
-     * A url-bearing element that is not <image>/<image_big> — here an
-     * <enclosure> — must not be mistaken for a custom image element.
-     */
     public function testIgnoresAUrlBearingElementThatIsNotACustomImageElement(): void
     {
         self::assertNull($this->extractor->fromCustomImageElement($this->item(
