@@ -9,14 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * A paywalled Substack podcast/video post extracts to nothing but dead player
- * chrome ("Playback speed / Share post / 0:00 / Preview") above a short teaser.
- * This runs before readability, on the page document, while the player class
- * and the <head> og tags are still intact: the wrapper-chain collapse strips
- * the `shows-video-player-container` class, so the winning collapsed variant
- * showed nothing to a post-readability pass (#627, #748). It drops the dead
- * player and the paywall landmark and puts a poster image that links to the
- * source article in the player's place.
+ * Replaces a paywalled Substack video post's dead player and paywall landmark with a poster linking to the article.
+ * It runs as a page repair, before the wrapper-chain collapse removes the player class it keys on.
  */
 final readonly class SubstackGatedVideoPlaceholder implements PageRepairInterface
 {
@@ -38,7 +32,6 @@ final readonly class SubstackGatedVideoPlaceholder implements PageRepairInterfac
         $this->replacePlayerWithPoster($page, $sourceUrl, $posterUrl);
     }
 
-    /** og:url, or the canonical link when the page carries no og:url. */
     private function sourceUrl(HTMLDocument $page): ?string
     {
         return $this->httpUrlFrom($page, 'meta[property="og:url"]', 'content')
@@ -103,7 +96,6 @@ final readonly class SubstackGatedVideoPlaceholder implements PageRepairInterfac
         return $link;
     }
 
-    /** The attribute's value when it is present and a non-empty http(s) URL. */
     private function httpUrlFrom(HTMLDocument $page, string $selector, string $attribute): ?string
     {
         return AbsoluteHttpUrl::orNull($page->querySelector($selector)?->getAttribute($attribute));

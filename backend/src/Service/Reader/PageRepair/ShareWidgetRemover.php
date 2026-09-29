@@ -10,16 +10,8 @@ use Dom\HTMLDocument;
 use Dom\XPath;
 
 /**
- * Removes social share-button widgets from a fetched page before readability
- * parses it: these widgets carry a stable, distinctive class fingerprint per
- * plugin (Shariff by heise motivated this, #582 — its bar leads the
- * hanfjournal body, rendered as "teilen … merken"), and readability keeps it
- * because it is just a list of links inside the article container.
- *
- * The match is by whole class token, so a widget's container is removed with
- * its buttons while an unrelated class merely containing the fragment
- * (`sharing-hint`, `myshariff`) is left alone. Removal is position-independent:
- * these plugins print the same bar above and below the article, and both go.
+ * Removes share-button widgets, found by a plugin's whole class token, before readability keeps them as a list of
+ * links. A class merely containing a token (`myshariff`) stays; every copy of a bar goes, wherever it sits.
  */
 final readonly class ShareWidgetRemover implements PageRepairInterface
 {
@@ -52,9 +44,7 @@ final readonly class ShareWidgetRemover implements PageRepairInterface
     }
 
     /**
-     * Every element carrying a class attribute, as an array so the tree can be
-     * mutated while the result is walked. An element whose ancestor was already
-     * removed has a null parentNode and is skipped by the caller.
+     * Every element carrying a class attribute, collected before any removal so the tree can change during the walk.
      *
      * @return list<Element>
      */
