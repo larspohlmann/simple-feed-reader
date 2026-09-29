@@ -29,13 +29,14 @@ final class WorkerRunsWithResetTest extends TestCase
 
         self::assertNotSame([], $consumers, $composeFile . ' runs no messenger:consume.');
         foreach ($consumers as $service => $command) {
-            self::assertStringNotContainsString('--no-reset', $command, $service . ' would keep state across messages.');
+            self::assertStringNotContainsString('--no-reset', $command, $service . ' keeps state across messages.');
         }
     }
 
     /** @return array<string, string> */
     private function consumeCommands(string $path): array
     {
+        /** @var array{services: array<string, array{command?: string|list<string>}>} $compose */
         $compose = Yaml::parseFile($path, Yaml::PARSE_CUSTOM_TAGS);
         $consumers = [];
         foreach ($compose['services'] as $name => $service) {
