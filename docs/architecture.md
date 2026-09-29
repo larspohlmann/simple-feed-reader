@@ -188,12 +188,14 @@ and ORM extensions — never imports a service. Decided in #1182.
 - **`App\Dto`** is HTTP input. A controller turns a request DTO into a service value (`$request->toUpdate()`,
   `->toChange()`) or passes a plain field; no domain class imports `App\Dto`.
 
-Repository → Service value imports (`SearchTermsModel`, `LikePattern`, `NormalizedCategoryModel`,
-`MonthWindowModel`, `CompletionUsageModel`…) are an open question; the rule below does not check `App\Repository`.
+A repository speaks the domain's values: it may name a Service `Model/`, `Support/` or `Exception/` class
+(`SearchTermsModel`, `LikePattern`, `MonthWindowModel`) and the `…Interface` it implements, never a service, a DTO
+or a per-call object. `EntryBatchInserter` is the one exception: the restore's bulk insert reads the backup's line
+format and hashes each URL itself, 14 times faster than going through the ORM (#1169).
 
-Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
-`DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code, `App\Doctrine` included), both in `backend/tests/PhpStan/` and run by
-`composer stan`.
+Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`; only
+Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code,
+`App\Doctrine` included), both in `backend/tests/PhpStan/` and run by `composer stan`.
 
 ## 9. Service modules form no cycle
 
