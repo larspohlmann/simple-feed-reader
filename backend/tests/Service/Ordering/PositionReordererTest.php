@@ -26,4 +26,18 @@ final class PositionReordererTest extends TestCase
 
         self::assertSame([1, 2, 0], [$tenth->position, $twentieth->position, $thirtieth->position]);
     }
+
+    public function testReorderFoundLooksEachIdUpAndPositionsItInTheRequestedOrder(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
+        $items = [10 => new RecordingPositioned(), 20 => new RecordingPositioned(), 30 => new RecordingPositioned()];
+
+        (new PositionReorderer($entityManager))->reorderFound(
+            [30, 10, 20],
+            static fn (int $id): RecordingPositioned => $items[$id],
+        );
+
+        self::assertSame([1, 2, 0], [$items[10]->position, $items[20]->position, $items[30]->position]);
+    }
 }

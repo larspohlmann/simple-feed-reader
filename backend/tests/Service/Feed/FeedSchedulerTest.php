@@ -58,6 +58,16 @@ final class FeedSchedulerTest extends TestCase
         self::assertSame('2026-07-21 12:00:00', $feed->getLastNewEntryAt()?->format('Y-m-d H:i:s'));
     }
 
+    public function testAnOddIntervalGrowsRoundedUp(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 7);
+
+        $this->scheduler->recordNotModified($feed);
+
+        self::assertSame(11, $feed->getFetchIntervalMinutes());
+    }
+
     public function testASuccessWithNoNewEntriesLeavesTheLastNewEntryTimeUntouched(): void
     {
         $feed = new Feed('https://example.com/feed');
@@ -69,6 +79,19 @@ final class FeedSchedulerTest extends TestCase
 
         self::assertSame('2026-07-20 08:00:00', $feed->getLastNewEntryAt()?->format('Y-m-d H:i:s'));
         self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
+    }
+
+    public function testANotModifiedFetchGrowsTheIntervalAndAddsNoNewEntryTime(): void
+    {
+        $feed = new Feed('https://example.com/feed');
+        $feed->recordSuccessfulFetch(new \DateTimeImmutable(self::EARLIER), 60);
+        $feed->recordNewEntries(new \DateTimeImmutable('2026-07-20 08:00:00'));
+
+        $this->scheduler->recordNotModified($feed);
+
+        self::assertSame(90, $feed->getFetchIntervalMinutes());
+        self::assertSame('2026-07-21 12:00:00', $feed->getLastSuccessfulFetchAt()?->format('Y-m-d H:i:s'));
+        self::assertSame('2026-07-20 08:00:00', $feed->getLastNewEntryAt()?->format('Y-m-d H:i:s'));
     }
 
     public function testAThrottleCostsTheFeedNothingButItsPlaceInTheQueue(): void

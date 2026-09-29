@@ -15,11 +15,17 @@ final class HtmlDocumentParser
 {
     public static function parse(string $html): HTMLDocument
     {
-        return self::parseOrNull($html)
+        return self::parsed($html)
             ?? throw new UnparseableHtmlException('The HTML is blank or could not be parsed.');
     }
 
-    public static function parseOrNull(string $html): ?HTMLDocument
+    /** A document with nothing in it when the HTML is blank or unreadable: nothing to read is not a failure here. */
+    public static function parseOrEmpty(string $html): HTMLDocument
+    {
+        return self::parsed($html) ?? HTMLDocument::createEmpty();
+    }
+
+    private static function parsed(string $html): ?HTMLDocument
     {
         if (trim($html) === '') {
             return null;

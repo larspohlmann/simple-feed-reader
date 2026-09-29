@@ -27,7 +27,7 @@ final readonly class RestoreEntryLoaderFactory
         private EntryStateRepository $entryStates,
         private EntryBatchInserter $inserter,
         private EntryIndexer $indexer,
-        private RestoredEntryStateFactory $states,
+        private RestoredEntryStateFactory $stateFactory,
         private FeedRepository $feeds,
     ) {
     }
@@ -43,7 +43,7 @@ final readonly class RestoreEntryLoaderFactory
             $this->entryStates,
             $this->inserter,
             $this->indexer,
-            $this->states,
+            $this->stateFactory,
             new RestoreDestination(
                 $user,
                 new RestoreFeedTargets($user->requireId(), $feedIdsByUrl, $this->feeds, $this->entries),

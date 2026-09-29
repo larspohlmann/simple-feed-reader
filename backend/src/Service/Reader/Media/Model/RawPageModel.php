@@ -20,7 +20,7 @@ final readonly class RawPageModel
 
     public static function parse(string $html, string $url): self
     {
-        $document = HtmlDocumentParser::parseOrNull($html) ?? HTMLDocument::createEmpty();
+        $document = HtmlDocumentParser::parseOrEmpty($html);
 
         return new self($document, $html, $url, PageTextBlocksModel::fromDocument($document));
     }

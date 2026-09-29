@@ -28,13 +28,13 @@ final readonly class RestoreLoader
         private BackupReader $reader,
         private FeedRepository $feeds,
         private SavedSearchSlug $savedSearchSlug,
-        private RestoredFoundationFactory $rows,
+        private RestoredFoundationFactory $foundationFactory,
     ) {
     }
 
     public function load(User $user, string $gzipBytes): RestoreResultModel
     {
-        $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug, $this->rows);
+        $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug, $this->foundationFactory);
 
         return $pass->run($user, $this->reader->read($gzipBytes));
     }

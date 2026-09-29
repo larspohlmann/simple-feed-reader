@@ -49,8 +49,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->owned->resolve(
-            [$second->requireId(), $first->requireId()],
             $user->requireId(),
+            [$second->requireId(), $first->requireId()],
         );
 
         self::assertCount(2, $resolved);
@@ -68,8 +68,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->owned->resolve(
-            [$ours->requireId(), $foreign->requireId()],
             $mine->requireId(),
+            [$ours->requireId(), $foreign->requireId()],
         );
     }
 
@@ -79,7 +79,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $this->expectException(InvalidSelectionException::class);
-        $this->owned->resolve([999_999], $user->requireId());
+        $this->owned->resolve($user->requireId(), [999_999]);
     }
 
     public function testRejectsADuplicateId(): void
@@ -91,7 +91,7 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $id = $subscription->requireId();
 
         $this->expectException(InvalidSelectionException::class);
-        $this->owned->resolve([$id, $id], $user->requireId());
+        $this->owned->resolve($user->requireId(), [$id, $id]);
     }
 
     /**
@@ -106,8 +106,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
         $this->em->flush();
 
         $resolved = $this->owned->resolveWithAssociations(
-            [$second->requireId(), $first->requireId()],
             $user->requireId(),
+            [$second->requireId(), $first->requireId()],
         );
 
         self::assertCount(2, $resolved);
@@ -125,8 +125,8 @@ final class OwnedSubscriptionsTest extends KernelTestCase
 
         $this->expectException(InvalidSelectionException::class);
         $this->owned->resolveWithAssociations(
-            [$ours->requireId(), $foreign->requireId()],
             $mine->requireId(),
+            [$ours->requireId(), $foreign->requireId()],
         );
     }
 }

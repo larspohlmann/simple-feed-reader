@@ -34,10 +34,10 @@ final class UrlResolver
             return $origin . $location;
         }
 
-        $path = $parts['path'] ?? '/';
-        $directory = substr($path, 0, (int) strrpos($path, '/') + 1);
+        $segments = explode('/', $parts['path'] ?? '/');
+        array_pop($segments);
 
-        return $origin . ($directory === '' ? '/' : $directory) . $location;
+        return $origin . implode('/', $segments) . '/' . $location;
     }
 
     private function __construct()

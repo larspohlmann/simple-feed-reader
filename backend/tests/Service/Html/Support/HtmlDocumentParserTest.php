@@ -14,25 +14,30 @@ final class HtmlDocumentParserTest extends TestCase
     public function testParsesHtmlIntoADocument(): void
     {
         /** @noinspection HtmlRequiredLangAttribute */
-        $document = HtmlDocumentParser::parseOrNull('<html><body><p>Body</p></body></html>');
+        $document = HtmlDocumentParser::parse('<html><body><p>Body</p></body></html>');
 
-        self::assertNotNull($document);
         self::assertStringContainsString('Body', (string) $document->querySelector('p')?->textContent);
     }
 
     public function testKeepsNonAsciiAsUtf8(): void
     {
         /** @noinspection HtmlRequiredLangAttribute */
-        $document = HtmlDocumentParser::parseOrNull('<html><body><p>Grüße</p></body></html>');
+        $document = HtmlDocumentParser::parse('<html><body><p>Grüße</p></body></html>');
 
-        self::assertNotNull($document);
         self::assertStringContainsString('Grüße', $document->saveHtml());
     }
 
-    public function testBlankInputYieldsNull(): void
+    public function testBlankInputYieldsAnEmptyDocument(): void
     {
-        self::assertNull(HtmlDocumentParser::parseOrNull(''));
-        self::assertNull(HtmlDocumentParser::parseOrNull('   '));
+        self::assertNull(HtmlDocumentParser::parseOrEmpty('')->documentElement);
+        self::assertNull(HtmlDocumentParser::parseOrEmpty('   ')->documentElement);
+    }
+
+    public function testParseOrEmptyHandsBackAParsedDocument(): void
+    {
+        $document = HtmlDocumentParser::parseOrEmpty('<html lang="en"><body><p>Body</p></body></html>');
+
+        self::assertSame('Body', $document->querySelector('p')?->textContent);
     }
 
     public function testParseHandsBackTheDocument(): void

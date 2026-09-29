@@ -20,14 +20,14 @@ final class AccountDeleterTest extends DbTestCase
     private const string NOW = '2026-07-01 10:00:00';
 
     private AccountDeleter $deleter;
-    private UserFactory $users;
+    private UserFactory $userFactory;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->deleter = self::getContainer()->get(AccountDeleter::class);
-        $this->users = new UserFactory(
+        $this->userFactory = new UserFactory(
             $this->em,
             self::getContainer()->get('security.user_password_hasher'),
         );
@@ -35,8 +35,8 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testAdminDeletionRemovesTheAccount(): void
     {
-        $admin = $this->users->create('admin@example.com', roles: ['ROLE_ADMIN']);
-        $target = $this->users->create('target@example.com');
+        $admin = $this->userFactory->create('admin@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target@example.com');
         $targetId = $target->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
@@ -47,8 +47,8 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testDeletionTakesTheAccountsSubscriptionsAndItsSoleFeed(): void
     {
-        $admin = $this->users->create('admin-2@example.com', roles: ['ROLE_ADMIN']);
-        $target = $this->users->create('target-2@example.com');
+        $admin = $this->userFactory->create('admin-2@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-2@example.com');
         $feed = new Feed('https://only-theirs.example.com/rss');
         $this->em->persist($feed);
         $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
@@ -66,9 +66,9 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testDeletionKeepsAFeedAnotherUserStillReads(): void
     {
-        $admin = $this->users->create('admin-3@example.com', roles: ['ROLE_ADMIN']);
-        $target = $this->users->create('target-3@example.com');
-        $stayer = $this->users->create('stayer@example.com');
+        $admin = $this->userFactory->create('admin-3@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-3@example.com');
+        $stayer = $this->userFactory->create('stayer@example.com');
         $feed = new Feed('https://shared-2.example.com/rss');
         $this->em->persist($feed);
         $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
@@ -92,8 +92,8 @@ final class AccountDeleterTest extends DbTestCase
      */
     public function testDeletionTakesTheAccountsAiConfigurations(): void
     {
-        $admin = $this->users->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
-        $target = $this->users->create('target-ai@example.com');
+        $admin = $this->userFactory->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-ai@example.com');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $sealed = $cipher->seal($target->requireId(), 'sk-throwaway1234');
@@ -125,8 +125,8 @@ final class AccountDeleterTest extends DbTestCase
      */
     public function testDeletionResolvesTheActiveAiConfigurationCycle(): void
     {
-        $admin = $this->users->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
-        $target = $this->users->create('target-ai-2@example.com');
+        $admin = $this->userFactory->create('admin-ai-2@example.com', roles: ['ROLE_ADMIN']);
+        $target = $this->userFactory->create('target-ai-2@example.com');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         $sealed = $cipher->seal($target->requireId(), 'sk-throwaway5678');
@@ -159,7 +159,7 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testAnAdminCannotDeleteThemselves(): void
     {
-        $admin = $this->users->create('self@example.com', roles: ['ROLE_ADMIN']);
+        $admin = $this->userFactory->create('self@example.com', roles: ['ROLE_ADMIN']);
 
         $this->expectException(ValidationException::class);
         $this->deleter->deleteAsAdmin($admin, $admin);
@@ -167,8 +167,8 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testTheLastAdminCannotBeDeletedByAnotherAdmin(): void
     {
-        $soleAdmin = $this->users->create('sole@example.com', roles: ['ROLE_ADMIN']);
-        $other = $this->users->create('other@example.com', roles: ['ROLE_ADMIN']);
+        $soleAdmin = $this->userFactory->create('sole@example.com', roles: ['ROLE_ADMIN']);
+        $other = $this->userFactory->create('other@example.com', roles: ['ROLE_ADMIN']);
         $this->deleter->deleteAsAdmin($other, $soleAdmin);
         $this->em->clear();
 
@@ -181,7 +181,7 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testTheLastAdminCannotDeleteThemselves(): void
     {
-        $soleAdmin = $this->users->create('sole-2@example.com', roles: ['ROLE_ADMIN']);
+        $soleAdmin = $this->userFactory->create('sole-2@example.com', roles: ['ROLE_ADMIN']);
 
         $this->expectException(LastAdminException::class);
         $this->deleter->deleteSelf($soleAdmin);
@@ -189,8 +189,8 @@ final class AccountDeleterTest extends DbTestCase
 
     public function testSelfDeletionRemovesTheAccount(): void
     {
-        $this->users->create('keeper-admin@example.com', roles: ['ROLE_ADMIN']);
-        $user = $this->users->create('leaving@example.com');
+        $this->userFactory->create('keeper-admin@example.com', roles: ['ROLE_ADMIN']);
+        $user = $this->userFactory->create('leaving@example.com');
         $userId = $user->requireId();
 
         $this->deleter->deleteSelf($user);

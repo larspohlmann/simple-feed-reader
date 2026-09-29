@@ -24,4 +24,17 @@ final readonly class PositionReorderer
         }
         $this->entityManager->flush();
     }
+
+    /**
+     * @param list<int>                          $orderedIds
+     * @param \Closure(int): PositionedInterface $find throws for an id it does not know
+     */
+    public function reorderFound(array $orderedIds, \Closure $find): void
+    {
+        $byId = [];
+        foreach ($orderedIds as $id) {
+            $byId[$id] = $find($id);
+        }
+        $this->reorder($orderedIds, $byId);
+    }
 }

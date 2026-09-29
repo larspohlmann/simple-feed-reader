@@ -105,10 +105,7 @@ final readonly class ItemImageExtractor
         if ($html === null || $html === '') {
             return null;
         }
-        $document = HtmlDocumentParser::parseOrNull($html);
-        if ($document === null) {
-            return null;
-        }
+        $document = HtmlDocumentParser::parseOrEmpty($html);
         foreach ($document->getElementsByTagName('img') as $element) {
             $image = self::inlineImage($element);
             if ($image !== null && !$image->declaresBeacon()) {

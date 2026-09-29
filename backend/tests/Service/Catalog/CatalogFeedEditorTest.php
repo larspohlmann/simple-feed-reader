@@ -123,6 +123,12 @@ final class CatalogFeedEditorTest extends DbTestCase
         self::assertSame(0, $this->reload($second)->getPosition());
     }
 
+    public function testReorderRefusesAnUnknownFeed(): void
+    {
+        $this->expectException(RecordNotFoundException::class);
+        $this->editor()->reorder([999999]);
+    }
+
     private function editor(): CatalogFeedEditor
     {
         $editor = self::getContainer()->get(CatalogFeedEditor::class);

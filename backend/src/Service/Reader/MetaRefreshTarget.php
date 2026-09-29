@@ -22,10 +22,7 @@ final readonly class MetaRefreshTarget
             return null;
         }
 
-        $document = HtmlDocumentParser::parseOrNull($html);
-        if ($document === null) {
-            return null;
-        }
+        $document = HtmlDocumentParser::parseOrEmpty($html);
 
         $pageUrls = new PageUrls($baseUrl);
         foreach ($document->querySelectorAll('meta[http-equiv]') as $meta) {

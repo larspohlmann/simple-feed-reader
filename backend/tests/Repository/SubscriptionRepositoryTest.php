@@ -37,6 +37,28 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $this->repo()->getOneForUser($stranger->requireId(), $subscription->requireId());
     }
 
+    public function testFindIncludedInAllItemsForUserSkipsHiddenFeedsAndOtherUsers(): void
+    {
+        $owner = $this->userFactory()->create('all-items-owner@example.com');
+        $included = $this->subscriptionToFeed($owner, 'https://example.com/included.xml');
+        $hidden = $this->subscriptionToFeed($owner, 'https://example.com/hidden.xml');
+        $hidden->setIncludeInAllItems(false);
+        $alsoIncluded = $this->subscriptionToFeed($owner, 'https://example.com/also-included.xml');
+        $this->subscriptionToFeed(
+            $this->userFactory()->create('all-items-other@example.com'),
+            'https://example.com/foreign.xml',
+        );
+        $this->em->flush();
+
+        self::assertSame(
+            [$included->requireId(), $alsoIncluded->requireId()],
+            array_map(
+                static fn (Subscription $subscription): int => $subscription->requireId(),
+                $this->repo()->findIncludedInAllItemsForUser($owner->requireId()),
+            ),
+        );
+    }
+
     private function repo(): SubscriptionRepository
     {
         $repo = $this->em->getRepository(Subscription::class);
@@ -55,7 +77,12 @@ final class SubscriptionRepositoryTest extends DbTestCase
 
     private function subscription(User $owner): Subscription
     {
-        $feed = new Feed('https://example.com/owned-lookup.xml');
+        return $this->subscriptionToFeed($owner, 'https://example.com/owned-lookup.xml');
+    }
+
+    private function subscriptionToFeed(User $owner, string $feedUrl): Subscription
+    {
+        $feed = new Feed($feedUrl);
         $this->em->persist($feed);
         $subscription = new Subscription($owner, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($subscription);

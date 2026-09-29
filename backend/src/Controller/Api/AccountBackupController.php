@@ -23,7 +23,7 @@ final readonly class AccountBackupController
 {
     public function __construct(
         private AccountBackupExporter $exporter,
-        private BackupDownloadResponseFactory $downloads,
+        private BackupDownloadResponseFactory $downloadResponseFactory,
         private RestorePreviewer $previewer,
         private AccountRestorer $restorer,
         private EntryPartRestorer $entryPartRestorer,
@@ -33,7 +33,7 @@ final readonly class AccountBackupController
     #[Route('/backup', name: 'api_account_backup', methods: ['GET'])]
     public function backup(#[CurrentUser] User $user, Request $request): StreamedResponse
     {
-        return $this->downloads->stream(
+        return $this->downloadResponseFactory->stream(
             $user->getEmail(),
             $this->exporter->parts($user, $request->getSchemeAndHttpHost()),
         );

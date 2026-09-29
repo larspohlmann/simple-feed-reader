@@ -66,10 +66,7 @@ final readonly class FeedLinkScanner
     /** @return list<FeedCandidateModel> */
     public function scan(string $html, string $baseUrl): array
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        if (null === $document) {
-            return [];
-        }
+        $document = HtmlDocumentParser::parseOrEmpty($html);
 
         $pageUrls = new PageUrls($baseUrl);
         $advertised = $this->advertisedFeeds($document, $pageUrls);

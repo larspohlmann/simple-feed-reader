@@ -56,6 +56,20 @@ final class SubscriptionRepository extends ServiceEntityRepository
         return $rows;
     }
 
+    /** @return list<Subscription> */
+    public function findIncludedInAllItemsForUser(int $userId): array
+    {
+        /** @var list<Subscription> $rows */
+        $rows = $this->createQueryBuilder('s')
+            ->andWhere('s.user = :userId')->setParameter('userId', $userId)
+            ->andWhere('s.includeInAllItems = true')
+            ->orderBy('s.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $rows;
+    }
+
     public function countForUser(int $userId): int
     {
         return (int) $this->createQueryBuilder('s')

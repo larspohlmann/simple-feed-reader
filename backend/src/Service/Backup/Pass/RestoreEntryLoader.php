@@ -52,7 +52,7 @@ final class RestoreEntryLoader
         private readonly RestoreEntryStatesInterface $entryStates,
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
-        private readonly RestoredEntryStateFactory $states,
+        private readonly RestoredEntryStateFactory $stateFactory,
         RestoreDestination $destination,
     ) {
         $this->targets = $destination->feeds;
@@ -113,7 +113,7 @@ final class RestoreEntryLoader
         $entry = $this->em->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
 
-        return $this->states->create($this->user, $entry, $line);
+        return $this->stateFactory->create($this->user, $entry, $line);
     }
 
     private function target(string $feedUrl): RestoreFeedTarget

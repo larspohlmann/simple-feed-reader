@@ -25,7 +25,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class RestorePreviewerTest extends DbTestCase
 {
-    private UserFactory $users;
+    private UserFactory $userFactory;
 
     protected function setUp(): void
     {
@@ -33,7 +33,7 @@ final class RestorePreviewerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->users = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->em, $hasher);
     }
 
     /** @param list<array<string, mixed>> $lines */
@@ -163,7 +163,7 @@ final class RestorePreviewerTest extends DbTestCase
 
     private function makeUser(string $email, ?int $maxSubscriptions = null): User
     {
-        return $this->users->create($email, maxSubscriptions: $maxSubscriptions);
+        return $this->userFactory->create($email, maxSubscriptions: $maxSubscriptions);
     }
 
     /**

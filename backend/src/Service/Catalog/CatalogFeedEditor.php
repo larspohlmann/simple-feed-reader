@@ -50,11 +50,7 @@ final readonly class CatalogFeedEditor
     /** @param list<int> $orderedFeedIds */
     public function reorder(array $orderedFeedIds): void
     {
-        $byId = [];
-        foreach ($orderedFeedIds as $id) {
-            $byId[$id] = $this->feeds->getById($id);
-        }
-        $this->reorderer->reorder($orderedFeedIds, $byId);
+        $this->reorderer->reorderFound($orderedFeedIds, $this->feeds->getById(...));
     }
 
     private function applyEditableFields(CatalogFeed $feed, CatalogFeedDetailsModel $details): void

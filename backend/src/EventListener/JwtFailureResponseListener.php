@@ -22,13 +22,13 @@ final readonly class JwtFailureResponseListener
 {
     public function __construct(
         private ProblemCatalog $problems,
-        private ProblemResponseFactory $responses,
+        private ProblemResponseFactory $responseFactory,
     ) {
     }
 
     public function onJwtFailure(AuthenticationFailureEvent $event): void
     {
         $path = $event->getRequest()?->getPathInfo() ?? '/api';
-        $event->setResponse($this->responses->create($this->problems->resolve($event->getException(), $path)));
+        $event->setResponse($this->responseFactory->create($this->problems->resolve($event->getException(), $path)));
     }
 }

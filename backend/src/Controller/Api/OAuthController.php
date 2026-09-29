@@ -77,7 +77,7 @@ final readonly class OAuthController
         private RateLimitGuard $rateLimitGuard,
         private RateLimiterFactoryInterface $oauthStartLimiter,
         private FlowCookie $flowCookie,
-        private OAuthRedirectFactory $oauthRedirect,
+        private OAuthRedirectFactory $oauthRedirectFactory,
     ) {
     }
 
@@ -155,9 +155,9 @@ final readonly class OAuthController
 
         try {
             // The success redirect leaves the flow cookie set: the exchange one hop later needs the binding.
-            return $this->oauthRedirect->success($this->callback->complete($attempt));
+            return $this->oauthRedirectFactory->success($this->callback->complete($attempt));
         } catch (OAuthCallbackRefusedException $refusal) {
-            return $this->oauthRedirect->failure($refusal->failure->value);
+            return $this->oauthRedirectFactory->failure($refusal->failure->value);
         }
     }
 

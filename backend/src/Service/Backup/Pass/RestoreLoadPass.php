@@ -55,7 +55,7 @@ final class RestoreLoadPass
         private readonly EntityManagerInterface $em,
         private readonly RestoreFeedsInterface $feeds,
         private readonly SavedSearchSlug $slug,
-        private readonly RestoredFoundationFactory $rows,
+        private readonly RestoredFoundationFactory $foundationFactory,
     ) {
     }
 
@@ -102,7 +102,7 @@ final class RestoreLoadPass
 
     private function loadTag(TagLine $line): void
     {
-        $tag = $this->rows->tag($this->user, $line);
+        $tag = $this->foundationFactory->tag($this->user, $line);
         $this->em->persist($tag);
         $this->tagsByName[$line->name] = $tag;
         ++$this->counts['tags'];
@@ -168,7 +168,7 @@ final class RestoreLoadPass
 
     private function createFeed(FeedLine $line): Feed
     {
-        $feed = $this->rows->feed($line);
+        $feed = $this->foundationFactory->feed($line);
         $this->em->persist($feed);
         ++$this->counts['feeds'];
 
@@ -183,7 +183,7 @@ final class RestoreLoadPass
             $line->feedUrl,
         ));
 
-        $subscription = $this->rows->subscription($this->user, $feed, $line);
+        $subscription = $this->foundationFactory->subscription($this->user, $feed, $line);
         foreach ($line->tags as $ref) {
             $subscription->addTag($this->tagNamed($ref->name), $ref->position);
         }

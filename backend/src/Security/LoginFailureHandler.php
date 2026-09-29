@@ -27,7 +27,7 @@ final readonly class LoginFailureHandler implements AuthenticationFailureHandler
     public function __construct(
         private LoginTimingEqualizer $timingEqualizer,
         private ProblemCatalog $problems,
-        private ProblemResponseFactory $responses,
+        private ProblemResponseFactory $responseFactory,
     ) {
     }
 
@@ -36,7 +36,7 @@ final readonly class LoginFailureHandler implements AuthenticationFailureHandler
         // Before building the response: the delay must land inside the window the client measures.
         $this->timingEqualizer->equalize($exception, $this->submittedIdentifier($request));
 
-        return $this->responses->create(
+        return $this->responseFactory->create(
             $this->problems->resolve(self::domainFailure($exception), $request->getPathInfo()),
         );
     }

@@ -39,9 +39,9 @@ final class HtmlTranscoderTest extends TestCase
     {
         $withMeta = '<meta charset="windows-1252">' . self::LATIN1_BODY;
 
-        $reparsed = HtmlDocumentParser::parseOrNull(HtmlTranscoder::toUtf8($withMeta, 'windows-1252'));
+        $reparsed = HtmlDocumentParser::parse(HtmlTranscoder::toUtf8($withMeta, 'windows-1252'));
 
-        self::assertSame('Café crème', (string) $reparsed?->querySelector('p')?->textContent);
+        self::assertSame('Café crème', (string) $reparsed->querySelector('p')?->textContent);
     }
 
     public function testRewritesAStaleHttpEquivCharsetSoALaterParseDecodesTheResultAsUtf8(): void
@@ -49,10 +49,10 @@ final class HtmlTranscoderTest extends TestCase
         $withMeta = '<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">' . self::LATIN1_BODY;
 
         $transcoded = HtmlTranscoder::toUtf8($withMeta, 'windows-1252');
-        $reparsed = HtmlDocumentParser::parseOrNull($transcoded);
+        $reparsed = HtmlDocumentParser::parse($transcoded);
 
         self::assertStringContainsString('content="text/html; charset=utf-8"', $transcoded);
-        self::assertSame('Café crème', (string) $reparsed?->querySelector('p')?->textContent);
+        self::assertSame('Café crème', (string) $reparsed->querySelector('p')?->textContent);
     }
 
     public function testLeavesABodyAlreadyInUtf8Untouched(): void

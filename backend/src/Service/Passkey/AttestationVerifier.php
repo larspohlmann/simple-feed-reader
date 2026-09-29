@@ -48,7 +48,7 @@ final readonly class AttestationVerifier
         private RegistrationOptionsFactory $optionsFactory,
         private PasskeyOffer $offer,
         private EntityManagerInterface $em,
-        private UserPasskeyFactory $passkeys,
+        private UserPasskeyFactory $passkeyFactory,
     ) {
     }
 
@@ -61,7 +61,7 @@ final readonly class AttestationVerifier
         $this->guardOwnership($user, $challenge);
 
         $credentialRecord = $this->check($user, $challenge, $attestation->credential);
-        $passkey = $this->passkeys->create($user, $credentialRecord, $attestation->label);
+        $passkey = $this->passkeyFactory->create($user, $credentialRecord, $attestation->label);
 
         $this->persist($user, $passkey);
 
