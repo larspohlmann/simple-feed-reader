@@ -9,9 +9,9 @@ use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
 use App\Event\UserAwaitingApproval;
-use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizerInterface;
 use App\Service\Auth\Factory\SignupUserFactory;
+use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -23,7 +23,7 @@ final readonly class RegistrationService
 {
     public function __construct(
         private EntityManagerInterface $em,
-        private UserRepository $users,
+        private UserByEmailInterface $users,
         private ActionTokenService $tokens,
         private AccountMailerInterface $mailer,
         private PasswordWorkEqualizerInterface $work,

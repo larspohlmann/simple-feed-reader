@@ -18,6 +18,7 @@ use App\Service\Auth\Factory\SignupUserFactory;
 use App\Service\Auth\PasswordResetter;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\Auth\RegistrationService;
+use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Tests\DbTestCase;
@@ -44,7 +45,7 @@ final class RegistrationServiceTest extends DbTestCase
     {
         $container = self::getContainer();
 
-        $blindRepository = $this->createStub(UserRepository::class);
+        $blindRepository = $this->createStub(UserByEmailInterface::class);
         $blindRepository->method('findOneByEmail')->willReturn(null);
 
         /** @var UserPasswordHasherInterface $hasher */

@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\User;
 use App\Enum\UserStatus;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 use Symfony\Bridge\Doctrine\Security\User\UserLoaderInterface;
@@ -15,7 +16,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
 /**
  * @extends ServiceEntityRepository<User>
  */
-class UserRepository extends ServiceEntityRepository implements UserLoaderInterface
+final class UserRepository extends ServiceEntityRepository implements UserLoaderInterface, UserByEmailInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
