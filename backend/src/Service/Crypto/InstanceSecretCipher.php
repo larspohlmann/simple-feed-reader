@@ -10,14 +10,8 @@ use App\Service\Crypto\Model\SecretBindingModel;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Seals a secret so a database dump alone reveals nothing. The master secret
- * lives only in the environment; every row carries its own random salt, and the
- * binding (what the secret is, whose it is, which scheme version) enters both
- * the key derivation and the AEAD's additional data.
- *
- * What this cannot do: protect a secret from someone holding both the dump and
- * the environment file. The server has to use the secret while its owner is
- * absent, so the secret has to be reachable by the server.
+ * Seals a secret so a database dump alone reveals nothing: the master key lives only in the environment, and the
+ * binding enters both the key derivation and the AEAD data. Threat model: docs/security.md#stored-secrets.
  */
 final readonly class InstanceSecretCipher
 {

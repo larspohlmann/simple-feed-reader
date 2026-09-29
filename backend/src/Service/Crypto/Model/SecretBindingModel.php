@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Crypto\Model;
 
 /**
- * Names what a secret is and whom it belongs to. Both halves feed the key
- * derivation and the AEAD's additional data, so a ciphertext cannot be read as
- * another kind of secret or moved to another owner. The rendered string is
- * part of the stored contract: change it and every existing row stops opening.
+ * What a secret is and whose it is. render()'s string is part of the stored format: changing it makes every existing
+ * row unreadable.
  */
 final readonly class SecretBindingModel
 {

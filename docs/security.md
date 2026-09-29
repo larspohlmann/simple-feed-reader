@@ -299,3 +299,24 @@ needs a clicked link and then an admin, and `app:users:purge-unverified` removes
 
 The replay entry outlives the challenge by ten minutes (`REPLAY_TTL_SECONDS`): with one shared expiry, a solution first
 spent just before the challenge expired could find its replay entry already evicted on a second use.
+
+## Stored secrets
+
+The secrets the server must use while their owner is away (a user's AI provider key, the mail password, the proxy
+password, the Grafana API token) are sealed by `InstanceSecretCipher` (XChaCha20-Poly1305).
+
+- The master key is `INSTANCE_SECRET_KEY`, at least 32 characters, and lives only in the environment. The cipher
+  refuses to construct with a shorter one: a short key would still derive a key and encrypt, and nothing downstream
+  could notice.
+- Every row carries its own random salt. The row key is derived with HKDF-SHA256 from the master key, the salt and the
+  binding.
+- The binding (`SecretBindingModel::render()`: purpose, scheme version and owner) is both the HKDF info and the AEAD's
+  additional data, so a ciphertext cannot be opened as another kind of secret or under another owner. The rendered
+  string is part of the stored format: changing it makes every existing row unreadable, and
+  `StoredSecretCompatibilityTest` fails.
+- A row that does not open throws `SecretUnreadableException`, whatever the cause: a wrong or rotated master key, a row
+  edited in the database, or a row bound to another owner. Telling them apart would only help someone probing the
+  store; to a caller the secret is gone and must be entered again.
+
+What this does not protect against: someone who holds both a database dump and the environment file. The server has
+to read the secret while its owner is away, so the server can always reach it.
