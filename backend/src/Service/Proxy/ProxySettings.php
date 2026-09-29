@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
-use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
 use App\Service\Proxy\Model\ProxySettingsSnapshotModel;
 use App\Service\Proxy\Model\ProxySettingsUpdateModel;
+use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class ProxySettings
 {
     public function __construct(
-        private ProxyServerSettingsRepository $repository,
+        private StoredProxySettingsInterface $repository,
         private EntityManagerInterface $em,
         private ProxyPasswordCipher $cipher,
     ) {

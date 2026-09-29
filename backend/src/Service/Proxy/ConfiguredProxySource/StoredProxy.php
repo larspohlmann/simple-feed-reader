@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Proxy\ConfiguredProxySource;
 
 use App\Entity\ProxyServerSettings;
-use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Proxy\Crypto\ProxyPasswordCipher;
+use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 
 final readonly class StoredProxy implements EgressProxySourceInterface, ConfiguredProxySourceInterface
 {
     public function __construct(
-        private ProxyServerSettingsRepository $repository,
+        private StoredProxySettingsInterface $repository,
         private ProxyPasswordCipher $cipher,
     ) {
     }

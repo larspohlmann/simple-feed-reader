@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\ProxyServerSettings;
+use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -13,7 +14,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<ProxyServerSettings>
  */
-class ProxyServerSettingsRepository extends ServiceEntityRepository
+final class ProxyServerSettingsRepository extends ServiceEntityRepository implements StoredProxySettingsInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
