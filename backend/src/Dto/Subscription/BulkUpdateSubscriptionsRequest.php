@@ -9,18 +9,8 @@ use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * One bulk change across many feeds: at most one tag added, at most one tag
- * removed, and either inclusion flag set.
- *
- * The flags are nullable and default to null, meaning "leave the stored value
- * unchanged" — the same convention UpdateSubscriptionRequest and
- * EntryController::updateState use (#695).
- *
- * The id cap is a hard technical ceiling on one request's payload size, NOT
- * the per-account subscription limit — an admin can raise a single account's
- * real cap above the global default (SubscriptionLimitResolver), and this
- * attribute cannot read the current user to match it. See
- * SubscriptionService::MAX_BULK_REQUEST_IDS for why it is generous instead.
+ * One bulk change across many feeds: at most one tag added, one removed, and either inclusion flag, where null
+ * leaves the stored value unchanged.
  */
 final readonly class BulkUpdateSubscriptionsRequest
 {
