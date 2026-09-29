@@ -10,11 +10,6 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * `/api/admin/proxy` is covered by the existing `^/api/admin/` ROLE_ADMIN
- * prefix rule in security.yaml — no new access_control entry needed, confirmed
- * by reading it before writing this test (see AdminSettingsControllerTest).
- */
 final class AdminProxyControllerTest extends ApiTestCase
 {
     private const string PROXY = '/api/admin/proxy';

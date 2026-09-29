@@ -12,11 +12,6 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * `/api/admin/grafana` is covered by the existing `^/api/admin/` ROLE_ADMIN
- * prefix rule in security.yaml — no new access_control entry needed, confirmed
- * by reading it before writing this test (see AdminProxyControllerTest).
- */
 final class AdminGrafanaControllerTest extends ApiTestCase
 {
     private const string GRAFANA = '/api/admin/grafana';
@@ -32,11 +27,8 @@ final class AdminGrafanaControllerTest extends ApiTestCase
     }
 
     /**
-     * The settings singleton outlives a single test: its row sits in the
-     * per-process schema and, worse, its resolved snapshot sits in a cache pool
-     * shared across the whole run (#1012). A writer test would leak an override
-     * into whichever test runs next, so clear both and start unconfigured
-     * (#1041).
+     * The settings row and its cached snapshot (a pool shared by the whole run) both outlive a test, so a writer
+     * would leak its override into the next one: clear both and start unconfigured.
      */
     private function resetGrafanaSettings(): void
     {
