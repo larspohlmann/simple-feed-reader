@@ -50,12 +50,7 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Lock\LockFactory;
 
-/**
- * Drives the handler through the container's real repository, advancer,
- * presence and entity manager, the same "no mocks" stance as
- * RecommendationRunAdvancerTest -- the handler's whole job is coordinating
- * those collaborators, and a mock would only re-encode that coordination.
- */
+/** Real repository, advancer, presence and entity manager: the handler's whole job is coordinating them. */
 final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 {
     use ProvidesWorkerHeartbeats;
@@ -80,17 +75,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * A firing's duration is the SUM over the runs it ticks, and one run can
-     * spend a whole provider timeout, so a single touch at the start of the
-     * firing goes stale while the worker is still working. The client then
-     * takes the working worker for a dead one, tries to advance the run
-     * itself, hits the per-user lock and gives up on a healthy run (#311
-     * final review, Critical 2a).
-     *
-     * A ticking clock makes the number of touches observable: one touch per
-     * run, so two runs must leave the heartbeat one step past the start
-     * rather than at it. (A firing with nothing to do still touches once --
-     * testFiringTouchesTheHeartbeatEvenWithNoRuns covers that path.)
+     * One heartbeat touch per run: a firing lasts the sum of its runs, so a single touch goes stale and the client
+     * takes the working worker for a dead one. A ticking clock makes the touches countable.
      */
     public function testEachRunInAFiringGetsItsOwnHeartbeatTouch(): void
     {
@@ -129,8 +115,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $this->queueDistillReply();
 
-        // Distillation firing: spends the profile call that now precedes
-        // every batch (#493).
+        // Distillation firing: spends the profile call that precedes every batch.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
         $this->requeueCleanReplyFor($batch);
@@ -152,12 +137,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * The worker owns its process, so it passes TickDriver::Worker and sends
-     * the connection's full batchConcurrency -- not the poll clamp (#344). The
-     * run's first wave is the warm-up of one (#495); the next worker firing then
-     * fans out all three remaining batches at once, where the poll clamp of two
-     * would bank only two and still owe a batch. That fan-out proves the handler
-     * passes the worker regime.
+     * The worker passes TickDriver::Worker and the connection's full batchConcurrency, not the poll clamp of two:
+     * after the warm-up wave of one, a single firing fans out all three remaining batches.
      */
     public function testAFiringSendsTheFullWorkerConcurrencyNotThePollClamp(): void
     {
@@ -174,10 +155,10 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $this->queueDistillReply();
 
-        // Distillation firing precedes every batch now (#493).
+        // Distillation firing: the profile call before any batch.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        // Warm-up firing: batch 0 alone writes the prompt-cache (#495).
+        // Warm-up firing: batch 0 alone writes the prompt-cache.
         $this->requeueCleanReplyFor($batches[0]);
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
         self::assertSame(1, $this->activeRun($user)->getProgress()->batchesDone);
@@ -227,11 +208,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $advancedAfterDistill = $this->activeRun($healthyUser);
         self::assertFalse($advancedAfterDistill->getProgress()->distillPending);
 
-        // The fairness this test is about is already proven above, in the one
-        // firing both runs shared; driving the healthy run the rest of the
-        // way to completion goes straight through its own advancer rather
-        // than through more shared firings, which would otherwise re-tick the
-        // still-active struggling run with no queued reply left for it.
+        // Fairness is proven above, in the one shared firing. More shared firings would re-tick the struggling run
+        // with no reply queued for it, so the healthy run finishes through its own advancer.
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
@@ -246,12 +224,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->assertSoleProviderFailureWarningLogged($logSpy, $strugglingRun->getId());
     }
 
-    /**
-     * The catch clause this handler uses is a union of two exception types;
-     * the ProviderUnreachableException case above alone cannot tell a real
-     * union apart from a mutant narrowed to just one arm. This proves the
-     * other arm is caught the same way.
-     */
+    /** WorkerRunSweep catches a union of two types; this pins the arm the unreachable-provider case above cannot. */
     public function testCredentialsRejectedIsLoggedAndDoesNotThrow(): void
     {
         $user = $this->user('bad-credentials@example.test');
@@ -273,7 +246,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
     /**
      * An unreadable key fails the run with its own message, not AiNotConfiguredException's. No error may be
-     * logged: that pins the typed, silent catch rather than the handler's \Throwable floor (#311).
+     * logged: that pins the typed, silent catch rather than WorkerRunSweep's \Throwable floor.
      */
     public function testApiKeyUnreadableFailsTheRunWithItsOwnMessage(): void
     {
@@ -284,10 +257,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $keyDonor = $this->user('key-mismatch-donor@example.test');
         $this->fixtures->seedReadyAiSettings($keyDonor);
 
-        // The donor's key was sealed under the donor's own account id; moving
-        // its settings row onto $user, whose original (correctly-sealed) row
-        // is deleted first, makes the stored ciphertext fail its integrity
-        // check the moment $user's advance() tries to open it.
+        // The donor's key is sealed under the donor's account id, so moving its row onto $user (whose own row is
+        // deleted first) makes the ciphertext fail its integrity check when $user's advance() opens it.
         $this->deleteAiSettingsFor($user);
         $this->moveAiSettingsRow($keyDonor, $user);
 
@@ -302,13 +273,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame([], $logSpy->getRecords());
     }
 
-    /**
-     * The per-firing identity map cleanup is a `finally`, not a plain
-     * trailing statement (the rationale now lives on WorkerRunSweep::sweep(),
-     * which the handler delegates to); this proves at least that clear()
-     * itself is not simply dropped from the successful path. That it also
-     * runs when the sweep body throws is WorkerRunSweepTest's job.
-     */
+    /** clear() runs on the successful path; that it also runs when the sweep throws is WorkerRunSweepTest's job. */
     public function testFiringClearsTheIdentityMapAfterwards(): void
     {
         $clearTracker = new ClearTrackingEntityManager($this->entityManager);
@@ -329,12 +294,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * The run's FAILED status alone no longer proves which catch clause
-     * handled it (#311 fix): RecommendationRunAdvancer::tick() now fails and
-     * flushes the run itself before rethrowing, so even the handler's
-     * generic \Throwable floor would see a FAILED run. Asserting no error was
-     * logged is what actually pins that AiNotConfiguredException landed in
-     * the typed, silent catch rather than falling through to that floor.
+     * tick() fails and flushes the run before rethrowing, so FAILED alone cannot tell the catches apart: no logged
+     * error pins that AiNotConfiguredException landed in the typed, silent catch, not the \Throwable floor.
      */
     public function testUnconfiguredUsersRunIsFailedNotSweptForever(): void
     {
@@ -355,11 +316,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Fix round 1 (#311 review): a run that never reached its first snapshot
-     * is still PENDING, not RUNNING, when its AI settings row disappears
-     * (DELETE /api/me/ai has no "is there an active run" guard). Unlike
-     * every test above, this one deliberately skips startAndSnapshot() so
-     * the run stays PENDING going into the firing that removes the row.
+     * A run still PENDING before its first snapshot can lose its AI settings row (DELETE /api/me/ai has no active-run
+     * guard), so this test skips startAndSnapshot().
      */
     public function testPendingRunLosingConfigurationBeforeItsFirstSnapshotIsFailed(): void
     {
@@ -379,13 +337,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame('The AI provider is no longer configured.', $failed->getError());
     }
 
-    /**
-     * Fix round 1 (#311 review): the same PENDING-loses-its-settings race as
-     * above, but with a second, healthy user's run sorted right after it.
-     * Before the fix, the first run's LogicException (from fail() guarding
-     * RUNNING) escaped __invoke() entirely and the second user's run was
-     * never even attempted in this firing.
-     */
+    /** The same PENDING race, with a healthy user's run sorted after it: that run must still advance in the firing. */
     public function testFairnessWhenAPendingRunFailsBeforeItsFirstSnapshot(): void
     {
         $strugglingUser = $this->user('never-snapshotted-struggling@example.test');
@@ -406,11 +358,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
 
-        // The fairness this test is about is already proven above: the
-        // healthy run's own distillation tick went through in the very same
-        // firing the struggling run's pending failure landed in. Driving it
-        // the rest of the way to completion goes straight through its own
-        // advancer, now that the struggling run is done and gone.
+        // Fairness is proven: the healthy run's distillation went through in the firing the pending failure landed
+        // in. It finishes through its own advancer now that the struggling run is gone.
         self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
 
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
@@ -426,20 +375,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Fix round 2 (#311 review): an earlier version flushed the
-     * fail()-recording write INSIDE the catch that decided to record it, so
-     * a flush() failure there (lock timeout, dropped connection) threw from
-     * within a catch block -- which PHP never routes to a sibling catch --
-     * and escaped exactly like the round-1 LogicException did. That
-     * fail()+flush() now lives in RecommendationRunAdvancer::tick() (#311
-     * fix, shared with the poll driver), so this test builds its own
-     * advancer wired with a decorator that makes only the FIRST flush()
-     * throw, without ever invoking the real EntityManager's UnitOfWork (see
-     * FlushFailingEntityManager) -- every other collaborator, including the
-     * EntityManager underneath the decorator, is the container's real,
-     * shared instance, so the second, healthy user's run genuinely advances
-     * through the real, un-poisoned EntityManager in the very same firing --
-     * the positive assertion, not just "no throw".
+     * A flush() that throws while recording one run's failure must not starve the next run. Only the first flush
+     * throws (FlushFailingEntityManager); the healthy run then advances through the real EntityManager in that firing.
      */
     public function testFlushFailureRecordingOneRunsFailureDoesNotStarveTheNext(): void
     {
@@ -460,27 +397,15 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             ->__invoke(new AdvanceRecommendationRuns());
 
         $this->entityManager->clear();
-        // fail() mutated the struggling run's in-memory object before its own
-        // flush() threw, and that object stayed managed in the *same* shared
-        // EntityManager the healthy run's advance() goes on to flush
-        // successfully -- Doctrine computes changesets for every managed
-        // entity at flush time, not just the one the caller had in mind, so
-        // the FAILED write actually reaches the database anyway, carried by
-        // the next successful flush in this firing. The one thing this test
-        // exists to prove is the part that is NOT incidental: the failing
-        // flush() itself never aborted the loop, so the healthy run's own
-        // distillation flush still happened at all in the same firing.
+        // The FAILED write still reaches the database, carried by the healthy run's flush of the shared EntityManager.
+        // What this pins is that the failing flush() never aborted the loop: the healthy run's flush happened at all.
         $struggling = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($struggling);
         self::assertSame(RunStatus::Failed, $struggling->getStatus());
 
         self::assertFalse($this->activeRun($healthyUser)->getProgress()->distillPending);
 
-        // Driving the healthy run the rest of the way to completion goes
-        // straight through its own advancer over the real, un-poisoned
-        // EntityManager, now that the struggling run is done and gone --
-        // the flush-resilience this test exists to prove is already pinned
-        // above, in the one firing both runs shared.
+        // The healthy run finishes through its own advancer; the flush resilience is pinned above.
         $this->requeueCleanReplyFor($healthyRun->getCandidateBatches()[0]);
         $this->advancer()->advance($healthyUser, TickDriver::Worker);
 
@@ -492,11 +417,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame(RunStatus::Completed, $advanced->getStatus());
         self::assertNotCount(0, $this->recommendationItems($advanced));
 
-        // The flush() failure is an unanticipated \Throwable, not one of the
-        // typed AI-provider cases the other tests exercise -- it must fall
-        // through to the outer floor and be logged at error level under a
-        // different message, proving that floor's own logging call (not
-        // just its exception-swallowing) survives.
+        // The flush() failure is no typed provider case: it falls through to the floor, which must log it at error
+        // level under its own message.
         self::assertTrue($logSpy->hasErrorRecords());
         $errorRecords = array_values(array_filter(
             $logSpy->getRecords(),
@@ -519,16 +441,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         self::assertSame($runId, $records[0]->context['runId']);
     }
 
-    /**
-     * Built by hand rather than fetched from the container: the advancer
-     * this sweep uses is wired with a decorator whose first flush() throws,
-     * so the struggling run's fail()-recording write (now inside
-     * RecommendationRunAdvancer::tick(), see the test above) fails exactly
-     * once. Every other collaborator -- the repository, and every one of the
-     * advancer's own collaborators besides its EntityManager -- is the
-     * container's real, shared instance, so the healthy user's run advances
-     * through the real EntityManager exactly as it would in production.
-     */
+    /** Built by hand around advancerWithFlushFailingEntityManager(); every other collaborator is the container's. */
     private function handlerWithFlushFailingEntityManager(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
@@ -562,11 +475,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         );
     }
 
-    /**
-     * Built by hand for the same reason as handlerWithFlushFailingEntityManager():
-     * only the logger changes, so a test can inspect what was logged without
-     * writing to the real log.
-     */
+    /** Built by hand to swap only the logger: a test inspects what was logged without writing to the real log. */
     private function handlerWithLogger(LoggerInterface $logger): AdvanceRecommendationRunsHandler
     {
         return new AdvanceRecommendationRunsHandler(
@@ -601,14 +510,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Moves the row's own ownership FK, then points the recipient's active
-     * pointer at it too: the handler resolves the active configuration
-     * through that pointer, not a "find by owner" query, so a row that ends
-     * up under the wrong account only matters to this test once it is also
-     * that account's active one. pointActiveAt() writes at the database
-     * level, which is enough here because the handler under test always
-     * loads $to fresh from the database — it never receives an in-memory
-     * instance from this test directly.
+     * Moves the row's owner FK and points $to's active pointer at it: the handler finds the configuration through
+     * that pointer and always loads $to fresh, so pointActiveAt()'s database-level write is enough.
      */
     private function moveAiSettingsRow(User $from, User $to): void
     {
@@ -617,12 +520,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $mover->pointActiveAt($to, $moved);
     }
 
-    /**
-     * Starts a run and drives one direct advance() call so its single batch
-     * is frozen and it is RUNNING -- the same "get to a batch-ready run
-     * first" shape RecommendationRunAdvancerTest's own startAndSnapshot()
-     * helper uses.
-     */
+    /** Starts a run and advances it once, so its single batch is frozen and it is RUNNING. */
     private function startAndSnapshot(User $user): RecommendationRun
     {
         $this->starter()->start($user);
@@ -649,11 +547,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
     }
 
-    /**
-     * The canned distill reply most tests neither read nor care about the
-     * content of -- only that the distillation phase spends exactly one
-     * provider call before the batches begin (#493).
-     */
+    /** A canned distill reply: these tests need only the distillation phase to spend its one provider call. */
     private function queueDistillReply(): void
     {
         $this->stubChatClient()->queueContent(json_encode(
@@ -663,8 +557,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * The consolidation phase's reply shape (#493): a usable
-     * recommendation for every id the batch phase banked, naming no
+     * The consolidation phase's reply shape: a usable recommendation for every id the batch phase banked, naming no
      * duplicates.
      *
      * @param list<int> $batchIds
@@ -689,10 +582,8 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     }
 
     /**
-     * Forces an exact batch count through the connection's per-batch ceiling,
-     * so a worker-regime test can pin how many batches a wave has to work with
-     * (the per-batch cap stays under the token budget's split size, so the
-     * packer produces exactly $batchCount batches).
+     * Forces exactly $batchCount batches through the connection's per-batch ceiling, which stays under the token
+     * budget's split size, so a worker-regime test can pin how many batches a wave has.
      */
     private function seedForcedBatchCountFixture(User $user, int $entryCount, int $batchCount): void
     {
@@ -796,12 +687,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         return $handler;
     }
-    /**
-     * A heartbeat over the same presence the sweep marks with. It only ever
-     * writes while a completion is streaming, and nothing in these tests
-     * streams — StubChatClient answers in one piece — so it is inert here and
-     * does not disturb the mark counts the presence clocks pin.
-     */
+    /** Writes only while a completion streams, and StubChatClient never streams: it cannot disturb the mark counts. */
     private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
     {
         return new SweepStreamHeartbeat($presence, new MockClock());
