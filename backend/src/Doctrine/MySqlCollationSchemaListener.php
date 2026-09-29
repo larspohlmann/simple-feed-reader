@@ -60,13 +60,13 @@ final readonly class MySqlCollationSchemaListener
     /**
      * @throws Exception
      */
-    public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $args): void
+    public function postGenerateSchemaTable(GenerateSchemaTableEventArgs $event): void
     {
         if ($this->connection->getDatabasePlatform() instanceof AbstractMySQLPlatform) {
             return;
         }
 
-        foreach ($args->getClassTable()->getColumns() as $column) {
+        foreach ($event->getClassTable()->getColumns() as $column) {
             $collation = $column->getCollation();
 
             if (null === $collation || !str_starts_with($collation, self::MYSQL_COLLATION_PREFIX)) {
