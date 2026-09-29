@@ -11,9 +11,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
-final class ApiExceptionIsLoggedAndAnsweredTest extends KernelTestCase
+final class ApiExceptionIsAnsweredBeforeSymfonyLogsItTest extends KernelTestCase
 {
-    public function testAnApiExceptionIsLoggedAndAnsweredAsProblemJson(): void
+    public function testAnApiExceptionIsAnsweredAsProblemJsonWithoutAnUncaughtExceptionLog(): void
     {
         $kernel = self::bootKernel();
         $requestLogger = self::getContainer()->get('monolog.logger.request');
@@ -25,10 +25,10 @@ final class ApiExceptionIsLoggedAndAnsweredTest extends KernelTestCase
 
         self::assertSame(404, $response->getStatusCode());
         self::assertSame('application/problem+json', $response->headers->get('Content-Type'));
-        self::assertCount(
-            1,
+        self::assertSame(
+            [],
             self::uncaughtNotFound($recorder),
-            'ErrorListener::logKernelException logged the exception the API answered',
+            'ErrorListener::logKernelException logged an exception the API had already answered',
         );
     }
 

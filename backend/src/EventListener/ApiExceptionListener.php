@@ -9,8 +9,11 @@ use App\Http\Problem\ProblemCatalog;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 
-/** Renders every exception under /api or /maintenance as problem+json; controllers never build an error by hand. */
-#[AsEventListener(event: ExceptionEvent::class, priority: -64)]
+/**
+ * Renders every exception under /api or /maintenance as problem+json; controllers never build an error by hand.
+ * Runs before ErrorListener logs (priority 0): ProblemCatalog logs what is unexpected, and a mapped 4xx is no error.
+ */
+#[AsEventListener(event: ExceptionEvent::class, priority: 64)]
 final readonly class ApiExceptionListener
 {
     public function __construct(
