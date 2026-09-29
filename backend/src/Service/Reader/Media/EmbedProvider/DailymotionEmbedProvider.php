@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\EmbedProvider;
 
 /**
- * Dailymotion's player embed. The video id is the whole payload — a page URL
- * carries a `_title-slug` after it and the query holds player preferences — so
- * every spelling reduces to the canonical embed URL. The short `dai.ly` host
- * and the `/video/` page form both fold to `/embed/video/<id>`.
+ * Dailymotion's player embed. The video id is the whole payload (a page URL adds a `_title-slug`, the query holds
+ * player preferences), so every spelling, `dai.ly` and `/video/` included, folds to `/embed/video/<id>`.
  */
 final readonly class DailymotionEmbedProvider implements EmbedProviderInterface
 {

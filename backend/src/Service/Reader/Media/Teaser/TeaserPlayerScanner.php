@@ -16,16 +16,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Reads the raw page for inline media teasers — a player block (video or audio)
- * that carries its own still, a headline and a link — the shape readability
- * strips to a lone thumbnail. Host-agnostic: it names no publisher, only the
- * structure. A player without its own still is the article's own media or a
- * bare stream, left to the media pipeline; one in page chrome is not content.
- *
- * The URL scan mirrors AttributeMediaSource: a publisher hides its file in an
- * ad-hoc attribute (ARD's `data-v` rendition list), so every attribute is read
- * rather than a named one. Renditions of a player share its element, so it
- * stays one teaser.
+ * Finds inline media teasers in the raw page: a player block with its own still, a headline and a link, which
+ * readability strips to a lone thumbnail. A player without its own still, or in page chrome, is left alone. Every
+ * attribute is scanned for the file, as in AttributeMediaSource; a player's renditions stay one teaser.
  */
 final readonly class TeaserPlayerScanner
 {

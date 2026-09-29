@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\EmbedProvider;
 
 /**
- * Brightcove's hosted player page, declared as a VideoObject's embedUrl
- * (Al Jazeera, #782). The video id lives in the query, so the query is
- * reduced to it rather than dropped; the player id is kept verbatim.
+ * Brightcove's hosted player page, declared as a VideoObject's embedUrl. The video id lives in the query, so the
+ * query is reduced to it rather than dropped; the player id is kept verbatim.
  */
 final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
 {

@@ -10,10 +10,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Rebuilds an inline teaser as one figure the sanitizer keeps: the player, its
- * still, and the headline as a link. class="reader-teaser" is the client's
- * marker; it survives on <figure> alone (EntrySanitizer). <audio> shows no
- * poster, so an audio teaser keeps its still as an <img> beside the control.
+ * Rebuilds an inline teaser as one figure: the player, its still, and the headline as a link. `reader-teaser` is the
+ * client's marker and survives EntrySanitizer on <figure> alone; an audio teaser keeps its still as an <img>.
  */
 final readonly class TeaserPlayerMarkup
 {

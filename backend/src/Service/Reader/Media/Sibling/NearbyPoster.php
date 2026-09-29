@@ -36,7 +36,7 @@ final readonly class NearbyPoster
             return -1;
         }
         // The rendition size is the last dimensions token in the path; an earlier one
-        // marks the source aspect (ZDF's `<stem>-1x1-100~1920x1080`), not the size (#952).
+        // marks the source aspect (ZDF's `<stem>-1x1-100~1920x1080`), not the size.
         $count = preg_match_all(self::DIMENSIONS, explode('?', $url, 2)[0], $matches, \PREG_SET_ORDER);
         if ($count < 1) {
             return 0;

@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\EmbedProvider;
 
 /**
- * The Spotify embed player, for a playlist, track, album, artist or podcast.
- * The content type and its base62 id are the whole payload, so the query goes:
- * `?si=` is a share token and `?utm_source=generator` is the embed builder's
- * tag. Older podcast embeds carry an `embed-podcast` path segment, folded to
- * the current `embed` form.
+ * The Spotify embed player. The content type and its base62 id are the whole payload, so the query (a `?si=` share
+ * token, the embed builder's `utm_source`) goes, and an older `embed-podcast` path segment folds to `embed`.
  */
 final readonly class SpotifyEmbedProvider implements EmbedProviderInterface
 {
