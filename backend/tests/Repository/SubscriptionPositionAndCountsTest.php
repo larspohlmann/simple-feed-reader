@@ -12,13 +12,6 @@ use App\Repository\SubscriptionRepository;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 
-/**
- * SubscriptionRepository's positioning seed (nextPositionForUser()) and its
- * per-user lookups (findForUserWithTags(), findForUserByTagId()) — the
- * queries SubscriptionTagPositions and TagController build on. See
- * SubscriptionTagPositionsTest for the in-memory counters these seed, and
- * SubscriptionCountsByUserIdTest for the admin list's own batched counts.
- */
 final class SubscriptionPositionAndCountsTest extends DbTestCase
 {
     use SeedsUsers;
@@ -93,12 +86,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         );
     }
 
-    /**
-     * findForUserByTagId() backs TagController::delete()'s detach loop —
-     * every subscription carrying the tag must come back, not just the
-     * first, or a tag deletion would leave later feeds still wearing a tag
-     * that no longer exists.
-     */
+    /** TagEditor::delete() detaches through it: a missed subscription would keep wearing the deleted tag. */
     public function testFindForUserByTagIdReturnsEveryCarryingSubscription(): void
     {
         $user = $this->user('find-by-tag-many@example.com');

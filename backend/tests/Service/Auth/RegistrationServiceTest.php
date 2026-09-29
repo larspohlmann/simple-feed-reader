@@ -32,13 +32,8 @@ final class RegistrationServiceTest extends DbTestCase
     use RegistrationPolicies;
 
     /**
-     * Builds the service against a repository that always reports "no such
-     * user". That is exactly what two concurrent requests for the same fresh
-     * address observe: both SELECT before either INSERT commits, so both pass
-     * the duplicate check and both go on to insert.
-     *
-     * The HTTP layer cannot stage this - one PHP process handles one request at
-     * a time - so the race is reproduced at the seam where it actually occurs.
+     * A repository that always reports "no such user", as two concurrent signups for one fresh address both see
+     * before either INSERT commits. HTTP cannot stage that race, so it is reproduced at this seam.
      */
     private function serviceWithBlindDuplicateCheck(): RegistrationService
     {
@@ -202,12 +197,8 @@ final class RegistrationServiceTest extends DbTestCase
     }
 
     /**
-     * The production scenario is a double-clicked submit button, which is
-     * common enough to be a certainty rather than a risk. Losing the race must
-     * look to the client exactly like winning it: anything else is both a 500
-     * on a normal user action and a crack in the enumeration guarantee, since
-     * a distinguishable response tells the caller a concurrent signup for that
-     * address was in flight.
+     * A double-clicked submit makes this race a certainty. Losing it must look exactly like winning: anything else is
+     * a 500 on a normal action, and it tells the caller that a signup for the address was in flight.
      */
     public function testLosingTheInsertRaceIsIndistinguishableFromWinningIt(): void
     {

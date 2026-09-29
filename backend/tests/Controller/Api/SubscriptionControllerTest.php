@@ -47,11 +47,8 @@ final class SubscriptionControllerTest extends WebTestCase
     }
 
     /**
-     * Drive the REAL FeedDiscovery by swapping the SSRF-guarded fetcher for a
-     * stub — the established seam in this codebase (FeedFetcherInterface is made
-     * public in config/services_test.yaml). FeedDiscovery is `final` and cannot
-     * be stubbed directly. Must be called BEFORE the request that triggers a
-     * fetch, while the kernel is still on its first (un-rebooted) boot.
+     * Swaps the SSRF-guarded fetcher for a stub, so the real FeedDiscovery runs (it is final and cannot be stubbed).
+     * Call it before the request that fetches, while the kernel is still on its first boot.
      */
     private function installFetcher(StubFeedFetcher $stub): void
     {
@@ -120,7 +117,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertIsArray($created['subscription']);
         self::assertSame('https://example.com/feed.xml', $created['subscription']['feedUrl']);
         // Discovery read the document to confirm it was a feed, so the entries
-        // are already there when the dialog closes (#290).
+        // are already there when the dialog closes.
         self::assertSame(2, $created['subscription']['unreadCount']);
         self::assertSame('Example Tech Blog', $created['subscription']['title']);
         // A discovery-confirmed feed document parses as XML — the refresh
@@ -139,7 +136,7 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertArrayHasKey('unreadCount', $first);
         // Discovery had to read the document to know it was a feed, and the
         // subscribe stores it — so the feed arrives with the fixture's two
-        // entries rather than empty until some later refresh (#290).
+        // entries rather than empty until some later refresh.
         self::assertSame(2, $first['unreadCount']);
         self::assertSame(2, $first['entryCount']);
         // Sidebar favourite/kept badge totals travel on the same payload.
@@ -374,9 +371,6 @@ final class SubscriptionControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('html@example.com');
 
-        // `/rss.xml` is a deliberately fake path, because discovering it is what
-        // the test is about, so `@lang TEXT` stops PhpStorm injecting HTML here
-        // and reporting the target as unresolvable.
         $html = /** @lang TEXT */ '<!doctype html><html><head>'
             . '<link rel="alternate" type="application/rss+xml" href="/rss.xml">'
             . '</head><body>x</body></html>';
@@ -453,10 +447,8 @@ final class SubscriptionControllerTest extends WebTestCase
     }
 
     /**
-     * The scrape fallback defaults to OFF, so this user's preference is left
-     * untouched — a DI wiring regression that never consults
-     * ScrapeFallbackPolicy would offer the scraped candidate anyway and this
-     * test would catch it.
+     * The preference stays at its default, off: a wiring that never consults ScrapeFallbackPolicy would still offer
+     * the scraped candidate.
      */
     public function testAFeedlessPageOffersNoScrapedCandidateWhenTheFallbackIsDisabled(): void
     {
@@ -585,12 +577,8 @@ final class SubscriptionControllerTest extends WebTestCase
     }
 
     /**
-     * The bypass Task 6 closes: a hand-made request setting format 'scraped'
-     * must be refused for an account with the preference off, exactly as
-     * discovery already refuses to OFFER such a candidate to that account.
-     * Nothing is stubbed on the fetcher, so a regression that lets the
-     * request reach discovery or the extractor fails loudly here rather than
-     * silently creating a subscription.
+     * A hand-made 'scraped' subscribe is refused while the preference is off, as discovery never offers one. Nothing
+     * is stubbed, so a regression that reaches discovery or the extractor fails loudly.
      */
     public function testScrapedFormatSubscribeIsRefusedWhenScrapingIsDisabled(): void
     {
@@ -746,16 +734,10 @@ final class SubscriptionControllerTest extends WebTestCase
         self::assertIsArray($body['subscription']);
         // Omitted flag: null leaves the pre-existing false value alone.
         self::assertFalse($body['subscription']['includeInForYou']);
-        // customTitle keeps its existing (unrelated) clear-on-omission-free
-        // apply-what-was-sent behaviour.
         self::assertSame('Kept Title', $body['subscription']['customTitle']);
     }
 
-    /**
-     * Regression guard: customTitle/tagIds must keep their existing
-     * clear-on-omission semantics — a PATCH body without tagIds still wipes
-     * the feed's tags, exactly as before the two flags were added.
-     */
+    /** Unlike the flags, an omitted tagIds still clears the feed's tags. */
     public function testTagClearOnOmissionStillHolds(): void
     {
         $client = self::createClient();
@@ -814,12 +796,8 @@ final class SubscriptionControllerTest extends WebTestCase
         );
 
         self::assertResponseStatusCodeSame(204);
-        // A single-request test never reboots the kernel (KernelBrowser only
-        // reboots from the second request on), so this is still the SAME
-        // EntityManager the controller used. reclaim() deletes via bulk DQL,
-        // which bypasses the unit of work, so $entityManager's identity map still holds
-        // the now-deleted Feed; find() would return it without ever touching
-        // the database unless the map is cleared first.
+        // reclaim() deletes by bulk DQL, past the unit of work, and one request never reboots the kernel: clear the
+        // controller's identity map, or find() returns the deleted Feed without asking the database.
         $entityManager->clear();
         self::assertNull($entityManager->getRepository(Feed::class)->find($feedId));
     }
@@ -852,12 +830,7 @@ final class SubscriptionControllerTest extends WebTestCase
         );
 
         self::assertResponseStatusCodeSame(204);
-        // Same identity-map trap as the sibling test above: a single-request
-        // test never reboots the kernel, so $entityManager is still the exact instance
-        // the controller used. Without clearing it, find() would return the
-        // pre-request Feed object straight out of the identity map and this
-        // assertion would pass even if reclaim() wrongly deleted the row —
-        // proving nothing about the guard this test exists to cover.
+        // Same identity-map trap: without the clear, find() passes even if reclaim() wrongly deleted the row.
         $entityManager->clear();
         self::assertNotNull($entityManager->getRepository(Feed::class)->find($feedId));
     }

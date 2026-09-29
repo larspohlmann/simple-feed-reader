@@ -187,13 +187,8 @@ final class SubscriptionBulkTest extends WebTestCase
     }
 
     /**
-     * Sends a flag alongside the foreign tag and re-reads the subscription
-     * afterwards (clearing the entity manager first, same staleness reason as
-     * testRejectsAForeignSubscriptionAndWritesNothing). apply() must reject
-     * the tag ownership BEFORE it resolves subscriptions or writes flags —
-     * reordering assertOwnedTagIds() after resolve()/applyFlags() still
-     * returns this same 422, but leaves the flag written, and only a test
-     * that re-reads the row can tell those two apart.
+     * The flag rides along to prove apply() checks tag ownership before it writes flags: a later check answers the
+     * same 422 but leaves the flag written, which only re-reading the row shows.
      */
     public function testRejectsAForeignTag(): void
     {
@@ -232,12 +227,6 @@ final class SubscriptionBulkTest extends WebTestCase
         self::assertResponseStatusCodeSame(422);
     }
 
-    /**
-     * An admin-raised per-account limit (SubscriptionLimitResolver) can exceed
-     * SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER. A bulk request naming
-     * more than the global default, but real, owned subscriptions must not be
-     * rejected by a cap that used to equal that default (#659 review).
-     */
     public function testAnAccountRaisedAboveTheDefaultCapCanBulkActOnAllItsFeeds(): void
     {
         $client = self::createClient();
@@ -263,13 +252,8 @@ final class SubscriptionBulkTest extends WebTestCase
     }
 
     /**
-     * SubscriptionJson::one() touches getFeed() (lazy ManyToOne) and
-     * getSubscriptionTags() (lazy OneToMany) for every subscription it
-     * serializes. findAllByIdsForUser() — what OwnedSubscriptions::resolve()
-     * used to route the bulk-update path through — selects with no joins, so
-     * serializing N subscriptions cost up to 2N extra SELECTs. The eager
-     * resolveWithAssociations() path must keep it at one read per association,
-     * however many subscriptions are in the response.
+     * SubscriptionJson::one() reads every subscription's feed and tag joins, so resolveWithAssociations() must load
+     * them in one joined read however many subscriptions the response holds.
      */
     public function testSerializingTheBulkResponseCostsOneReadPerAssociationNotOnePerSubscription(): void
     {
@@ -296,10 +280,7 @@ final class SubscriptionBulkTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
 
-        // One joined SELECT carries subscription, feed, subscription_tag AND
-        // tag together (resolveWithAssociations()) — assert on the JOIN
-        // clauses, not a bare "from feed", since feed/subscription_tag never
-        // head their own FROM here.
+        // The eager read joins feed and subscription_tag instead of selecting from them, so match the JOIN clauses.
         $feedReads = $recorder->queriesMatching('join feed');
         self::assertCount(
             1,
@@ -316,13 +297,8 @@ final class SubscriptionBulkTest extends WebTestCase
     }
 
     /**
-     * SubscriptionTagSync::sync() resolves its requested tag ids on every
-     * call, and BulkSubscriptionUpdater::apply() calls sync() once per
-     * subscription — a naive implementation queries the tag table once per
-     * subscription even though every id was already validated once up front
-     * (assertOwnedTagIds()). Expect exactly two "from tag" reads: the
-     * up-front validation, and the sync loop's first (cache-priming) lookup —
-     * never a third for a fifth identical subscription.
+     * Two tag reads for any number of feeds: the up-front ownership check and OwnedTagsCache's first lookup in the
+     * sync loop, never one per subscription.
      */
     public function testAddingATagAcrossManySubscriptionsCostsOneTagQueryNotOnePerSubscription(): void
     {
@@ -359,13 +335,8 @@ final class SubscriptionBulkTest extends WebTestCase
     }
 
     /**
-     * SubscriptionTagSync::sync() picks a new tag's join position with
-     * SubscriptionTagRepository::nextPositionForTag(), a MAX(position) query.
-     * BulkSubscriptionUpdater::apply() calls sync() once per subscription and
-     * flushes only once after the loop, so that query cannot see the rows the
-     * earlier iterations just added — every feed reads the same stale MAX and
-     * gets the same position. Three untagged feeds tagged in one bulk request
-     * must land at distinct ascending positions [0, 1, 2], not all at 0.
+     * One flush follows the whole loop, so a MAX(position) query per sync() would see none of the earlier feeds'
+     * joins and put all three at 0 instead of [0, 1, 2].
      */
     public function testBulkAddTagGivesEachFeedADistinctAscendingTagPosition(): void
     {
@@ -395,12 +366,7 @@ final class SubscriptionBulkTest extends WebTestCase
     }
 
     /**
-     * The mirror defect on the untagged side: SubscriptionTagSync::sync()
-     * appends a feed that just lost its last tag with
-     * SubscriptionRepository::nextPositionForUser(), also a MAX() query before
-     * the same single flush. Three feeds stripped of their only tag in one
-     * bulk request must land at distinct untagged positions, not all at the
-     * same stale MAX.
+     * The untagged side of the same trap: a MAX() per feed before the single flush would give all three one position.
      */
     public function testBulkRemoveLastTagGivesEachFeedADistinctUntaggedPosition(): void
     {
