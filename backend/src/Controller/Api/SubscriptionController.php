@@ -51,11 +51,6 @@ final readonly class SubscriptionController
         ));
     }
 
-    /**
-     * The sidebar poll's cheap tick (#720): unread counts and the three surface
-     * totals, without hydrating feeds, tags or descriptions. Route declared
-     * before `/{id}`, which requires a numeric id, so `/counts` reaches here.
-     */
     #[Route('/counts', name: 'api_subscriptions_counts', methods: ['GET'])]
     public function counts(#[CurrentUser] User $user): JsonResponse
     {
@@ -72,8 +67,6 @@ final readonly class SubscriptionController
             return new JsonResponse(SubscribeOutcomeJson::candidates($outcome));
         }
 
-        // A new subscription is no longer always worth 0 unread: discovery
-        // hands the feed its entries at subscribe time (#290).
         return new JsonResponse(
             ['subscription' => SubscriptionJson::one($outcome->subscription, $outcome->unreadCount)],
             Response::HTTP_CREATED,
@@ -93,11 +86,6 @@ final readonly class SubscriptionController
         return new JsonResponse(['subscription' => SubscriptionJson::one($subscription)]);
     }
 
-    /**
-     * Move a feed between the sidebar's lists, honouring the drop position: out
-     * of `fromTagId`, into `toTagId` at `position` (a null tag id is the
-     * untagged "Feeds" list; a null position appends).
-     */
     #[Route('/{id}/move-to-tag', name: 'api_subscriptions_move', methods: ['PATCH'], requirements: ['id' => '\d+'])]
     public function moveToTag(
         int $id,

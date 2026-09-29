@@ -10,22 +10,9 @@ use App\Repository\SubscriptionTagRepository;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Hands out the next per-tag join position and the next untagged "Feeds" list
- * position, seeded from the database once per tag/user and advanced in
- * memory from there.
- *
- * SubscriptionTagSync::sync() used to ask the repositories directly, a
- * MAX(position) query every time — correct for one sync() call followed by
- * its own flush, but BulkSubscriptionUpdater::apply() calls sync() once per
- * subscription and flushes only ONCE after the loop, so a repeated MAX()
- * query never sees rows the earlier iterations just added and keeps
- * returning the same stale maximum. This collaborator is the counters' home:
- * seed once, then increment in memory, without lengthening sync()'s own
- * signature (CLAUDE.md).
- *
- * Implements ResetInterface so counters cannot survive into a later request
- * when a worker reuses the PHP process (see OwnedTagsCache for why that
- * assumption does not hold in this app's own test client).
+ * The next per-tag join position and the next untagged "Feeds" position, seeded from the database once and then
+ * counted in memory: BulkSubscriptionUpdater flushes once after many sync() calls, so a MAX(position) query per call
+ * would return the same stale maximum.
  */
 final class SubscriptionTagPositions implements ResetInterface
 {

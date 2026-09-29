@@ -9,24 +9,9 @@ use App\Repository\TagRepository;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Caches TagRepository::findAllByIdsForUser() for the lifetime of one request.
- *
- * SubscriptionTagSync::sync() re-resolves its requested tag ids on every call,
- * and a bulk write calls sync() once per subscription — a 500-feed tag change
- * would otherwise issue up to 500 near-identical queries, even though every id
- * was already validated up front (BulkSubscriptionUpdater::assertOwnedTagIds()).
- * This collaborator holds what has already been resolved so a repeated id
- * costs a map lookup, not a query, without lengthening sync()'s own signature
- * (CLAUDE.md: a value with no home gets a collaborator field, not a longer
- * parameter list).
- *
- * Keyed by user id so nothing leaks between accounts within one request. That
- * alone does not make it safe to keep alive PAST one request: this app's
- * functional tests reuse one container across requests via
- * $client->disableReboot(), and a worker process could do the same.
- * ResetInterface (auto-tagged kernel.reset) empties the cache between
- * requests so a stale entry — possibly bound to a since-reset EntityManager —
- * can never reach a later one.
+ * Caches TagRepository::findAllByIdsForUser() per user, so a bulk write's sync() per subscription costs a map lookup,
+ * not a query. reset() empties it between requests: a reused container must not serve a tag bound to a reset
+ * EntityManager.
  */
 final class OwnedTagsCache implements ResetInterface
 {

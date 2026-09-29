@@ -18,13 +18,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The row mechanics of subscribing one feed: the per-user cap, the shared Feed
- * row, the duplicate check, the tag positions.
- *
- * BulkSubscriber is the batch sibling and keeps its own copy of these rules
- * because it defers every flush to the end of the import — a difference worth
- * collapsing one day, and the reason neither class may claim to be the only
- * place a subscription comes into being.
+ * The row mechanics of subscribing one feed: the per-user cap, the shared Feed row, the duplicate check, the tag
+ * positions. BulkSubscriber keeps its own copy of these rules, because it defers every flush to the end of an import.
  */
 final readonly class SubscriptionCreator
 {
@@ -67,17 +62,11 @@ final readonly class SubscriptionCreator
             $this->entityManager->persist($feed);
             $this->entityManager->flush(); // assign an id so the duplicate check is meaningful
         } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {
-            // One-way heal for a poisoned shared row: an 'xml' arrival comes from
-            // discovery PARSING the URL as a real feed document -- a stronger fact
-            // than the 'scraped' assertion of whoever created the row (who may post
-            // 'scraped' for an XML feed, so every refresh runs the HTML extractor
-            // over RSS and errors out). Never the reverse: a 'scraped' arrival is
-            // user-asserted and must not downgrade what discovery established.
+            // One-way heal of a shared row poisoned as 'scraped': an 'xml' arrival means discovery parsed the URL as
+            // a feed. Never the reverse: a 'scraped' arrival is only the user's assertion.
             $feed->setSourceFormat(SourceFormat::XML);
-            // Persist the heal in its own step, BEFORE the duplicate check can
-            // throw. An existing victim re-adding the feed to fix its format is
-            // the natural repair path; without this flush that check aborts the
-            // unit of work and the heal is rolled back, so the fix does nothing.
+            // Flushed before the duplicate check can throw: re-adding the feed is how a subscriber repairs it, and
+            // that throw would roll the heal back.
             $this->entityManager->flush();
         }
 

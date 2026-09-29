@@ -19,13 +19,8 @@ final readonly class SubscriptionService
     public const int MAX_SUBSCRIPTIONS_PER_USER = 500;
 
     /**
-     * A hard technical ceiling on how many ids ONE bulk request may name — it
-     * bounds payload/array size, nothing else. It is deliberately NOT tied to
-     * MAX_SUBSCRIPTIONS_PER_USER: SubscriptionLimitResolver lets an admin raise
-     * a single account's real cap above the global default, and a validation
-     * attribute cannot read the current user to match it exactly. Every id in
-     * the request is still checked for ownership downstream (OwnedSubscriptions),
-     * so this ceiling only needs to be generous, not exact.
+     * Bounds one bulk request's payload, not the subscription cap: an admin may raise an account's cap above
+     * MAX_SUBSCRIPTIONS_PER_USER, which a validation attribute cannot read. OwnedSubscriptions still checks every id.
      */
     public const int MAX_BULK_REQUEST_IDS = 5000;
 
@@ -40,10 +35,8 @@ final readonly class SubscriptionService
     }
 
     /**
-     * Removes one subscription and reclaims the feed if that was the last one.
-     * The removal is flushed before the reclaim so the DELETE's no-subscriber
-     * guard sees the row is gone; reclaim() is a no-op when anybody else still
-     * subscribes.
+     * Flushes the removal before reclaiming the feed, so the DELETE's no-subscriber guard sees the row gone;
+     * reclaim() does nothing while anybody else subscribes.
      */
     public function unsubscribe(Subscription $subscription): void
     {
@@ -56,18 +49,9 @@ final readonly class SubscriptionService
     }
 
     /**
-     * Removes many subscriptions in one transaction, then reclaims each feed
-     * that lost its last subscriber.
-     *
-     * The single flush is the point: unsubscribe() flushes and reclaims per
-     * call, which a 176-feed selection would turn into 176 transactions and 176
-     * orphan sweeps. Reclaiming per DISTINCT feed after the flush also matters
-     * — two of the removed subscriptions can point at the same feed, and
-     * reclaim() must not be asked about it twice.
+     * One flush for the whole selection, then one reclaim per distinct feed: two removed subscriptions may share one.
      *
      * @param list<Subscription> $subscriptions
-     *
-     * @return int how many subscriptions were removed
      */
     public function unsubscribeAll(array $subscriptions): int
     {
@@ -101,15 +85,9 @@ final readonly class SubscriptionService
         array $tags = [],
         ?string $initialTitle = null,
     ): SubscribeOutcomeModel {
-        // A 'scraped' or 'wp-json' subscribe re-posts a candidate URL discovery
-        // itself just produced: the URL IS the source. Running discovery again
-        // would re-fetch for nothing — or fail this time and block a subscribe
-        // the user was already offered. Both are stored VERBATIM.
+        // Re-running discovery on a candidate it just offered could fail this time and block the offered subscribe.
         if (SourceFormat::SCRAPED === $format) {
-            // Discovery never offers a scraped candidate to an account with the
-            // preference off, so a request that reaches here with it off is a
-            // hand-made one — refuse it rather than let this shortcut become
-            // the bypass discovery's own gate cannot see.
+            // This shortcut skips discovery's scrape gate, so a hand-made request must meet the preference here.
             $this->scrapeFallbackPolicy->assertMayScrape($user);
 
             return $this->subscribeVerbatim($user, $url, SourceFormat::SCRAPED, $tags);

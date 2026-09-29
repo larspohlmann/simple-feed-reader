@@ -12,18 +12,8 @@ use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Applies one tag and flag change across many subscriptions in a single
- * request.
- *
- * The per-feed tag work is delegated to SubscriptionTagSync, which owns two
- * rules that are easy to get subtly wrong: a newly added tag appends at that
- * tag's next position, and a feed that loses its LAST tag is appended to the
- * untagged list so a stale position does not float it to the top. Reproducing
- * either of them here would be the second copy this collaborator exists to
- * prevent.
- *
- * One flush for the whole request, after the loop. A flush per feed would turn
- * a 176-feed selection into 176 transactions.
+ * Applies one tag and flag change across many subscriptions, with one flush after the loop. The per-feed tag rules
+ * (append positions, the untagged list) belong to SubscriptionTagSync: never copy them here.
  */
 final readonly class BulkSubscriptionUpdater
 {
@@ -44,9 +34,7 @@ final readonly class BulkSubscriptionUpdater
 
         $addTagIds = $this->assertOwnedTagIds($change->addTagIds, $userId);
         $removeTagIds = $this->assertOwnedTagIds($change->removeTagIds, $userId);
-        // The eager variant: the controller serializes every changed
-        // subscription's feed and tags into the response, and the plain
-        // resolve() leaves both lazy — up to 500 extra SELECTs for one request.
+        // Eager: the response serializes every feed and its tags, which plain resolve() would load one by one.
         $byId = $this->ownedSubscriptions->resolveWithAssociations($userId, $change->subscriptionIds);
 
         $changed = [];
