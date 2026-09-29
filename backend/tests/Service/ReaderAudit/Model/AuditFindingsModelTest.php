@@ -187,6 +187,20 @@ final class AuditFindingsModelTest extends TestCase
         self::assertSame('Gross', $findings->byFeed()[0]['feed']);
     }
 
+    public function testFeedsAlreadyInWorstFirstOrderStayInIt(): void
+    {
+        $findings = AuditFindingsModel::fromJsonlFiles([$this->jsonl([
+            $this->finding(1, 11, 'Worst', [$this->marker('a', 2)]),
+            $this->finding(2, 12, 'Middle', [$this->marker('a', 2)]),
+            $this->finding(3, 12, 'Middle', []),
+            $this->finding(4, 13, 'Mildest', [$this->marker('a', 2)]),
+            $this->finding(5, 13, 'Mildest', []),
+            $this->finding(6, 13, 'Mildest', []),
+        ])]);
+
+        self::assertSame(['Worst', 'Middle', 'Mildest'], array_column($findings->byFeed(), 'feed'));
+    }
+
     public function testAnEmptySweepAnswersEveryQuestionWithNothing(): void
     {
         $findings = AuditFindingsModel::fromJsonlFiles([$this->jsonl([])]);
