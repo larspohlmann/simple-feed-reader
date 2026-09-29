@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh;
 
 use App\Entity\Feed;
-use App\Service\Refresh\FeedOutcome;
-use App\Service\Refresh\FeedRefreshResult;
+use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 use App\Service\Refresh\RefreshTally;
 use PHPUnit\Framework\TestCase;
 
@@ -30,10 +30,10 @@ final class RefreshTallyTest extends TestCase
     {
         $tally = new RefreshTally();
 
-        $tally->record(FeedRefreshResult::fetched(3), new Feed('https://a.example.com/feed'));
-        $tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), new Feed('https://b.example.com/feed'));
-        $tally->record(FeedRefreshResult::of(FeedOutcome::Failed), new Feed('https://c.example.com/feed'));
-        $tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::fetched(3), new Feed('https://a.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), new Feed('https://b.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), new Feed('https://c.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
 
         self::assertSame(1, $tally->fetched());
         self::assertSame(1, $tally->notModified());
@@ -49,8 +49,8 @@ final class RefreshTallyTest extends TestCase
         $tally = new RefreshTally();
         $fetched = new Feed('https://a.example.com/feed');
 
-        $tally->record(FeedRefreshResult::fetched(2), $fetched);
-        $tally->record(FeedRefreshResult::of(FeedOutcome::Aborted), new Feed('https://b.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::fetched(2), $fetched);
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::Aborted), new Feed('https://b.example.com/feed'));
 
         self::assertSame(1, $tally->failed());
         self::assertSame(1, $tally->processed());
@@ -65,10 +65,10 @@ final class RefreshTallyTest extends TestCase
         $fetched = new Feed('https://a.example.com/feed');
         $unchanged = new Feed('https://b.example.com/feed');
 
-        $tally->record(FeedRefreshResult::fetched(0), $fetched);
-        $tally->record(FeedRefreshResult::of(FeedOutcome::Failed), new Feed('https://c.example.com/feed'));
-        $tally->record(FeedRefreshResult::of(FeedOutcome::NotModified), $unchanged);
-        $tally->record(FeedRefreshResult::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::fetched(0), $fetched);
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::Failed), new Feed('https://c.example.com/feed'));
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::NotModified), $unchanged);
+        $tally->record(FeedRefreshResultModel::of(FeedOutcome::Throttled), new Feed('https://d.example.com/feed'));
 
         self::assertSame([$fetched, $unchanged], $tally->faviconEligibleFeeds());
     }

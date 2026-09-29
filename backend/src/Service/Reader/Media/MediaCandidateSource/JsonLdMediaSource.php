@@ -6,11 +6,11 @@ namespace App\Service\Reader\Media\MediaCandidateSource;
 
 use App\Service\Html\JsonLd;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
-use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\MediaUrlKind;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\PageFurniture;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
@@ -36,7 +36,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
     ) {
     }
 
-    public function find(RawPage $page): array
+    public function find(RawPageModel $page): array
     {
         $found = [];
         foreach (JsonLd::scriptsIn($page->document) as $script) {
@@ -110,7 +110,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
      *
      * @param array{urls: list<string>, poster: ?string} $declaration
      */
-    private function firstPlayable(array $declaration, ?string $precedingText): ?MediaCandidate
+    private function firstPlayable(array $declaration, ?string $precedingText): ?MediaCandidateModel
     {
         $posterlessFile = null;
         foreach ($declaration['urls'] as $url) {
@@ -127,19 +127,19 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
         return $posterlessFile;
     }
 
-    private function toCandidate(string $url, ?string $poster, ?string $precedingText): ?MediaCandidate
+    private function toCandidate(string $url, ?string $poster, ?string $precedingText): ?MediaCandidateModel
     {
         $resolved = $this->mediaUrlKind->resolve($url);
         if ($resolved === null) {
             return null;
         }
         if ($resolved->kind === MediaKind::Audio) {
-            return new MediaCandidate(MediaKind::Audio, $resolved->url, null, null, $precedingText);
+            return new MediaCandidateModel(MediaKind::Audio, $resolved->url, null, null, $precedingText);
         }
         if ($resolved->kind->isVideo()) {
             // The poster may be absent here; the scanner rescues or drops a
             // still-poster-less video once every source has been merged (#913).
-            return new MediaCandidate($resolved->kind, $resolved->url, $poster ?: null, null, $precedingText);
+            return new MediaCandidateModel($resolved->kind, $resolved->url, $poster ?: null, null, $precedingText);
         }
 
         $target = $this->embedProviders->resolve($url);
@@ -147,7 +147,7 @@ final readonly class JsonLdMediaSource implements MediaCandidateSourceInterface
             return null;
         }
 
-        return new MediaCandidate(
+        return new MediaCandidateModel(
             MediaKind::Embed,
             $target->url,
             $target->posterUrl ?? $poster,

@@ -21,17 +21,17 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\LeadImageCandidate;
-use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageMediaInserter;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
+use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
@@ -111,7 +111,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testRebuildsAnOrphanTeaserThumbnailAsAnInlinePlayer(): void
     {
         $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
-        $teaser = new TeaserPlayer(
+        $teaser = new TeaserPlayerModel(
             MediaKind::Video,
             'https://x.test/clip.mp4',
             'https://x.test/still.jpg',
@@ -119,7 +119,8 @@ final class ReaderBodyCleanerTest extends TestCase
             'https://x.test/related.html',
         );
 
-        $result = $this->cleaner->clean($content, BodyCleaningInputs::withTeasers([$teaser], ArticleMedia::none()));
+        $input = BodyCleaningInputs::withTeasers([$teaser], ArticleMediaModel::none());
+        $result = $this->cleaner->clean($content, $input);
 
         self::assertStringContainsString('<figure class="reader-teaser">', $result);
         self::assertStringContainsString('<video', $result);
@@ -129,9 +130,15 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testDoesNotRebuildATeaserThePipelineAlreadyPlaced(): void
     {
         $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
-        $teaser = new TeaserPlayer(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg', null, null);
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg'),
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Video,
+            'https://x.test/clip.mp4',
+            'https://x.test/still.jpg',
+            null,
+            null,
+        );
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/clip.mp4', 'https://x.test/still.jpg'),
         ]);
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withTeasers([$teaser], $media));
@@ -237,7 +244,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testRestoresTheLeadIntoATextOnlyBodyInTheSharedWindow(): void
     {
         $content = '<div><p>' . self::PROSE . '</p></div>';
-        $candidate = new LeadImageCandidate('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
+        $candidate = new LeadImageCandidateModel('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withLeadImage($candidate));
 
@@ -288,8 +295,13 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $html = '<div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
             . '<p>' . self::PROSE . '</p>';
-        $discovered = new ArticleMedia([
-            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb', null, 'Watch'),
+        $discovered = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Embed,
+                'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb',
+                null,
+                'Watch',
+            ),
         ]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
@@ -303,7 +315,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $html = '<div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
             . '<p>' . self::PROSE . '</p>';
-        $discovered = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+        $discovered = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
 
@@ -319,9 +331,9 @@ final class ReaderBodyCleanerTest extends TestCase
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
         $html = '<div><p>' . self::PROSE . '</p><figure><img src="' . $bodyImg . '" alt=""></figure></div>';
-        $discovered = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster),
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3'),
+        $discovered = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster),
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3'),
         ]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
@@ -343,12 +355,12 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testSuppressesTheHeroWhenARecoveredEmbedIsTopPlaced(): void
     {
         $html = '<div><p>' . self::PROSE . '</p></div>';
-        $lead = new LeadImageCandidate(
+        $lead = new LeadImageCandidateModel(
             'https://heise.cloudimg.example/thumb.jpg',
             BodyCleaningInputs::pageDrawingNothing(),
         );
-        $discovered = new ArticleMedia([
-            new MediaCandidate(
+        $discovered = new ArticleMediaModel([
+            new MediaCandidateModel(
                 MediaKind::Embed,
                 'https://www.youtube-nocookie.com/embed/ccccccccccc',
                 'https://i.ytimg.example/hqdefault.jpg',
@@ -375,9 +387,9 @@ final class ReaderBodyCleanerTest extends TestCase
         $html = '<div><p>' . self::PROSE . '</p>'
             . '<figure><img src="' . $video1Body . '" alt=""></figure>'
             . '<figure><img src="' . $mapImg . '" alt=""></figure></div>';
-        $discovered = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
+        $discovered = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
         ]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
@@ -395,8 +407,8 @@ final class ReaderBodyCleanerTest extends TestCase
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
         $html = '<div><p>' . self::PROSE . '</p>'
             . '<a href="https://x.test/story"><img src="' . $bodyImg . '" alt=""></a></div>';
-        $discovered = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster),
+        $discovered = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster),
         ]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
@@ -417,7 +429,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<div><p><a href="https://x.substack.com/p/plants"><img src="' . $poster . '"'
             . ' alt="Video — open the original article to watch" width="1280" height="720"></a></p>'
             . '<p>' . self::PROSE . '</p></div></div>';
-        $lead = new LeadImageCandidate($poster, BodyCleaningInputs::pageDrawingNothing());
+        $lead = new LeadImageCandidateModel($poster, BodyCleaningInputs::pageDrawingNothing());
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withLeadImage($lead));
 

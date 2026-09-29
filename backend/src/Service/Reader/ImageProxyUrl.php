@@ -11,7 +11,7 @@ use App\Service\Url\AbsoluteHttpUrl;
  * route photos through a proxy that carries the true source URL in a query
  * parameter (Politico's dims4, NPR's brightspot), as a base64 path segment
  * (imgproxy) or as a percent-encoded one (Substack's `/image/fetch/`).
- * ImageIdentity fingerprints the resolved source, so two renditions behind the
+ * ImageIdentityModel fingerprints the resolved source, so two renditions behind the
  * same proxy compare as the one photo they are.
  */
 final readonly class ImageProxyUrl

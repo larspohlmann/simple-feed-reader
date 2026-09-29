@@ -7,10 +7,10 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;
@@ -30,8 +30,8 @@ final class TeaserPlayerInserterTest extends TestCase
         return HtmlDocumentParser::parse('<body>' . $bodyHtml . '</body>');
     }
 
-    /** @param list<TeaserPlayer> $teasers */
-    private function insert(HTMLDocument $document, array $teasers, ArticleMedia $placedMedia): void
+    /** @param list<TeaserPlayerModel> $teasers */
+    private function insert(HTMLDocument $document, array $teasers, ArticleMediaModel $placedMedia): void
     {
         $this->inserter->cleanIn(
             new BodyCleaningPass($document, BodyCleaningInputs::withTeasers($teasers, $placedMedia)),
@@ -41,15 +41,21 @@ final class TeaserPlayerInserterTest extends TestCase
     private function video(
         string $mediaUrl = 'https://x.test/clip.mp4',
         string $poster = 'https://x.test/still.jpg',
-    ): TeaserPlayer {
-        return new TeaserPlayer(MediaKind::Video, $mediaUrl, $poster, 'The headline', 'https://x.test/related.html');
+    ): TeaserPlayerModel {
+        return new TeaserPlayerModel(
+            MediaKind::Video,
+            $mediaUrl,
+            $poster,
+            'The headline',
+            'https://x.test/related.html',
+        );
     }
 
     public function testReplacesTheOrphanThumbnailWithAPlayerCaptionAndLink(): void
     {
         $document = $this->document('<p>Prose.</p><p><img src="https://x.test/still.jpg"></p>');
 
-        $this->insert($document, [$this->video()], ArticleMedia::none());
+        $this->insert($document, [$this->video()], ArticleMediaModel::none());
 
         $html = (string) $document->saveHtml();
         self::assertStringNotContainsString('<img', $html);
@@ -64,9 +70,15 @@ final class TeaserPlayerInserterTest extends TestCase
     public function testAnAudioTeaserKeepsItsThumbnail(): void
     {
         $document = $this->document('<p><img src="https://x.test/still.jpg"></p>');
-        $teaser = new TeaserPlayer(MediaKind::Audio, 'https://x.test/ep.mp3', 'https://x.test/still.jpg', 'Head', null);
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Audio,
+            'https://x.test/ep.mp3',
+            'https://x.test/still.jpg',
+            'Head',
+            null,
+        );
 
-        $this->insert($document, [$teaser], ArticleMedia::none());
+        $this->insert($document, [$teaser], ArticleMediaModel::none());
 
         $html = (string) $document->saveHtml();
         self::assertStringContainsString('<audio', $html);
@@ -77,7 +89,7 @@ final class TeaserPlayerInserterTest extends TestCase
     public function testSkipsATeaserAlreadyAmongTheArticleMedia(): void
     {
         $document = $this->document('<p><img src="https://x.test/still.jpg"></p>');
-        $placed = new ArticleMedia([new MediaCandidate(MediaKind::Video, 'https://x.test/clip.mp4')]);
+        $placed = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/clip.mp4')]);
 
         $this->insert($document, [$this->video('https://x.test/clip.mp4')], $placed);
 
@@ -89,7 +101,7 @@ final class TeaserPlayerInserterTest extends TestCase
     {
         $document = $this->document('<p><img src="https://x.test/other.jpg"></p>');
 
-        $this->insert($document, [$this->video()], ArticleMedia::none());
+        $this->insert($document, [$this->video()], ArticleMediaModel::none());
 
         self::assertStringNotContainsString('<video', (string) $document->saveHtml());
     }
@@ -101,7 +113,7 @@ final class TeaserPlayerInserterTest extends TestCase
         $body = '<p><img src="https://images.test/image/' . $uuid
             . '/AA/BB/1x1-small/konjunktur-416.jpg?width=256"></p>';
         $document = $this->document($body);
-        $teaser = new TeaserPlayer(
+        $teaser = new TeaserPlayerModel(
             MediaKind::Video,
             'https://x.test/clip.mp4',
             'https://images.test/image/' . $uuid . '/AA/CC/16x9-1920/konjunktur-416.jpg',
@@ -109,7 +121,7 @@ final class TeaserPlayerInserterTest extends TestCase
             null,
         );
 
-        $this->insert($document, [$teaser], ArticleMedia::none());
+        $this->insert($document, [$teaser], ArticleMediaModel::none());
 
         self::assertStringContainsString('<video', (string) $document->saveHtml());
     }
@@ -119,7 +131,7 @@ final class TeaserPlayerInserterTest extends TestCase
     {
         $document = $this->document('<p><img src="https://x.test/still.jpg"></p>');
 
-        $this->insert($document, [$this->video()], ArticleMedia::none());
+        $this->insert($document, [$this->video()], ArticleMediaModel::none());
 
         $html = (string) $document->saveHtml();
         self::assertStringContainsString('<figure class="reader-teaser">', $html);
@@ -131,7 +143,7 @@ final class TeaserPlayerInserterTest extends TestCase
     {
         $document = $this->document('<p>Around <img src="https://x.test/still.jpg"> it.</p>');
 
-        $this->insert($document, [$this->video()], ArticleMedia::none());
+        $this->insert($document, [$this->video()], ArticleMediaModel::none());
 
         $html = (string) $document->saveHtml();
         self::assertStringContainsString('<p>Around <figure', $html);
@@ -144,7 +156,7 @@ final class TeaserPlayerInserterTest extends TestCase
             '<p><img src="https://x.test/still.jpg"></p><p><img src="https://x.test/still.jpg"></p>',
         );
 
-        $this->insert($document, [$this->video()], ArticleMedia::none());
+        $this->insert($document, [$this->video()], ArticleMediaModel::none());
 
         self::assertSame(1, substr_count((string) $document->saveHtml(), '<video'));
         self::assertStringContainsString('<img', (string) $document->saveHtml());

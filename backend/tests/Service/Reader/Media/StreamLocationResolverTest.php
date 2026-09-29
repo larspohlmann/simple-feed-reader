@@ -9,14 +9,14 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\StreamLocationResolver;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
@@ -74,10 +74,16 @@ final class StreamLocationResolverTest extends TestCase
         return new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => $location]]);
     }
 
-    private static function stream(): ArticleMedia
+    private static function stream(): ArticleMediaModel
     {
-        return new ArticleMedia([
-            new MediaCandidate(MediaKind::Stream, self::DECLARED, 'https://www.zdfheute.de/poster.jpg', null, 'prose'),
+        return new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Stream,
+                self::DECLARED,
+                'https://www.zdfheute.de/poster.jpg',
+                null,
+                'prose',
+            ),
         ]);
     }
 
@@ -141,10 +147,10 @@ final class StreamLocationResolverTest extends TestCase
 
     public function testMakesNoRequestForAnythingButAStream(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://a.test/clip.mp4', 'p.jpg'),
-            new MediaCandidate(MediaKind::Audio, 'https://a.test/show.mp3'),
-            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', 'p.jpg'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://a.test/clip.mp4', 'p.jpg'),
+            new MediaCandidateModel(MediaKind::Audio, 'https://a.test/show.mp3'),
+            new MediaCandidateModel(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI', 'p.jpg'),
         ]);
 
         $resolved = $this->resolver([])->resolve($media);

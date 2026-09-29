@@ -7,7 +7,7 @@ namespace App\Tests\Service\Scraper;
 use App\Service\Fetch\PageUrls;
 use App\Service\Scraper\CardFields;
 use App\Service\Scraper\JsonLdArticles;
-use App\Service\Scraper\ScrapedItem;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -31,7 +31,7 @@ final class JsonLdArticlesTest extends TestCase
         return $overrides + ['@type' => 'Article', 'url' => '/a/1', 'headline' => 'A headline long enough'];
     }
 
-    private function firstOf(JsonLdArticles $articles): ScrapedItem
+    private function firstOf(JsonLdArticles $articles): ScrapedItemModel
     {
         $items = $articles->all();
         self::assertCount(1, $items);

@@ -6,29 +6,29 @@ namespace App\Service\Reader\ArticleExtractor;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Reader\ArticleContentGate;
-use App\Service\Reader\ArticlePage;
 use App\Service\Reader\ArticleReadability;
-use App\Service\Reader\BodyCleaning\BodyCleaningInput;
-use App\Service\Reader\EntryHints;
+use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\Exception\ArticleNotExtractedException;
 use App\Service\Reader\Exception\PageFetchException;
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
-use App\Service\Reader\FeedMedia;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
-use App\Service\Reader\LeadFigureCaptions;
-use App\Service\Reader\LeadImageCandidate;
 use App\Service\Reader\Media\BodyMediaResolver;
+use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageMediaScanner;
-use App\Service\Reader\Media\RawPage;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
-use App\Service\Reader\PageImageInventory;
-use App\Service\Reader\PageResponse;
+use App\Service\Reader\Model\ArticlePageModel;
+use App\Service\Reader\Model\EntryHintsModel;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Reader\Model\LeadFigureCaptionsModel;
+use App\Service\Reader\Model\LeadImageCandidateModel;
+use App\Service\Reader\Model\PageImageInventoryModel;
+use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Reader\ReaderBodyCleaner;
-use App\Service\Reader\Slideshow\ContainerSignature;
-use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
 use fivefilters\Readability\Article;
@@ -55,20 +55,20 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
     }
 
     #[WithSpan]
-    public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+    public function extract(string $url, EntryHintsModel $hints = new EntryHintsModel()): ExtractionResultModel
     {
         try {
             return $this->extractPage($this->fetcher->fetch($url), $hints);
         } catch (PageFetchException $failure) {
-            return ExtractionResult::failed($url, ExtractionFailure::Fetch, $failure->getMessage());
+            return ExtractionResultModel::failed($url, ExtractionFailure::Fetch, $failure->getMessage());
         } catch (UnparseableHtmlException) {
-            return ExtractionResult::failed($url, ExtractionFailure::Unextractable);
+            return ExtractionResultModel::failed($url, ExtractionFailure::Unextractable);
         } catch (ArticleNotExtractedException $failure) {
-            return ExtractionResult::failed($url, $failure->failure);
+            return ExtractionResultModel::failed($url, $failure->failure);
         }
     }
 
-    private function extractPage(PageResponse $page, EntryHints $hints): ExtractionResult
+    private function extractPage(PageResponseModel $page, EntryHintsModel $hints): ExtractionResultModel
     {
         $articlePage = $this->readPage($page, $hints->feedMedia);
         $containers = $this->slideshowContainers($articlePage->slideshows);
@@ -78,7 +78,7 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         $body = $this->bodyCleaner->clean($content, $this->bodyCleaningInput($article, $articlePage, $hints));
         $clean = $this->sanitizer->sanitize($body) ?? throw new ArticleNotExtractedException(ExtractionFailure::Empty);
 
-        return ExtractionResult::ok(
+        return ExtractionResultModel::ok(
             url: $page->finalUrl,
             title: $article->title,
             byline: $article->byline,
@@ -89,14 +89,14 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         );
     }
 
-    private function readPage(PageResponse $page, FeedMedia $feedMedia): ArticlePage
+    private function readPage(PageResponseModel $page, FeedMediaModel $feedMedia): ArticlePageModel
     {
         $normalized = $this->normalizer->normalize($page->html);
-        $pageImages = PageImageInventory::fromDocument($normalized);
-        $leadCaptions = LeadFigureCaptions::fromDocument($normalized);
-        $rawPage = RawPage::parse($page->html, $page->finalUrl);
+        $pageImages = PageImageInventoryModel::fromDocument($normalized);
+        $leadCaptions = LeadFigureCaptionsModel::fromDocument($normalized);
+        $rawPage = RawPageModel::parse($page->html, $page->finalUrl);
 
-        return new ArticlePage(
+        return new ArticlePageModel(
             page: $page,
             normalized: $normalized,
             pageImages: $pageImages,
@@ -108,11 +108,14 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
         );
     }
 
-    private function bodyCleaningInput(Article $article, ArticlePage $articlePage, EntryHints $hints): BodyCleaningInput
-    {
-        return new BodyCleaningInput(
+    private function bodyCleaningInput(
+        Article $article,
+        ArticlePageModel $articlePage,
+        EntryHintsModel $hints,
+    ): BodyCleaningInputModel {
+        return new BodyCleaningInputModel(
             titleCandidates: [$article->title, $hints->title],
-            leadImage: new LeadImageCandidate(
+            leadImage: new LeadImageCandidateModel(
                 $article->image,
                 $articlePage->pageImages,
                 $articlePage->leadCaptions->captionFor($article->image),
@@ -127,13 +130,16 @@ final readonly class ArticleExtractor implements ArticleExtractorInterface
     }
 
     /**
-     * @param list<Slideshow> $slideshows
-     * @return list<ContainerSignature>
+     * @param list<SlideshowModel> $slideshows
+     * @return list<ContainerSignatureModel>
      */
     private function slideshowContainers(array $slideshows): array
     {
         return array_values(array_filter(
-            array_map(static fn (Slideshow $slideshow): ?ContainerSignature => $slideshow->container, $slideshows),
+            array_map(
+                static fn (SlideshowModel $slideshow): ?ContainerSignatureModel => $slideshow->container,
+                $slideshows,
+            ),
         ));
     }
 }

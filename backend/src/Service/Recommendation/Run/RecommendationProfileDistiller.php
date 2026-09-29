@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Recommendation\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationProfileParser;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
-use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Model\ProfileDistillationOutcomeModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 
 /**
@@ -31,7 +33,7 @@ final readonly class RecommendationProfileDistiller
     ) {
     }
 
-    public function distill(TickContext $tick): ProfileDistillationOutcome
+    public function distill(TickContext $tick): ProfileDistillationOutcomeModel
     {
         $run = $tick->run;
         $history = $this->historyLoader->load($tick->userId(), $tick->settings);
@@ -43,9 +45,9 @@ final readonly class RecommendationProfileDistiller
 
         $request = $this->requestFactory->create(
             $tick->connection,
-            new CallPrompt($messages, 1, RecommendationResponseSchema::Distillation),
+            new CallPromptModel($messages, 1, RecommendationResponseSchema::Distillation),
         );
-        $recordedCall = $this->callRecorder->begin($run, CallSlot::distillation(), $request);
+        $recordedCall = $this->callRecorder->begin($run, CallSlotModel::distillation(), $request);
         $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->profileParser->parse($content);
@@ -53,7 +55,7 @@ final readonly class RecommendationProfileDistiller
             $recordedCall->finishUnusable($content);
             $this->checkpoint->guard($run);
 
-            return ProfileDistillationOutcome::unusable($content);
+            return ProfileDistillationOutcomeModel::unusable($content);
         }
 
         $recordedCall->finishUsable($content);
@@ -62,6 +64,6 @@ final readonly class RecommendationProfileDistiller
             ?? throw new \LogicException('A usable profile parse result has no profile text.');
         $this->settingsWriter->storeProfile($run->getUser(), $profile);
 
-        return ProfileDistillationOutcome::usable($profile);
+        return ProfileDistillationOutcomeModel::usable($profile);
     }
 }

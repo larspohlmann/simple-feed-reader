@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -64,8 +64,8 @@ final class RefreshFeedsCommand extends Command
         $userId = ConsoleOption::wholeNumber($input, 'user');
 
         $request = match (true) {
-            $feedId !== null => RefreshRequest::forFeed($feedId, $budget),
-            $userId !== null => RefreshRequest::forUser($userId, $budget),
+            $feedId !== null => RefreshRequestModel::forFeed($feedId, $budget),
+            $userId !== null => RefreshRequestModel::forUser($userId, $budget),
             default => $this->allDueRequest($input, $budget),
         };
 
@@ -94,9 +94,9 @@ final class RefreshFeedsCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function allDueRequest(InputInterface $input, int $budget): RefreshRequest
+    private function allDueRequest(InputInterface $input, int $budget): RefreshRequestModel
     {
-        $request = RefreshRequest::allDue($budget);
+        $request = RefreshRequestModel::allDue($budget);
         if ($input->getOption('no-prune') === true) {
             $request = $request->withoutPruning();
         }

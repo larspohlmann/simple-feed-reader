@@ -7,13 +7,13 @@ namespace App\Service\Recommendation\Prompt\Factory;
 use App\Entity\AiProviderSettings;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Prompt\CallPrompt;
+use App\Service\Recommendation\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 
 /** Builds every phase's request, so a prompt and its output bound are always derived together. */
 final readonly class RecommendationCompletionRequestFactory
 {
-    public function create(AiProviderSettings $connection, CallPrompt $prompt): CompletionRequestModel
+    public function create(AiProviderSettings $connection, CallPromptModel $prompt): CompletionRequestModel
     {
         $reasoning = Reasoning::preferredBy($connection);
 

@@ -87,7 +87,7 @@ export class AiSectionComponent {
 
   /** The batch-cap field's placeholder when a connection makes no claim -- the
    *  backend's own ceiling, read from the list response so
-   *  `RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE` stays its one
+   *  `RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE` stays its one
    *  definition. A string because `placeholder` rejects a number under strict
    *  template checking; empty until the list has loaded. */
   readonly defaultMaxBatchSize = computed(() => {

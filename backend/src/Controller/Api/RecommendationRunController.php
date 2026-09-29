@@ -8,10 +8,10 @@ use App\Entity\User;
 use App\Http\RecommendationRunStatusJson;
 use App\Service\RateLimit\RateLimitGuard;
 use App\Service\Recommendation\Feed\RecommendationRunStatusResolver;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\RecommendationPollDriver;
 use App\Service\Recommendation\Run\RecommendationRunCanceller;
 use App\Service\Recommendation\Run\RecommendationRunPurger;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Service\Recommendation\Run\RecommendationRunStarter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
@@ -93,7 +93,7 @@ final readonly class RecommendationRunController
         $this->purger->purge($user);
 
         return new JsonResponse(RecommendationRunStatusJson::report(
-            $this->status->forReport(RecommendationRunReport::none(), $user),
+            $this->status->forReport(RecommendationRunReportModel::none(), $user),
         ));
     }
 }

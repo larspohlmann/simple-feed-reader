@@ -6,6 +6,7 @@ namespace App\Service\Search;
 
 use App\Repository\SavedSearchEntryRepository;
 use App\Repository\SavedSearchListQuery;
+use App\Service\Search\Model\SavedSearchEntriesResultModel;
 
 /**
  * The combined saved-search list (#769) over the membership table (#1116):
@@ -17,8 +18,8 @@ final readonly class SavedSearchEntries
     {
     }
 
-    public function list(SavedSearchListQuery $query): SavedSearchEntriesResult
+    public function list(SavedSearchListQuery $query): SavedSearchEntriesResultModel
     {
-        return new SavedSearchEntriesResult(rows: $this->entries->listMembers($query));
+        return new SavedSearchEntriesResultModel(rows: $this->entries->listMembers($query));
     }
 }

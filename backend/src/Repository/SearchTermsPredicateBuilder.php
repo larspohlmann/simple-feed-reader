@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Doctrine\WordBoundaries;
 use App\Service\Search\LikePattern;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use Doctrine\ORM\QueryBuilder;
 
 /**
@@ -21,7 +21,7 @@ final readonly class SearchTermsPredicateBuilder
      * cannot express. $prefix keys the bound parameters, so two searches that
      * share a word cannot overwrite each other's value.
      */
-    public function build(QueryBuilder $qb, SearchTerms $terms, string $prefix, string $entryAlias = 'e'): string
+    public function build(QueryBuilder $qb, SearchTermsModel $terms, string $prefix, string $entryAlias = 'e'): string
     {
         $predicates = [];
         foreach ($terms->terms as $position => $term) {

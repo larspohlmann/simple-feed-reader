@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\LeadingBlock;
 use App\Service\Reader\LeadingEngagementBlocks;
 use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\LeadingFurniture;
+use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -57,7 +57,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
         }
     }
 
-    /** @param list<LeadingBlock> $leading */
+    /** @param list<LeadingBlockModel> $leading */
     private function removeMatchedFurniture(array $leading, LeadingFurniture $furniture): bool
     {
         $removed = false;
@@ -172,7 +172,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
      * the reader meta line. Guard on non-prose so a real paragraph that merely
      * opens with "Von"/"By" is never mistaken for the byline and deleted.
      */
-    private function isDuplicateByline(LeadingBlock $block, ?string $entryAuthor): bool
+    private function isDuplicateByline(LeadingBlockModel $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::hasAuthor($entryAuthor)
             && !LeadingEngagementBlocks::isProse($block)

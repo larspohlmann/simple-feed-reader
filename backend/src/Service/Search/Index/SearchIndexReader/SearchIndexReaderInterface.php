@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Search\Index\SearchIndexReader;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexMatches;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexMatchesModel;
+use App\Service\Search\Index\Model\IndexSearchModel;
 
 /**
  * The read side of the index gateway. Separate from SearchIndexWriterInterface so that
@@ -17,12 +17,12 @@ use App\Service\Search\Index\IndexSearch;
 interface SearchIndexReaderInterface
 {
     /** @throws SearchEngineUnavailableException */
-    public function find(IndexSearch $search): IndexMatches;
+    public function find(IndexSearchModel $search): IndexMatchesModel;
 
     /**
-     * @param list<IndexSearch> $searches
+     * @param list<IndexSearchModel> $searches
      *
-     * @return list<IndexMatches> result i pairs with searches[i], in request order
+     * @return list<IndexMatchesModel> result i pairs with searches[i], in request order
      *
      * @throws SearchEngineUnavailableException
      */

@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionResultModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
  * Every marker one audited article earns — and only for an article the pipeline
@@ -31,9 +34,9 @@ final readonly class CleanupMarkers
      * The body is measured by the caller, which also reports its numbers, so the
      * cleaned HTML is parsed once per article rather than once per reader of it.
      *
-     * @return list<CleanupMarker>
+     * @return list<CleanupMarkerModel>
      */
-    public function detect(ExtractionResult $result, SampledEntry $entry, ?ExtractedBody $body): array
+    public function detect(ExtractionResultModel $result, SampledEntryModel $entry, ?ExtractedBodyModel $body): array
     {
         if (!$result->ok || $body === null) {
             return [];

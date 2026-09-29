@@ -5,23 +5,23 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Media\PageTextBlocks;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\Slideshow;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use PHPUnit\Framework\TestCase;
 
 final class MarkupCarouselRecognizerTest extends TestCase
 {
-    /** @return list<Slideshow> */
+    /** @return list<SlideshowModel> */
     private function recognize(string $html): array
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
 
         return (new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver()))
-            ->recognize($document, PageTextBlocks::fromDocument($document));
+            ->recognize($document, PageTextBlocksModel::fromDocument($document));
     }
 
     public function testDetectsSwiperWithRealImages(): void

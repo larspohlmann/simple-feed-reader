@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 
 /**
@@ -15,18 +15,18 @@ use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
  */
 final class FakeRefreshRunner implements RefreshRunnerInterface
 {
-    /** @var list<RefreshRequest> */
+    /** @var list<RefreshRequestModel> */
     public array $requests = [];
 
-    /** @var list<RefreshReport> */
+    /** @var list<RefreshReportModel> */
     private array $reports;
 
-    public function __construct(RefreshReport ...$reports)
+    public function __construct(RefreshReportModel ...$reports)
     {
         $this->reports = array_values($reports);
     }
 
-    public function run(RefreshRequest $request): RefreshReport
+    public function run(RefreshRequestModel $request): RefreshReportModel
     {
         $this->requests[] = $request;
         $report = array_shift($this->reports);

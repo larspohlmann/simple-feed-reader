@@ -15,7 +15,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\NoEgressProxy;
@@ -129,7 +129,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $this->em->flush();
 
         $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
-        $report = $this->runner($fetcher)->run(RefreshRequest::allDue(300));
+        $report = $this->runner($fetcher)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(0, $report->notModified);
         self::assertSame(1, $report->failed);
@@ -143,7 +143,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $this->em->flush();
 
         $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
-        $report = $this->runner($fetcher)->run(RefreshRequest::allDue(300));
+        $report = $this->runner($fetcher)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(1, $report->notModified);
         self::assertSame(0, $report->failed);
@@ -181,7 +181,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
         $fetcher = $this->concurrentFetcher($httpClient);
 
-        $report = $this->runner($fetcher)->run(RefreshRequest::allDue(5));
+        $report = $this->runner($fetcher)->run(RefreshRequestModel::allDue(5));
 
         self::assertSame('partial', $report->status);
         self::assertSame(3, $report->total);

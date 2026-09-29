@@ -7,13 +7,13 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
-use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -137,10 +137,10 @@ final class InBodyEmbedRewriterTest extends TestCase
         self::assertTrue($pass->discoveredMedia()->isEmpty());
     }
 
-    private function discoveredEmbed(): ArticleMedia
+    private function discoveredEmbed(): ArticleMediaModel
     {
-        return new ArticleMedia([
-            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
+        return new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb'),
         ]);
     }
 }

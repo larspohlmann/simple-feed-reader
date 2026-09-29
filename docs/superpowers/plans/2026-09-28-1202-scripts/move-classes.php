@@ -69,13 +69,25 @@ function declaredNamespace(string $code): string
     return 1 === preg_match('/^namespace ([^;]+);$/m', $code, $match) ? $match[1] : '';
 }
 
+/** @return array{class: string, alias: ?string}|null a plain class import; `use function` and `use const` are not one */
+function parseImport(string $line): ?array
+{
+    if (1 !== preg_match('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/', $line, $import)) {
+        return null;
+    }
+
+    return ['class' => $import[1], 'alias' => $import[2] ?? null];
+}
+
 /** @return array<string, true> the short names a file imports, aliases included */
 function importedNames(string $code): array
 {
-    preg_match_all('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/m', $code, $matches, PREG_SET_ORDER);
     $names = [];
-    foreach ($matches as $match) {
-        $names[$match[2] ?? shortNameOf($match[1])] = true;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null !== $import) {
+            $names[$import['alias'] ?? shortNameOf($import['class'])] = true;
+        }
     }
 
     return $names;
@@ -255,17 +267,32 @@ function referencedNames(string $code): array
     return $names;
 }
 
-function removeImport(string $code, string $class): string
+/** A plain import of a direct member of the namespace, or one aliased to its own short name, changes nothing. */
+function isOwnNamespaceImport(string $line, string $namespace): bool
 {
-    $trimmed = str_replace("use {$class};\n", '', $code);
-    if ($trimmed === $code) {
-        return $code;
+    $import = parseImport($line);
+    if (null === $import) {
+        return false;
     }
+    $short = shortNameOf($import['class']);
+
+    return namespaceOf($import['class']) === $namespace && ($import['alias'] ?? $short) === $short;
+}
+
+/** A use block that loses every line takes the blank line after it along. */
+function withoutOwnNamespaceImports(string $code): string
+{
+    $namespace = declaredNamespace($code);
 
     return (string) preg_replace_callback(
-        '/^(namespace [^;]+;\n)\n\n+/m',
-        static fn (array $match): string => $match[1] . "\n",
-        $trimmed,
+        '/(?:^use [^;\n]+;\n)+(\n?)/m',
+        static function (array $block) use ($namespace): string {
+            $lines = explode("\n", rtrim($block[0], "\n"));
+            $kept = array_filter($lines, static fn (string $line): bool => !isOwnNamespaceImport($line, $namespace));
+
+            return [] === $kept ? '' : implode("\n", $kept) . "\n" . $block[1];
+        },
+        $code,
     );
 }
 
@@ -299,10 +326,12 @@ function addImport(string $code, string $class): string
 /** @return array<string, string> short name => class, for the imports that carry no alias */
 function importedClasses(string $code): array
 {
-    preg_match_all('/^use (?!function |const )([\w\\\\]+);$/m', $code, $matches);
     $classes = [];
-    foreach ($matches[1] as $class) {
-        $classes[shortNameOf($class)] = $class;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null !== $import && null === $import['alias']) {
+            $classes[shortNameOf($import['class'])] = $import['class'];
+        }
     }
 
     return $classes;
@@ -495,11 +524,14 @@ function namesAfterMoves(string $code, string $destination, array $moves, array 
         $class = $moves[declaredNamespace($code) . '\\' . $short] ?? namespaceOf($destination) . '\\' . $short;
         $names[shortNameOf($class)][$class] = 'the file declares';
     }
-    preg_match_all('/^use (?!function |const )([\w\\\\]+)(?: as (\w+))?;$/m', $code, $imports, PREG_SET_ORDER);
-    foreach ($imports as $import) {
-        $class = $moves[$import[1]] ?? $import[1];
-        $short = $import[2] ?? shortNameOf($import[1]);
-        $isRenamedBareImport = !isset($import[2]) && shortNameOf($class) !== $short;
+    foreach (explode("\n", $code) as $line) {
+        $import = parseImport($line);
+        if (null === $import) {
+            continue;
+        }
+        $class = $moves[$import['class']] ?? $import['class'];
+        $short = $import['alias'] ?? shortNameOf($import['class']);
+        $isRenamedBareImport = null === $import['alias'] && shortNameOf($class) !== $short;
         if (!$isRenamedBareImport) {
             $names[$short][$class] = 'an import names';
         }
@@ -625,6 +657,7 @@ $relativeNamesIn = [];
 $introducedIn = [];
 $namesIn = [];
 $importBlocksBefore = [];
+$contentsBefore = [];
 foreach (phpFiles() as $file) {
     $code = (string) file_get_contents($file);
     $namespace = declaredNamespace($code);
@@ -634,6 +667,7 @@ foreach (phpFiles() as $file) {
     $namespaceClasses = $finalClasses[namespaceOf($destination)] ?? [];
     $namesIn[$destinationFile] = namesAfterMoves($code, $destination, $moves, $namespaceClasses);
     $importBlocksBefore[$destinationFile] = importBlocks($code);
+    $contentsBefore[$destinationFile] = $code;
     $imported = importedClasses($code);
     $importedShortNames = importedNames($code);
     foreach ($renames as $old => $new) {
@@ -724,27 +758,12 @@ foreach ([...repositoryFiles(), '../docs/architecture.md'] as $file) {
     }
 }
 
-// 4. An import of a class that now shares the file's namespace goes.
-foreach (phpFiles() as $file) {
-    $code = (string) file_get_contents($file);
-    $namespace = declaredNamespace($code);
-    $trimmed = $code;
-    foreach ($moves as $new) {
-        if (namespaceOf($new) === $namespace) {
-            $trimmed = removeImport($trimmed, $new);
-        }
-    }
-    if ($trimmed !== $code) {
-        file_put_contents($file, $trimmed);
-    }
-}
-
-// 5. A relative name that no longer resolves names its class by an import, or in full where the short name is taken.
+// 4. A relative name that no longer resolves names its class by an import, or in full where the short name is taken.
 foreach ($relativeNamesIn as $file => $replacements) {
     file_put_contents($file, replaceRelativeNames((string) file_get_contents($file), $replacements));
 }
 
-// 6. A bare name that left the file's namespace gets an import.
+// 5. A bare name that left the file's namespace gets an import.
 $added = 0;
 foreach ($importsFor as $file => $classes) {
     $code = (string) file_get_contents($file);
@@ -755,12 +774,23 @@ foreach ($importsFor as $file => $classes) {
     file_put_contents($file, $code);
 }
 
-// 7. A renamed class is renamed where a file named it bare: its declaration, its uses, its comments.
+// 6. A renamed class is renamed where a file named it bare: its declaration, its uses, its comments.
 foreach ($bareRenamesIn as $file => $shortRenames) {
     $code = (string) file_get_contents($file);
     $renamed = renameBareNames($code, $shortRenames);
     if ($renamed !== $code) {
         file_put_contents($file, $renamed);
+    }
+}
+
+// 7. A file the moves rewrote drops its imports of classes in its own namespace, such as one it moved in beside.
+$trimmedFiles = 0;
+foreach ($contentsBefore as $file => $before) {
+    $code = (string) file_get_contents($file);
+    $trimmed = withoutOwnNamespaceImports($code);
+    if ($code !== $before && $trimmed !== $code) {
+        file_put_contents($file, $trimmed);
+        ++$trimmedFiles;
     }
 }
 
@@ -776,12 +806,14 @@ foreach ($importBlocksBefore as $file => $before) {
 
 printf(
     "Moved %d classes (%d renamed); rewrote names in %d files; added %d imports in %d files; "
-        . "renamed bare names in %d files; sorted imports in %d files.\n",
+        . "renamed bare names in %d files; dropped own-namespace imports in %d files; "
+        . "sorted imports in %d files.\n",
     count($moves),
     count($renames),
     $rewrittenFiles,
     $added,
     count($importsFor),
     count($bareRenamesIn),
+    $trimmedFiles,
     $sorted,
 );

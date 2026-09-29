@@ -6,9 +6,9 @@ namespace App\Service\Reader;
 
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\BodyCleaningStepInterface;
+use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -24,7 +24,7 @@ final readonly class ReaderBodyCleaner
     }
 
     #[WithSpan]
-    public function clean(string $contentHtml, BodyCleaningInput $input): string
+    public function clean(string $contentHtml, BodyCleaningInputModel $input): string
     {
         try {
             $pass = new BodyCleaningPass(HtmlDocumentParser::parse($contentHtml), $input);

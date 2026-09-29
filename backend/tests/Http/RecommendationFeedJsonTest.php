@@ -11,18 +11,18 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\RecommendationFeedRow;
-use App\Service\Recommendation\Feed\FeedAnnotationVisibility;
-use App\Service\Recommendation\Feed\ForYouFeedPage;
+use App\Service\Recommendation\Feed\Model\FeedAnnotationVisibilityModel;
+use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationFeedJsonTest extends TestCase
 {
     public function testShownIncludesTheReasonAndItsScoreTogether(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPage(
+        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showExplanation: true),
+            new FeedAnnotationVisibilityModel(showExplanation: true),
         ));
 
         self::assertSame('Matches your interest in g1', $result['entries'][0]['recommendationReason']);
@@ -34,10 +34,10 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testHiddenOmitsTheReasonAndItsScoreTogether(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPage(
+        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showExplanation: false),
         ));
 
         self::assertArrayNotHasKey('recommendationReason', $result['entries'][0]);
@@ -46,10 +46,10 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testPageAlwaysCarriesRunIdAndGeneratedAtRegardlessOfVisibility(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPage(
+        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row()],
             null,
-            new FeedAnnotationVisibility(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showExplanation: false),
         ));
 
         // Present even with both annotations hidden — the divider is a
@@ -60,10 +60,10 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testRunGeneratedAtIsNullWhenTheRowCarriesNoGenerationTime(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPage(
+        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->rowWithoutGenerationTime()],
             null,
-            new FeedAnnotationVisibility(showExplanation: false),
+            new FeedAnnotationVisibilityModel(showExplanation: false),
         ));
 
         // Defensive: the field is nullable, so a row lacking a completion time
@@ -74,10 +74,10 @@ final class RecommendationFeedJsonTest extends TestCase
 
     public function testScoreKeyIsNullForRowsWrittenBeforeTheColumnExisted(): void
     {
-        $result = RecommendationFeedJson::page(new ForYouFeedPage(
+        $result = RecommendationFeedJson::page(new ForYouFeedPageModel(
             [$this->row(null)],
             null,
-            new FeedAnnotationVisibility(showExplanation: true),
+            new FeedAnnotationVisibilityModel(showExplanation: true),
         ));
 
         self::assertArrayHasKey('recommendationScore', $result['entries'][0]);

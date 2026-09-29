@@ -8,9 +8,9 @@ use App\Exception\ValidationException;
 use App\Http\RequestServingHost;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
+use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyChange;
-use App\Service\Settings\RelyingPartyIdChoice;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
@@ -87,9 +87,9 @@ final class RelyingPartyChangeTest extends TestCase
         }
     }
 
-    private function choiceOf(string $passkeyRpId): RelyingPartyIdChoice
+    private function choiceOf(string $passkeyRpId): RelyingPartyIdChoiceModel
     {
-        return new RelyingPartyIdChoice($passkeyRpId, invalidateExistingPasskeys: false);
+        return new RelyingPartyIdChoiceModel($passkeyRpId, invalidateExistingPasskeys: false);
     }
 
     private function change(string $currentRelyingPartyId, string $publicBaseUrl): RelyingPartyChange

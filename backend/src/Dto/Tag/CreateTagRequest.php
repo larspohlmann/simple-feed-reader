@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Tag;
 
-use App\Service\Tag\TagDetails;
+use App\Service\Tag\Model\TagDetailsModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CreateTagRequest
@@ -22,8 +22,8 @@ final readonly class CreateTagRequest
     ) {
     }
 
-    public function toDetails(): TagDetails
+    public function toDetails(): TagDetailsModel
     {
-        return new TagDetails(name: $this->name, color: $this->color, icon: $this->icon);
+        return new TagDetailsModel(name: $this->name, color: $this->color, icon: $this->icon);
     }
 }

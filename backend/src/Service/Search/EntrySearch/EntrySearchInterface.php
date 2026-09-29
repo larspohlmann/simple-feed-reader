@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\EntrySearch;
 
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\EntrySearchResult;
+use App\Service\Search\Model\EntrySearchResultModel;
 
 /**
  * Finds entries for one caller. The single seam behind which the matching lives:
@@ -14,6 +14,6 @@ use App\Service\Search\EntrySearchResult;
  */
 interface EntrySearchInterface
 {
-    /** @return EntrySearchResult whose rows are newest first, at most $query->limit of them */
-    public function search(EntrySearchQuery $query): EntrySearchResult;
+    /** @return EntrySearchResultModel whose rows are newest first, at most $query->limit of them */
+    public function search(EntrySearchQuery $query): EntrySearchResultModel;
 }

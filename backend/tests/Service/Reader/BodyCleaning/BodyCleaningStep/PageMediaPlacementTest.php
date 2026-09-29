@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\BodyCleaning\BodyCleaningInput;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
-use App\Service\Reader\LeadImageCandidate;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageMediaInserter;
+use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Reader\ReaderLeadImage;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
@@ -41,14 +41,14 @@ final class PageMediaPlacementTest extends TestCase
 
     public function testSkipsTheHeroWhenAnEmbedIsTopPlaced(): void
     {
-        $embed = new MediaCandidate(
+        $embed = new MediaCandidateModel(
             MediaKind::Embed,
             'https://www.youtube-nocookie.com/embed/ccccccccccc',
             'https://i.ytimg.example/hqdefault.jpg',
             'Watch',
         );
 
-        $out = $this->placed(BodyCleaningInputs::withLeadImageAndMedia($this->hero(), new ArticleMedia([$embed])));
+        $out = $this->placed(BodyCleaningInputs::withLeadImageAndMedia($this->hero(), new ArticleMediaModel([$embed])));
 
         self::assertStringNotContainsString('cdn.test/hero.jpg', $out);
         self::assertStringContainsString('i.ytimg.example/hqdefault.jpg', $out);
@@ -57,7 +57,7 @@ final class PageMediaPlacementTest extends TestCase
     /** #907: narration audio is not a lead visual, so the hero stays and the player sits below it. */
     public function testSeatsATopPlacedAudioPlayerBelowTheRestoredHero(): void
     {
-        $audio = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+        $audio = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         $out = $this->placed(BodyCleaningInputs::withLeadImageAndMedia($this->hero(), $audio));
 
@@ -67,7 +67,7 @@ final class PageMediaPlacementTest extends TestCase
 
     public function testPlacesNoDiscoveredEmbedOnceTheBodyRecoveredItsOwn(): void
     {
-        $embed = new MediaCandidate(
+        $embed = new MediaCandidateModel(
             MediaKind::Embed,
             'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb',
             null,
@@ -75,7 +75,7 @@ final class PageMediaPlacementTest extends TestCase
         );
         $pass = new BodyCleaningPass(
             HtmlDocumentParser::parse('<p>' . self::PROSE . '</p>'),
-            BodyCleaningInputs::withMedia(new ArticleMedia([$embed])),
+            BodyCleaningInputs::withMedia(new ArticleMediaModel([$embed])),
         );
         $pass->recordEmbedsRecoveredInBody();
 
@@ -84,12 +84,12 @@ final class PageMediaPlacementTest extends TestCase
         self::assertStringNotContainsString('bbbbbbbbbbb', $pass->document->saveHtml());
     }
 
-    private function hero(): LeadImageCandidate
+    private function hero(): LeadImageCandidateModel
     {
-        return new LeadImageCandidate('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
+        return new LeadImageCandidateModel('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
     }
 
-    private function placed(BodyCleaningInput $input): string
+    private function placed(BodyCleaningInputModel $input): string
     {
         $pass = new BodyCleaningPass(HtmlDocumentParser::parse('<p>' . self::PROSE . '</p>'), $input);
         $this->placement->cleanIn($pass);

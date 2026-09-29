@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run\ProviderPhase;
 
 use App\Service\Recommendation\Run\InvalidReplyRetry;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
-use App\Service\Recommendation\Run\RecommendationRunReport;
 use App\Service\Recommendation\Run\TickContext;
 
 /**
@@ -23,7 +23,7 @@ final readonly class ConsolidationPhase implements ProviderPhaseInterface
     ) {
     }
 
-    public function advance(TickContext $tick): RecommendationRunReport
+    public function advance(TickContext $tick): RecommendationRunReportModel
     {
         $run = $tick->run;
         $outcome = $this->resolver->resolve($tick);
@@ -32,7 +32,8 @@ final readonly class ConsolidationPhase implements ProviderPhaseInterface
             return $this->invalidReplies->retryOrDegrade(
                 $run,
                 $outcome->requireUnusableReply(),
-                fn (): RecommendationRunReport => $this->finalizer->finalize($run, $outcome->requireFallbackPool()),
+                fn (): RecommendationRunReportModel
+                    => $this->finalizer->finalize($run, $outcome->requireFallbackPool()),
             );
         }
 

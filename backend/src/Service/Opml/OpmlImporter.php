@@ -7,8 +7,8 @@ namespace App\Service\Opml;
 use App\Entity\User;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\Model\OpmlImportResultModel;
-use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
+use App\Service\Subscription\Model\BulkSubscribeItemModel;
 
 /**
  * Imports an OPML file into a user's subscriptions WITHOUT fetching anything.
@@ -39,7 +39,7 @@ final readonly class OpmlImporter
         // title as its tag. `null` tag = body root (untagged). OPML carries no
         // styling, so imported tags get the app's default colour and icon.
         foreach ($this->collectFeeds($body, null) as [$xmlUrl, $tagName]) {
-            $items[] = new BulkSubscribeItem(feedUrl: $xmlUrl, tagName: $tagName);
+            $items[] = new BulkSubscribeItemModel(feedUrl: $xmlUrl, tagName: $tagName);
         }
 
         $result = $this->subscriber->subscribeAll($user, $items);

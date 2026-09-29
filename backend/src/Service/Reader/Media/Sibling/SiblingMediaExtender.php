@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
 
 /** Adds the media SiblingIdRule derives, once the network has confirmed each URL: it must land 2xx on a URL of the seed's kind. */
 final readonly class SiblingMediaExtender
@@ -25,8 +25,11 @@ final readonly class SiblingMediaExtender
      * base the verified siblings are appended onto (#800 — a seed already moved to
      * its landing no longer names its sibling's id).
      */
-    public function extend(ArticleMedia $declared, ArticleMedia $resolved, string $pageHtml): ArticleMedia
-    {
+    public function extend(
+        ArticleMediaModel $declared,
+        ArticleMediaModel $resolved,
+        string $pageHtml,
+    ): ArticleMediaModel {
         // A page can name one clip twice — through its VideoObject and its player
         // config (#1055) — so the search re-derives a seed already declared. Skip
         // it before the network round-trip, not after: the derived URL is the
@@ -51,7 +54,7 @@ final readonly class SiblingMediaExtender
         return $resolved->with($verified);
     }
 
-    private function landed(MediaCandidate $candidate): ?MediaCandidate
+    private function landed(MediaCandidateModel $candidate): ?MediaCandidateModel
     {
         $landing = $this->landings->urlOf($candidate->url);
         $resolved = $landing === null ? null : $this->mediaUrlKind->resolve($landing);

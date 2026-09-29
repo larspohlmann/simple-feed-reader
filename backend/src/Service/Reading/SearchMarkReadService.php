@@ -7,7 +7,7 @@ namespace App\Service\Reading;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 
 /** Marks read every unread entry matching a search term. A search spans every feed, so no watermark scopes it. */
 final readonly class SearchMarkReadService
@@ -23,7 +23,7 @@ final readonly class SearchMarkReadService
         $userId = $user->requireId();
 
         $this->readMarker->markEntriesRead($userId, $this->entries->unreadMatchingEntryIdsForUser(
-            new EntrySearchQuery($userId, SearchTerms::fromInput($rawQuery)),
+            new EntrySearchQuery($userId, SearchTermsModel::fromInput($rawQuery)),
             $until,
         ));
     }

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Backup\Model;
 
 use App\Service\Backup\Model\BackupFilenameModel;
-use App\Service\Version\ReleaseVersion;
+use App\Service\Version\Model\ReleaseVersionModel;
 use PHPUnit\Framework\TestCase;
 
 final class BackupFilenameModelTest extends TestCase
@@ -60,7 +60,7 @@ final class BackupFilenameModelTest extends TestCase
     }
 
     /**
-     * ReleaseVersion::development() is what every local checkout and Docker
+     * ReleaseVersionModel::development() is what every local checkout and Docker
      * run reports — no version.json has ever been deployed there. "dev" says
      * so plainly rather than inventing a version number the build never had.
      */
@@ -68,7 +68,7 @@ final class BackupFilenameModelTest extends TestCase
     {
         $filename = new BackupFilenameModel(
             'ada.lovelace@fastmail.com',
-            ReleaseVersion::development()->version,
+            ReleaseVersionModel::development()->version,
             $this->exportedAt(),
         );
 

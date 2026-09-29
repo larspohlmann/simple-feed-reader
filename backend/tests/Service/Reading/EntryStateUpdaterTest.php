@@ -10,8 +10,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
-use App\Service\Reading\EntryStateChange;
 use App\Service\Reading\EntryStateUpdater;
+use App\Service\Reading\Model\EntryStateChangeModel;
 use App\Tests\DbTestCase;
 
 final class EntryStateUpdaterTest extends DbTestCase
@@ -61,8 +61,8 @@ final class EntryStateUpdaterTest extends DbTestCase
         ?bool $isFavorite = null,
         ?bool $isKept = null,
         ?bool $isViewed = null,
-    ): EntryStateChange {
-        return new EntryStateChange($isHidden, $isFavorite, $isKept, $isViewed);
+    ): EntryStateChangeModel {
+        return new EntryStateChangeModel($isHidden, $isFavorite, $isKept, $isViewed);
     }
 
     /**

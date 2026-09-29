@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Repository\ReaderAuditRepository;
+use App\Service\ReaderAudit\Model\AuditSampleModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
  * Draws the audit sample stratified by feed: every feed gives one article before any gives a second. The shuffle is
@@ -16,8 +18,8 @@ final readonly class AuditSampler
     {
     }
 
-    /** @return list<SampledEntry> */
-    public function sample(AuditSample $request): array
+    /** @return list<SampledEntryModel> */
+    public function sample(AuditSampleModel $request): array
     {
         $byFeed = $this->candidatesByFeed($request->userId, $request->seed, $request->before);
         $chosenIds = $this->roundRobin($byFeed, $request->limit, $request->perFeed);
@@ -31,7 +33,7 @@ final readonly class AuditSampler
      *
      * @param list<int> $entryIds
      *
-     * @return list<SampledEntry>
+     * @return list<SampledEntryModel>
      */
     public function pick(array $entryIds, int $userId): array
     {
@@ -85,14 +87,14 @@ final readonly class AuditSampler
     /**
      * @param list<int> $entryIds
      *
-     * @return list<SampledEntry>
+     * @return list<SampledEntryModel>
      */
     private function detailsOf(array $entryIds, int $userId): array
     {
         $byId = [];
         foreach ($this->audit->detailRows($userId, $entryIds) as $row) {
             $entryId = DatabaseValue::int($row['id']);
-            $byId[$entryId] = new SampledEntry(
+            $byId[$entryId] = new SampledEntryModel(
                 entryId: $entryId,
                 subscriptionId: DatabaseValue::int($row['subscription_id']),
                 feedId: DatabaseValue::int($row['feed_id']),

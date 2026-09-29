@@ -7,7 +7,7 @@ namespace App\Tests\Service\Reader;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\PageResponse;
+use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\RelatedTeaserGridRemover;
 use PHPUnit\Framework\TestCase;
 
@@ -26,7 +26,7 @@ final class ArticleReadabilityTest extends TestCase
         );
         $normalizer = new FetchedPageNormalizer([]);
         $readability = new ArticleReadability($normalizer, new RelatedTeaserGridRemover(), new EmbedProviders([]));
-        $page = new PageResponse('https://site.test/post', $html);
+        $page = new PageResponseModel('https://site.test/post', $html);
 
         $article = $readability->richest($normalizer->normalize($html), $page, []);
 

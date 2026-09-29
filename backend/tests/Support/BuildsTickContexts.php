@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Entity\RecommendationRun;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\TickContext;
-use App\Service\Recommendation\Run\TickDriver;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 
 trait BuildsTickContexts

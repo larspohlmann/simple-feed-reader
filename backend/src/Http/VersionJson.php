@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Version\VersionReport;
+use App\Service\Version\Model\VersionReportModel;
 
 final class VersionJson
 {
     /** @return array<string, mixed> */
-    public static function of(VersionReport $report): array
+    public static function of(VersionReportModel $report): array
     {
         $latest = $report->latest;
 

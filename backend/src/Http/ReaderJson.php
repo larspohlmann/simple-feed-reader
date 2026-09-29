@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionResultModel;
 
 final class ReaderJson
 {
@@ -22,8 +22,11 @@ final class ReaderJson
      *  |array{status: 'failed', url: string|null, reason: string, detail: string|null,
      *   originalHero: array{url: string, width: int|null, height: int|null}|null}
      */
-    public static function one(ExtractionResult $r, ?DeclaredImageModel $originalHero, \DateTimeImmutable $now): array
-    {
+    public static function one(
+        ExtractionResultModel $r,
+        ?DeclaredImageModel $originalHero,
+        \DateTimeImmutable $now,
+    ): array {
         if ($r->reason !== null) {
             return [
                 'status' => 'failed',

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Membership\SavedSearchMatcher;
 
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
-use App\Service\Search\SavedSearchTerm;
+use App\Service\Search\Model\SavedSearchTermModel;
 
 /**
  * The engine matcher: one multi-search per chunk, one query per search, each
@@ -22,11 +22,11 @@ final readonly class IndexedSavedSearchMatcher implements SavedSearchMatcherInte
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
         if ($searches === [] || $candidateEntryIds === []) {
-            return array_fill_keys(SavedSearchTerm::idsOf($searches), []);
+            return array_fill_keys(SavedSearchTermModel::idsOf($searches), []);
         }
 
         $results = $this->index->findMany(array_map(
-            static fn (SavedSearchTerm $search): IndexSearch => IndexSearch::amongEntries(
+            static fn (SavedSearchTermModel $search): IndexSearchModel => IndexSearchModel::amongEntries(
                 $search->terms,
                 $candidateEntryIds,
             ),

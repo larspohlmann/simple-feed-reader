@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Prompt;
 
+use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
+
 /**
  * Salvages the valid picks from a decoded model reply's `recommendations`
  * list -- the id/score/reason validation the batch parser and the
@@ -30,7 +32,7 @@ final readonly class RecommendationPickSalvager
      * @param array<mixed> $entries
      * @param list<int>    $shownIds
      *
-     * @return list<RecommendationPick>
+     * @return list<RecommendationPickModel>
      */
     public function salvage(array $entries, array $shownIds): array
     {
@@ -55,7 +57,7 @@ final readonly class RecommendationPickSalvager
      * @param list<int>        $shownIds
      * @param array<int, true> $seenIds
      */
-    private function salvagePick(mixed $entry, array $shownIds, array $seenIds): ?RecommendationPick
+    private function salvagePick(mixed $entry, array $shownIds, array $seenIds): ?RecommendationPickModel
     {
         if (!\is_array($entry)) {
             return null;
@@ -73,7 +75,7 @@ final readonly class RecommendationPickSalvager
             return null;
         }
 
-        return new RecommendationPick($entryId, $score, $this->salvageReason($entry['reason'] ?? null));
+        return new RecommendationPickModel($entryId, $score, $this->salvageReason($entry['reason'] ?? null));
     }
 
     private function salvageScore(mixed $score): ?int

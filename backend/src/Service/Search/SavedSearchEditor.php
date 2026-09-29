@@ -7,8 +7,10 @@ namespace App\Service\Search;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\SavedSearchRepository;
+use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SweepBudget;
+use App\Service\Search\Model\SavedSearchDefinitionModel;
+use App\Service\Search\Model\SavedSearchOutcomeModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class SavedSearchEditor
@@ -23,7 +25,7 @@ final readonly class SavedSearchEditor
     ) {
     }
 
-    public function save(User $user, SavedSearchDefinition $definition): SavedSearchOutcome
+    public function save(User $user, SavedSearchDefinitionModel $definition): SavedSearchOutcomeModel
     {
         $existing = $this->savedSearches->findOneForUserByTerm(
             $user->requireId(),
@@ -32,10 +34,10 @@ final readonly class SavedSearchEditor
             $definition->phrase,
         );
         if (null !== $existing) {
-            return SavedSearchOutcome::existing($existing);
+            return SavedSearchOutcomeModel::existing($existing);
         }
 
-        return SavedSearchOutcome::created($this->create($user, $definition));
+        return SavedSearchOutcomeModel::created($this->create($user, $definition));
     }
 
     public function changeDigestInclusion(SavedSearch $savedSearch, bool $includeInDigest): void
@@ -50,14 +52,14 @@ final readonly class SavedSearchEditor
         $this->entityManager->flush();
     }
 
-    private function create(User $user, SavedSearchDefinition $definition): SavedSearch
+    private function create(User $user, SavedSearchDefinitionModel $definition): SavedSearch
     {
         $savedSearch = new SavedSearch($user, $definition->term, $definition->wholeWord, $definition->phrase);
         $this->entityManager->persist($savedSearch);
         $this->entityManager->flush();
         $this->slug->assignTo($savedSearch);
         $this->entityManager->flush();
-        $this->sweep->sweepOne($savedSearch, SweepBudget::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
+        $this->sweep->sweepOne($savedSearch, SweepBudgetModel::seconds(self::CREATE_SWEEP_BUDGET_SECONDS));
 
         return $savedSearch;
     }

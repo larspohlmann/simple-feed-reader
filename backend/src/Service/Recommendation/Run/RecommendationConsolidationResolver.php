@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run;
 
-use App\Service\Recommendation\Prompt\CallPrompt;
-use App\Service\Recommendation\Prompt\ConsolidationParseResult;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Recommendation\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
+use App\Service\Recommendation\Prompt\Model\PromptLineModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\PromptContext;
-use App\Service\Recommendation\Prompt\PromptLine;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Prompt\RecommendationPick;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
-use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
 
 /**
  * The consolidation phase's one provider call (#493): re-score, reason and dedupe the top of the pool in one pass.
@@ -36,7 +38,7 @@ final readonly class RecommendationConsolidationResolver
     ) {
     }
 
-    public function resolve(TickContext $tick): ConsolidationOutcome
+    public function resolve(TickContext $tick): ConsolidationOutcomeModel
     {
         $run = $tick->run;
         $prompt = new PromptContext(
@@ -50,7 +52,7 @@ final readonly class RecommendationConsolidationResolver
         $pool = self::stillPresent($pool, $linesById);
 
         if ([] === $pool) {
-            return ConsolidationOutcome::finalizeWith([]);
+            return ConsolidationOutcomeModel::finalizeWith([]);
         }
 
         $messages = $this->promptBuilder->messagesWithCorrectiveTail(
@@ -61,9 +63,9 @@ final readonly class RecommendationConsolidationResolver
 
         $request = $this->requestFactory->create(
             $tick->connection,
-            new CallPrompt($messages, \count($pool), RecommendationResponseSchema::Consolidation),
+            new CallPromptModel($messages, \count($pool), RecommendationResponseSchema::Consolidation),
         );
-        $recordedCall = $this->callRecorder->begin($run, CallSlot::consolidation(), $request);
+        $recordedCall = $this->callRecorder->begin($run, CallSlotModel::consolidation(), $request);
         $content = $this->providerCall->complete($tick, $request, $recordedCall);
 
         $result = $this->consolidationParser->parse($content, array_column($pool, 'id'));
@@ -71,18 +73,18 @@ final readonly class RecommendationConsolidationResolver
             $recordedCall->finishUnusable($content);
             $this->checkpoint->guard($run);
 
-            return ConsolidationOutcome::unusable($content, $pool);
+            return ConsolidationOutcomeModel::unusable($content, $pool);
         }
 
         $recordedCall->finishUsable($content);
         $this->checkpoint->guard($run);
 
-        return ConsolidationOutcome::finalizeWith(self::rankedFromReply($result));
+        return ConsolidationOutcomeModel::finalizeWith(self::rankedFromReply($result));
     }
 
     /**
      * @param list<array{id: int, score: int, reason: string}> $pool
-     * @param array<int, PromptLine>                           $linesById entries pruned since their batch are absent
+     * @param array<int, PromptLineModel>                      $linesById entries pruned since their batch are absent
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
@@ -100,7 +102,7 @@ final readonly class RecommendationConsolidationResolver
      *
      * @return list<array{id: int, score: int, reason: string}>
      */
-    private static function rankedFromReply(ConsolidationParseResult $result): array
+    private static function rankedFromReply(ConsolidationParseResultModel $result): array
     {
         $ranked = array_values(array_filter(
             self::picksById($result->picks),
@@ -113,7 +115,7 @@ final readonly class RecommendationConsolidationResolver
     }
 
     /**
-     * @param list<RecommendationPick> $picks
+     * @param list<RecommendationPickModel> $picks
      *
      * @return array<int, array{id: int, score: int, reason: string}>
      */

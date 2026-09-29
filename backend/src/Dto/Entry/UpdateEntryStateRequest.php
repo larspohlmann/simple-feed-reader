@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Entry;
 
-use App\Service\Reading\EntryStateChange;
+use App\Service\Reading\Model\EntryStateChangeModel;
 
 /**
  * Partial update: a null field means "leave unchanged". At least one non-null
@@ -23,9 +23,9 @@ final readonly class UpdateEntryStateRequest
     ) {
     }
 
-    public function toChange(): EntryStateChange
+    public function toChange(): EntryStateChangeModel
     {
-        return new EntryStateChange(
+        return new EntryStateChangeModel(
             isHidden: $this->isHidden,
             isFavorite: $this->isFavorite,
             isKept: $this->isKept,

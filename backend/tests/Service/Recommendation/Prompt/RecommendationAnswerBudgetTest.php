@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Prompt;
 
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
-use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationAnswerBudgetTest extends TestCase

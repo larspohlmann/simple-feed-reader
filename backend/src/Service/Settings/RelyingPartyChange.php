@@ -7,6 +7,7 @@ namespace App\Service\Settings;
 use App\Exception\ValidationException;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
+use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\ServingHost\ServingHostInterface;
 
@@ -30,7 +31,7 @@ final readonly class RelyingPartyChange
      * @throws RelyingPartyChangeRequiresConfirmationException if the effective id changes while passkeys exist
      *         and the change was not confirmed
      */
-    public function guardAndInvalidatePasskeysIfChanged(RelyingPartyIdChoice $choice): void
+    public function guardAndInvalidatePasskeysIfChanged(RelyingPartyIdChoiceModel $choice): void
     {
         $this->assertUsableRelyingPartyId($choice->passkeyRpId);
 

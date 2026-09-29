@@ -9,7 +9,7 @@ use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
-use App\Service\Reader\FeedMedia;
+use App\Service\Reader\Model\FeedMediaModel;
 use App\Tests\Support\BodyCleaningInputs;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 final class FeedDimensionStamperTest extends TestCase
 {
     /** @param list<EntryMedium> $media */
-    private function feed(array $media): FeedMedia
+    private function feed(array $media): FeedMediaModel
     {
         $entry = new Entry(
             new Feed('https://feed.test/rss.xml'),
@@ -29,10 +29,10 @@ final class FeedDimensionStamperTest extends TestCase
         );
         $entry->setMedia($media, []);
 
-        return FeedMedia::fromEntry($entry);
+        return FeedMediaModel::fromEntry($entry);
     }
 
-    private function stamp(string $bodyHtml, FeedMedia $feed): string
+    private function stamp(string $bodyHtml, FeedMediaModel $feed): string
     {
         $document = HTMLDocument::createFromString(
             '<!doctype html><html><body>' . $bodyHtml . '</body></html>',

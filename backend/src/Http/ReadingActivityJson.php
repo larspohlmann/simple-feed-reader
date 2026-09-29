@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Reading\ReadingActivity;
+use App\Service\Reading\Model\ReadingActivityModel;
 
 /**
  * The wire shape of the reading-activity chart (#896): one entry per day of the
@@ -21,7 +21,7 @@ use App\Service\Reading\ReadingActivity;
 final class ReadingActivityJson
 {
     /** @return ReadingActivityPayload */
-    public static function of(ReadingActivity $activity): array
+    public static function of(ReadingActivityModel $activity): array
     {
         $days = [];
         $total = 0;

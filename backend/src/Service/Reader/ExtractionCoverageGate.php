@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Html\HtmlDocumentParser;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\Text\Whitespace;
 
 /**
@@ -40,7 +42,7 @@ final readonly class ExtractionCoverageGate
     /** Below this share of the feed article's shingles, the extraction is not that article. */
     private const float MIN_COVERAGE = 0.25;
 
-    public function verify(ExtractionResult $result, ?string $feedContentHtml): ExtractionResult
+    public function verify(ExtractionResultModel $result, ?string $feedContentHtml): ExtractionResultModel
     {
         if (!$result->ok || $feedContentHtml === null) {
             return $result;
@@ -61,7 +63,7 @@ final readonly class ExtractionCoverageGate
             return $result;
         }
 
-        return ExtractionResult::failed($result->url, ExtractionFailure::Mismatch);
+        return ExtractionResultModel::failed($result->url, ExtractionFailure::Mismatch);
     }
 
     /**

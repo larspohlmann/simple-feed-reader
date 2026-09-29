@@ -6,7 +6,7 @@ namespace App\Tests\Dto\Entry;
 
 use App\Dto\Entry\MarkReadRequest;
 use App\Exception\ValidationException;
-use App\Service\Reading\ReadScopeKind;
+use App\Service\Reading\Model\ReadScopeKind;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 

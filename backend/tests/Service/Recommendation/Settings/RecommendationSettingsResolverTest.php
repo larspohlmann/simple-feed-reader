@@ -10,7 +10,7 @@ use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -102,7 +102,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $this->seedAiSettingsWithModel($this->user, contextWindow: 200000);
 
         self::assertSame(
-            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
         );
     }
@@ -129,7 +129,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
     public function testTheBatchCeilingFallsBackWithNoConfiguration(): void
     {
         self::assertSame(
-            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
         );
     }
@@ -148,7 +148,7 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $this->em->flush();
 
         self::assertSame(
-            RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
             $this->resolver()->forUser($this->user)->packing->maximumBatchSize,
         );
     }

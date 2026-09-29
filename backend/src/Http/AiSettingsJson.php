@@ -7,7 +7,7 @@ namespace App\Http;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\AiReadiness;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
  * The client's view of the account's AI provider configurations. Hand-built,
@@ -57,7 +57,7 @@ final class AiSettingsJson
             // The ceiling the packer applies when a connection leaves its cap
             // empty. Sent so the settings form shows the same number the run
             // would use, from its one definition rather than a copy that drifts.
-            'defaultMaxBatchSize' => RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
+            'defaultMaxBatchSize' => RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
         ];
     }
 

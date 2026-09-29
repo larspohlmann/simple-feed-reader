@@ -7,7 +7,9 @@ namespace App\Service\Reading;
 use App\Entity\User;
 use App\Repository\EntryStateRepository;
 use App\Service\Clock\NaiveUtcClock;
-use App\Service\Recommendation\Feed\ViewerTimeZone;
+use App\Service\Reading\Model\ReadingActivityModel;
+use App\Service\Reading\Model\ReadingWindowModel;
+use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 
 /**
  * How many articles the account opened on each of the last WINDOW_DAYS days, in the viewer's own timezone
@@ -25,9 +27,9 @@ final readonly class ReadingActivityCounter
     ) {
     }
 
-    public function daily(User $user, ViewerTimeZone $viewer): ReadingActivity
+    public function daily(User $user, ViewerTimeZoneModel $viewer): ReadingActivityModel
     {
-        $window = ReadingWindow::lastDays(self::WINDOW_DAYS, $viewer, $this->clock->now());
+        $window = ReadingWindowModel::lastDays(self::WINDOW_DAYS, $viewer, $this->clock->now());
         $userId = $user->requireId();
 
         $countsByDay = $this->countByLocalDay(
@@ -35,7 +37,7 @@ final readonly class ReadingActivityCounter
             $viewer,
         );
 
-        return new ReadingActivity(
+        return new ReadingActivityModel(
             $window->localDates,
             $countsByDay,
             $this->states->readCountsByFeed($userId, self::TOP_FEEDS),
@@ -47,7 +49,7 @@ final readonly class ReadingActivityCounter
      *
      * @return array<string, int> local 'Y-m-d' => articles opened
      */
-    private function countByLocalDay(array $viewedAt, ViewerTimeZone $viewer): array
+    private function countByLocalDay(array $viewedAt, ViewerTimeZoneModel $viewer): array
     {
         $countsByDay = [];
         foreach ($viewedAt as $instant) {

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Worker\Handler;
 
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Service\Worker\Message\RefreshDueFeeds;
 use Psr\Log\LoggerInterface;
@@ -34,7 +34,7 @@ final readonly class RefreshDueFeedsHandler
 
     public function __invoke(RefreshDueFeeds $message): void
     {
-        $report = $this->refreshRunner->run(RefreshRequest::allDue(self::BUDGET_SECONDS));
+        $report = $this->refreshRunner->run(RefreshRequestModel::allDue(self::BUDGET_SECONDS));
 
         // 'busy' is healthy here: a user-driven refresh holds the global lock
         // and is doing the same work; this firing simply yields to it.

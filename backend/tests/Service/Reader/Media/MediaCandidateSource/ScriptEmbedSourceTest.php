@@ -7,9 +7,9 @@ namespace App\Tests\Service\Reader\Media\MediaCandidateSource;
 use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
 use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use PHPUnit\Framework\TestCase;
 
 final class ScriptEmbedSourceTest extends TestCase
@@ -21,7 +21,7 @@ final class ScriptEmbedSourceTest extends TestCase
         return new ScriptEmbedSource(new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]));
     }
 
-    /** @return list<MediaCandidate> */
+    /** @return list<MediaCandidateModel> */
     private function findInBody(string $body): array
     {
         return $this->find('<html lang="en"><body>' . $body . '</body></html>', 'https://site.test/a');

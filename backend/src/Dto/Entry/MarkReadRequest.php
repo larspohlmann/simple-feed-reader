@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Dto\Entry;
 
 use App\Exception\ValidationException;
-use App\Service\Reading\ReadScope;
-use App\Service\Reading\ReadScopeKind;
+use App\Service\Reading\Model\ReadScopeKind;
+use App\Service\Reading\Model\ReadScopeModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class MarkReadRequest
@@ -20,15 +20,15 @@ final readonly class MarkReadRequest
     ) {
     }
 
-    public function toScope(): ReadScope
+    public function toScope(): ReadScopeModel
     {
         $kind = ReadScopeKind::tryFrom($this->scope)
             ?? throw new ValidationException(['scope' => [sprintf('Unknown scope "%s".', $this->scope)]]);
 
         return match ($kind) {
-            ReadScopeKind::All => ReadScope::all(),
-            ReadScopeKind::Feed => ReadScope::feed($this->requiredIdFor($kind)),
-            ReadScopeKind::Tag => ReadScope::tag($this->requiredIdFor($kind)),
+            ReadScopeKind::All => ReadScopeModel::all(),
+            ReadScopeKind::Feed => ReadScopeModel::feed($this->requiredIdFor($kind)),
+            ReadScopeKind::Tag => ReadScopeModel::tag($this->requiredIdFor($kind)),
         };
     }
 

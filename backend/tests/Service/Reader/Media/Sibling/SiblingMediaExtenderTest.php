@@ -9,14 +9,14 @@ use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
-use App\Service\Reader\Media\ArticleMedia;
 use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Tests\Support\NoEgressProxy;
@@ -73,9 +73,9 @@ final class SiblingMediaExtenderTest extends TestCase
         return new MockResponse('', ['http_code' => 301, 'response_headers' => ['location' => $location]]);
     }
 
-    private static function found(): ArticleMedia
+    private static function found(): ArticleMediaModel
     {
-        return new ArticleMedia([new MediaCandidate(
+        return new ArticleMediaModel([new MediaCandidateModel(
             MediaKind::Stream,
             'https://cdn.test/live/taktik-analyse-video-100.m3u8',
             'https://a.test/assets/taktik~1920x1080',
@@ -100,9 +100,9 @@ final class SiblingMediaExtenderTest extends TestCase
         // The page seeds the same clip twice — its VideoObject and its player
         // config (#1055) — so the search re-derives a seed already declared. The
         // extender must skip it before the redirect-follow, making no request.
-        $declared = new ArticleMedia([
+        $declared = new ArticleMediaModel([
             self::found()->candidates[0],
-            new MediaCandidate(
+            new MediaCandidateModel(
                 MediaKind::Stream,
                 'https://cdn.test/live/reaktion-anschlag-video-100.m3u8',
                 'https://a.test/assets/reaktion~1920x1080',

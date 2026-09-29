@@ -9,7 +9,7 @@ use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
-use App\Service\Recommendation\Prompt\CandidatePoolRequest;
+use App\Service\Recommendation\Prompt\Model\CandidatePoolRequestModel;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
@@ -564,8 +564,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         int $poolSize = 100,
         int $orderSeed = 1,
         string $since = '2000-01-01T00:00:00Z',
-    ): CandidatePoolRequest {
-        return new CandidatePoolRequest(
+    ): CandidatePoolRequestModel {
+        return new CandidatePoolRequestModel(
             since: new \DateTimeImmutable($since),
             poolSize: $poolSize,
             orderSeed: $orderSeed,

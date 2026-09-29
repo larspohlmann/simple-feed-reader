@@ -9,6 +9,7 @@ use App\Pagination\RecommendationCursor;
 use App\Repository\ForYouFeedQuery;
 use App\Repository\RecommendationFeedRow;
 use App\Repository\RecommendationItemRepository;
+use App\Service\Recommendation\Feed\Model\RecommendationFeedPageModel;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 final readonly class RecommendationFeedPager
@@ -19,11 +20,11 @@ final readonly class RecommendationFeedPager
     }
 
     #[WithSpan]
-    public function page(ForYouFeedQuery $query): RecommendationFeedPage
+    public function page(ForYouFeedQuery $query): RecommendationFeedPageModel
     {
         $rows = $this->items->listForYou($query, self::cursorOf($query));
 
-        return new RecommendationFeedPage($rows, $this->nextCursorFor($rows, $query->limit));
+        return new RecommendationFeedPageModel($rows, $this->nextCursorFor($rows, $query->limit));
     }
 
     /** A garbled For You cursor restarts the feed instead of breaking it, unlike EntryCursor. */

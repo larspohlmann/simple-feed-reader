@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Search\EntrySearch;
 
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\EntrySearchResult;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Search\Model\EntrySearchResultModel;
 use App\Service\Search\SearchEngineCapability;
 use Psr\Log\LoggerInterface;
 
@@ -42,7 +42,7 @@ final readonly class EntrySearchWithFallback implements EntrySearchInterface
     ) {
     }
 
-    public function search(EntrySearchQuery $query): EntrySearchResult
+    public function search(EntrySearchQuery $query): EntrySearchResultModel
     {
         if (!$this->capability->isConfigured()) {
             return $this->database->search($query);

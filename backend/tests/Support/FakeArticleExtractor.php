@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\EntryHints;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\EntryHintsModel;
+use App\Service\Reader\Model\ExtractionResultModel;
 
 /**
  * Test double for the reader endpoint: returns a preconfigured outcome and
@@ -18,17 +18,17 @@ final class FakeArticleExtractor implements ArticleExtractorInterface
     /** @var list<string> */
     public array $calls = [];
 
-    /** @var list<EntryHints> */
+    /** @var list<EntryHintsModel> */
     public array $hints = [];
 
-    private ?ExtractionResult $result = null;
+    private ?ExtractionResultModel $result = null;
 
-    public function willReturn(ExtractionResult $result): void
+    public function willReturn(ExtractionResultModel $result): void
     {
         $this->result = $result;
     }
 
-    public function extract(string $url, EntryHints $hints = new EntryHints()): ExtractionResult
+    public function extract(string $url, EntryHintsModel $hints = new EntryHintsModel()): ExtractionResultModel
     {
         $this->calls[] = $url;
         $this->hints[] = $hints;

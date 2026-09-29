@@ -7,10 +7,10 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 use App\Entity\User;
 use App\Repository\CatalogFeedRepository;
-use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\BulkSubscribeResult;
-use App\Service\Subscription\TagStyle;
+use App\Service\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
+use App\Service\Subscription\Model\TagStyleModel;
 
 /**
  * Turns a picker selection into subscriptions. NO DISCOVERY: catalog rows carry
@@ -31,16 +31,16 @@ final readonly class CatalogSubscriber
     /**
      * @param list<int> $catalogFeedIds
      */
-    public function subscribe(User $user, array $catalogFeedIds): BulkSubscribeResult
+    public function subscribe(User $user, array $catalogFeedIds): BulkSubscribeResultModel
     {
         return $this->subscriber->subscribeAll(
             $user,
             array_map(
-                static fn (CatalogFeed $feed): BulkSubscribeItem => new BulkSubscribeItem(
+                static fn (CatalogFeed $feed): BulkSubscribeItemModel => new BulkSubscribeItemModel(
                     feedUrl: $feed->getUrl(),
                     feedTitle: $feed->getTitle(),
                     tagName: $feed->getCategory()->getName(),
-                    tagStyle: new TagStyle(
+                    tagStyle: new TagStyleModel(
                         $feed->getCategory()->getColor(),
                         $feed->getCategory()->getIcon(),
                     ),

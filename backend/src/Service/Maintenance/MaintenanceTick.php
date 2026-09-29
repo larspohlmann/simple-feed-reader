@@ -10,10 +10,10 @@ use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
 use App\Service\Recommendation\Run\ForYouSweep;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
+use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMembershipSweep;
-use App\Service\Search\Membership\SweepBudget;
 use Psr\Clock\ClockInterface;
 
 /**
@@ -47,7 +47,7 @@ final readonly class MaintenanceTick
     public function run(): MaintenanceTickReportModel
     {
         $deadline = $this->clock->now()->modify(\sprintf('+%d seconds', self::TICK_WINDOW_SECONDS));
-        $refresh = $this->refreshRunner->run(RefreshRequest::allDue(self::REFRESH_BUDGET_SECONDS));
+        $refresh = $this->refreshRunner->run(RefreshRequestModel::allDue(self::REFRESH_BUDGET_SECONDS));
         $sweeps = $refresh->isAborted()
             ? MaintenanceSweepsModel::skippedAfterAbortedRefresh()
             : $this->sweep($deadline);
@@ -60,7 +60,7 @@ final readonly class MaintenanceTick
         $recommendations = $this->forYouSweep->sweepOnce();
         $digests = $this->sendDueDigests->run();
         $imageVerification = $this->imageVerificationSweep->verifyDue();
-        $budget = SweepBudget::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
+        $budget = SweepBudgetModel::remainingUntil($deadline, $this->clock->now(), self::MEMBERSHIP_BUDGET_SECONDS);
 
         return new MaintenanceSweepsModel(
             $recommendations,

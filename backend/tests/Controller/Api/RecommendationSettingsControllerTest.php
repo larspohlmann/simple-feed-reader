@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
-use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\UserFactory;
 use Doctrine\ORM\EntityManagerInterface;

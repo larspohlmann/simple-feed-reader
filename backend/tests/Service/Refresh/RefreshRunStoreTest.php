@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Refresh;
 
-use App\Service\Refresh\RefreshRequest;
-use App\Service\Refresh\RefreshRunProgress;
+use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\Model\RefreshRunProgressModel;
 use App\Service\Refresh\RefreshRunStore;
 use PHPUnit\Framework\TestCase;
 use Psr\Cache\CacheItemInterface;
@@ -25,7 +25,7 @@ final class RefreshRunStoreTest extends TestCase
 
     public function testAnUnknownRunOpensAtZero(): void
     {
-        $progress = $this->store->open(RefreshRequest::forUser(1, self::BUDGET));
+        $progress = $this->store->open(RefreshRequestModel::forUser(1, self::BUDGET));
 
         self::assertSame(0, $progress->done);
         self::assertSame(0, $progress->total);
@@ -33,8 +33,8 @@ final class RefreshRunStoreTest extends TestCase
 
     public function testASavedRunIsHandedBackToTheNextSlice(): void
     {
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $this->store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         $resumed = $this->store->open($request);
 
@@ -46,11 +46,11 @@ final class RefreshRunStoreTest extends TestCase
     public function testRunsAreKeptApartByUser(): void
     {
         $this->store->save(
-            RefreshRequest::forUser(1, self::BUDGET),
-            RefreshRunProgress::start()->advancedBy(20, 180),
+            RefreshRequestModel::forUser(1, self::BUDGET),
+            RefreshRunProgressModel::start()->advancedBy(20, 180),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequest::forUser(2, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUser(2, self::BUDGET))->done);
     }
 
     /**
@@ -61,12 +61,12 @@ final class RefreshRunStoreTest extends TestCase
     {
         $userId = 1;
         $this->store->save(
-            RefreshRequest::forUser($userId, self::BUDGET),
-            RefreshRunProgress::start()->advancedBy(20, 180),
+            RefreshRequestModel::forUser($userId, self::BUDGET),
+            RefreshRunProgressModel::start()->advancedBy(20, 180),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequest::forUserFeed($userId, 7, self::BUDGET))->done);
-        self::assertSame(0, $this->store->open(RefreshRequest::forUserTag($userId, 7, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserFeed($userId, 7, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserTag($userId, 7, self::BUDGET))->done);
     }
 
     /** A feed scope and a tag scope with the same id are still two runs. */
@@ -74,17 +74,17 @@ final class RefreshRunStoreTest extends TestCase
     {
         $userId = 1;
         $this->store->save(
-            RefreshRequest::forUserFeed($userId, 7, self::BUDGET),
-            RefreshRunProgress::start()->advancedBy(1, 0),
+            RefreshRequestModel::forUserFeed($userId, 7, self::BUDGET),
+            RefreshRunProgressModel::start()->advancedBy(1, 0),
         );
 
-        self::assertSame(0, $this->store->open(RefreshRequest::forUserTag($userId, 7, self::BUDGET))->done);
+        self::assertSame(0, $this->store->open(RefreshRequestModel::forUserTag($userId, 7, self::BUDGET))->done);
     }
 
     public function testAForgottenRunStartsOverNextTime(): void
     {
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $this->store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $this->store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         $this->store->forget($request);
 
@@ -109,7 +109,7 @@ final class RefreshRunStoreTest extends TestCase
     {
         $this->expectException(\LogicException::class);
 
-        $this->store->open(RefreshRequest::allDue(self::BUDGET));
+        $this->store->open(RefreshRequestModel::allDue(self::BUDGET));
     }
 
     /**
@@ -125,7 +125,7 @@ final class RefreshRunStoreTest extends TestCase
     /**
      * `is_array` passing is not enough on its own: each field is checked
      * independently, so a shape with exactly one bad field must still open fresh
-     * rather than hand a non-int through to `RefreshRunProgress::resumed()`.
+     * rather than hand a non-int through to `RefreshRunProgressModel::resumed()`.
      */
     public function testAnEntryWithOnlyDoneOfTheWrongTypeOpensAFreshRun(): void
     {
@@ -147,7 +147,7 @@ final class RefreshRunStoreTest extends TestCase
         $cache->method('getItem')->willReturn($item);
 
         $store = new RefreshRunStore($cache);
-        $store->save(RefreshRequest::forUser(1, self::BUDGET), RefreshRunProgress::start());
+        $store->save(RefreshRequestModel::forUser(1, self::BUDGET), RefreshRunProgressModel::start());
     }
 
     /**
@@ -157,14 +157,14 @@ final class RefreshRunStoreTest extends TestCase
      */
     public function testTheCacheKeyEncodesTheUserAndTheRequestsScope(): void
     {
-        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor(RefreshRequest::forUser(3, self::BUDGET)));
+        self::assertSame(['refresh_run_3.all'], $this->rawKeyFor(RefreshRequestModel::forUser(3, self::BUDGET)));
         self::assertSame(
             ['refresh_run_3.feed-7'],
-            $this->rawKeyFor(RefreshRequest::forUserFeed(3, 7, self::BUDGET)),
+            $this->rawKeyFor(RefreshRequestModel::forUserFeed(3, 7, self::BUDGET)),
         );
         self::assertSame(
             ['refresh_run_3.tag-9'],
-            $this->rawKeyFor(RefreshRequest::forUserTag(3, 9, self::BUDGET)),
+            $this->rawKeyFor(RefreshRequestModel::forUserTag(3, 9, self::BUDGET)),
         );
     }
 
@@ -173,12 +173,12 @@ final class RefreshRunStoreTest extends TestCase
      * reopens. The four tests above differ only in that value, so the
      * save-corrupt-reopen dance lives here once rather than four times over.
      */
-    private function openAfterCorrupting(mixed $storedValue): RefreshRunProgress
+    private function openAfterCorrupting(mixed $storedValue): RefreshRunProgressModel
     {
         $cache = new ArrayAdapter();
         $store = new RefreshRunStore($cache);
-        $request = RefreshRequest::forUser(1, self::BUDGET);
-        $store->save($request, RefreshRunProgress::start()->advancedBy(20, 180));
+        $request = RefreshRequestModel::forUser(1, self::BUDGET);
+        $store->save($request, RefreshRunProgressModel::start()->advancedBy(20, 180));
 
         foreach (array_keys($cache->getValues()) as $key) {
             $item = $cache->getItem($key);
@@ -190,10 +190,10 @@ final class RefreshRunStoreTest extends TestCase
     }
 
     /** @return list<string> */
-    private function rawKeyFor(RefreshRequest $request): array
+    private function rawKeyFor(RefreshRequestModel $request): array
     {
         $cache = new ArrayAdapter();
-        (new RefreshRunStore($cache))->save($request, RefreshRunProgress::start());
+        (new RefreshRunStore($cache))->save($request, RefreshRunProgressModel::start());
 
         return array_keys($cache->getValues());
     }

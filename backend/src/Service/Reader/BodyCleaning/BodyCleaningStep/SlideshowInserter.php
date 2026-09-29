@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\Media\PageTextBlocks;
-use App\Service\Reader\Slideshow\ContainerSignature;
-use App\Service\Reader\Slideshow\Slideshow;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -28,7 +28,7 @@ final readonly class SlideshowInserter implements BodyCleaningStepInterface
         $this->insert($pass->document, $pass->input->slideshows);
     }
 
-    /** @param list<Slideshow> $slideshows */
+    /** @param list<SlideshowModel> $slideshows */
     private function insert(HTMLDocument $body, array $slideshows): void
     {
         $root = $body->body;
@@ -36,14 +36,14 @@ final readonly class SlideshowInserter implements BodyCleaningStepInterface
             return;
         }
 
-        $textBlocks = PageTextBlocks::fromDocument($body);
+        $textBlocks = PageTextBlocksModel::fromDocument($body);
         foreach ($slideshows as $slideshow) {
             $this->removeOriginal($root, $slideshow->container);
             $this->seat($body, $textBlocks, $slideshow);
         }
     }
 
-    private function removeOriginal(Element $root, ?ContainerSignature $container): void
+    private function removeOriginal(Element $root, ?ContainerSignatureModel $container): void
     {
         if ($container === null) {
             return;
@@ -57,7 +57,7 @@ final readonly class SlideshowInserter implements BodyCleaningStepInterface
         }
     }
 
-    private function seat(HTMLDocument $body, PageTextBlocks $textBlocks, Slideshow $slideshow): void
+    private function seat(HTMLDocument $body, PageTextBlocksModel $textBlocks, SlideshowModel $slideshow): void
     {
         $root = $body->body;
         if ($root === null) {

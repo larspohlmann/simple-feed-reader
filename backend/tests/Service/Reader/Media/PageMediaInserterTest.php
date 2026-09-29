@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Media;
 
 use App\Service\Html\HtmlDocumentParser;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
 use App\Service\Reader\Media\MediaMarkup;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageMediaInserter;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaInserterTest extends TestCase
@@ -21,7 +22,7 @@ final class PageMediaInserterTest extends TestCase
         $this->inserter = new PageMediaInserter(new MediaMarkup());
     }
 
-    private function insert(string $html, ArticleMedia $media): string
+    private function insert(string $html, ArticleMediaModel $media): string
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
@@ -33,7 +34,7 @@ final class PageMediaInserterTest extends TestCase
 
     public function testPutsAudioAtTheTopAboveTheTeaser(): void
     {
-        $media = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
 
@@ -50,7 +51,7 @@ final class PageMediaInserterTest extends TestCase
         self::assertNotNull($document);
         $hero = $document->querySelector('figure');
         self::assertNotNull($hero);
-        $media = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         $plan = $this->inserter->plan($document, $media);
         $this->inserter->apply($document, $plan, $hero);
@@ -62,8 +63,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testANarratedAudioPlayerCarriesTheNarrationClass(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/full.mp3', null, null, null, true),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/full.mp3', null, null, null, true),
         ]);
 
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
@@ -73,15 +74,15 @@ final class PageMediaInserterTest extends TestCase
 
     public function testAnOrdinaryAudioPlayerCarriesNoClass(): void
     {
-        $media = new ArticleMedia([new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3')]);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         self::assertStringNotContainsString('class=', $this->insert('<body><p>Teaser</p></body>', $media));
     }
 
     public function testVideoCarriesItsPoster(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'),
         ]);
 
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
@@ -93,8 +94,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testAFeedDeclaredMimeTypePlaysThroughATypedSource(): void
     {
-        $media = new ArticleMedia([
-            (new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'))
+        $media = new ArticleMediaModel([
+            (new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg'))
                 ->withMimeType('video/mp4'),
         ]);
 
@@ -110,8 +111,8 @@ final class PageMediaInserterTest extends TestCase
     {
         $html = $this->insert(
             '<html><body><p>Teaser.</p></body></html>',
-            new ArticleMedia([
-                new MediaCandidate(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
+            new ArticleMediaModel([
+                new MediaCandidateModel(MediaKind::Stream, 'https://x.test/master.m3u8', 'https://x.test/p.jpg'),
             ]),
         );
 
@@ -125,8 +126,8 @@ final class PageMediaInserterTest extends TestCase
     {
         // Defect i: <audio> has no poster attribute, so even a candidate that
         // somehow carries a posterUrl must not render one.
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', 'https://x.test/p.jpg'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', 'https://x.test/p.jpg'),
         ]);
 
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
@@ -136,7 +137,7 @@ final class PageMediaInserterTest extends TestCase
 
     public function testAnEmbedBecomesTheSameLinkShapeAsAnInBodyOne(): void
     {
-        $media = new ArticleMedia([new MediaCandidate(
+        $media = new ArticleMediaModel([new MediaCandidateModel(
             MediaKind::Embed,
             'https://w.soundcloud.com/player/?url=https%3A%2F%2Fapi.soundcloud.com%2Ftracks%2F1',
             null,
@@ -151,17 +152,28 @@ final class PageMediaInserterTest extends TestCase
 
     public function testEmptyMediaLeavesTheBodyAlone(): void
     {
-        $out = $this->insert('<body><p>Teaser</p></body>', ArticleMedia::none());
+        $out = $this->insert('<body><p>Teaser</p></body>', ArticleMediaModel::none());
 
         self::assertStringNotContainsString('<audio', $out);
         self::assertStringContainsString('Teaser', $out);
     }
 
+    public function testADocumentWithoutABodyPlansNothing(): void
+    {
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
+
+        $plan = $this->inserter->plan(HTMLDocument::createEmpty(), $media);
+
+        self::assertSame([], $plan->reconcilePairs);
+        self::assertSame([], $plan->anchoredPairs);
+        self::assertSame([], $plan->topPlaced);
+    }
+
     public function testKeepsSourceOrder(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/first.mp3'),
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/second.mp3'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/first.mp3'),
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/second.mp3'),
         ]);
 
         $out = $this->insert('<body><p>Teaser</p></body>', $media);
@@ -174,7 +186,7 @@ final class PageMediaInserterTest extends TestCase
         // tagesschau 491512: the same asset UUID, a different rendition.
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
-        $media = new ArticleMedia([new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
         $html = '<body><p>Intro</p><figure><img src="' . $bodyImg . '" alt=""></figure><p>Tail</p></body>';
 
         $out = $this->insert($html, $media);
@@ -192,7 +204,7 @@ final class PageMediaInserterTest extends TestCase
         // output, and #627's gated placeholder even when the asset matches.
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
-        $media = new ArticleMedia([new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
+        $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
         $html = '<body><p>Intro</p><a href="https://x.test"><img src="' . $bodyImg . '" alt=""></a></body>';
 
         $out = $this->insert($html, $media);
@@ -203,8 +215,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testACandidateWithNoMatchingImageIsTopPlaced(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/no-match-poster.jpg'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/no-match-poster.jpg'),
         ]);
         $html = '<body><p>Intro</p><figure><img src="https://x.test/unrelated-photo.jpg" alt=""></figure></body>';
 
@@ -223,9 +235,9 @@ final class PageMediaInserterTest extends TestCase
         $video2Poster = 'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $mapImg = 'https://media.tagesschau.de/image/deadbeef-0000-0000-0000-000000000000/A/map.jpg';
 
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v1.mp4', $video1Poster),
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v2.mp4', $video2Poster),
         ]);
         $html = '<body><p>Intro</p>'
             . '<figure><img src="' . $video1Body . '" alt=""></figure>'
@@ -246,8 +258,14 @@ final class PageMediaInserterTest extends TestCase
 
     public function testPlacesACandidateAfterTheBlockItFollowedOnThePage(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', 'https://x.test/p.jpg', null, self::PROSE),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Video,
+                'https://x.test/v.mp4',
+                'https://x.test/p.jpg',
+                null,
+                self::PROSE,
+            ),
         ]);
         $html = '<body><p>Intro</p><p>' . self::PROSE . '</p><p>Tail</p></body>';
 
@@ -259,8 +277,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testMatchesTheBlockOnCollapsedText(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
         ]);
         $html = '<body><p>Intro</p><p>  The paragraph the player followed on the source page,' . "
 "
@@ -274,9 +292,9 @@ final class PageMediaInserterTest extends TestCase
 
     public function testTwoCandidatesAfterTheSameBlockKeepSourceOrder(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/first.mp3', null, null, self::PROSE),
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/second.mp3', null, null, self::PROSE),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/first.mp3', null, null, self::PROSE),
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/second.mp3', null, null, self::PROSE),
         ]);
         $html = '<body><p>' . self::PROSE . '</p><p>Tail</p></body>';
 
@@ -289,8 +307,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testFollowsAListItemBlockWithTheWholeList(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
         ]);
         $html = '<body><ul><li>' . self::PROSE . '</li><li>Second item</li></ul><p>Tail</p></body>';
 
@@ -302,8 +320,14 @@ final class PageMediaInserterTest extends TestCase
 
     public function testACandidateWhoseBlockTheBodyLostIsTopPlaced(): void
     {
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3', null, null, 'A block readability removed'),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                'A block readability removed',
+            ),
         ]);
 
         $out = $this->insert('<body><p>Intro</p></body>', $media);
@@ -315,8 +339,8 @@ final class PageMediaInserterTest extends TestCase
     {
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
-        $media = new ArticleMedia([
-            new MediaCandidate(MediaKind::Video, 'https://x.test/v.mp4', $poster, null, self::PROSE),
+        $media = new ArticleMediaModel([
+            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster, null, self::PROSE),
         ]);
         $html = '<body><figure><img src="' . $bodyImg . '" alt=""></figure><p>' . self::PROSE . '</p></body>';
 

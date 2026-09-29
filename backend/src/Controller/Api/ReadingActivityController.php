@@ -7,7 +7,7 @@ namespace App\Controller\Api;
 use App\Entity\User;
 use App\Http\ReadingActivityJson;
 use App\Service\Reading\ReadingActivityCounter;
-use App\Service\Recommendation\Feed\ViewerTimeZone;
+use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
@@ -35,7 +35,7 @@ final readonly class ReadingActivityController
     {
         return new JsonResponse(ReadingActivityJson::of($this->activity->daily(
             $user,
-            ViewerTimeZone::of($request->query->get('tz')),
+            ViewerTimeZoneModel::of($request->query->get('tz')),
         )));
     }
 }

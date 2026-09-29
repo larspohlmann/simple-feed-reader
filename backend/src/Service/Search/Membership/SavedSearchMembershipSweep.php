@@ -8,6 +8,8 @@ use App\Entity\SavedSearch;
 use App\Repository\EntryMembershipSweepRepository;
 use App\Repository\SavedSearchRepository;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
+use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
 use App\Service\Search\SavedSearchTerms;
@@ -38,14 +40,14 @@ final readonly class SavedSearchMembershipSweep
     ) {
     }
 
-    public function sweep(SweepBudget $budget): SavedSearchMembershipSweepReport
+    public function sweep(SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
     {
         $ceiling = $this->ceiling();
 
         return $this->walkGroups(self::groupedByMark($this->searches->findBelowMark($ceiling)), $ceiling, $budget);
     }
 
-    public function sweepOne(SavedSearch $search, SweepBudget $budget): SavedSearchMembershipSweepReport
+    public function sweepOne(SavedSearch $search, SweepBudgetModel $budget): SavedSearchMembershipSweepReportModel
     {
         $ceiling = $this->ceiling();
         $mark = $search->matchedUpToEntryId();
@@ -85,8 +87,8 @@ final readonly class SavedSearchMembershipSweep
     private function walkGroups(
         array $groupsByMark,
         int $ceiling,
-        SweepBudget $budget,
-    ): SavedSearchMembershipSweepReport {
+        SweepBudgetModel $budget,
+    ): SavedSearchMembershipSweepReportModel {
         $tally = new SweepTally();
         $deadline = $budget->deadlineFrom($this->clock->now());
         $marks = array_keys($groupsByMark);

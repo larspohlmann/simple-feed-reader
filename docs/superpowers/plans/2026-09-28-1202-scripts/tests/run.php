@@ -250,5 +250,82 @@ check(
     "  exit {$result['status']}, output: {$result['output']}\n  moved file:\n{$moved}",
 );
 
+$ownImport = "use App\Service\Backup\Model\RestoreSourceModel;\n";
+$root = plantRepository([
+    'backend/src/Service/Backup/Model/RestoreSourceModel.php' => phpClass(
+        'App\Service\Backup\Model',
+        'RestoreSourceModel',
+    ),
+    'backend/src/Service/Backup/Model/ChecksumModel.php' => phpClass('App\Service\Backup\Model', 'ChecksumModel'),
+    'backend/src/Service/Backup/Model/Part/Detail.php' => phpClass('App\Service\Backup\Model\Part', 'Detail'),
+    'backend/src/Service/Backup/BackupInventory.php' => phpClass(
+        'App\Service\Backup',
+        'BackupInventory',
+        "use App\Service\Backup\Model\ChecksumModel as ChecksumModel;\n{$ownImport}"
+            . "use App\Service\Backup\Model\RestoreSourceModel as Source;\nuse App\Service\Backup\Model\Part\Detail;\n",
+    ),
+    'backend/src/Service/Backup/Model/Consumer.php' => phpClass(
+        'App\Service\Backup\Model',
+        'Consumer',
+        "use App\Service\Backup\BackupInventory;\n",
+        "    public function __construct(BackupInventory \$inventory)\n    {\n    }\n",
+    ),
+    'backend/src/Service/Backup/Model/Untouched.php' => phpClass('App\Service\Backup\Model', 'Untouched', $ownImport),
+]);
+$result = runMove($root, ['App\Service\Backup\BackupInventory' => 'App\Service\Backup\Model\BackupInventoryModel']);
+$inventory = (string) @file_get_contents("{$root}/backend/src/Service/Backup/Model/BackupInventoryModel.php");
+$consumer = (string) @file_get_contents("{$root}/backend/src/Service/Backup/Model/Consumer.php");
+$untouched = (string) @file_get_contents("{$root}/backend/src/Service/Backup/Model/Untouched.php");
+check(
+    '(f) a moved file drops the import of a class the move places beside it',
+    0 === $result['status'] && !str_contains($inventory, $ownImport) && !str_contains($inventory, "\n\n\n"),
+    "  exit {$result['status']}, output: {$result['output']}\n  moved file:\n{$inventory}",
+);
+check(
+    '(f) an import aliased to its own short name drops like a plain one',
+    str_contains($inventory, "namespace App\Service\Backup\Model;\n") && !str_contains($inventory, 'ChecksumModel'),
+    "  moved file:\n{$inventory}",
+);
+check(
+    '(f) a staying file drops an import that moves into its namespace, and its emptied block the blank line',
+    str_contains($consumer, "namespace App\Service\Backup\Model;\n\nfinal class Consumer\n")
+        && str_contains($consumer, 'BackupInventoryModel $inventory'),
+    "  file:\n{$consumer}",
+);
+check(
+    '(g) an import aliased to another name stays',
+    str_contains($inventory, "\nuse App\Service\Backup\Model\RestoreSourceModel as Source;\n"),
+    "  moved file:\n{$inventory}",
+);
+check(
+    '(g) an import from a sub-namespace stays',
+    str_contains($inventory, "\nuse App\Service\Backup\Model\Part\Detail;\n"),
+    "  moved file:\n{$inventory}",
+);
+check(
+    '(g) a file the moves leave alone keeps its own-namespace import',
+    str_contains($untouched, "\n{$ownImport}"),
+    "  file:\n{$untouched}",
+);
+
+$functionImport = "use function App\Service\Backup\Model\checksumOf;\n";
+$root = plantRepository([
+    'backend/src/Service/Backup/Model/ChecksumModel.php' => phpClass('App\Service\Backup\Model', 'ChecksumModel'),
+    'backend/src/Service/Backup/BackupNote.php' => phpClass(
+        'App\Service\Backup',
+        'BackupNote',
+        "use App\Service\Backup\Model\ChecksumModel;\n{$functionImport}",
+    ),
+]);
+$result = runMove($root, ['App\Service\Backup\BackupNote' => 'App\Service\Backup\Model\BackupNoteModel']);
+$note = (string) @file_get_contents("{$root}/backend/src/Service/Backup/Model/BackupNoteModel.php");
+check(
+    '(g) a use function line stays when every class import of its block drops',
+    0 === $result['status']
+        && str_contains($note, "\n{$functionImport}")
+        && !str_contains($note, 'use App\Service\Backup\Model\ChecksumModel;'),
+    "  exit {$result['status']}, output: {$result['output']}\n  moved file:\n{$note}",
+);
+
 echo 0 === $failures ? "All checks passed.\n" : "{$failures} checks failed.\n";
 exit(0 === $failures ? 0 : 1);

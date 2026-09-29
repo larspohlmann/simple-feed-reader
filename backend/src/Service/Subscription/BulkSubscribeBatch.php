@@ -7,10 +7,11 @@ namespace App\Service\Subscription;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
+use App\Service\Subscription\Model\BulkSubscribeResultModel;
 
 final class BulkSubscribeBatch
 {
-    private BulkSubscribeResult $result;
+    private BulkSubscribeResultModel $result;
 
     /** @var array<string, Subscription> keyed by the item's feed URL: a URL listed twice subscribes once */
     private array $subscriptionsByUrl = [];
@@ -24,10 +25,10 @@ final class BulkSubscribeBatch
         private int $room,
         public readonly BulkSubscribePositions $positions,
     ) {
-        $this->result = new BulkSubscribeResult();
+        $this->result = new BulkSubscribeResultModel();
     }
 
-    public function result(): BulkSubscribeResult
+    public function result(): BulkSubscribeResultModel
     {
         return $this->result;
     }

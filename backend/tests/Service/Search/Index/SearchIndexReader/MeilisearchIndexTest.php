@@ -7,11 +7,11 @@ namespace App\Tests\Service\Search\Index\SearchIndexReader;
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexedEntry;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexedEntryModel;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\MeilisearchIndex;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\SearchEngineCapability;
-use App\Service\Search\SearchTerms;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -42,9 +42,9 @@ final class MeilisearchIndexTest extends TestCase
         });
     }
 
-    private function search(): IndexSearch
+    private function search(): IndexSearchModel
     {
-        return new IndexSearch(SearchTerms::fromInput('widgets gizmos'), [1, 2], null, 20);
+        return new IndexSearchModel(SearchTermsModel::fromInput('widgets gizmos'), [1, 2], null, 20);
     }
 
     /**
@@ -113,9 +113,9 @@ final class MeilisearchIndexTest extends TestCase
     public function testAWholeWordSearchSendsEveryTermAsItsOwnQuotedPhrase(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        // The trailing space is the whole-word signal (SearchTerms::fromInput).
+        // The trailing space is the whole-word signal (SearchTermsModel::fromInput).
         $this->index($client)->find(
-            new IndexSearch(SearchTerms::fromInput('widgets gizmos '), [1, 2], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('widgets gizmos '), [1, 2], null, 20),
         );
 
         // A phrase matches the word exactly; a bare term also matches by prefix
@@ -128,7 +128,7 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         $this->index($client)->find(
-            new IndexSearch(SearchTerms::fromInput('wid"gets '), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('wid"gets '), [1], null, 20),
         );
 
         // Left as typed it would close the phrase early and leave one hanging
@@ -141,7 +141,7 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         $this->index($client)->find(
-            new IndexSearch(SearchTerms::fromInput('wid"gets'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('wid"gets'), [1], null, 20),
         );
 
         self::assertSame('wid gets', $this->capturedJsonObject()['q']);
@@ -151,10 +151,10 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         // Wrapping the query in double quotes is the phrase signal
-        // (SearchTerms::fromInput); Meilisearch's own phrase syntax then asks
+        // (SearchTermsModel::fromInput); Meilisearch's own phrase syntax then asks
         // for those words in order and adjacent (#702).
         $this->index($client)->find(
-            new IndexSearch(SearchTerms::fromInput('"widgets gizmos"'), [1, 2], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('"widgets gizmos"'), [1, 2], null, 20),
         );
 
         self::assertSame('"widgets gizmos"', $this->capturedJsonObject()['q']);
@@ -163,7 +163,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testFindSendsTheFeedIdFilter(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [3, 7], null, 20));
+        $this->index($client)->find(new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [3, 7], null, 20));
 
         self::assertSame('feedId IN [3,7]', $this->capturedJsonObject()['filter']);
     }
@@ -172,7 +172,7 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         $cursor = new EntryCursor(new \DateTimeImmutable('@100'), 5);
-        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], $cursor, 20));
+        $this->index($client)->find(new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1, 2], $cursor, 20));
 
         self::assertSame(
             'feedId IN [1,2] AND (effectiveDate < 100 OR (effectiveDate = 100 AND id < 5))',
@@ -183,7 +183,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testNoCursorAddsNoCursorPredicate(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20));
+        $this->index($client)->find(new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1, 2], null, 20));
 
         $filter = $this->capturedJsonObject()['filter'];
         self::assertSame('feedId IN [1,2]', $filter);
@@ -193,7 +193,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testASearchAmongEntriesFiltersByIdAloneAndSendsTheirCountAsTheLimit(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(IndexSearch::amongEntries(SearchTerms::fromInput('widgets'), [5, 9, 12]));
+        $this->index($client)->find(IndexSearchModel::amongEntries(SearchTermsModel::fromInput('widgets'), [5, 9, 12]));
 
         $query = $this->capturedJsonObject();
         self::assertSame('id IN [5,9,12]', $query['filter']);
@@ -203,7 +203,8 @@ final class MeilisearchIndexTest extends TestCase
     public function testAnEntryIdFilterJoinsTheFeedFilterWithAnd(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [3], null, 20, [5, 9]));
+        $search = new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [3], null, 20, [5, 9]);
+        $this->index($client)->find($search);
 
         self::assertSame('feedId IN [3] AND id IN [5,9]', $this->capturedJsonObject()['filter']);
     }
@@ -217,7 +218,13 @@ final class MeilisearchIndexTest extends TestCase
 
     public function testAnOldestFirstSearchSortsBothKeysAscending(): void
     {
-        $search = new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20, order: ListOrder::OldestFirst);
+        $search = new IndexSearchModel(
+            SearchTermsModel::fromInput('widgets'),
+            [1, 2],
+            null,
+            20,
+            order: ListOrder::OldestFirst,
+        );
         $this->index($this->clientCapturing(new MockResponse('{"hits":[]}')))->find($search);
 
         self::assertSame(['effectiveDate:asc', 'id:asc'], $this->capturedJsonObject()['sort']);
@@ -226,8 +233,8 @@ final class MeilisearchIndexTest extends TestCase
     public function testAnOldestFirstCursorAddsTheMirroredPredicate(): void
     {
         $cursor = new EntryCursor(new \DateTimeImmutable('@100'), 5);
-        $search = new IndexSearch(
-            SearchTerms::fromInput('widgets'),
+        $search = new IndexSearchModel(
+            SearchTermsModel::fromInput('widgets'),
             [1, 2],
             $cursor,
             20,
@@ -256,7 +263,7 @@ final class MeilisearchIndexTest extends TestCase
     public function testFindSendsTheLimit(): void
     {
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
-        $this->index($client)->find(new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 7));
+        $this->index($client)->find(new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1], null, 7));
 
         self::assertSame(7, $this->capturedJsonObject()['limit']);
     }
@@ -365,8 +372,8 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientCapturing(new MockResponse('{"results":[{"hits":[]},{"hits":[]}]}'));
         $this->index($client)->findMany([
-            new IndexSearch(SearchTerms::fromInput('widgets'), [1, 2], null, 20),
-            new IndexSearch(SearchTerms::fromInput('gizmos '), [1, 2], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1, 2], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('gizmos '), [1, 2], null, 20),
         ]);
 
         self::assertSame('POST', $this->capturedRequest['method']);
@@ -384,8 +391,8 @@ final class MeilisearchIndexTest extends TestCase
             '{"results":[{"hits":[{"id":7}]},{"hits":[{"id":9},{"id":11}]}]}',
         ));
         $matches = $this->index($client)->findMany([
-            new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20),
-            new IndexSearch(SearchTerms::fromInput('gizmos'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('gizmos'), [1], null, 20),
         ]);
 
         self::assertSame([7], $matches[0]->entryIds);
@@ -398,8 +405,8 @@ final class MeilisearchIndexTest extends TestCase
 
         $this->expectException(SearchEngineUnavailableException::class);
         $this->index($client)->findMany([
-            new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20),
-            new IndexSearch(SearchTerms::fromInput('gizmos'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('gizmos'), [1], null, 20),
         ]);
     }
 
@@ -410,7 +417,7 @@ final class MeilisearchIndexTest extends TestCase
         });
 
         $this->expectException(SearchEngineUnavailableException::class);
-        $this->index($client)->findMany([new IndexSearch(SearchTerms::fromInput('widgets'), [1], null, 20)]);
+        $this->index($client)->findMany([new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1], null, 20)]);
     }
 
     public function testFindManyReturnsNothingForNoSearchesWithoutCallingTheEngine(): void
@@ -441,7 +448,7 @@ final class MeilisearchIndexTest extends TestCase
         $response = new MockResponse('{"taskUid":1,"status":"enqueued"}', ['http_code' => 202]);
         $client = $this->clientCapturing($response);
 
-        $entry = new IndexedEntry(
+        $entry = new IndexedEntryModel(
             42,
             7,
             'How to receive a package',
@@ -477,7 +484,7 @@ final class MeilisearchIndexTest extends TestCase
         $response = new MockResponse('{"taskUid":1,"status":"enqueued"}', ['http_code' => 202]);
         $client = $this->clientCapturing($response);
 
-        $entry = new IndexedEntry(1, 1, 'Title only', null, null, null, new \DateTimeImmutable('@0'));
+        $entry = new IndexedEntryModel(1, 1, 'Title only', null, null, null, new \DateTimeImmutable('@0'));
         $this->index($client)->upsert([$entry]);
 
         $document = $this->capturedJsonList()[0];
@@ -553,7 +560,7 @@ final class MeilisearchIndexTest extends TestCase
     {
         $client = $this->clientThatMustNotBeCalled();
 
-        $this->unconfiguredIndex($client)->upsert([new IndexedEntry(
+        $this->unconfiguredIndex($client)->upsert([new IndexedEntryModel(
             42,
             7,
             'How to receive a package',

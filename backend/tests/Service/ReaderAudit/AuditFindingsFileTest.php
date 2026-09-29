@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\ReaderAudit\AuditFinding;
 use App\Service\ReaderAudit\AuditFindingsFile;
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
+use App\Service\ReaderAudit\Model\AuditFindingModel;
 use PHPUnit\Framework\TestCase;
 
 final class AuditFindingsFileTest extends TestCase
@@ -77,9 +77,9 @@ final class AuditFindingsFileTest extends TestCase
         return $this->directory . '/nested/findings.jsonl';
     }
 
-    private function finding(int $entryId, string $title): AuditFinding
+    private function finding(int $entryId, string $title): AuditFindingModel
     {
-        return new AuditFinding(
+        return new AuditFindingModel(
             $entryId,
             10,
             'Feed',

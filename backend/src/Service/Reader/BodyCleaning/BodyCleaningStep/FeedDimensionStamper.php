@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\FeedMedia;
+use App\Service\Reader\Model\FeedMediaModel;
 use Dom\Element;
 
 /**
@@ -21,7 +21,7 @@ final readonly class FeedDimensionStamper implements BodyCleaningStepInterface
         }
     }
 
-    private function stamp(Element $element, FeedMedia $feedMedia): void
+    private function stamp(Element $element, FeedMediaModel $feedMedia): void
     {
         if ($element->hasAttribute('width') || $element->hasAttribute('height')) {
             return;

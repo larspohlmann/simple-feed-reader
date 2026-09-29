@@ -8,8 +8,8 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\FeedMove;
-use App\Service\Subscription\SubscriptionChange;
+use App\Service\Subscription\Model\FeedMoveModel;
+use App\Service\Subscription\Model\SubscriptionChangeModel;
 use App\Service\Subscription\SubscriptionEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -27,7 +27,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setCustomTitle('Old');
         $this->em->flush();
 
-        $this->editor()->update($subscription, new SubscriptionChange(''));
+        $this->editor()->update($subscription, new SubscriptionChangeModel(''));
 
         self::assertNull($this->reload($subscription)->getCustomTitle());
     }
@@ -37,7 +37,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $user = $this->user('title-keep@example.com');
         $subscription = $this->subscription($user, 'https://keep.editor.example.com/rss');
 
-        $this->editor()->update($subscription, new SubscriptionChange('Mine'));
+        $this->editor()->update($subscription, new SubscriptionChangeModel('Mine'));
 
         self::assertSame('Mine', $this->reload($subscription)->getCustomTitle());
     }
@@ -50,7 +50,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setIncludeInForYou(false);
         $this->em->flush();
 
-        $this->editor()->update($subscription, new SubscriptionChange(null));
+        $this->editor()->update($subscription, new SubscriptionChangeModel(null));
 
         $reloaded = $this->reload($subscription);
         self::assertFalse($reloaded->isIncludeInAllItems());
@@ -65,7 +65,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->setIncludeInForYou(true);
         $this->em->flush();
 
-        $this->editor()->update($subscription, new SubscriptionChange(null, [], false, false));
+        $this->editor()->update($subscription, new SubscriptionChangeModel(null, [], false, false));
 
         $reloaded = $this->reload($subscription);
         self::assertFalse($reloaded->isIncludeInAllItems());
@@ -78,7 +78,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $tag = $this->tag($user, 'Synced');
         $subscription = $this->subscription($user, 'https://sync.editor.example.com/rss');
 
-        $this->editor()->update($subscription, new SubscriptionChange(null, [$tag->requireId()]));
+        $this->editor()->update($subscription, new SubscriptionChangeModel(null, [$tag->requireId()]));
 
         self::assertSame(['Synced'], $this->tagNames($this->reload($subscription)));
     }
@@ -92,7 +92,7 @@ final class SubscriptionEditorTest extends DbTestCase
         $subscription->addTag($news);
         $this->em->flush();
 
-        $this->editor()->moveToTag($subscription, new FeedMove($news->requireId(), $tech->requireId()));
+        $this->editor()->moveToTag($subscription, new FeedMoveModel($news->requireId(), $tech->requireId()));
 
         self::assertSame(['Tech'], $this->tagNames($this->reload($subscription)));
     }

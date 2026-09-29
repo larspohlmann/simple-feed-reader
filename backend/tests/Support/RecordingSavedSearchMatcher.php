@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\SavedSearchTerm;
+use App\Service\Search\Model\SavedSearchTermModel;
 
 /**
  * Answers from a fixed map of saved-search id => matching entry ids, keeps
@@ -28,7 +28,7 @@ final class RecordingSavedSearchMatcher implements SavedSearchMatcherInterface
 
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
-        $this->calls[] = ['searchIds' => SavedSearchTerm::idsOf($searches), 'candidates' => $candidateEntryIds];
+        $this->calls[] = ['searchIds' => SavedSearchTermModel::idsOf($searches), 'candidates' => $candidateEntryIds];
         if ($this->failure !== null) {
             throw $this->failure;
         }

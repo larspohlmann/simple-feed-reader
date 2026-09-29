@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\Membership\SavedSearchMatcher;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\SavedSearchTerm;
+use App\Service\Search\Model\SavedSearchTermModel;
 
 /**
  * Which of a handful of candidate entries each saved search matches — the one
@@ -14,8 +14,8 @@ use App\Service\Search\SavedSearchTerm;
 interface SavedSearchMatcherInterface
 {
     /**
-     * @param list<SavedSearchTerm> $searches
-     * @param list<int>             $candidateEntryIds
+     * @param list<SavedSearchTermModel> $searches
+     * @param list<int>                  $candidateEntryIds
      *
      * @return array<int, list<int>> every requested saved-search id => the candidate ids it matches
      *

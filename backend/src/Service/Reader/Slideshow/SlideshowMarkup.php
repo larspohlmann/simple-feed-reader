@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow;
 
+use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
+use App\Service\Reader\Slideshow\Model\SlideModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -13,7 +16,7 @@ use Dom\HTMLDocument;
  */
 final readonly class SlideshowMarkup
 {
-    public function figureFor(HTMLDocument $document, Slideshow $slideshow): Element
+    public function figureFor(HTMLDocument $document, SlideshowModel $slideshow): Element
     {
         $figure = $document->createElement('figure');
         $figure->setAttribute('class', 'reader-slideshow');
@@ -34,7 +37,7 @@ final readonly class SlideshowMarkup
         return $figure;
     }
 
-    private function item(HTMLDocument $document, Slide $slide): Element
+    private function item(HTMLDocument $document, SlideModel $slide): Element
     {
         $image = $document->createElement('img');
         $image->setAttribute('src', $slide->imageUrl);
@@ -60,7 +63,7 @@ final readonly class SlideshowMarkup
      * schemes); a plain one a <p>. Both are safe elements, so neither needs a
      * class to cross the sanitizer.
      */
-    private function caption(HTMLDocument $document, SlideCaption $caption): Element
+    private function caption(HTMLDocument $document, SlideCaptionModel $caption): Element
     {
         $element = $document->createElement($caption->hasLink() ? 'a' : 'p');
         if ($caption->link !== null) {

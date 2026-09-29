@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Refresh\Model\TrackedRefreshReportModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Psr\Cache\InvalidArgumentException;
 
@@ -16,8 +20,8 @@ use Psr\Cache\InvalidArgumentException;
  *
  * Two quirks on the abort path, neither reachable by anything a user sees:
  *
- * - When {@see RefreshReport::aborted()} reports `remaining = 0` (every feed had
- *   started before persistence failed), `advancedBy()` takes {@see RefreshRunProgress}'s
+ * - When {@see RefreshReportModel::aborted()} reports `remaining = 0` (every feed had
+ *   started before persistence failed), `advancedBy()` takes {@see RefreshRunProgressModel}'s
  *   completion branch and the run reads as full though it stopped early — invisible,
  *   since the failure alert replaces the counted banner either way.
  * - `aborted()`'s `remaining` is a lower bound from the current batch, at most
@@ -35,7 +39,7 @@ final readonly class TrackedRefreshRunner
     }
 
     /** @throws InvalidArgumentException */
-    public function run(RefreshRequest $request): TrackedRefreshReport
+    public function run(RefreshRequestModel $request): TrackedRefreshReportModel
     {
         $progress = $this->runs->open($request);
         $report = $this->refreshRunner->run($request);
@@ -43,8 +47,8 @@ final readonly class TrackedRefreshRunner
         // The lock was held, so no slice ran. Its counters are all zero including
         // `remaining`, and folding those in would drop the denominator to whatever
         // was already done and report the run as finished.
-        if (RefreshReport::STATUS_BUSY === $report->status) {
-            return new TrackedRefreshReport($report, $progress);
+        if (RefreshReportModel::STATUS_BUSY === $report->status) {
+            return new TrackedRefreshReportModel($report, $progress);
         }
 
         $advanced = $progress->advancedBy($this->handledIn($report), $report->remaining);
@@ -52,12 +56,12 @@ final readonly class TrackedRefreshRunner
         if (0 === $report->remaining || $report->isAborted()) {
             $this->runs->forget($request);
 
-            return new TrackedRefreshReport($report, $advanced);
+            return new TrackedRefreshReportModel($report, $advanced);
         }
 
         $this->runs->save($request, $advanced);
 
-        return new TrackedRefreshReport($report, $advanced);
+        return new TrackedRefreshReportModel($report, $advanced);
     }
 
     /**
@@ -66,7 +70,7 @@ final readonly class TrackedRefreshRunner
      * here would strand the bar short of full. Feeds the time budget deferred are
      * absent on purpose: they never started, and `remaining` still counts them.
      */
-    private function handledIn(RefreshReport $report): int
+    private function handledIn(RefreshReportModel $report): int
     {
         return $report->fetched + $report->notModified + $report->failed + $report->throttled;
     }

@@ -6,7 +6,7 @@ namespace App\Service\Catalog\Model;
 
 /**
  * One budgeted slice of warming. `remaining` is what a caller polls on — the
- * same shape RefreshReport uses, so the frontend drives this with the loop it
+ * same shape RefreshReportModel uses, so the frontend drives this with the loop it
  * already has.
  */
 final readonly class CatalogWarmReportModel

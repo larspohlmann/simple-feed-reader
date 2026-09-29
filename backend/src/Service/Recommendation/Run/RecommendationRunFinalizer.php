@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\RecommendationItem;
 use App\Entity\RecommendationRun;
 use App\Repository\EntryRepository;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -33,7 +34,7 @@ final readonly class RecommendationRunFinalizer
     /**
      * @param list<array{id: int, score: int, reason: string}> $ranked
      */
-    public function finalize(RecommendationRun $run, array $ranked): RecommendationRunReport
+    public function finalize(RecommendationRun $run, array $ranked): RecommendationRunReportModel
     {
         $picks = \array_slice($ranked, 0, $this->settingsResolver->forUser($run->getUser())->picksLimit);
         $existingIds = $this->entries->findExistingIds(array_map(
@@ -58,6 +59,6 @@ final readonly class RecommendationRunFinalizer
         $run->complete($this->clock->now());
         $this->entityManager->flush();
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 }

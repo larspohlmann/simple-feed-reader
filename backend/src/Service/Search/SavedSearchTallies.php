@@ -6,6 +6,7 @@ namespace App\Service\Search;
 
 use App\Entity\SavedSearch;
 use App\Repository\SavedSearchEntryRepository;
+use App\Service\Search\Model\SavedSearchTallyModel;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
@@ -22,7 +23,7 @@ final readonly class SavedSearchTallies
     /**
      * @param list<SavedSearch> $savedSearches
      *
-     * @return array<int, SavedSearchTally> saved-search id => its tally
+     * @return array<int, SavedSearchTallyModel> saved-search id => its tally
      */
     #[WithSpan]
     public function forAll(array $savedSearches, int $userId): array
@@ -32,12 +33,13 @@ final readonly class SavedSearchTallies
         $memberCounts = $this->entries->memberCountsBySavedSearch($userId, $ids);
 
         return array_combine($ids, array_map(
-            static fn (int $id): SavedSearchTally => new SavedSearchTally($unreadIds[$id], $memberCounts[$id]),
+            static fn (int $id): SavedSearchTallyModel
+                => new SavedSearchTallyModel($unreadIds[$id], $memberCounts[$id]),
             $ids,
         ));
     }
 
-    public function forOne(SavedSearch $savedSearch, int $userId): SavedSearchTally
+    public function forOne(SavedSearch $savedSearch, int $userId): SavedSearchTallyModel
     {
         return $this->forAll([$savedSearch], $userId)[$savedSearch->requireId()];
     }

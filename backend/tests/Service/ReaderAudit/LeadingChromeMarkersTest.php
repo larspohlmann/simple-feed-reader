@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\ReaderAudit\CleanupMarker;
-use App\Service\ReaderAudit\ExtractedBody;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingChromeMarkersTest extends TestCase
@@ -113,7 +113,7 @@ final class LeadingChromeMarkersTest extends TestCase
     public function testEachMarkerCarriesItsWeightAndTheStageToLookAt(): void
     {
         $menu = '<ul>' . str_repeat('<li><a href="/x">Ressort</a></li>', 4) . '</ul>';
-        $markers = $this->markers->detect(ExtractedBody::fromHtml($menu . $this->article()));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml($menu . $this->article()));
 
         self::assertSame(4, $markers[0]->weight);
         self::assertSame('NavigationChromeTrimmer', $markers[0]->suspect);
@@ -127,7 +127,7 @@ final class LeadingChromeMarkersTest extends TestCase
     public function testTheLinkWallDetailNamesBothCounts(): void
     {
         $wall = str_repeat('<p>Ressort <a href="/x">Politik</a></p>', 5) . '<p>Kurz</p>';
-        $markers = $this->markers->detect(ExtractedBody::fromHtml($wall . $this->article()));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml($wall . $this->article()));
 
         self::assertSame(3, $markers[0]->weight);
         self::assertSame(
@@ -141,10 +141,10 @@ final class LeadingChromeMarkersTest extends TestCase
     {
         $html = str_repeat('<p><a href="/x">A</a></p>', 5) . '<p>Kurz</p>'
             . str_repeat('<p><a href="/y">B</a></p>', 4);
-        $markers = $this->markers->detect(ExtractedBody::fromHtml($html . $this->article()));
+        $markers = $this->markers->detect(ExtractedBodyModel::fromHtml($html . $this->article()));
         $run = array_values(array_filter(
             $markers,
-            static fn (CleanupMarker $marker): bool => $marker->code === 'leading_nav_run',
+            static fn (CleanupMarkerModel $marker): bool => $marker->code === 'leading_nav_run',
         ));
 
         self::assertSame(
@@ -162,8 +162,8 @@ final class LeadingChromeMarkersTest extends TestCase
     private function codesFor(string $html): array
     {
         return array_map(
-            static fn (CleanupMarker $marker): string => $marker->code,
-            $this->markers->detect(ExtractedBody::fromHtml($html)),
+            static fn (CleanupMarkerModel $marker): string => $marker->code,
+            $this->markers->detect(ExtractedBodyModel::fromHtml($html)),
         );
     }
 }

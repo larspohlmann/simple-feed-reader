@@ -16,8 +16,8 @@ use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
 use App\Service\Search\EntrySearch\IndexedEntrySearch;
-use App\Service\Search\EntrySearchResult;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\EntrySearchResultModel;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\FakeSearchIndexReader;
 
@@ -75,12 +75,12 @@ final class IndexedEntrySearchTest extends DbTestCase
     }
 
     /** @return list<string> */
-    private function guids(EntrySearchResult $result): array
+    private function guids(EntrySearchResultModel $result): array
     {
         return array_map(static fn (EntryListRow $row): string => $row->entry->getGuid(), $result->rows);
     }
 
-    private function search(FakeSearchIndexReader $reader, EntrySearchQuery $query): EntrySearchResult
+    private function search(FakeSearchIndexReader $reader, EntrySearchQuery $query): EntrySearchResultModel
     {
         $entryListRepository = self::getContainer()->get(EntryListRepository::class);
         self::assertInstanceOf(EntryListRepository::class, $entryListRepository);
@@ -97,7 +97,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular signals'),
+            terms: SearchTermsModel::fromInput('angular signals'),
             limit: 10,
         ));
 
@@ -115,7 +115,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular '),
+            terms: SearchTermsModel::fromInput('angular '),
         ));
 
         self::assertNotNull($reader->received);
@@ -128,7 +128,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertNotNull($reader->received);
@@ -143,7 +143,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertNotNull($reader->received);
@@ -157,7 +157,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             cursor: $cursor,
         ));
 
@@ -175,7 +175,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertCount(1, $result->rows);
@@ -201,7 +201,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             limit: 2,
         ));
 
@@ -233,7 +233,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             limit: 3,
             unread: true,
         ));
@@ -261,7 +261,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertSame(['read', 'unread'], $this->guids($result));
@@ -282,7 +282,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             limit: 1,
             unread: true,
         ));
@@ -308,7 +308,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $this->user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             limit: 3,
             order: ListOrder::OldestFirst,
         ));
@@ -329,7 +329,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
         $result = $this->search($reader, new EntrySearchQuery(
             userId: $lonelyUser->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertSame([], $result->rows);

@@ -9,9 +9,9 @@ use App\Repository\SearchTermsPredicateBuilder;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Membership\SavedSearchMatcher\EngineOrDatabaseSavedSearchMatcher;
 use App\Service\Search\Membership\SavedSearchMatcher\IndexedSavedSearchMatcher;
-use App\Service\Search\SavedSearchTerm;
+use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\SearchEngineCapability;
-use App\Service\Search\SearchTerms;
 use App\Tests\Service\Search\FakeMultiSearchReader;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -49,8 +49,8 @@ final class EngineOrDatabaseSavedSearchMatcherTest extends TestCase
         $matcher->matchingIds([$this->search(1)], [10]);
     }
 
-    private function search(int $id): SavedSearchTerm
+    private function search(int $id): SavedSearchTermModel
     {
-        return new SavedSearchTerm($id, SearchTerms::fromInput('climate'));
+        return new SavedSearchTermModel($id, SearchTermsModel::fromInput('climate'));
     }
 }

@@ -5,22 +5,25 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit;
 
 use App\Service\Reader\LeadingEngagementRules;
+use App\Service\ReaderAudit\Model\BodyBlockModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 
 final readonly class LeadingEngagementMarkers
 {
-    /** @return list<CleanupMarker> */
-    public function detect(ExtractedBody $body, ?string $entryAuthor): array
+    /** @return list<CleanupMarkerModel> */
+    public function detect(ExtractedBodyModel $body, ?string $entryAuthor): array
     {
         $blocks = array_values(array_filter(
             $body->leadingBlocks(),
-            fn (BodyBlock $block): bool => $this->isEngagement($block, $entryAuthor),
+            fn (BodyBlockModel $block): bool => $this->isEngagement($block, $entryAuthor),
         ));
 
         if ($blocks === []) {
             return [];
         }
 
-        return [new CleanupMarker(
+        return [new CleanupMarkerModel(
             'leading_engagement_chrome',
             3,
             'LeadingEngagementCleaner',
@@ -28,7 +31,7 @@ final readonly class LeadingEngagementMarkers
         )];
     }
 
-    private function isEngagement(BodyBlock $block, ?string $entryAuthor): bool
+    private function isEngagement(BodyBlockModel $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::isEmojiOnly($block->text)
             || LeadingEngagementRules::isCounter($block->text)
@@ -36,11 +39,11 @@ final readonly class LeadingEngagementMarkers
             || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
     }
 
-    /** @param list<BodyBlock> $blocks */
+    /** @param list<BodyBlockModel> $blocks */
     private function quoted(array $blocks): string
     {
         $shown = array_slice($blocks, 0, 3);
-        $lines = array_map(static fn (BodyBlock $block): string => '"' . $block->text . '"', $shown);
+        $lines = array_map(static fn (BodyBlockModel $block): string => '"' . $block->text . '"', $shown);
 
         return implode(' | ', $lines) . (count($blocks) > 3 ? ' | …' : '');
     }

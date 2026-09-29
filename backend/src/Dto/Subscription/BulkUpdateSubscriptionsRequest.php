@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Subscription;
 
-use App\Service\Subscription\BulkSubscriptionChange;
+use App\Service\Subscription\Model\BulkSubscriptionChangeModel;
 use App\Service\Subscription\SubscriptionService;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -42,9 +42,9 @@ final readonly class BulkUpdateSubscriptionsRequest
     ) {
     }
 
-    public function toChange(): BulkSubscriptionChange
+    public function toChange(): BulkSubscriptionChangeModel
     {
-        return new BulkSubscriptionChange(
+        return new BulkSubscriptionChangeModel(
             subscriptionIds: $this->subscriptionIds,
             addTagIds: $this->addTagIds,
             removeTagIds: $this->removeTagIds,

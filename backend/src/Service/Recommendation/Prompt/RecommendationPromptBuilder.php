@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt;
 
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
+use App\Service\Recommendation\Prompt\Model\CandidatePoolSummaryModel;
+use App\Service\Recommendation\Prompt\Model\PromptLineModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /**
  * Renders the prompt layers for the recommendation feature and partitions
@@ -71,14 +75,14 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * @param list<PromptLine> $candidates
+     * @param list<PromptLineModel> $candidates
      *
      * @return list<list<int>>
      */
     public function packBatches(
         array $candidates,
-        RecommendationHistory $history,
-        EffectiveRecommendationSettings $settings,
+        RecommendationHistoryModel $history,
+        EffectiveRecommendationSettingsModel $settings,
     ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
         $favoritesSection = $this->favoritesSection($history, $descriptionLength);
@@ -149,14 +153,14 @@ final class RecommendationPromptBuilder
     }
 
     /**
-     * @param list<PromptLine> $candidateLines
+     * @param list<PromptLineModel> $candidateLines
      *
      * @return list<array{role: string, content: string}>
      */
     public function batchMessages(
         PromptContext $context,
         array $candidateLines,
-        ?CandidatePoolSummary $poolSummary = null,
+        ?CandidatePoolSummaryModel $poolSummary = null,
     ): array {
         $system = implode("\n\n", [
             RecommendationPromptText::BATCH_SYSTEM_ROLE,
@@ -175,14 +179,14 @@ final class RecommendationPromptBuilder
      * The profile when there is one, FAVORITES only (KEPT and VIEWED shape the profile, #493), the whole pool's
      * frame (#344 shuffles the pool into random batches), then the candidates.
      *
-     * @param list<PromptLine> $candidateLines
+     * @param list<PromptLineModel> $candidateLines
      *
      * @return list<string>
      */
     private function batchUserSections(
         PromptContext $context,
         array $candidateLines,
-        ?CandidatePoolSummary $poolSummary,
+        ?CandidatePoolSummaryModel $poolSummary,
     ): array {
         $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $sections = [];
@@ -199,7 +203,7 @@ final class RecommendationPromptBuilder
         return $sections;
     }
 
-    private function poolFrameLine(?CandidatePoolSummary $poolSummary): ?string
+    private function poolFrameLine(?CandidatePoolSummaryModel $poolSummary): ?string
     {
         if (null === $poolSummary) {
             return null;
@@ -221,8 +225,10 @@ final class RecommendationPromptBuilder
      *
      * @return list<array{role: string, content: string}>
      */
-    public function distillMessages(RecommendationHistory $history, EffectiveRecommendationSettings $settings): array
-    {
+    public function distillMessages(
+        RecommendationHistoryModel $history,
+        EffectiveRecommendationSettingsModel $settings,
+    ): array {
         $descriptionLength = $this->descriptionLength($settings->packing->contextWindow);
 
         return [
@@ -240,7 +246,7 @@ final class RecommendationPromptBuilder
      * keeps the id a recommendation resolves back to; a winner pruned since its batch is dropped (#493).
      *
      * @param list<array{id: int, score: int, reason: string}> $rankedPool
-     * @param array<int, PromptLine>                           $linesById
+     * @param array<int, PromptLineModel>                      $linesById
      *
      * @return list<array{role: string, content: string}>
      *
@@ -254,7 +260,7 @@ final class RecommendationPromptBuilder
 
         $descriptionLength = $this->descriptionLength($context->settings->packing->contextWindow);
         $shortlistLines = array_values(array_filter(array_map(
-            static fn (array $winner): ?PromptLine => $linesById[$winner['id']] ?? null,
+            static fn (array $winner): ?PromptLineModel => $linesById[$winner['id']] ?? null,
             $rankedPool,
         )));
 
@@ -365,7 +371,7 @@ final class RecommendationPromptBuilder
      * sees the profile it produces plus FAVORITES alone, not the full history
      * (#493).
      */
-    private function historySections(RecommendationHistory $history, int $descriptionLength): string
+    private function historySections(RecommendationHistoryModel $history, int $descriptionLength): string
     {
         return implode("\n\n", [
             $this->favoritesSection($history, $descriptionLength),
@@ -374,13 +380,13 @@ final class RecommendationPromptBuilder
         ]);
     }
 
-    private function favoritesSection(RecommendationHistory $history, int $descriptionLength): string
+    private function favoritesSection(RecommendationHistoryModel $history, int $descriptionLength): string
     {
         return $this->historySection('FAVORITES (newest first):', $history->favorites, $descriptionLength);
     }
 
     /**
-     * @param list<PromptLine> $lines
+     * @param list<PromptLineModel> $lines
      */
     private function historySection(string $header, array $lines, int $descriptionLength): string
     {
@@ -388,13 +394,16 @@ final class RecommendationPromptBuilder
             return $header . "\n- none";
         }
 
-        $rendered = array_map(fn (PromptLine $line): string => $this->historyLine($line, $descriptionLength), $lines);
+        $rendered = array_map(
+            fn (PromptLineModel $line): string => $this->historyLine($line, $descriptionLength),
+            $lines,
+        );
 
         return $header . "\n" . implode("\n", $rendered);
     }
 
     /**
-     * @param list<PromptLine> $candidateLines
+     * @param list<PromptLineModel> $candidateLines
      */
     private function candidateSection(array $candidateLines, int $descriptionLength): string
     {
@@ -413,14 +422,14 @@ final class RecommendationPromptBuilder
         );
 
         $rendered = array_map(
-            fn (PromptLine $line): string => $this->candidateLine($line, $descriptionLength),
+            fn (PromptLineModel $line): string => $this->candidateLine($line, $descriptionLength),
             $candidateLines,
         );
 
         return $header . "\n" . implode("\n", $rendered);
     }
 
-    private function historyLine(PromptLine $line, int $descriptionLength): string
+    private function historyLine(PromptLineModel $line, int $descriptionLength): string
     {
         $description = $this->truncatedDescription($line->description, $descriptionLength);
 
@@ -429,7 +438,7 @@ final class RecommendationPromptBuilder
             : \sprintf('- %s — %s — %s — %s', $line->title, $line->feedName, $line->date, $description);
     }
 
-    private function candidateLine(PromptLine $line, int $descriptionLength): string
+    private function candidateLine(PromptLineModel $line, int $descriptionLength): string
     {
         $description = $this->truncatedDescription($line->description, $descriptionLength);
         $baseLine = \sprintf('- [%d] %s — %s — %s', $line->entryId, $line->title, $line->feedName, $line->date);

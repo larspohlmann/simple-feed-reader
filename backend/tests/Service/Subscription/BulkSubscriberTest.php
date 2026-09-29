@@ -8,9 +8,9 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Subscription\BulkSubscribeItem;
 use App\Service\Subscription\BulkSubscriber;
-use App\Service\Subscription\TagStyle;
+use App\Service\Subscription\Model\BulkSubscribeItemModel;
+use App\Service\Subscription\Model\TagStyleModel;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
@@ -42,10 +42,10 @@ final class BulkSubscriberTest extends DbTestCase
     {
         $user = $this->user('bulk@example.com');
 
-        $style = new TagStyle('#3b82f6', 'memory');
+        $style = new TagStyleModel('#3b82f6', 'memory');
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://a.example.com/rss.xml', 'A Feed', 'Technology', $style),
-            new BulkSubscribeItem('https://b.example.com/rss.xml', 'B Feed', 'Technology', $style),
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', 'Technology', $style),
+            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', 'Technology', $style),
         ]);
 
         self::assertSame(2, $result->imported);
@@ -67,8 +67,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('titles@example.com');
 
         $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://shared.example.com/rss.xml', 'Catalog Title', null, null),
-            new BulkSubscribeItem('https://fresh.example.com/rss.xml', 'Catalog Title', null, null),
+            new BulkSubscribeItemModel('https://shared.example.com/rss.xml', 'Catalog Title', null, null),
+            new BulkSubscribeItemModel('https://fresh.example.com/rss.xml', 'Catalog Title', null, null),
         ]);
 
         $shared = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://shared.example.com/rss.xml']);
@@ -87,7 +87,7 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('due@example.com');
 
         $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://due.example.com/rss.xml', 'Due Feed', null, null),
+            new BulkSubscribeItemModel('https://due.example.com/rss.xml', 'Due Feed', null, null),
         ]);
 
         $feed = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://due.example.com/rss.xml']);
@@ -106,11 +106,11 @@ final class BulkSubscriberTest extends DbTestCase
         $this->em()->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem(
+            new BulkSubscribeItemModel(
                 'https://c.example.com/rss.xml',
                 'C Feed',
                 'Technology',
-                new TagStyle('#3b82f6', 'memory'),
+                new TagStyleModel('#3b82f6', 'memory'),
             ),
         ]);
 
@@ -129,8 +129,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('dupe@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://d.example.com/rss.xml', 'D Feed', null, null),
-            new BulkSubscribeItem('https://d.example.com/rss.xml', 'D Feed', null, null),
+            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed', null, null),
+            new BulkSubscribeItemModel('https://d.example.com/rss.xml', 'D Feed', null, null),
         ]);
 
         self::assertSame(1, $result->imported);
@@ -143,8 +143,8 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('invalid@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('not-a-url', 'Bad', null, null),
-            new BulkSubscribeItem('https://e.example.com/rss.xml', 'E Feed', null, null),
+            new BulkSubscribeItemModel('not-a-url', 'Bad', null, null),
+            new BulkSubscribeItemModel('https://e.example.com/rss.xml', 'E Feed', null, null),
         ]);
 
         self::assertSame(1, $result->invalid);
@@ -166,9 +166,9 @@ final class BulkSubscriberTest extends DbTestCase
         $this->em()->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://one.example.com/rss.xml', 'One', 'Existing', null),
-            new BulkSubscribeItem('https://two.example.com/rss.xml', 'Two', 'Fresh', null),
-            new BulkSubscribeItem('https://three.example.com/rss.xml', 'Three', 'fresh', null),
+            new BulkSubscribeItemModel('https://one.example.com/rss.xml', 'One', 'Existing', null),
+            new BulkSubscribeItemModel('https://two.example.com/rss.xml', 'Two', 'Fresh', null),
+            new BulkSubscribeItemModel('https://three.example.com/rss.xml', 'Three', 'fresh', null),
         ]);
 
         self::assertSame(3, $result->imported);
@@ -196,8 +196,8 @@ final class BulkSubscriberTest extends DbTestCase
         $this->em()->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://first.example.com/rss.xml', 'First', null, null),
-            new BulkSubscribeItem('https://second.example.com/rss.xml', 'Second', null, null),
+            new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First', null, null),
+            new BulkSubscribeItemModel('https://second.example.com/rss.xml', 'Second', null, null),
         ]);
 
         self::assertSame(1, $result->imported);
@@ -212,8 +212,18 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('long-tag@example.com');
 
         $result = $this->subscriber()->subscribeAll($user, [
-            new BulkSubscribeItem('https://long.example.com/rss.xml', 'Long', 'L' . str_repeat('t', 119), null),
-            new BulkSubscribeItem('https://longer.example.com/rss.xml', 'Longer', 'l' . str_repeat('T', 119), null),
+            new BulkSubscribeItemModel(
+                'https://long.example.com/rss.xml',
+                'Long',
+                'L' . str_repeat('t', 119),
+                null,
+            ),
+            new BulkSubscribeItemModel(
+                'https://longer.example.com/rss.xml',
+                'Longer',
+                'l' . str_repeat('T', 119),
+                null,
+            ),
         ]);
 
         self::assertSame(2, $result->imported);

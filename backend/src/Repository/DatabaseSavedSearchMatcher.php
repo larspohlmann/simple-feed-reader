@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Entity\Entry;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
-use App\Service\Search\SavedSearchTerm;
+use App\Service\Search\Model\SavedSearchTermModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
@@ -33,7 +33,7 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInt
     public function matchingIds(array $searches, array $candidateEntryIds): array
     {
         if ($candidateEntryIds === []) {
-            return array_fill_keys(SavedSearchTerm::idsOf($searches), []);
+            return array_fill_keys(SavedSearchTermModel::idsOf($searches), []);
         }
 
         $matches = [];
@@ -45,8 +45,8 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInt
     }
 
     /**
-     * @param list<SavedSearchTerm> $searches
-     * @param list<int>             $candidateEntryIds
+     * @param list<SavedSearchTermModel> $searches
+     * @param list<int>                  $candidateEntryIds
      *
      * @return array<int, list<int>>
      */
@@ -74,13 +74,13 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInt
     }
 
     /**
-     * @param list<SavedSearchTerm> $searches
+     * @param list<SavedSearchTermModel> $searches
      *
      * @return array<int, list<int>>
      */
     private function collect(array $searches, QueryBuilder $qb): array
     {
-        $matches = array_fill_keys(SavedSearchTerm::idsOf($searches), []);
+        $matches = array_fill_keys(SavedSearchTermModel::idsOf($searches), []);
         // Doctrine types the mapped id; a CASE is raw, and MySQL hands it back as a string.
         /** @var list<array{id: int, ...<string, int|string>}> $rows */
         $rows = $qb->getQuery()->getScalarResult();

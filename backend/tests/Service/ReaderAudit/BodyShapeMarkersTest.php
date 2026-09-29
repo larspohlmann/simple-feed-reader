@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\ReaderAudit\BodyShapeMarkers;
-use App\Service\ReaderAudit\CleanupMarker;
-use App\Service\ReaderAudit\ExtractedBody;
-use App\Service\ReaderAudit\SampledEntry;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
 use PHPUnit\Framework\TestCase;
 
 final class BodyShapeMarkersTest extends TestCase
@@ -112,7 +112,7 @@ final class BodyShapeMarkersTest extends TestCase
     {
         $heading = static fn (string $text): string => '<h2><a href="https://example.test/x">' . $text . '</a></h2>';
         $markers = $this->markers->detect(
-            ExtractedBody::fromHtml($heading('Eins') . $heading('Zwei') . $heading('Drei') . '<p>a</p>'),
+            ExtractedBodyModel::fromHtml($heading('Eins') . $heading('Zwei') . $heading('Drei') . '<p>a</p>'),
             $this->entry(null),
             null,
         );
@@ -126,7 +126,7 @@ final class BodyShapeMarkersTest extends TestCase
     public function testTheNoParagraphMarkerNamesItsWeightAndStage(): void
     {
         $markers = $this->markers->detect(
-            ExtractedBody::fromHtml('<div>' . str_repeat(self::PROSE, 5) . '</div>'),
+            ExtractedBodyModel::fromHtml('<div>' . str_repeat(self::PROSE, 5) . '</div>'),
             $this->entry(null),
             null,
         );
@@ -140,7 +140,7 @@ final class BodyShapeMarkersTest extends TestCase
     {
         $html = '<p>Die Ueberschrift</p><p>' . str_repeat(self::PROSE, 5) . '</p>';
         $markers = $this->markers->detect(
-            ExtractedBody::fromHtml($html),
+            ExtractedBodyModel::fromHtml($html),
             $this->entry(null, 'Die Ueberschrift'),
             null,
         );
@@ -157,7 +157,7 @@ final class BodyShapeMarkersTest extends TestCase
         $html = '<p>Was Readability las</p><p>' . str_repeat(self::PROSE, 5) . '</p>';
 
         $markers = $this->markers->detect(
-            ExtractedBody::fromHtml($html),
+            ExtractedBodyModel::fromHtml($html),
             $this->entry(null, 'Ganz anders im Feed'),
             'Was Readability las',
         );
@@ -169,23 +169,23 @@ final class BodyShapeMarkersTest extends TestCase
     private function codesFor(string $html, ?string $entryTitle = null): array
     {
         return $this->codesOf(
-            $this->markers->detect(ExtractedBody::fromHtml($html), $this->entry(null, $entryTitle), null),
+            $this->markers->detect(ExtractedBodyModel::fromHtml($html), $this->entry(null, $entryTitle), null),
         );
     }
 
     /**
-     * @param list<CleanupMarker> $markers
+     * @param list<CleanupMarkerModel> $markers
      *
      * @return list<string>
      */
     private function codesOf(array $markers): array
     {
-        return array_map(static fn (CleanupMarker $marker): string => $marker->code, $markers);
+        return array_map(static fn (CleanupMarkerModel $marker): string => $marker->code, $markers);
     }
 
-    private function entry(?string $feedHtml, ?string $title = null): SampledEntry
+    private function entry(?string $feedHtml, ?string $title = null): SampledEntryModel
     {
-        return new SampledEntry(
+        return new SampledEntryModel(
             7,
             3,
             11,

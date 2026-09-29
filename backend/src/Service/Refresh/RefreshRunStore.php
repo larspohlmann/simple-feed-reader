@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Refresh;
 
+use App\Service\Refresh\Model\RefreshRequestModel;
+use App\Service\Refresh\Model\RefreshRunProgressModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Cache\InvalidArgumentException;
 
@@ -33,7 +35,7 @@ final readonly class RefreshRunStore
     }
 
     /** @throws InvalidArgumentException */
-    public function open(RefreshRequest $request): RefreshRunProgress
+    public function open(RefreshRequestModel $request): RefreshRunProgressModel
     {
         $item = $this->refreshRunCache->getItem($this->keyFor($request));
         $stored = $item->isHit() ? $item->get() : null;
@@ -42,14 +44,14 @@ final readonly class RefreshRunStore
         // shape, and it can be truncated. An unreadable entry is a new run, not a
         // crash.
         if (!\is_array($stored) || !\is_int($stored['done'] ?? null) || !\is_int($stored['total'] ?? null)) {
-            return RefreshRunProgress::start();
+            return RefreshRunProgressModel::start();
         }
 
-        return RefreshRunProgress::resumed($stored['done'], $stored['total']);
+        return RefreshRunProgressModel::resumed($stored['done'], $stored['total']);
     }
 
     /** @throws InvalidArgumentException */
-    public function save(RefreshRequest $request, RefreshRunProgress $progress): void
+    public function save(RefreshRequestModel $request, RefreshRunProgressModel $progress): void
     {
         $item = $this->refreshRunCache->getItem($this->keyFor($request));
         $item->set(['done' => $progress->done, 'total' => $progress->total]);
@@ -58,12 +60,12 @@ final readonly class RefreshRunStore
     }
 
     /** @throws InvalidArgumentException */
-    public function forget(RefreshRequest $request): void
+    public function forget(RefreshRequestModel $request): void
     {
         $this->refreshRunCache->deleteItem($this->keyFor($request));
     }
 
-    private function keyFor(RefreshRequest $request): string
+    private function keyFor(RefreshRequestModel $request): string
     {
         if (null === $request->userId) {
             throw new \LogicException(
@@ -74,7 +76,7 @@ final readonly class RefreshRunStore
         return self::KEY_PREFIX . $request->userId . '.' . $this->scopeOf($request);
     }
 
-    private function scopeOf(RefreshRequest $request): string
+    private function scopeOf(RefreshRequestModel $request): string
     {
         if (null !== $request->feedId) {
             return 'feed-' . $request->feedId;

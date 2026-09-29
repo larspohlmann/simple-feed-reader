@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\Model\ImageIdentityModel;
+use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Url\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -18,7 +20,7 @@ final readonly class ReaderLeadImage
     private const int ICON_EDGE_CEILING = 100;
 
     /** @return ?Element the restored hero figure, so a top-placed player can be seated below it (#907) */
-    public function restore(HTMLDocument $document, LeadImageCandidate $lead): ?Element
+    public function restore(HTMLDocument $document, LeadImageCandidateModel $lead): ?Element
     {
         $body = $document->body;
         $leadUrl = AbsoluteHttpUrl::orNull($lead->url);
@@ -36,9 +38,9 @@ final readonly class ReaderLeadImage
         return $figure;
     }
 
-    private function belongsAbove(Element $body, LeadImageCandidate $lead): bool
+    private function belongsAbove(Element $body, LeadImageCandidateModel $lead): bool
     {
-        $leadIdentity = ImageIdentity::fromUrl((string) $lead->url);
+        $leadIdentity = ImageIdentityModel::fromUrl((string) $lead->url);
         if ($leadIdentity->isShareRender() || $this->opensWithImage($body)) {
             return false;
         }
@@ -57,11 +59,11 @@ final readonly class ReaderLeadImage
         return $body->getElementsByTagName('img')->length > 0;
     }
 
-    private function bodyShowsLead(ImageIdentity $lead, Element $body): bool
+    private function bodyShowsLead(ImageIdentityModel $lead, Element $body): bool
     {
         foreach ($body->getElementsByTagName('img') as $image) {
             $source = $image->getAttribute('src') ?? '';
-            if ($source !== '' && $lead->isSameAsset(ImageIdentity::fromUrl($source))) {
+            if ($source !== '' && $lead->isSameAsset(ImageIdentityModel::fromUrl($source))) {
                 return true;
             }
         }

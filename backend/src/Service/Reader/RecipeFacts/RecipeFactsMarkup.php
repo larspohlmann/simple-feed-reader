@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\RecipeFacts;
 
+use App\Service\Reader\RecipeFacts\Model\RecipeFactModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -15,7 +16,7 @@ use Dom\HTMLDocument;
  */
 final readonly class RecipeFactsMarkup
 {
-    /** @param list<RecipeFact> $facts */
+    /** @param list<RecipeFactModel> $facts */
     public function figureFor(HTMLDocument $document, array $facts): Element
     {
         $figure = $document->createElement('figure');
@@ -30,7 +31,7 @@ final readonly class RecipeFactsMarkup
         return $figure;
     }
 
-    private function cell(HTMLDocument $document, RecipeFact $fact): Element
+    private function cell(HTMLDocument $document, RecipeFactModel $fact): Element
     {
         $cell = $document->createElement('div');
         $cell->appendChild($this->term($document, 'dt', $fact->label));

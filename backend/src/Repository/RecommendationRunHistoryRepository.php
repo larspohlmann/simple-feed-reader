@@ -7,7 +7,7 @@ namespace App\Repository;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RunStatus;
-use App\Service\Recommendation\Feed\MonthWindow;
+use App\Service\Recommendation\Feed\Model\MonthWindowModel;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -71,7 +71,7 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
      *
      * @return list<HistoryRow>
      */
-    public function pageForMonth(User $user, MonthWindow $window, ?int $beforeRunId): array
+    public function pageForMonth(User $user, MonthWindowModel $window, ?int $beforeRunId): array
     {
         $query = $this->historyRowsFor($user)
             ->andWhere('r.createdAt >= :start')->setParameter('start', $window->startUtc)

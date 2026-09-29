@@ -8,10 +8,10 @@ use App\Entity\AiProviderSettings;
 use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Prompt\CallPrompt;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
+use App\Service\Recommendation\Prompt\Model\CallPromptModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
-use App\Service\Recommendation\Prompt\RecommendationResponseSchema;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCompletionRequestFactoryTest extends TestCase
@@ -76,9 +76,9 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
     }
 
-    private function prompt(): CallPrompt
+    private function prompt(): CallPromptModel
     {
-        return new CallPrompt(
+        return new CallPromptModel(
             [['role' => 'user', 'content' => 'rank these']],
             45,
             RecommendationResponseSchema::Consolidation,

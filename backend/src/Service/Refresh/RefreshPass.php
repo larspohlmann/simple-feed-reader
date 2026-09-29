@@ -6,6 +6,7 @@ namespace App\Service\Refresh;
 
 use App\Entity\Feed;
 use App\Service\Fetch\Model\FetchTicketModel;
+use App\Service\Refresh\Model\RefreshReportModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /** One run's due feeds, its budget queue and its tally, and the report they add up to. */
@@ -53,19 +54,19 @@ final readonly class RefreshPass
     }
 
     /** Persistence failed while outcomes were stored: every feed not yet processed, the failing one too, is due. */
-    public function abortedDuringOutcomes(): RefreshReport
+    public function abortedDuringOutcomes(): RefreshReportModel
     {
         return $this->aborted(\count($this->feeds) - $this->tally->processed());
     }
 
-    public function abortedAfterOutcomes(): RefreshReport
+    public function abortedAfterOutcomes(): RefreshReportModel
     {
         return $this->aborted($this->queue->skippedCount());
     }
 
-    public function finished(int $remaining, int $pruned): RefreshReport
+    public function finished(int $remaining, int $pruned): RefreshReportModel
     {
-        return RefreshReport::finished(
+        return RefreshReportModel::finished(
             \count($this->feeds),
             $this->tally->fetched(),
             $this->tally->notModified(),
@@ -77,9 +78,9 @@ final readonly class RefreshPass
         );
     }
 
-    private function aborted(int $remaining): RefreshReport
+    private function aborted(int $remaining): RefreshReportModel
     {
-        return RefreshReport::aborted(
+        return RefreshReportModel::aborted(
             \count($this->feeds),
             $this->tally->fetched(),
             $this->tally->notModified(),

@@ -15,8 +15,8 @@ use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\JsonSchemaModel;
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Run\CallSlot;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
+use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\RecommendationCallRecorder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\UserFactory;
@@ -70,7 +70,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         $this->recorder->begin(
             $this->run,
-            CallSlot::batch(2),
+            CallSlotModel::batch(2),
             $this->request([['role' => 'user', 'content' => 'hi']]),
         );
 
@@ -88,7 +88,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointsAreThrottledToTheInterval(): void
     {
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
 
         $call->streamProgressed(new CompletionStreamProgressModel('He', 40));
@@ -106,7 +106,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testCheckpointUpdatesTheLivenessCounter(): void
     {
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
 
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgressModel('He', 1_234));
@@ -120,7 +120,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testFinishUsableStoresTextVerdictAndResetsLiveness(): void
     {
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgressModel('partial', 7_000));
@@ -137,7 +137,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testAbortKeepsThePartialTextWithTransportVerdictAndTheTransportMessage(): void
     {
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgressModel('cut off', 9_001));
@@ -160,7 +160,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
      */
     public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
     {
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
         $logId = $this->logRows()[0]['id'];
 
         // Inside the checkpoint interval on purpose: no write has happened,
@@ -187,12 +187,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         [$otherRunId, $otherLogId] = $this->seedOtherUsersRunAndLog();
 
-        $call = $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $call = $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
         $this->clock->modify('+3 seconds');
         $call->streamProgressed(new CompletionStreamProgressModel('mine', 50));
         $call->finishUsable('final mine');
 
-        $abortCall = $this->recorder->begin($this->run, CallSlot::batch(2), $this->request([]));
+        $abortCall = $this->recorder->begin($this->run, CallSlotModel::batch(2), $this->request([]));
         $this->clock->modify('+3 seconds');
         $abortCall->streamProgressed(new CompletionStreamProgressModel('cut', 60));
         $abortCall->abortAfterTransportFailure('connection reset');
@@ -202,8 +202,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     public function testASecondBeginForTheSamePhaseCountsTheAttempt(): void
     {
-        $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]))->finishUnusable('bad');
-        $this->recorder->begin($this->run, CallSlot::batch(1), $this->request([]));
+        $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]))->finishUnusable('bad');
+        $this->recorder->begin($this->run, CallSlotModel::batch(1), $this->request([]));
 
         $rows = $this->logRows();
         self::assertSame([1, 2], array_column($rows, 'attempt'));

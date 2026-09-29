@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Search\Index\SearchIndexReader;
 
 use App\Service\Search\Exception\SearchEngineUnavailableException;
-use App\Service\Search\Index\IndexedEntry;
-use App\Service\Search\Index\IndexMatches;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexedEntryModel;
+use App\Service\Search\Index\Model\IndexMatchesModel;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Service\Search\SearchEngineCapability;
-use App\Service\Search\SearchTerms;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -70,7 +70,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      * page must be the next rows in that order. A relevance rule ahead of it lets an
      * old title match onto page one, and the cursor then skips every newer match.
      *
-     * filterable/sortable list precisely the fields IndexSearch's cursor and
+     * filterable/sortable list precisely the fields IndexSearchModel's cursor and
      * feed scoping use.
      *
      * @var array{
@@ -93,7 +93,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     ) {
     }
 
-    public function find(IndexSearch $search): IndexMatches
+    public function find(IndexSearchModel $search): IndexMatchesModel
     {
         $body = $this->requestBody('POST', '/indexes/' . self::INDEX . '/search', [
             'json' => $this->searchPayload($search),
@@ -103,9 +103,9 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /**
-     * @param list<IndexSearch> $searches
+     * @param list<IndexSearchModel> $searches
      *
-     * @return list<IndexMatches>
+     * @return list<IndexMatchesModel>
      */
     public function findMany(array $searches): array
     {
@@ -161,7 +161,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     /**
      * @return array<string, mixed>
      */
-    private function searchPayload(IndexSearch $search): array
+    private function searchPayload(IndexSearchModel $search): array
     {
         return [
             'q' => $this->queryStringFor($search->terms),
@@ -186,17 +186,17 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
 
     /**
      * The `q` string for one search. A whole-word search — the trailing space
-     * the user typed, carried as SearchTerms::$isWholeWord — becomes one quoted
+     * the user typed, carried as SearchTermsModel::$isWholeWord — becomes one quoted
      * phrase per term: a phrase matches the word exactly, where a bare term also
      * matches by prefix and typo. That's why a whole-word search for "punk" was
      * answering with "Pünktlichkeit" until #450; probed against v1.13, which
      * narrowed that search from 82 hits to 16.
      *
      * A phrase search — the wrapping quotes the user typed, carried as
-     * SearchTerms::$isPhrase — becomes one quoted phrase over the whole term,
+     * SearchTermsModel::$isPhrase — becomes one quoted phrase over the whole term,
      * Meilisearch's own way of asking for those words in order and adjacent (#702).
      */
-    private function queryStringFor(SearchTerms $terms): string
+    private function queryStringFor(SearchTermsModel $terms): string
     {
         $words = array_map(self::withoutPhraseDelimiters(...), $terms->terms);
 
@@ -223,12 +223,12 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /** @return array<string, mixed> */
-    private function multiSearchQuery(IndexSearch $search): array
+    private function multiSearchQuery(IndexSearchModel $search): array
     {
         return ['indexUid' => self::INDEX, ...$this->searchPayload($search)];
     }
 
-    private function filterFor(IndexSearch $search): string
+    private function filterFor(IndexSearchModel $search): string
     {
         $clauses = [];
         if ($search->feedIds !== null) {
@@ -249,7 +249,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         return implode(' AND ', $clauses);
     }
 
-    private function matchesFromResponse(string $body): IndexMatches
+    private function matchesFromResponse(string $body): IndexMatchesModel
     {
         $decoded = json_decode($body, true);
         if (!\is_array($decoded) || !isset($decoded['hits']) || !\is_array($decoded['hits'])) {
@@ -259,7 +259,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         return $this->matchesFromHits($decoded['hits']);
     }
 
-    /** @return list<IndexMatches> */
+    /** @return list<IndexMatchesModel> */
     private function manyMatchesFromResponse(string $body, int $expected): array
     {
         $decoded = json_decode($body, true);
@@ -275,7 +275,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             );
         }
 
-        return array_map(function (array $result): IndexMatches {
+        return array_map(function (array $result): IndexMatchesModel {
             $hits = isset($result['hits']) && \is_array($result['hits']) ? $result['hits'] : [];
 
             return $this->matchesFromHits($hits);
@@ -285,12 +285,12 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     /**
      * @param array<mixed> $rawHits
      */
-    private function matchesFromHits(array $rawHits): IndexMatches
+    private function matchesFromHits(array $rawHits): IndexMatchesModel
     {
         /** @var list<array<mixed>> $hits */
         $hits = array_values(array_filter($rawHits, static fn (mixed $hit): bool => \is_array($hit)));
 
-        return new IndexMatches($this->entryIdsOf($hits), $this->matchedWordsOf($hits));
+        return new IndexMatchesModel($this->entryIdsOf($hits), $this->matchedWordsOf($hits));
     }
 
     /**
@@ -364,7 +364,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
      *     effectiveDate: int,
      * }
      */
-    private function documentOf(IndexedEntry $entry): array
+    private function documentOf(IndexedEntryModel $entry): array
     {
         return [
             'id' => $entry->id,

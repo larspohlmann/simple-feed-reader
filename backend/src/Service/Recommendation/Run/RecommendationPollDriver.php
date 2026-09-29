@@ -6,6 +6,8 @@ namespace App\Service\Recommendation\Run;
 
 use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Psr\Log\LoggerInterface;
 
@@ -49,7 +51,7 @@ final readonly class RecommendationPollDriver
     ) {
     }
 
-    public function poll(User $user): RecommendationRunReport
+    public function poll(User $user): RecommendationRunReportModel
     {
         if ($this->presence->isAnybodyDrivingRecommendationRuns()) {
             return $this->latestReport($user)->inBackground();
@@ -62,7 +64,7 @@ final readonly class RecommendationPollDriver
         // polling a healthy run (#311). Here the presence check already said
         // "nobody driving", so waitingForLock names that gap rather than
         // letting the client read it as a healthy background run (#439).
-        if (RecommendationRunReport::STATUS_BUSY !== $report->status) {
+        if (RecommendationRunReportModel::STATUS_BUSY !== $report->status) {
             return $report;
         }
 
@@ -72,7 +74,7 @@ final readonly class RecommendationPollDriver
     }
 
     #[WithSpan]
-    public function current(User $user): RecommendationRunReport
+    public function current(User $user): RecommendationRunReportModel
     {
         $report = $this->latestReport($user);
 
@@ -94,10 +96,10 @@ final readonly class RecommendationPollDriver
         ]);
     }
 
-    private function latestReport(User $user): RecommendationRunReport
+    private function latestReport(User $user): RecommendationRunReportModel
     {
         $latest = $this->runs->findLatestForUser($user);
 
-        return null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
+        return null === $latest ? RecommendationRunReportModel::none() : RecommendationRunReportModel::fromRun($latest);
     }
 }

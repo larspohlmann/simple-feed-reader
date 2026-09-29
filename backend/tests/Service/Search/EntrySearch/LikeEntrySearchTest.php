@@ -12,7 +12,7 @@ use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\EntrySearchQuery;
 use App\Service\Search\EntrySearch\LikeEntrySearch;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
@@ -52,7 +52,7 @@ final class LikeEntrySearchTest extends DbTestCase
 
         $result = $search->search(new EntrySearchQuery(
             userId: $user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
         ));
 
         self::assertCount(1, $result->rows);
@@ -60,7 +60,7 @@ final class LikeEntrySearchTest extends DbTestCase
         self::assertSame([], $result->matchedWords);
         // The database path's matchCount is the row count — nothing removes
         // rows after the query runs, unlike the indexed search's hydration
-        // step — so EntrySearchResult must default it from count($rows)
+        // step — so EntrySearchResultModel must default it from count($rows)
         // rather than the caller having to say so.
         self::assertSame(1, $result->matchCount);
     }
@@ -96,7 +96,7 @@ final class LikeEntrySearchTest extends DbTestCase
         self::assertInstanceOf(EntryListRepository::class, $repository);
         $result = (new LikeEntrySearch($repository))->search(new EntrySearchQuery(
             userId: $user->requireId(),
-            terms: SearchTerms::fromInput('angular'),
+            terms: SearchTermsModel::fromInput('angular'),
             unread: true,
         ));
 

@@ -7,6 +7,8 @@ namespace App\Service\Recommendation\Run;
 use App\Entity\User;
 use App\Enum\RunStatus;
 use App\Repository\RecommendationRunTimingRepository;
+use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
@@ -36,7 +38,7 @@ final readonly class RecommendationEtaEstimator
     ) {
     }
 
-    public function estimateSeconds(RecommendationRunReport $report, User $user): ?int
+    public function estimateSeconds(RecommendationRunReportModel $report, User $user): ?int
     {
         if (
             null === $report->batchesTotal
@@ -47,7 +49,7 @@ final readonly class RecommendationEtaEstimator
         }
 
         $elapsed = $report->elapsedSecondsAt($this->clock->now());
-        $durations = PhaseDurations::fromCompletedRunSpans(
+        $durations = PhaseDurationsModel::fromCompletedRunSpans(
             $this->timings->completedRunPhaseSpans($user, RunLogRetention::RUNS),
         );
         if (null === $elapsed || null === $durations) {
@@ -59,7 +61,7 @@ final readonly class RecommendationEtaEstimator
         return max(0, (int) round($durations->predictedTotalSeconds($batchCount) - $elapsed));
     }
 
-    private function isInFlight(RecommendationRunReport $report): bool
+    private function isInFlight(RecommendationRunReportModel $report): bool
     {
         return RunStatus::tryFrom($report->status)?->isActive() ?? false;
     }

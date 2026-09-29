@@ -10,7 +10,7 @@ use App\Entity\User;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
-use App\Service\Recommendation\Run\WaveBatch;
+use App\Service\Recommendation\Run\Model\WaveBatchModel;
 use App\Service\Recommendation\Run\WaveContextLoader;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
@@ -46,7 +46,7 @@ final class WaveContextLoaderTest extends DbTestCase
 
         $wave = $this->loader()->load($this->tick($run), 2);
 
-        self::assertSame([1, 2], array_map(static fn (WaveBatch $batch): int => $batch->index, $wave->batches));
+        self::assertSame([1, 2], array_map(static fn (WaveBatchModel $batch): int => $batch->index, $wave->batches));
         self::assertSame([$ids[2], $ids[3]], $wave->batches[0]->ids);
         self::assertEqualsCanonicalizing([$ids[4], $ids[5]], $wave->batches[1]->validIds());
         self::assertSame(6, $wave->poolSummary?->total);

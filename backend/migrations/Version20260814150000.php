@@ -20,7 +20,7 @@ use Doctrine\Migrations\AbstractMigration;
  * chain.
  *
  * The default is the literal 2, not
- * EffectiveRecommendationSettings::DEFAULT_LOOKBACK_DAYS: a migration
+ * EffectiveRecommendationSettingsModel::DEFAULT_LOOKBACK_DAYS: a migration
  * records what was applied at a point in time, and a constant a migration
  * imports can move after the migration has already run, silently changing
  * what an already-applied migration claims and diverging fresh installs

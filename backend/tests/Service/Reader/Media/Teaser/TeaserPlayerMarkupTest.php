@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Teaser;
 
-use App\Service\Reader\Media\MediaKind;
-use App\Service\Reader\Media\Teaser\TeaserPlayer;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -21,7 +21,7 @@ final class TeaserPlayerMarkupTest extends TestCase
         $this->document = HTMLDocument::createEmpty();
     }
 
-    private function html(TeaserPlayer $teaser): string
+    private function html(TeaserPlayerModel $teaser): string
     {
         $figure = $this->markup->figureFor($this->document, $teaser);
 
@@ -30,7 +30,7 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     public function testAVideoTeaserIsAFigureWithAPosteredControllablePlayer(): void
     {
-        $teaser = new TeaserPlayer(
+        $teaser = new TeaserPlayerModel(
             MediaKind::Video,
             'https://x.test/clip.mp4',
             'https://x.test/still.jpg',
@@ -52,7 +52,7 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     public function testAnAudioTeaserKeepsItsStillAndLabelsItWithTheCaption(): void
     {
-        $teaser = new TeaserPlayer(
+        $teaser = new TeaserPlayerModel(
             MediaKind::Audio,
             'https://x.test/ep.mp3',
             'https://x.test/still.jpg',
@@ -72,7 +72,13 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     public function testAPlainCaptionHasNoLink(): void
     {
-        $teaser = new TeaserPlayer(MediaKind::Video, 'https://x.test/c.mp4', 'https://x.test/s.jpg', 'Just text', null);
+        $teaser = new TeaserPlayerModel(
+            MediaKind::Video,
+            'https://x.test/c.mp4',
+            'https://x.test/s.jpg',
+            'Just text',
+            null,
+        );
 
         $html = $this->html($teaser);
 
@@ -82,7 +88,7 @@ final class TeaserPlayerMarkupTest extends TestCase
 
     public function testNoCaptionMeansNoFigcaption(): void
     {
-        $teaser = new TeaserPlayer(MediaKind::Video, 'https://x.test/c.mp4', 'https://x.test/s.jpg', null, null);
+        $teaser = new TeaserPlayerModel(MediaKind::Video, 'https://x.test/c.mp4', 'https://x.test/s.jpg', null, null);
 
         self::assertStringNotContainsString('<figcaption', $this->html($teaser));
     }

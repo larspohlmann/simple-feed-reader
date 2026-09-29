@@ -8,10 +8,11 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Repository\DatabaseSavedSearchMatcher;
 use App\Repository\SearchTermsPredicateBuilder;
-use App\Service\Search\SavedSearchTerm;
-use App\Service\Search\SearchMode;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SavedSearchTermModel;
+use App\Service\Search\Model\SearchMode;
+use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
+use Doctrine\ORM\EntityManagerInterface;
 
 /** ASCII terms only: SQLite's LIKE folds ASCII case alone. */
 final class DatabaseSavedSearchMatcherTest extends DbTestCase
@@ -76,6 +77,15 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         ));
     }
 
+    public function testNoCandidatesRunsNoStatement(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('createQueryBuilder');
+        $matcher = new DatabaseSavedSearchMatcher($entityManager, new SearchTermsPredicateBuilder());
+
+        self::assertSame([1 => []], $matcher->matchingIds([$this->search(1, 'climate')], []));
+    }
+
     public function testMoreSearchesThanOneStatementHoldsAreStillAllAnswered(): void
     {
         $entry = $this->entry('a', 'term07 and term30');
@@ -97,9 +107,9 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
         return new DatabaseSavedSearchMatcher($this->em, new SearchTermsPredicateBuilder());
     }
 
-    private function search(int $id, string $term, SearchMode $mode = SearchMode::Substring): SavedSearchTerm
+    private function search(int $id, string $term, SearchMode $mode = SearchMode::Substring): SavedSearchTermModel
     {
-        return new SavedSearchTerm($id, SearchTerms::fromTermAndMode($term, $mode));
+        return new SavedSearchTermModel($id, SearchTermsModel::fromTermAndMode($term, $mode));
     }
 
     private function entry(string $guid, string $title, ?string $summary = null): Entry

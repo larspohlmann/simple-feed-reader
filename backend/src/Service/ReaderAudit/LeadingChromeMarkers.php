@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\ReaderAudit\Model\BodyBlockModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+
 /**
  * What stands between the top of the reader view and the article's first
  * paragraph. This is the half of the audit that matters: a menu, a ressort list
@@ -11,7 +15,7 @@ namespace App\Service\ReaderAudit;
  * the same shapes under the last paragraph are the site's related-articles tail
  * and are tolerated (#744).
  *
- * Every rule here reads ExtractedBody::leadingBlocks() and nothing else, so no
+ * Every rule here reads ExtractedBodyModel::leadingBlocks() and nothing else, so no
  * rule can be fooled by furniture that sits safely at the end.
  */
 final readonly class LeadingChromeMarkers
@@ -24,8 +28,8 @@ final readonly class LeadingChromeMarkers
     private const int MIN_LEADING_LINKS = 5;
     private const int MIN_LEADING_BLOCKS_FOR_WALL = 6;
 
-    /** @return list<CleanupMarker> */
-    public function detect(ExtractedBody $body): array
+    /** @return list<CleanupMarkerModel> */
+    public function detect(ExtractedBodyModel $body): array
     {
         $leading = $body->leadingBlocks();
         $candidates = [
@@ -41,9 +45,9 @@ final readonly class LeadingChromeMarkers
      * A list whose items are bare links, standing before the article starts: a
      * site menu, a ressort row or a "most read" box readability kept.
      *
-     * @param list<BodyBlock> $leading
+     * @param list<BodyBlockModel> $leading
      */
-    private function linkList(array $leading): ?CleanupMarker
+    private function linkList(array $leading): ?CleanupMarkerModel
     {
         $items = [];
         foreach ($leading as $block) {
@@ -55,7 +59,7 @@ final readonly class LeadingChromeMarkers
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'leading_link_list',
             4,
             'NavigationChromeTrimmer',
@@ -71,9 +75,9 @@ final readonly class LeadingChromeMarkers
      * The same shape without a list: consecutive blocks that are nothing but a
      * link, which is how a menu built from <div>s or <p>s arrives.
      *
-     * @param list<BodyBlock> $leading
+     * @param list<BodyBlockModel> $leading
      */
-    private function navigationRun(array $leading): ?CleanupMarker
+    private function navigationRun(array $leading): ?CleanupMarkerModel
     {
         $run = [];
         $longest = [];
@@ -85,7 +89,7 @@ final readonly class LeadingChromeMarkers
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'leading_nav_run',
             4,
             'NavigationChromeTrimmer',
@@ -101,9 +105,9 @@ final readonly class LeadingChromeMarkers
      * Neither shape, but the reader still has to scroll past a wall of links to
      * reach the first sentence.
      *
-     * @param list<BodyBlock> $leading
+     * @param list<BodyBlockModel> $leading
      */
-    private function linkWall(array $leading): ?CleanupMarker
+    private function linkWall(array $leading): ?CleanupMarkerModel
     {
         $links = 0;
         foreach ($leading as $block) {
@@ -113,7 +117,7 @@ final readonly class LeadingChromeMarkers
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'leading_link_wall',
             3,
             'NavigationChromeTrimmer',
@@ -121,7 +125,7 @@ final readonly class LeadingChromeMarkers
                 '%d links across %d blocks before the article starts: %s',
                 $links,
                 \count($leading),
-                $this->quoted(array_map(static fn (BodyBlock $block): string => $block->text, $leading)),
+                $this->quoted(array_map(static fn (BodyBlockModel $block): string => $block->text, $leading)),
             ),
         );
     }

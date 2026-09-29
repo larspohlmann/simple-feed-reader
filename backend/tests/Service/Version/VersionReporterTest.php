@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Version;
 
-use App\Service\Version\LatestRelease;
 use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
-use App\Service\Version\ReleaseVersion;
+use App\Service\Version\Model\LatestReleaseModel;
+use App\Service\Version\Model\ReleaseVersionModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 use App\Service\Version\VersionReporter;
 use PHPUnit\Framework\TestCase;
@@ -16,7 +16,7 @@ final class VersionReporterTest extends TestCase
     public function testReportsTheRunningBuild(): void
     {
         $report = $this->reporter(
-            new ReleaseVersion('v1.4.1', 'abc123', '2026-01-01T00:00:00Z'),
+            new ReleaseVersionModel('v1.4.1', 'abc123', '2026-01-01T00:00:00Z'),
             null,
         )->report();
 
@@ -29,8 +29,8 @@ final class VersionReporterTest extends TestCase
     public function testSignalsAnUpdateWhenTheLatestReleaseIsNewer(): void
     {
         $report = $this->reporter(
-            new ReleaseVersion('v1.4.1', 'abc123', ''),
-            new LatestRelease('v1.4.2', 'https://example.test/notes'),
+            new ReleaseVersionModel('v1.4.1', 'abc123', ''),
+            new LatestReleaseModel('v1.4.2', 'https://example.test/notes'),
         )->report();
 
         self::assertTrue($report->updateAvailable);
@@ -42,8 +42,8 @@ final class VersionReporterTest extends TestCase
     public function testStaysQuietWhenADevTagIsAheadOfTheLatestRelease(): void
     {
         $report = $this->reporter(
-            new ReleaseVersion('v1.4.2-dev.3', 'abc123', ''),
-            new LatestRelease('v1.4.1', 'https://example.test/notes'),
+            new ReleaseVersionModel('v1.4.2-dev.3', 'abc123', ''),
+            new LatestReleaseModel('v1.4.1', 'https://example.test/notes'),
         )->report();
 
         self::assertFalse($report->updateAvailable);
@@ -54,32 +54,32 @@ final class VersionReporterTest extends TestCase
     public function testStaysQuietForADevelopmentBuild(): void
     {
         $report = $this->reporter(
-            ReleaseVersion::development(),
-            new LatestRelease('v1.4.2', 'https://example.test/notes'),
+            ReleaseVersionModel::development(),
+            new LatestReleaseModel('v1.4.2', 'https://example.test/notes'),
         )->report();
 
         self::assertFalse($report->updateAvailable);
     }
 
-    private function reporter(ReleaseVersion $running, ?LatestRelease $latest): VersionReporter
+    private function reporter(ReleaseVersionModel $running, ?LatestReleaseModel $latest): VersionReporter
     {
         $releaseReader = new class ($running) implements ReleaseVersionReaderInterface {
-            public function __construct(private readonly ReleaseVersion $version)
+            public function __construct(private readonly ReleaseVersionModel $version)
             {
             }
 
-            public function read(): ReleaseVersion
+            public function read(): ReleaseVersionModel
             {
                 return $this->version;
             }
         };
 
         $latestReader = new class ($latest) implements LatestReleaseReaderInterface {
-            public function __construct(private readonly ?LatestRelease $latest)
+            public function __construct(private readonly ?LatestReleaseModel $latest)
             {
             }
 
-            public function read(): ?LatestRelease
+            public function read(): ?LatestReleaseModel
             {
                 return $this->latest;
             }

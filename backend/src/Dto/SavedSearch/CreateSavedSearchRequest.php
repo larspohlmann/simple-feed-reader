@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\SavedSearch;
 
-use App\Service\Search\SavedSearchDefinition;
+use App\Service\Search\Model\SavedSearchDefinitionModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final readonly class CreateSavedSearchRequest
@@ -18,8 +18,8 @@ final readonly class CreateSavedSearchRequest
     ) {
     }
 
-    public function toDefinition(): SavedSearchDefinition
+    public function toDefinition(): SavedSearchDefinitionModel
     {
-        return new SavedSearchDefinition(term: $this->term, wholeWord: $this->wholeWord, phrase: $this->phrase);
+        return new SavedSearchDefinitionModel(term: $this->term, wholeWord: $this->wholeWord, phrase: $this->phrase);
     }
 }

@@ -10,7 +10,7 @@ use App\Exception\ValidationException;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
 use App\Repository\EntrySearchQuery;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -29,7 +29,7 @@ final readonly class EntrySearchRequestFactory
 
         return new EntrySearchQuery(
             userId: $user->requireId(),
-            terms: SearchTerms::fromInput($this->singleValue($request, 'q')),
+            terms: SearchTermsModel::fromInput($this->singleValue($request, 'q')),
             cursor: EntryCursor::fromRequestValue($this->singleValue($request, 'cursor')),
             limit: $this->limit($request),
             unread: $this->unread($request),

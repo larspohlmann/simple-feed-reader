@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media;
 
-use App\Service\Reader\ImageIdentity;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\EmbedTargetModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaInsertionPlanModel;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Model\ImageIdentityModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -19,18 +25,18 @@ final readonly class PageMediaInserter
     {
     }
 
-    public function plan(HTMLDocument $document, ArticleMedia $media): MediaInsertionPlan
+    public function plan(HTMLDocument $document, ArticleMediaModel $media): MediaInsertionPlanModel
     {
         $root = $document->body;
         if ($root === null || $media->isEmpty()) {
-            return new MediaInsertionPlan([], [], []);
+            return new MediaInsertionPlanModel([], [], []);
         }
 
-        return $this->classify($media, $this->reconcilableImages($root), PageTextBlocks::fromDocument($document));
+        return $this->classify($media, $this->reconcilableImages($root), PageTextBlocksModel::fromDocument($document));
     }
 
     /** @param ?Element $belowHero a restored lead hero the top-placed media seats under, not above (#907) */
-    public function apply(HTMLDocument $document, MediaInsertionPlan $plan, ?Element $belowHero = null): void
+    public function apply(HTMLDocument $document, MediaInsertionPlanModel $plan, ?Element $belowHero = null): void
     {
         foreach ($plan->reconcilePairs as $pair) {
             $pair['image']->parentNode?->replaceChild($this->element($document, $pair['candidate']), $pair['image']);
@@ -46,8 +52,11 @@ final readonly class PageMediaInserter
     }
 
     /** @param list<Element> $pool candidate body images, in document order */
-    private function classify(ArticleMedia $media, array $pool, PageTextBlocks $bodyBlocks): MediaInsertionPlan
-    {
+    private function classify(
+        ArticleMediaModel $media,
+        array $pool,
+        PageTextBlocksModel $bodyBlocks,
+    ): MediaInsertionPlanModel {
         $reconciled = [];
         $anchored = [];
         $topPlaced = [];
@@ -65,7 +74,7 @@ final readonly class PageMediaInserter
             $topPlaced[] = $candidate;
         }
 
-        return new MediaInsertionPlan($reconciled, $anchored, $topPlaced);
+        return new MediaInsertionPlanModel($reconciled, $anchored, $topPlaced);
     }
 
     /**
@@ -74,10 +83,10 @@ final readonly class PageMediaInserter
      */
     private function claim(array &$pool, string $posterUrl): ?Element
     {
-        $posterIdentity = ImageIdentity::fromUrl($posterUrl);
+        $posterIdentity = ImageIdentityModel::fromUrl($posterUrl);
         foreach ($pool as $index => $image) {
             $source = $image->getAttribute('src') ?? '';
-            if ($source !== '' && $posterIdentity->isSameAsset(ImageIdentity::fromUrl($source))) {
+            if ($source !== '' && $posterIdentity->isSameAsset(ImageIdentityModel::fromUrl($source))) {
                 array_splice($pool, $index, 1);
 
                 return $image;
@@ -112,7 +121,7 @@ final readonly class PageMediaInserter
         $reference->parentNode?->insertBefore($player, $reference->nextSibling);
     }
 
-    /** @param list<MediaCandidate> $topPlaced */
+    /** @param list<MediaCandidateModel> $topPlaced */
     private function prependTopPlaced(HTMLDocument $document, array $topPlaced, ?Element $belowHero): void
     {
         $root = $document->body;
@@ -130,7 +139,7 @@ final readonly class PageMediaInserter
         }
     }
 
-    private function element(HTMLDocument $document, MediaCandidate $candidate): Element
+    private function element(HTMLDocument $document, MediaCandidateModel $candidate): Element
     {
         return match ($candidate->kind) {
             MediaKind::Audio => $this->player($document, 'audio', $candidate),
@@ -138,12 +147,12 @@ final readonly class PageMediaInserter
             MediaKind::Stream => $this->player($document, 'video', $candidate),
             MediaKind::Embed => $this->markup->embedLink(
                 $document,
-                new EmbedTarget($candidate->url, $candidate->posterUrl, $candidate->label ?? 'Open the media'),
+                new EmbedTargetModel($candidate->url, $candidate->posterUrl, $candidate->label ?? 'Open the media'),
             ),
         };
     }
 
-    private function player(HTMLDocument $document, string $tag, MediaCandidate $candidate): Element
+    private function player(HTMLDocument $document, string $tag, MediaCandidateModel $candidate): Element
     {
         $player = $document->createElement($tag);
         $player->setAttribute('controls', '');
@@ -168,7 +177,7 @@ final readonly class PageMediaInserter
      * plays through a typed <source> the browser can accept or skip without a
      * fetch (#914); a candidate the feed never enumerated keeps a bare src.
      */
-    private function attachSource(HTMLDocument $document, Element $player, MediaCandidate $candidate): void
+    private function attachSource(HTMLDocument $document, Element $player, MediaCandidateModel $candidate): void
     {
         if ($candidate->mimeType === null) {
             $player->setAttribute('src', $candidate->url);

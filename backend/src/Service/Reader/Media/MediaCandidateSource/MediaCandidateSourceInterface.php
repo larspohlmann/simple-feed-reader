@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\MediaCandidateSource;
 
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\RawPage;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\RawPageModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
@@ -23,6 +23,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.media_candidate_source')]
 interface MediaCandidateSourceInterface
 {
-    /** @return list<MediaCandidate> */
-    public function find(RawPage $page): array;
+    /** @return list<MediaCandidateModel> */
+    public function find(RawPageModel $page): array;
 }

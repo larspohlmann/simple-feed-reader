@@ -6,9 +6,9 @@ namespace App\Tests\Service\Reader\BodyCleaning;
 
 use App\Service\Html\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningPass;
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
@@ -32,18 +32,23 @@ final class BodyCleaningPassTest extends TestCase
 
         $pass->recordEmbedsRecoveredInBody();
         $urls = array_map(
-            static fn (MediaCandidate $candidate): string => $candidate->url,
+            static fn (MediaCandidateModel $candidate): string => $candidate->url,
             $pass->discoveredMedia()->candidates,
         );
 
         self::assertSame(['https://x.test/a.mp3'], $urls);
     }
 
-    private function embedAndAudio(): ArticleMedia
+    private function embedAndAudio(): ArticleMediaModel
     {
-        return new ArticleMedia([
-            new MediaCandidate(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb', null, 'Watch'),
-            new MediaCandidate(MediaKind::Audio, 'https://x.test/a.mp3'),
+        return new ArticleMediaModel([
+            new MediaCandidateModel(
+                MediaKind::Embed,
+                'https://www.youtube-nocookie.com/embed/bbbbbbbbbbb',
+                null,
+                'Watch',
+            ),
+            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3'),
         ]);
     }
 }

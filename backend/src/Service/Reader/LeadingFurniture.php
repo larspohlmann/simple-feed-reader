@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\Model\LeadingBlockModel;
+
 /**
  * Decides which leading blocks are article-head furniture rather than content,
  * and where the body begins past an optional standfirst. Holds the entry author
@@ -20,7 +22,7 @@ final readonly class LeadingFurniture
      * is allowed above the masthead: when furniture sits between the first prose
      * block and the next, the body starts at the next; otherwise at the first.
      *
-     * @param list<LeadingBlock> $blocks
+     * @param list<LeadingBlockModel> $blocks
      */
     public function bodyStart(array $blocks): ?int
     {
@@ -37,7 +39,7 @@ final readonly class LeadingFurniture
         return $firstProse;
     }
 
-    public function matches(LeadingBlock $block): bool
+    public function matches(LeadingBlockModel $block): bool
     {
         if (LeadingEngagementBlocks::isProtectedContent($block->element)) {
             return false;
@@ -48,7 +50,7 @@ final readonly class LeadingFurniture
     }
 
     /** Breadcrumbs, section labels, kickers and bare separators. */
-    private function isNavigationalChrome(LeadingBlock $block): bool
+    private function isNavigationalChrome(LeadingBlockModel $block): bool
     {
         $linkTextLength = BlockText::linkTextLength($block->element);
 
@@ -58,7 +60,7 @@ final readonly class LeadingFurniture
     }
 
     /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */
-    private function isEngagementMeta(LeadingBlock $block): bool
+    private function isEngagementMeta(LeadingBlockModel $block): bool
     {
         return LeadingEngagementRules::isEmojiOnly($block->text)
             || LeadingEngagementRules::isCounter($block->text)
@@ -69,7 +71,7 @@ final readonly class LeadingFurniture
             || ($this->hasAuthor() && LeadingEngagementRules::isByline($block->text));
     }
 
-    /** @param list<LeadingBlock> $blocks */
+    /** @param list<LeadingBlockModel> $blocks */
     private function firstProseIndex(array $blocks, int $from): ?int
     {
         $count = count($blocks);
@@ -82,7 +84,7 @@ final readonly class LeadingFurniture
         return null;
     }
 
-    /** @param list<LeadingBlock> $blocks */
+    /** @param list<LeadingBlockModel> $blocks */
     private function furnitureBetween(array $blocks, int $from, int $to): bool
     {
         for ($index = $from + 1; $index < $to; $index++) {

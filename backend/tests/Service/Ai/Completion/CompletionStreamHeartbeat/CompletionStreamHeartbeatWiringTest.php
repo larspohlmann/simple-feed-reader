@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai\Completion\CompletionStreamHeartbeat;
 
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
-use App\Service\Recommendation\Run\TickLockKeepalive;
-use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\SweepStreamHeartbeat;
+use App\Service\Recommendation\Run\TickLockKeepalive;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RefreshCountingLock;

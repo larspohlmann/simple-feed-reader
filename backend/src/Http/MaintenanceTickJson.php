@@ -9,7 +9,7 @@ use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
 use App\Service\Maintenance\Model\MaintenanceSweepsModel;
 use App\Service\Maintenance\Model\MaintenanceTickReportModel;
-use App\Service\Search\Membership\SavedSearchMembershipSweepReport;
+use App\Service\Search\Membership\Model\SavedSearchMembershipSweepReportModel;
 
 /** The /maintenance/tick response: every half under a stable key; a skipped sweep says why. */
 final class MaintenanceTickJson
@@ -72,7 +72,7 @@ final class MaintenanceTickJson
     }
 
     /** @return array{searchesSwept: int, entriesScanned: int, matchesInserted: int, caughtUp: bool} */
-    private static function memberships(SavedSearchMembershipSweepReport $report): array
+    private static function memberships(SavedSearchMembershipSweepReportModel $report): array
     {
         return [
             'searchesSwept' => $report->searchesSwept,

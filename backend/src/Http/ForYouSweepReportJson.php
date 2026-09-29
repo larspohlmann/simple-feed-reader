@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http;
 
-use App\Service\Recommendation\Run\ForYouSweepReport;
+use App\Service\Recommendation\Run\Model\ForYouSweepReportModel;
 
 final class ForYouSweepReportJson
 {
     /** @return array{startedRuns: int, advancedRuns: int, activeRuns: int} */
-    public static function report(ForYouSweepReport $report): array
+    public static function report(ForYouSweepReportModel $report): array
     {
         return [
             'startedRuns' => $report->startedRuns,

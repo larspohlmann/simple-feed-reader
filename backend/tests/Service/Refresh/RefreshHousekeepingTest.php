@@ -9,8 +9,8 @@ use App\Repository\OrphanedFeedRepository;
 use App\Repository\RetentionRepository;
 use App\Repository\RowIds;
 use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshHousekeeping;
-use App\Service\Refresh\RefreshRequest;
 use App\Service\Retention\EntryPruner;
 use App\Service\Search\EntryIndexer;
 use App\Tests\DbTestCase;
@@ -34,7 +34,7 @@ final class RefreshHousekeepingTest extends DbTestCase
     {
         $orphanId = $this->orphanedFeed();
 
-        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequest::allDue(30));
+        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::allDue(30));
 
         $this->em->clear();
         self::assertNull($this->em->getRepository(Feed::class)->find($orphanId));
@@ -48,7 +48,7 @@ final class RefreshHousekeepingTest extends DbTestCase
     {
         $orphanId = $this->orphanedFeed();
 
-        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequest::forUser(1, 30));
+        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::forUser(1, 30));
 
         $this->em->clear();
         self::assertNotNull($this->em->getRepository(Feed::class)->find($orphanId));
@@ -57,7 +57,7 @@ final class RefreshHousekeepingTest extends DbTestCase
 
     public function testNothingToReclaimLogsNothing(): void
     {
-        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequest::allDue(30));
+        $this->housekeeping()->reclaimOrphanedFeeds(RefreshRequestModel::allDue(30));
 
         self::assertSame([], $this->logger->records);
     }

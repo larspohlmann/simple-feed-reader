@@ -15,6 +15,8 @@ use App\Service\Ai\Factory\ProviderConnectionFactory;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
 use App\Service\Recommendation\Exception\RecommendationTickLockLostException;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
@@ -53,14 +55,14 @@ final readonly class RecommendationRunAdvancer
         return self::LOCK_NAME_PREFIX . $user->requireId();
     }
 
-    public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReport
+    public function advance(User $user, TickDriver $driver = TickDriver::Poll): RecommendationRunReportModel
     {
         $lockName = self::lockNameFor($user);
         $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
             // Silent: a failed acquire is the healthy, frequent case; only the poll driver can tell a stall (#439).
-            return RecommendationRunReport::busy();
+            return RecommendationRunReportModel::busy();
         }
 
         // A hard request kill (Strato's 240 s cap) never reaches the finally below and would strand the lock for
@@ -98,14 +100,16 @@ final readonly class RecommendationRunAdvancer
         return $timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_SECONDS;
     }
 
-    private function tick(User $user, TickDriver $driver): RecommendationRunReport
+    private function tick(User $user, TickDriver $driver): RecommendationRunReportModel
     {
         $run = $this->runs->findActiveForUser($user);
 
         if (null === $run) {
             $latest = $this->runs->findLatestForUser($user);
 
-            return null === $latest ? RecommendationRunReport::none() : RecommendationRunReport::fromRun($latest);
+            return null === $latest
+                ? RecommendationRunReportModel::none()
+                : RecommendationRunReportModel::fromRun($latest);
         }
 
         try {
@@ -119,7 +123,7 @@ final readonly class RecommendationRunAdvancer
             // Stopped by the user or by a lost lock (#444): drop this tick's work, re-read the row its owner wrote.
             $this->entityManager->refresh($run);
 
-            return RecommendationRunReport::fromRun($run);
+            return RecommendationRunReportModel::fromRun($run);
         } catch (AiNotConfiguredException | AiKeyUnreadableException $e) {
             // Such a run can never advance again, so it fails here for every driver (#311), and the error still
             // propagates to the HTTP mapping and the worker's fault floor.

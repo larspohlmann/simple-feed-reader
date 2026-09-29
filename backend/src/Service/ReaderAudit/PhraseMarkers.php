@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\ReaderAudit\Model\BodyBlockModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\PhraseFamilyModel;
+use App\Service\ReaderAudit\Model\PhraseScope;
+
 /**
  * Scans the article's short blocks for the wording SuspiciousPhrases lists, each
  * family over the region it is allowed to match. Reports each family at most
@@ -16,8 +22,8 @@ namespace App\Service\ReaderAudit;
  */
 final readonly class PhraseMarkers
 {
-    /** @return list<CleanupMarker> */
-    public function detect(ExtractedBody $body): array
+    /** @return list<CleanupMarkerModel> */
+    public function detect(ExtractedBodyModel $body): array
     {
         $markers = [];
         foreach (SuspiciousPhrases::families() as $family) {
@@ -30,8 +36,8 @@ final readonly class PhraseMarkers
         return $markers;
     }
 
-    /** @return list<BodyBlock> */
-    private function scopeFor(PhraseFamily $family, ExtractedBody $body): array
+    /** @return list<BodyBlockModel> */
+    private function scopeFor(PhraseFamilyModel $family, ExtractedBodyModel $body): array
     {
         return match ($family->scope) {
             PhraseScope::AboveTheArticle => $body->leadingBlocks(),
@@ -39,8 +45,8 @@ final readonly class PhraseMarkers
         };
     }
 
-    /** @param list<BodyBlock> $blocks */
-    private function firstMatch(PhraseFamily $family, array $blocks): ?CleanupMarker
+    /** @param list<BodyBlockModel> $blocks */
+    private function firstMatch(PhraseFamilyModel $family, array $blocks): ?CleanupMarkerModel
     {
         foreach ($blocks as $block) {
             if ($block->isInPageAffordance()) {
@@ -51,7 +57,7 @@ final readonly class PhraseMarkers
                 continue;
             }
 
-            return new CleanupMarker(
+            return new CleanupMarkerModel(
                 $family->code,
                 $family->weight,
                 $family->suspect,

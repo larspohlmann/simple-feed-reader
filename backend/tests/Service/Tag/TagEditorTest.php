@@ -9,7 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Tag\Exception\TagNameTakenException;
-use App\Service\Tag\TagDetails;
+use App\Service\Tag\Model\TagDetailsModel;
 use App\Service\Tag\TagEditor;
 use App\Tests\DbTestCase;
 use App\Tests\Support\ReloadsEntities;
@@ -23,9 +23,9 @@ final class TagEditorTest extends DbTestCase
     public function testCreateAppendsTheTagAfterTheUsersExistingOnes(): void
     {
         $user = $this->user('tag-creator@example.com');
-        $this->editor()->create($user, new TagDetails('First'));
+        $this->editor()->create($user, new TagDetailsModel('First'));
 
-        $tag = $this->editor()->create($user, new TagDetails('Second', '#ff8800', 'star'));
+        $tag = $this->editor()->create($user, new TagDetailsModel('Second', '#ff8800', 'star'));
 
         $reloaded = $this->reload($tag);
         self::assertSame('Second', $reloaded->getName());
@@ -37,17 +37,17 @@ final class TagEditorTest extends DbTestCase
     public function testCreateRefusesANameTheUserAlreadyHasInAnyCase(): void
     {
         $user = $this->user('tag-duplicate@example.com');
-        $this->editor()->create($user, new TagDetails('News'));
+        $this->editor()->create($user, new TagDetailsModel('News'));
 
         $this->expectException(TagNameTakenException::class);
-        $this->editor()->create($user, new TagDetails('NEWS'));
+        $this->editor()->create($user, new TagDetailsModel('NEWS'));
     }
 
     public function testCreateAllowsANameAnotherUserHas(): void
     {
-        $this->editor()->create($this->user('tag-owner@example.com'), new TagDetails('News'));
+        $this->editor()->create($this->user('tag-owner@example.com'), new TagDetailsModel('News'));
 
-        $tag = $this->editor()->create($this->user('tag-other@example.com'), new TagDetails('News'));
+        $tag = $this->editor()->create($this->user('tag-other@example.com'), new TagDetailsModel('News'));
 
         self::assertSame('News', $this->reload($tag)->getName());
     }
@@ -55,9 +55,9 @@ final class TagEditorTest extends DbTestCase
     public function testUpdateMayKeepTheTagsOwnNameInAnotherCase(): void
     {
         $user = $this->user('tag-renamer@example.com');
-        $tag = $this->editor()->create($user, new TagDetails('news'));
+        $tag = $this->editor()->create($user, new TagDetailsModel('news'));
 
-        $this->editor()->update($tag, new TagDetails('News', '#000000', 'label'));
+        $this->editor()->update($tag, new TagDetailsModel('News', '#000000', 'label'));
 
         $reloaded = $this->reload($tag);
         self::assertSame('News', $reloaded->getName());
@@ -68,17 +68,17 @@ final class TagEditorTest extends DbTestCase
     public function testUpdateRefusesAnotherTagsName(): void
     {
         $user = $this->user('tag-clash@example.com');
-        $this->editor()->create($user, new TagDetails('News'));
-        $tech = $this->editor()->create($user, new TagDetails('Tech'));
+        $this->editor()->create($user, new TagDetailsModel('News'));
+        $tech = $this->editor()->create($user, new TagDetailsModel('Tech'));
 
         $this->expectException(TagNameTakenException::class);
-        $this->editor()->update($tech, new TagDetails('news'));
+        $this->editor()->update($tech, new TagDetailsModel('news'));
     }
 
     public function testDeleteDetachesTheTagFromItsFeedsAndRemovesIt(): void
     {
         $user = $this->user('tag-deleter@example.com');
-        $tag = $this->editor()->create($user, new TagDetails('Doomed'));
+        $tag = $this->editor()->create($user, new TagDetailsModel('Doomed'));
         $subscription = $this->taggedSubscription($user, $tag);
         $tagId = $tag->requireId();
 

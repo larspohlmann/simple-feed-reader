@@ -6,7 +6,7 @@ namespace App\Repository;
 
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
-use App\Service\Search\SearchTerms;
+use App\Service\Search\Model\SearchTermsModel;
 
 /**
  * The parameter object for a search read. Sits beside EntryQuery because it is
@@ -20,7 +20,7 @@ final readonly class EntrySearchQuery
     /** @param int $limit the size the client asked for */
     public function __construct(
         public int $userId,
-        public SearchTerms $terms,
+        public SearchTermsModel $terms,
         public ?EntryCursor $cursor = null,
         int $limit = EntryQuery::DEFAULT_LIMIT,
         public bool $unread = false,

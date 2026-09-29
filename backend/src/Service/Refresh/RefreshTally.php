@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Entity\Feed;
+use App\Service\Refresh\Model\FeedOutcome;
+use App\Service\Refresh\Model\FeedRefreshResultModel;
 
 /** Running counts for one refresh pass; only record() moves them. */
 final class RefreshTally
@@ -20,7 +22,7 @@ final class RefreshTally
     /** @var list<Feed> not "processed": a failed or throttled feed has nothing new to show an icon beside */
     private array $faviconEligibleFeeds = [];
 
-    public function record(FeedRefreshResult $result, Feed $feed): void
+    public function record(FeedRefreshResultModel $result, Feed $feed): void
     {
         $outcome = $result->outcome;
         // An aborted feed's flush rolled back, so it is still due: it counts as failed, never as processed.

@@ -13,6 +13,7 @@ use App\Service\Ai\AiProviderConfigurator;
 use App\Service\Ai\AiReadiness;
 use App\Service\Ai\Exception\AiNotConfiguredException;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
+use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
@@ -40,7 +41,7 @@ final readonly class RecommendationRunStarter
     /**
      * @throws AiNotConfiguredException
      */
-    public function start(User $user): RecommendationRunReport
+    public function start(User $user): RecommendationRunReportModel
     {
         if (!AiReadiness::of($this->configurator->settingsFor($user))) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
@@ -48,7 +49,7 @@ final readonly class RecommendationRunStarter
 
         $active = $this->runs->findActiveForUser($user);
         if (null !== $active) {
-            return RecommendationRunReport::fromRun($active);
+            return RecommendationRunReportModel::fromRun($active);
         }
 
         $run = new RecommendationRun($user, $this->clock->now());
@@ -58,7 +59,7 @@ final readonly class RecommendationRunStarter
 
         $this->trimRunLog($user);
 
-        return RecommendationRunReport::fromRun($run);
+        return RecommendationRunReportModel::fromRun($run);
     }
 
     /**
@@ -84,7 +85,7 @@ final readonly class RecommendationRunStarter
      * @throws AiNotConfiguredException
      * @throws NoResumableRecommendationRunException
      */
-    public function resume(User $user): RecommendationRunReport
+    public function resume(User $user): RecommendationRunReportModel
     {
         if (!AiReadiness::of($this->configurator->settingsFor($user))) {
             throw new AiNotConfiguredException('This account has no AI model chosen yet.');
@@ -102,7 +103,7 @@ final readonly class RecommendationRunStarter
         $this->stampProvider($latest, $user);
         $this->entityManager->flush();
 
-        return RecommendationRunReport::fromRun($latest);
+        return RecommendationRunReportModel::fromRun($latest);
     }
 
     /**

@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Service\Discovery\Model\FeedCandidateModel;
-use App\Service\Subscription\SubscribeOutcome;
+use App\Service\Subscription\Model\SubscribeOutcomeModel;
 
 final class SubscribeOutcomeJson
 {
     /** @return array<string, mixed> */
-    public static function candidates(SubscribeOutcome $outcome): array
+    public static function candidates(SubscribeOutcomeModel $outcome): array
     {
         $payload = [
             'candidates' => array_map(

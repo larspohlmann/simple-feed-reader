@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -16,7 +17,7 @@ use Dom\HTMLDocument;
  */
 final readonly class TeaserPlayerMarkup
 {
-    public function figureFor(HTMLDocument $document, TeaserPlayer $teaser): Element
+    public function figureFor(HTMLDocument $document, TeaserPlayerModel $teaser): Element
     {
         $figure = $document->createElement('figure');
         $figure->setAttribute('class', 'reader-teaser');
@@ -28,7 +29,7 @@ final readonly class TeaserPlayerMarkup
         return $figure;
     }
 
-    private function appendPlayer(HTMLDocument $document, Element $figure, TeaserPlayer $teaser): void
+    private function appendPlayer(HTMLDocument $document, Element $figure, TeaserPlayerModel $teaser): void
     {
         if ($teaser->kind === MediaKind::Audio) {
             $figure->appendChild($this->still($document, $teaser));
@@ -52,7 +53,7 @@ final readonly class TeaserPlayerMarkup
         return $player;
     }
 
-    private function still(HTMLDocument $document, TeaserPlayer $teaser): Element
+    private function still(HTMLDocument $document, TeaserPlayerModel $teaser): Element
     {
         $image = $document->createElement('img');
         $image->setAttribute('src', $teaser->posterUrl);
@@ -63,7 +64,7 @@ final readonly class TeaserPlayerMarkup
     }
 
     /** A linked caption is an <a> (the sanitizer forces rel/target); a plain one keeps only its text. */
-    private function caption(HTMLDocument $document, TeaserPlayer $teaser): Element
+    private function caption(HTMLDocument $document, TeaserPlayerModel $teaser): Element
     {
         $caption = $document->createElement('figcaption');
         if ($teaser->linkUrl === null) {

@@ -9,7 +9,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Service\Reader\ArticleExtractor\ArticleExtractorInterface;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\ReaderAudit\DatabaseValue;
 use App\Service\ReaderAudit\Exception\UnwritableFindingsFileException;
 use App\Tests\DbTestCase;
@@ -94,6 +94,29 @@ final class ReaderAuditCommandTest extends DbTestCase
             1,
             $extractor->calls,
             'A blank --shard must fall back to index 0, which keeps one of every two, not none.',
+        );
+    }
+
+    public function testTheSummaryCountsTheSampleItsDistinctFeedsAndTheShard(): void
+    {
+        $entries = $this->subscribedEntries('audit-summary@example.com', 2);
+        self::getContainer()->set(
+            ArticleExtractorInterface::class,
+            $this->extractorReturningOk('https://cli.example.com/article-0'),
+        );
+        $entryIds = array_map(static fn (Entry $entry): string => (string) $entry->requireId(), $entries);
+
+        $tester = $this->tester();
+        $tester->execute([
+            '--entries' => implode(',', $entryIds),
+            '--shards' => '2',
+            '--shard' => '0',
+            '--out' => $this->outputPath('summary'),
+        ]);
+
+        self::assertMatchesRegularExpression(
+            '/user \d+ — 2 articles sampled over 1 feeds, 1 in this shard/',
+            $tester->getDisplay(),
         );
     }
 
@@ -223,7 +246,7 @@ final class ReaderAuditCommandTest extends DbTestCase
     private function extractorReturningOk(string $url): FakeArticleExtractor
     {
         $extractor = new FakeArticleExtractor();
-        $extractor->willReturn(ExtractionResult::ok($url, 'An article', null, null, '<p>Body.</p>', null));
+        $extractor->willReturn(ExtractionResultModel::ok($url, 'An article', null, null, '<p>Body.</p>', null));
 
         return $extractor;
     }

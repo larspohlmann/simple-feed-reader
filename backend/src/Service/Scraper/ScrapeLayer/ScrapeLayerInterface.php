@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper\ScrapeLayer;
 
-use App\Service\Scraper\ScrapedItem;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
@@ -16,6 +16,6 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 #[AutoconfigureTag('app.scrape_layer')]
 interface ScrapeLayerInterface
 {
-    /** @return list<ScrapedItem> */
+    /** @return list<ScrapedItemModel> */
     public function extract(HTMLDocument $doc, string $baseUrl): array;
 }

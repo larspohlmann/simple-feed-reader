@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\SubscriptionCountsJson;
-use App\Service\Subscription\SubscriptionTallies;
+use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use PHPUnit\Framework\TestCase;
 
 final class SubscriptionCountsJsonTest extends TestCase
 {
     public function testMapsUnreadAndEntryCountsAndSurfaceTotals(): void
     {
-        $payload = SubscriptionCountsJson::from(new SubscriptionTallies(
+        $payload = SubscriptionCountsJson::from(new SubscriptionTalliesModel(
             [12 => 3],
             [12 => 40, 8 => 5],
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],
@@ -32,7 +32,7 @@ final class SubscriptionCountsJsonTest extends TestCase
     public function testAnEmptyAccountMapsToEmptySubscriptionsAndZeroTotals(): void
     {
         $payload = SubscriptionCountsJson::from(
-            new SubscriptionTallies([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
+            new SubscriptionTalliesModel([], [], ['favorites' => 0, 'kept' => 0, 'viewed' => 0]),
         );
 
         self::assertSame([], $payload['subscriptions']);

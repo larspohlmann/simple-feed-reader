@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Tests\Http;
 
 use App\Http\RefreshJson;
-use App\Service\Refresh\RefreshReport;
-use App\Service\Refresh\RefreshRunProgress;
-use App\Service\Refresh\TrackedRefreshReport;
+use App\Service\Refresh\Model\RefreshReportModel;
+use App\Service\Refresh\Model\RefreshRunProgressModel;
+use App\Service\Refresh\Model\TrackedRefreshReportModel;
 use PHPUnit\Framework\TestCase;
 
 final class RefreshJsonTest extends TestCase
 {
     public function testMapsEveryCounterToItsOwnKeyAndDropsTotal(): void
     {
-        $report = RefreshReport::finished(
+        $report = RefreshReportModel::finished(
             total: 9,
             fetched: 1,
             notModified: 2,
@@ -24,7 +24,7 @@ final class RefreshJsonTest extends TestCase
             remaining: 6,
             pruned: 7,
         );
-        $tracked = new TrackedRefreshReport($report, RefreshRunProgress::resumed(10, 20));
+        $tracked = new TrackedRefreshReportModel($report, RefreshRunProgressModel::resumed(10, 20));
 
         self::assertSame(
             [

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media\Sibling;
 
-use App\Service\Reader\Media\ArticleMedia;
-use App\Service\Reader\Media\MediaCandidate;
-use App\Service\Reader\Media\MediaKind;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
+use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use PHPUnit\Framework\TestCase;
 
@@ -14,11 +14,11 @@ final class SiblingIdRuleTest extends TestCase
 {
     private const string SEED_URL = 'https://a.test/api/video/taktik-analyse-video-100.m3u8';
 
-    private function seed(MediaKind $kind = MediaKind::Stream, string $url = self::SEED_URL): ArticleMedia
+    private function seed(MediaKind $kind = MediaKind::Stream, string $url = self::SEED_URL): ArticleMediaModel
     {
-        $candidate = new MediaCandidate($kind, $url, 'https://a.test/assets/taktik~1920x1080', null, 'prose');
+        $candidate = new MediaCandidateModel($kind, $url, 'https://a.test/assets/taktik~1920x1080', null, 'prose');
 
-        return new ArticleMedia([$candidate]);
+        return new ArticleMediaModel([$candidate]);
     }
 
     /** One player config in the shape the ZDF payload uses, escaped as the flight data escapes it. */
@@ -53,6 +53,20 @@ final class SiblingIdRuleTest extends TestCase
         self::assertSame('https://a.test/assets/reaktion-clean-100~1920x1080?cb=1', $derived[0]->posterUrl);
         self::assertNull($derived[0]->precedingText);
         self::assertSame('https://a.test/api/video/sgs-lange-wiesel-100.m3u8', $derived[1]->url);
+    }
+
+    public function testASiblingNamedTwiceTakesTheStillBesideItsFirstMention(): void
+    {
+        $html = self::page(
+            self::config('taktik-analyse-video-100', 'taktik'),
+            self::config('reaktion-anschlag-video-100', 'reaktion-first-100'),
+            self::config('reaktion-anschlag-video-100', 'reaktion-second-100'),
+        );
+
+        $derived = (new SiblingIdRule())->derive($this->seed(), $html);
+
+        self::assertCount(1, $derived);
+        self::assertSame('https://a.test/assets/reaktion-first-100~1920x1080?cb=1', $derived[0]->posterUrl);
     }
 
     public function testAContextWithMoreThanFiveSiblingsIsAListNotTheArticle(): void

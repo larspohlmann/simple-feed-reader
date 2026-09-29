@@ -7,14 +7,14 @@ namespace App\Tests\Service\Recommendation\Prompt;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Completion\Model\Reasoning;
-use App\Service\Recommendation\Prompt\CandidatePoolSummary;
+use App\Service\Recommendation\Prompt\Model\CandidatePoolSummaryModel;
+use App\Service\Recommendation\Prompt\Model\PromptLineModel;
+use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Prompt\PromptContext;
-use App\Service\Recommendation\Prompt\PromptLine;
-use App\Service\Recommendation\Prompt\RecommendationHistory;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\RecommendationPromptText;
-use App\Service\Recommendation\Settings\EffectiveRecommendationSettings;
-use App\Service\Recommendation\Settings\RecommendationPackingSettings;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -61,7 +61,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testThePackerHonoursTheCeilingItsSettingsCarry(): void
     {
         $candidates = array_map(
-            static fn (int $index): PromptLine => new PromptLine($index, 't', 'f', 'd', null),
+            static fn (int $index): PromptLineModel => new PromptLineModel($index, 't', 'f', 'd', null),
             range(1, 100),
         );
 
@@ -154,13 +154,16 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testScoreOnlyBatchesFitTheCapBoundBatchCountAtAGenerousWindow(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 100),
             range(1, 200),
         );
-        $history = new RecommendationHistory(
-            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
-            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
-            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        $history = new RecommendationHistoryModel(
+            favorites: array_map(
+                static fn (int $id): PromptLineModel => self::line($id, "Favorite $id", 100),
+                range(1, 40),
+            ),
+            kept: array_map(static fn (int $id): PromptLineModel => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLineModel => self::line($id, "Viewed $id", 100), range(1, 80)),
         );
         $settings = $this->settings(32768, 50);
 
@@ -186,13 +189,16 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 100),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 100),
             range(1, 200),
         );
-        $history = new RecommendationHistory(
-            favorites: array_map(static fn (int $id): PromptLine => self::line($id, "Favorite $id", 100), range(1, 40)),
-            kept: array_map(static fn (int $id): PromptLine => self::line($id, "Kept $id", 100), range(1, 40)),
-            viewed: array_map(static fn (int $id): PromptLine => self::line($id, "Viewed $id", 100), range(1, 80)),
+        $history = new RecommendationHistoryModel(
+            favorites: array_map(
+                static fn (int $id): PromptLineModel => self::line($id, "Favorite $id", 100),
+                range(1, 40),
+            ),
+            kept: array_map(static fn (int $id): PromptLineModel => self::line($id, "Kept $id", 100), range(1, 40)),
+            viewed: array_map(static fn (int $id): PromptLineModel => self::line($id, "Viewed $id", 100), range(1, 80)),
         );
         $settings = $this->settings(10000, 50, batchSize: RecommendationBatchSize::Large);
 
@@ -204,7 +210,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testEverythingFitsInOneBatchWhenSmall(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 50),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 50),
             range(1, 20),
         );
 
@@ -227,7 +233,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // picksLimit.
         $candidateCount = 35;
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 400),
             range(1, $candidateCount),
         );
 
@@ -251,7 +257,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // MAXIMUM_BATCH_SIZE cap (100) can be splitting these into 100/100/50.
         $candidateCount = 250;
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
         );
 
@@ -270,7 +276,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // budget — under half the 12 it took at the old reason-bearing cap.
         $candidateCount = 500;
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
         );
 
@@ -286,7 +292,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeFillsToTheCeilingOnALargeContext(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav', 10)],
             kept: [],
             viewed: [],
@@ -304,7 +310,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeFloorsOnATightContext(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav', 10)],
             kept: [],
             viewed: [],
@@ -324,7 +330,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testConsolidationInputSizeGrowsWithTheContextWindow(): void
     {
-        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $history = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
 
         $small = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
@@ -342,7 +348,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testALongerProfileShrinksTheConsolidationShortlist(): void
     {
-        $history = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $history = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
 
         $short = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(60000, 50), 'A profile.'),
@@ -358,9 +364,9 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testMoreFavoritesShrinkTheConsolidationShortlist(): void
     {
-        $few = new RecommendationHistory(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
-        $many = new RecommendationHistory(
-            favorites: array_map(static fn (int $id): PromptLine => self::line($id, 'Fav', 100), range(1, 40)),
+        $few = new RecommendationHistoryModel(favorites: [self::line(1, 'Fav', 10)], kept: [], viewed: []);
+        $many = new RecommendationHistoryModel(
+            favorites: array_map(static fn (int $id): PromptLineModel => self::line($id, 'Fav', 100), range(1, 40)),
             kept: [],
             viewed: [],
         );
@@ -391,7 +397,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     ): void {
         $candidateCount = 250;
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, "C$id", 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, "C$id", 'F', 'D', null),
             range(1, $candidateCount),
         );
 
@@ -421,7 +427,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // forces a split, proving the size choice does not bypass it.
         $candidateCount = 60;
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 400),
             range(1, $candidateCount),
         );
 
@@ -440,7 +446,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTinyWindowStillMakesProgress(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => self::line($id, "Candidate $id", 400),
+            static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 400),
             range(1, 60),
         );
 
@@ -455,7 +461,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testBatchMessagesLayerFixedGuidanceAndContract(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Favorite', 10)],
             kept: [],
             viewed: [self::line(2, 'Viewed', 10)],
@@ -531,7 +537,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheCandidateHeaderNamesHowManyLinesTheBatchHolds(): void
     {
         $candidateLines = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'Title ' . $id, 'Feed', '2026-01-05', null),
+            static fn (int $id): PromptLineModel
+                => new PromptLineModel($id, 'Title ' . $id, 'Feed', '2026-01-05', null),
             range(1, 17),
         );
 
@@ -546,7 +553,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testBatchMessagesAddsThePoolFrameLineWhenASummaryIsPassed(): void
     {
         $candidateLines = [self::line(7, 'Candidate seven', 10)];
-        $summary = new CandidatePoolSummary(total: 2000, oldest: '2026-01-15', newest: '2026-08-09');
+        $summary = new CandidatePoolSummaryModel(total: 2000, oldest: '2026-01-15', newest: '2026-08-09');
 
         $messages = $this->builder->batchMessages(
             $this->defaultContext(),
@@ -582,7 +589,7 @@ final class RecommendationPromptBuilderTest extends TestCase
      */
     public function testBatchMessagesCarryProfileAndFavouritesOnly(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10), self::line(3, 'Fav three', 10)],
             kept: [self::line(4, 'Kept one', 10), self::line(5, 'Kept two', 10), self::line(6, 'Kept three', 10)],
             viewed: [
@@ -610,7 +617,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testBatchMessagesOmitProfileBlockWhenProfileIsNull(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
             kept: [],
             viewed: [],
@@ -663,14 +670,14 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testBatchMessagesReturnsTheExactRoleContentStructure(): void
     {
-        $history = new RecommendationHistory(
-            favorites: [new PromptLine(101, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
-            kept: [new PromptLine(102, 'Kept Title', 'Feed B', '2026-01-02', null)],
-            viewed: [new PromptLine(103, 'View Title', 'Feed C', '2026-01-02', null)],
+        $history = new RecommendationHistoryModel(
+            favorites: [new PromptLineModel(101, 'Fav Title', 'Feed A', '2026-01-01', 'fav desc')],
+            kept: [new PromptLineModel(102, 'Kept Title', 'Feed B', '2026-01-02', null)],
+            viewed: [new PromptLineModel(103, 'View Title', 'Feed C', '2026-01-02', null)],
         );
         $candidateLines = [
-            new PromptLine(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
-            new PromptLine(6, 'Second', 'Feed D', '2026-01-04', null),
+            new PromptLineModel(5, 'Cand Title', 'Feed C', '2026-01-03', 'cand desc'),
+            new PromptLineModel(6, 'Second', 'Feed D', '2026-01-04', null),
         ];
         $settings = $this->settings(32768, 3);
 
@@ -711,8 +718,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         $messages = $this->builder->batchMessages(
             new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
             [
-                new PromptLine(1, 'Boundary120', 'F', 'D', $exactly120),
-                new PromptLine(2, 'Boundary121', 'F', 'D', $exactly121),
+                new PromptLineModel(1, 'Boundary120', 'F', 'D', $exactly120),
+                new PromptLineModel(2, 'Boundary121', 'F', 'D', $exactly121),
             ],
         );
 
@@ -734,7 +741,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         $messages = $this->builder->batchMessages(
             new PromptContext($this->emptyHistory(), $this->settings(8192, 10), null),
-            [new PromptLine(9, 'Varying', 'F', 'D', $description)],
+            [new PromptLineModel(9, 'Varying', 'F', 'D', $description)],
         );
 
         self::assertStringContainsString("- [9] Varying — F — D — {$expectedTruncated}", $messages[1]['content']);
@@ -747,7 +754,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // overflows it; only the >= MINIMUM_BATCH_SIZE guard decides where each
         // batch actually ends.
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 124),
         );
 
@@ -763,7 +770,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // would land: a one-token error in either the starting or the
         // post-split reset of $used shifts the split point.
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 124),
         );
 
@@ -782,7 +789,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         // strict `>` (not `>=`) leaves it in the first batch, and a sign error
         // in subtracting the history tokens shifts the split.
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 119),
         );
 
@@ -803,7 +810,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testHistoryTokensAreAddedToTheBudgetNotSubtracted(): void
     {
         $favorites = array_map(
-            static fn (int $id): PromptLine => new PromptLine(
+            static fn (int $id): PromptLineModel => new PromptLineModel(
                 $id,
                 "Fav $id",
                 'Feed',
@@ -812,9 +819,9 @@ final class RecommendationPromptBuilderTest extends TestCase
             ),
             range(1, 30),
         );
-        $history = new RecommendationHistory(favorites: $favorites, kept: [], viewed: []);
+        $history = new RecommendationHistoryModel(favorites: $favorites, kept: [], viewed: []);
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 119),
         );
 
@@ -830,7 +837,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testResponseReserveDivisorIsExactlyOneHundred(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 199),
         );
 
@@ -850,7 +857,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     public function testTheBatchReplyReserveIsTheProvidersAnswerBound(): void
     {
         $candidates = array_map(
-            static fn (int $id): PromptLine => new PromptLine($id, 'T', 'F', 'D', null),
+            static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 129),
         );
 
@@ -870,7 +877,7 @@ final class RecommendationPromptBuilderTest extends TestCase
      */
     public function testDistillMessagesCarryAllThreeHistorySections(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10), self::line(2, 'Fav two', 10)],
             kept: [self::line(3, 'Kept one', 10), self::line(4, 'Kept two', 10)],
             viewed: [self::line(5, 'Viewed one', 10), self::line(6, 'Viewed two', 10)],
@@ -886,7 +893,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testDistillMessagesReturnsTheExactRoleContentStructure(): void
     {
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10)],
             kept: [self::line(2, 'Kept one', 10)],
             viewed: [self::line(3, 'Viewed one', 10)],
@@ -921,7 +928,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10)],
             kept: [self::line(2, 'Kept one', 10)],
             viewed: [self::line(3, 'Viewed one', 10)],
@@ -958,7 +965,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     {
         $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
         $lines = [5 => self::line(5, 'Rust 2.0 released', 10)];
-        $history = new RecommendationHistory(
+        $history = new RecommendationHistoryModel(
             favorites: [self::line(1, 'Fav one', 10)],
             kept: [self::line(2, 'Kept one', 10)],
             viewed: [self::line(3, 'Viewed one', 10)],
@@ -991,7 +998,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     /**
      * A pool entry whose line has since been pruned (id absent from
      * $linesById) must be dropped from the rendered shortlist, not carried
-     * through as a null — candidateLine() is typed to PromptLine and would
+     * through as a null — candidateLine() is typed to PromptLineModel and would
      * fatal on one.
      */
     public function testConsolidationMessagesDropsAPrunedPoolEntryFromTheShortlist(): void
@@ -1028,9 +1035,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    private static function line(int $id, string $title, int $descriptionChars): PromptLine
+    private static function line(int $id, string $title, int $descriptionChars): PromptLineModel
     {
-        return new PromptLine(
+        return new PromptLineModel(
             entryId: $id,
             title: $title,
             feedName: 'Example Feed',
@@ -1039,9 +1046,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    private function emptyHistory(): RecommendationHistory
+    private function emptyHistory(): RecommendationHistoryModel
     {
-        return new RecommendationHistory(favorites: [], kept: [], viewed: []);
+        return new RecommendationHistoryModel(favorites: [], kept: [], viewed: []);
     }
 
     /** A generous window, no profile, and no history — the baseline context tests reach for by default. */
@@ -1055,9 +1062,9 @@ final class RecommendationPromptBuilderTest extends TestCase
         int $picksLimit,
         ?string $guidancePrompt = null,
         RecommendationBatchSize $batchSize = RecommendationBatchSize::Medium,
-        int $maximumBatchSize = RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE,
-    ): EffectiveRecommendationSettings {
-        return new EffectiveRecommendationSettings(
+        int $maximumBatchSize = RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE,
+    ): EffectiveRecommendationSettingsModel {
+        return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $guidancePrompt,
             favoritesCap: 40,
             keptCap: 40,
@@ -1065,7 +1072,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             candidatePoolSize: 500,
             lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $picksLimit,
-            packing: new RecommendationPackingSettings(
+            packing: new RecommendationPackingSettingsModel(
                 contextWindow: $contextWindow,
                 contextWindowSource: 'default',
                 batchSize: $batchSize,

@@ -9,6 +9,8 @@ use App\Entity\RecommendationSettings;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
+use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
+use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
  * Combines the per-user override row (if any) with the account's active AI
@@ -23,7 +25,7 @@ final readonly class RecommendationSettingsResolver
     ) {
     }
 
-    public function forUser(User $user): EffectiveRecommendationSettings
+    public function forUser(User $user): EffectiveRecommendationSettingsModel
     {
         $row = $this->settings->findForUser($user);
         $provider = $user->getActiveAiProviderSettings();
@@ -32,10 +34,10 @@ final readonly class RecommendationSettingsResolver
         [$window, $source] = match (true) {
             null !== $row?->values()->contextWindow => [$row->values()->contextWindow, 'user'],
             null !== $providerWindow => [$providerWindow, 'provider'],
-            default => [EffectiveRecommendationSettings::FALLBACK_CONTEXT_WINDOW, 'fallback'],
+            default => [EffectiveRecommendationSettingsModel::FALLBACK_CONTEXT_WINDOW, 'fallback'],
         };
 
-        return new EffectiveRecommendationSettings(
+        return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $row?->values()->guidancePrompt,
             profileText: $row?->values()->profileText,
             favoritesCap: $row?->values()->favoritesCap ?? RecommendationSettings::DEFAULT_FAVORITES_CAP,
@@ -46,7 +48,7 @@ final readonly class RecommendationSettingsResolver
             lookbackDays: $row?->values()->lookbackDays
                 ?? RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
             picksLimit: $row?->values()->picksLimit ?? RecommendationSettings::DEFAULT_PICKS_LIMIT,
-            packing: new RecommendationPackingSettings(
+            packing: new RecommendationPackingSettingsModel(
                 contextWindow: $window,
                 contextWindowSource: $source,
                 batchSize: $row?->values()->batchSize ?? RecommendationBatchSize::Medium,
@@ -68,6 +70,6 @@ final readonly class RecommendationSettingsResolver
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {
-        return $provider?->maxBatchSize() ?? RecommendationPackingSettings::DEFAULT_MAXIMUM_BATCH_SIZE;
+        return $provider?->maxBatchSize() ?? RecommendationPackingSettingsModel::DEFAULT_MAXIMUM_BATCH_SIZE;
     }
 }

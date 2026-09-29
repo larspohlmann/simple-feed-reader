@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
+use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Text\Whitespace;
 use Dom\Element;
 
@@ -16,7 +17,7 @@ final class LeadingEngagementBlocks
     /** Tags that are article content in their own right and are never furniture. */
     private const array CONTENT_TAGS = ['figcaption', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
-    /** @return list<LeadingBlock> */
+    /** @return list<LeadingBlockModel> */
     public static function in(Element $root): array
     {
         $blocks = [];
@@ -27,14 +28,14 @@ final class LeadingEngagementBlocks
 
             $text = Whitespace::collapse($element->textContent);
             if ($text !== '') {
-                $blocks[] = new LeadingBlock($element, $text);
+                $blocks[] = new LeadingBlockModel($element, $text);
             }
         }
 
         return $blocks;
     }
 
-    public static function isProse(LeadingBlock $block): bool
+    public static function isProse(LeadingBlockModel $block): bool
     {
         return LeadingEngagementRules::isProse($block->text, BlockText::linkTextLength($block->element));
     }

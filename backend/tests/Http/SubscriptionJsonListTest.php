@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Http\SubscriptionJson;
-use App\Service\Subscription\SubscriptionTallies;
+use App\Service\Subscription\Model\SubscriptionTalliesModel;
 use App\Tests\DbTestCase;
 
 final class SubscriptionJsonListTest extends DbTestCase
@@ -19,7 +19,7 @@ final class SubscriptionJsonListTest extends DbTestCase
         $this->em->persist($user);
         $counted = $this->subscription($user, 'https://example.com/counted.xml');
         $silent = $this->subscription($user, 'https://example.com/silent.xml');
-        $tallies = new SubscriptionTallies(
+        $tallies = new SubscriptionTalliesModel(
             [$counted->requireId() => 3],
             [$counted->requireId() => 40],
             ['favorites' => 8, 'kept' => 2, 'viewed' => 41],

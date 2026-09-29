@@ -12,7 +12,7 @@ use App\Enum\CallVerdict;
 use App\Repository\RecommendationRunLogRepository;
 use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Service\Recommendation\Exception\RecommendationRunCancelledException;
-use App\Service\Recommendation\Run\ConsolidationOutcome;
+use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Tests\DbTestCase;
 use App\Tests\Support\BuildsTickContexts;
@@ -371,7 +371,7 @@ final class RecommendationConsolidationResolverTest extends DbTestCase
         return $run;
     }
 
-    private function resolveConsolidation(RecommendationRun $run): ConsolidationOutcome
+    private function resolveConsolidation(RecommendationRun $run): ConsolidationOutcomeModel
     {
         return $this->resolver()->resolve($this->tick($run));
     }

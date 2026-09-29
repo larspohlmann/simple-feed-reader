@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\ReaderAudit\Model\AuditFindingModel;
+use App\Service\ReaderAudit\Model\AuditFindingsModel;
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+
 /**
  * Renders the audit as one self-contained HTML page: the ranked candidates with
  * a link that opens each one in the running SPA, the feeds that fail most often,
@@ -19,7 +23,7 @@ final readonly class AuditReportHtml
     {
     }
 
-    public function render(AuditFindings $findings, string $generatedAt): string
+    public function render(AuditFindingsModel $findings, string $generatedAt): string
     {
         return self::PAGE_HEAD
             . $this->summary($findings, $generatedAt)
@@ -29,7 +33,7 @@ final readonly class AuditReportHtml
             . '</body>';
     }
 
-    private function summary(AuditFindings $findings, string $generatedAt): string
+    private function summary(AuditFindingsModel $findings, string $generatedAt): string
     {
         $flagged = \count($findings->ranked());
 
@@ -45,10 +49,10 @@ final readonly class AuditReportHtml
         );
     }
 
-    private function suspects(AuditFindings $findings): string
+    private function suspects(AuditFindingsModel $findings): string
     {
         $rows = '';
-        foreach ($findings->tally(static fn (CleanupMarker $m): string => $m->suspect) as $suspect => $count) {
+        foreach ($findings->tally(static fn (CleanupMarkerModel $m): string => $m->suspect) as $suspect => $count) {
             $rows .= \sprintf('<tr><td>%s</td><td class="n">%d</td></tr>', $this->escape($suspect), $count);
         }
 
@@ -56,7 +60,7 @@ final readonly class AuditReportHtml
             . '<th class="n">Articles</th></tr></thead><tbody>' . $rows . '</tbody></table>';
     }
 
-    private function feeds(AuditFindings $findings): string
+    private function feeds(AuditFindingsModel $findings): string
     {
         $rows = '';
         foreach ($findings->byFeed() as $feed) {
@@ -76,7 +80,7 @@ final readonly class AuditReportHtml
             . $rows . '</tbody></table>';
     }
 
-    private function candidates(AuditFindings $findings): string
+    private function candidates(AuditFindingsModel $findings): string
     {
         $ranked = \array_slice($findings->ranked(), 0, $this->maxCandidates);
 
@@ -94,7 +98,7 @@ final readonly class AuditReportHtml
         return $heading . $items;
     }
 
-    private function candidate(AuditFinding $finding): string
+    private function candidate(AuditFindingModel $finding): string
     {
         return \sprintf(
             '<article><h3><span class="score">%d</span> <a href="%s">%s</a></h3>'
@@ -110,7 +114,7 @@ final readonly class AuditReportHtml
         );
     }
 
-    private function markers(AuditFinding $finding): string
+    private function markers(AuditFindingModel $finding): string
     {
         $items = '';
         foreach ($finding->markers as $marker) {
@@ -125,7 +129,7 @@ final readonly class AuditReportHtml
         return '<ul class="markers">' . $items . '</ul>';
     }
 
-    private function metricLine(AuditFinding $finding): string
+    private function metricLine(AuditFindingModel $finding): string
     {
         $parts = [];
         foreach ($finding->metrics as $name => $value) {

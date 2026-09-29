@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\EntryListSort;
-use App\Service\Search\EntrySearchResult;
+use App\Service\Search\Model\EntrySearchResultModel;
 
 /**
  * The `{entries, nextCursor, matchedWords}` shape a search response returns.
@@ -19,7 +19,7 @@ final readonly class SearchPage
     }
 
     /** @return array{entries: list<array<string, mixed>>, nextCursor: string|null, matchedWords: list<string>} */
-    public static function of(EntrySearchResult $result, int $limit): array
+    public static function of(EntrySearchResultModel $result, int $limit): array
     {
         // withMatchCount(), not of(): matchCount is the read's own match count,
         // which for indexed search can exceed count($result->rows) once hydration

@@ -8,9 +8,9 @@ use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntrySearchQuery;
 use App\Repository\FeedRepository;
-use App\Service\Search\EntrySearchResult;
-use App\Service\Search\Index\IndexSearch;
+use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
+use App\Service\Search\Model\EntrySearchResultModel;
 
 /**
  * Matching through the search index: ask the engine for entry ids scoped to
@@ -43,14 +43,14 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
     ) {
     }
 
-    public function search(EntrySearchQuery $query): EntrySearchResult
+    public function search(EntrySearchQuery $query): EntrySearchResultModel
     {
         $feedIds = $this->feeds->idsSubscribedByUser($query->userId);
         if ($feedIds === []) {
-            return EntrySearchResult::rowsOnly([]);
+            return EntrySearchResultModel::rowsOnly([]);
         }
 
-        $matches = $this->index->find(new IndexSearch(
+        $matches = $this->index->find(new IndexSearchModel(
             terms: $query->terms,
             feedIds: $feedIds,
             cursor: $query->cursor,
@@ -62,7 +62,7 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
             $this->entries->rowsByIdsForUser($query->userId, $matches->entryIds),
         );
 
-        return new EntrySearchResult(
+        return new EntrySearchResultModel(
             rows: $query->unread ? $this->unreadOnly($candidates) : $candidates,
             matchedWords: $matches->matchedWords,
             // The engine's own count, not count($rows): rowsByIdsForUser's

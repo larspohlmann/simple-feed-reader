@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\ContentTypeCharset;
+use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Html\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
+use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
 use App\Service\Text\Whitespace;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -42,7 +43,7 @@ final readonly class HtmlPageFetcher
     }
 
     #[WithSpan]
-    public function fetch(string $url): PageResponse
+    public function fetch(string $url): PageResponseModel
     {
         $remainingHops = self::MAX_REDIRECTS;
         $target = $url;
@@ -55,7 +56,7 @@ final readonly class HtmlPageFetcher
             $this->assertNotChallenge($head, $landed);
             $next = $this->metaRefresh->within($head, $landed->url);
             if ($next === null) {
-                return new PageResponse($landed->url, $body);
+                return new PageResponseModel($landed->url, $body);
             }
 
             $landed->response->cancel();

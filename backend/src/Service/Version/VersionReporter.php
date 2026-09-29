@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Service\Version;
 
 use App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface;
+use App\Service\Version\Model\SemanticVersionModel;
+use App\Service\Version\Model\VersionReportModel;
 use App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface;
 
 /**
  * Joins the running build with the newest release upstream and decides whether
  * an update is worth showing. The decision is the strict semver ordering
- * (see SemanticVersion): a release only counts as an update when it ranks
+ * (see SemanticVersionModel): a release only counts as an update when it ranks
  * above the running version, so a dev-tagged instance that is already ahead
  * stays quiet.
  */
@@ -22,14 +24,14 @@ final readonly class VersionReporter
     ) {
     }
 
-    public function report(): VersionReport
+    public function report(): VersionReportModel
     {
         $running = $this->releaseVersionReader->read();
         $latest = $this->latestReleaseReader->read();
 
         $updateAvailable = null !== $latest
-            && SemanticVersion::isUpgrade($running->version, $latest->version);
+            && SemanticVersionModel::isUpgrade($running->version, $latest->version);
 
-        return new VersionReport($running, $latest, $updateAvailable);
+        return new VersionReportModel($running, $latest, $updateAvailable);
     }
 }

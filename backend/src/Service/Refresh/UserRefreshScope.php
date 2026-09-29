@@ -7,6 +7,7 @@ namespace App\Service\Refresh;
 use App\Repository\Exception\RecordNotFoundException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\TagRepository;
+use App\Service\Refresh\Model\RefreshRequestModel;
 
 /** A foreign or unknown feed or tag is a 404, not a 403, so the refresh endpoint never confirms that it exists. */
 final readonly class UserRefreshScope
@@ -20,7 +21,7 @@ final readonly class UserRefreshScope
     ) {
     }
 
-    public function requestFor(int $userId, ?int $feedId, ?int $tagId): RefreshRequest
+    public function requestFor(int $userId, ?int $feedId, ?int $tagId): RefreshRequestModel
     {
         if (null !== $feedId) {
             return $this->forFeed($userId, $feedId);
@@ -29,18 +30,18 @@ final readonly class UserRefreshScope
         if (null !== $tagId) {
             $tag = $this->tags->getOneForUser($userId, $tagId);
 
-            return RefreshRequest::forUserTag($userId, $tag->requireId(), self::BUDGET_SECONDS);
+            return RefreshRequestModel::forUserTag($userId, $tag->requireId(), self::BUDGET_SECONDS);
         }
 
-        return RefreshRequest::forUser($userId, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUser($userId, self::BUDGET_SECONDS);
     }
 
-    private function forFeed(int $userId, int $feedId): RefreshRequest
+    private function forFeed(int $userId, int $feedId): RefreshRequestModel
     {
         if (!$this->subscriptions->existsForUserAndFeed($userId, $feedId)) {
             throw new RecordNotFoundException('No such subscription.');
         }
 
-        return RefreshRequest::forUserFeed($userId, $feedId, self::BUDGET_SECONDS);
+        return RefreshRequestModel::forUserFeed($userId, $feedId, self::BUDGET_SECONDS);
     }
 }

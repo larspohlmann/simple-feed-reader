@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Search;
 
-use App\Service\Search\Index\IndexedEntry;
+use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 
 /**
@@ -18,7 +18,7 @@ final class RecordingSearchIndexWriter implements SearchIndexWriterInterface
     /** @var list<string> */
     public array $calls = [];
 
-    /** @var list<list<IndexedEntry>> */
+    /** @var list<list<IndexedEntryModel>> */
     public array $upserts = [];
 
     /** @var list<list<int>> */

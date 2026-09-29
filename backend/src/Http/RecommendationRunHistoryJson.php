@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Repository\RecommendationRunHistoryRepository;
-use App\Service\Recommendation\Feed\HistoryMonth;
-use App\Service\Recommendation\Feed\RunHistoryMonthPage;
-use App\Service\Recommendation\Feed\RunHistoryOverview;
+use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
+use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
 
 /**
  * The wire shape of the run history (#409): the overview card (the account's
@@ -38,7 +38,7 @@ use App\Service\Recommendation\Feed\RunHistoryOverview;
 final class RecommendationRunHistoryJson
 {
     /** @return OverviewPayload */
-    public static function overview(RunHistoryOverview $overview): array
+    public static function overview(RunHistoryOverviewModel $overview): array
     {
         return [
             // The account's whole spend, not the sum of the page above it. A
@@ -51,7 +51,7 @@ final class RecommendationRunHistoryJson
     }
 
     /** @return MonthPagePayload */
-    public static function monthPage(RunHistoryMonthPage $page): array
+    public static function monthPage(RunHistoryMonthPageModel $page): array
     {
         return [
             'month' => $page->month,
@@ -61,7 +61,7 @@ final class RecommendationRunHistoryJson
     }
 
     /** @return array{month: string, runCount: int, costNanoCredits: ?int} */
-    private static function monthSummary(HistoryMonth $month): array
+    private static function monthSummary(HistoryMonthModel $month): array
     {
         return [
             'month' => $month->month,

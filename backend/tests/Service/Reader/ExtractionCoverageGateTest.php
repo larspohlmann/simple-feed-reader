@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\ExtractionCoverageGate;
-use App\Service\Reader\ExtractionFailure;
-use App\Service\Reader\ExtractionResult;
+use App\Service\Reader\Model\ExtractionFailure;
+use App\Service\Reader\Model\ExtractionResultModel;
 use PHPUnit\Framework\TestCase;
 
 final class ExtractionCoverageGateTest extends TestCase
@@ -97,7 +97,7 @@ final class ExtractionCoverageGateTest extends TestCase
 
     public function testLeavesAnAlreadyFailedExtractionUntouched(): void
     {
-        $failed = ExtractionResult::failed('https://site.test/post', ExtractionFailure::Fetch);
+        $failed = ExtractionResultModel::failed('https://site.test/post', ExtractionFailure::Fetch);
 
         self::assertSame($failed, $this->gate->verify($failed, '<div>' . $this->paragraph() . '</div>'));
     }
@@ -120,9 +120,9 @@ final class ExtractionCoverageGateTest extends TestCase
         return implode(' ', array_slice(explode(' ', $text), 0, $count));
     }
 
-    private function okWith(string $contentHtml): ExtractionResult
+    private function okWith(string $contentHtml): ExtractionResultModel
     {
-        return ExtractionResult::ok(
+        return ExtractionResultModel::ok(
             url: 'https://site.test/post',
             title: 'The Title',
             byline: null,

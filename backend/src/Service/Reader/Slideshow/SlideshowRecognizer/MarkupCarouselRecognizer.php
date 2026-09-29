@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Reader\Media\PageTextBlocks;
-use App\Service\Reader\Slideshow\ContainerSignature;
-use App\Service\Reader\Slideshow\Slide;
+use App\Service\Reader\Media\Model\PageTextBlocksModel;
+use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Slideshow\Model\SlideModel;
+use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
-use App\Service\Reader\Slideshow\Slideshow;
 use Dom\Element;
 use Dom\HTMLDocument;
 
@@ -40,7 +40,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     ) {
     }
 
-    public function recognize(HTMLDocument $document, PageTextBlocks $textBlocks): array
+    public function recognize(HTMLDocument $document, PageTextBlocksModel $textBlocks): array
     {
         $found = [];
         foreach (self::RULES as $rule) {
@@ -108,20 +108,23 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
     }
 
     /** @param list<Element> $slideElements */
-    private function slideshow(Element $container, array $slideElements, PageTextBlocks $textBlocks): ?Slideshow
-    {
-        return Slideshow::fromSlides(
+    private function slideshow(
+        Element $container,
+        array $slideElements,
+        PageTextBlocksModel $textBlocks,
+    ): ?SlideshowModel {
+        return SlideshowModel::fromSlides(
             $this->slides($slideElements),
             null,
             $textBlocks->before($container),
-            ContainerSignature::fromElement($container),
+            ContainerSignatureModel::fromElement($container),
         );
     }
 
     /**
      * @param list<Element> $slideElements
      *
-     * @return list<Slide>
+     * @return list<SlideModel>
      */
     private function slides(array $slideElements): array
     {
@@ -130,7 +133,7 @@ final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInte
         foreach ($slideElements as $index => $element) {
             $url = $urls[$index];
             if ($url !== null) {
-                $slides[] = new Slide(
+                $slides[] = new SlideModel(
                     $url,
                     $element->getAttribute('title') ?? $this->altOf($element),
                     $this->captions->resolve($element),

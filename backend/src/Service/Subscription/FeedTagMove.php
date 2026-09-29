@@ -11,6 +11,7 @@ use App\Exception\InvalidSelectionException;
 use App\Repository\SubscriptionRepository;
 use App\Repository\SubscriptionTagRepository;
 use App\Repository\TagRepository;
+use App\Service\Subscription\Model\FeedMoveModel;
 
 /**
  * Moves one feed between the sidebar's lists the way a drag does: out of the
@@ -28,7 +29,7 @@ final readonly class FeedTagMove
     ) {
     }
 
-    public function move(Subscription $subscription, FeedMove $move): void
+    public function move(Subscription $subscription, FeedMoveModel $move): void
     {
         // A same-list drop is a reorder, which the reorder endpoints own.
         if ($move->fromTagId === $move->toTagId) {

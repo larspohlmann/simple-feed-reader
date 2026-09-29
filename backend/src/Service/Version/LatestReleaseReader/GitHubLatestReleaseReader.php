@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Version\LatestReleaseReader;
 
-use App\Service\Version\LatestRelease;
+use App\Service\Version\Model\LatestReleaseModel;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -37,7 +37,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
     ) {
     }
 
-    public function read(): ?LatestRelease
+    public function read(): ?LatestReleaseModel
     {
         if ('' === $this->repository) {
             return null;
@@ -47,7 +47,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
         if ($item->isHit()) {
             $cached = $item->get();
 
-            return $cached instanceof LatestRelease ? $cached : null;
+            return $cached instanceof LatestReleaseModel ? $cached : null;
         }
 
         $latest = $this->fetch();
@@ -60,7 +60,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
         return $latest;
     }
 
-    private function fetch(): ?LatestRelease
+    private function fetch(): ?LatestReleaseModel
     {
         try {
             $response = $this->httpClient->request('GET', $this->endpoint(), [
@@ -95,7 +95,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
     /**
      * @param array<array-key, mixed> $payload
      */
-    private function toLatestRelease(array $payload): ?LatestRelease
+    private function toLatestRelease(array $payload): ?LatestReleaseModel
     {
         $tag = $payload['tag_name'] ?? null;
         $notesUrl = $payload['html_url'] ?? null;
@@ -103,7 +103,7 @@ final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInt
             return null;
         }
 
-        return new LatestRelease($tag, $notesUrl);
+        return new LatestReleaseModel($tag, $notesUrl);
     }
 
     private function endpoint(): string

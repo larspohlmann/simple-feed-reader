@@ -1,0 +1,18 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Scraper\Model;
+
+/** One article-like item found on a scraped HTML page, before ParsedEntryModel mapping. */
+final readonly class ScrapedItemModel
+{
+    public function __construct(
+        public string $url,
+        public string $title,
+        public ?string $teaser = null,
+        public ?string $imageUrl = null,
+        public ?\DateTimeImmutable $publishedAt = null,
+    ) {
+    }
+}

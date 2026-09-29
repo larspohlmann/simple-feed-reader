@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
+use App\Service\ReaderAudit\Model\CleanupMarkerModel;
+use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\ReaderAudit\Model\SampledEntryModel;
+
 /**
  * The whole-body rules: not "the cleaners left something behind" but "this is
  * not the article". A body with no paragraph at all, more headings than
@@ -23,8 +27,8 @@ final readonly class BodyShapeMarkers
 {
     private const int MIN_HEADINGS_FOR_HUB = 3;
 
-    /** @return list<CleanupMarker> */
-    public function detect(ExtractedBody $body, SampledEntry $entry, ?string $articleTitle): array
+    /** @return list<CleanupMarkerModel> */
+    public function detect(ExtractedBodyModel $body, SampledEntryModel $entry, ?string $articleTitle): array
     {
         $candidates = [
             $this->noParagraphs($body),
@@ -35,13 +39,13 @@ final readonly class BodyShapeMarkers
         return array_values(array_filter($candidates));
     }
 
-    private function noParagraphs(ExtractedBody $body): ?CleanupMarker
+    private function noParagraphs(ExtractedBodyModel $body): ?CleanupMarkerModel
     {
         if ($body->paragraphCount > 0 || $body->textLength() === 0) {
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'no_paragraphs',
             4,
             'readability picked a non-article region',
@@ -55,7 +59,7 @@ final readonly class BodyShapeMarkers
      * section titles. What an index page has is headings that are LINKS, each
      * one a teaser for a different article (#744).
      */
-    private function headingHeavy(ExtractedBody $body): ?CleanupMarker
+    private function headingHeavy(ExtractedBodyModel $body): ?CleanupMarkerModel
     {
         $linkedHeadings = 0;
         foreach ($body->blocks as $block) {
@@ -65,7 +69,7 @@ final readonly class BodyShapeMarkers
             return null;
         }
 
-        return new CleanupMarker(
+        return new CleanupMarkerModel(
             'heading_heavy',
             3,
             'readability picked an index page',
@@ -77,8 +81,11 @@ final readonly class BodyShapeMarkers
         );
     }
 
-    private function duplicateTitle(ExtractedBody $body, SampledEntry $entry, ?string $articleTitle): ?CleanupMarker
-    {
+    private function duplicateTitle(
+        ExtractedBodyModel $body,
+        SampledEntryModel $entry,
+        ?string $articleTitle,
+    ): ?CleanupMarkerModel {
         $first = $body->blocks[0] ?? null;
         if ($first === null) {
             return null;
@@ -90,7 +97,7 @@ final readonly class BodyShapeMarkers
         }
         foreach ([$entry->title, $articleTitle] as $title) {
             if ($title !== null && $this->titleKey($title) === $firstKey) {
-                return new CleanupMarker(
+                return new CleanupMarkerModel(
                     'duplicate_title',
                     2,
                     'LeadingTitleRemover',

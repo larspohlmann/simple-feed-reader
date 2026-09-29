@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Refresh;
 
 use App\Service\Feed\OrphanedFeedReclaimer;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Retention\EntryPruner;
 use Psr\Log\LoggerInterface;
 
@@ -18,7 +19,7 @@ final readonly class RefreshHousekeeping
     ) {
     }
 
-    public function reclaimOrphanedFeeds(RefreshRequest $request): void
+    public function reclaimOrphanedFeeds(RefreshRequestModel $request): void
     {
         if (!$request->prune) {
             return;
@@ -30,7 +31,7 @@ final readonly class RefreshHousekeeping
         }
     }
 
-    public function pruneEntries(RefreshRequest $request): int
+    public function pruneEntries(RefreshRequestModel $request): int
     {
         return $request->prune ? $this->pruner->prune() : 0;
     }

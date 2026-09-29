@@ -11,7 +11,7 @@ use App\Enum\CallPhase;
 use App\Enum\CallVerdict;
 use App\Http\RecommendationDebugLogJson;
 use App\Repository\RecommendationRunLogRepository;
-use App\Service\Recommendation\Feed\RecommendationDebugLog;
+use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -23,13 +23,13 @@ final class RecommendationDebugLogJsonTest extends TestCase
     {
         self::assertSame(
             ['entries' => [], 'run' => null, 'runs' => []],
-            RecommendationDebugLogJson::list(RecommendationDebugLog::empty()),
+            RecommendationDebugLogJson::list(RecommendationDebugLogModel::empty()),
         );
     }
 
     public function testEachRowCarriesItsStreamingTextOrNull(): void
     {
-        $log = new RecommendationDebugLog(
+        $log = new RecommendationDebugLogModel(
             [self::row(7), self::row(8)],
             [8 => 'partial answer'],
             null,
@@ -48,7 +48,7 @@ final class RecommendationDebugLogJsonTest extends TestCase
         $row = self::row(7);
         $row['finishedAt'] = new \DateTimeImmutable('2026-08-09T10:00:05Z');
 
-        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLog([$row], [], null, []))['entries'][0];
+        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLogModel([$row], [], null, []))['entries'][0];
 
         self::assertSame('2026-08-09T10:00:00+00:00', $entry['createdAt']);
         self::assertSame('2026-08-09T10:00:05+00:00', $entry['finishedAt']);
@@ -59,7 +59,7 @@ final class RecommendationDebugLogJsonTest extends TestCase
         $row = self::row(7);
         $row['verdict'] = CallVerdict::TransportFailed;
 
-        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLog([$row], [], null, []))['entries'][0];
+        $entry = RecommendationDebugLogJson::list(new RecommendationDebugLogModel([$row], [], null, []))['entries'][0];
 
         self::assertSame('batch', $entry['phase']);
         self::assertSame('transport-failed', $entry['verdict']);

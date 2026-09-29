@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\BodyCleaning;
 
-use App\Service\Reader\Media\ArticleMedia;
+use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
+use App\Service\Reader\Media\Model\ArticleMediaModel;
 use Dom\HTMLDocument;
 
 /**
@@ -17,7 +18,7 @@ final class BodyCleaningPass
 
     public function __construct(
         public readonly HTMLDocument $document,
-        public readonly BodyCleaningInput $input,
+        public readonly BodyCleaningInputModel $input,
     ) {
     }
 
@@ -27,7 +28,7 @@ final class BodyCleaningPass
     }
 
     /** The page's media to place: no embed once the body recovered its own, so a video never shows twice. */
-    public function discoveredMedia(): ArticleMedia
+    public function discoveredMedia(): ArticleMediaModel
     {
         return $this->embedsRecoveredInBody ? $this->input->media->withoutEmbeds() : $this->input->media;
     }

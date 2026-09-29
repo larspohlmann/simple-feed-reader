@@ -6,7 +6,7 @@ namespace App\Service\Scraper\ScrapeLayer;
 
 use App\Service\Fetch\PageUrls;
 use App\Service\Scraper\CardFields;
-use App\Service\Scraper\ScrapedItem;
+use App\Service\Scraper\Model\ScrapedItemModel;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
@@ -40,7 +40,7 @@ final class ClusterLayer implements ScrapeLayerInterface
         // Built items memoized per anchor, same one-pass lifetime: an anchor
         // with k class tokens joins k groups, and without the memo every
         // group would re-run the whole CardFields walk over the same card.
-        /** @var \SplObjectStorage<Element, ScrapedItem|null> $built */
+        /** @var \SplObjectStorage<Element, ScrapedItemModel|null> $built */
         $built = new \SplObjectStorage();
 
         $groups = [];
@@ -103,8 +103,8 @@ final class ClusterLayer implements ScrapeLayerInterface
      *
      * @param list<Element> $anchors
      * @param \SplObjectStorage<Element, int> $counts
-     * @param \SplObjectStorage<Element, ScrapedItem|null> $built
-     * @return list<ScrapedItem>
+     * @param \SplObjectStorage<Element, ScrapedItemModel|null> $built
+     * @return list<ScrapedItemModel>
      */
     private function items(
         array $anchors,
@@ -172,8 +172,8 @@ final class ClusterLayer implements ScrapeLayerInterface
      * Primary score is item count; equal counts go to the group with the
      * longer average title, which favors headline cards over label lists.
      *
-     * @param list<ScrapedItem> $candidate
-     * @param list<ScrapedItem> $current
+     * @param list<ScrapedItemModel> $candidate
+     * @param list<ScrapedItemModel> $current
      */
     private function beats(array $candidate, array $current): bool
     {
@@ -184,7 +184,7 @@ final class ClusterLayer implements ScrapeLayerInterface
         return $this->meanTitleLength($candidate) > $this->meanTitleLength($current);
     }
 
-    /** @param list<ScrapedItem> $items */
+    /** @param list<ScrapedItemModel> $items */
     private function meanTitleLength(array $items): float
     {
         if ($items === []) {

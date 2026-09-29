@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
-use App\Service\Recommendation\Run\RecommendationDriverKind;
+use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use App\Service\Recommendation\Run\SweepStreamHeartbeat;
 use App\Service\Recommendation\Run\WorkerPresence;
 use App\Tests\DbTestCase;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\RefreshRunner;
 
 use App\Entity\Feed;
-use App\Service\Refresh\RefreshRequest;
+use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RefreshRunners;
@@ -44,7 +44,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $this->em->flush();
         $orphanId = $orphan->requireId();
 
-        $this->runner()->run(RefreshRequest::allDue(budgetSeconds: 30));
+        $this->runner()->run(RefreshRequestModel::allDue(budgetSeconds: 30));
 
         $this->em->clear();
         self::assertNull($this->em->getRepository(Feed::class)->find($orphanId));
@@ -57,7 +57,7 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $this->em->flush();
         $orphanId = $orphan->requireId();
 
-        $this->runner()->run(RefreshRequest::forUser(userId: 1, budgetSeconds: 30));
+        $this->runner()->run(RefreshRequestModel::forUser(userId: 1, budgetSeconds: 30));
 
         $this->em->clear();
         self::assertNotNull($this->em->getRepository(Feed::class)->find($orphanId));
