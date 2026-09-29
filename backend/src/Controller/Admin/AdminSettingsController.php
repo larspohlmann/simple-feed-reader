@@ -8,7 +8,7 @@ use App\Dto\Admin\InstanceSettingsRequest;
 use App\Http\Admin\InstanceSettingsJson;
 use App\Http\FullReplacePayload;
 use App\Service\Settings\InstanceSettings;
-use App\Service\Settings\RelyingPartyChange;
+use App\Service\Settings\RelyingPartyChangeGuard;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
@@ -18,7 +18,7 @@ final readonly class AdminSettingsController
 {
     public function __construct(
         private InstanceSettings $settings,
-        private RelyingPartyChange $relyingPartyChange,
+        private RelyingPartyChangeGuard $relyingPartyChangeGuard,
         private InstanceSettingsJson $settingsJson,
     ) {
     }
@@ -33,7 +33,7 @@ final readonly class AdminSettingsController
     public function update(
         #[MapRequestPayload(serializationContext: FullReplacePayload::CONTEXT)] InstanceSettingsRequest $request,
     ): JsonResponse {
-        $this->relyingPartyChange->guardAndInvalidatePasskeysIfChanged($request->toRelyingPartyIdChoice());
+        $this->relyingPartyChangeGuard->guardAndInvalidatePasskeysIfChanged($request->toRelyingPartyIdChoice());
         $this->settings->update($request->toUpdate());
 
         return new JsonResponse($this->settingsJson->current());

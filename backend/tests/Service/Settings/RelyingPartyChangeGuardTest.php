@@ -10,13 +10,13 @@ use App\Service\Settings\EffectivePasskeyRelyingPartyId;
 use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
 use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
-use App\Service\Settings\RelyingPartyChange;
+use App\Service\Settings\RelyingPartyChangeGuard;
 use App\Service\Settings\RelyingPartyIdRule;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-final class RelyingPartyChangeTest extends TestCase
+final class RelyingPartyChangeGuardTest extends TestCase
 {
     /**
      * The domain is the admin's to choose: the server cannot know which origin
@@ -25,10 +25,10 @@ final class RelyingPartyChangeTest extends TestCase
      */
     public function testADomainUnrelatedToThisServerIsAccepted(): void
     {
-        $change = $this->change(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://localhost');
+        $guard = $this->guard(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://localhost');
         $this->expectNotToPerformAssertions();
 
-        $change->guardAndInvalidatePasskeysIfChanged(
+        $guard->guardAndInvalidatePasskeysIfChanged(
             $this->choiceOf('green-tara.aardvark-koi.ts.net'),
         );
     }
@@ -40,14 +40,14 @@ final class RelyingPartyChangeTest extends TestCase
      */
     public function testASingleLabelRelyingPartyIdIsRefused(): void
     {
-        $change = $this->change(
+        $guard = $this->guard(
             currentRelyingPartyId: 'reader.example.com',
             publicBaseUrl: 'https://reader.example.com',
         );
 
         $this->expectException(ValidationException::class);
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
+        $guard->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
     }
 
     /**
@@ -56,28 +56,28 @@ final class RelyingPartyChangeTest extends TestCase
      */
     public function testAnIpAddressRelyingPartyIdIsRefused(): void
     {
-        $change = $this->change(currentRelyingPartyId: '203.0.113.5', publicBaseUrl: 'https://203.0.113.5');
+        $guard = $this->guard(currentRelyingPartyId: '203.0.113.5', publicBaseUrl: 'https://203.0.113.5');
 
         $this->expectException(ValidationException::class);
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('203.0.113.5'));
+        $guard->guardAndInvalidatePasskeysIfChanged($this->choiceOf('203.0.113.5'));
     }
 
     /** Development depends on this: rule3's one named exception must still work. */
     public function testLocalhostIsAccepted(): void
     {
-        $change = $this->change(currentRelyingPartyId: 'localhost', publicBaseUrl: 'https://localhost');
+        $guard = $this->guard(currentRelyingPartyId: 'localhost', publicBaseUrl: 'https://localhost');
         $this->expectNotToPerformAssertions();
 
-        $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('localhost'));
+        $guard->guardAndInvalidatePasskeysIfChanged($this->choiceOf('localhost'));
     }
 
     public function testTheValidationErrorNamesTheFieldAndExplainsTheRule(): void
     {
-        $change = $this->change(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://example.test');
+        $guard = $this->guard(currentRelyingPartyId: 'example.test', publicBaseUrl: 'https://example.test');
 
         try {
-            $change->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
+            $guard->guardAndInvalidatePasskeysIfChanged($this->choiceOf('com'));
             self::fail('Expected a ValidationException.');
         } catch (ValidationException $exception) {
             self::assertSame(
@@ -92,9 +92,9 @@ final class RelyingPartyChangeTest extends TestCase
         return new RelyingPartyIdChoiceModel($passkeyRpId, invalidateExistingPasskeys: false);
     }
 
-    private function change(string $currentRelyingPartyId, string $publicBaseUrl): RelyingPartyChange
+    private function guard(string $currentRelyingPartyId, string $publicBaseUrl): RelyingPartyChangeGuard
     {
-        return new RelyingPartyChange(
+        return new RelyingPartyChangeGuard(
             $this->relyingPartyOf($currentRelyingPartyId),
             new EffectivePasskeyRelyingPartyId(),
             $this->createStub(EnrolledPasskeysInterface::class),

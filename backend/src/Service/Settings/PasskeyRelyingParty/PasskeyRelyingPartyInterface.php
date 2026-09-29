@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Settings\PasskeyRelyingParty;
 
-use App\Service\Settings\RelyingPartyChange;
+use App\Service\Settings\RelyingPartyChangeGuard;
 
 /**
  * The WebAuthn relying party this instance registers and asserts credentials
  * against (#624). `id()` is baked into every stored credential at
- * registration time — see {@see RelyingPartyChange} for why altering it is
+ * registration time — see {@see RelyingPartyChangeGuard} for why altering it is
  * guarded — while `name()` is cosmetic, shown only by the authenticator's own
  * UI.
  */
