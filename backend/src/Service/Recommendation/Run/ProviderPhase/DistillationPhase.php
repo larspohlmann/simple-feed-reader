@@ -11,7 +11,7 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationProfileDistiller;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** Records the distilled profile; an unusable reply is retried, then the run proceeds without a profile (#493). */
+/** Records the distilled profile; an unusable reply is retried, then the run proceeds without a profile. */
 final readonly class DistillationPhase implements ProviderPhaseInterface
 {
     public function __construct(

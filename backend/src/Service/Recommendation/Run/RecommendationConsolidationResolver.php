@@ -21,8 +21,8 @@ use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
- * The consolidation phase's one provider call (#493): re-score, reason and dedupe the top of the pool in one pass.
- * A pool pruned to nothing finalizes free; an unusable reply comes back with the batch-score pool to degrade to.
+ * The consolidation phase's one provider call: re-score, reason and dedupe the top of the pool in one pass. A pool
+ * pruned to nothing finalizes free; an unusable reply comes back with the batch-score pool to degrade to.
  */
 final readonly class RecommendationConsolidationResolver
 {

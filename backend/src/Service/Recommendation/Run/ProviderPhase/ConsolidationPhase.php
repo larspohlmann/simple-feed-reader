@@ -10,10 +10,7 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
 
-/**
- * Finalizes the consolidated list; an unusable reply is retried, then the run completes with the undeduped
- * batch-score pool (#493).
- */
+/** Finalizes the consolidated list; an unusable reply is retried, then the run completes with the batch-score pool. */
 final readonly class ConsolidationPhase implements ProviderPhaseInterface
 {
     public function __construct(

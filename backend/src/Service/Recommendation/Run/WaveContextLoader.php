@@ -20,7 +20,7 @@ final readonly class WaveContextLoader
     ) {
     }
 
-    /** The pool summary spans the whole frozen plan: every batch shares one frame, not its own few dates (#344). */
+    /** The pool summary spans the whole frozen plan: every batch shares one frame, not its own few dates. */
     public function load(TickContext $tick, int $waveSize): WaveContext
     {
         $run = $tick->run;

@@ -11,8 +11,8 @@ use App\Service\Recommendation\Run\Pass\RecordedCall;
 use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
- * One recorded provider call for the single-call phases (#493). Any failure, an unreadable key included, settles the
- * debug row before it propagates unchanged: an unsettled row reads as "still streaming" forever (#309).
+ * One recorded provider call for the single-call phases. Any failure, an unreadable key included, settles the debug
+ * row before it propagates unchanged: an unsettled row reads as "still streaming" forever.
  */
 final readonly class RecommendationProviderCall
 {
