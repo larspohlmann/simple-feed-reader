@@ -49,9 +49,7 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per-user cap on feed preview fetches. Each preview triggers at most
-        # one outbound feed fetch, mirroring reader's shape; same limit, same
-        # reasoning, same pool.
+        # Per user: each preview triggers at most one outbound feed fetch, as reader's does.
         feed_preview:
             policy: 'sliding_window'
             limit: 60
@@ -99,9 +97,7 @@ framework:
             interval: '5 minutes'
             cache_pool: 'cache.rate_limiter'
 
-        # Per-user cap on the "send a test digest" button (#636). Each accepted
-        # call hands one mail to the relay, so this guards outbound abuse from a
-        # signed-in account. Keyed on the user id; sliding window, same pool.
+        # Per user: each accepted "send a test digest" hands one mail to the relay.
         digest_test:
             policy: 'sliding_window'
             limit: 5
