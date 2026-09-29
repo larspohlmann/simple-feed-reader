@@ -19,7 +19,7 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * No variable, parameter or property is a single letter or a truncated word (CLAUDE.md "Names reveal intent", #1172).
+ * No variable, parameter or property is a single letter or a truncated word (CLAUDE.md "Names reveal intent").
  * A method overriding one declared outside App keeps its parent's parameter names: named arguments bind to them.
  *
  * @implements Rule<FileNode>

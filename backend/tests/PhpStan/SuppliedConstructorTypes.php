@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 use PHPStan\Reflection\ClassReflection;
 
-/** The class types of the constructor arguments the container would have to supply (#1202). */
+/** The class types of the constructor arguments the container would have to supply. */
 final class SuppliedConstructorTypes
 {
     private const string DEPENDENCY_INJECTION_ATTRIBUTES = 'Symfony\\Component\\DependencyInjection\\Attribute\\';

@@ -13,7 +13,7 @@ use PHPStan\Rules\Rule;
 
 /**
  * Every class in src/Service and src/Http, and every event listener in src, has one role, and its folder and name
- * say which (#1202, docs/architecture.md §10).
+ * say which (docs/architecture.md §10).
  *
  * @implements Rule<CollectedDataNode>
  */

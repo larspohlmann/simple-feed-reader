@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 /**
  * A service module's area root holds stateless services. Enums and data built per call are models, per-call objects
- * that hold state or collaborators go to Pass/, static-only helpers go to Support/ (#1202).
+ * that hold state or collaborators go to Pass/, static-only helpers go to Support/.
  */
 final readonly class RootPlacement implements ServiceRoleChecker
 {

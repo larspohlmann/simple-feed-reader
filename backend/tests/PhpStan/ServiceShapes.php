@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 /**
  * A service is final readonly and takes only collaborators. One that keeps state says how that state ends: the
- * Messenger worker resets it between messages (ResetInterface), or #[ProcessLifetimeState] says why it may not (#1202).
+ * Messenger worker resets it between messages (ResetInterface), or #[ProcessLifetimeState] says why it may not.
  */
 final readonly class ServiceShapes implements ServiceRoleChecker
 {

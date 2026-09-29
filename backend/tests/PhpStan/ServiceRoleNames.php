@@ -59,7 +59,7 @@ final class ServiceRoleNames
         return false === $separator ? $name : substr($name, $separator + 1);
     }
 
-    /** `App\Service\<Module>` for a service, `App\<Layer>` for anything else (#1161 D1). */
+    /** `App\Service\<Module>` for a service, `App\<Layer>` for anything else. */
     public static function moduleOf(string $name): string
     {
         $segments = explode('\\', $name);

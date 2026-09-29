@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
-/** A Support/ helper is final, never instantiated and stateless: a private constructor, no static property (#1202). */
+/** A Support/ helper is final, never instantiated and stateless: a private constructor, no static property. */
 final readonly class SupportShapes implements ServiceRoleChecker
 {
     public function violationsIn(ServiceRoleMap $map): array

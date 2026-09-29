@@ -18,8 +18,6 @@ final class ThinControllerRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        // A dedicated allow-list keyed at the fixture's helper, so the test never
-        // depends on the seeded production allow-list, which shrinks over #186.
         return new ThinControllerRule([
             self::FIXTURE_CONTROLLER . '::allowedHelper' => 'trivial fixture helper',
         ]);
@@ -30,17 +28,14 @@ final class ThinControllerRuleTest extends RuleTestCase
         $this->analyse(
             [__DIR__ . '/data/thin-controller-fixtures.php'],
             [
-                // A private method that carries responsibility is reported.
                 [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'assembleResponse'), 22],
-                // A private *static* method is reported too — a plain "private function"
-                // grep would miss it, the rule does not.
+                // A private static method is reported too.
                 [$this->expectedMessage(self::FIXTURE_CONTROLLER, 'private', 'readParameter'), 27],
                 // allowedHelper (line 32) is allow-listed, so it is not reported.
                 // NotAController::helper (line 49) is outside App\Controller, so it is ignored.
                 [$this->persistenceMessage(self::PERSISTING_CONTROLLER, '__construct', 'entityManager'), 64],
                 [$this->persistenceMessage(self::PERSISTING_CONTROLLER, 'action', 'registry'), 68],
                 // clean() (line 73) takes no persistence; PersistingService (line 87) is no controller.
-                // A union with a persistence member is reported too.
                 [$this->persistenceMessage(self::UNION_CONTROLLER, 'withPersistenceUnion', 'target'), 100],
                 // withoutPersistenceUnion() (line 105) unions two non-persistence classes.
             ],

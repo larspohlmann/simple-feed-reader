@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
-/** The names AbbreviatedNameRule rejects (CLAUDE.md "Names reveal intent", #1172). */
+/** The names AbbreviatedNameRule rejects (CLAUDE.md "Names reveal intent"). */
 final class AbbreviatedNames
 {
     private const array TRUNCATIONS = [

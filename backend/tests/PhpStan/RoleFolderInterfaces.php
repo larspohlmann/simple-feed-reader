@@ -7,7 +7,7 @@ namespace App\Tests\PhpStan;
 /**
  * Inside Factory/ or Model/, an interface and its implementations sit flat only when every class there implements
  * that one interface; otherwise each interface gets a subfolder named without its FactoryInterface or ModelInterface
- * suffix, and the classes that implement none sit flat (#1202).
+ * suffix, and the classes that implement none sit flat.
  */
 final readonly class RoleFolderInterfaces implements ServiceRoleChecker
 {

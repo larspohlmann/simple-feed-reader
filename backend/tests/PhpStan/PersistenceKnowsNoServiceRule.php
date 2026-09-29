@@ -14,7 +14,7 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * Entities, enums and the ORM extensions sit below the services, so what they share with a service lives with them
- * (docs/architecture.md §8, #1182). Repositories may name Service values and the interfaces they implement, nothing
+ * (docs/architecture.md §8). Repositories may name Service values and the interfaces they implement, nothing
  * else.
  *
  * @implements Rule<FileNode>

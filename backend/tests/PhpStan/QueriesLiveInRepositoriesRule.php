@@ -17,9 +17,9 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Queries live in src/Repository (#1170, docs/architecture.md §7): elsewhere no class builds DQL, opens a
- * QueryBuilder, holds the DBAL connection or pulls a repository out of the EntityManager. src/Doctrine extends the
- * ORM itself and is exempt, as are the tests.
+ * Queries live in src/Repository (docs/architecture.md §7): elsewhere no class builds DQL, opens a QueryBuilder,
+ * holds the DBAL connection or pulls a repository out of the EntityManager. src/Doctrine extends the ORM itself
+ * and is exempt, as are the tests.
  *
  * @implements Rule<InClassNode>
  */
@@ -43,7 +43,7 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
         'Doctrine\\ORM\\QueryBuilder',
     ];
 
-    /** Empty since #1170 moved the last query; an entry here must say why its class cannot use a repository. */
+    /** An entry here must say why its class cannot use a repository. */
     private const array ALLOW_LIST = [];
 
     /** @param list<string> $allowList fully qualified class names; overridable only for the rule's own test */
