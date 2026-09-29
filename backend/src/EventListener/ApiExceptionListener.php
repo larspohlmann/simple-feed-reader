@@ -11,9 +11,10 @@ use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 
 /**
  * Renders every exception under /api or /maintenance as problem+json; controllers never build an error by hand.
- * Runs before ErrorListener logs (priority 0): ProblemCatalog logs what is unexpected, and a mapped 4xx is no error.
+ * After the firewall (1) turns an anonymous denial into 401; before ErrorListener logs (0, registered after this):
+ * ProblemCatalog logs what is unexpected, and a mapped 4xx is no error.
  */
-#[AsEventListener(event: ExceptionEvent::class, priority: 64)]
+#[AsEventListener(event: ExceptionEvent::class, priority: 0)]
 final readonly class ApiExceptionListener
 {
     public function __construct(
