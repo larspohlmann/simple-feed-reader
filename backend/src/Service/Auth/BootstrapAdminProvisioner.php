@@ -11,14 +11,8 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Creates the first administrator, or promotes an existing account into that
- * role: Active, ROLE_ADMIN, approvedAt stamped, skipping email verification and
- * the approval queue. Both bootstrap paths — app:admin:create and the web setup
- * endpoint — funnel through here, so the rule lives in one place.
- *
- * Find-or-create by email makes a re-run idempotent. This service does NOT
- * decide whether provisioning is allowed; each caller enforces the hasAnyAdmin
- * invariant (the command refuses, the endpoint 404s).
+ * Creates or promotes the first administrator (Active, ROLE_ADMIN, approved, no verification or queue) for both
+ * app:admin:create and the web setup; find-or-create keeps a re-run idempotent. Each caller enforces hasAnyAdmin.
  */
 final readonly class BootstrapAdminProvisioner
 {

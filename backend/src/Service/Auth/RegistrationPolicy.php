@@ -9,14 +9,8 @@ use App\Service\Mail\MailCapability;
 use App\Service\Settings\InstanceSettings;
 
 /**
- * The single source of truth for what a new registration becomes.
- *
- * Combines the deploy-time mail capability (#230) with the admin's runtime gate
- * toggles (#224); registration, verification, the OAuth linker and the register
- * API response all read from here:
- *
- *  - mail off forces email confirmation off (nothing can deliver the link);
- *  - approval is independent of mail (an admin can still approve by hand).
+ * What a new registration becomes: the admin's gate toggles, with mail off forcing email confirmation off (nothing
+ * could deliver the link). Approval does not depend on mail: an admin approves by hand.
  */
 final readonly class RegistrationPolicy
 {
@@ -36,12 +30,7 @@ final readonly class RegistrationPolicy
         return $this->settings->requireEmailConfirmation() && $this->mailEnabled();
     }
 
-    /**
-     * The stored toggle, unmodified by mail capability. Distinct from
-     * {@see self::emailConfirmationRequired()}: the admin settings UI must show
-     * what the admin set, and let mailEnabled() explain any divergence, rather
-     * than silently showing the mail-forced effective value.
-     */
+    /** The toggle as the admin set it, for the settings UI; emailConfirmationRequired() applies the mail rule. */
     public function storedEmailConfirmationRequired(): bool
     {
         return $this->settings->requireEmailConfirmation();
