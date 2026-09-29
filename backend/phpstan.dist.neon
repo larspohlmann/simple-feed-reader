@@ -105,3 +105,13 @@ services:
         class: App\Tests\PhpStan\AbbreviatedNameRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\PhpDocTypeReader
+    -
+        class: App\Tests\PhpStan\CommentProse
+    -
+        class: App\Tests\PhpStan\CommentBlocks
+    -
+        class: App\Tests\PhpStan\CommentBlockLengthRule
+        tags:
+            - phpstan.rules.rule

@@ -212,6 +212,9 @@ Enforced mechanically by `composer check` and `composer md`:
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
   every event listener anywhere in `src` that sits outside its role, and names
   the folder it belongs in.
+- **`CommentBlockLengthRule`** (`tests/PhpStan/CommentBlockLengthRule.php`) — a comment block holds three lines
+  of prose at most; PHPDoc types and tool directives are not prose, and a blank line does not split a block.
+  `UnsweptCommentFiles` lists the files #1171 has yet to sweep; it only shrinks, and #1171's last PR deletes it.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
   parameter/field counts. **Standing rule: every `src` file you touch must be
   PHPMD-clean before commit**, not merely free of *new* findings. Fix the design
