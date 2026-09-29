@@ -16,6 +16,9 @@ final readonly class ServiceRoleMap
 
     private const array VALUE_CLASSES = ['DateTimeInterface', 'DateTimeZone', 'DateInterval', 'Throwable', 'DOMNode'];
 
+    /** @var array<string, list<ServiceRoleClass>> */
+    private array $classesByNamespace;
+
     /**
      * @param array<string, ServiceRoleClass> $classes
      * @param array<string, true> $builtPerCall
@@ -29,6 +32,11 @@ final readonly class ServiceRoleMap
         private array $builtInConstructor,
         private array $unresolvedClasses,
     ) {
+        $byNamespace = [];
+        foreach ($classes as $class) {
+            $byNamespace[$class->namespace()][] = $class;
+        }
+        $this->classesByNamespace = $byNamespace;
     }
 
     public static function fromCollected(ReflectionProvider $reflectionProvider, CollectedDataNode $node): self
@@ -94,15 +102,6 @@ final readonly class ServiceRoleMap
     public function classFor(string $type): ?ServiceRoleClass
     {
         return $this->classes[$type] ?? null;
-    }
-
-    /** @return list<ServiceRoleClass> */
-    public function classesIn(string $namespace): array
-    {
-        return array_values(array_filter(
-            $this->classes,
-            static fn (ServiceRoleClass $class): bool => $class->namespace() === $namespace,
-        ));
     }
 
     /** @return list<ServiceRoleClass> */
@@ -185,7 +184,7 @@ final readonly class ServiceRoleMap
 
     private function holdsOnlyTheFamilyOf(string $interface): bool
     {
-        foreach ($this->classesIn(ServiceRoleNames::namespaceOf($interface)) as $member) {
+        foreach ($this->classesByNamespace[ServiceRoleNames::namespaceOf($interface)] ?? [] as $member) {
             if (!$member->isOfFamily($interface)) {
                 return false;
             }

@@ -9,6 +9,8 @@ final readonly class RoleFolderTree
     /** @var list<ServiceRoleClass> */
     private array $interfaces;
 
+    private bool $isFlat;
+
     /** @param list<ServiceRoleClass> $members */
     public function __construct(public string $root, public string $role, public array $members)
     {
@@ -16,12 +18,13 @@ final readonly class RoleFolderTree
             $members,
             static fn (ServiceRoleClass $member): bool => $member->isInterface(),
         ));
+        $this->isFlat = $this->holdsOneFamilyOnly();
     }
 
     /** @return non-empty-list<string> the folders the member may sit in */
     public function foldersFor(ServiceRoleClass $member): array
     {
-        if ($this->isFlat()) {
+        if ($this->isFlat) {
             return [$this->root];
         }
         $folders = [];
@@ -34,7 +37,7 @@ final readonly class RoleFolderTree
         return [] === $folders ? [$this->root] : $folders;
     }
 
-    private function isFlat(): bool
+    private function holdsOneFamilyOnly(): bool
     {
         if (1 !== \count($this->interfaces)) {
             return false;
