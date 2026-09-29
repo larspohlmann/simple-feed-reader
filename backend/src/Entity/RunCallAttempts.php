@@ -8,12 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A run's provider-call retry bookkeeping: unusable-reply attempts, transport
- * failures, and the last unusable reply seen — three fields written together
- * by recordInvalidReply()/recordTransportFailure() and reset together by every
- * checkpoint. Embedded, unprefixed columns, like RunBatchProgress and
- * RunProfile: this was the seam PHPMD's field-count ceiling on
- * RecommendationRun was pointing at once RunThrottle (#947) pushed it over.
+ * A run's provider-call retry bookkeeping: unusable-reply attempts, transport failures and the last unusable reply,
+ * recorded by recordInvalidReply()/recordTransportFailure() and reset together at every checkpoint.
  */
 #[ORM\Embeddable]
 final class RunCallAttempts

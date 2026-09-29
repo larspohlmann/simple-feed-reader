@@ -8,29 +8,16 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * What a recommendation run cost: the provider it called, the model, and the
- * provider's own token and price accounting for every call the run made.
- *
- * Embedded into RecommendationRun rather than left as seven of its own scalar
- * columns — PHPMD's field-count ceiling on RecommendationRun is a proxy for a
- * real seam: these seven values are stamped and banked together, by
- * RecommendationRunStarter and RecordedCall, and belong to the same concern
- * (#409). An embeddable keeps them there without the join or lifecycle a
- * separate entity would add; the column names are unprefixed so the table
- * itself is unchanged (see FetchSchedule for the same move on Feed).
+ * What a recommendation run cost: the provider, the model, and the provider's own token and price accounting.
+ * RecommendationCallRepository adds each call's usage in SQL, never through this object, so a wave's concurrent calls
+ * lose no increment. That is why the counters have no setter.
  */
 #[ORM\Embeddable]
 final class ProviderUsage
 {
     /**
-     * The provider this run actually called, copied onto the run at start
-     * rather than read back through the account's configuration (#409). The
-     * configuration is editable, and a history that renames last month's runs
-     * when the model changes is not a history. Null on runs that predate this
-     * column, and on one that failed before it was ever stamped.
-     *
-     * The host only, not the whole base URL: the host is what identifies the
-     * provider, and a path adds nothing a history row can use.
+     * Copied at start, not read through the editable configuration, so history never renames last month's runs.
+     * Null on runs older than the column, or that failed before stamp().
      */
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $providerHost = null;
@@ -38,17 +25,7 @@ final class ProviderUsage
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $model = null;
 
-    /**
-     * The provider's own token accounting for this run, summed over every call
-     * it made — retries and the discarded siblings of an aborted wave
-     * included, because the provider billed those too (#344, #409).
-     *
-     * Written by RecordedCall through DBAL with SQL arithmetic, never through
-     * this object: concurrent calls of one wave would otherwise lose each
-     * other's increments, and the advancer's EntityManager must not be flushed
-     * mid-tick. This object only ever reads them, which is why there is no
-     * setter — a second writer is exactly the race the SQL avoids.
-     */
+    /** This and the next three: summed over every call, retries and an aborted wave's discarded siblings included. */
     #[ORM\Column(options: ['default' => 0])]
     private int $promptTokens = 0;
 
@@ -62,22 +39,11 @@ final class ProviderUsage
     private int $cachedTokens = 0;
 
     /**
-     * What this run cost, in nano-credits. Money, so an integer, never a float.
-     * BIGINT because credits × 1e9 outgrows INT at 2.1 credits, and it hydrates
-     * as a PHP int because DBAL 4's BigIntType returns one for every value
-     * inside PHP's integer range — which nano-credits never leave.
-     *
-     * Null means no call of this run reported a price (a local model, or a run
-     * that predates this column) — deliberately not 0, which would claim the
-     * run was free.
-     *
-     * PHPStan sees only this class's code, so it reads the property as always
-     * null: nothing here ever assigns it an int, by the same no-setter design
-     * as the class doc. Doctrine's hydration populates the real value via
-     * reflection when a priced row loads back, invisible to static analysis.
+     * Nano-credits in a BIGINT: money is never a float, and credits × 1e9 outgrows INT at 2.1 credits. Null means no
+     * call reported a price (a local model, an older run), which must not read as free.
      */
     #[ORM\Column(type: Types::BIGINT, nullable: true)]
-    // @phpstan-ignore property.unusedType
+    // @phpstan-ignore property.unusedType (only the repository's SQL and Doctrine's hydration assign it)
     private ?int $costNanoCredits = null;
 
     /**

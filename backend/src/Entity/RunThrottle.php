@@ -7,12 +7,7 @@ namespace App\Entity;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
-/**
- * A run's rate-limit throttle (#947): when the next provider call may fire, and
- * the wave concurrency lowered after a 429. Embedded, unprefixed columns, like
- * RunBatchProgress and RunProfile — the two belong to one concern and keep
- * RecommendationRun's field count down.
- */
+/** A run's rate-limit throttle: when the next provider call may fire, and the wave concurrency cut after a 429. */
 #[ORM\Embeddable]
 final class RunThrottle
 {

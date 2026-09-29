@@ -9,12 +9,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One account's AI provider. Unlike Preferences, this row is NOT created with
- * the account: most accounts never configure a provider, and "no row" says
- * "not configured" without a nullable flag.
- *
- * The row holds no readable secret. `apiKeyHint` is the last four characters
- * in clear text, on purpose, so the settings page can say which key is stored.
+ * One account's AI provider. Unlike Preferences, no row is created with the account: no row means "not configured".
+ * No readable secret is stored; `apiKeyHint`, the key's last four characters, is clear text on purpose.
  */
 #[ORM\Entity(repositoryClass: AiProviderSettingsRepository::class)]
 #[ORM\Table(name: 'user_ai_settings')]
@@ -29,15 +25,8 @@ final class AiProviderSettings
     public const int MAX_BATCH_CONCURRENCY = 8;
 
     /**
-     * Does not collide with RecommendationPromptBuilder::MINIMUM_BATCH_SIZE
-     * (10), even though a configured value can sit below it. That constant only
-     * floors packBatches()'s token-budget-driven early split (needs 10+
-     * candidates before an over-budget line starts a new batch); this value is
-     * the hard per-batch ceiling instead (`atCapacity` in packBatches()), closing
-     * a batch the moment it holds `maximumBatchSize` candidates regardless of
-     * token budget. A configured cap below 10 always hits that ceiling first, so
-     * the token-budget floor never applies — verified directly: caps of 5, 7, 9
-     * against 40 candidates came back sized exactly to the cap every time.
+     * The smallest cap an account may set. It may sit below RecommendationPromptBuilder::MINIMUM_BATCH_SIZE (10): that
+     * floors only the token-budget split, and the cap closes a batch first (caps 5, 7, 9 over 40 candidates held).
      */
     public const int MINIMUM_BATCH_SIZE = 5;
 
@@ -89,10 +78,8 @@ final class AiProviderSettings
     private ?int $modelContextWindow = null;
 
     /**
-     * Whether the recommendation call asks the provider not to reason. Default
-     * true: ranking never needs a thinking phase, and a reasoning model that
-     * reasons here is pure cost (#320/#323). A strict endpoint that rejects the
-     * `reasoning` field — a direct OpenAI URL — turns it off.
+     * Default true: ranking needs no thinking phase, and a reasoning model reasoning here is pure cost (#320, #323).
+     * A strict endpoint that rejects the `reasoning` field, such as a direct OpenAI URL, turns it off.
      */
     #[ORM\Column(options: ['default' => 1])]
     private bool $suppressReasoning = true;
@@ -104,14 +91,8 @@ final class AiProviderSettings
     private ?\DateTimeImmutable $verifiedAt = null;
 
     /**
-     * A row is normally born from a live call to the provider that succeeded, so
-     * the first save is a verification like every later one and stamps
-     * $verifiedAt too. The one exception is a duplicate (see
-     * AiProviderConfigurator::duplicateConfiguration): it reuses an
-     * already-verified sibling's credentials and carries that row's $verifiedAt
-     * across without a fresh call. Either way the caller passes the timestamp
-     * in. Delegating to replaceConnection() keeps the two paths from drifting:
-     * whatever a replacement writes, a creation writes.
+     * The caller passes $verifiedAt: a row is normally born of a successful live call, but a duplicate
+     * (AiProviderConfigurator::duplicateConfiguration) carries its sibling's. Delegates to replaceConnection().
      */
     public function __construct(
         User $user,
