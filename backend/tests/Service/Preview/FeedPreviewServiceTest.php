@@ -81,9 +81,6 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     private function rss(string $itemsXml, string $namespaces = ''): string
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"
@@ -259,10 +256,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     public function testSummaryIsTruncatedForLongItemsAndUntouchedForShortOnes(): void
     {
-        // EntrySnippet::from caps a body at 500 characters (its own MAX_LENGTH);
-        // this only checks that FeedPreviewService::item() delegates to it
-        // rather than reimplementing its own truncation, so 1000 chars of
-        // filler is comfortably over that cap.
+        // Well over EntrySnippet's 500-character cap: item() must delegate the truncation, not reimplement it.
         $longText = str_repeat('word ', 200);
         $items = <<<XML
             <item>
@@ -316,9 +310,6 @@ final class FeedPreviewServiceTest extends KernelTestCase
 
     public function testUnparseableBodyBecomesFeedPreviewException(): void
     {
-        // @lang TEXT: this truncated body is the input under test — the preview
-        // must fail on it — so it stays exactly as written rather than growing a
-        // `lang` attribute to satisfy PhpStorm's injected-HTML check.
         $fetcher = $this->fetcherWithBody(/** @lang TEXT */ '<html>nope');
 
         $this->expectException(FeedPreviewException::class);
@@ -334,10 +325,8 @@ final class FeedPreviewServiceTest extends KernelTestCase
     }
 
     /**
-     * "That address is not a readable feed." fits a feed-document mismatch;
-     * for a scraped preview the extractor already words the actual problem
-     * for the user, so its message must survive into the exception instead
-     * of being flattened to the generic one.
+     * A scraped preview keeps the extractor's own message, which names the problem for the user, instead of the
+     * generic "That address is not a readable feed.".
      */
     public function testScrapedPreviewFailureKeepsTheExtractorsMessage(): void
     {

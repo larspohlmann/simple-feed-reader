@@ -10,23 +10,16 @@ use App\Tests\Support\StubFeedFetcher;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Discovery integrated with the Substack profile rewrite — proof that
- * FeedDiscovery consults SubstackProfileFeed and then fetch-and-parses whatever
- * it resolves. The rewrite's own edge cases (which URLs it recognises, how it
- * reads the profile API) are SubstackProfileFeedTest's job; this file only
- * proves the two are wired together, so the Substack-specific fixtures stay out
- * of the generic FeedDiscoveryTest.
+ * Proves FeedDiscovery consults SubstackProfileFeed, then fetches and parses what it resolves; the rewrite's own edge
+ * cases are SubstackProfileFeedTest's.
  */
 final class SubstackProfileDiscoveryTest extends KernelTestCase
 {
     use BuildsFeedDiscovery;
 
     /**
-     * "Copy link to profile" gives `substack.com/@handle`, whose feed lives on
-     * a host the same-origin probe cannot reach — and whose subdomain need not
-     * be the handle. `@abbeyheffer` publishes at `theopenbookshelf`; discovery
-     * reads that from the profile API, subscribes it, and drops the share URL's
-     * tracking query.
+     * A profile's feed lives on a host the same-origin probe cannot reach, under a subdomain that need not be the
+     * handle (`@abbeyheffer` publishes at `theopenbookshelf`); the share URL's tracking query is dropped.
      */
     public function testASubstackProfileSubscribesThePublicationApiResolvesForIt(): void
     {

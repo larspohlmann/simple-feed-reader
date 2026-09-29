@@ -48,9 +48,7 @@ final readonly class FeedPreviewService
 
     public function preview(User $user, string $url, ?string $format = null): FeedPreviewModel
     {
-        // Mirrors the guard in SubscriptionService::subscribe(): a preview
-        // request asserting 'scraped' is the same hand-made bypass discovery's
-        // gate (Task 5) cannot see, since discovery never runs on this path.
+        // A preview asserting 'scraped' is a hand-made request discovery never saw, so the policy checks it here too.
         if (SourceFormat::SCRAPED === $format) {
             $this->scrapeFallbackPolicy->assertMayScrape($user);
         }
@@ -67,20 +65,15 @@ final readonly class FeedPreviewService
         }
 
         try {
-            // A 'scraped' preview extracts the page's article list — same
-            // synthesis the refresh pipeline will run — so the dialog shows
-            // what subscribing to the page actually buys. One catch covers
-            // all branches: HtmlExtractionException IS a FeedParseException.
+            // A scraped preview runs the extraction a refresh will run, so the dialog shows what subscribing buys.
+            // One catch covers every branch: HtmlExtractionException is a FeedParseException.
             $feed = match ($format) {
                 SourceFormat::SCRAPED => $this->extractor->extract($body, $response->finalUrl),
                 SourceFormat::WP_JSON => $this->wordPressJsonParser->parse($body),
                 default => $this->parser->parse($body),
             };
         } catch (FeedParseException $exception) {
-            // The generic wording fits a feed-document mismatch; a scraped preview
-            // keeps the extractor's own message ("No article list was detected on
-            // the page."), which already names the actual problem in user-
-            // appropriate words. Flattening it would only lose information.
+            // A scraped preview keeps the extractor's message, which already names the problem in the user's words.
             throw new FeedPreviewException(
                 $format === SourceFormat::SCRAPED ? $exception->getMessage() : 'That address is not a readable feed.',
                 0,
@@ -125,7 +118,6 @@ final readonly class FeedPreviewService
     }
 
     // The SPA is https, so an http/relative/data image is useless in an <img>.
-    // Mirrors the reader's firstPreviewImage rule.
     private function httpsImageUrl(?DeclaredImageModel $image): ?string
     {
         if ($image === null) {
