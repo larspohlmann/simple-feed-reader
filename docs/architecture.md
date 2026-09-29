@@ -177,9 +177,13 @@ and ORM extensions — never imports a service. Decided in #1182.
   and the recommendation defaults as constants on `RecommendationSettings`.
 - **`App\Enum`** holds the enums an entity or a repository uses (`FeedStatus`, `ListOrder`, `DigestCadence`,
   `MagazineStyle`, `MailKind`, `RecommendationBatchSize`…). It does not fold into `App\Entity`: several of its enums
-  never touch an entity. Module enums, including ones several `Service/*` modules share, stay in their owning module
-  for now (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`, `TickDriver`,
-  `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`).
+  never touch an entity: it also holds the value sets a stored column is limited to when no entity type names them
+  (`SupportedLocale`, the locales `User::$locale` may hold, which the request DTO, `translation.yaml` and the signup
+  factory all read; `SourceFormat`). Module enums, including ones several `Service/*` modules share, stay in the
+  module that owns their meaning (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`,
+  `TickDriver`, `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`): `ServiceModuleCycleRule`
+  guarantees sharing one closes no cycle, and an enum that returns a Service value (`TickDriver::retryPlan()`)
+  could not move below the services anyway (#1169).
 - **`App\Doctrine`** holds the persistence plumbing the ORM extensions share: `WordBoundaries`.
 - **`App\Dto`** is HTTP input. A controller turns a request DTO into a service value (`$request->toUpdate()`,
   `->toChange()`) or passes a plain field; no domain class imports `App\Dto`.
