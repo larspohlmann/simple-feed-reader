@@ -4,18 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Url;
 
-/**
- * Reduces an article URL to a stable canonical form so two links pointing at
- * the same article dedupe to one identity, even when a feed decorates the URL
- * with per-fetch tracking parameters (BBC's `?at_medium=RSS&at_campaign=rss`)
- * or a fragment.
- *
- * Deliberately conservative: lowercases only the scheme and host, drops the
- * default port, the fragment, and a known set of tracking parameters. Path and
- * every other query parameter stay verbatim, so two different articles
- * sharing a base URL but differing by a real parameter (`?id=42` vs
- * `?id=43`) never collapse into one.
- */
+/** Keeps the path and every non-tracking parameter verbatim: two articles differing by `?id=` must never collapse. */
 final readonly class UrlNormalizer
 {
     /** Query keys, or key prefixes, that never identify the article itself. */
@@ -43,13 +32,7 @@ final readonly class UrlNormalizer
         return $canonical;
     }
 
-    /**
-     * The stable identity of an article URL: sha256 over the normalised form.
-     *
-     * Shared rather than duplicated because two writers of this value must
-     * agree byte for byte. A divergence would not raise anything — dedupe
-     * would simply stop matching, silently (#556).
-     */
+    /** Every writer of an article's identity hashes here: a divergence of one byte silently stops dedupe. */
     public function hash(?string $url): ?string
     {
         $normalized = $this->normalize($url);

@@ -50,12 +50,7 @@ final class PlainTextTest extends TestCase
         self::assertNull(PlainText::from('<em></em>'));
     }
 
-    /**
-     * from() has no concept of block-level boundaries — strip_tags()
-     * concatenates across them with no separator — which is exactly why
-     * fromHtmlBlocks() exists as a distinct method for HTML known to carry
-     * block-level structure.
-     */
+    /** Pins from()'s concatenation on purpose: block boundaries are fromHtmlBlocks()'s job. */
     public function testFromConcatenatesAcrossParagraphsWithNoSeparator(): void
     {
         self::assertSame(
