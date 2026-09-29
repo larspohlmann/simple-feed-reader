@@ -18,4 +18,10 @@ abstract class DbTestCase extends KernelTestCase
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $this->entityManager = $entityManager;
     }
+
+    /** @param class-string $entityClass */
+    protected function assertNoneManaged(string $entityClass): void
+    {
+        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[$entityClass] ?? []);
+    }
 }

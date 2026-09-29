@@ -140,7 +140,7 @@ final class SearchReindexCommandTest extends DbTestCase
 
         $this->tester(new RecordingSearchIndexWriter(), batchSize: 2)->execute([]);
 
-        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[Entry::class] ?? []);
+        $this->assertNoneManaged(Entry::class);
     }
 
     public function testReportsTheIndexedCount(): void

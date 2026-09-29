@@ -433,7 +433,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->restorer()->load($user, $gzip);
 
-        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[Entry::class] ?? []);
+        $this->assertNoneManaged(Entry::class);
     }
 
     public function testLeavesNoWrittenStateInTheIdentityMap(): void
@@ -446,7 +446,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(1, $result->entryStates);
-        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[EntryState::class] ?? []);
+        $this->assertNoneManaged(EntryState::class);
     }
 
     private function restorer(int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES): EntryPartRestorer
