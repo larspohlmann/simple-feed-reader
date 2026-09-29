@@ -1,13 +1,14 @@
 # Running in production (Docker)
 
 The production stack is the production PHP image, nginx serving the compiled
-app with `/api` handled same-origin, the `worker` container that drives
-background recommendation runs and the scheduled feed refresh (#311), and — for
+app with `/api` handled same-origin, the `worker` container that runs the
+scheduled background jobs (§9), and — for
 the M and L packages (§1) — a MySQL container beside them, defined
 in [`docker-compose.prod.yml`](../docker-compose.prod.yml). A Meilisearch
 container joins them for the L package, or for a C install that enables
 full-content search (§1); the app answers searches from the database whenever
-it is absent. It is completely
+it is absent. Loki, Tempo, Pyroscope and Grafana join them when the installer's
+Grafana question is answered yes (§1). It is completely
 separate from the [development stack](local-docker.md): its own compose file,
 its own project name (`simple-feed-reader-prod`), its own volumes. Both can
 run on the same machine.
@@ -78,7 +79,7 @@ values only you know:
 
   Without a terminal (`curl | bash` piped into a script) the installer applies
   the **S** package, not Q: there is no question to skip, so it writes
-  `.env.prod` and stops for the mail transport exactly as it always has.
+  `.env.prod` and stops for the mail transport.
 - **How users reach the instance** — three questions, because this is three
   decisions:
   1. Plain HTTP, direct (the default); HTTPS with a certificate this stack
@@ -130,17 +131,27 @@ values only you know:
   needs no relay. Answer 1 or 2 for an instance that registers users by email
   before an admin has configured mail; answer 3 to finish it by hand later.
   `./scripts/prod-configure.sh` asks again at any time.
+- **Whether to run a Grafana log dashboard** — asked for every package but
+  **Q**, and **no by default**. Answer yes to run Loki, Tempo, Pyroscope and
+  Grafana containers beside the app: the app ships its logs to Loki and its
+  traces to Tempo, and Grafana shows them on `GRAFANA_PORT` (3000 by default),
+  signed in as `admin` with the `GRAFANA_ADMIN_PASSWORD` the installer writes
+  into `.env.prod`. Declining leaves the logs in `docker compose logs` and
+  builds the image without the opentelemetry and excimer extensions.
+  `./scripts/prod-configure.sh` asks again at any time.
 
 Once the stack is up, the installer fills the **onboarding catalog** from the
 document this release ships and fetches an icon for every feed in it — a few
 minutes of requests, paid once and cached in the database. Only the installer
 does this: from then on the catalog is yours, and neither an update nor a
 restart re-applies the shipped document over your edits. A manual install
-does the same in one command:
+does the same in two commands:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
   exec -u www-data php bin/console app:catalog:import --if-empty
+docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
+  exec -u www-data php bin/console app:catalog:warm-favicons
 ```
 
 At the end it offers to send a **test mail** — accept, and a wrong relay
@@ -309,7 +320,8 @@ instead, for a test instance that has to run a change before it is released.
 
 ## 7. Reconfigure
 
-To change the public origin or the mail settings later, re-run the
+To change the public origin, the search engine, the mail settings or the
+Grafana dashboard later, re-run the
 installer's questions against the existing install. Every question offers the
 current value, so pressing return through all of them changes nothing;
 answering the port question differently re-publishes the stack on the new
@@ -334,7 +346,9 @@ Everything worth keeping lives in three named volumes: the database
 (`jwt-keys`). Running the bundled search engine adds a fourth, `meili-data`.
 Losing it is not fatal — `app:search:reindex` rebuilds the whole index from
 the database — but back it up anyway if you would rather not run that command
-by hand after a restore. A database dump before major updates:
+by hand after a restore. The Grafana dashboard adds `loki-data`, `tempo-data`,
+`pyroscope-data` and `grafana-data`: logs, traces, profiles and Grafana's own
+state, none of which the app needs to run. A database dump before major updates:
 
 ```bash
 docker compose -p simple-feed-reader-prod -f docker-compose.prod.yml --env-file .env.prod \
@@ -357,12 +371,20 @@ but it signs every user out.
 ## 9. Troubleshooting
 
 - **The worker** — the `worker` container consumes the `scheduler_worker`
-  schedule: it advances background recommendation runs, sweeps due feeds
-  every 5 minutes, and purges the failure transport daily. Watch it with
+  transport, fed by `App\Service\Worker\WorkerSchedule`: it advances active
+  recommendation runs every 10 seconds, starts due scheduled recommendation
+  runs every 5 minutes, sweeps due feeds every 5 minutes, sends due digest
+  mails every hour, fills saved-search memberships every minute, and once a
+  day purges failed messages older than 30 days. Watch it with
   `docker compose -p simple-feed-reader-prod logs -f worker`. If it is down,
-  the app degrades automatically rather than breaking: recommendation runs
-  only advance while a tab stays open (#308 behaviour), and scheduled feed
-  refresh pauses — feeds still refresh manually.
+  the app degrades automatically rather than breaking: once the worker's
+  heartbeat is 16 minutes old (`WorkerPresence::FRESH_SECONDS`), a
+  recommendation run advances only while a tab polls it — this stack sets no
+  `DRAIN_PHP_CLI_BINARY`, so no on-demand drainer starts — and scheduled feed
+  refresh, scheduled recommendation runs, digests and the saved-search sweep
+  pause. Feeds still refresh manually. A cron calling `POST /maintenance/tick`
+  with `MAINTENANCE_TOKEN` does the same jobs meanwhile
+  ([for-you-scheduling.md](for-you-scheduling.md#one-call-for-everything)).
 - **Compose refuses to start and names a variable** — that value is empty in
   `.env.prod`. The comments in `.env.prod.example` explain each one.
 - **Every request answers 500** — the runtime guard refuses to serve while a
