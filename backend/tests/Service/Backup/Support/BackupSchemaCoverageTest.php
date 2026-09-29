@@ -40,19 +40,9 @@ use App\Tests\Support\FullyPopulatedAccount;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Couples the backup format to the ORM schema, which nothing else does.
- *
- * The backup is a hand-maintained projection: an exporter that writes named
- * JSON keys, and line DTOs that read them. A column added to a backed-up
- * table reaches neither unless a person remembers. Three schema changes
- * landed on backed-up tables in the six days after the format shipped and two
- * of them were missed, silently, because a nullable column accepts an INSERT
- * that never names it (#556).
- *
- * The guard is deliberately narrow in one way: it reads the ORM mapping, so a
- * migration that adds a column with no entity mapping is invisible to it.
- * Everything in this tree is attribute-mapped, and an unmapped column holds no
- * user data by construction.
+ * Couples the backup format to the ORM mapping: a column added to a backed-up table reaches neither the exporter nor
+ * the line DTOs unless someone remembers, and a nullable one is lost silently (#556). Only mapped columns are seen;
+ * an unmapped one holds no user data by construction.
  */
 final class BackupSchemaCoverageTest extends DbTestCase
 {
@@ -71,12 +61,6 @@ final class BackupSchemaCoverageTest extends DbTestCase
         . 'the signed-in account, so no line names an owner — an owner read from the file would be '
         . 'one the user chose for themselves.';
 
-    /**
-     * The email digest (#636) lands its data model in this task before the
-     * backup format is extended for it. Genuine account configuration, so it
-     * belongs in BACKED_UP eventually — a later task of the same plan wires
-     * the exporter and the restorer for it.
-     */
     private const string DIGEST_BACKUP_NOT_YET_WIRED = 'Email digest configuration, added ahead of '
         . 'the backup format\'s support for it. A later task of the digest plan (#636) carries it.';
 
@@ -84,11 +68,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private const array EVERY_LINE = ['kind'];
 
     /**
-     * The header and footer describe the file rather than any entity, so no
-     * declaration claims their keys and they are enumerated here instead.
-     *
-     * Kept per kind rather than excused everywhere: the header's own
-     * `createdAt` must not license a `createdAt` appearing on some other line.
+     * The keys no entity declaration claims, per kind, so the header's `createdAt` does not license a `createdAt` on
+     * another line.
      */
     private const array FILE_SCAFFOLDING = [
         BackupSchema::KIND_HEADER => [
@@ -99,16 +80,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
             'counts', 'counts.tag', 'counts.savedSearch', 'counts.feed', 'counts.subscription',
             'counts.entry', 'counts.entryState',
         ],
-        // media[] and attachments[] are nested lists of value objects, not
-        // separate entities, so their subkeys are claimed here the same way the
-        // footer's nested `counts` object is — the `media`/`attachments` keys
-        // themselves are claimed by Entry's field declarations. A subkey is
-        // absent from an item that did not declare it (jsonSerialize omits
-        // unknown fields), so the flattener only ever sees a subset of these.
-        // If a THIRD value-object list ever lands on a line, promote these out of
-        // FILE_SCAFFOLDING into a named NESTED_VALUE_OBJECTS map: entity data
-        // carried as JSON is a distinct concept from file structure, and two
-        // instances do not yet justify the mechanism.
+        // media[] and attachments[] hold value objects, not entities, so their subkeys are claimed here like the
+        // footer's `counts`. A third such list earns its own NESTED_VALUE_OBJECTS map.
         BackupSchema::KIND_ENTRY => [
             'media.url', 'media.kind', 'media.width', 'media.height', 'media.previewImageUrl',
             'attachments.url', 'attachments.mimeType', 'attachments.durationInSeconds',
@@ -139,12 +112,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     ];
 
     /**
-     * Account-scoped and dropped in full. Declared per entity rather than per
-     * field: see the plan's stated deviation.
-     * testTheExportWritesNoKeyThatNoDeclarationClaims() is what keeps that
-     * shorthand honest — these six have no field-by-field declaration, so the
-     * only way one of them starting to be exported becomes visible is the
-     * insistence that every key on every line is claimed by something.
+     * Account-scoped and dropped in full, declared per entity rather than per field.
+     * testTheExportWritesNoKeyThatNoDeclarationClaims() is what notices one of them starting to be exported.
      */
     private const array ACCOUNT_SCOPED_WHOLLY_DROPPED = [
         AiProviderSettings::class => 'Model endpoints and API keys. A backup is a file the '
@@ -167,16 +136,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     ];
 
     /**
-     * Doctrine class => [field or association => exported JSON key, or the
-     * list of keys when one field is written as several — an entry reference
-     * is a feed URL and a GUID hash together, and neither half identifies an
-     * entry on its own].
-     *
-     * Lives in `BackupFieldDeclarations::BACKED_UP` (test/Support), not here,
-     * because `AccountRestorerTest` drives its own round-trip coverage off
-     * the identical list — this class's own write-direction proof would mean
-     * nothing if the read-direction test could silently fall out of step
-     * with it (#556).
+     * Doctrine class => [field or association => exported JSON key, or the list of keys one field is written as].
+     * It lives in BackupFieldDeclarations because AccountRestorerTest proves the read half off the same list.
      */
     private const array BACKED_UP = BackupFieldDeclarations::BACKED_UP;
 
@@ -280,19 +241,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
     ];
 
     /**
-     * Security boundaries, not product decisions. Moving a field out of this
-     * list is never a fix for a red test.
-     *
-     * `roles` is the sharp one: a restore writes what the file says, and a
-     * backup is a file the user supplies. If roles were restorable, any
-     * account holder could hand-edit one line and grant themselves
-     * ROLE_ADMIN. Restorable identity links would let a user attach someone
-     * else's OAuth identity to their own account, and a restorable email
-     * would let them move onto an address they do not control.
-     *
-     * `passwordChangedAt` is here for the same class of reason rather than as
-     * a product choice: it is the token-revocation control itself, and a user
-     * who can write it can undo a revocation.
+     * Security boundaries; moving a field out is never a fix for a red test. The file is user-supplied, so restorable
+     * roles, identities, email or passwordChangedAt would grant ROLE_ADMIN, another's login or an undone revocation.
+     * Why each: docs/backup.md#7-fields-a-restore-must-never-write.
      */
     private const array NEVER_BACKED_UP = [
         User::class => [
@@ -384,18 +335,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * A key present with a null value would satisfy a bare "was the key
-     * written" check just as well as a real one, so the write-direction proof
-     * has to look at the value, not merely the key — and `FullyPopulatedAccount`
-     * exists precisely so every declared field has a real value to check
-     * against here (#556).
-     *
-     * No field is excused from this today: every `BACKED_UP` field is a
-     * scalar (or a list of them) that `FullyPopulatedAccount` can set to a
-     * real value, so there is currently no case of a field that legitimately
-     * has to stay null. If one is found, name it in a small, explicitly
-     * commented exception here rather than weakening the assertion below for
-     * every field.
+     * Checks the value, not just the key: a null would pass a key check, which is why FullyPopulatedAccount sets every
+     * declared field. No field is excused; name a legitimate null here explicitly rather than weaken the assertion.
      *
      * @param array<string, array<string, list<mixed>>> $valuesByKind
      */
@@ -437,13 +378,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * The other direction: nothing reaches the file that this class has not
-     * accounted for.
-     *
-     * This is what keeps ACCOUNT_SCOPED_WHOLLY_DROPPED's per-entity shorthand
-     * honest. Those six entities have no field-by-field declaration, so the
-     * only way to notice one of them starting to be exported is to insist that
-     * every key on every line is claimed by some declaration here.
+     * The other direction: every key on every line must be claimed by a declaration here, which is what notices an
+     * ACCOUNT_SCOPED_WHOLLY_DROPPED entity starting to be exported.
      */
     public function testTheExportWritesNoKeyThatNoDeclarationClaims(): void
     {
@@ -461,15 +397,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * The reason strings above are for whoever hits a red test. This asserts
-     * the user-facing table cannot silently fall behind them — the coupling is
-     * mechanical, the wording stays hand-written.
-     *
-     * Scoped per section because a backticked name is not unique across the
-     * page: unscoped, section 5's `createdAt` would answer for a User row that
-     * 6.3 had lost. Two declarations of one name inside a single section still
-     * alias each other — User's and Feed's `status` rows both sit in 6.3 — so
-     * the floor this holds is one row per name per section.
+     * Keeps docs/backup.md's tables from falling behind the reason strings. Searched per section, because a backticked
+     * name repeats across the page; two rows of one name inside one section still alias each other.
      */
     public function testEveryDroppedThingAppearsInTheUserFacingDoc(): void
     {
@@ -623,14 +552,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * Every key the export writes that no declaration in this class claims,
-     * grouped by the kind of line it appeared on. Empty is the passing state.
-     *
-     * The accounting is per kind, not global. A global one would let any key
-     * excuse itself against a declaration from a different line — `createdAt`
-     * on the header would license a `createdAt` anywhere — and field names are
-     * shared vocabulary across this schema, so a global set collapses to
-     * nothing and the proof stops proving.
+     * Every exported key no declaration claims, by kind; empty passes. Per kind, since field names repeat across lines
+     * and a global set would let any key excuse itself.
      *
      * @return array<string, list<string>>
      */
@@ -664,12 +587,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * Which JSON keys the exporter writes on each kind of line — the key half
-     * of {@see exportedValuesByKind()}, derived from it rather than walking
-     * the export a second time: the two questions ("which keys" and "which
-     * values") share the exact same traversal, and a key list kept in step by
-     * hand would be exactly the kind of drift this test suite exists to catch
-     * elsewhere.
+     * The key half of exportedValuesByKind(), derived from it rather than walking the export twice.
      *
      * @return array<string, list<string>>
      */
@@ -679,11 +597,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * Seeds one fully populated account and reports, for each kind of line,
-     * every value the exporter writes under each key — the same shape as
-     * {@see exportedKeysByKind()}, but keeping the value rather than only
-     * proving the key was present, because a null value would satisfy the
-     * key-only proof just as well as a real one (#556).
+     * Every value the exporter writes under each key, by kind, for one fully populated account: values, not only keys,
+     * because a null would pass a key-only proof.
      *
      * @return array<string, array<string, list<mixed>>>
      */
@@ -725,12 +640,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * A line's own values, keyed by its own keys, plus a dotted key for each
-     * key of a nested object — `recommendationSettings.profileText`,
-     * `tags.position`. One level only: the format nests no deeper, and a
-     * flattener that recursed would invent key names the exporter cannot
-     * produce. A key maps to a list because a nested key repeats once per
-     * element: two subscription tags both contribute a `tags.position` value.
+     * A line's values by key, plus a dotted key per nested key (`counts.feed`, `tags.position`), one level deep as the
+     * format is. Each maps to a list, since a nested key repeats once per element.
      *
      * @param array<string, mixed> $line
      *
@@ -752,9 +663,8 @@ final class BackupSchemaCoverageTest extends DbTestCase
     }
 
     /**
-     * The objects held under one key: the account line's recommendation
-     * settings is a single object, a subscription line's tag references are a
-     * list of several.
+     * The objects held under one key: the footer's `counts` is a single object, a subscription line's tag references
+     * are a list of several.
      *
      * @return list<array<array-key, mixed>>
      */
