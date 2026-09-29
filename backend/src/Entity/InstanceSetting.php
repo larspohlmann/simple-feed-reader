@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: InstanceSettingRepository::class)]
 #[ORM\Table(name: 'instance_setting')]
-class InstanceSetting
+final class InstanceSetting
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

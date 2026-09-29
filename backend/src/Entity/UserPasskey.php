@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: UserPasskeyRepository::class)]
 #[ORM\Table(name: 'user_passkey')]
 #[ORM\UniqueConstraint(name: 'uniq_passkey_credential_id', columns: ['credential_id'])]
-class UserPasskey
+final class UserPasskey
 {
     use PersistedId;
 

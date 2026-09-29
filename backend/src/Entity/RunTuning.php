@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
  * sizes a tick's wave (BatchPhase::effectiveCap()), `maxBatchSize` caps a batch (null keeps the default, #445).
  */
 #[ORM\Embeddable]
-class RunTuning
+final class RunTuning
 {
     /**
      * How many batch calls a run may send at once for this connection (#344).

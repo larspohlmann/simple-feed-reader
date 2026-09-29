@@ -10,7 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: EntryStateRepository::class)]
 #[ORM\Table(name: 'entry_state')]
-class EntryState
+final class EntryState
 {
     // No `nullable: false` on these two join columns: they are part of the
     // composite identifier, and Doctrine forces identifier join columns to

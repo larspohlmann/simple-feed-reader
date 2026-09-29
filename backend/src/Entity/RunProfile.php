@@ -22,7 +22,7 @@ use Doctrine\ORM\Mapping as ORM;
  * profile. The column names are unprefixed so the table itself is unchanged.
  */
 #[ORM\Embeddable]
-class RunProfile
+final class RunProfile
 {
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $profileText = null;

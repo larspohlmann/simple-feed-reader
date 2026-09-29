@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
 #[ORM\Table(name: 'category')]
 #[ORM\UniqueConstraint(name: 'uniq_category_key_scheme', columns: ['canonical_key', 'scheme'])]
-class Category
+final class Category
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

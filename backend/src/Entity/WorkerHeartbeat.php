@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: WorkerHeartbeatRepository::class)]
 #[ORM\Table(name: 'worker_heartbeat')]
-class WorkerHeartbeat
+final class WorkerHeartbeat
 {
     #[ORM\Id]
     #[ORM\Column(length: 64)]

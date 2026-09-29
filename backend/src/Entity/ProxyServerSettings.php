@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: ProxyServerSettingsRepository::class)]
 #[ORM\Table(name: 'proxy_server_settings')]
-class ProxyServerSettings
+final class ProxyServerSettings
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

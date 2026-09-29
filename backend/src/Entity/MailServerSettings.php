@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: MailServerSettingsRepository::class)]
 #[ORM\Table(name: 'mail_server_settings')]
-class MailServerSettings
+final class MailServerSettings
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

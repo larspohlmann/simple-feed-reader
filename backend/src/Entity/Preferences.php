@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PreferencesRepository::class)]
 #[ORM\Table(name: 'user_preferences')]
 #[ORM\UniqueConstraint(name: 'uniq_preferences_user', columns: ['user_id'])]
-class Preferences
+final class Preferences
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

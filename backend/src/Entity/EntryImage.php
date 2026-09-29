@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  * read together and mean nothing apart.
  */
 #[ORM\Embeddable]
-class EntryImage
+final class EntryImage
 {
     #[ORM\Column(name: 'image_url', length: 2048, nullable: true)]
     private ?string $url = null;

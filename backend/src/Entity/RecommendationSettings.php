@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: RecommendationSettingsRepository::class)]
 #[ORM\Table(name: 'user_recommendation_settings')]
 #[ORM\UniqueConstraint(name: 'uniq_recommendation_settings_user', columns: ['user_id'])]
-class RecommendationSettings
+final class RecommendationSettings
 {
     public const int DEFAULT_FAVORITES_CAP = 40;
     public const int DEFAULT_KEPT_CAP = 40;

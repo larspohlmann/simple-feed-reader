@@ -67,8 +67,8 @@ final class RateLimitGuardTest extends TestCase
     public function testEnforceForUserKeysOnTheUserId(): void
     {
         $factory = $this->factoryReturning($this->accepted());
-        $user = $this->createStub(User::class);
-        $user->method('getId')->willReturn(42);
+        $user = new User('rate-limited@example.com', $this->clock->now());
+        (new \ReflectionProperty(User::class, 'id'))->setValue($user, 42);
 
         $this->guard()->enforceForUser($factory, $user);
 

@@ -35,7 +35,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: RecommendationRunRepository::class)]
 #[ORM\Table(name: 'recommendation_run')]
 #[ORM\Index(name: 'idx_recommendation_run_user_status', columns: ['user_id', 'status'])]
-class RecommendationRun
+final class RecommendationRun
 {
     use PersistedId;
 

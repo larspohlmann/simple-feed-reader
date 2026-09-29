@@ -35,8 +35,8 @@ final class SelfActionGuardTest extends TestCase
 
     private function userWithId(int $id): User
     {
-        $user = $this->createStub(User::class);
-        $user->method('getId')->willReturn($id);
+        $user = new User(sprintf('user-%d@example.com', $id), new \DateTimeImmutable('2026-07-01 10:00:00'));
+        (new \ReflectionProperty(User::class, 'id'))->setValue($user, $id);
 
         return $user;
     }

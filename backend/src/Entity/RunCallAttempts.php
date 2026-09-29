@@ -16,7 +16,7 @@ use Doctrine\ORM\Mapping as ORM;
  * RecommendationRun was pointing at once RunThrottle (#947) pushed it over.
  */
 #[ORM\Embeddable]
-class RunCallAttempts
+final class RunCallAttempts
 {
     #[ORM\Column(options: ['default' => 0])]
     private int $attempts = 0;

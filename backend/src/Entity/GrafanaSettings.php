@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: GrafanaSettingsRepository::class)]
 #[ORM\Table(name: 'grafana_settings')]
-class GrafanaSettings
+final class GrafanaSettings
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
