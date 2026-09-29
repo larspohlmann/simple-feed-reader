@@ -93,7 +93,6 @@ final class EmailVerifierTest extends DbTestCase
         return new EmailVerifier($this->tokens(), $policy, $this->em, $events, $clock);
     }
 
-
     private function tokens(): ActionTokenService
     {
         /** @var ActionTokenService $tokens */

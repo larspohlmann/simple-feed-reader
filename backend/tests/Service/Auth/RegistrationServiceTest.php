@@ -105,7 +105,6 @@ final class RegistrationServiceTest extends DbTestCase
         );
     }
 
-
     public function testConfirmationOnLandsInPendingVerificationAndMails(): void
     {
         $policy = $this->registrationPolicy(confirm: true, approve: true);

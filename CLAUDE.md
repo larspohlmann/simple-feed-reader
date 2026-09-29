@@ -161,7 +161,7 @@ Non-negotiables:
 
 Enforced mechanically by `composer check` and `composer md`:
 
-- **PSR-12** (`phpcs.xml.dist`), and `declare(strict_types=1)` in every file of `src` and `tests`
+- **PSR-12** (`phpcs.xml.dist`), and `declare(strict_types=1)` in every file of `src`, `tests` and `migrations`
   (`Generic.PHP.RequireStrictTypes`).
 - **PHPStan level max** over `src` and `tests` — no new baselines, no
   `@phpstan-ignore` without a comment saying why.
@@ -185,7 +185,7 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`NoCollaboratorDefaultRule`** (`tests/PhpStan/NoCollaboratorDefaultRule.php`) — a service, controller,
   listener, command or HTTP class never defaults a constructor parameter with `new`; tests pass the
   collaborator in. Models, DTOs and per-call objects may default a value.
-- **`InvocationMatchersOnThisRule`** — PHPUnit's invocation matchers are called on `$this`
+- **`InvocationMatchersOnThisRule`** (`tests/PhpStan/InvocationMatchersOnThisRule.php`) — PHPUnit's invocation matchers are called on `$this`
   (`$this->once()`, `$this->never()`); PhpStorm's EA warning on `self::once()` blocks the lint gate.
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`

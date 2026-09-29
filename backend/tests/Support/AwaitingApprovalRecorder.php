@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Event\UserAwaitingApproval;
 use Symfony\Component\EventDispatcher\EventDispatcher;
 
-/** An event dispatcher that keeps every UserAwaitingApproval it is asked to dispatch. */
+/** Holds an event dispatcher that records every UserAwaitingApproval it dispatches. */
 final class AwaitingApprovalRecorder
 {
     public readonly EventDispatcher $dispatcher;
@@ -26,9 +26,7 @@ final class AwaitingApprovalRecorder
         );
     }
 
-    /**
-     * @return list<UserAwaitingApproval>
-     */
+    /** @return list<UserAwaitingApproval> */
     public function events(): array
     {
         return $this->events;

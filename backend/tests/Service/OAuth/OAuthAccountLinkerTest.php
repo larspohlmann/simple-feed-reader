@@ -383,7 +383,6 @@ final class OAuthAccountLinkerTest extends DbTestCase
         );
     }
 
-
     private function persistUser(string $email, UserStatus $status): User
     {
         $user = new User($email, $this->now());
