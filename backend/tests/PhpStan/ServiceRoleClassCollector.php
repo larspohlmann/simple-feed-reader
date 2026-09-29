@@ -26,7 +26,11 @@ final readonly class ServiceRoleClassCollector implements Collector
         return InClassNode::class;
     }
 
-    /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes a model names, in code or PHPDoc */
+    /**
+     * @param InClassNode $node
+     *
+     * @return array{string, int, list<string>}|null the class, its line, and the Dto classes a model names
+     */
     public function processNode(Node $node, Scope $scope): ?array
     {
         $reflection = $node->getClassReflection();
