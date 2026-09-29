@@ -19,8 +19,8 @@ use PHPStan\Type\Type;
 use PHPStan\Type\TypeCombinator;
 
 /**
- * What the ControllerMutatesNoEntity rules share (#1157): an entity is a class Doctrine maps, and a controller
- * neither builds one, directly or through a static method that returns one, nor calls a non-query method on one.
+ * What the ControllerMutatesNoEntity rules share: an entity is a class Doctrine maps, and a controller neither
+ * builds one, directly or through a static method that returns one, nor calls a non-query method on one.
  */
 final readonly class ControllerEntityUse
 {

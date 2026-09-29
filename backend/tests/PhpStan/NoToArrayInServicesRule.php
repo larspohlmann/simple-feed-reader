@@ -11,8 +11,8 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Services build no response arrays (#1182): a src/Http/*Json mapper shapes the wire, and a value that serialises for
- * a store names the method after it (toLogContext(), toCacheEntry()).
+ * Services build no response arrays: a src/Http/*Json mapper shapes the wire, and a value that serialises for a
+ * store names the method after it (toLogContext(), toCacheEntry()).
  *
  * @implements Rule<ClassMethod>
  */

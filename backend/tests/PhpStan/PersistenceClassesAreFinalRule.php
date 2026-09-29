@@ -12,7 +12,7 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * Entities, embeddables and repositories are final: native lazy objects need no proxy subclass, and a test doubles
- * the interface a consumer owns instead (#1169).
+ * the interface a consumer owns instead.
  *
  * @implements Rule<InClassNode>
  */

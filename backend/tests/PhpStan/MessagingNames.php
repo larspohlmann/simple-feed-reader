@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 use PHPStan\Reflection\ClassReflection;
 
-/** An event listener's name ends in Listener; a message handler is its message's name plus Handler (#1202). */
+/** An event listener's name ends in Listener; a message handler is its message's name plus Handler. */
 final readonly class MessagingNames implements ServiceRoleChecker
 {
     public function violationsIn(ServiceRoleMap $map): array

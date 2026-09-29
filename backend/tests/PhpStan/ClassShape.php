@@ -7,7 +7,7 @@ namespace App\Tests\PhpStan;
 use App\DependencyInjection\ProcessLifetimeState;
 use PHPStan\Reflection\ClassReflection;
 
-/** What a class's own declaration says about its state and how it is built (#1202). */
+/** What a class's own declaration says about its state and how it is built. */
 final readonly class ClassShape
 {
     private const array RESET_CONTRACTS = [

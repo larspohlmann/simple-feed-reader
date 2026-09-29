@@ -16,8 +16,8 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * A service takes its collaborators from the container, never from a `new` in a constructor parameter's default
- * (CLAUDE.md "Depend on interfaces, inject them", #1169). Models, DTOs, messages and per-call objects may default
- * a value.
+ * (CLAUDE.md "Depend on interfaces, inject them"). Models, DTOs, messages and per-call objects may default a
+ * value.
  *
  * @implements Rule<InClassNode>
  */

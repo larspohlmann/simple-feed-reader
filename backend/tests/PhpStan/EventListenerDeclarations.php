@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 use PHPStan\Reflection\ClassReflection;
 
-/** In App\EventListener, or declared a Symfony or Doctrine listener by attribute, or a subscriber (#1202). */
+/** In App\EventListener, or declared a Symfony or Doctrine listener by attribute, or a subscriber. */
 final class EventListenerDeclarations
 {
     private const string LISTENER_ATTRIBUTE = 'Symfony\\Component\\EventDispatcher\\Attribute\\AsEventListener';
