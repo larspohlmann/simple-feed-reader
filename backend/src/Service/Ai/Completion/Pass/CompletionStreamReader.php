@@ -8,24 +8,14 @@ use App\Service\Ai\Completion\CompletionBodyDecoder;
 use App\Service\Ai\Completion\Model\CompletionUsageModel;
 
 /**
- * Reads one /chat/completions response as it arrives and keeps only the
- * answer.
- *
- * Incremental rather than "accumulate then decode" (#320): a reasoning model
- * streams its whole thinking phase as SSE events with no `content`, so the
- * transcript runs to megabytes while the answer stays empty. Retaining it put
- * reasoning and framing under the answer's cap and killed working calls;
- * dropping each event once decoded bounds memory by the answer, as intended.
- *
- * Deliberately not readonly: one reader is one call's worth of state.
+ * Reads one /chat/completions response as it arrives and keeps only the answer: each event is dropped once decoded,
+ * so a reasoning model's megabytes of thinking are never retained or charged to the answer's cap.
  */
 final class CompletionStreamReader
 {
     /**
-     * A reasoning phase can run to megabytes (#320), so only the tail of the
-     * reasoning channel is kept — where LM Studio's models put the JSON answer
-     * before they stop (#323). Self-bounding, not charged to retainedBytes():
-     * reasoning must never count against the answer's cap (#320).
+     * The reasoning channel keeps only this much tail, where LM Studio's models put the answer. It bounds itself and
+     * is never charged to retainedBytes().
      */
     public const int REASONING_TAIL_LIMIT = 2_097_152;
 
@@ -40,15 +30,13 @@ final class CompletionStreamReader
     /**
      * The provider's own accounting for this call, sticky exactly as
      * $finishReason is: it arrives in one late message and every event after
-     * it carries none, so a later null must never erase it (#409).
+     * it carries none, so a later null must never erase it.
      */
     private ?CompletionUsageModel $usage = null;
 
     /**
-     * How many times the buffers have changed — the key the blocking-envelope
-     * readers share one decode per generation on. Buffers change only inside
-     * consume(); their combined length is no stand-in, since a CRLF break
-     * leaves exactly as many bytes as it removes.
+     * Counts buffer changes (only consume() makes them), keying the shared envelope decode. Length is no stand-in: a
+     * CRLF break leaves exactly as many bytes as it removes.
      */
     private int $bufferGeneration = 0;
 
@@ -84,10 +72,8 @@ final class CompletionStreamReader
     }
 
     /**
-     * Why the provider stopped generating, once it says so — `length` when
-     * `max_tokens` truncated the answer, `stop` on a natural end. Null until an
-     * event carries it; once carried it stays, so a trailing usage-only event
-     * cannot erase it.
+     * Why the provider stopped (`length`: `max_tokens`; `stop`: a natural end), null until an event says so. Once
+     * said it stays, so a trailing usage-only event cannot erase it.
      */
     public function finishReason(): ?string
     {
@@ -99,14 +85,8 @@ final class CompletionStreamReader
     }
 
     /**
-     * Whether the provider stopped because `max_tokens` stopped it.
-     *
-     * The judgement lives here, not in the client, because this class and
-     * CompletionBodyDecoder hold every other provider dialect — #323's
-     * `reasoning_content` recovery, #409's sticky usage, the `$finishReason`
-     * stickiness this depends on. #437 compared the raw `'length'` in the HTTP
-     * client, the layer furthest from the wire; an endpoint that spells the
-     * ceiling differently is then a one-line change here beside the dialects.
+     * Whether `max_tokens` stopped the provider. Judged here beside the other provider dialects, so an endpoint that
+     * spells the ceiling differently is a one-line change.
      */
     public function hitTokenCeiling(): bool
     {
@@ -114,15 +94,8 @@ final class CompletionStreamReader
     }
 
     /**
-     * What the provider says this call consumed, once it says so. Null until a
-     * message carries it, and for a provider that reports none.
-     *
-     * No salvage of an unterminated event in $pendingLine the way
-     * trailingEventContent() salvages a last delta: that is a JSON decode per
-     * chunk, the parse cost #327 removed, and the usage message is followed by
-     * `data: [DONE]`, so it is never the unterminated one. The blocking shape
-     * re-reads its whole buffer but shares that decode with assistantContent(),
-     * which the client asks for on the same chunk.
+     * What the provider says this call consumed, null until it says so. No salvage from an unterminated last event:
+     * that costs a decode per chunk, and the usage message is always followed by `data: [DONE]`.
      */
     public function usage(): ?CompletionUsageModel
     {
@@ -144,13 +117,8 @@ final class CompletionStreamReader
     }
 
     /**
-     * How much *answer* is held — what a `max_tokens`-derived bound may measure.
-     *
-     * Zero on the blocking shape, deliberately: nothing is an answer until the
-     * whole body parses, and the buffer holds framing and a reasoning model's
-     * whole thinking phase. Charging that to the answer bound flagged a legit
-     * 540 KB reasoning reply as a runaway, under the 1.9 MB #320 calls normal
-     * (#437 review); the blocking shape is bounded by retainedBytes() instead.
+     * Answer bytes held, for the `max_tokens`-derived bound. Zero on the blocking shape, whose buffer is not an answer
+     * until it parses; retainedBytes() bounds that shape.
      */
     public function answerBytes(): int
     {
@@ -172,12 +140,7 @@ final class CompletionStreamReader
         return '' === $answer ? null : $answer;
     }
 
-    /**
-     * The reasoning channel, kept only so the client can recover an answer a
-     * model routed there instead of into `content` (#323). Never the preferred
-     * source: the client reads it only when `assistantContent()` is empty. Held
-     * to its tail, and — unlike the answer — never charged to the size cap.
-     */
+    /** The reasoning channel's tail, which the client reads only when assistantContent() is empty. */
     public function reasoningContent(): ?string
     {
         if (!$this->sawStreamEvent) {
@@ -188,13 +151,8 @@ final class CompletionStreamReader
     }
 
     /**
-     * The blocking envelope's fields, decoded at most once per buffer
-     * generation and shared by the three readers above.
-     *
-     * The client asks for the answer and the usage on every chunk, and here
-     * both come from the same whole-body decode. Without the memo this shape
-     * would pay one decode per field per chunk — the parse cost #327 removed
-     * from the streaming shape and #409 must not reintroduce here.
+     * The blocking envelope's fields, decoded at most once per buffer generation: the client reads the answer and the
+     * usage on every chunk, and a decode per field would re-parse the whole body each time.
      *
      * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
@@ -262,19 +220,14 @@ final class CompletionStreamReader
     {
         $this->reasoning .= $fragment;
 
-        // Keep only the tail: a reasoning phase can stream up to the wire cap,
-        // but the answer sits at its end (#323), and it must never be charged
-        // to the answer's own cap (#320) — so this buffer bounds itself.
         if (\strlen($this->reasoning) > self::REASONING_TAIL_LIMIT) {
             $this->reasoning = substr($this->reasoning, -self::REASONING_TAIL_LIMIT);
         }
     }
 
     /**
-     * A stream cut short — or one whose last event simply arrives without its
-     * closing newline — leaves a final event in the buffer that the line loop
-     * never saw. Decoding it here salvages that last delta; a genuinely
-     * truncated payload does not decode and contributes nothing.
+     * Salvages a last event that arrived without its closing newline, as a cut-short stream leaves it; a truncated
+     * payload does not decode and adds nothing.
      */
     private function trailingEventContent(): string
     {

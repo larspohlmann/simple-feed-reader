@@ -17,10 +17,8 @@ use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Turns a ParsedFeedModel into persisted Entry rows: dedupes against the feed's
- * existing entries on stable URL (falling back to GUID hash), sanitizes
- * content, truncates to column limits, and refreshes feed metadata. Caller
- * flushes.
+ * Turns a ParsedFeedModel into Entry rows, skipping any whose GUID hash or stable URL the feed already holds, and
+ * refreshes the feed's metadata. The caller flushes.
  */
 final readonly class EntryIngestor
 {
@@ -28,12 +26,8 @@ final readonly class EntryIngestor
     private const int SITE_URL_MAX = 2048;
 
     /**
-     * feed.description is a TEXT column, so nothing but this bounds it. It is
-     * reduced to plain text on every read of the sidebar bootstrap — once per
-     * subscription, for the whole library — so a feed that ships its About
-     * page as a <description> would tax every page load forever. Generous
-     * enough that no real feed notices: the longest in a 111-feed library is
-     * 617 characters.
+     * The only bound on the TEXT column, which the sidebar bootstrap reduces to plain text for every subscription on
+     * every load. Generous: the longest description in a 111-feed library is 617 characters.
      */
     private const int FEED_DESCRIPTION_MAX = 4000;
 
@@ -48,14 +42,7 @@ final readonly class EntryIngestor
     ) {
     }
 
-    /**
-     * @param FeedIngestContext $context the run instant shared by every entry
-     *        this call ingests, and the feed's previous fetch — together they
-     *        decide where each entry lands in the list (see EntryEffectiveDate)
-     *
-     * @return list<Entry> the entries created, in the order the caller can
-     *         later index them — each one has no id until the caller flushes
-     */
+    /** @return list<Entry> the entries created, without ids until the caller flushes */
     public function ingest(Feed $feed, ParsedFeedModel $parsed, FeedIngestContext $context): array
     {
         $this->updateFeedMetadata($feed, $parsed);
@@ -91,14 +78,8 @@ final readonly class EntryIngestor
     }
 
     /**
-     * Fill in the image on entries ingested before the feed's image was
-     * persisted (#148), matching by guid hash against a fresh parse.
-     *
-     * Only entries that never had a judged image are touched — a feed that
-     * later drops or downgrades its images must never erase what we have. The
-     * archive this can reach is bounded by what the feed still serves (15–50
-     * items against thousands stored), so this is opportunistic repair, not a
-     * migration. Caller flushes. Returns the number updated.
+     * Fills the image of stored entries that never had one judged, matched by GUID hash against a fresh parse, so a
+     * feed dropping its images erases nothing. Reaches only what the feed still serves; returns the count.
      */
     public function fillMissingImages(Feed $feed, ParsedFeedModel $parsed): int
     {
@@ -138,10 +119,7 @@ final readonly class EntryIngestor
         if ($parsed->description !== null) {
             $feed->setDescription(mb_substr($parsed->description, 0, self::FEED_DESCRIPTION_MAX));
         }
-        // Guarded like the fields above: a feed that stops sending its <image>
-        // on one fetch must not erase the logo the reader already shows.
-        // FeedImageExtractor has already applied the scheme and length rules,
-        // so no truncation belongs here.
+        // A fetch without <image> must not erase the logo; FeedImageExtractor already applied scheme and length rules.
         if ($parsed->imageUrl !== null) {
             $feed->setImageUrl($parsed->imageUrl);
         }

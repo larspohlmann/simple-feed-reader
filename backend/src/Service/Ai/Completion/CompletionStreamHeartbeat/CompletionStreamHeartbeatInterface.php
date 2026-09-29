@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\CompletionStreamHeartbeat;
 
 /**
- * Told that a completion is still streaming, so a process others watch for
- * liveness can say it is alive while it waits (#433).
- *
- * Separate from CompletionStreamObserverInterface, which watches one call's content:
- * this carries no progress, only that the reader still runs. The transport
- * owns the only place that knows a chunk arrived, so the ping starts there;
- * who listens, and how often it may cost a write, is the implementation's.
+ * Told on every streamed chunk that a completion still runs, so a process others watch for liveness stays alive
+ * while it waits. No content: CompletionStreamObserverInterface watches that.
  */
 interface CompletionStreamHeartbeatInterface
 {

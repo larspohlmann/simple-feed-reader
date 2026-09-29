@@ -8,10 +8,8 @@ use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Exception\RetryableProviderException;
 
 /**
- * The result of one call in a concurrent wave: a decoded answer or the
- * transport failure it hit. completeMany() returns one per call, not a throw,
- * so one failed call never discards a sibling's answer — the atomic-wave rule
- * needs every outcome in hand to bank the wave or re-run it (#344).
+ * One call's result in a concurrent wave: an answer, a spoiled reply or the failure it hit. Returned, not thrown, so
+ * the wave has every outcome in hand to bank it or re-run it.
  */
 final readonly class CompletionOutcomeModel
 {
@@ -42,14 +40,8 @@ final readonly class CompletionOutcomeModel
     }
 
     /**
-     * Whether the *endpoint* failed — the only question the atomic-wave rule
-     * asks. A reply failure is deliberately not one: the address answered, so a
-     * badly answering model must not abort its siblings or count against the
-     * transport ceiling (#437).
-     *
-     * The one place this distinction is drawn. It used to be `instanceof` in
-     * three classes — the wave negating it, two sites matching it — with
-     * nothing holding them in step.
+     * Whether the endpoint failed, the atomic-wave rule's only question, decided here alone. A spoiled reply is not:
+     * the address answered, so it must not abort its siblings or count against the transport ceiling.
      */
     public function isFailure(): bool
     {
@@ -65,12 +57,7 @@ final readonly class CompletionOutcomeModel
         return $this->content;
     }
 
-    /**
-     * Whether anything went wrong with this call at all — an endpoint failure
-     * or a spoiled reply. Distinct from isFailure(), which asks only about the
-     * endpoint: a caller reporting what happened wants both, a caller deciding
-     * whether to abort the wave wants only the first.
-     */
+    /** Whether anything went wrong at all, an endpoint failure or a spoiled reply; isFailure() asks only the first. */
     public function hasCause(): bool
     {
         return null !== $this->cause;

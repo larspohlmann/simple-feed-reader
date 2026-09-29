@@ -25,10 +25,8 @@ final class FaviconFetcherTest extends TestCase
     private const string ICON_URL = 'https://www.theverge.com/favicon.ico';
 
     /**
-     * UrlGuard is `final` and, per the pattern already established in
-     * HttpFeedFetcherTest/HtmlPageFetcherTest, is exercised for real here
-     * rather than mocked: a fake DnsResolverInterface stands in for the
-     * network, and the real IpValidator makes the SSRF check genuine.
+     * UrlGuard is `final`, so it runs for real: a fake DnsResolverInterface stands in for the network and the real
+     * IpValidator makes the SSRF check genuine.
      *
      * @param array<string, list<string>> $dnsMap
      */

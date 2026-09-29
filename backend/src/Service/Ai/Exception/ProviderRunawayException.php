@@ -5,30 +5,12 @@ declare(strict_types=1);
 namespace App\Service\Ai\Exception;
 
 /**
- * The model answered, and would not stop.
- *
- * Separate from ProviderUnreachableException: the two need different advice.
- * Unreachable means the address is wrong or the endpoint is down and no
- * retry helps. A runaway means the endpoint is healthy and the model is
- * repeating itself — a 4B model asked to rank 45 entries emitted invented
- * ids counting down by 100 until `max_tokens` stopped it, 8.2 MB later
- * (#437). Reporting that as "did not answer" sent the reader to look at the
- * network, and made a per-batch model failure fail the whole wave.
- *
- * Carries whatever arrived before the call was cut, so the retry can show
- * the model the start of its own loop instead of asking the same question
- * unchanged.
+ * The model answered and would not stop. Apart from ProviderUnreachableException because the endpoint is healthy:
+ * the retry quotes the partial answer back to break the loop, and one batch's runaway must not fail the wave.
  */
 final class ProviderRunawayException extends \RuntimeException implements ProviderReplyFailureExceptionInterface
 {
-    /**
-     * The partial answer arrives already clipped to what a retry can quote
-     * back. Clipping at the boundary rather than at the prompt keeps the
-     * unclipped runaway — up to the retained-answer bound — from being parsed,
-     * held across retry rounds, and written whole into
-     * `recommendation_run.last_invalid_reply`, which is re-read on every
-     * following tick.
-     */
+    /** $partialAnswer arrives clipped: unclipped, it would be stored in `last_invalid_reply` and re-read every tick. */
     public function __construct(string $message, private readonly string $partialAnswer)
     {
         parent::__construct($message);

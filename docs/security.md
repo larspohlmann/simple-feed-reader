@@ -320,3 +320,19 @@ password, the Grafana API token) are sealed by `InstanceSecretCipher` (XChaCha20
 
 What this does not protect against: someone who holds both a database dump and the environment file. The server has
 to read the secret while its owner is away, so the server can always reach it.
+
+## AI provider endpoints
+
+An account's AI base URL does not pass through `UrlGuard`: private, loopback and link-local targets are accepted,
+so an account can point at a local provider (Ollama, LM Studio). This is a recorded exception to the SSRF boundary,
+decided by the repository owner on 2026-08-06 (#305).
+
+The accepted risk: any account that reaches the AI settings can make the server send requests to hosts on its own
+network and observe whether they answer. The mitigation is that registration is approval-gated, so every account is
+one the operator admitted. If the instance ever opens registration, revisit this decision.
+
+`ProviderCredentialsModel::fromAccountInput()` is the only validation the URL gets: `http` or `https`, a host, no
+user or password, no query or fragment. `OpenAiCompatibleCatalog` and `OpenAiCompatibleChatClient` add a timeout, a
+response size cap, no redirects (a followed redirect would hand the API key to another host) and no transparent
+compression, and `RateLimitGuard` covers the AI settings endpoints that call the provider. None of these is an SSRF
+guard. Do not copy this pattern for any other outbound call.

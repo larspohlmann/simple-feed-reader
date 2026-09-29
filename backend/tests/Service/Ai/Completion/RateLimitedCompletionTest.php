@@ -128,14 +128,8 @@ final class RateLimitedCompletionTest extends TestCase
     }
 
     /**
-     * The budget check is `$waited + $wait > budgetSeconds()` with `$waited`
-     * accumulating across retries, not just the latest wait. Three 45 s waits
-     * (each under the 120 s budget alone) cross it only once summed: 45, then
-     * 90, then 135 -- so the third retry must defer instead of sleeping again.
-     * A mutant that replaced the accumulation with a plain assignment would
-     * see 45 + 45 = 90 at that same retry and sleep through to exhaustion
-     * instead, so only the deferral -- not just the elapsed clock -- tells
-     * the two apart.
+     * `$waited` accumulates: three 45 s waits pass the 120 s budget only summed (45, 90, 135), so the third retry
+     * defers. An assignment in place of the sum would sleep to exhaustion instead, which only the deferral exposes.
      */
     public function testWorkerBudgetAccumulatesAcrossRetries(): void
     {

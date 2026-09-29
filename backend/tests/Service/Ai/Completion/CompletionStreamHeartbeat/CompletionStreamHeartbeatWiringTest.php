@@ -13,18 +13,8 @@ use App\Tests\Support\ProvidesWorkerHeartbeats;
 use App\Tests\Support\RefreshCountingLock;
 
 /**
- * This whole mechanism (#444) rests on `$container->get(TickLockKeepalive::class)`
- * being the SAME instance the transport beats through the
- * `CompletionStreamHeartbeatInterface` alias -- and, since #433, on
- * `SweepStreamHeartbeat` staying that same instance too. Every other test in
- * this suite builds these classes by hand, so none of them can catch a
- * wiring regression: if a future edit to services.yaml ever pointed the
- * composite at a *different* TickLockKeepalive than the one the advancer
- * arms by class name, arming one instance and beating another would be a
- * silent no-op. The lock would stop refreshing, the three-hour stall #439
- * and #444 exist to fix would come straight back, and every unit test would
- * stay green, because none of them go through the container. Only driving
- * the real, compiled container proves the identity holds.
+ * The TickLockKeepalive and SweepStreamHeartbeat the code arms must be the instances the transport beats through the
+ * interface alias. Unit tests build them by hand, so only the compiled container catches a wiring that breaks that.
  */
 final class CompletionStreamHeartbeatWiringTest extends DbTestCase
 {

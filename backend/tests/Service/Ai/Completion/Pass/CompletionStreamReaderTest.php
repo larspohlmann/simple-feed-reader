@@ -15,12 +15,7 @@ final class CompletionStreamReaderTest extends TestCase
         return new CompletionStreamReader(new CompletionBodyDecoder());
     }
 
-    /**
-     * One content-carrying SSE event. The framing is spelled out here because
-     * it is what the reader parses; the payload is encoded rather than typed
-     * by hand, so a test whose content contains quotes cannot be defeated by
-     * an escaping slip in the fixture.
-     */
+    /** One content-carrying SSE event; the payload is JSON-encoded, so quotes in $content cannot break the fixture. */
     private function contentEvent(string $content): string
     {
         $event = ['choices' => [['delta' => ['content' => $content]]]];
@@ -89,12 +84,7 @@ final class CompletionStreamReaderTest extends TestCase
         self::assertSame('stop', $reader->finishReason());
     }
 
-    /**
-     * The point of #320. Reasoning deltas carry no content, so the answer
-     * stays empty while the wire count climbs — and, decisively, the reader
-     * retains none of them. Without this, a thinking model's transcript sat
-     * in memory under the answer's cap and killed the call.
-     */
+    /** Reasoning deltas cost wire bytes but are not retained, so thinking never sits under the answer cap. */
     public function testReasoningCostsWireBytesButIsNotRetained(): void
     {
         $reader = $this->reader();
@@ -237,9 +227,8 @@ final class CompletionStreamReaderTest extends TestCase
     }
 
     /**
-     * #308's salvage depends on this: a stream cut mid-flight, or one whose
-     * last event simply lacks its closing newline, must still yield the
-     * deltas that did arrive — including that final unterminated one.
+     * A stream cut mid-flight, or one whose last event lacks its closing newline, still yields the deltas that did
+     * arrive, including that final unterminated one.
      */
     public function testAFinalEventWithoutItsClosingNewlineIsStillRead(): void
     {
@@ -276,12 +265,8 @@ final class CompletionStreamReaderTest extends TestCase
     }
 
     /**
-     * #323: LM Studio delivers a reasoning model's whole answer under
-     * `reasoning_content` and leaves `content` empty. The reader exposes that
-     * channel so the client can recover an answer the content channel never
-     * carried — while `assistantContent()` stays empty, keeping the observer
-     * and the debug log unchanged, and `retainedBytes()` stays zero, keeping
-     * #320's answer cap unmoved.
+     * LM Studio can put a reasoning model's whole answer under `reasoning_content`. The reader exposes it for recovery
+     * while assistantContent() stays empty and retainedBytes() stays zero.
      */
     public function testTheReasoningChannelIsExposedForRecovery(): void
     {
@@ -331,12 +316,7 @@ final class CompletionStreamReaderTest extends TestCase
         self::assertNull($reader->reasoningContent());
     }
 
-    /**
-     * A rambling reasoning phase can run to megabytes, so the retained tail is
-     * bounded. It keeps the END, where a reasoning model puts the JSON answer
-     * right before it stops — and it is never charged to the answer cap, so a
-     * runaway thinking phase cannot fail a healthy call the way #320 did.
-     */
+    /** The reasoning tail is bounded, keeps its END (where the answer sits) and is never charged to the answer cap. */
     public function testTheReasoningTailIsBoundedButKeepsTheTrailingAnswer(): void
     {
         $reader = $this->reader();
@@ -422,11 +402,8 @@ final class CompletionStreamReaderTest extends TestCase
     }
 
     /**
-     * The client asks a reader for its answer and its usage on every chunk it
-     * feeds in, so on the blocking shape both land first on a half-arrived
-     * body and then on the finished one. The decode those two fields share
-     * has to follow the buffer rather than keep answering with what it saw
-     * the first time.
+     * The blocking shape's answer and usage are read on every chunk, first of a half-arrived body; their shared decode
+     * must follow the buffer, not keep its first answer.
      */
     public function testABlockingEnvelopeReadWhileStillArrivingAnswersWithTheFinishedBody(): void
     {
@@ -451,13 +428,7 @@ final class CompletionStreamReaderTest extends TestCase
         self::assertNull($reader->usage());
     }
 
-    /**
-     * A blocking provider stamps `finish_reason` on the choice exactly as a
-     * stream event does, and the runaway classifier reads it through
-     * hitTokenCeiling(). Decoding it only on the streaming path left that
-     * classifier permanently blind on the one shape ProviderTimeoutsModel documents
-     * as answering all at once (#437 review).
-     */
+    /** A blocking envelope's `finish_reason` must reach hitTokenCeiling(), or runaways go unseen on that shape. */
     public function testABlockingEnvelopeReportsItsTokenCeiling(): void
     {
         $reader = new CompletionStreamReader(new CompletionBodyDecoder());
@@ -483,11 +454,8 @@ final class CompletionStreamReaderTest extends TestCase
     }
 
     /**
-     * The answer bound measures the answer. On a blocking shape nothing is an
-     * answer until the whole body parses, so the buffered body must not be
-     * charged to it — a reasoning model's 540 KB of `reasoning_content` sits in
-     * that buffer and tripped the bound as if the model had run away (#437
-     * review).
+     * The buffered blocking body is not charged to the answer bound: nothing is an answer until it parses, and a
+     * reasoning model's 540 KB of `reasoning_content` there once tripped the bound.
      */
     public function testABufferedBlockingBodyIsNotChargedToTheAnswerBound(): void
     {

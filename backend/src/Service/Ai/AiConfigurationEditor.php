@@ -8,11 +8,8 @@ use App\Entity\AiProviderSettings;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The account's local edits to a saved configuration: its name and the
- * per-connection preferences. None of these talk to the provider, which is
- * exactly what separates them from AiProviderConfigurator — whose every write
- * verifies against the endpoint first. Keeping them here lets that class hold
- * its "every write is a live call" invariant without exception.
+ * The account's local edits to a saved configuration: its name and preferences. None calls the provider, which
+ * keeps AiProviderConfigurator's rule that every write it makes is verified live.
  */
 final readonly class AiConfigurationEditor
 {

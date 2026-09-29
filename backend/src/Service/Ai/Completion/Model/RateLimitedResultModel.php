@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\Model;
 
 /**
- * What one rate-limit-aware round of calls produced: either completed outcomes
- * (with whether any 429 was seen along the way) or a deferral with the wait to
- * apply. A worker call retried to exhaustion stays a failure inside $outcomes,
- * carrying its RetryableProviderException (#947).
+ * One rate-limit-aware round: completed outcomes (and whether a 429 was seen) or a deferral with its wait. A call
+ * retried to exhaustion stays a failure in $outcomes, carrying its RetryableProviderException.
  */
 final readonly class RateLimitedResultModel
 {

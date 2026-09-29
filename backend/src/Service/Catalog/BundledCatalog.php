@@ -9,11 +9,8 @@ use App\Service\Catalog\Model\BundledCatalogSummaryModel;
 use App\Service\Catalog\Model\ParsedCatalogModel;
 
 /**
- * The catalog document this release ships. One owner for the path, shared by the
- * admin's one-click import and the console command.
- *
- * It is a starting point, not a source of truth: once imported, the database is
- * authoritative and the admin may edit it freely.
+ * The catalog document this release ships, shared by the admin's one-click import and the console command. Once
+ * imported, the database is authoritative.
  */
 final readonly class BundledCatalog
 {

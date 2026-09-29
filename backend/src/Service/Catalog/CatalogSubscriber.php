@@ -13,12 +13,8 @@ use App\Service\Subscription\Model\BulkSubscribeResultModel;
 use App\Service\Subscription\Model\TagStyleModel;
 
 /**
- * Turns a picker selection into subscriptions. NO DISCOVERY: catalog rows carry
- * a verified direct feed URL and its sourceFormat, so 110 selections must never
- * become 110 outbound discovery fetches.
- *
- * Unknown, disabled and already-subscribed ids are ignored rather than rejected,
- * so a picker rendered against a since-edited catalog still submits cleanly.
+ * Turns a picker selection into subscriptions WITHOUT discovery: catalog rows carry a verified feed URL and format.
+ * Unknown, disabled and already-subscribed ids are ignored, so a picker from an edited catalog still submits.
  */
 final readonly class CatalogSubscriber
 {

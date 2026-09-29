@@ -16,7 +16,7 @@ use App\Service\Ai\Model\ProviderConnectionModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Applies a RetryPlanModel to rate-limited calls (#947): a blocking plan waits and re-fires only the still-limited
+ * Applies a RetryPlanModel to rate-limited calls: a blocking plan waits and re-fires only the still-limited
  * calls, so a paid provider is not re-billed for those that answered; a deferring plan never waits, it returns the
  * deferral.
  */

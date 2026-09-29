@@ -5,17 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\CompletionStreamHeartbeat;
 
 /**
- * One beat, several listeners. The transport pings a single heartbeat per
- * chunk and should not learn how many things care (#444): a tick's lock
- * keepalive and a worker's liveness marker both want every beat, neither
- * knowing the other exists.
- *
- * The two members are named, not iterated, since their order is an
- * invariant: nothing is transactional, so a throwing member skips the rest
- * for that chunk, and the lock keepalive must run first — a missed refresh
- * risks a stolen lock and a double-banked run, while a missed liveness mark
- * only delays a UI hint by one beat. As a list, re-sorting two YAML lines
- * would silently break that.
+ * One beat for two named members, keepalive first: a throwing member skips the rest, and a missed lock refresh risks
+ * a stolen lock and a double-banked run while a missed liveness mark only delays a UI hint. Never make it a list.
  */
 final readonly class CompositeCompletionStreamHeartbeat implements CompletionStreamHeartbeatInterface
 {

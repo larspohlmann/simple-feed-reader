@@ -7,12 +7,8 @@ namespace App\Service\Opml;
 use App\Service\Opml\Exception\InvalidOpmlException;
 
 /**
- * Turns untrusted OPML into a DOM, hardened the same way FeedParser hardens
- * feeds: no network, no DTD, and a root that must actually be <opml>.
- *
- * The single place OPML parsing lives: the catalog document uses it now, and the
- * user-facing OPML import will adopt it in a later step. Centralised on purpose —
- * this is a security boundary, and a second copy is a second thing to get wrong.
+ * The one hardened OPML parser (no network, no DTD, an <opml> root), shared by the OPML import and the catalog: a
+ * security boundary, so never a second copy.
  */
 final readonly class OpmlBodyReader
 {

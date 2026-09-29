@@ -6,7 +6,7 @@ namespace App\Service\Ai\Completion\Model;
 
 use App\Entity\AiProviderSettings;
 
-/** Whether a call asks the provider not to reason (#323): a hint a local model may ignore, so budgets keep room. */
+/** Whether a call asks the provider not to reason: a hint a local model may ignore, so budgets keep room. */
 enum Reasoning
 {
     case Allowed;

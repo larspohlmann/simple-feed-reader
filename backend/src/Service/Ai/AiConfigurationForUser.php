@@ -10,13 +10,8 @@ use App\Repository\AiProviderSettingsRepository;
 use App\Service\Ai\Exception\ConfigurationNotFoundException;
 
 /**
- * The one place that turns a route's `{id}` into a row, scoped to the
- * account making the request. Every `{id}` route in AiSettingsController goes
- * through here rather than through the repository directly, so ownership is
- * checked once and cannot be forgotten on a new route.
- *
- * A row belonging to another account is reported the same way a missing id
- * is — 404, not 403 — so a caller cannot learn that an id exists at all.
+ * Turns a route's `{id}` into a row the requesting account owns; every `{id}` route in AiSettingsController goes
+ * through here. Another account's row reads as missing (404, not 403), so a caller never learns an id exists.
  */
 final readonly class AiConfigurationForUser
 {

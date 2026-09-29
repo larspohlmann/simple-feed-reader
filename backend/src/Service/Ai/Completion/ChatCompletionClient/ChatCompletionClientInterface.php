@@ -15,13 +15,8 @@ use App\Service\Ai\Model\ProviderConnectionModel;
 interface ChatCompletionClientInterface
 {
     /**
-     * One JSON-mode chat completion; returns the assistant message content.
-     * Reports the accumulating streamed body to $observer chunk by chunk.
-     *
-     * A reply the endpoint delivered and the model spoiled — a runaway, say —
-     * is returned, not thrown: it is content the caller's parser judges and
-     * retries against, and only a failure of the endpoint itself is an
-     * exception here (#437).
+     * One JSON-mode chat completion, reported to $observer chunk by chunk; returns the assistant content. A reply the
+     * model spoiled (a runaway) is returned for the caller's parser to judge; only an endpoint failure throws.
      *
      * @throws CredentialsRejectedException
      * @throws ProviderUnreachableException
@@ -33,10 +28,8 @@ interface ChatCompletionClientInterface
     ): string;
 
     /**
-     * Several JSON-mode chat completions at once, read in one multiplexed
-     * stream. Returns one CompletionOutcomeModel per call, aligned by index. A
-     * per-call transport failure is carried in that call's outcome rather than
-     * thrown, so one failed call never discards a sibling's answer (#344).
+     * Several JSON-mode chat completions read in one multiplexed stream, one outcome per call aligned by index. A
+     * per-call failure is carried in its outcome, never thrown, so it cannot discard a sibling's answer.
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      *

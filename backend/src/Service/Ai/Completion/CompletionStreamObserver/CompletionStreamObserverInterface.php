@@ -7,7 +7,7 @@ namespace App\Service\Ai\Completion\CompletionStreamObserver;
 use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 
 /**
- * Streaming hook for one /chat/completions call (#309): the client reports
+ * Streaming hook for one /chat/completions call: the client reports
  * progress after every chunk, and the observer decides what any of it means
  * — throttling and persistence are its business, so the transport stays dumb.
  */

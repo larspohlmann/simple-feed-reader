@@ -13,12 +13,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Reads `GET {baseUrl}/models`, the one call every OpenAI-compatible provider
- * answers the same way.
- *
- * The caps are not an SSRF boundary — see ProviderCredentialsModel for why there is
- * none — they keep one hostile or broken endpoint from holding a request open
- * or filling memory.
+ * Reads `GET {baseUrl}/models`, which every OpenAI-compatible provider answers alike. The caps are no SSRF boundary
+ * (docs/security.md#ai-provider-endpoints); they stop one endpoint holding a request open or filling memory.
  */
 final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
 {
@@ -74,10 +70,7 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
         return $this->httpClient->request('GET', $credentials->baseUrl . '/models', [
             'headers' => [
                 'Accept' => 'application/json',
-                // Refuse transparent compression so the wire cap below also bounds
-                // the buffered body — gzip would otherwise let a small reply
-                // decompress unbounded after the cap has already passed it. Same
-                // reasoning as ConcurrentFeedFetcher::headers().
+                // No transparent compression, so the wire cap below also bounds the decompressed body.
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
                 ...$credentials->authorizationHeaders(),
@@ -85,11 +78,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
             'max_redirects' => 0,
-            // Capped on the wire, like this codebase's other size caps
-            // (ConcurrentFeedFetcher::send(), HtmlPageFetcher, FaviconFetcher):
-            // a provider answering with gigabytes is refused as the bytes arrive,
-            // not truncated into an unparseable body. The transport reports the
-            // aborted download as a failure, which readBody() maps to this refusal.
+            // Refused on the wire as the bytes arrive, not truncated into an unparseable body; readBody() reports the
+            // aborted transfer as unreachable.
             'on_progress' => static function (int $downloaded): void {
                 if ($downloaded > self::MAXIMUM_RESPONSE_BYTES) {
                     throw new ProviderUnreachableException(sprintf(
@@ -102,10 +92,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
     }
 
     /**
-     * Unique, because an aggregating proxy (LiteLLM, a gateway in front of
-     * several backends) can list the same model once per backend. The frontend
-     * tracks its options by the identifier, so a repeat renders a broken
-     * dropdown rather than a duplicated row.
+     * One entry per id: an aggregating proxy (LiteLLM, a gateway) lists a model once per backend, and the frontend
+     * keys its dropdown options by id.
      *
      * @param array<mixed> $entries
      *

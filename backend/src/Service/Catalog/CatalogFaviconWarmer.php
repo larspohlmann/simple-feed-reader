@@ -15,21 +15,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * Fills in missing and stale catalog favicons, a budgeted slice at a time.
- *
- * Each slice resolves its icon URLs in one concurrent batch via the shared
- * `FaviconResolver::resolveAll()` (#116) — one burst of guarded homepage
- * fetches rather than 25 sequential ones — then downloads each icon's bytes
- * and commits per row.
- *
- * Budgeted because 111 publisher round trips cannot happen inside one HTTP
- * request: the caller gets `remaining` back and comes again, as /api/refresh
- * does; the console command just passes a large budget and loops itself.
- *
- * Not tied to any deployment mechanism — the admin UI drives it after an
- * import, so a self-hosted install with no deploy script still gets icons.
- * No lock: each row commits on its own and the due-query skips anything
- * already fresh, so concurrent runs merely duplicate a little work.
+ * Fills missing and stale catalog favicons a budgeted slice at a time (the caller comes back for `remaining`): one
+ * concurrent resolve per slice, then a download and a commit per row. No lock: concurrent runs only redo a little.
  */
 final readonly class CatalogFaviconWarmer
 {
@@ -69,10 +56,7 @@ final readonly class CatalogFaviconWarmer
         foreach ($due as $index => $feed) {
             $this->store($feed, $iconUrls[$index] ?? null, $now) ? ++$warmed : ++$failed;
 
-            // Check AFTER the download, never before: a budget that stops early
-            // would report progress it did not make. One overshoot by a single
-            // icon's timeout is the price of an honest count. (Resolution already
-            // happened above as one bounded burst, so the loop only downloads.)
+            // Checked after the download, never before: stopping early would report progress it did not make.
             if ($this->clock->now()->getTimestamp() >= $deadline) {
                 break;
             }
@@ -118,10 +102,8 @@ final readonly class CatalogFaviconWarmer
     }
 
     /**
-     * Downloads and stores one already-resolved icon, or records a failure when
-     * the URL is unresolved or the download is rejected. Commits per row so an
-     * interrupted run resumes rather than restarting. Returns whether an icon
-     * was stored.
+     * Stores one resolved icon, or records a failure when the URL is unresolved or the download refused; it commits
+     * per row so an interrupted run resumes. Returns whether an icon was stored.
      */
     private function store(CatalogFeed $feed, ?string $iconUrl, \DateTimeImmutable $now): bool
     {

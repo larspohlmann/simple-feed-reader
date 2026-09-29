@@ -96,11 +96,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         return $this->clientUsing(new MockHttpClient($responses));
     }
 
-    /**
-     * The one outcome of a single-call wave. A spoiled reply is no longer an
-     * exception out of complete() -- it is content with a cause attached
-     * (#437) -- so the cause is read off the outcome.
-     */
+    /** The one outcome of a single-call wave: a spoiled reply is content with a cause, not an exception. */
     private function soleOutcomeOf(
         OpenAiCompatibleChatClient $client,
         CompletionRequestModel $request,
@@ -168,29 +164,16 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertContains('Accept: text/event-stream, application/json', $seen['headers']);
         self::assertContains('Accept-Encoding: identity', $seen['headers']);
 
-        // The idle bound is what makes a dead connection fail in 180 s rather
-        // than at the full wall clock — the whole point of #312. The wall bound
-        // is the published 600 s budget WorkerPresence::FRESH_SECONDS is sized
-        // against (#311). Pinning the numbers, not the constants, means a
-        // regression that swaps one for the other or drops max_duration
-        // shows up here instead of only in production behaviour.
+        // Pinned as numbers, not constants, so swapping the idle and wall bounds or dropping max_duration fails here.
         self::assertSame(180.0, $seen['timeout']);
         self::assertSame(600.0, $seen['max_duration']);
 
-        // Asserted as a whole body rather than key by key: `max_tokens` is the
-        // only guard here that stops tokens being generated instead of
-        // discarding them once billed, so it must not be droppable without a
-        // red test. Dropping it once let a looping model bill 4.4 million
-        // characters against a reply that runs to a few kilobytes. The value
-        // is the caller's, not a constant of this class — a client that
-        // substituted its own would silently truncate the large batches the
-        // packer deliberately reserved room for.
+        // The whole body, so `max_tokens` (the one guard that prevents spend) cannot be dropped silently; its value is
+        // the caller's, never a constant of the client.
         $decodedBody = json_decode($seen['body'], true);
         self::assertSame([
             'model' => 'm',
             'messages' => $this->messages(),
-            // Structured output rides as a json_schema built from the request's
-            // own schema (OpenAiCompatibleChatClient records why, #329).
             'response_format' => [
                 'type' => 'json_schema',
                 'json_schema' => [
@@ -200,21 +183,12 @@ final class OpenAiCompatibleChatClientTest extends TestCase
                 ],
             ],
             'stream' => true,
-            // Asks the provider to include its usage report in the stream
-            // (#409) — see OpenAiCompatibleChatClient::completionPayload()
-            // for why this is unconditional.
             'stream_options' => ['include_usage' => true],
             'max_tokens' => 2048,
         ], $decodedBody);
     }
 
-    /**
-     * The transport is the only place that knows a chunk arrived, so it is
-     * what tells a worker's liveness that the process reading the stream is
-     * still running (#433). Without this ping, a worker inside a long call
-     * would age out of WorkerPresence's freshness window and the poll driver
-     * would stop deferring to it while it was working.
-     */
+    /** Only the transport knows a chunk arrived; without this ping a worker inside a long call would look dead. */
     public function testItPingsTheHeartbeatAsTheAnswerStreams(): void
     {
         $heartbeat = new CountingCompletionStreamHeartbeat();
@@ -231,13 +205,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * The bounds the request is sent under come from the connection, not from
-     * this class (#433). Pinned for both profiles, because a wiring that read
-     * one fixed profile would pass a standard-connection test and silently
-     * keep failing the slow local model this setting exists for.
-     *
-     * `timeout` is the idle bound and `max_duration` the wall clock, the two
-     * option names Symfony's transport gives them.
+     * Both profiles, because a wiring that read one fixed profile would pass for a standard connection and keep
+     * failing the slow local model. `timeout` is Symfony's idle bound, `max_duration` the wall clock.
      *
      * @param array<string, mixed> $expected
      */
@@ -303,12 +272,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         );
     }
 
-    /**
-     * A keyless credential (a local model server) must not send `Bearer ` with
-     * nothing after it — ProviderCredentialsModel::authorizationHeaders() drops the
-     * header entirely, and every other header this call sets must survive
-     * that.
-     */
+    /** A keyless credential (a local server) sends no `Bearer ` at all, and every other header still goes out. */
     public function testAKeylessCredentialSendsNoAuthorizationHeader(): void
     {
         $seen = [];
@@ -339,14 +303,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * A provider that ignores `stream: true` answers with the blocking envelope;
-     * the client must accept it exactly as it did before #312.
-     *
-     * Shape only, not timing: the MockResponse answers instantly, so this says
-     * nothing about whether such a provider can still finish in time. It
-     * cannot, past the profile's first-byte bound — that bound covers the wait
-     * for the response headers too, and ProviderTimeoutsModel records why the branch
-     * accepts that.
+     * A provider that ignores `stream: true` answers with the blocking envelope. Shape only: a real one must finish
+     * within the first-byte bound (ProviderTimeoutsModel says why).
      */
     public function testABlockingEnvelopeAnswerStillWorks(): void
     {
@@ -361,12 +319,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * The point of #312: a stream that goes silent is aborted after the
-     * inactivity window and surfaces as the same typed transport failure the
-     * #308 retry pipeline already handles — not after the full 600 s budget.
-     *
-     * MockHttpClient turns an empty string yielded by a body generator into a
-     * timeout chunk, the documented way to simulate a stalled stream.
+     * A silent stream is aborted after the idle bound as unreachable, not after the wall clock. MockHttpClient turns
+     * an empty string yielded by a body generator into a timeout chunk.
      */
     public function testASilentStreamIsAbortedAsUnreachable(): void
     {
@@ -417,20 +371,6 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
-    /**
-     * Pins the documented contract at the boundary: 300 itself, not just
-     * something comfortably past it, is a refusal — and pins that the
-     * provider's own status reaches the user's problem detail, rather than
-     * being flattened into the generic "did not answer".
-     *
-     * The message assertion is what makes this a real kill, not just a type
-     * check: if "$status >= 300" ever loosened to "$status > 300", 300 would
-     * fall through to getContent(), which Symfony's HttpClientInterface
-     * raises as RedirectionException for any unfollowed 3xx — caught by the
-     * same `catch (ExceptionInterface $exception)`, but rewritten to the generic
-     * "That address did not answer." rather than this status-carrying one.
-     * Same exception type either way; different message.
-     */
     public function testAStatusOfExactly300IsAlsoUnreachable(): void
     {
         $client = $this->clientAnswering(new MockResponse(
@@ -443,17 +383,6 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         $client->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
     }
 
-    /**
-     * Pins the same contract as the 300 case, at a status a real provider
-     * would plausibly send: its own outage reaches the user's problem detail
-     * instead of being flattened into a generic "did not answer".
-     *
-     * The message assertion is what kills the `Throw_` mutant on this branch:
-     * deleting the `throw` also falls through to getContent(), which raises
-     * ServerException for a 5xx — caught and rewritten to the generic
-     * message, not this status-carrying one. Same exception type, different
-     * message.
-     */
     public function testAServerErrorIsUnreachable(): void
     {
         $client = $this->clientAnswering(new MockResponse(
@@ -467,22 +396,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * Pins the documented contract: a redirect answer is a refusal, not
-     * something to follow. `max_redirects: 0` is load-bearing hardening on
-     * the one class in this branch that talks to an untrusted external
-     * endpoint — a client that silently followed a redirect would hand the
-     * API key to whatever host the provider's `Location` header names.
-     *
-     * This does NOT prove the `max_redirects: 0` request option specifically —
-     * verified by direct experiment, not assumed. MockHttpClient never
-     * performs real redirect-following regardless of that option's value: a
-     * queued second response is consumed only by an explicit second
-     * ->request() call, which nothing here makes. The identical limitation
-     * already applies to OpenAiCompatibleCatalog's own `max_redirects: 0`,
-     * whose Increment/DecrementInteger mutants escape for the same reason.
-     * Proving the option's wire effect would need a real transport against a
-     * server that actually redirects, which is an integration test, not this
-     * unit suite's job.
+     * A redirect is refused, never followed: following would hand the API key to the `Location` host. MockHttpClient
+     * never follows redirects, so this does not pin the `max_redirects: 0` option itself.
      */
     public function testARedirectIsRefusedRatherThanFollowed(): void
     {
@@ -573,17 +488,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertNull($this->soleOutcomeOf($client, $this->request())->retryAfterSeconds());
     }
 
-    /**
-     * This is otherwise-valid JSON that would decode into one perfectly good
-     * completion — the content is just padded well past MAXIMUM_RESPONSE_BYTES.
-     * The wire cap aborting the download is the ONLY reason this throws: without
-     * it, this body parses and complete() returns successfully.
-     *
-     * Split into small chunks: MockHttpClient delivers one plain string as a
-     * single chunk, and reports progress only once it is already complete.
-     * Chunking matches how a real response actually streams and is what makes
-     * this test able to catch a cap that stopped firing.
-     */
+    /** Valid JSON padded past MAXIMUM_RETAINED_BYTES: the retained-size bound is the only thing that refuses it. */
     public function testAnOversizedAnswerIsRefusedAsARunaway(): void
     {
         $body = '{"choices":[{"message":{"content":"' . str_repeat('a', 2_100_000) . '"}}]}';
@@ -595,26 +500,14 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         );
     }
 
-    /**
-     * complete() is a one-call completeMany() wave (#344): this pins that the
-     * delegation still preserves complete()'s original contract even for a
-     * failure that never produced a response at all (the request() call
-     * itself refuses the connection) -- completeMany() settles it as that
-     * call's own outcome (testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome
-     * below pins that half directly), and complete() unwraps a single failed
-     * outcome back into a thrown exception.
-     */
+    /** complete(), a one-call completeMany() wave, still throws for a failure with no response: a refused request(). */
     public function testTransportErrorsAreUnreachable(): void
     {
         $client = new MockHttpClient(static function (): MockResponse {
             throw new TransportException('Connection refused');
         });
 
-        // The exact message, not merely the exception class: without the
-        // throw in the ExceptionInterface catch, contentOf() would still
-        // raise a ProviderUnreachableException of its own (an empty reader
-        // reads as "answered without a completion"), so only the message
-        // proves this specific catch block actually ran.
+        // The exact message: contentOf() raises the same exception type of its own for an empty reader.
         try {
             $this->clientUsing($client)
                 ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
@@ -642,12 +535,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame(\strlen($first . $second), $seen->reports[1]->wireBytes);
     }
 
-    /**
-     * The #327 seam. The provider stamps `length` on the choice when
-     * `max_tokens` truncated the answer, and the client must relay it to the
-     * observer -- that is what lets the debug log record why the answer stopped
-     * rather than only that it did.
-     */
+    /** The client relays the provider's `finish_reason`, so the debug log records why the answer stopped. */
     public function testTheObserverIsToldWhyGenerationStopped(): void
     {
         $answer = "data: {\"choices\":[{\"delta\":{\"content\":\"{}\"}}]}\n\n";
@@ -661,14 +549,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame('length', $seen->reports[\count($seen->reports) - 1]->finishReason);
     }
 
-    /**
-     * The #320 regression, at the seam that produced it. A reasoning model
-     * streams its thinking as deltas with no content: the wire count must
-     * climb while the answer stays empty, and the call must not be refused
-     * for it. Before this change the transcript was retained and counted
-     * against the answer's own 2 MiB cap, which failed real batches three
-     * times running and killed the run.
-     */
+    /** Reasoning deltas carry no content: the wire count climbs, the answer stays empty, the call is not refused. */
     public function testAReasoningStreamIsReportedWithoutBeingCharged(): void
     {
         // Thousands of small events, the way a thinking phase really
@@ -691,14 +572,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertGreaterThan(2_097_152, $seen->reports[\count($seen->reports) - 1]->wireBytes);
     }
 
-    /**
-     * The answer cap still protects memory on the streaming path -- it is
-     * only reasoning that stopped being charged to it. Without this, #320's
-     * fix would have removed the bound rather than moved it.
-     *
-     * The bound is now the request's own answer budget rather than a flat 2 MB
-     * (#437): 2048 requested tokens buy 16384 retained bytes.
-     */
+    /** The answer bound still refuses on the streaming path: 2048 requested tokens buy 16384 retained bytes. */
     public function testAnOversizedStreamedAnswerIsStillRefused(): void
     {
         $event = 'data: ' . json_encode(
@@ -712,13 +586,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame('That provider answered with more than 16384 bytes.', $cause->getMessage());
     }
 
-    /**
-     * A flat 2 MB cap could never fire before `max_tokens` did: the largest
-     * answer a request may ask for is a few tens of kilobytes, so the guard
-     * was dead on the one path it was meant to cover -- a provider that
-     * ignores `max_tokens` and generates until something stops it (#437). The
-     * bound has to follow what was asked for.
-     */
+    /** The bound follows what the request asked for: a flat cap never fired before `max_tokens` did. */
     public function testTheAnswerBoundFollowsWhatTheRequestAskedFor(): void
     {
         $event = 'data: ' . json_encode(
@@ -757,7 +625,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     /**
      * The runaway carries what arrived before it was cut, because that is what
      * the retry shows the model to break the loop. An empty partial answer
-     * would send it back the same question unchanged (#437).
+     * would send it back the same question unchanged.
      */
     public function testARunawayCarriesThePartialAnswerItWasCutFrom(): void
     {
@@ -773,13 +641,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * A runaway is a per-call outcome like every other failure completeMany
-     * folds, not an exception that aborts the read for the whole wave: the
-     * sibling still delivers its answer (#344, #437).
-     *
-     * isFailure() is deliberately false for it. That question means "did the
-     * endpoint fail", and this endpoint answered -- at length. The caller
-     * reads content() and lets its parser reject the reply.
+     * A runaway is that call's outcome and the sibling still answers. isFailure() stays false, because the endpoint
+     * answered; the caller's parser rejects the reply.
      */
     public function testARunawayBecomesThatCallsOutcomeWithoutAbortingSiblings(): void
     {
@@ -804,12 +667,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertSame('{"picks":[]}', $outcomes[1]->content());
     }
 
-    /**
-     * A runaway is not an unreachable provider. Reporting it as one sends the
-     * reader to look at the network, when the model in fact answered at
-     * length -- 8.2 MB of it, in the run that prompted #437 -- and simply
-     * would not stop.
-     */
+    /** A runaway is not an unreachable provider: the model answered at length (8.2 MB in #437) and would not stop. */
     public function testARunawayIsNotReportedAsAnUnreachableProvider(): void
     {
         $event = 'data: ' . json_encode(
@@ -824,12 +682,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         );
     }
 
-    /**
-     * The wall clock cutting a call that already reported `length` is a
-     * runaway, and the generic transport message ("That address did not
-     * answer.") is exactly wrong for it: the model had spent its whole ceiling
-     * and 8.2 MB by then (#437).
-     */
+    /** A wall-clock cut after the call reported `length` is a runaway, not "That address did not answer.". */
     public function testAWallClockCutAfterTheTokenCeilingIsReportedAsARunaway(): void
     {
         $event = 'data: ' . json_encode(
@@ -872,7 +725,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * #323: LM Studio delivers a reasoning model's whole answer under
+     * LM Studio delivers a reasoning model's whole answer under
      * `reasoning_content` and never populates `content`. The client recovers it
      * from the reasoning channel rather than failing the call as answerless.
      */
@@ -1024,13 +877,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * completeMany's whole atomicity promise -- one failed call never aborts
-     * the read for its siblings -- rests on advance() converting even a raw
-     * Symfony transport exception into that call's own failure outcome. Every
-     * other completeMany failure test above raises through an HTTP status
-     * (guardStatus's domain exceptions); this one is the only one that goes
-     * through the multiplexed loop's own generic ExceptionInterface catch, by
-     * having the connection itself die mid-stream.
+     * The only test through advance()'s generic ExceptionInterface catch (the others fail by HTTP status): the
+     * connection dies mid-stream, and the sibling still answers.
      */
     public function testCompleteManyConvertsARawTransportFailureIntoThatCallsOutcomeWithoutAbortingSiblings(): void
     {
@@ -1056,17 +904,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
     }
 
     /**
-     * The sibling of the test above, one stage earlier: here the connection
-     * refusal happens at request() itself, before there is any response to
-     * read a chunk from at all (MockHttpClient's factory throws synchronously,
-     * exactly as a refused TCP connection would). fireRequests() has to catch
-     * this one directly and bank it as that call's own outcome -- unlike the
-     * mid-stream case, there is no response object for advance() to key it by,
-     * so this exercises a different catch block from the mid-stream test
-     * above. completeMany() must not throw for this either: it stays exactly
-     * as available to the caller as any other per-call failure, which is what
-     * lets complete() (a one-call completeMany() wave, #344) recover it back
-     * into a thrown exception in testTransportErrorsAreUnreachable.
+     * The request-phase sibling of the test above: request() itself refuses (MockHttpClient's factory throws, as a
+     * refused connection would), so fireRequests() settles it as that call's outcome and completeMany() does not throw.
      */
     public function testCompleteManySettlesARequestPhaseFailureAsThatCallsOutcome(): void
     {
@@ -1100,12 +939,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
         self::assertTrue($client->lastResponse?->getInfo('canceled'));
     }
 
-    /**
-     * The multiplexed loop routes every chunk back to the reader and observer
-     * of the response it belongs to. If it crossed the streams, one call's
-     * answer would leak into the other's outcome — so each observer must have
-     * seen only its own answer, and each outcome must carry its own.
-     */
+    /** Each chunk reaches its own call's reader and observer: crossed streams would leak one answer into the other. */
     public function testCompleteManyRoutesEachStreamToItsOwnReaderAndObserver(): void
     {
         $client = $this->clientReturning([

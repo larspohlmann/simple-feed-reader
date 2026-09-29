@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\Model;
 
 /**
- * What one provider call actually consumed, as the provider accounts for it
- * (#409). Read off the `usage` object OpenAI-compatible endpoints send in the
- * last message of a streamed reply — the only number that is the provider's
- * own, not our guess. Wire bytes are no cost proxy: reasoning and SSE framing
- * inflate them.
- *
- * Cost is nano-credits as an integer because money is never a float. Null
- * means no price reported, the same as "local model, free" — not zero, since
- * zero claims the call was free, a different statement from unpriced.
+ * What one call consumed, by the provider's own `usage` report; wire bytes are no cost proxy. Cost is integer
+ * nano-credits; null means unpriced, which differs from zero, a claim that the call was free.
  */
 final readonly class CompletionUsageModel
 {

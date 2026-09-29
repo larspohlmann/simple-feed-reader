@@ -7,10 +7,8 @@ namespace App\Service\Catalog;
 use App\Entity\CatalogFeed;
 
 /**
- * The offline stand-in for a favicon: the feed's initial on its category colour,
- * as SVG. Serving this instead of fetching on a cache miss is what keeps the
- * picker free of outbound requests — 111 cards render with no network fan-out,
- * and e2e works with no publisher reachable.
+ * The offline stand-in for a favicon, the feed's initial on its category colour as SVG: served on a cache miss
+ * instead of a fetch, so the picker makes no outbound request.
  */
 final readonly class MonogramFavicon
 {

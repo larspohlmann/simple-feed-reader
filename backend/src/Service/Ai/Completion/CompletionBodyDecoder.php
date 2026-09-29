@@ -7,19 +7,14 @@ namespace App\Service\Ai\Completion;
 use App\Service\Ai\Completion\Model\CompletionUsageModel;
 
 /**
- * Knows where a /chat/completions answer sits inside the provider's JSON, in either
- * shape: the whole envelope a blocking request returns, or one event of the SSE stream
- * a `stream: true` request produces. Framing is not its business — CompletionStreamReader
- * owns that and hands single payloads here. Null means the JSON carried no content.
+ * Finds a /chat/completions answer in the provider's JSON, a blocking envelope or one SSE event; the framing is
+ * CompletionStreamReader's. Null means the JSON carried no content.
  */
 final readonly class CompletionBodyDecoder
 {
     /**
-     * Every field of one blocking envelope from a single decode: the answer, the
-     * reasoning channel a model may have routed the answer into instead (#323), and the
-     * provider's own usage report. The mirror of streamEvent() below: a provider that
-     * ignores `stream: true` has its whole buffer re-read on every chunk, so reading
-     * every field off it must cost one decode, not one apiece.
+     * Every field of one blocking envelope from a single decode: a provider that ignores `stream: true` has its whole
+     * buffer re-read on every chunk, so the fields must cost one decode, not one apiece.
      *
      * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
@@ -31,9 +26,6 @@ final readonly class CompletionBodyDecoder
         return [
             'content' => $this->contentOf($choice, 'message'),
             'reasoning' => $this->reasoningOf($choice, 'message'),
-            // Both shapes stamp it on the choice, but this shape never decoded
-            // it, so hitTokenCeiling() stayed false for a provider that ignores
-            // `stream: true` and the runaway classifier could not fire (#437).
             'finishReason' => $this->finishReasonOf($choice),
             'usage' => $this->usageIn($root),
         ];
@@ -44,25 +36,15 @@ final readonly class CompletionBodyDecoder
         return $this->contentOf($this->firstChoice($payload), 'delta');
     }
 
-    /**
-     * Why the provider stopped generating, stamped on the choice itself:
-     * `length` means `max_tokens` truncated the answer, `stop` a natural end.
-     * Null while the choice is still streaming. Both shapes carry it in the
-     * same place, so one reader covers stream events and whole envelopes alike.
-     */
+    /** Why generation stopped (`length`: `max_tokens` cut it; `stop`: a natural end); null while still streaming. */
     public function finishReason(string $json): ?string
     {
         return $this->finishReasonOf($this->firstChoice($json));
     }
 
     /**
-     * Every field of one stream event from a single decode. The reader reads an event's
-     * answer fragment, finish reason and usage report together, so decoding once here
-     * halves the parse work over a reasoning model's thousands of thinking events (#327).
-     *
-     * `usage` is the provider's own accounting, which OpenAI-compatible endpoints send in
-     * the last message of a streamed reply — the one whose `choices` is empty, which is
-     * why nothing here read it before (#409).
+     * Every field of one stream event from a single decode, over a reasoning model's thousands of thinking events.
+     * `usage` arrives at the root of the stream's last message, the one whose `choices` is empty.
      *
      * @return array{content: ?string, reasoning: ?string, finishReason: ?string, usage: ?CompletionUsageModel}
      */
@@ -80,10 +62,7 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
-     * The payload as an array, or null when it is not JSON at all. Decoded once
-     * per payload and shared: `streamEvent()` reads the choice fields and the
-     * root-level usage object off the same decode, and a second decode per
-     * event is exactly the parse cost #327 removed.
+     * The payload as an array, or null when it is not JSON; decoded once and shared by the choice and usage reads.
      *
      * @return array<mixed>|null
      */
@@ -95,10 +74,8 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
-     * The first choice as an array, or null when the shape is wrong. Every
-     * step is guarded because the provider is untrusted — any of them can be
-     * absent or the wrong type. The final usage message of a stream carries
-     * `choices: []`, so null here is routine, not a fault.
+     * The first choice, or null when any step of the untrusted shape is missing or mistyped. The stream's final usage
+     * message carries `choices: []`, so null is routine.
      *
      * @param array<mixed>|null $root
      *
@@ -218,11 +195,8 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
-     * One counter of the usage report. Absent, non-numeric or negative reads 0: the
-     * provider is untrusted, and a token count it did not send is one it did not spend.
-     * A negative one reads 0 rather than passing on, because these counters are banked
-     * with SQL arithmetic onto a running per-run total — a below-zero reading would
-     * subtract from calls that really happened, indistinguishable from a cheaper run.
+     * One usage counter; absent, non-integer or negative reads 0. A negative one would subtract from the per-run total
+     * it is banked onto with SQL arithmetic.
      *
      * @param array<mixed> $fields
      */
@@ -234,15 +208,8 @@ final readonly class CompletionBodyDecoder
     }
 
     /**
-     * The price, converted from the provider's float credits to the integer nano-credits
-     * downstream stores. Null — not zero — when the provider reported no price: zero
-     * claims the call was free, a different statement from unpriced (a local model).
-     *
-     * A number the provider cannot have meant is refused rather than clamped: an
-     * unbelievable price is no reading at all, and null already says that. A negative
-     * price would subtract from the account's all-time spend, and a huge one overflows
-     * the (int) cast — undefined for an out-of-range float — corrupting the total once
-     * and making BIGINT reject the next write.
+     * The price in integer nano-credits; null, not zero (a claim of "free"), when unpriced. A negative, non-finite or
+     * out-of-range cost is refused as null, never clamped: it would corrupt the all-time spend or overflow the cast.
      *
      * @param array<mixed> $usage
      */

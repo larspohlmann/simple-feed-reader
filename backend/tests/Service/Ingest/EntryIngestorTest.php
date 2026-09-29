@@ -186,12 +186,7 @@ final class EntryIngestorTest extends DbTestCase
         self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]));
     }
 
-    /**
-     * A whole feed refreshes at once: several already-stored articles come back
-     * in one fetch, each with a bumped revision GUID. Every one of them must be
-     * recognized by its stable URL, not just the first — the dedup preloads and
-     * matches the batch's full set of URL hashes.
-     */
+    /** Several stored articles return in one fetch with revised GUIDs: each is matched by URL, not just the first. */
     public function testRefetchingSeveralStoredArticlesWithRevisedGuidsCreatesNoNewRows(): void
     {
         $feed = $this->feed();
@@ -809,8 +804,6 @@ final class EntryIngestorTest extends DbTestCase
                 title: 'One',
                 author: null,
                 summary: null,
-                // @lang TEXT: the `alt`-less image is the input under test — the
-                // ingestor has to reject this as a summary — so it stays as is.
                 contentHtml: /** @lang TEXT */ '<a href="https://x"><img src="https://i/a.jpg"/></a> None',
                 publishedAt: null,
             ),

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\Model;
 
 /**
- * How a caller handles a provider rate limit (#947): a blocking plan waits and retries within a budget,
+ * How a caller handles a provider rate limit: a blocking plan waits and retries within a budget,
  * a deferring plan hands the wait back for its caller to record.
  */
 final readonly class RetryPlanModel
