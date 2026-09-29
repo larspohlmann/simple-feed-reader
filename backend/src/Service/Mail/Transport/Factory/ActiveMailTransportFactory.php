@@ -45,7 +45,6 @@ final readonly class ActiveMailTransportFactory
         return new CurlSmtpTransport($resolved, $proxy, $dispatcher, $logger);
     }
 
-    /** The resolved row's signature, plus the configured proxy's when the row routes through it. */
     public function signatureOf(ResolvedMailTransportModel $resolved): string
     {
         if (!$resolved->useProxy) {
