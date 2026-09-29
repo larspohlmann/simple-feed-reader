@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt\Model;
 
 /**
- * The outcome of parsing one distillation reply. `usable` is what
- * RecommendationRunAdvancer branches on: a usable profile is carried into the
- * batch and consolidation phases; an unusable one triggers a retry with a
- * corrective message, mirroring PickParseResultModel and ConsolidationParseResultModel.
+ * One distillation reply's outcome: RecommendationProfileDistiller stores a usable profile, and an unusable reply is
+ * retried with a corrective message.
  */
 final readonly class ProfileParseResultModel
 {

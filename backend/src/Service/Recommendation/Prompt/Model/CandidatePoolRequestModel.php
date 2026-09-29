@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt\Model;
 
 /**
- * What bounds one run's candidate pool: how far back it reaches, how many
- * entries it may hold, and the seed that shuffles it. The three travel
- * together because they describe one selection, and the caller — not the
- * loader — decides them: the loader stays clock-free and settings-free, so a
- * test can pin an exact boundary instead of arranging a clock.
- *
- * `since` is an absolute instant, already resolved from the reader's
- * lookbackDays against the snapshot clock, so nothing downstream has to know
- * what "2 days" meant at that moment.
+ * What bounds one run's candidate pool: its reach, its size and its shuffle seed. The caller decides them, so the
+ * loader stays clock- and settings-free; `since` is already resolved from lookbackDays against the snapshot clock.
  */
 final readonly class CandidatePoolRequestModel
 {
