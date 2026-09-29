@@ -184,8 +184,8 @@ final class HttpFeedFetcherTest extends TestCase
         try {
             $fetcher->fetch('https://example.com/feed');
             self::fail('Expected FeedUnreachableException');
-        } catch (FeedUnreachableException $e) {
-            self::assertSame(403, $e->statusCode);
+        } catch (FeedUnreachableException $exception) {
+            self::assertSame(403, $exception->statusCode);
         }
     }
 
@@ -210,9 +210,9 @@ final class HttpFeedFetcherTest extends TestCase
         try {
             $fetcher->fetch('https://example.com/feed');
             self::fail('Expected FeedUnreachableException');
-        } catch (FeedUnreachableException $e) {
-            self::assertNull($e->statusCode);
-            self::assertNotNull($e->getPrevious());
+        } catch (FeedUnreachableException $exception) {
+            self::assertNull($exception->statusCode);
+            self::assertNotNull($exception->getPrevious());
         }
     }
 }

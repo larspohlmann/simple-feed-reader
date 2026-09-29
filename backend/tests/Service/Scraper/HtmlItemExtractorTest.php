@@ -34,7 +34,7 @@ final class HtmlItemExtractorTest extends TestCase
         self::assertSame('https://www.tagesschau.de/', $parsed->siteUrl);
         self::assertGreaterThanOrEqual(20, \count($parsed->entries));
         self::assertLessThanOrEqual(50, \count($parsed->entries));
-        $urls = array_map(static fn ($e) => $e->url, $parsed->entries);
+        $urls = array_map(static fn ($entry) => $entry->url, $parsed->entries);
         self::assertSame($urls, array_unique($urls));
         $first = $parsed->entries[0];
         self::assertSame($first->url, $first->guid);
@@ -49,12 +49,12 @@ final class HtmlItemExtractorTest extends TestCase
             'https://www.treehugger.com/'
         );
         self::assertGreaterThanOrEqual(10, \count($parsed->entries));
-        $titles = array_map(static fn ($e) => $e->title, $parsed->entries);
+        $titles = array_map(static fn ($entry) => $entry->title, $parsed->entries);
         self::assertContains('Your Yard’s Next Big Upgrade: A Rain Garden You Can Build Yourself', $titles);
-        foreach ($titles as $t) {
-            self::assertLessThan(301, mb_strlen($t));
+        foreach ($titles as $title) {
+            self::assertLessThan(301, mb_strlen($title));
         }
-        $teasers = array_filter($parsed->entries, static fn ($e) => $e->summary !== null);
+        $teasers = array_filter($parsed->entries, static fn ($entry) => $entry->summary !== null);
         self::assertNotEmpty($teasers);
     }
 
@@ -62,12 +62,12 @@ final class HtmlItemExtractorTest extends TestCase
     {
         $parsed = $this->extractor()->extract($this->scrapedFixture('heise-2026-07-23.html'), 'https://www.heise.de/');
         self::assertCount(50, $parsed->entries); // 141 unique urls, capped at 50
-        foreach ($parsed->entries as $e) {
-            self::assertMatchesRegularExpression('#^https://www\.heise\.de/#', (string) $e->url);
+        foreach ($parsed->entries as $entry) {
+            self::assertMatchesRegularExpression('#^https://www\.heise\.de/#', (string) $entry->url);
         }
-        $teasers = array_filter($parsed->entries, static fn ($e) => $e->summary !== null);
+        $teasers = array_filter($parsed->entries, static fn ($entry) => $entry->summary !== null);
         self::assertGreaterThanOrEqual(20, \count($teasers)); // abstracts arrived
-        $images = array_filter($parsed->entries, static fn ($e) => $e->media->image !== null);
+        $images = array_filter($parsed->entries, static fn ($entry) => $entry->media->image !== null);
         self::assertGreaterThanOrEqual(20, \count($images));
     }
 
@@ -87,11 +87,11 @@ final class HtmlItemExtractorTest extends TestCase
     public function testTeaserCapAppliesToJsonLdDescriptionsAtTheFunnel(): void
     {
         $articles = [];
-        for ($i = 1; $i <= 3; $i++) {
+        for ($index = 1; $index <= 3; $index++) {
             $articles[] = [
                 '@type' => 'NewsArticle',
-                'url' => "/story-{$i}",
-                'headline' => "Synthetic story number {$i}",
+                'url' => "/story-{$index}",
+                'headline' => "Synthetic story number {$index}",
                 'description' => str_repeat('x', 5000),
             ];
         }

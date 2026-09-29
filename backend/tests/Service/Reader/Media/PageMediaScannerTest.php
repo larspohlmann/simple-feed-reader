@@ -200,7 +200,7 @@ final class PageMediaScannerTest extends TestCase
         ]);
 
         $urls = array_map(
-            static fn (MediaCandidateModel $c): string => $c->url,
+            static fn (MediaCandidateModel $candidate): string => $candidate->url,
             $scanner->scan($this->page())->candidates,
         );
 
@@ -232,9 +232,9 @@ final class PageMediaScannerTest extends TestCase
         // The second source re-confirms e0 so the guard trusts the rest of its embeds.
         $first = [];
         $second = [new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e0')];
-        for ($i = 0; $i < 15; $i++) {
-            $first[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $i);
-            $second[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/f' . $i);
+        for ($index = 0; $index < 15; $index++) {
+            $first[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $index);
+            $second[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/f' . $index);
         }
 
         $scanner = new PageMediaScanner([$this->source($first), $this->source($second)]);
@@ -273,8 +273,8 @@ final class PageMediaScannerTest extends TestCase
     public function testTheCapStillApplies(): void
     {
         $many = [];
-        for ($i = 0; $i < ArticleMediaModel::MAX_ITEMS + 5; $i++) {
-            $many[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $i);
+        for ($index = 0; $index < ArticleMediaModel::MAX_ITEMS + 5; $index++) {
+            $many[] = new MediaCandidateModel(MediaKind::Embed, 'https://x.test/e' . $index);
         }
 
         $scanner = new PageMediaScanner([$this->source($many)]);

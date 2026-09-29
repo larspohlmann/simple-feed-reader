@@ -188,7 +188,10 @@ final class CatalogFaviconWarmerTest extends DbTestCase
      */
     private static function assertContainsFeed(CatalogFeed $needle, array $feeds): void
     {
-        self::assertContains($needle->getId(), array_map(static fn (CatalogFeed $f): ?int => $f->getId(), $feeds));
+        self::assertContains(
+            $needle->getId(),
+            array_map(static fn (CatalogFeed $feed): ?int => $feed->getId(), $feeds),
+        );
     }
 
     /**
@@ -196,6 +199,9 @@ final class CatalogFaviconWarmerTest extends DbTestCase
      */
     private static function assertNotContainsFeed(CatalogFeed $needle, array $feeds): void
     {
-        self::assertNotContains($needle->getId(), array_map(static fn (CatalogFeed $f): ?int => $f->getId(), $feeds));
+        self::assertNotContains(
+            $needle->getId(),
+            array_map(static fn (CatalogFeed $feed): ?int => $feed->getId(), $feeds),
+        );
     }
 }

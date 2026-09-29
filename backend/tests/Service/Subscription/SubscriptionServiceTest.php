@@ -290,7 +290,7 @@ final class SubscriptionServiceTest extends DbTestCase
 
         self::assertNotNull($outcome->subscription);
         $tagNames = array_map(
-            static fn (Tag $t): string => $t->getName(),
+            static fn (Tag $tag): string => $tag->getName(),
             $outcome->subscription->getTags()->toArray(),
         );
         self::assertSame(['News', 'Tech'], $tagNames);
@@ -318,7 +318,7 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertNotNull($outcome->subscription);
         self::assertSame(
             ['Blogs'],
-            array_map(static fn (Tag $t): string => $t->getName(), $outcome->subscription->getTags()->toArray()),
+            array_map(static fn (Tag $tag): string => $tag->getName(), $outcome->subscription->getTags()->toArray()),
         );
     }
 
@@ -477,9 +477,9 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertNull($outcome->subscription);
         self::assertCount(1, $outcome->candidates);
 
-        /** @var \App\Repository\SubscriptionRepository $repo */
-        $repo = $this->entityManager->getRepository(Subscription::class);
-        self::assertSame(0, $repo->countForUser($user->requireId()));
+        /** @var \App\Repository\SubscriptionRepository $repository */
+        $repository = $this->entityManager->getRepository(Subscription::class);
+        self::assertSame(0, $repository->countForUser($user->requireId()));
     }
 
     public function testPerUserCapOverridesTheGlobalDefault(): void

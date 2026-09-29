@@ -11,10 +11,10 @@ final class Rss1ParserTest extends TestCase
 {
     private function document(string $xml): \DOMDocument
     {
-        $doc = new \DOMDocument();
-        $doc->loadXML($xml);
+        $document = new \DOMDocument();
+        $document->loadXML($xml);
 
-        return $doc;
+        return $document;
     }
 
     public function testImageUrlComesFromContentEncodedThenMediaThenNull(): void

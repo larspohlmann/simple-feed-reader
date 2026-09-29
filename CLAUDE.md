@@ -79,7 +79,13 @@ Non-negotiables:
   `…ExceptionInterface`). A property holding a `…Factory` or `…FactoryInterface`
   ends in `Factory` too (`$tagFactory`, never `$tags`, which elsewhere names a
   repository); Symfony's `RateLimiterFactoryInterface $…Limiter` keeps its name, as the
-  container binds it by that name. If a name needs a comment to be understood, rename it.
+  container binds it by that name. A property holding a repository or a
+  consumer-owned repository interface is named for what it holds (`$tags`,
+  `$storedSettings`), never `$repository` or `$…Repo`. No name is a single letter
+  or a truncated word, closure parameters, comparator operands, caught exceptions
+  and loop counters included (`$tag`, `$left`/`$right`, `$exception`, `$index`);
+  `$x`/`$y` stay for coordinates, `$qb` and `$io` for the Doctrine and Symfony
+  idioms. If a name needs a comment to be understood, rename it.
 - **Functions do one thing**, at a single level of abstraction, and stay short.
   Extract until each method reads as a sentence about *what*, not *how*.
 - **Few parameters.** Three is a lot; more means a DTO or value object is missing.
@@ -180,6 +186,12 @@ Enforced mechanically by `composer check` and `composer md`:
   returns a mapped class (a disguised `new`), and calling, or taking as a
   first-class callable, any of its methods other than `get*`/`is*`/`has*` and
   `requireId()`. A pure static helper such as `User::normalizeEmail()` is fine.
+- **`AbbreviatedNameRule`** (`tests/PhpStan/AbbreviatedNameRule.php`, its names in
+  `AbbreviatedNames`) — no variable, parameter or property is a single letter
+  (numbered or not; `$x`/`$y` aside) or a listed truncation. An override of a
+  method declared outside `App` keeps its parent's parameter names (named
+  arguments bind to them), and the rule skips those; its one allow-listed wire key
+  is `MarkSearchReadRequest::$q`.
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.

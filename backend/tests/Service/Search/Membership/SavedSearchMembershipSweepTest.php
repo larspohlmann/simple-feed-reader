@@ -111,8 +111,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $search = $this->search('climate');
         $ids = [];
-        for ($i = 0; $i < SavedSearchMembershipSweep::CHUNK + 1; $i++) {
-            $ids[] = $this->entry('e' . $i)->requireId();
+        for ($index = 0; $index < SavedSearchMembershipSweep::CHUNK + 1; $index++) {
+            $ids[] = $this->entry('e' . $index)->requireId();
         }
         // Every reading moves the clock 6 s: the deadline is read once, then
         // once per chunk, so a 10 s budget allows exactly one chunk.
@@ -135,8 +135,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     public function testEntriesScannedSumsAcrossEveryChunkInOneRun(): void
     {
         $this->search('climate');
-        for ($i = 0; $i < SavedSearchMembershipSweep::CHUNK + 1; $i++) {
-            $this->entry('e' . $i);
+        for ($index = 0; $index < SavedSearchMembershipSweep::CHUNK + 1; $index++) {
+            $this->entry('e' . $index);
         }
         $matcher = new RecordingSavedSearchMatcher();
 

@@ -26,10 +26,10 @@ final class MediaUrlKindTest extends TestCase
 
     public function testRecognisesAudioByExtension(): void
     {
-        $a = $this->kind->resolve('https://x.test/a.mp3');
-        self::assertNotNull($a);
-        self::assertSame(MediaKind::Audio, $a->kind);
-        self::assertSame('https://x.test/a.mp3', $a->url);
+        $mp3 = $this->kind->resolve('https://x.test/a.mp3');
+        self::assertNotNull($mp3);
+        self::assertSame(MediaKind::Audio, $mp3->kind);
+        self::assertSame('https://x.test/a.mp3', $mp3->url);
 
         $m4a = $this->kind->resolve('https://x.test/a.m4a');
         self::assertNotNull($m4a);

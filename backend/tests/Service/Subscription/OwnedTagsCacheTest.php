@@ -92,7 +92,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        for ($i = 0; $i < 5; ++$i) {
+        for ($index = 0; $index < 5; ++$index) {
             $this->cache->findAllByIdsForUser($userId, [$newsId]);
         }
 

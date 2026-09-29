@@ -66,20 +66,20 @@ final class EntryStateResolverTest extends DbTestCase
         return $service;
     }
 
-    private function repo(): EntryStateRepository
+    private function repository(): EntryStateRepository
     {
-        $repo = self::getContainer()->get(EntryStateRepository::class);
-        self::assertInstanceOf(EntryStateRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function rows(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function listRow(Entry $entry, bool $isHidden, ?\DateTimeImmutable $markedReadUntil): EntryListRow
@@ -107,12 +107,12 @@ final class EntryStateResolverTest extends DbTestCase
         $state = $this->resolver()->resolve($this->user, $row);
         $state->markFavorite();
 
-        $this->repo()->ensureRow($this->user->requireId(), $entry->requireId(), null);
+        $this->repository()->ensureRow($this->user->requireId(), $entry->requireId(), null);
 
         $this->entityManager->flush();
         $this->entityManager->clear();
 
-        $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
+        $persisted = $this->repository()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
         self::assertNotNull($persisted);
         self::assertTrue($persisted->isFavorite());
     }
@@ -127,7 +127,7 @@ final class EntryStateResolverTest extends DbTestCase
         $this->entityManager->clear();
 
         self::assertTrue($state->isHidden());
-        $persisted = $this->repo()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
+        $persisted = $this->repository()->findOneForUserEntry($this->user->requireId(), $entry->requireId());
         self::assertNotNull($persisted);
         self::assertTrue($persisted->isHidden());
         self::assertEquals($watermark, $persisted->getHiddenAt());

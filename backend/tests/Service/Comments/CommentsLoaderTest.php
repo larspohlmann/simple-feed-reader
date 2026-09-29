@@ -124,7 +124,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry('/u/Background_Lie11'));
 
-        $byAuthor = array_filter($result->comments, static fn ($c): bool => $c->byEntryAuthor);
+        $byAuthor = array_filter($result->comments, static fn ($comment): bool => $comment->byEntryAuthor);
         self::assertNotSame([], $byAuthor);
     }
 
@@ -136,7 +136,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $byOtherCommenter = array_filter(
             $result->comments,
-            static fn ($c): bool => $c->author === '/u/WesamMikhail',
+            static fn ($comment): bool => $comment->author === '/u/WesamMikhail',
         );
         self::assertNotSame([], $byOtherCommenter);
         foreach ($byOtherCommenter as $comment) {
@@ -150,7 +150,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry(null));
 
-        $byAuthor = array_filter($result->comments, static fn ($c): bool => $c->byEntryAuthor);
+        $byAuthor = array_filter($result->comments, static fn ($comment): bool => $comment->byEntryAuthor);
         self::assertSame([], $byAuthor);
     }
 
@@ -160,7 +160,7 @@ final class CommentsLoaderTest extends KernelTestCase
 
         $result = $this->loader()->load(self::entry(guid: 't3_another'));
 
-        self::assertContains(self::THREAD, array_map(static fn ($c) => $c->url, $result->comments));
+        self::assertContains(self::THREAD, array_map(static fn ($comment) => $comment->url, $result->comments));
     }
 
     public function testA429IsThrottledAndRemembered(): void

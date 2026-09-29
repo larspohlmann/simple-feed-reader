@@ -19,8 +19,8 @@ final class LokiPushHandlerTest extends TestCase
     public function testBuffersUntilFlushThenPostsLabelledLines(): void
     {
         $seen = [];
-        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen = $o;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
 
             return new MockResponse('', ['http_code' => 204]);
         });
@@ -79,7 +79,7 @@ final class LokiPushHandlerTest extends TestCase
         $sink = new DirectLokiSink(new LokiClient($http, new StubLokiEndpoint()));
         $handler = new LokiPushHandler($sink, 'sfr', 'prod');
 
-        for ($i = 0; $i < 99; ++$i) {
+        for ($index = 0; $index < 99; ++$index) {
             $handler->handle($this->record(Level::Info, 'app', 'line'));
         }
         self::assertSame(0, $posts, 'must not flush before the 100th record');
@@ -126,8 +126,8 @@ final class LokiPushHandlerTest extends TestCase
     public function testFormatsContextExceptionsWithStackTraces(): void
     {
         $seen = [];
-        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen = $o;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
 
             return new MockResponse('', ['http_code' => 204]);
         });
@@ -156,8 +156,8 @@ final class LokiPushHandlerTest extends TestCase
     public function testFormatsNanosecondPrecisionTimestamps(): void
     {
         $seen = [];
-        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen = $o;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
 
             return new MockResponse('', ['http_code' => 204]);
         });
@@ -171,9 +171,9 @@ final class LokiPushHandlerTest extends TestCase
         /** @var array{body: string} $seen */
         $body = json_decode($seen['body'], true, 512, JSON_THROW_ON_ERROR);
         /** @var array{streams: list<array{values: list<array{0: string, 1: string}>}>} $body */
-        $ts = $body['streams'][0]['values'][0][0];
+        $timestamp = $body['streams'][0]['values'][0][0];
 
-        self::assertSame($time->getTimestamp() . '123456000', $ts);
+        self::assertSame($time->getTimestamp() . '123456000', $timestamp);
     }
 
     public function testAutoFlushesAtThreshold(): void
@@ -213,8 +213,8 @@ final class LokiPushHandlerTest extends TestCase
     public function testLabelsSourceFrontendForTheClientErrorsChannel(): void
     {
         $seen = [];
-        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen = $o;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
 
             return new MockResponse('', ['http_code' => 204]);
         });
@@ -234,8 +234,8 @@ final class LokiPushHandlerTest extends TestCase
     public function testLabelsSourceBackendForEveryOtherChannel(): void
     {
         $seen = [];
-        $http = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen = $o;
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen = $options;
 
             return new MockResponse('', ['http_code' => 204]);
         });

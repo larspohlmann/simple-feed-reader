@@ -343,17 +343,17 @@ final class AccountBackupExporterTest extends DbTestCase
         $feed = new Feed('https://budget.example/feed.xml');
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        for ($i = 0; $i < 2001; ++$i) {
+        for ($index = 0; $index < 2001; ++$index) {
             $entry = new Entry(
                 $feed,
-                'guid-' . $i,
+                'guid-' . $index,
                 null,
-                'Entry ' . $i,
+                'Entry ' . $index,
                 new \DateTimeImmutable('2026-08-01T00:00:00Z'),
                 new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             );
             $this->entityManager->persist($entry);
-            if (0 === $i % 500) {
+            if (0 === $index % 500) {
                 $this->entityManager->flush();
             }
         }

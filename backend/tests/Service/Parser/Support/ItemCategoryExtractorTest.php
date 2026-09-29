@@ -12,9 +12,9 @@ final class ItemCategoryExtractorTest extends TestCase
 {
     private function firstItem(string $xml): \DOMElement
     {
-        $doc = new \DOMDocument();
-        $doc->loadXML($xml);
-        $item = $doc->getElementsByTagName('*')->item(0);
+        $document = new \DOMDocument();
+        $document->loadXML($xml);
+        $item = $document->getElementsByTagName('*')->item(0);
         \assert($item instanceof \DOMElement);
 
         // Return the element that actually holds the categories: the wrapper root.
@@ -134,10 +134,10 @@ final class ItemCategoryExtractorTest extends TestCase
             . '<item><title>A</title><link>https://x.test/a</link>'
             . '<category domain="https://d.test">Politics</category>'
             . '<category>World</category></item></channel></rss>';
-        $doc = new \DOMDocument();
-        $doc->loadXML($xml);
+        $document = new \DOMDocument();
+        $document->loadXML($xml);
 
-        $feed = FeedFormatParsers::rss2()->parse($doc);
+        $feed = FeedFormatParsers::rss2()->parse($document);
 
         self::assertCount(2, $feed->entries[0]->categories);
         self::assertSame('Politics', $feed->entries[0]->categories[0]->label);

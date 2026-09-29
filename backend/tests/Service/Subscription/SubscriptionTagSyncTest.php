@@ -46,7 +46,7 @@ final class SubscriptionTagSyncTest extends DbTestCase
         $this->sync()->sync($feed, [$news->requireId()], $user->requireId());
         $this->entityManager->flush();
 
-        $tagNames = array_map(static fn (Tag $t): string => $t->getName(), $feed->getTags()->toArray());
+        $tagNames = array_map(static fn (Tag $tag): string => $tag->getName(), $feed->getTags()->toArray());
         self::assertSame(['News'], $tagNames);
     }
 

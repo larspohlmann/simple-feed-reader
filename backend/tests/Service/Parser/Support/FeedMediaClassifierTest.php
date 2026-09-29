@@ -12,12 +12,12 @@ final class FeedMediaClassifierTest extends TestCase
 {
     private function kindOf(string $xml): FeedMediaKind
     {
-        $doc = new \DOMDocument();
+        $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
-        $doc->loadXML(
+        $document->loadXML(
             '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>' . $xml . '</item></channel></rss>',
         );
-        $node = $doc->getElementsByTagName('item')->item(0)?->firstChild;
+        $node = $document->getElementsByTagName('item')->item(0)?->firstChild;
         self::assertInstanceOf(\DOMElement::class, $node);
 
         return FeedMediaClassifier::kind($node);

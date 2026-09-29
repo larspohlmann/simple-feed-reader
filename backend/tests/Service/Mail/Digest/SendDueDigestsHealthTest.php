@@ -66,9 +66,9 @@ final class SendDueDigestsHealthTest extends DbTestCase
     public function testAFailedDigestSendIsRecorded(): void
     {
         $user = $this->verifiedUser();
-        $prefs = $this->duePreferences($user, lastSentAt: null);
+        $preferences = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
 
         $mailer = $this->createStub(DigestMailerInterface::class);
         $mailer->method('send')->willThrowException(new TransportException('SMTP is down'));
@@ -85,9 +85,9 @@ final class SendDueDigestsHealthTest extends DbTestCase
         $this->health->recordFailure(MailKind::Digest, 'old@example.test', 'earlier outage');
 
         $user = $this->verifiedUser();
-        $prefs = $this->duePreferences($user, lastSentAt: null);
+        $preferences = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$preferences]);
 
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())->method('send');
@@ -127,13 +127,13 @@ final class SendDueDigestsHealthTest extends DbTestCase
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
     private function duePreferences(User $user, ?\DateTimeImmutable $lastSentAt): Preferences
     {
-        $prefs = $user->getPreferences();
-        $prefs->setDigestEnabled(true);
-        $prefs->setDigestCadence(DigestCadence::Daily);
-        $prefs->setDigestSendHour(8);
-        $prefs->setDigestLastSentAt($lastSentAt);
+        $preferences = $user->getPreferences();
+        $preferences->setDigestEnabled(true);
+        $preferences->setDigestCadence(DigestCadence::Daily);
+        $preferences->setDigestSendHour(8);
+        $preferences->setDigestLastSentAt($lastSentAt);
 
-        return $prefs;
+        return $preferences;
     }
 
     private function givenOneMatch(User $user): void
@@ -145,17 +145,17 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     private function members(): SavedSearchEntryRepository
     {
-        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entries(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 }

@@ -111,8 +111,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testSkipsParsedEntriesThatCarryNoImage(): void
     {
         $feed = $this->feed();
-        $g5 = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g5', null)]);
-        $this->ingestor()->ingest($feed, $g5, self::context());
+        $parsedFeed = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g5', null)]);
+        $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [
@@ -128,8 +128,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnOverlongReplacementImageUrlIsNotFilledIn(): void
     {
         $feed = $this->feed();
-        $g6 = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g6', null)]);
-        $this->ingestor()->ingest($feed, $g6, self::context());
+        $parsedFeed = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g6', null)]);
+        $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
         $overlongUrl = 'https://i/' . str_repeat('u', 2048) . '.jpg';
@@ -167,8 +167,8 @@ final class FillMissingImagesTest extends DbTestCase
     public function testAnHttpReplacementImageUrlIsUpgradedAndFilledIn(): void
     {
         $feed = $this->feed();
-        $g7 = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g7', null)]);
-        $this->ingestor()->ingest($feed, $g7, self::context());
+        $parsedFeed = new ParsedFeedModel('T', null, null, null, [$this->parsedEntry('g7', null)]);
+        $this->ingestor()->ingest($feed, $parsedFeed, self::context());
         $this->entityManager->flush();
 
         $filled = $this->ingestor()->fillMissingImages($feed, new ParsedFeedModel('T', null, null, null, [

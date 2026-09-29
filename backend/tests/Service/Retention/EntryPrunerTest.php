@@ -61,8 +61,8 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->flush();
 
         $fetchedAt = $createdAt ?? $this->clock->now();
-        for ($i = 0; $i < $count; ++$i) {
-            $this->persistEntry($feed, sprintf('entry-%d', $i), $fetchedAt);
+        for ($index = 0; $index < $count; ++$index) {
+            $this->persistEntry($feed, sprintf('entry-%d', $index), $fetchedAt);
         }
         $this->entityManager->flush();
 
@@ -143,7 +143,7 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(10, $this->pruner->prune());
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(10, 29)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(10, 29)),
             $this->remainingGuids($feed),
         );
     }
@@ -173,7 +173,7 @@ final class EntryPrunerTest extends DbTestCase
             $idsByGuid[$entry->getGuid()] = $entry->getId();
         }
         $expectedForgottenIds = array_map(
-            static fn (int $i): int => (int) $idsByGuid["entry-{$i}"],
+            static fn (int $index): int => (int) $idsByGuid["entry-{$index}"],
             range(0, 9),
         );
 
@@ -196,7 +196,7 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(10, $pruner->prune());
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(10, 29)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(10, 29)),
             $this->remainingGuids($feed),
         );
     }
@@ -212,7 +212,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->pruner->prune();
 
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(5, 24)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(5, 24)),
             $this->remainingGuids($feed),
         );
     }
@@ -237,11 +237,11 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(2, $this->pruner->prune());
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(1, 20)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(1, 20)),
             $this->remainingGuids($feedA),
         );
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(1, 20)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(1, 20)),
             $this->remainingGuids($feedB),
         );
     }
@@ -279,7 +279,7 @@ final class EntryPrunerTest extends DbTestCase
 
         self::assertSame(2, $pruner->prune());
         self::assertEqualsCanonicalizing(
-            array_map(static fn (int $i): string => "entry-{$i}", range(2, $cap + 1)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(2, $cap + 1)),
             $this->remainingGuids($feed),
         );
     }
@@ -485,7 +485,7 @@ final class EntryPrunerTest extends DbTestCase
         self::assertSame(2, $pruner->prune());
         $expected = array_merge(
             ['favorite-newest'],
-            array_map(static fn (int $i): string => "entry-{$i}", range(2, $cap)),
+            array_map(static fn (int $index): string => "entry-{$index}", range(2, $cap)),
         );
         self::assertEqualsCanonicalizing($expected, $this->remainingGuids($feed));
     }
@@ -496,8 +496,8 @@ final class EntryPrunerTest extends DbTestCase
 
         $feed = new Feed('https://example.com/feed');
         $this->entityManager->persist($feed);
-        for ($i = 0; $i < 3; ++$i) {
-            $this->persistEntry($feed, 'entry-' . $i, $this->daysAgo($i + 1));
+        for ($index = 0; $index < 3; ++$index) {
+            $this->persistEntry($feed, 'entry-' . $index, $this->daysAgo($index + 1));
         }
         $this->entityManager->flush();
 
@@ -543,7 +543,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
 
-        for ($i = 0; $i < 3; $i++) {
+        for ($index = 0; $index < 3; $index++) {
             $run = new RecommendationRun($user, $this->clock->now());
             $run->snapshot([[1]]);
             $run->complete($this->clock->now());
@@ -595,11 +595,11 @@ final class EntryPrunerTest extends DbTestCase
 
         // Two feeds, each at the cap — globally 4 entries, but per-feed nothing
         // exceeds the cap, so a global cap would wrongly delete here.
-        foreach (['https://a.example/feed', 'https://b.example/feed'] as $n => $url) {
+        foreach (['https://a.example/feed', 'https://b.example/feed'] as $feedNumber => $url) {
             $feed = new Feed($url);
             $this->entityManager->persist($feed);
-            $this->persistEntry($feed, "feed{$n}-a", $this->daysAgo(2));
-            $this->persistEntry($feed, "feed{$n}-b", $this->daysAgo(1));
+            $this->persistEntry($feed, "feed{$feedNumber}-a", $this->daysAgo(2));
+            $this->persistEntry($feed, "feed{$feedNumber}-b", $this->daysAgo(1));
         }
         $this->entityManager->flush();
 

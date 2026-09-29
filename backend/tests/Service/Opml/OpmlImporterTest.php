@@ -20,10 +20,10 @@ final class OpmlImporterTest extends DbTestCase
 
     private function importer(): OpmlImporter
     {
-        $svc = self::getContainer()->get(OpmlImporter::class);
-        self::assertInstanceOf(OpmlImporter::class, $svc);
+        $importer = self::getContainer()->get(OpmlImporter::class);
+        self::assertInstanceOf(OpmlImporter::class, $importer);
 
-        return $svc;
+        return $importer;
     }
 
     private function fixture(): string
@@ -41,7 +41,7 @@ final class OpmlImporterTest extends DbTestCase
     }
 
     /** @return list<Subscription> */
-    private function subsOf(User $user): array
+    private function subscriptionsOf(User $user): array
     {
         return $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
     }
@@ -61,8 +61,8 @@ final class OpmlImporterTest extends DbTestCase
         self::assertSame(3, $result->imported); // 2 under News + 1 root feed
         self::assertSame(0, $result->alreadySubscribed);
 
-        $subs = $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
-        self::assertCount(3, $subs);
+        $subscriptions = $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
+        self::assertCount(3, $subscriptions);
 
         // New feeds are due now so the next refresh populates them (no inline fetch).
         $feed = $this->entityManager
@@ -134,7 +134,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->alreadySubscribed); // the second listing
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertCount(1, $this->feedsWithUrl($url));
     }
 
@@ -154,7 +154,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->alreadySubscribed);
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertCount(1, $this->feedsWithUrl($url));
     }
 
@@ -172,7 +172,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->invalid);
         self::assertSame(1, $result->imported);
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertSame([], $this->feedsWithUrl($longUrl)); // no oversized Feed persisted
     }
 
@@ -195,17 +195,17 @@ final class OpmlImporterTest extends DbTestCase
         self::assertCount(1, $tags); // reused, not duplicated
         self::assertSame('news', $tags[0]->getName()); // original casing preserved
 
-        $subs = $this->subsOf($user);
-        self::assertCount(1, $subs);
-        self::assertCount(1, $subs[0]->getTags());
+        $subscriptions = $this->subscriptionsOf($user);
+        self::assertCount(1, $subscriptions);
+        self::assertCount(1, $subscriptions[0]->getTags());
     }
 
     public function testSkippedOverLimitCreatesNoOrphanFeeds(): void
     {
         $user = $this->user('atcap@example.com');
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $i++) {
-            $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $i));
+        for ($index = 0; $index < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER; $index++) {
+            $feed = new Feed(sprintf('https://seed%d.example.com/feed.xml', $index));
             $this->entityManager->persist($feed);
             $this->entityManager->persist(new Subscription($user, $feed, $when));
         }

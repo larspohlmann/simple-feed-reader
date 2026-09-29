@@ -457,8 +457,8 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         self::assertNotSame([], $batches);
         // All batches except the final one should respect MINIMUM_BATCH_SIZE.
-        for ($i = 0; $i < \count($batches) - 1; ++$i) {
-            self::assertGreaterThanOrEqual(10, \count($batches[$i]));
+        for ($index = 0; $index < \count($batches) - 1; ++$index) {
+            self::assertGreaterThanOrEqual(10, \count($batches[$index]));
         }
     }
 
@@ -737,8 +737,8 @@ final class RecommendationPromptBuilderTest extends TestCase
         // mb_substr) or an off-by-one start offset produce different text.
         $characters = ['á', 'é', 'í', 'ó', 'ú'];
         $description = '';
-        for ($i = 0; $i < 130; ++$i) {
-            $description .= $characters[$i % 5];
+        for ($index = 0; $index < 130; ++$index) {
+            $description .= $characters[$index % 5];
         }
         $expectedTruncated = mb_substr($description, 0, 120) . '…';
 

@@ -18,9 +18,9 @@ final class ClusterLayerTest extends TestCase
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
-        $doc = $this->document($this->scrapedFixture($fixture));
+        $document = $this->document($this->scrapedFixture($fixture));
 
-        return new ClusterLayer(new CardTitle())->extract($doc, $baseUrl);
+        return new ClusterLayer(new CardTitle())->extract($document, $baseUrl);
     }
 
     public function testFindsTagesschauTeaserCluster(): void
@@ -30,7 +30,7 @@ final class ClusterLayerTest extends TestCase
         $first = $items[0];
         self::assertStringNotContainsString("\u{00AD}", $first->title);
         self::assertMatchesRegularExpression('#^https://www\.tagesschau\.de/#', $first->url);
-        $withTeaser = array_filter($items, static fn ($i) => $i->teaser !== null);
+        $withTeaser = array_filter($items, static fn ($item) => $item->teaser !== null);
         self::assertGreaterThanOrEqual(10, \count($withTeaser));
     }
 
@@ -56,14 +56,14 @@ final class ClusterLayerTest extends TestCase
     public function testFlatPageWithThousandsOfSiblingAnchorsStillExtracts(): void
     {
         $links = '';
-        for ($i = 0; $i < 2000; $i++) {
-            $links .= sprintf('<a href="/p/%d">Story number %d headline</a>', $i, $i);
+        for ($index = 0; $index < 2000; $index++) {
+            $links .= sprintf('<a href="/p/%d">Story number %d headline</a>', $index, $index);
         }
-        $doc = $this->document(
+        $document = $this->document(
             '<html lang="en"><body><main>' . $links . '</main></body></html>'
         );
 
-        $items = new ClusterLayer(new CardTitle())->extract($doc, 'https://flat.test/');
+        $items = new ClusterLayer(new CardTitle())->extract($document, 'https://flat.test/');
 
         self::assertCount(2000, $items);
         self::assertSame('https://flat.test/p/0', $items[0]->url);

@@ -57,7 +57,7 @@ final class ArticleMediaModelTest extends TestCase
         ]);
 
         $kinds = array_map(
-            static fn (MediaCandidateModel $c): MediaKind => $c->kind,
+            static fn (MediaCandidateModel $candidate): MediaKind => $candidate->kind,
             $media->withoutRedundantStreams()->candidates,
         );
 
@@ -75,8 +75,8 @@ final class ArticleMediaModelTest extends TestCase
 
     public function testWithAppendsAndKeepsTheCap(): void
     {
-        $one = static fn (int $n): MediaCandidateModel
-            => new MediaCandidateModel(MediaKind::Video, 'https://a.test/' . $n . '.mp4', 'p.jpg');
+        $one = static fn (int $number): MediaCandidateModel
+            => new MediaCandidateModel(MediaKind::Video, 'https://a.test/' . $number . '.mp4', 'p.jpg');
         $media = new ArticleMediaModel(array_map($one, range(1, ArticleMediaModel::MAX_ITEMS - 1)));
 
         $extended = $media->with([$one(98), $one(99)]);

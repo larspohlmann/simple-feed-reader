@@ -54,7 +54,7 @@ final class UserStatisticsTest extends TestCase
     {
         return 0 === $count
             ? []
-            : array_map(static fn (int $i): Tag => new Tag($user, 'tag' . $i), range(1, $count));
+            : array_map(static fn (int $index): Tag => new Tag($user, 'tag' . $index), range(1, $count));
     }
 
     private function statistics(): UserStatistics

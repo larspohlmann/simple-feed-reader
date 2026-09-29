@@ -140,7 +140,7 @@ final class AuditSamplerTest extends DbTestCase
     private function feedTitlesOf(array $sample): array
     {
         $titles = array_values(array_unique(array_map(
-            static fn (SampledEntryModel $e): string => $e->feedTitle,
+            static fn (SampledEntryModel $entry): string => $entry->feedTitle,
             $sample,
         )));
         sort($titles);
@@ -155,7 +155,7 @@ final class AuditSamplerTest extends DbTestCase
      */
     private function entryIdsOf(array $sample): array
     {
-        return array_map(static fn (SampledEntryModel $e): int => $e->entryId, $sample);
+        return array_map(static fn (SampledEntryModel $entry): int => $entry->entryId, $sample);
     }
 
     private function userId(): int

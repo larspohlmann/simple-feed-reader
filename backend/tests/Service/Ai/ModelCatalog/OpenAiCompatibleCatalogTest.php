@@ -60,7 +60,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         $models = $catalog->listModels($this->credentials());
 
         self::assertSame(['big', 'silent', 'small'], $this->ids($models));
-        self::assertSame([200000, null, 8192], array_map(static fn ($m) => $m->contextWindow, $models));
+        self::assertSame([200000, null, 8192], array_map(static fn ($model) => $model->contextWindow, $models));
     }
 
     /**
@@ -240,7 +240,7 @@ final class OpenAiCompatibleCatalogTest extends TestCase
 
         $models = $catalog->listModels($this->credentials());
 
-        self::assertSame([8192], array_map(static fn ($m) => $m->contextWindow, $models));
+        self::assertSame([8192], array_map(static fn ($model) => $model->contextWindow, $models));
     }
 
     /**

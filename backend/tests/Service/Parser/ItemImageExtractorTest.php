@@ -20,7 +20,7 @@ final class ItemImageExtractorTest extends TestCase
 
     private function item(string $innerXml): \DOMElement
     {
-        $doc = new \DOMDocument();
+        $document = new \DOMDocument();
         // @lang TEXT: the `media` prefix is used by the `$innerXml` the callers
         // splice in, which the XML PhpStorm injects here cannot see, so it
         // reports the namespace declaration as unused.
@@ -28,8 +28,8 @@ final class ItemImageExtractorTest extends TestCase
         $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
             . $innerXml
             . '</item></channel></rss>';
-        $doc->loadXML($rss);
-        $item = $doc->getElementsByTagName('item')->item(0);
+        $document->loadXML($rss);
+        $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
         return $item;

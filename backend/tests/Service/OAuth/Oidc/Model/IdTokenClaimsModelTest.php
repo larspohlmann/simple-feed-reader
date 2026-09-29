@@ -116,9 +116,9 @@ final class IdTokenClaimsModelTest extends TestCase
     {
         try {
             IdTokenClaimsModel::decode($token);
-        } catch (OAuthFailedException $e) {
-            self::assertSame($logDetail, $e->logDetail);
-            self::assertStringNotContainsString($logDetail, $e->getMessage());
+        } catch (OAuthFailedException $exception) {
+            self::assertSame($logDetail, $exception->logDetail);
+            self::assertStringNotContainsString($logDetail, $exception->getMessage());
 
             return;
         }
@@ -228,8 +228,8 @@ final class IdTokenClaimsModelTest extends TestCase
         return new IdTokenModel('header.' . $this->encode($payload) . '.signature');
     }
 
-    private function encode(string $data): string
+    private function encode(string $bytes): string
     {
-        return strtr(base64_encode($data), '+/', '-_');
+        return strtr(base64_encode($bytes), '+/', '-_');
     }
 }

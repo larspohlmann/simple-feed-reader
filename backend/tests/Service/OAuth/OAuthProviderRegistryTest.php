@@ -52,14 +52,14 @@ final class OAuthProviderRegistryTest extends TestCase
 
         try {
             $registry->get('apple');
-        } catch (UnknownProviderException $e) {
-            $unconfigured = $e;
+        } catch (UnknownProviderException $exception) {
+            $unconfigured = $exception;
         }
 
         try {
             $registry->get('facebook');
-        } catch (UnknownProviderException $e) {
-            $absent = $e;
+        } catch (UnknownProviderException $exception) {
+            $absent = $exception;
         }
 
         self::assertInstanceOf(UnknownProviderException::class, $unconfigured);

@@ -87,8 +87,8 @@ final class RedirectFollowerTest extends TestCase
         try {
             $follower->follow('https://example.com/start', [], 5);
             self::fail('a hop into link-local space must be refused');
-        } catch (RedirectChainException $e) {
-            self::assertStringContainsString('169.254.169.254', $e->getMessage());
+        } catch (RedirectChainException $exception) {
+            self::assertStringContainsString('169.254.169.254', $exception->getMessage());
         }
         self::assertSame(['https://example.com/start'], $requested, 'the blocked host is never requested');
     }

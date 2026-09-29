@@ -430,8 +430,8 @@ final class BackupReaderTest extends TestCase
     public function testAPartOverTheEntryCeilingIsRefusedBeforeTheExtraLineIsYielded(): void
     {
         $lines = [self::header(1)];
-        for ($i = 0; $i <= BackupReader::MAX_ENTRIES_PER_PART; ++$i) {
-            $lines[] = ['guid' => "g-$i", 'guidHash' => hash('sha256', "g-$i")] + self::entry();
+        for ($index = 0; $index <= BackupReader::MAX_ENTRIES_PER_PART; ++$index) {
+            $lines[] = ['guid' => "g-$index", 'guidHash' => hash('sha256', "g-$index")] + self::entry();
         }
         $yielded = 0;
 
@@ -440,8 +440,8 @@ final class BackupReaderTest extends TestCase
                 $yielded += $line instanceof EntryLine ? 1 : 0;
             }
             self::fail('The ceiling did not trip.');
-        } catch (InvalidBackupException $e) {
-            self::assertStringContainsString('more than 5000 entries', $e->getMessage());
+        } catch (InvalidBackupException $exception) {
+            self::assertStringContainsString('more than 5000 entries', $exception->getMessage());
         }
 
         self::assertSame(BackupReader::MAX_ENTRIES_PER_PART, $yielded);
@@ -467,10 +467,10 @@ final class BackupReaderTest extends TestCase
      */
     public function testBlankLinesCountTowardTheByteCeiling(): void
     {
-        $data = json_encode(self::header(1), \JSON_THROW_ON_ERROR) . "\n"
+        $contents = json_encode(self::header(1), \JSON_THROW_ON_ERROR) . "\n"
             . json_encode(self::entry(), \JSON_THROW_ON_ERROR) . "\n";
-        self::assertLessThan(self::SMALL_CEILING, \strlen($data), 'Only the blank lines may cross the ceiling.');
-        $gzip = (string) gzencode($data . str_repeat("\n", self::SMALL_CEILING));
+        self::assertLessThan(self::SMALL_CEILING, \strlen($contents), 'Only the blank lines may cross the ceiling.');
+        $gzip = (string) gzencode($contents . str_repeat("\n", self::SMALL_CEILING));
 
         $this->expectException(InvalidBackupException::class);
         $this->expectExceptionMessageMatches('/inflates past/');

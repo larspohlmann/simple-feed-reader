@@ -47,7 +47,7 @@ final class BackupPartBufferTest extends TestCase
     public function testItIsFullAtTheEntryBudget(): void
     {
         $buffer = new BackupPartBuffer();
-        for ($i = 1; $i < BackupPartBuffer::MAX_ENTRIES; ++$i) {
+        for ($index = 1; $index < BackupPartBuffer::MAX_ENTRIES; ++$index) {
             $buffer->add('{}', null);
         }
         self::assertFalse($buffer->isFull());

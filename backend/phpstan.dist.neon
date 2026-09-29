@@ -101,3 +101,7 @@ services:
         class: App\Tests\PhpStan\InvocationMatchersOnThisRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\AbbreviatedNameRule
+        tags:
+            - phpstan.rules.rule

@@ -31,7 +31,7 @@ final class RecommendationConsolidationParserTest extends TestCase
         $result = $this->parser->parse($json, [5, 6]);
 
         self::assertTrue($result->usable);
-        self::assertSame([5, 6], array_map(static fn ($p) => $p->entryId, $result->picks));
+        self::assertSame([5, 6], array_map(static fn ($pick) => $pick->entryId, $result->picks));
         self::assertSame([6], $result->duplicateIds);
     }
 
@@ -76,7 +76,7 @@ final class RecommendationConsolidationParserTest extends TestCase
         $result = $this->parser->parse($json, [5]);
 
         self::assertTrue($result->usable);
-        self::assertSame([5], array_map(static fn ($p) => $p->entryId, $result->picks));
+        self::assertSame([5], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
     /** A score above the scale is clamped, mirroring RecommendationPickParser. */
@@ -129,7 +129,7 @@ final class RecommendationConsolidationParserTest extends TestCase
         $result = $this->parser->parse($json, [5]);
 
         self::assertTrue($result->usable);
-        self::assertSame([5], array_map(static fn ($p) => $p->entryId, $result->picks));
+        self::assertSame([5], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
     /** A fractional score rounds to the nearest whole number rather than always down. */

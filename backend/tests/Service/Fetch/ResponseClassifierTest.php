@@ -195,8 +195,8 @@ final class ResponseClassifierTest extends TestCase
                 $this->attempt(),
             );
             self::fail('Expected a FeedThrottledException.');
-        } catch (FeedThrottledException $e) {
-            self::assertSame($expectedSeconds, $e->retryAfterSeconds);
+        } catch (FeedThrottledException $exception) {
+            self::assertSame($expectedSeconds, $exception->retryAfterSeconds);
         }
     }
 

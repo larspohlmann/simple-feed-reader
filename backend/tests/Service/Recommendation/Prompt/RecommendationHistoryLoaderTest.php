@@ -76,9 +76,9 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
-        self::assertSame(['E', 'A'], array_map(static fn ($l) => $l->title, $history->favorites));
-        self::assertSame(['B'], array_map(static fn ($l) => $l->title, $history->kept));
-        self::assertSame(['C'], array_map(static fn ($l) => $l->title, $history->viewed));
+        self::assertSame(['E', 'A'], array_map(static fn ($line) => $line->title, $history->favorites));
+        self::assertSame(['B'], array_map(static fn ($line) => $line->title, $history->kept));
+        self::assertSame(['C'], array_map(static fn ($line) => $line->title, $history->viewed));
         self::assertSame($entryE->requireId(), $history->favorites[0]->entryId);
     }
 
@@ -105,7 +105,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
         $history = $this->loader()->load($this->userId(), $this->settings(viewedCap: 1));
 
-        self::assertSame(['F'], array_map(static fn ($l) => $l->title, $history->viewed));
+        self::assertSame(['F'], array_map(static fn ($line) => $line->title, $history->viewed));
     }
 
     public function testEachHistoryListReadsItsOwnCap(): void
@@ -148,7 +148,7 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
 
         $history = $this->loader()->load($this->userId(), $this->settings());
 
-        self::assertSame(['F', 'C'], array_map(static fn ($l) => $l->title, $history->viewed));
+        self::assertSame(['F', 'C'], array_map(static fn ($line) => $line->title, $history->viewed));
     }
 
     public function testFeedNamePrefersTheSubscriptionsCustomTitle(): void

@@ -19,13 +19,13 @@ final class ItemMediaExtractorTest extends TestCase
 
     private function rssItem(string $innerXml): \DOMElement
     {
-        $doc = new \DOMDocument();
+        $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
         $root = '<rss xmlns:media="http://search.yahoo.com/mrss/"'
             . ' xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><item>'
             . $innerXml . '</item></channel></rss>';
-        $doc->loadXML($root);
-        $item = $doc->getElementsByTagName('item')->item(0);
+        $document->loadXML($root);
+        $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
         return $item;
@@ -33,9 +33,9 @@ final class ItemMediaExtractorTest extends TestCase
 
     private function atomEntry(string $innerXml): \DOMElement
     {
-        $doc = new \DOMDocument();
-        $doc->loadXML('<feed xmlns="http://www.w3.org/2005/Atom"><entry>' . $innerXml . '</entry></feed>');
-        $entry = $doc->getElementsByTagName('entry')->item(0);
+        $document = new \DOMDocument();
+        $document->loadXML('<feed xmlns="http://www.w3.org/2005/Atom"><entry>' . $innerXml . '</entry></feed>');
+        $entry = $document->getElementsByTagName('entry')->item(0);
         self::assertInstanceOf(\DOMElement::class, $entry);
 
         return $entry;

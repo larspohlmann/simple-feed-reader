@@ -199,8 +199,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator = $this->configurator(['gpt-4o']);
         $user = $this->user('cfg-cap@example.test');
 
-        for ($i = 0; $i < 20; ++$i) {
-            $configurator->addConfiguration($user, null, 'https://api.example.test/v1', sprintf('sk-key-%04d', $i));
+        for ($index = 0; $index < 20; ++$index) {
+            $configurator->addConfiguration($user, null, 'https://api.example.test/v1', sprintf('sk-key-%04d', $index));
         }
 
         $this->expectException(TooManyConfigurationsException::class);
@@ -405,8 +405,8 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator = $this->configurator(['gpt-4o']);
         $user = $this->user('cfg-duplicate-cap@example.test');
         $first = $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-key-0000');
-        for ($i = 1; $i < 20; ++$i) {
-            $configurator->addConfiguration($user, null, 'https://api.example.test/v1', sprintf('sk-key-%04d', $i));
+        for ($index = 1; $index < 20; ++$index) {
+            $configurator->addConfiguration($user, null, 'https://api.example.test/v1', sprintf('sk-key-%04d', $index));
         }
 
         $this->expectException(TooManyConfigurationsException::class);

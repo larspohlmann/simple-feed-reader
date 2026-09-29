@@ -102,13 +102,13 @@ final class FeedPreviewServiceTest extends KernelTestCase
     public function testFullTextFeedYieldsFullVerdictAndCapsDisplayedItemsAtThree(): void
     {
         $items = '';
-        for ($i = 1; $i <= 9; ++$i) {
+        for ($index = 1; $index <= 9; ++$index) {
             $items .= <<<XML
                 <item>
-                  <title>Post {$i}</title>
-                  <link>https://example.com/{$i}</link>
-                  <guid>https://example.com/{$i}</guid>
-                  <description>Short teaser {$i}.</description>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
+                  <description>Short teaser {$index}.</description>
                   <content:encoded><![CDATA[{$this->longParagraph()}]]></content:encoded>
                 </item>
                 XML;
@@ -128,13 +128,13 @@ final class FeedPreviewServiceTest extends KernelTestCase
     public function testSummaryOnlyFeedYieldsSummaryVerdict(): void
     {
         $items = '';
-        for ($i = 1; $i <= 3; ++$i) {
+        for ($index = 1; $index <= 3; ++$index) {
             $items .= <<<XML
                 <item>
-                  <title>Post {$i}</title>
-                  <link>https://example.com/{$i}</link>
-                  <guid>https://example.com/{$i}</guid>
-                  <description>Just a short description for post {$i}.</description>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
+                  <description>Just a short description for post {$index}.</description>
                 </item>
                 XML;
         }
@@ -149,12 +149,12 @@ final class FeedPreviewServiceTest extends KernelTestCase
     public function testTitlesOnlyFeedYieldsTitleOnlyVerdict(): void
     {
         $items = '';
-        for ($i = 1; $i <= 3; ++$i) {
+        for ($index = 1; $index <= 3; ++$index) {
             $items .= <<<XML
                 <item>
-                  <title>Post {$i}</title>
-                  <link>https://example.com/{$i}</link>
-                  <guid>https://example.com/{$i}</guid>
+                  <title>Post {$index}</title>
+                  <link>https://example.com/{$index}</link>
+                  <guid>https://example.com/{$index}</guid>
                 </item>
                 XML;
         }

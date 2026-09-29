@@ -43,7 +43,10 @@ final class AuditFindingsModelTest extends TestCase
 
         self::assertSame(2, $findings->audited());
         self::assertSame(2, $findings->extracted());
-        self::assertSame([1], array_map(static fn (AuditFindingModel $f): int => $f->entryId, $findings->ranked()));
+        self::assertSame(
+            [1],
+            array_map(static fn (AuditFindingModel $finding): int => $finding->entryId, $findings->ranked()),
+        );
     }
 
     public function testRanksTheFlaggedArticlesWorstFirstAndDropsTheCleanOnes(): void
@@ -54,7 +57,10 @@ final class AuditFindingsModelTest extends TestCase
             $this->finding(3, 11, 'A', [$this->marker('link_dense', 3), $this->marker('chrome_share', 2)]),
         ])]);
 
-        self::assertSame([3, 1], array_map(static fn (AuditFindingModel $f): int => $f->entryId, $findings->ranked()));
+        self::assertSame(
+            [3, 1],
+            array_map(static fn (AuditFindingModel $finding): int => $finding->entryId, $findings->ranked()),
+        );
     }
 
     public function testRanksFeedsByTheShareThatFailsSoAProlificFeedCannotTopTheListOnVolumeAlone(): void
@@ -94,7 +100,7 @@ final class AuditFindingsModelTest extends TestCase
 
         self::assertSame(
             ['NavigationChromeTrimmer' => 2, 'ShareWidgetRemover' => 1],
-            $findings->tally(static fn (CleanupMarkerModel $m): string => $m->suspect),
+            $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->suspect),
         );
     }
 
@@ -216,8 +222,8 @@ final class AuditFindingsModelTest extends TestCase
     {
         $path = (string) tempnam(sys_get_temp_dir(), 'audit');
         $this->files[] = $path;
-        $encode = static fn (AuditFindingModel $f): string
-            => json_encode($f->toFindingsFileRecord(), \JSON_THROW_ON_ERROR);
+        $encode = static fn (AuditFindingModel $finding): string
+            => json_encode($finding->toFindingsFileRecord(), \JSON_THROW_ON_ERROR);
         $lines = array_map($encode, $findings);
         file_put_contents($path, $lines === [] ? '' : implode("\n", $lines) . "\n");
 

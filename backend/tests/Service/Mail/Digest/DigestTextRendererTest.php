@@ -26,9 +26,9 @@ final class DigestTextRendererTest extends TestCase
     {
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $dir = \dirname(__DIR__, 4) . '/translations';
-        $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
-        $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+        $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
 
         $this->renderer = new DigestTextRenderer($translator);
     }

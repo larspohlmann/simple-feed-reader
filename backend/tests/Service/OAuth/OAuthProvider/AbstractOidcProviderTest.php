@@ -261,7 +261,7 @@ final class AbstractOidcProviderTest extends TestCase
      * Every one of these collapses two provider accounts onto one
      * `user_identity` row, or one provider account onto two — which is the same
      * defect the empty-subject check above exists to prevent, wearing a hat.
-     * The whitespace-only case in particular passed a bare `'' === $sub` check.
+     * The whitespace-only case in particular passed a bare `'' === $subject` check.
      *
      * @return iterable<string, array{string}>
      */
@@ -524,8 +524,8 @@ final class AbstractOidcProviderTest extends TestCase
             try {
                 $this->provider($response)->exchangeCode('c', 'v', self::NONCE);
                 self::fail('expected the exchange to fail');
-            } catch (OAuthFailedException $e) {
-                $shapes[] = [$e::class, $e->getMessage(), (new OAuthProblems())->resolve($e)];
+            } catch (OAuthFailedException $exception) {
+                $shapes[] = [$exception::class, $exception->getMessage(), (new OAuthProblems())->resolve($exception)];
             }
         }
 
@@ -575,7 +575,7 @@ final class AbstractOidcProviderTest extends TestCase
 
     private function tokenResponseFromPayload(string $payload): MockResponse
     {
-        $encode = static fn (string $data): string => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        $encode = static fn (string $bytes): string => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
 
         $idToken = $encode('{"alg":"RS256","typ":"JWT"}') . '.' . $encode($payload) . '.signature';
 

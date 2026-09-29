@@ -89,10 +89,10 @@ final class EntryStateUpdaterTest extends DbTestCase
 
     private function rows(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function updater(): EntryStateUpdater

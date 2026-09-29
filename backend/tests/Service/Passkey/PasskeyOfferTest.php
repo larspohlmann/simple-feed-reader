@@ -22,12 +22,12 @@ final class PasskeyOfferTest extends TestCase
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
         $offer = new PasskeyOffer(new NaiveUtcClock(new MockClock($now)));
-        $prefs = $this->preferences();
-        self::assertNull($prefs->getPasskeyOfferAnsweredAt());
+        $preferences = $this->preferences();
+        self::assertNull($preferences->getPasskeyOfferAnsweredAt());
 
-        $offer->markAnswered($prefs->getUser());
+        $offer->markAnswered($preferences->getUser());
 
-        self::assertEquals($now, $prefs->getPasskeyOfferAnsweredAt());
+        self::assertEquals($now, $preferences->getPasskeyOfferAnsweredAt());
     }
 
     /**
@@ -42,25 +42,25 @@ final class PasskeyOfferTest extends TestCase
     {
         $clock = new MockClock('2026-08-01T00:00:00Z');
         $offer = new PasskeyOffer(new NaiveUtcClock($clock));
-        $prefs = $this->preferences();
+        $preferences = $this->preferences();
         $seededAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $prefs->markPasskeyOfferAnswered($seededAt);
+        $preferences->markPasskeyOfferAnswered($seededAt);
 
         $clock->modify('+1 day');
-        $offer->markAnswered($prefs->getUser());
+        $offer->markAnswered($preferences->getUser());
 
-        self::assertEquals($seededAt, $prefs->getPasskeyOfferAnsweredAt());
+        self::assertEquals($seededAt, $preferences->getPasskeyOfferAnsweredAt());
     }
 
     public function testANonUtcClockIsNormalisedToNaiveUtcBeforeRecording(): void
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
         $offer = new PasskeyOffer(new NaiveUtcClock($clock));
-        $prefs = $this->preferences();
+        $preferences = $this->preferences();
 
-        $offer->markAnswered($prefs->getUser());
+        $offer->markAnswered($preferences->getUser());
 
-        $answeredAt = $prefs->getPasskeyOfferAnsweredAt();
+        $answeredAt = $preferences->getPasskeyOfferAnsweredAt();
         self::assertNotNull($answeredAt);
         self::assertSame('UTC', $answeredAt->getTimezone()->getName());
         self::assertEquals(new \DateTimeImmutable('2026-08-28T10:00:00Z'), $answeredAt);

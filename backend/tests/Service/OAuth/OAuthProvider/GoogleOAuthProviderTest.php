@@ -100,7 +100,7 @@ final class GoogleOAuthProviderTest extends TestCase
 
     private static function tokenResponse(string $issuer): MockResponse
     {
-        $encode = static fn (string $data): string => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        $encode = static fn (string $bytes): string => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
 
         $claims = json_encode([
             'sub' => 'sub-123',

@@ -23,8 +23,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testProxyRequestOmitsResolveAndIsTriedFirst(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('ok');
         });
@@ -43,9 +47,13 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testProxyTransportFailureFallsThroughToPinnedDirect(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
-            if (isset($o['proxy'])) {
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+            if (isset($options['proxy'])) {
                 return new MockResponse('', ['error' => 'proxy down']);
             }
 
@@ -70,9 +78,13 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testProxyErrorStatusFallsThroughToPinnedDirectWhenFallbackOn(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
-            if (isset($o['proxy'])) {
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
+            if (isset($options['proxy'])) {
                 return new MockResponse('blocked', ['http_code' => 403]);
             }
 
@@ -95,8 +107,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testProxyErrorStatusStaysTerminalWhenFallbackOff(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('blocked', ['http_code' => 403]);
         });
@@ -116,8 +132,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testProxyRedirectIsReturnedNotSecondGuessed(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/moved']]);
         });
@@ -183,8 +203,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testNullEgressProxyIsByteForByteTheCurrentLoop(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('ok');
         });
@@ -199,8 +223,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testDirectFallbackDisabledThrowsInsteadOfFallingThrough(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('', ['error' => 'proxy down']);
         });
@@ -226,8 +254,12 @@ final class FailoverRequestSenderProxyTest extends TestCase
     public function testAnUnreadableProxyPasswordFailsTheSendAndNeverGoesDirect(): void
     {
         $calls = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$calls): MockResponse {
-            $calls[] = $o;
+        $client = new MockHttpClient(function (
+            string $method,
+            string $url,
+            array $options,
+        ) use (&$calls): MockResponse {
+            $calls[] = $options;
 
             return new MockResponse('ok');
         });

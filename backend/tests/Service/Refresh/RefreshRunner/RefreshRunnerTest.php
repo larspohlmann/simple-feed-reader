@@ -945,8 +945,8 @@ final class RefreshRunnerTest extends DbTestCase
         // per-feed floor, so the ancient entry below falls beyond the
         // newest-twenty boundary and is eligible for the age pass.
         $recentDate = $this->clock->now()->modify('-1 day');
-        for ($i = 0; $i < 20; ++$i) {
-            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
             $filler->setPublishedAt($recentDate);
             $this->entityManager->persist($filler);
         }
@@ -980,8 +980,8 @@ final class RefreshRunnerTest extends DbTestCase
         // feed would survive pruning regardless of whether this run scope
         // is meant to prune at all.
         $recentDate = $this->clock->now()->modify('-1 day');
-        for ($i = 0; $i < 20; ++$i) {
-            $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
+        for ($index = 0; $index < 20; ++$index) {
+            $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
             $filler->setPublishedAt($recentDate);
             $this->entityManager->persist($filler);
         }
