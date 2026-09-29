@@ -6,8 +6,8 @@ namespace App\Tests\Service\Ingest\PlatformEntryRule;
 
 use App\Enum\CommentsLoad;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
 use App\Service\Parser\Model\ParsedEntryModel;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -177,7 +177,7 @@ final class RedditEntryRuleTest extends TestCase
     {
         $document = new \DOMDocument();
         $document->load(__DIR__ . '/../../../Fixtures/reddit/subreddit.atom');
-        $feed = (new Atom10Parser())->parse($document);
+        $feed = FeedFormatParsers::atom10()->parse($document);
         $rule = new RedditEntryRule();
 
         self::assertNotSame([], $feed->entries);

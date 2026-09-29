@@ -25,6 +25,12 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
     private const string WFW_NS = 'http://wellformedweb.org/CommentAPI/';
 
+    public function __construct(
+        private FeedItemImageSelector $imageSelector,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
+
     public function supports(\DOMElement $root): bool
     {
         return $root->localName === 'rss';
@@ -65,8 +71,8 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $description = XmlHelper::childText($item, 'description');
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
 
-        $image = FeedItemImageSelector::fromRss2($item, $contentEncoded ?? $description);
-        $mediaBundle = ItemMediaExtractor::extract($item);
+        $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),

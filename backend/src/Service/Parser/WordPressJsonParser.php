@@ -22,6 +22,10 @@ use App\Service\Text\Support\PlainText;
  */
 final readonly class WordPressJsonParser
 {
+    public function __construct(private ItemImageExtractor $imageExtractor)
+    {
+    }
+
     public function parse(string $body): ParsedFeedModel
     {
         /** @var mixed $posts */
@@ -79,8 +83,8 @@ final readonly class WordPressJsonParser
             return new DeclaredImageModel($jetpackUrl);
         }
 
-        return ItemImageExtractor::fromHtml($this->rendered($post, 'content'))
-            ?? ItemImageExtractor::fromHtml($this->rendered($post, 'excerpt'));
+        return $this->imageExtractor->fromHtml($this->rendered($post, 'content'))
+            ?? $this->imageExtractor->fromHtml($this->rendered($post, 'excerpt'));
     }
 
     /** @param array<string, mixed> $post */

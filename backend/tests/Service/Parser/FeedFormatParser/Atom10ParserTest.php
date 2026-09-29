@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class Atom10ParserTest extends TestCase
@@ -17,7 +17,7 @@ final class Atom10ParserTest extends TestCase
         $document = new \DOMDocument();
         $document->loadXML($xml);
 
-        return (new Atom10Parser())->parse($document);
+        return FeedFormatParsers::atom10()->parse($document);
     }
 
     private function parseSingleEntry(string $entryXml): ParsedEntryModel

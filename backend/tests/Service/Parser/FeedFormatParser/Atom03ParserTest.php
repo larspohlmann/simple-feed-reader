@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
-use App\Service\Parser\FeedFormatParser\Atom03Parser;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class Atom03ParserTest extends TestCase
@@ -15,7 +15,7 @@ final class Atom03ParserTest extends TestCase
         $document = new \DOMDocument();
         $document->loadXML($xml);
 
-        return (new Atom03Parser())->parse($document);
+        return FeedFormatParsers::atom03()->parse($document);
     }
 
     public function testEntryDateComesFromDublinCoreWhenTheDialectDatesAreAbsent(): void

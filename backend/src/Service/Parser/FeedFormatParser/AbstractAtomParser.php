@@ -26,6 +26,12 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
  */
 abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 {
+    public function __construct(
+        private FeedItemImageSelector $imageSelector,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
+
     /** The single XML namespace this dialect uses throughout the document. */
     abstract protected function namespaceUri(): string;
 
@@ -102,12 +108,12 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         $contentHtml = $this->elementMarkup($entry, $ns, 'content');
-        $image = FeedItemImageSelector::fromAtom(
+        $image = $this->imageSelector->fromAtom(
             $entry,
             $ns,
             [$contentHtml, $this->elementMarkup($entry, $ns, 'summary')],
         );
-        $mediaBundle = ItemMediaExtractor::extract($entry);
+        $mediaBundle = $this->mediaExtractor->extract($entry);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),

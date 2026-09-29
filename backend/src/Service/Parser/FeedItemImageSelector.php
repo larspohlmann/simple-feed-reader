@@ -6,44 +6,44 @@ namespace App\Service\Parser;
 
 use App\Service\Image\Model\DeclaredImageModel;
 
-final class FeedItemImageSelector
+final readonly class FeedItemImageSelector
 {
-    public static function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    public function __construct(private ItemImageExtractor $extractor)
     {
-        $image = ItemImageExtractor::fromMedia($item) ?? ItemImageExtractor::fromRssEnclosure($item);
+    }
+
+    public function fromRss2(\DOMElement $item, ?string $bodyHtml): ?DeclaredImageModel
+    {
+        $image = $this->extractor->fromMedia($item) ?? $this->extractor->fromRssEnclosure($item);
 
         return $image
-            ?? ItemImageExtractor::fromCustomImageElement($item)
-            ?? ItemImageExtractor::fromHtml($bodyHtml);
+            ?? $this->extractor->fromCustomImageElement($item)
+            ?? $this->extractor->fromHtml($bodyHtml);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    public static function fromAtom(
+    public function fromAtom(
         \DOMElement $entry,
         string $namespace,
         array $bodyHtmlCandidates,
     ): ?DeclaredImageModel {
-        $image = ItemImageExtractor::fromMedia($entry) ?? ItemImageExtractor::fromAtomEnclosure($entry, $namespace);
+        $image = $this->extractor->fromMedia($entry) ?? $this->extractor->fromAtomEnclosure($entry, $namespace);
 
         return $image
-            ?? ItemImageExtractor::fromCustomImageElement($entry)
-            ?? self::firstBodyImage($bodyHtmlCandidates);
+            ?? $this->extractor->fromCustomImageElement($entry)
+            ?? $this->firstBodyImage($bodyHtmlCandidates);
     }
 
     /** @param list<?string> $bodyHtmlCandidates */
-    private static function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImageModel
+    private function firstBodyImage(array $bodyHtmlCandidates): ?DeclaredImageModel
     {
         foreach ($bodyHtmlCandidates as $bodyHtml) {
-            $image = ItemImageExtractor::fromHtml($bodyHtml);
+            $image = $this->extractor->fromHtml($bodyHtml);
             if ($image !== null) {
                 return $image;
             }
         }
 
         return null;
-    }
-
-    private function __construct()
-    {
     }
 }

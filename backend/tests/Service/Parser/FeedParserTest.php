@@ -6,11 +6,8 @@ namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedFormatParser\Atom03Parser;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\FeedFormatParser\Rss1Parser;
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Service\Parser\FeedParser;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class FeedParserTest extends TestCase
@@ -18,10 +15,10 @@ final class FeedParserTest extends TestCase
     private function parser(): FeedParser
     {
         return new FeedParser(new FeedParserFactory([
-            new Rss2Parser(),
-            new Atom10Parser(),
-            new Atom03Parser(),
-            new Rss1Parser(),
+            FeedFormatParsers::rss2(),
+            FeedFormatParsers::atom10(),
+            FeedFormatParsers::atom03(),
+            FeedFormatParsers::rss1(),
         ]));
     }
 

@@ -11,6 +11,7 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Parser\FeedParser;
+use App\Service\Parser\ItemImageExtractor;
 use App\Service\Parser\WordPressJsonParser;
 use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\FeedPreviewService;
@@ -37,7 +38,7 @@ final class FeedPreviewServiceTest extends KernelTestCase
             $parser,
             $extractor,
             new ScrapeFallbackPolicy(),
-            new WordPressJsonParser(),
+            new WordPressJsonParser(new ItemImageExtractor()),
         );
     }
 

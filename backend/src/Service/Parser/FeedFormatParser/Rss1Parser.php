@@ -24,6 +24,12 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
 
+    public function __construct(
+        private ItemImageExtractor $imageExtractor,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
+
     public function supports(\DOMElement $root): bool
     {
         return $root->localName === 'RDF';
@@ -64,10 +70,10 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         $about = trim($item->getAttributeNS(self::RDF_NS, 'about'));
         $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
-        $image = ItemImageExtractor::fromMedia($item)
-            ?? ItemImageExtractor::fromCustomImageElement($item)
-            ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
-        $mediaBundle = ItemMediaExtractor::extract($item);
+        $image = $this->imageExtractor->fromMedia($item)
+            ?? $this->imageExtractor->fromCustomImageElement($item)
+            ?? $this->imageExtractor->fromHtml($contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($about === '' ? null : $about, $link, $title),

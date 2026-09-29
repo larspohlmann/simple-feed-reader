@@ -23,12 +23,12 @@ use Dom\Element;
  * URLs are returned verbatim — callers that need an absolute URL resolve it
  * themselves.
  */
-final class ItemImageExtractor
+final readonly class ItemImageExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
 
     /** Media RSS image, searching <media:group> when nothing is attached directly. */
-    public static function fromMedia(\DOMElement $item): ?DeclaredImageModel
+    public function fromMedia(\DOMElement $item): ?DeclaredImageModel
     {
         $candidates = self::mediaCandidatesIn($item);
 
@@ -43,7 +43,7 @@ final class ItemImageExtractor
     }
 
     /** RSS 2.0 <enclosure type="image/*" url="…">. */
-    public static function fromRssEnclosure(\DOMElement $item): ?DeclaredImageModel
+    public function fromRssEnclosure(\DOMElement $item): ?DeclaredImageModel
     {
         foreach ($item->childNodes as $child) {
             if (!$child instanceof \DOMElement || $child->localName !== 'enclosure') {
@@ -62,7 +62,7 @@ final class ItemImageExtractor
     }
 
     /** Atom <link rel="enclosure" type="image/*" href="…">. */
-    public static function fromAtomEnclosure(\DOMElement $entry, string $ns): ?DeclaredImageModel
+    public function fromAtomEnclosure(\DOMElement $entry, string $ns): ?DeclaredImageModel
     {
         foreach ($entry->childNodes as $child) {
             if (
@@ -93,14 +93,14 @@ final class ItemImageExtractor
      * declared candidate wins. The `url` attribute is required, so the standard
      * channel-level <image> (which nests a <url> child) never matches here.
      */
-    public static function fromCustomImageElement(\DOMElement $item): ?DeclaredImageModel
+    public function fromCustomImageElement(\DOMElement $item): ?DeclaredImageModel
     {
         return self::widest(self::customImageCandidates($item, 'image_big'))
             ?? self::widest(self::customImageCandidates($item, 'image'));
     }
 
     /** First non-beacon <img src="…"> in a fragment of HTML, with the dimensions it declares. */
-    public static function fromHtml(?string $html): ?DeclaredImageModel
+    public function fromHtml(?string $html): ?DeclaredImageModel
     {
         if ($html === null || $html === '') {
             return null;
@@ -203,9 +203,5 @@ final class ItemImageExtractor
         }
 
         return $best;
-    }
-
-    private function __construct()
-    {
     }
 }
