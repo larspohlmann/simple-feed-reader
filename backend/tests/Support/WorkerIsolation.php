@@ -7,11 +7,8 @@ namespace App\Tests\Support;
 use function putenv;
 
 /**
- * Keeps parallel test workers out of each other's state.
- *
- * A parallel runner (Infection, ParaTest) gives every worker a TEST_TOKEN.
- * Without one, this does nothing at all: a serial `php bin/phpunit` run keeps
- * the plain, inspectable database file and cache directory it always had.
+ * Keeps parallel test workers (Infection, ParaTest: one TEST_TOKEN each) out of each other's state. Without a token it
+ * does nothing, so a serial run keeps the plain database file and cache directory.
  */
 final readonly class WorkerIsolation
 {
@@ -28,13 +25,8 @@ final readonly class WorkerIsolation
             WorkerDatabaseUrl::forWorker(self::read('DATABASE_URL'), $workerToken),
         );
 
-        // The cache pools are shared state too, and the rate limiter keeps its
-        // sliding windows in one of them: without this a worker spends the
-        // budget its siblings were about to assert on, and their tests fail
-        // with a 429 that has nothing to do with the code under test. The
-        // directory is the lever rather than prefix_seed, because pool
-        // namespaces are computed when the container is compiled and the
-        // workers share one compiled container.
+        // The rate limiter keeps its windows in the cache pools, so each worker gets its own directory. The directory,
+        // not prefix_seed: pool namespaces are fixed when the one shared container is compiled.
         self::write('CACHE_DIRECTORY', self::read('CACHE_DIRECTORY') . $workerToken);
     }
 

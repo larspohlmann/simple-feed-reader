@@ -9,19 +9,8 @@ use function strrpos;
 use function substr_replace;
 
 /**
- * Gives a parallel test worker a database file of its own.
- *
- * Infection (like ParaTest) runs each worker with a TEST_TOKEN, and
- * doctrine.yaml turns that token into a dbname suffix. That isolates the MySQL
- * leg, but a SQLite DSN carries a file path rather than a database name, so the
- * suffix never reaches it: every worker would open — and tests/bootstrap.php
- * would delete — the same file. Deleting a database out from under the sibling
- * workers fails their tests, and a mutation run reads a failing test as a
- * killed mutant, so the score comes out high for the wrong reason.
- *
- * Putting the token in the file name closes that gap. The token is the worker
- * index, so the file count is bounded by the thread count, not by the number of
- * mutants.
+ * Puts TEST_TOKEN into a SQLite file name: doctrine.yaml's dbname suffix never reaches a file path, so parallel
+ * workers would share one file that tests/bootstrap.php deletes, and Infection would score the failures as kills.
  */
 final readonly class WorkerDatabaseUrl
 {
