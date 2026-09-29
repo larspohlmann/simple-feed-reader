@@ -68,7 +68,7 @@ final readonly class ServiceRoleClass
 
     public function role(): ?string
     {
-        return ServiceRoleNames::roleOf($this->namespace());
+        return ServiceRoleNames::roleOfClass($this->name());
     }
 
     public function area(): string

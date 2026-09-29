@@ -68,8 +68,13 @@ final class ServiceRoleNames
         return implode('\\', \array_slice($segments, 0, $depth));
     }
 
+    public static function roleOfClass(string $name): ?string
+    {
+        return self::roleOf(self::namespaceOf($name));
+    }
+
     /** The innermost role folder a namespace sits in, or null in an area root or an interface folder. */
-    public static function roleOf(string $namespace): ?string
+    private static function roleOf(string $namespace): ?string
     {
         foreach (array_reverse(explode('\\', $namespace)) as $segment) {
             if (\in_array($segment, self::ROLES, true)) {

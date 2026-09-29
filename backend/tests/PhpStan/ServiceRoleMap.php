@@ -138,7 +138,7 @@ final readonly class ServiceRoleMap
             return true;
         }
         if ($reflection->isInterface()) {
-            return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
+            return ServiceRoleNames::MODEL !== ServiceRoleNames::roleOfClass($type);
         }
         $class = $this->classFor($type);
         $isPerCall = null === $class ? isset($this->builtPerCall[$type]) : $this->isPerCall($class);
@@ -154,7 +154,7 @@ final readonly class ServiceRoleMap
             $class->interfaceNames(),
             static fn (string $interface): bool => ServiceRoleNames::moduleOf($interface) === $module
                 && ServiceRoleNames::isServiceOrHttp($interface)
-                && null === ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($interface)),
+                && null === ServiceRoleNames::roleOfClass($interface),
         );
         sort($interfaces);
 

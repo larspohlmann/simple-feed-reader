@@ -59,7 +59,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
             );
         }
         foreach ($service->suppliedConstructorTypes() as $type) {
-            $role = ServiceRoleNames::roleOf(ServiceRoleNames::namespaceOf($type));
+            $role = ServiceRoleNames::roleOfClass($type);
             if (\in_array($role, self::UNSUPPLIED_ROLES, true)) {
                 $violations[] = new ServiceRoleViolation(
                     ServiceRoleCheck::RootService,
