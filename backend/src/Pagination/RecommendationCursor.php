@@ -8,10 +8,8 @@ use App\Pagination\Exception\MalformedCursorException;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 
 /**
- * Opaque keyset-pagination cursor for the for-you feed: base64url of
- * "<runId>|<position>". Modeled on EntryCursor, but the for-you feed orders by
- * (run DESC, position ASC) — a score order the (effectiveDate, id) cursor
- * cannot express — so it needs its own pair.
+ * Opaque keyset cursor for the for-you feed: base64url of "<runId>|<position>". Its own pair, because the feed
+ * orders by (run DESC, position ASC), which EntryCursor's (instant, id) cannot express.
  */
 final readonly class RecommendationCursor
 {

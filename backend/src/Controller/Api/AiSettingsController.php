@@ -171,7 +171,7 @@ final readonly class AiSettingsController
     )]
     /**
      * REQUIRE_ALL_PROPERTIES: the one nullable payload here, so a body that never mentions `maxBatchSize` must
-     * not clear the account's cap (#445). Clearing takes an explicit `{"maxBatchSize": null}`.
+     * not clear the account's cap. Clearing takes an explicit `{"maxBatchSize": null}`.
      */
     public function setMaxBatchSize(
         #[CurrentUser] User $user,

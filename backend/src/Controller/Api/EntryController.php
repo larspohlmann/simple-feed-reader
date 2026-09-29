@@ -107,10 +107,8 @@ final readonly class EntryController
     }
 
     /**
-     * The for-you list's own mark-read. It carries no scope, and it is not a
-     * scope on `/mark-read` above: that endpoint's whole shape is a watermark
-     * per subscription, which this list must not move (see
-     * `ForYouMarkReadService`). The same split the search list already makes.
+     * Its own endpoint, not a scope on `/mark-read`: that one moves a watermark per subscription, which marking the
+     * for-you list must never move (ForYouMarkReadService).
      */
     #[Route('/for-you/mark-read', name: 'api_entries_for_you_mark_read', methods: ['POST'])]
     public function markForYouRead(

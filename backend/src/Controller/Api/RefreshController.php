@@ -16,12 +16,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * Runs one budgeted refresh slice over the caller's own feeds — or a single one
- * via `?feedId=` — and returns the tally as JSON. Always HTTP 200: the client
- * switches on the `status` field (busy → wait and retry; partial → keep
- * looping; completed → done; aborted → terminal error) and loops until
- * `remaining` reaches 0. `progress` is the run as a whole — every
- * slice of it — and is the only figure a client should render.
+ * One budgeted refresh slice over the caller's feeds, narrowed by `?feedId=` or `?tag=`. The client loops on
+ * `status` (busy: wait and retry; partial: call again; completed: done; aborted: stop) until `remaining` is 0.
  */
 final readonly class RefreshController
 {
