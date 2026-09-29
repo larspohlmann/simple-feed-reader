@@ -29,6 +29,7 @@ import {
   ToTopButtonComponent,
 } from '../../shared/to-top-button/to-top-button.component';
 import { EntryRowComponent } from '../entry-row/entry-row.component';
+import { CaughtUpIllustrationComponent } from '../caught-up-illustration/caught-up-illustration.component';
 import { RecommendationStripComponent } from '../recommendation-strip/recommendation-strip.component';
 import { RunHeaderComponent } from '../run-header/run-header.component';
 import { groupByRun, RunGroup } from '../for-you-runs';
@@ -66,6 +67,7 @@ import { LanguageService } from '../../core/language.service';
 import { Problem } from '../../core/problem';
 import { LayoutService } from '../layout.service';
 import { CatalogStore } from '../../discover/catalog.store';
+import { SubscriptionsStore } from '../subscriptions.store';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { nextHeaderHidden } from '../header-scroll';
 import { REVEAL_STEP, isAppendedPage, prefetchMargin } from '../paging';
@@ -91,6 +93,7 @@ const RELOAD_SPINNER_DELAY_MS = 150;
 // One shared instance: a fresh `[]` per check would change every tag-less block's
 // input identity on every tick and re-render it, defeating OnPush (#501).
 const NO_TAGS: SubscriptionTagDto[] = [];
+const FEW_SUBSCRIPTIONS = 5;
 
 /** The heading icon for each fixed view, matching its sidebar row's glyph so the
  *  list a reader lands in reads as the row they clicked (#411). Tag and
@@ -127,6 +130,7 @@ export interface TitleCount {
     TagGlyphComponent,
     FaviconComponent,
     EntryRowComponent,
+    CaughtUpIllustrationComponent,
     RecommendationStripComponent,
     RunHeaderComponent,
     EntryHeroComponent,
@@ -482,6 +486,7 @@ export class EntryListComponent implements OnDestroy {
   private readonly scroll = inject(ListScrollMemory);
   private readonly host = inject(ElementRef<HTMLElement>);
   private readonly catalog = inject(CatalogStore);
+  private readonly subscriptions = inject(SubscriptionsStore);
   private readonly destroyRef = inject(DestroyRef);
   private readonly magazineStyle = inject(MagazineStyleService);
 
@@ -500,6 +505,14 @@ export class EntryListComponent implements OnDestroy {
    *  guess — it simply shows until the shell (which loads the catalog on the
    *  onboarding path) proves the catalog empty. */
   readonly catalogEmpty = computed(() => this.catalog.resolved() && !this.catalog.hasEntries());
+
+  /** The /discover nudge is for an account still building its reading list. */
+  readonly suggestFeeds = computed(
+    () =>
+      !this.catalogEmpty() &&
+      this.subscriptions.resolved() &&
+      this.subscriptions.subscriptions().length < FEW_SUBSCRIPTIONS,
+  );
 
   constructor() {
     // Capture so we hear the gesture even though scroll events fire on inner .rows;

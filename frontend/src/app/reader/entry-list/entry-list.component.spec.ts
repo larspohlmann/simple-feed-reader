@@ -8,7 +8,8 @@ import { EntryListComponent, REFRESH_REVEAL } from './entry-list.component';
 import { ListScrollMemory } from '../list-scroll-memory';
 import { CatalogStore } from '../../discover/catalog.store';
 import { REVEAL_STEP, prefetchMargin } from '../paging';
-import { EntryDto, ListOrder } from '../models';
+import { EntryDto, ListOrder, SubscriptionDto } from '../models';
+import { SubscriptionsStore } from '../subscriptions.store';
 import { MagazineBlock } from '../magazine/magazine-block';
 import { ReadingFocusService } from '../../core/reading-focus.service';
 import { MagazineStyleService } from '../../core/magazine-style.service';
@@ -38,6 +39,13 @@ const memory = { save: jest.fn(), read: jest.fn().mockReturnValue(0) };
 // A stub for the two signals `catalogEmpty` reads — keeps the real CatalogStore
 // (and its HttpClient chain) out of this component's unit test.
 const catalog = { resolved: signal(false), hasEntries: signal(false) };
+const subscriptionsStore = { resolved: signal(true), subscriptions: signal<SubscriptionDto[]>([]) };
+
+function subscribedTo(count: number): void {
+  subscriptionsStore.subscriptions.set(
+    Array.from({ length: count }, (_, i) => ({ id: i + 1 }) as SubscriptionDto),
+  );
+}
 
 const entry = (id: number, over: Partial<EntryDto> = {}): EntryDto => ({
   id,
@@ -89,6 +97,7 @@ function mount(over: Record<string, unknown> = {}) {
       provideRouter([]),
       { provide: ListScrollMemory, useValue: memory },
       { provide: CatalogStore, useValue: catalog },
+      { provide: SubscriptionsStore, useValue: subscriptionsStore },
       { provide: MAGAZINE_STYLE_WRITER, useValue: { write: () => of(true) } },
     ],
   });
@@ -172,6 +181,8 @@ function fireRowsResize(f: ComponentFixture<EntryListComponent>): void {
 describe('EntryListComponent', () => {
   beforeEach(() => {
     localStorage.clear();
+    subscriptionsStore.resolved.set(true);
+    subscribedTo(1);
     MockResizeObserver.instances = [];
     (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = MockResizeObserver;
   });
@@ -898,6 +909,70 @@ describe('EntryListComponent', () => {
     const empty = el.querySelector('.empty')!;
     expect(empty.textContent).toContain('Nothing here yet.');
     expect(empty.querySelector('a')).not.toBeNull();
+  });
+
+  describe('the suggested-feeds link in the empty state', () => {
+    const emptyAll = {
+      loading: false,
+      entries: [],
+      selection: { kind: 'all', id: null, unread: true },
+    };
+
+    it('offers the catalog to an account with only a few subscriptions', () => {
+      subscribedTo(4);
+      const el = mount(emptyAll).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.empty a')).not.toBeNull();
+    });
+
+    it('leaves it out once the account follows five or more feeds', () => {
+      subscribedTo(5);
+      const el = mount(emptyAll).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.empty a')).toBeNull();
+    });
+
+    it('leaves it out until the subscriptions have loaded', () => {
+      subscriptionsStore.resolved.set(false);
+      subscribedTo(0);
+      const el = mount(emptyAll).nativeElement as HTMLElement;
+
+      expect(el.querySelector('.empty a')).toBeNull();
+    });
+  });
+
+  describe('the caught-up illustration (#1198)', () => {
+    it('sits in the empty state of an unread selection', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'all', id: null, unread: true },
+      }).nativeElement as HTMLElement;
+      const empty = el.querySelector('.empty')!;
+
+      expect(empty.textContent).toContain("You're all caught up.");
+      expect(empty.querySelector('app-caught-up-illustration')).not.toBeNull();
+    });
+
+    it('stays out of the "Nothing here yet." state', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'all', id: null, unread: false },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+    });
+
+    it('stays out of an unread search that matches nothing', () => {
+      const el = mount({
+        loading: false,
+        entries: [],
+        selection: { kind: 'search', id: null, unread: true, term: 'angular' },
+      }).nativeElement as HTMLElement;
+
+      expect(el.querySelector('app-caught-up-illustration')).toBeNull();
+    });
   });
 
   it('emits loadMore from the fallback button and markAllRead', () => {
