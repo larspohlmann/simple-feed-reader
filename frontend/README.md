@@ -1,8 +1,8 @@
 # Frontend
 
 The Angular 20 single-page app for simple-feed-reader: the reader UI and the full
-auth journey (register, email confirmation, sign-in by password or OAuth, password
-reset). Standalone components and signals throughout; bespoke SCSS over Angular
+auth journey (register, email confirmation, sign-in by password, passkey or OAuth,
+password reset). Standalone components and signals throughout; bespoke SCSS over Angular
 CDK; CSS-custom-property theming. The bearer JWT in `localStorage` is the entire
 auth story, which keeps a future native client in play (see
 [../docs/architecture.md](../docs/architecture.md)).
@@ -22,9 +22,12 @@ npm start
 ```
 
 Serves the app at `http://localhost:4200/`. In development the API base URL is
-`https://localhost:8443` (`src/environments/environment.development.ts`), so bring
-the [Docker stack](../docs/local-docker.md) up first — the SPA talks to the
-backend running there over TLS. The dev build reloads on source changes.
+empty (`src/environments/environment.development.ts`), so the app calls `/api`
+same-origin: the dev server proxies `/api` and `/state` to the `nginx` container
+(`proxy.conf.json`), and only the Docker `frontend` service starts it with
+`--proxy-config proxy.conf.json` (see "Run in Docker" below). Bring the
+[Docker stack](../docs/local-docker.md) up first. The dev build reloads on source
+changes.
 
 In production the API base URL is empty (`src/environments/environment.ts`): the
 SPA is served same-origin with the backend, so requests are relative.
@@ -53,10 +56,12 @@ Runs the full quality gate, the same one CI runs:
 - **ESLint** (`npm run lint`) — TypeScript + Angular template rules.
 - **Prettier** (`npm run format:check`) — formatting. `npm run format` rewrites.
 - **Stylelint** (`npm run stylelint`) — the `.scss` files. `color-no-hex` is on:
-  **hex colours are forbidden in `.scss` outside `src/app/theme/`**, the one place
-  literal colours may appear. Component styles are inline in their `.ts` files
-  (outside Stylelint's `.scss` glob) and are kept token-only (`var(--…)`) by
-  convention, not by the linter.
+  **hex colours are forbidden in `.scss` outside `src/app/theme/`** and the global
+  stylesheets (`src/styles.scss`, `src/styles/`). Spacing, font-size and sizing
+  values take relative units only, and a width media query takes no literal.
+  Every component keeps its styles in a sibling `.scss` file (`styleUrl`), so
+  Stylelint sees all of them.
+- **Spec typecheck** (`npm run typecheck:spec`) — `tsc` over `tsconfig.spec.json`.
 - **Jest** (`npm test`) — unit tests (jest-preset-angular, jsdom).
 
 ## Build
@@ -65,16 +70,18 @@ Runs the full quality gate, the same one CI runs:
 npm run build
 ```
 
-Compiles to `dist/` (production configuration by default: budgets enforced,
-output hashing on). CI runs this to prove the app compiles.
+Compiles to `dist/frontend/browser/` (production configuration by default:
+budgets enforced, output hashing on). CI runs this to prove the app compiles.
 
 ### Production output path (release step)
 
-For a release the production bundle is copied into `backend/public/app/` so the
-SPA is served **same-origin** with the API (which is why the production API base
-URL is empty). That copy is a **release-time step**, not part of every CI run —
-CI builds to `dist/` to verify compilation and stops there. No `angular.json`
-configuration wires the copy in 5a.
+A production install serves the bundle **same-origin** with the API (which is
+why the production API base URL is empty). The copy is a **release-time step**,
+not part of every CI run: the Docker `web` image (`docker/web/Dockerfile`) builds
+the bundle and copies `dist/frontend/browser/` into nginx's document root, and the
+Strato release (`deploy/strato/build-release.sh`) builds it with
+`--configuration production,strato` and copies the same directory into the
+release's `public/`. CI builds to `dist/` to verify compilation and stops there.
 
 ## End-to-end smoke
 
@@ -82,16 +89,19 @@ configuration wires the copy in 5a.
 npm run e2e
 ```
 
-Playwright smokes over the auth journey (`e2e/auth-smoke.spec.ts`), the reader
-shell (`e2e/reader-smoke.spec.ts`), the magazine reading layout
-(`e2e/magazine-smoke.spec.ts`), and settings + admin
-(`e2e/settings-admin-smoke.spec.ts`). They need the **Docker stack up** (they
-drive the real backend), so they are **not** part of `npm run check` or the CI
-unit-gate job — run them locally against Docker, or in a dedicated integration
-job later. The reader, magazine, and settings/admin smokes all sign in as the
-seeded `app:e2e:seed-admin` account (`e2e-admin@example.com`), the same
-fixture the backend e2e suite authenticates as, and skip cleanly when that
-account or the stack is absent.
+Playwright specs under `e2e/`: four smokes, over the auth journey
+(`e2e/auth-smoke.spec.ts`), the reader shell (`e2e/reader-smoke.spec.ts`), the
+magazine reading layout (`e2e/magazine-smoke.spec.ts`), and settings + admin
+(`e2e/settings-admin-smoke.spec.ts`), plus focused specs that each pin one
+behaviour (for example `e2e/pull-to-refresh-mobile.spec.ts`). They need the
+**Docker stack up** (they drive the real backend), so they are **not** part of
+`npm run check` or the CI gate: run them locally against Docker. The weekly
+`.github/workflows/e2e-rot-check.yml` runs them in CI. The global setup
+(`e2e/global-setup.ts`) purges the accounts a previous run left behind, then
+seeds the `app:e2e:seed-admin` account (`e2e-admin@example.com`) and gives it a
+subscription. The reader, magazine, and settings/admin smokes all sign in as
+that account, the same fixture the backend e2e suite authenticates as, and skip
+cleanly when that account or the stack is absent.
 
 ## Reader
 
