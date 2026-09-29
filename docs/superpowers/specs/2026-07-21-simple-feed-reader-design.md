@@ -303,11 +303,12 @@ Key decisions:
 
 ## Fetch pipeline
 
-One service, `RefreshRunner`, three callers (CLI command via SSH, maintenance
-endpoint, user refresh endpoint). Callers differ only in **scope**
-(all due / one user's feeds / one feed), **force** flag, and **time budget**
-(~3 min CLI — server caps execution at 240 s, ~20 s maintenance HTTP,
-~10 s user slice).
+One service, `RefreshRunner`, four callers (the `app:feeds:refresh` command,
+the maintenance endpoints, the Docker worker's five-minute `RefreshDueFeeds`
+message, the user refresh endpoint). Callers differ only in **scope**
+(all due / one user's feeds / one user's tag / one feed), **force** flag,
+whether they **prune**, and **time budget** (120 s for the CLI default and
+the worker, 20 s maintenance HTTP, 25 s user slice).
 
 Loop:
 
@@ -316,23 +317,29 @@ Loop:
 2. **Select due feeds:** `nextFetchAt <= now AND status != 'gone'`, ordered,
    batched.
 3. **Per feed:** conditional GET (stored ETag/Last-Modified; 304 is
-   near-free) → parse (RSS 2.0 / Atom / RSS 1.0) → dedupe by `guidHash` →
-   sanitize → insert new entries → update schedule → **flush per feed**.
-   One broken feed never affects the others; a budget exit loses nothing
-   committed.
-4. **Budget check between feeds:** if remaining budget < safety margin
-   (~10 s, one worst-case fetch), stop cleanly. Unprocessed feeds stay due.
-5. **Return a report** (fetched / notModified / failed / skippedForBudget /
-   remaining) — CLI output, endpoint response, admin feed-health data.
+   near-free), up to `FETCH_CONCURRENCY` (default 8) in flight at once →
+   parse by the feed's `sourceFormat` (`xml`: RSS 2.0 / RSS 1.0 / Atom 1.0 /
+   Atom 0.3; `wp-json`; `scraped`) → dedupe by `guidHash` → sanitize → insert
+   new entries → update schedule → **flush per feed**, serially as each
+   outcome lands. One broken feed never affects the others; a budget exit
+   loses nothing committed. A persistence failure ends the slice as `aborted`.
+4. **Budget check before each fetch starts:** if remaining budget < safety
+   margin (10 s, one worst-case fetch), start no more. Unprocessed feeds stay
+   due.
+5. **Return a report** (status partial / completed / busy / aborted; fetched /
+   notModified / failed / throttled / skippedForBudget / remaining / pruned) —
+   CLI output, endpoint response, worker log.
 
-**Adaptive scheduling:** base interval 60 min, multiplicatively nudged by
-observed activity; floor 30 min, ceiling 24 h.
+**Adaptive scheduling:** a new feed starts at 60 min. A fetch that brings new
+entries resets the interval to the 5 min floor; one that brings none (or a
+304) grows it by half, up to a 2 h ceiling.
 
 **Failure handling (per feed):** errors increment `consecutiveFailures`,
-interval backs off exponentially (×2, cap 7 days); success resets. ~30
-consecutive failures → status `gone` (never auto-fetched; UI shows "appears
-dead" with manual retry). HTTP 410 short-circuits. A 301 updates the stored
-URL once the target proves fetchable.
+interval backs off exponentially (×2 per failure, cap 7 days); success resets.
+30 consecutive failures → status `gone` (never auto-fetched; the "Unhealthy
+feeds" panel lists it as no longer available, with a manual retry). HTTP 410
+short-circuits. A 429 is rationing, not failure: only `nextFetchAt` moves. A
+301 or 308 updates the stored URL once the target proves fetchable.
 
 **SSRF guard** (in the fetcher, applies to every outbound request including
 subscribe-time discovery — the user-triggered, most dangerous path):
@@ -343,87 +350,147 @@ subscribe-time discovery — the user-triggered, most dangerous path):
 - Max 5 redirects, each hop re-validated
 - Response cap ~5 MB, timeout ~10 s per request
 
-**Feed discovery:** pasting an HTML URL scans for
-`<link rel="alternate" type="application/rss+xml">` and offers candidates.
+**Feed discovery:** pasting a URL tries, most certain first: the URL as a
+feed, the feeds the page links (`<link rel="alternate">`, then the WordPress
+REST API), a feed under a conventional path, and last a `scraped` candidate
+built from the page itself; it offers what it finds as candidates.
 
 ### Manual refresh with live progress
 
-`POST /api/refresh` (user JWT) runs one ~10 s slice scoped to the caller's
+`POST /api/refresh` (user JWT) runs one 25 s slice scoped to the caller's
 feeds and returns the tally:
 
 ```json
-{ "status": "partial", "total": 42, "fetched": 9, "notModified": 21,
-  "failed": 1, "remaining": 11 }
+{ "status": "partial", "progress": { "done": 31, "total": 42 },
+  "fetched": 9, "notModified": 21, "failed": 1, "throttled": 0,
+  "skippedForBudget": 0, "remaining": 11, "pruned": 0 }
 ```
 
-The Angular client loops until `remaining` is 0, driving a progress bar. The
-response of each call is the progress event — no WebSockets/SSE/job table.
+The Angular client loops until `remaining` is 0, driving a progress bar from
+`progress`, which the server keeps for the whole run. The response of each
+call is the progress event — no WebSockets/SSE/job table.
 
 - Manual = ignore the schedule, but skip feeds fetched within the last
   ~5 min (cooldown).
 - Global lock shared with cron; `{"status":"busy"}` → client retries after a
   pause.
-- Rate-limited (Symfony RateLimiter, ~1 full cycle per user per few minutes).
+- Rate-limited (Symfony RateLimiter, 90 slices per user per 5 minutes,
+  sliding window).
 - Optional `feedId` parameter doubles as the per-feed "retry now" for dead
-  feeds.
+  feeds; optional `tag` narrows the slice to one tag's feeds.
 
 ## API surface
 
-All under `/api`, JWT-protected except auth endpoints:
+All under `/api`, JWT-protected except the auth, setup, health, catalog-favicon
+and client-error endpoints (passkey enrolment and the passkey list need a JWT):
 
 ```
-POST   /auth/register            → 202, pending_verification (ALTCHA required)
+POST   /auth/register            → 202 { status } (ALTCHA required)
 POST   /auth/verify-email        { token }
-POST   /auth/login               → { token } (403 + reason when pending/suspended)
+POST   /auth/login               → { token } (403 account_not_active when not active)
+GET    /auth/altcha-challenge
 POST   /auth/password-reset-request | POST /auth/password-reset   (ALTCHA on request)
-GET    /auth/oauth/{provider}    → 302   |  …/callback  |  POST /auth/oauth/exchange
-GET    /me
-POST   /refresh                  ← progress-loop endpoint
-GET    /subscriptions            (tags + unread counts included)
-POST   /subscriptions            { url } → subscribed or discovery candidates
-PATCH  /subscriptions/{id}       (customTitle, tags)
-DELETE /subscriptions/{id}
-GET    /tags | POST | PATCH | DELETE
-GET    /entries?feed=&tag=&view=unread|favorites|kept&before=…
-PATCH  /entries/{id}/state       { isRead?, isFavorite?, isKept? }
+GET    /auth/oauth/providers | GET /auth/oauth/{provider} → 302
+GET|POST /auth/oauth/{provider}/callback | POST /auth/oauth/exchange
+POST   /auth/passkey/login/options | POST /auth/passkey/login
+POST   /auth/passkey/register/options | POST /auth/passkey/register
+GET    /auth/passkeys | DELETE /auth/passkeys/{id}
+GET    /setup/status | POST /setup/admin   (first-run admin)
+GET    /me | PATCH /me | DELETE /me | POST /me/resend-verification
+PATCH  /me/preferences | PATCH /me/magazine-style | PATCH /me/digest | POST /me/digest/test
+POST   /me/passkey-offer/answer
+POST   /refresh                  ← progress-loop endpoint (?feedId= | ?tag=)
+GET    /subscriptions            (tags + unread counts included) | GET /subscriptions/counts
+POST   /subscriptions            { url, format?, tagIds?, title? } → 201 subscribed, or discovery candidates
+PATCH  /subscriptions/{id}       (customTitle, tagIds, includeInAllItems, includeInForYou)
+PATCH  /subscriptions/{id}/move-to-tag | PATCH /subscriptions/reorder | PATCH /subscriptions/bulk
+POST   /subscriptions/bulk-unsubscribe | DELETE /subscriptions/{id}
+POST   /feeds/preview | POST /onboarding/subscribe
+GET    /catalog | GET /catalog/feeds/{id}/favicon
+GET    /tags | POST /tags | PATCH /tags/{id} | DELETE /tags/{id}
+PATCH  /tags/reorder | PATCH /tags/{id}/feed-order
+GET    /entries?view=all|unread|favorites|kept|viewed|for-you&subscription=&tag=&unread=&order=&cursor=&limit=
+GET    /entries/{id} | GET /entries/{id}/reader | GET /entries/{id}/comments
+PATCH  /entries/{id}/state       { isHidden?, isFavorite?, isKept?, isViewed? }
 POST   /entries/mark-read        { scope: all|feed|tag, id?, until }
+POST   /entries/for-you/mark-read { until } | POST /entries/mark-read-batch { ids }
+GET    /entries/search | POST /entries/search/mark-read
+GET    /saved-searches | POST /saved-searches | PATCH /saved-searches/{id} | DELETE /saved-searches/{id}
+GET    /entries/saved-searches | GET /entries/saved-searches/{id}
+POST   /entries/saved-searches/mark-read | POST /entries/saved-searches/{id}/mark-read
+GET    /reading/activity
+GET    /me/ai | POST /me/ai/configs | POST /me/ai/configs/{id}/duplicate | GET /me/ai/configs/{id}/models
+PUT    /me/ai/configs/{id}/model | name | reasoning | slow-model | batch-concurrency | max-batch-size | active
+DELETE /me/ai/configs/{id} | GET /me/ai/recommendations | PUT /me/ai/recommendations
+POST   /recommendations/runs | POST /recommendations/runs/resume | POST /recommendations/runs/tick
+GET    /recommendations/runs/current | POST /recommendations/runs/stop | DELETE /recommendations/runs
+GET    /recommendations/runs/history | GET /recommendations/runs/history/{month}
+GET    /recommendations/runs/debug-log | GET /recommendations/runs/debug-log/{id}
+GET    /account/backup | POST /account/restore/preview | POST /account/restore/start | POST /account/restore/entries
 POST   /opml/import  |  GET /opml/export
-GET    /admin/users | POST /admin/users/{id}/approve | reject | suspend
-GET    /admin/feeds  (health)   |  GET /admin/logs
+GET    /admin/users | GET /admin/users/{id} | DELETE /admin/users/{id}
+POST   /admin/users/{id}/approve | reject | suspend | reset-password
+POST   /admin/users/{id}/trial | DELETE /admin/users/{id}/trial | PUT /admin/users/{id}/subscription-limit
+GET    /admin/settings | PUT /admin/settings | GET /admin/grafana | PUT /admin/grafana
+GET    /admin/proxy | PUT /admin/proxy | POST /admin/proxy/test
+GET    /admin/mail | PUT /admin/mail | POST /admin/mail/test | POST /admin/mail/reset | GET /admin/mail/errors
+GET    /admin/catalog | POST /admin/catalog/favicons/warm | GET /admin/catalog/bundled
+POST   /admin/catalog/import | POST /admin/catalog/import/bundled
+POST   /admin/catalog/feeds | PATCH /admin/catalog/feeds/reorder | PATCH /admin/catalog/feeds/{id}
+DELETE /admin/catalog/feeds/{id} | POST /admin/catalog/feeds/{id}/favicon
+POST   /admin/catalog/categories | PATCH /admin/catalog/categories/reorder
+PATCH  /admin/catalog/categories/{id} | DELETE /admin/catalog/categories/{id}
+POST   /client-errors            (frontend error reports)
+GET    /version
 GET    /health                   (public — used by the deploy health check)
 ```
 
-- **Cursor pagination** (`before` = publishedAt+id): offset pagination
-  duplicates/skips items while new entries arrive.
+- **Cursor pagination** (`cursor` = opaque base64url of the sort instant + id,
+  `App\Pagination\EntryCursor`; the sort instant is `effectiveDate`, or
+  `viewedAt` in the viewed list): offset pagination duplicates/skips items
+  while new entries arrive.
 - **`mark-read` carries an `until` timestamp** (client sends its list-load
   time) so entries arriving during reading stay unread — the watermark
   surfacing in the API.
 
 ### Maintenance endpoints (machine callers, not JWT)
 
-`POST /maintenance/{action}?token=…` — long random token from env,
-constant-time comparison, fixed action allowlist:
+Three fixed routes, authorised by a long random token from env
+(`MAINTENANCE_TOKEN`; empty refuses everything), sent in an
+`X-Maintenance-Token` header or, for a caller that cannot set one, as
+`?token=`; constant-time comparison:
 
-- `refresh` — budgeted RefreshRunner slice, called by the scheduled GitHub
-  Actions pinger (or any external cron service)
+- `POST /maintenance/tick` — refresh, then the recommendation, digest,
+  image-verification and saved-search sweeps, then the log spool; the one
+  route an external cron needs on an install without the worker
+- `POST /maintenance/refresh` — a budgeted RefreshRunner slice alone (409
+  when busy, 500 when aborted)
+- `POST /maintenance/recommendations/sweep` — starts the due "For you" runs
+  and advances each active run once
 
 Deploy-time operations (migrations, cache warmup) run over SSH — no
 `post-deploy` HTTP endpoint needed.
 
 ### Error contract
 
-RFC 7807 `application/problem+json` everywhere, produced by a single
-exception listener mapping exception classes → status codes. Stable
-machine-readable `type` values (`validation_error`, `feed_unreachable`,
-`subscription_limit_reached`, …) the client switches on. Unexpected errors →
-opaque 500, details to the log only. Controllers never build error responses
-by hand.
+RFC 7807 `application/problem+json` everywhere under `/api` and
+`/maintenance`, produced by a single exception listener
+(`ApiExceptionListener`) that hands the exception to `ProblemCatalog`, which
+asks one `*Problems` mapper per module (`src/Http/Problem/ExceptionProblems/`)
+for its status code and type. Stable machine-readable `type` values
+(`validation_error`, `subscription_limit_reached`, `rate_limited`,
+`account_not_active`) the client switches on. Unexpected errors → opaque 500,
+details to the log only. Controllers never build error responses by hand.
 
 ### Logging
 
-Monolog `rotating_file`, ~7 days retained — a full disk quota on shared
-hosting takes the DB down. The admin UI includes a read-only viewer for the
-current log; it is the only window into production errors.
+Monolog `rotating_file` of JSON lines, 7 days retained — a full disk quota on
+shared hosting takes the DB down. Grafana with Loki is optional, chosen at
+install time. When a Loki endpoint is configured (the admin's Grafana
+settings, or `GRAFANA_LOKI_PUSH_URL`), a second handler ships every record,
+frontend errors from `POST /api/client-errors` included; on a cgi-fcgi host it
+spools them and the maintenance tick ships the spool. Where Grafana runs, it
+is the window into production errors.
 
 ## Testing
 
