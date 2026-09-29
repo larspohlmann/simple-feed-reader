@@ -7,10 +7,8 @@ namespace App\Service\Reader\Media;
 use Dom\Element;
 
 /**
- * Recognises machine-generated narration — a publisher's text-to-speech reading
- * of the article, offered beside the prose. The file URL or any attribute on the
- * player or its ancestors carries the tell; the reader keeps such a player but
- * marks it so the client can render it small and unobtrusive (#903).
+ * Recognises a publisher's text-to-speech reading of the article by a tell in the file URL or on the player or its
+ * ancestors. The reader keeps such a player but marks it, so the client renders it small.
  */
 final readonly class NarrationSignals
 {
@@ -29,8 +27,7 @@ final readonly class NarrationSignals
         return self::declaresNarration($fileUrl) || $this->holderChainDeclaresNarration($holder);
     }
 
-    /** Whether the element's own attributes name narration — the tell a silent
-     *  text-to-speech widget carries on its container or icon (#959). */
+    /** Whether the element's own attributes name narration, as a silent text-to-speech widget's container does. */
     public function declaredOn(Element $element): bool
     {
         foreach ($element->attributes as $attribute) {
