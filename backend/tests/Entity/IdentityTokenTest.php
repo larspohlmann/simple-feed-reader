@@ -43,17 +43,7 @@ final class IdentityTokenTest extends DbTestCase
         $this->addToAssertionCount(1);
     }
 
-    /**
-     * Plan 3b links an OAuth identity to an existing account by matching the
-     * provider-verified address. If a provider returns `Bob@example.com` for an
-     * account stored as `bob@example.com`, an unnormalised copy here would make
-     * that comparison fail and OAuth would create a second orphaned account
-     * instead of linking to the rightful owner.
-     *
-     * The identity's provider_user_id is deliberately left untouched — it is an
-     * opaque token that may be case-significant, and it is the half of
-     * uniq_identity_provider_uid that actually matters.
-     */
+    /** The address is normalised so linking matches it; the subject is opaque and may be case-significant. */
     public function testIdentityEmailIsNormalisedButProviderIdIsNot(): void
     {
         $user = new User('owner@example.com', new \DateTimeImmutable('2026-07-21 10:00:00'));

@@ -30,16 +30,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * The spawn is only safe to move behind terminate if the listener genuinely
- * fires on that exit and genuinely waits for it. So, like
- * DeferredMailFlushListenerTest, this drives the real kernel rather than
- * calling the listener's methods directly: handle() alone must never launch,
- * and only terminate() may. A console exit never may at all.
- *
- * The real container's DetachedProcessLauncherInterface is swapped for a
- * RecordingProcessLauncher (config/services_test.yaml) so the launch this
- * proves is the one the container-built listener and spawner actually make,
- * not a hand-assembled stand-in.
+ * Drives the real kernel with the container's RecordingProcessLauncher (services_test.yaml): handle() never launches,
+ * terminate() may, and a console exit never does.
  */
 final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
 {
@@ -80,13 +72,7 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
         self::assertSame([[RecommendationDrainSpawner::DRAIN_COMMAND, '--detach']], $this->launcher->launches);
     }
 
-    /**
-     * No heartbeat is marked in this case, so if the listener reached
-     * spawnIfNoWorker() anyway it would find nobody driving the runs and
-     * launch — exactly the same shape as the fresh-heartbeat case below,
-     * minus the heartbeat. An empty launch list here therefore proves the
-     * hasActiveRun() guard, not a presence read that happened to say no.
-     */
+    /** No heartbeat is marked, so an empty launch list proves the hasActiveRun() guard, not a presence read. */
     public function testNoActiveRunSpawnsNothingAndNeverReachesThePresenceRead(): void
     {
         $request = $this->healthRequest();
@@ -109,19 +95,8 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
     }
 
     /**
-     * No console command forks a drainer, whatever it is (#393 review).
-     * `app:e2e:purge-users` is the case that proved the point: docs/local-
-     * docker.md has you stop the worker before the e2e suites, so its
-     * heartbeat ages out, and the purge command that runs at the head of
-     * `composer e2e` then forked a drainer that drove runs against the dev
-     * database for the length of the suite. The drain command is here too
-     * because it surrenders its liveness key before terminating, so it looks
-     * like "nobody is driving" to the presence read and would fork its own
-     * successor on its way out.
-     *
-     * A run is active and no heartbeat is marked, so anything that reached
-     * spawnIfNoWorker() at all would launch -- the empty list is the listener
-     * not being on this event, not a presence read that happened to say no.
+     * No console exit forks a drainer. A run is active and no heartbeat is marked, so an empty launch list means the
+     * listener is not on this event.
      *
      * @param non-empty-string $commandName
      */
@@ -136,20 +111,8 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
     }
 
     /**
-     * The control for the three cases above. Each of them proves a listener is
-     * absent from ConsoleEvents::TERMINATE by dispatching it and finding
-     * nothing launched -- which a dispatch that reached no listener at all
-     * would satisfy just as well, and would go on satisfying if the helper or
-     * the event name ever went wrong. The HTTP case is no control for it: it
-     * proves the fixture over a different channel.
-     *
-     * DeferredMailFlushListener is the proof, and a container-registered one
-     * rather than a listener this test adds: it carries
-     * #[AsEventListener(ConsoleTerminateEvent::class)] for exactly the reason
-     * the drain spawner no longer does -- console exits send no response, so
-     * without it a command's mail would sit in a queue nothing drains. Its
-     * flush is observable, so the same dispatch the absence cases use is shown
-     * to arrive.
+     * The control for the console cases: the same dispatch reaches DeferredMailFlushListener, which is on
+     * ConsoleTerminateEvent, so their empty launch lists are not a dispatch that reached nobody.
      */
     public function testTheConsoleTerminateDispatchReachesTheListenersThatAreOnIt(): void
     {
@@ -178,13 +141,7 @@ final class RecommendationDrainOnTerminateListenerTest extends KernelTestCase
         yield 'an unrelated command' => ['app:feeds:refresh'];
     }
 
-    /**
-     * Reproduces MaintenanceTick's aborted-refresh scenario from the other
-     * side: a closed EntityManager must not turn a listener that runs after
-     * every response into a fatal. Persisting the run happens first, while
-     * the manager is still open; the close happens only afterwards, so the
-     * run genuinely is active and only the guard is what stops the read.
-     */
+    /** A closed EntityManager (MaintenanceTick's aborted refresh) must neither launch nor throw after the response. */
     public function testAClosedEntityManagerIsSurvivedWithoutLaunchingOrThrowing(): void
     {
         $this->persistActiveRun();

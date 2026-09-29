@@ -23,17 +23,8 @@ use Symfony\Component\Messenger\Event\WorkerMessageHandledEvent;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 /**
- * The direct-invocation tests below prove the listener's own logic, but
- * nothing in them proves Symfony's container actually wires the
- * #[AsEventListener] attributes to the real dispatcher for all three events
- * — the same gap DeferredMailFlushListenerTest closes for its sibling
- * listener. The *EventDrainsTheBufferThroughTheRealDispatcher tests below
- * close it here: they drive the real kernel/dispatcher and observe flush()'s
- * real side effect on the container-built LokiPushHandler, not a hand-built
- * stand-in. No Loki URL is configured in the test env, so the push itself
- * never reaches the network — but LokiPushHandler::flush() drains its buffer
- * unconditionally before that, so an emptied buffer is proof the listener
- * fired, not proof of delivery.
+ * The *DrainsTheBufferThroughTheRealDispatcher tests prove the container wires all three events: an emptied buffer on
+ * the container's LokiPushHandler shows the listener fired. The test env sets no Loki URL, so nothing is sent.
  */
 final class LokiFlushListenerTest extends KernelTestCase
 {
