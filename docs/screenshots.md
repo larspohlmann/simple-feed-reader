@@ -4,11 +4,11 @@ A tour of simple-feed-reader. Every surface works in a light and a dark theme.
 
 [← Back to the README](../README.md)
 
-## The magazine card grid
+## The magazine layout
 
 The default layout, with the sidebar of feeds, tags, and saved searches.
 
-![Magazine card grid](screenshots/screen_01.png)
+![Magazine layout](screenshots/screen_01.png)
 
 ## The two-pane view
 
@@ -18,17 +18,17 @@ original page.
 
 ![Two-pane view with the reader pane](screenshots/screen_02.png)
 
-## The card grid on mobile
+## The magazine on mobile
 
-The grid collapses to a single column on a phone.
+On a phone the same single column of cards fills the screen's width.
 
-![Card grid on mobile](screenshots/screen_03.png)
+![Magazine layout on mobile](screenshots/screen_03.png)
 
-![Card grid on mobile](screenshots/screen_04.png)
+![Magazine layout on mobile](screenshots/screen_04.png)
 
 The same view in the dark theme.
 
-![Card grid on mobile, dark theme](screenshots/screen_05.png)
+![Magazine layout on mobile, dark theme](screenshots/screen_05.png)
 
 ## The reader view
 
