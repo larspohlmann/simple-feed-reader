@@ -11,11 +11,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
 
 /**
- * "Hide every copy but the lowest-id one that is itself in scope." A plain WHERE
- * predicate, so it composes with the keyset cursor and a page still returns
- * `limit` visible rows. The scope is applied to the e2/es2/s2 alias set through
- * the SAME callback the outer query used, so filtering by tag or view scopes the
- * survivor too — see the spec for why carrying the filters prevents holes.
+ * Hides every copy of an article but the lowest-id one in scope, as a plain WHERE so a page still holds `limit`
+ * rows. The semi-join takes the outer query's own scope callback: a survivor picked outside the scope leaves a hole.
  */
 final readonly class DuplicateCollapseDql
 {

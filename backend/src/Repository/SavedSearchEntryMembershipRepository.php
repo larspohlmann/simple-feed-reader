@@ -10,8 +10,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The one writer of saved_search_entry (#1116). Reads live on
- * SavedSearchEntryRepository, which projects entries, not memberships.
+ * The one writer of saved_search_entry. Reads live on SavedSearchEntryRepository, which projects entries, not
+ * memberships.
  *
  * @extends ServiceEntityRepository<SavedSearchEntry>
  */

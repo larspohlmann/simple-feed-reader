@@ -13,8 +13,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The combined saved-search list (#769) and every other saved-search read,
- * over the membership table (#1116).
+ * The combined saved-search list and every other saved-search read, over the membership table.
  *
  * @extends ServiceEntityRepository<Entry>
  */
@@ -30,10 +29,8 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every member of any of the caller's searches, in the query's order,
-     * keyset-paged, the unread test in the same statement as the LIMIT. EXISTS
-     * rather than a join, so an entry in several searches is one row without a
-     * DISTINCT.
+     * Every member of any of the caller's searches, keyset-paged, with the unread test in the LIMIT's own statement.
+     * EXISTS, not a join, so an entry in several searches is one row without DISTINCT.
      *
      * @return list<EntryListRow>
      */
@@ -156,8 +153,7 @@ final class SavedSearchEntryRepository extends ServiceEntityRepository
     }
 
     /**
-     * One search's unread members newer than $since, newest first — the
-     * digest's window (#636).
+     * One search's unread members newer than $since, newest first: the digest's window.
      *
      * @return list<int>
      */

@@ -16,10 +16,8 @@ use Doctrine\ORM\QueryBuilder;
 final readonly class SearchTermsPredicateBuilder
 {
     /**
-     * One search's terms as a single ANDed expression the caller places itself.
-     * The combined saved-search read ORs several of these, which andWhere()
-     * cannot express. $prefix keys the bound parameters, so two searches that
-     * share a word cannot overwrite each other's value.
+     * The terms as one ANDed expression the caller places, since DatabaseSavedSearchMatcher ORs several of them.
+     * $prefix keys the bound parameters, so two searches sharing a word cannot overwrite each other's value.
      */
     public function build(QueryBuilder $qb, SearchTermsModel $terms, string $prefix, string $entryAlias = 'e'): string
     {
@@ -54,18 +52,9 @@ final readonly class SearchTermsPredicateBuilder
     }
 
     /**
-     * The plain "LIKE %term%" is ANDed in front of the normalized whole-word
-     * check on purpose: it rejects almost every row with a cheap scan before
-     * the expensive REPLACE chain runs, at no extra cost on rows where it
-     * matches.
-     *
-     * It is sound only while the raw term is a substring of every row the
-     * normalized check would accept — true for letters and digits, false once
-     * the term carries boundary punctuation, since the two sides then differ
-     * in exactly that punctuation. "E-Mail" and "E–Mail" (en dash) normalize
-     * alike and must both match, yet neither is a raw substring of the other.
-     * Such a term skips the prefilter and pays for the chain — rare, and a
-     * wrong answer is not worth the scan.
+     * A cheap "%term%" LIKE runs first and rejects most rows before the REPLACE chain. It is sound only while the raw
+     * term is a substring of every row the normalized check accepts, so a term with boundary punctuation skips it:
+     * "E-Mail" must match "E–Mail", which does not contain it.
      */
     private function wholeWordPredicate(QueryBuilder $qb, string $parameter, string $term, string $entryAlias): string
     {

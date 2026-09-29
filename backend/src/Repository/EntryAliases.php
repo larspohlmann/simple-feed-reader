@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/**
- * The four DQL aliases the entry-list scope predicates read. Two fixed sets:
- * the primary query (e/es/s/st) and the duplicate-collapse semi-join
- * (e2/es2/s2/st2), so one scope definition serves the outer query and the
- * NOT EXISTS that hides its lower-id copies.
- */
+/** The DQL aliases a scope predicate reads, so one scope serves the outer query and the duplicate-collapse join. */
 final readonly class EntryAliases
 {
     public function __construct(
