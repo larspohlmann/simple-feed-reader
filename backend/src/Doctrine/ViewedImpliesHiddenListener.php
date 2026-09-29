@@ -33,9 +33,9 @@ final readonly class ViewedImpliesHiddenListener
     {
     }
 
-    public function onFlush(OnFlushEventArgs $args): void
+    public function onFlush(OnFlushEventArgs $event): void
     {
-        $entityManager = $args->getObjectManager();
+        $entityManager = $event->getObjectManager();
         $unitOfWork = $entityManager->getUnitOfWork();
         $metadata = $entityManager->getClassMetadata(EntryState::class);
 

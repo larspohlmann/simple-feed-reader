@@ -11,7 +11,6 @@ use App\Service\Passkey\Exception\DuplicatePasskeyException;
 use App\Service\Passkey\Exception\LastSignInMethodException;
 use App\Service\Passkey\Exception\PasskeyChallengeOwnershipException;
 use App\Service\Passkey\Exception\PasskeyNotFoundException;
-use App\Service\Passkey\Exception\UnknownChallengeException;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class PasskeyRegistrationProblems implements ExceptionProblemsInterface
@@ -36,11 +35,6 @@ final readonly class PasskeyRegistrationProblems implements ExceptionProblemsInt
                 'Forbidden',
                 Response::HTTP_FORBIDDEN,
                 'This registration challenge was not issued to you.',
-            )),
-            $exception instanceof UnknownChallengeException => new ResolvedProblem(new ApiProblem(
-                'unknown_passkey_challenge',
-                'Unknown or expired passkey challenge',
-                Response::HTTP_BAD_REQUEST,
             )),
             $exception instanceof PasskeyNotFoundException => new ResolvedProblem(new ApiProblem(
                 'passkey_not_found',

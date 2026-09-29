@@ -19,10 +19,10 @@ final readonly class EntryScopePredicates
     {
     }
 
-    public function applyList(QueryBuilder $qb, EntryAliases $a, EntryQuery $query): void
+    public function applyList(QueryBuilder $qb, EntryAliases $aliases, EntryQuery $query): void
     {
         if ($query->subscriptionId !== null) {
-            $qb->andWhere(\sprintf('%s.id = :sid', $a->subscription))
+            $qb->andWhere(\sprintf('%s.id = :sid', $aliases->subscription))
                 ->setParameter('sid', $query->subscriptionId);
         }
         if ($query->tagId !== null) {
@@ -30,61 +30,61 @@ final readonly class EntryScopePredicates
             // join never duplicates an entry. IDENTITY() reads the tag_id FK
             // without a second join to the tag table.
             $qb->innerJoin(
-                \sprintf('%s.subscriptionTags', $a->subscription),
-                $a->tag,
+                \sprintf('%s.subscriptionTags', $aliases->subscription),
+                $aliases->tag,
                 'WITH',
-                \sprintf('IDENTITY(%s.tag) = :tagId', $a->tag),
+                \sprintf('IDENTITY(%s.tag) = :tagId', $aliases->tag),
             )->setParameter('tagId', $query->tagId);
         }
         if ($query->hidesExcludedFeeds()) {
-            $qb->andWhere(\sprintf('%s.includeInAllItems = true', $a->subscription));
+            $qb->andWhere(\sprintf('%s.includeInAllItems = true', $aliases->subscription));
         }
-        $this->applyView($qb, $a, $query->view);
+        $this->applyView($qb, $aliases, $query->view);
     }
 
-    public function applySearch(QueryBuilder $qb, EntryAliases $a, EntrySearchQuery $query): void
+    public function applySearch(QueryBuilder $qb, EntryAliases $aliases, EntrySearchQuery $query): void
     {
-        $qb->andWhere($this->terms->build($qb, $query->terms, 'term', $a->entry));
+        $qb->andWhere($this->terms->build($qb, $query->terms, 'term', $aliases->entry));
         if ($query->unread) {
-            $this->unread($qb, $a);
+            $this->unread($qb, $aliases);
         }
     }
 
     /**
      * @param list<int> $entryIds
      */
-    public function applyIds(QueryBuilder $qb, EntryAliases $a, array $entryIds): void
+    public function applyIds(QueryBuilder $qb, EntryAliases $aliases, array $entryIds): void
     {
-        $qb->andWhere(\sprintf('%s.id IN (:ids)', $a->entry))->setParameter('ids', $entryIds);
+        $qb->andWhere(\sprintf('%s.id IN (:ids)', $aliases->entry))->setParameter('ids', $entryIds);
     }
 
-    private function applyView(QueryBuilder $qb, EntryAliases $a, EntryView $view): void
+    private function applyView(QueryBuilder $qb, EntryAliases $aliases, EntryView $view): void
     {
         switch ($view) {
             case EntryView::Unread:
-                $this->unread($qb, $a);
+                $this->unread($qb, $aliases);
                 break;
             case EntryView::Favorites:
-                $this->stateFlagIsSet($qb, $a, 'isFavorite');
+                $this->stateFlagIsSet($qb, $aliases, 'isFavorite');
                 break;
             case EntryView::Kept:
-                $this->stateFlagIsSet($qb, $a, 'isKept');
+                $this->stateFlagIsSet($qb, $aliases, 'isKept');
                 break;
             case EntryView::Viewed:
-                $this->stateFlagIsSet($qb, $a, 'isViewed');
+                $this->stateFlagIsSet($qb, $aliases, 'isViewed');
                 break;
             default:
                 break;
         }
     }
 
-    private function stateFlagIsSet(QueryBuilder $qb, EntryAliases $a, string $flag): void
+    private function stateFlagIsSet(QueryBuilder $qb, EntryAliases $aliases, string $flag): void
     {
-        $qb->andWhere(\sprintf('%s.%s = :flag', $a->state, $flag))->setParameter('flag', true, Types::BOOLEAN);
+        $qb->andWhere(\sprintf('%s.%s = :flag', $aliases->state, $flag))->setParameter('flag', true, Types::BOOLEAN);
     }
 
-    private function unread(QueryBuilder $qb, EntryAliases $a): void
+    private function unread(QueryBuilder $qb, EntryAliases $aliases): void
     {
-        $qb->andWhere(UnreadDql::predicate($a))->setParameter('notHidden', false, Types::BOOLEAN);
+        $qb->andWhere(UnreadDql::predicate($aliases))->setParameter('notHidden', false, Types::BOOLEAN);
     }
 }

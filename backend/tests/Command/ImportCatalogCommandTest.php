@@ -84,6 +84,10 @@ final class ImportCatalogCommandTest extends DbTestCase
         $tester->execute(['--file' => '/nonexistent/catalog.opml']);
 
         self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString(
+            'No readable catalog document at /nonexistent/catalog.opml.',
+            $tester->getDisplay(),
+        );
     }
 
     public function testAWhitespaceOnlyFileFallsBackToTheShippedDocument(): void

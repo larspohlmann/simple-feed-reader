@@ -120,6 +120,29 @@ final class ReaderAuditCommandTest extends DbTestCase
         );
     }
 
+    public function testTheClosingLineReportsHowManyOfTheShardCarryAMarker(): void
+    {
+        $entries = $this->subscribedEntries('audit-closing@example.com', 2);
+        self::getContainer()->set(
+            ArticleExtractorInterface::class,
+            $this->extractorReturningOk('https://cli.example.com/article-0'),
+        );
+        $entryIds = array_map(static fn (Entry $entry): string => (string) $entry->requireId(), $entries);
+
+        $tester = $this->tester();
+        $tester->execute([
+            '--entries' => implode(',', $entryIds),
+            '--shards' => '2',
+            '--shard' => '0',
+            '--out' => $this->outputPath('closing'),
+        ]);
+
+        self::assertMatchesRegularExpression(
+            '/\d+ of 1 audited articles carry at least one marker\./',
+            $tester->getDisplay(),
+        );
+    }
+
     public function testAnExplicitBeforeCutoffExcludesLaterEntries(): void
     {
         $this->subscribedEntries('audit-before@example.com', 1);

@@ -20,6 +20,19 @@ final class SubscriptionJsonTest extends TestCase
         return new Subscription(new User('u@example.com', $now), $feed, $now);
     }
 
+    public function testACustomTitleWinsOverTheFeedsOwnTitle(): void
+    {
+        $feed = new Feed('https://example.com/feed.xml');
+        $feed->setTitle('Feed title');
+        $subscription = $this->subscriptionTo($feed);
+        $subscription->setCustomTitle('My title');
+
+        $json = SubscriptionJson::one($subscription);
+
+        self::assertSame('My title', $json['title']);
+        self::assertSame('My title', $json['customTitle']);
+    }
+
     public function testFlattensAnHtmlDescriptionToPlainText(): void
     {
         $feed = new Feed('https://example.com/feed.xml');

@@ -86,7 +86,11 @@ final class AdminUserJson
     public static function positionOrdered(array $subscriptions): array
     {
         $ordered = $subscriptions;
-        usort($ordered, static fn (Subscription $a, Subscription $b): int => $a->getPosition() <=> $b->getPosition());
+        usort(
+            $ordered,
+            static fn (Subscription $left, Subscription $right): int
+                => $left->getPosition() <=> $right->getPosition(),
+        );
 
         return $ordered;
     }

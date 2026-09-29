@@ -76,22 +76,26 @@ final class ReaderAuditCommand extends Command
 
         $userId = $this->users->resolve(ConsoleOption::text($input, 'user'));
         $sample = $this->articlesToAudit($input, $userId);
-        $mine = (new AuditShardModel($this->number($input, 'shard'), $this->number($input, 'shards')))->pick($sample);
+        $shard = new AuditShardModel($this->number($input, 'shard'), $this->number($input, 'shards'));
+        $shardEntries = $shard->pick($sample);
 
         $io->text(\sprintf(
             'user %d — %d articles sampled over %d feeds, %d in this shard',
             $userId,
             \count($sample),
-            \count(array_unique(array_map(static fn (SampledEntryModel $e): int => $e->feedId, $sample))),
-            \count($mine),
+            \count(array_unique(array_map(
+                static fn (SampledEntryModel $sampledEntry): int => $sampledEntry->feedId,
+                $sample,
+            ))),
+            \count($shardEntries),
         ));
 
         $file = AuditFindingsFile::create((string) ConsoleOption::text($input, 'out'));
         $link = new ReaderLinkModel((string) ConsoleOption::text($input, 'base-url'));
 
-        $io->progressStart(\count($mine));
+        $io->progressStart(\count($shardEntries));
         $flagged = 0;
-        foreach ($this->runner->run($mine, $link) as $finding) {
+        foreach ($this->runner->run($shardEntries, $link) as $finding) {
             $file->append($finding);
             $flagged += $finding->markers === [] ? 0 : 1;
             $io->progressAdvance();
@@ -99,7 +103,7 @@ final class ReaderAuditCommand extends Command
         $io->progressFinish();
         $file->close();
 
-        $io->success(\sprintf('%d of %d audited articles carry at least one marker.', $flagged, \count($mine)));
+        $io->success(\sprintf('%d of %d audited articles carry at least one marker.', $flagged, \count($shardEntries)));
 
         return Command::SUCCESS;
     }

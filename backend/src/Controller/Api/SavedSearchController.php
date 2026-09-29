@@ -37,7 +37,10 @@ final readonly class SavedSearchController
 
         return new JsonResponse([
             'savedSearches' => array_map(
-                static fn (SavedSearch $s) => SavedSearchJson::one($s, $tallies[$s->requireId()]),
+                static fn (SavedSearch $savedSearch) => SavedSearchJson::one(
+                    $savedSearch,
+                    $tallies[$savedSearch->requireId()],
+                ),
                 $rows,
             ),
         ]);
