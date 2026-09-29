@@ -52,7 +52,7 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertSame(2, substr_count($html, 'Same line.'));
     }
 
-    /** The dek repeats once per breakpoint; only the dek is collapsed now, the lead image is kept (#1088). */
+    /** The dek repeats once per breakpoint; it collapses, and the lead image stays. */
     public function testCollapsesTheResponsiveDuplicateDek(): void
     {
         $html = $this->collapsed(
@@ -67,12 +67,6 @@ final class DuplicateBlockCollapserTest extends TestCase
         self::assertStringContainsString('Cath Virginia', $html);
     }
 
-    /**
-     * Image de-duplication was removed as too URL-fingerprint-fragile: it deleted
-     * distinct photos that shared only a generic filename (#1032 Pixabay, #1051
-     * YouTube posters, #1088 CBC). A responsive duplicate image is now kept, not
-     * collapsed — showing one twice beats deleting the wrong one.
-     */
     public function testKeepsAResponsiveDuplicateImage(): void
     {
         $html = $this->collapsed(
@@ -104,9 +98,8 @@ final class DuplicateBlockCollapserTest extends TestCase
     }
 
     /**
-     * A posterless embed (Vimeo, SoundCloud, Brightcove) recovers as a bare
-     * `<a>` carrying the provider's fixed label, so two in a row read as
-     * identical prose. The paragraph path must spare them (#1051).
+     * A posterless embed (Vimeo, SoundCloud, Brightcove) recovers as a bare `<a>` carrying the provider's fixed
+     * label, so two in a row read as identical prose. The paragraph path must spare them.
      */
     public function testKeepsTwoPosterlessEmbedsThatCarryTheSameLabel(): void
     {

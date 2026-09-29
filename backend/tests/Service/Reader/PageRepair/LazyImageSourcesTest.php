@@ -154,10 +154,8 @@ final class LazyImageSourcesTest extends TestCase
 
     public function testDropsThePictureSourcesWhenTheImageCarriesItsOwnSource(): void
     {
-        // NDR wraps each photo in a <picture> whose <source srcset> lists a 20w
-        // placeholder first and sets sizes="1px"; its own script rewrites the
-        // size after layout. The reader strips that script, so a surviving
-        // <source> makes the browser pick the placeholder over the real <img>.
+        // A <source srcset> listing a 20w placeholder first under sizes="1px" relies on the page's own script,
+        // which the reader strips: a surviving <source> would win over the real <img>.
         $html = $this->resolvedHtml(
             '<picture>'
             . '<source type="image/webp" srcset="/assets/placeholder.png 20w,'
@@ -185,10 +183,8 @@ final class LazyImageSourcesTest extends TestCase
 
     public function testAdoptsAWiderPictureSourceWhenTheImageSrcIsAPlaceholder(): void
     {
-        // taz wraps each photo in a <picture> whose <source>s carry the real
-        // renditions and whose <img> fallback src is a 14px LQIP placeholder
-        // (entry 486683). The placeholder is a valid https URL, so it survives
-        // the usable-source check; the wider <source> has to win regardless.
+        // The <img> fallback src is a 14px placeholder but a valid https URL, so it passes the usable-source
+        // check; the wider <source> must win regardless.
         $html = $this->resolvedHtml(
             '<picture>'
             . '<source srcset="https://cdn.example.com/picture/8227075/1020/x.webp">'
@@ -299,12 +295,10 @@ final class LazyImageSourcesTest extends TestCase
         self::assertStringContainsString('<figcaption>C</figcaption>', $html);
     }
 
-    /** The `src` the resolver leaves on the first image, or null if it removed it. */
     public function testKeepsACommaBearingTransformUrlWhenAdoptingAPictureSource(): void
     {
-        // Substack wraps its images in a <picture> whose candidates are Cloudinary
-        // transform URLs, and those spell their options with commas. A list split
-        // on every comma leaves the tail as a relative URL (#706, entry 487639).
+        // Cloudinary-style transform URLs spell their options with commas; a list split on every comma leaves the
+        // tail as a relative URL.
         $source = $this->resolvedSource(
             '<picture><source type="image/webp" srcset="'
             . 'https://cdn.example.com/fetch/$s_!-_9x!,w_424,c_limit,f_webp,fl_progressive:steep/photo.png 424w,'
@@ -318,7 +312,7 @@ final class LazyImageSourcesTest extends TestCase
         );
     }
 
-    /** nature.com 495343: a lazy <picture> carries its candidates on `data-srcset`, and its <img> has no src at all. */
+    /** A lazy <picture> carries its candidates on `data-srcset`, and its <img> has no src at all. */
     public function testPromotesTheLazySourceOfAPictureWhoseImageIsBare(): void
     {
         $source = $this->resolvedSource(
@@ -385,9 +379,8 @@ final class LazyImageSourcesTest extends TestCase
 
     public function testSkipsPictureSourcesScopedToNarrowViewports(): void
     {
-        // zeit art-directs by viewport and scales by density, with no width
-        // descriptor anywhere (entry 497686). A mobile crop is no candidate for
-        // the reader's desktop column; the desktop source's densest one is.
+        // Art direction by viewport and density with no width descriptor: a mobile crop is no candidate for the
+        // reader's desktop column; the desktop source's densest one is.
         $source = $this->resolvedSource(
             '<picture>'
             . '<source media="(max-width: 360px)" srcset="https://img.example.com/wide__360x202__mobile,'
@@ -415,11 +408,8 @@ final class LazyImageSourcesTest extends TestCase
 
     public function testAdoptsAWiderSrcsetWhenTheBareImageSrcIsAPlaceholder(): void
     {
-        // heise ships the lead image inside a <noscript> whose <img> pins its
-        // src to the 16px no-JavaScript base and lists the real sizes only in
-        // srcset (Telepolis entry 508092). NoscriptImageUnwrapper promotes that
-        // bare <img>; the sanitizer then strips srcset, so a small-but-usable
-        // src would leave the reader on a 16px image.
+        // A no-JavaScript <img> pins its src to a 16px base and lists the real sizes only in srcset, which the
+        // sanitizer strips later: a small-but-usable src would leave the reader on 16px.
         $source = $this->resolvedSource(
             '<img src="https://heise.cloudimg.io/v7/photo.jpeg?q=50&width=16"'
             . ' srcset="https://heise.cloudimg.io/v7/photo.jpeg?q=30&width=336 336w,'

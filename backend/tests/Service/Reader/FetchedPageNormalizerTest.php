@@ -55,8 +55,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testCollapsesSingleChildDivChains(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="a"><div class="b"><div class="c"><p>Text</p></div></div></div></body></html>';
 
@@ -71,10 +69,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testCollapsesWrapperChainsIndentedWithWhitespace(): void
     {
-        // Real block-component markup indents its wrappers, so whitespace text
-        // sits between each <div> and its single child. That whitespace is not
-        // the wrapper's own content; without trimming it, the chain would never
-        // collapse.
+        // Indented markup puts whitespace text between each <div> and its single child; it is not the wrapper's
+        // own content, so the chain still collapses.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = "<html><body><div class=\"a\">\n<div class=\"b\">\n"
             . "<div class=\"c\">\n<p>Text</p>\n</div>\n</div>\n</div></body></html>";
@@ -88,10 +84,7 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testKeepsDivWithOwnText(): void
     {
-        // The div carries its own text, so it is content and not a wrapper: no
-        // chain to collapse. (A div with several element children is covered by
-        // testCollapseReturnsNullWhenNoWrapperChains — the same "not a single-
-        // child wrapper" branch, so it is not duplicated here.)
+        // The div carries its own text, so it is content, not a wrapper: no chain to collapse.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep">intro <div>nested</div></div></body></html>';
 
@@ -100,9 +93,7 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testHeadingSurvivesWrapperCollapse(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE. HeadingClassRemover
-        // strips the id, so the heading survives the collapse without it.
+        // HeadingClassRemover strips the id, so the heading survives the collapse without it.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><h2 id="s1">Section</h2></div></div></body></html>';
 
@@ -111,8 +102,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testStripsAHeadingClassSoReadabilityKeepsIt(): void
     {
-        // Substack marks every subheading `header-anchor-post`; readability's
-        // unlikely-candidate regex matches "header" and drops the heading.
+        // A heading classed `header-anchor-post`: readability's unlikely-candidate regex matches "header" and
+        // drops it.
         $normalized = $this->normalized(
             '<html lang="en"><body><article><p>Body text long enough to be real content.</p>'
             . '<h2 class="header-anchor-post" id="anchor"><strong>Section</strong></h2></article></body></html>'
@@ -124,8 +115,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testPromotesAHorizontalRuleOutOfAnEmptyWrapperDiv(): void
     {
-        // Substack wraps every section break as <div><hr></div>; readability
-        // reads that div as empty and removes it, rule and all.
+        // A section break wrapped as <div><hr></div>: readability reads the div as empty and removes it, rule
+        // and all.
         $normalized = $this->normalized(
             '<html lang="en"><body><article><p>One.</p><div><hr></div><p>Two.</p></article></body></html>'
         );
@@ -135,9 +126,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testCollapseReturnsNullWhenNoWrapperChains(): void
     {
-        // A div with several element children is a real container, not a
-        // single-child wrapper, so there is no chain to collapse: the method
-        // returns null and ArticleExtractor skips the second extraction.
+        // Several element children make a real container, not a single-child wrapper: there is no chain, and
+        // ArticleReadability runs one extraction.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div class="keep"><p>One</p><p>Two</p></div></body></html>';
 
@@ -146,8 +136,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testRemovesScreenReaderOnlyElements(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body>'
             . '<span class="visually-hidden">Image source,</span>'
@@ -166,8 +154,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testStripsAShareWidgetBeforeReadabilitySeesIt(): void
     {
-        // A Shariff bar in the raw page is gone after normalize(), so its
-        // "teilen" labels never reach readability or lead the article (#582).
+        // A Shariff bar in the raw page is gone after normalize(), so its "teilen" labels never reach
+        // readability or lead the article.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><article><div class="shariff">'
             . '<ul class="shariff-buttons"><li>Facebook teilen</li></ul></div>'
@@ -181,9 +169,8 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testStripsAShareIntentLinkBeforeReadabilitySeesIt(): void
     {
-        // A hand-rolled Bluesky share link carrying the page's own URL is gone
-        // after normalize() (#627); it is not a plugin widget, so ShareWidgetRemover
-        // alone would leave it for readability to keep.
+        // A hand-rolled Bluesky share link carrying the page's own URL is gone after normalize(); it is no plugin
+        // widget, so ShareWidgetRemover alone would leave it for readability to keep.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><article><p>Body text long enough to be real content.</p>'
             . '<a href="https://bsky.app/intent/compose?text=https://canarymedia.com/x">Share</a>'
@@ -212,8 +199,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testUmlautsSurviveNormalization(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><div><div><p>Grüße from Köln</p></div></div></body></html>';
 
@@ -226,14 +211,7 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testRemovesAnOrphanIconGlyphAndPrunesTheHoldersItEmpties(): void
     {
-        // U+E80F is an icon-font glyph the sanitizer's class strip would orphan.
-        // It sits in a <span>, in a <p>, in a <div> that holds nothing else:
-        // stripping it empties all three, which are pruned from the inside out.
-        // A plain paragraph precedes the glyph, so a scan that stopped at the
-        // first glyph-free node (rather than skipping it) would leave the glyph
-        // behind. The <p> keeps whitespace around the glyph span, so an
-        // untrimmed emptiness check would leave the blank <p> in place. The
-        // surrounding paragraphs must stay.
+        // The icon-font glyph goes with the three holders it alone filled; the paragraphs around them stay.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><section><p>Intro paragraph.</p>'
             . "<div><p> <span>\u{E80F}</span> </p></div>"
@@ -251,8 +229,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testKeepsAnEmptiedHolderThatStillCarriesAnImage(): void
     {
-        // Stripping the glyph empties the <span> of text, but its <img> makes it
-        // meaningful, so the holder must survive.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = "<html><body><span>\u{E80F}"
             . '<img src="https://images.example.com/a.png" alt=""></span></body></html>';
@@ -307,8 +283,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testRestoresTheSourceOfALazyLoadedImage(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><body><figure><img src="data:image/gif;base64,R0lGOD"'
             . ' data-lazy-src="https://images.example.com/photo.jpg"></figure></body></html>';
@@ -321,8 +295,6 @@ final class FetchedPageNormalizerTest extends TestCase
 
     public function testNormalizeReplacesTheSubstackGatedPlayerWithThePoster(): void
     {
-        // The fixture is the input under test, so it keeps its `lang`-less
-        // <html> instead of being edited to please the IDE.
         /** @noinspection HtmlRequiredLangAttribute */
         $html = '<html><head>'
             . '<meta property="og:image" content="https://cdn.test/og.jpg">'

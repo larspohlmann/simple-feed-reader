@@ -46,8 +46,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testSeatsATopPlacedPlayerBelowARestoredHero(): void
     {
-        // #907: a restored hero figure is handed in as the anchor, so the
-        // top-placed narration player lands under the picture, not above it.
+        // A restored hero figure is handed in as the anchor, so the top-placed narration player lands under the
+        // picture, not above it.
         $document = $this->document('<body><figure><img src="https://x.test/hero.jpg"></figure>'
             . '<p>Prose</p></body>');
         $hero = $document->querySelector('figure');
@@ -125,8 +125,7 @@ final class PageMediaInserterTest extends TestCase
 
     public function testAudioNeverCarriesAPosterAttribute(): void
     {
-        // Defect i: <audio> has no poster attribute, so even a candidate that
-        // somehow carries a posterUrl must not render one.
+        // <audio> has no poster attribute, so even a candidate that carries a posterUrl must not render one.
         $media = new ArticleMediaModel([
             new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', 'https://x.test/p.jpg'),
         ]);
@@ -184,7 +183,7 @@ final class PageMediaInserterTest extends TestCase
 
     public function testReconcilesAMatchingBodyImageInPlace(): void
     {
-        // tagesschau 491512: the same asset UUID, a different rendition.
+        // The same asset UUID, a different rendition.
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
         $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
@@ -201,8 +200,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testDoesNotReconcileAnImageInsideAnAnchor(): void
     {
-        // The <a> guard: protects embed poster anchors, SubstackPosterLink's
-        // output, and #627's gated placeholder even when the asset matches.
+        // The <a> guard: protects embed poster anchors, SubstackPosterLink's output and
+        // SubstackGatedVideoPlaceholder's poster link, even when the asset matches.
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
         $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster)]);
@@ -229,8 +228,8 @@ final class PageMediaInserterTest extends TestCase
 
     public function testTwoCandidatesOneMatchingImageReconcilesOneAndTopPlacesTheOther(): void
     {
-        // tagesschau 491912 mix: video1 reconciles, video2 has no match and goes
-        // to the top, and an unrelated map img is left untouched.
+        // A mix: video1 reconciles, video2 has no match and goes to the top, and an unrelated map img is left
+        // untouched.
         $video1Poster = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $video1Body = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
         $video2Poster = 'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';

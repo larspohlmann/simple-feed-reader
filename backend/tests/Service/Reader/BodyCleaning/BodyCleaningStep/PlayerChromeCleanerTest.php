@@ -30,8 +30,7 @@ final class PlayerChromeCleanerTest extends TestCase
 
     public function testRemovesTheClockReadoutsBesideAPlayerWithTheirEmptiedRegion(): void
     {
-        // Substack's audio embed (#786): readability keeps the player's time
-        // labels as paragraphs inside the region the buttons left behind.
+        // An audio embed's time labels survive readability as paragraphs inside the region its buttons left.
         $html = '<div><p>' . self::PROSE . '</p><div role="region"><p>0:00</p><p>-13:34</p></div>'
             . '<p>' . self::AUDIO . '</p></div>';
 
@@ -46,8 +45,7 @@ final class PlayerChromeCleanerTest extends TestCase
 
     public function testRemovesAClockReadoutWhenThePlayerItselfIsGone(): void
     {
-        // sriramana (#786): a podcast page whose <audio> readability dropped
-        // still leads with the dead readout.
+        // A podcast page whose <audio> readability dropped still leads with the dead readout.
         $html = '<div><p>Share from 0:00</p><div><p>0:00</p></div><p>' . self::PROSE . '</p></div>';
 
         $clean = $this->clean($html);
@@ -105,9 +103,8 @@ final class PlayerChromeCleanerTest extends TestCase
 
     public function testRemovesAPlayerWithNoSourceInsteadOfGivingItControls(): void
     {
-        // ZEIT (#903): the page's own <audio> carries the file only in data-src,
-        // which the sanitizer strips, so restoring controls would arm a player
-        // that can never play. A second, working player exists elsewhere.
+        // The page's own <audio> carries the file only in data-src, which the sanitizer strips, so restoring
+        // controls would arm a player that can never play. A second, working player exists elsewhere.
         $html = '<div><audio data-src="https://zon-speechbert.test/full.mp3">'
             . 'Ihr Browser unterstützt keine Audio Dateien.</audio><p>' . self::PROSE . '</p></div>';
 
@@ -147,8 +144,8 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertSame(1, substr_count($this->clean($html), 'controls'));
     }
 
-    // NPR renders a "copy this embed" widget beside the player — a label and a
-    // <code> block showing the iframe snippet as escaped, literal text (#922).
+    // A "copy this embed" widget beside the player: a label and a <code> block showing the iframe snippet as
+    // literal text.
     private const string NPR_EMBED_WIDGET =
         '<div><ul><li><p><label><b>Embed</b></label><b><code>'
         . '&lt;iframe src="https://www.npr.org/player/embed/g-s1-142210/nx-s1-mx-5960265-1" '
@@ -252,10 +249,8 @@ final class PlayerChromeCleanerTest extends TestCase
         self::assertStringContainsString('<code', $clean);
     }
 
-    // A script-driven text-to-speech widget: the container is marked as narration
-    // (CBC's class textToSpeech, the icon texttospeech.svg), but the page carries
-    // no <audio> — the reading is generated on demand. Readability keeps the icon
-    // and labels, so the reader shows a giant glyph over a disclaimer (#959).
+    // A script-driven text-to-speech widget: marked as narration (class textToSpeech, icon texttospeech.svg) but
+    // with no <audio>, since the reading is generated on demand. Readability keeps its icon and labels.
     private const string SILENT_TTS_WIDGET =
         '<div class="textToSpeech-p16Ki"><p><img src="https://www.cbc.ca/a/assets/texttospeech.svg" '
         . 'alt="Text to Speech Icon" width="44" height="44"></p>'
@@ -303,8 +298,8 @@ final class PlayerChromeCleanerTest extends TestCase
 
     public function testKeepsANarrationContainerThatStillHoldsItsPlayer(): void
     {
-        // A live narration player declares narration too, but it has a real
-        // <audio>: it is kept here so the player logic can arm and mark it (#903).
+        // A live narration player declares narration too, but it has a real <audio>: it is kept here so the
+        // player logic can arm and mark it.
         $html = '<div class="audio-player" data-audio-type="tts"><p>Listen to this article</p>'
             . self::AUDIO . '</div><p>' . self::PROSE . '</p>';
 

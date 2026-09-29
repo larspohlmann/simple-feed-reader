@@ -41,7 +41,7 @@ final class InBodyEmbedRewriterTest extends TestCase
         return $pass->document->saveHtml();
     }
 
-    /** The OZORA shape: a heading, then the embed, ten times over. */
+    /** A heading, then the embed, ten times over. */
     public function testKeepsEachEmbedAtItsHeadingPosition(): void
     {
         $html = '<body><h3>One</h3><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa?si=x"></iframe></div>'
@@ -105,7 +105,7 @@ final class InBodyEmbedRewriterTest extends TestCase
         self::assertTrue($one->discoveredMedia()->isEmpty());
     }
 
-    /** Do not reuse #627's alt text: its CSS paints a play badge on that string. */
+    /** Do not reuse SubstackGatedVideoPlaceholder's alt text: its CSS paints a play badge on that string. */
     public function testDoesNotReuseTheSubstackPlaceholderAltText(): void
     {
         $out = $this->rewrite('<body><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></body>');

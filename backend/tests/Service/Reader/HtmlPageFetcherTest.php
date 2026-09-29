@@ -175,18 +175,13 @@ final class HtmlPageFetcherTest extends TestCase
 
         $fetcher->fetch('https://example.com/post');
 
-        // Without this, curl would negotiate gzip and the on_progress byte cap
-        // would count compressed bytes while the decompressed body is buffered
-        // whole — a decompression-bomb amplification.
         self::assertContains('Accept-Encoding: identity', $seenHeaders);
     }
 
     public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
     {
-        // The both-families pin leads with IPv6. From Strato heise's IPv6 route
-        // completes the TCP connect and then resets at the TLS handshake, which
-        // happy-eyeballs cannot recover from — the article must still load over
-        // IPv4.
+        // The both-families pin leads with IPv6. A route that connects and then resets at the TLS handshake
+        // defeats happy-eyeballs, so the article must still load over IPv4.
         $fetcher = $this->fetcher(
             static function (string $method, string $url, array $options): MockResponse {
                 /** @var array<string, string> $resolve */
@@ -322,8 +317,8 @@ final class HtmlPageFetcherTest extends TestCase
 
     public function testDecodesABodyWhoseCharsetOnlyTheHeaderDeclares(): void
     {
-        // #904: no <meta charset>, so the parser would otherwise read the
-        // Windows-1252 bytes as UTF-8 and render mojibake.
+        // No <meta charset>, so the parser would otherwise read the Windows-1252 bytes as UTF-8 and render
+        // mojibake.
         $fetcher = $this->fetcher([new MockResponse("<html lang=\"fr\"><body><p>Caf\xE9 cr\xE8me</p></body></html>", [
             'http_code' => 200,
             'response_headers' => ['content-type' => ['text/html; charset=windows-1252']],

@@ -19,7 +19,7 @@ final class ArticleReadabilityTest extends TestCase
 
     public function testDropsTheRelatedTeaserGridFromTheCollapsedVariantToo(): void
     {
-        // article-block-components.html only wins its extraction through the wrapper-chain collapse (#235).
+        // article-block-components.html only wins its extraction through the wrapper-chain collapse.
         $html = str_replace(
             '</article>',
             $this->relatedTeaserGrid() . '</article>',

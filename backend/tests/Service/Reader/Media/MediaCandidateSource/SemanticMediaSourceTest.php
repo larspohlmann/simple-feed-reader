@@ -69,7 +69,6 @@ final class SemanticMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
-    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
     public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
     {
         $html = '<body><video><source src="https://x.test/v.mp4" type="video/mp4"></video></body>';

@@ -8,24 +8,6 @@ namespace App\Tests\PhpStan;
 final class UnsweptCommentFiles
 {
     public const array FILES = [
-        // O
-        'src/Service/Reader/ExtractionCoverageGate.php',
-        'src/Service/Reader/HeroImageSelector.php',
-        'tests/Service/Reader/ArticleExtractor/ArticleExtractorTest.php',
-        'tests/Service/Reader/BodyCleaning/BodyCleaningStep/DuplicateBlockCollapserTest.php',
-        'tests/Service/Reader/BodyCleaning/BodyCleaningStep/EdgeBoilerplateTrimmerTest.php',
-        'tests/Service/Reader/BodyCleaning/BodyCleaningStep/LeadingEngagementCleanerTest.php',
-        'tests/Service/Reader/BodyCleaning/BodyCleaningStep/NavigationChromeTrimmerTest.php',
-        'tests/Service/Reader/BodyCleaning/BodyCleaningStep/PlayerChromeCleanerTest.php',
-        'tests/Service/Reader/FetchedPageNormalizerTest.php',
-        'tests/Service/Reader/HtmlPageFetcherTest.php',
-        'tests/Service/Reader/Media/HostAgnosticDiscoveryTest.php',
-        'tests/Service/Reader/Model/ImageIdentityModelTest.php',
-        'tests/Service/Reader/Model/PageImageInventoryModelTest.php',
-        'tests/Service/Reader/PageRepair/LazyImageSourcesTest.php',
-        'tests/Service/Reader/PageRepair/OrphanIconGlyphRemoverTest.php',
-        'tests/Service/Reader/ReaderLeadImageTest.php',
-        'tests/Service/Reader/Slideshow/SlideshowScannerWiringTest.php',
         // P
         'src/Service/Fetch/BatchFeedFetcher/BatchFeedFetcherInterface.php',
         'src/Service/Fetch/BatchFeedFetcher/ConcurrentFeedFetcher.php',

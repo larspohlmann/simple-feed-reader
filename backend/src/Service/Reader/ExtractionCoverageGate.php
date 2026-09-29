@@ -10,22 +10,9 @@ use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\Text\Support\Whitespace;
 
 /**
- * Guards against a confident-but-wrong extraction. Readability sometimes picks
- * page furniture over the article — a shop banner, a "related posts" list, a
- * repeated promo block — and returns it as a successful result that clears
- * every length check yet is not the article at all (#654: an Ankerherz
- * Shopify blog where even vanilla readability never finds the story).
- *
- * The feed's own article body is the ground truth: when that body is a full
- * article, not a truncated teaser (the case the reader exists to improve on),
- * a real extraction of the same page shares its wording. So when a
- * substantial feed body and the extraction share almost no text, the
- * extraction grabbed the wrong thing — this gate fails it and the endpoint
- * falls back to the feed content the client already trusts.
- *
- * The measure is word-shingle coverage, blunt on purpose: a correct
- * extraction scores near 1, a wrong one near 0, so the verdict never rides on
- * a finely tuned threshold.
+ * Fails a confident-but-wrong extraction: when a substantial feed body and the extraction share almost no wording,
+ * readability grabbed page furniture, and the endpoint falls back to the feed body. The word-shingle measure is
+ * blunt on purpose: a right extraction scores near 1, a wrong one near 0, so no finely tuned threshold decides.
  */
 final readonly class ExtractionCoverageGate
 {
@@ -82,7 +69,7 @@ final readonly class ExtractionCoverageGate
         return $present / count($feedShingles);
     }
 
-    /** @return array<string, true> the distinct word shingles, as a lookup set */
+    /** @return array<string, true> */
     private function shingles(string $text): array
     {
         $words = preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), -1, \PREG_SPLIT_NO_EMPTY) ?: [];

@@ -27,11 +27,8 @@ final class PageImageInventoryModelTest extends TestCase
 
     public function testDrawsASizeVariantOfTheSamePhoto(): void
     {
-        // ImageIdentityModel matches renditions of one photo by their distinctive
-        // filename words (the WordPress size-variant case in its docblock). The
-        // example must carry photo-specific tokens (len >= 5, non-generic): a
-        // pair distinguished only by the size suffix does NOT match, and must
-        // not, since ImageIdentityModel is untouched here (spec non-goal).
+        // ImageIdentityModel ties size variants by their photo-specific filename words (five letters or more),
+        // so the example needs them: a pair that differs only by the size suffix does not match.
         $inventory = $this->inventoryOf('<body><img src="https://cdn.test/mountain-vista-scene-1280x720.jpg"></body>');
 
         self::assertTrue($inventory->draws(ImageIdentityModel::fromUrl('https://cdn.test/mountain-vista-scene.jpg')));

@@ -21,13 +21,8 @@ final class OrphanIconGlyphRemoverTest extends TestCase
 
     public function testRemovesAnOrphanIconGlyphAndPrunesTheHoldersItEmpties(): void
     {
-        // U+E80F is an icon-font glyph the sanitizer's class strip would orphan.
-        // It sits in a <span>, in a <p>, in a <div> that holds nothing else:
-        // stripping it empties all three, which are pruned from the inside out.
-        // A plain paragraph precedes the glyph, so a scan that stopped at the
-        // first glyph-free node would leave the glyph behind. The <p> keeps
-        // whitespace around the glyph span, so an untrimmed emptiness check would
-        // leave the blank <p> in place. The surrounding paragraphs must stay.
+        // U+E80F, alone in a <span> in a <p> in a <div>: all three go, from the inside out. A glyph-free paragraph
+        // comes first, so the scan must skip past it, and whitespace around the span must not keep the blank <p>.
         $html = $this->repaired(
             '<section><p>Intro paragraph.</p>'
             . "<div><p> <span>\u{E80F}</span> </p></div>"

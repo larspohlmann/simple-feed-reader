@@ -79,10 +79,7 @@ final class ReaderBodyCleanerTest extends TestCase
         ];
     }
 
-    /**
-     * The Verge ships the dek once per breakpoint; the reader collapses it, and keeps the lead image untouched
-     * (#963, #1088).
-     */
+    /** The dek repeats once per breakpoint; the reader collapses it and leaves the lead image untouched. */
     public function testCollapsesTheResponsiveDuplicateDek(): void
     {
         $dek = 'Apple might recycle the name from Microsoft dual-screen device for its first folding iPhone.';
@@ -95,7 +92,7 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertSame(1, substr_count($result, 'recycle the name from Microsoft'));
     }
 
-    /** The trailing "about the author" furniture is set apart in its own figure (#1000). */
+    /** The trailing "about the author" furniture is set apart in its own figure. */
     public function testSetsTheTrailingAuthorBioApartFromTheBody(): void
     {
         $content = '<div>'
@@ -267,7 +264,7 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringNotContainsString('<iframe', $out);
     }
 
-    /** One video per section recovers a poster per embed, all `hqdefault.jpg`; every embed stays (#1051). */
+    /** One video per section recovers a poster per embed, all `hqdefault.jpg`; every embed stays. */
     public function testKeepsEveryInBodyEmbedWhenTheirPostersShareAStem(): void
     {
         $html = '<h4>One</h4><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
@@ -282,7 +279,7 @@ final class ReaderBodyCleanerTest extends TestCase
         self::assertStringContainsString('embed/ccccccccccc', $out);
     }
 
-    /** A Spotify player embedded in the body survives as an embed link the client upgrades (#1053). */
+    /** A Spotify player embedded in the body survives as an embed link the client upgrades. */
     public function testRewritesAnInBodySpotifyEmbed(): void
     {
         $html = '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><h3>Playlist</h3>'
@@ -327,8 +324,8 @@ final class ReaderBodyCleanerTest extends TestCase
     }
 
     /**
-     * tagesschau 491512: the video reconciles into the body img that shares its poster's path UUID, in place and
-     * once; an audio candidate with no matching img is top-placed.
+     * The video reconciles into the body img that shares its poster's path UUID, in place and once; an audio
+     * candidate with no matching img is top-placed.
      */
     public function testReconcilesARecoveredVideoIntoItsMatchingBodyImage(): void
     {
@@ -354,8 +351,8 @@ final class ReaderBodyCleanerTest extends TestCase
     }
 
     /**
-     * heise 487576: the embed poster and the hero are one picture on two CDNs, so identity cannot match them;
-     * the embed is top-placed and the hero is suppressed rather than stacked above it.
+     * The embed poster and the hero are one picture on two CDNs, so identity cannot match them; the embed is
+     * top-placed and the hero is suppressed rather than stacked above it.
      */
     public function testSuppressesTheHeroWhenARecoveredEmbedIsTopPlaced(): void
     {
@@ -380,8 +377,8 @@ final class ReaderBodyCleanerTest extends TestCase
     }
 
     /**
-     * tagesschau 491912: video1 reconciles into its matching body img, video2 has no match and is top-placed, and
-     * an unrelated map img is left untouched.
+     * The first video reconciles into its matching body img, the second has no match and is top-placed, and an
+     * unrelated map img is left untouched.
      */
     public function testMixesReconciledAndTopPlacedVideosInTheSamePass(): void
     {
@@ -423,8 +420,8 @@ final class ReaderBodyCleanerTest extends TestCase
     }
 
     /**
-     * Substack 481600, a paid video post: a byline card ("Paid"), then #627's poster link, then the teaser. The
-     * poster link is the reader's play overlay hook and must survive.
+     * A paid video post: a byline card ("Paid"), then the gated-video poster link, then the teaser. The poster link is
+     * the reader's play-overlay hook and must survive.
      */
     public function testKeepsTheGatedVideoPosterBelowASubstackBylineCard(): void
     {

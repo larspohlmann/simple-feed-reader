@@ -72,7 +72,7 @@ final class EmbedProvidersWiringTest extends KernelTestCase
         self::assertSame('https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4', $target->url);
     }
 
-    /** Readability keeps an in-body frame only when the generated regex claims its source host (#1053). */
+    /** Readability keeps an in-body frame only when the generated regex claims its source host. */
     public function testTheVideoEmbedRegexKeepsEveryProviderSourceHost(): void
     {
         $regex = $this->providers()->videoEmbedRegex();

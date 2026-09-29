@@ -27,7 +27,7 @@ final class PaywallBlocksTest extends TestCase
 
     public function testMatchesEverySubscriberOnlyVariant(): void
     {
-        // jungle.world (Drupal): the body wrapper carries `subscription-only`.
+        // A Drupal body wrapper carrying `subscription-only`.
         self::assertTrue($this->hasGate('<div class="body-wrapper subscription-only"><p>Text.</p></div>'));
         self::assertTrue($this->hasGate('<p class="subscriber-only">A.</p>'));
         self::assertTrue($this->hasGate('<p class="subscribers-only">B.</p>'));
@@ -35,8 +35,8 @@ final class PaywallBlocksTest extends TestCase
 
     public function testFindsAGhostRegistrationWall(): void
     {
-        // surplusmagazin.de (Ghost custom theme): the preview ends in a `c-regwall`
-        // block whose paid card gates the rest; no schema.org declaration (#967).
+        // A Ghost theme's preview ends in a `c-regwall` block whose paid card gates the rest; nothing is
+        // declared.
         self::assertTrue($this->hasGate(
             '<article><p>Teaser.</p></article>'
             . '<div class="c-regwall"><div class="c-regwall__card c-regwall__card--paid">4 Wochen.</div></div>',
@@ -45,8 +45,7 @@ final class PaywallBlocksTest extends TestCase
 
     public function testAFadeOrTruncationClassIsNoLongerAGateBlock(): void
     {
-        // #908 dropped the fade family; the schema.org declaration now carries the
-        // ZEIT-style soft gate. A faded or truncated region alone does not flag.
+        // A faded or truncated region alone does not flag; a soft gate is marked by its declaration.
         self::assertFalse($this->hasGate(
             '<div class="paragraph--faded"><p>Trails off.</p></div>'
             . '<div class="article-body fade-out"><p>One.</p></div>'
@@ -82,8 +81,7 @@ final class PaywallBlocksTest extends TestCase
 
     public function testAStateClassOnTheDocumentRootIsNotAGateBlock(): void
     {
-        // mopo.de tags every MOPO+ article template with `has-paywall` on <body>;
-        // the whole page is not a gated region.
+        // A `has-paywall` class on <body> tags the article template; the whole page is not a gated region.
         $document = $this->document(
             '<html class="has-paywall"><body class="article has-paywall">'
             . '<article><p>The full article, served in one piece.</p></article></body></html>',

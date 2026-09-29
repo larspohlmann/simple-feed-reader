@@ -23,10 +23,8 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testRemovesASiteHeaderRegionThatReadabilityKeptBeforeTheArticle(): void
     {
-        // The Avada/Fusion theme (#verfassungsblog) builds its masthead from
-        // content <div>s, so readability scores it as article content. The nav
-        // landmark anchors the region; the whole link-dominated header block —
-        // logo, an un-rendered search widget and the menu — is chrome.
+        // A masthead built from content <div>s is scored as article content. The nav landmark anchors the region,
+        // and the whole link-dominated header block around it is chrome.
         $header = '<div class="site-header">'
             . '<a href="https://example.test/"><img src="https://example.test/logo.svg" alt="Logo"></a>'
             . '<div role="dialog"><p>Results for {phrase}</p></div>'
@@ -129,10 +127,7 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testKeepsAPlainLinkListThatCarriesNoNavigationLandmark(): void
     {
-        // A bare link list with no <nav>/role landmark is kept here only when
-        // it is under the menu link-count threshold. At >=3 links a leading
-        // list like this is now removed — see
-        // testRemovesALeadingMenuShapedListWithoutALandmark.
+        // Without a landmark, a list under the menu's three-link threshold stays.
         $list = '<ul><li><a href="/a">A</a></li><li><a href="/b">B</a></li></ul>';
         $html = '<div>' . $list . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
@@ -141,8 +136,7 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testRemovesALeadingMenuShapedListWithoutALandmark(): void
     {
-        // Dissent's masthead menu is a bare <ul>, no <nav>/role. Four+ outbound
-        // link-only items before the first paragraph = a site menu.
+        // A bare <ul> of outbound, link-only items before the first paragraph is a site menu.
         $menu = '<ul class="side-nav">'
             . '<li><a href="https://d.test/subscribe">Subscribe</a></li>'
             . '<li><a href="https://d.test/magazine">Magazine</a></li>'
@@ -158,9 +152,7 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testRemovesALeadingMenuListOfExactlyThreeLinks(): void
     {
-        // A 3-link site breadcrumb ("Umwelt | Philosophie | Meinung & Debatte")
-        // is the motivating case: the threshold now removes a leading link-only
-        // list of three, not just four or more.
+        // A three-link breadcrumb is the smallest leading link-only list that counts as a menu.
         $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
             . '<li><a href="https://d.test/b">B</a></li>'
             . '<li><a href="https://d.test/c">C</a></li></ul>';
@@ -226,10 +218,7 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testKeepsAMenuListBetweenAParagraphAtExactlyTheThresholdAndALaterOne(): void
     {
-        // The first paragraph meets SUBSTANTIAL_PROSE_LENGTH exactly (120), so
-        // it — not the longer paragraph after the list — is the real anchor.
-        // A one-under match would skip it and anchor on the later paragraph
-        // instead, wrongly treating the list between them as a leading menu.
+        // A first paragraph of exactly SUBSTANTIAL_PROSE_LENGTH anchors, so the list after it is not leading.
         $paragraphAtThreshold = str_repeat('x', 120);
         $menu = $this->fourLinkMenu();
         $html = '<div><p>' . $paragraphAtThreshold . '</p>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL
@@ -240,11 +229,8 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testRemovesALeadingMenuListWhenTheFirstParagraphIsShortInCharactersButLongInBytes(): void
     {
-        // 65 "ü" characters is 130 bytes but only 65 characters — a real
-        // prose-threshold miss, so the anchor is the later ASCII paragraph
-        // and the list between the two is still a leading masthead menu. A
-        // byte count would wrongly read the "ü" paragraph itself as
-        // substantial and anchor there instead, keeping the menu.
+        // 65 "ü" are 130 bytes but 65 characters, under the bar: the anchor is the later paragraph, so the list
+        // between them is a leading menu.
         $shortMultibyteParagraph = str_repeat('ü', 65);
         $menu = $this->fourLinkMenu();
         $html = '<div><p>' . $shortMultibyteParagraph . '</p>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL
@@ -265,10 +251,8 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testRemovesALeadingMenuListAtExactlyTheLinkTextRatioThresholdWithMultibyteText(): void
     {
-        // Each item is "AAA" (link) + "üü" (plain, 2 bytes per character): 12
-        // link chars of 20 characters total, exactly the 0.6 threshold by
-        // character count — still chrome. A byte count would read 28 total
-        // and wrongly drop below the threshold.
+        // "üü" is 2 characters but 4 bytes: by characters each item sits exactly at the 0.6 ratio, still chrome;
+        // a byte count would fall below it.
         $list = $this->fourItemList('üü');
         $html = '<div>' . $list . '</div>';
 
@@ -287,10 +271,8 @@ final class NavigationChromeTrimmerTest extends TestCase
 
     public function testKeepsATrailingMenuListInAPostWithNoSubstantialProse(): void
     {
-        // A photo/link post: every paragraph is short (< SUBSTANTIAL_PROSE_LENGTH),
-        // and a "more stories" list follows them. With no substantial prose the
-        // anchor falls back to the first short paragraph, so the trailing list is
-        // not mistaken for a masthead and is kept.
+        // With no substantial prose the anchor falls back to the first short paragraph, so a trailing list is not
+        // mistaken for a masthead.
         $shortParagraph = '<p>' . str_repeat('x', 40) . '</p>';
         $menu = $this->fourLinkMenu();
         $html = '<div>' . $shortParagraph . $shortParagraph . $menu . '</div>';
@@ -328,11 +310,6 @@ final class NavigationChromeTrimmerTest extends TestCase
         return '<ul>' . $item('a') . $item('b') . $item('c') . $item('d') . '</ul>';
     }
 
-    /**
-     * Parses the fragment, runs the in-place trim and serialises the shared
-     * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
-     * owns in the pipeline.
-     */
     private function trimmed(string $bodyHtml): string
     {
         $document = $this->document($bodyHtml);

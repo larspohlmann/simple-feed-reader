@@ -55,10 +55,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testRemovesATrailingRelatedGridWithFingerprintAndLinkShape(): void
     {
-        // Trailing edge, two structural signals: the "related" class fingerprint
-        // and a link-list shape (mostly anchors, little prose). Three leading
-        // substantial paragraphs put it right after the last one, in the
-        // trailing edge.
+        // A "related" fingerprint plus a link-list shape, right after the last of three substantial paragraphs.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -100,10 +97,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testKeepsABlockWithOnlyOneStructuralSignal(): void
     {
-        // A single "related" fingerprint with no link-list shape and no phrase is
-        // not enough under the conservative rule: the block stays, even though it
-        // genuinely sits in the trailing edge, right after the last of three
-        // leading substantial paragraphs.
+        // A lone "related" fingerprint, with no link list and no phrase, is one signal: the trailing block stays.
         $block = '<div class="related"><p>Kurzer Hinweis.</p></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -114,10 +108,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testKeepsABlockWithOnlyAPhraseAndNoStructuralSignal(): void
     {
-        // A heading phrase alone never triggers a removal — phrases only
-        // corroborate. A short trailing note that merely says "Read more" but
-        // carries no fingerprint, link list or form is kept, even though it
-        // genuinely sits in the trailing edge.
+        // A phrase only corroborates: a trailing "Read more" note with no fingerprint, link list or form stays.
         $note = '<p>Read more about our work in the archive.</p>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -128,11 +119,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testKeepsABlockWithACorroboratingHeadingButNoStructuralSignal(): void
     {
-        // "Related posts" matches the phrase list via the heading, but the block
-        // carries no fingerprint class, no link-list shape and no form/email —
-        // zero structural signals. A phrase alone never removes a block, even
-        // when it sits in a real trailing edge, right after three leading
-        // substantial paragraphs.
+        // "Related posts" matches a phrase, but with no fingerprint, link list or form the block has no
+        // structural signal, so it stays.
         $block = '<div><h3>Related posts</h3><p>x</p></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -143,10 +131,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testDescendsThroughAWrapperFollowedByOnlyWhitespaceText(): void
     {
-        // A whitespace-only text node next to the sole wrapper div must not
-        // block the content-root descent: trim() reduces it to '', so the
-        // wrapper is still recognised as the sole element child and the
-        // trimmer descends into it and reaches the trailing grid.
+        // Whitespace-only text beside the sole wrapper is not content, so the trimmer still descends into it and
+        // reaches the trailing grid.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -158,9 +144,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testDescendsThroughAWrapperThatHoldsAnHtmlCommentBesideTheSoleChild(): void
     {
-        // A page shell leaves ESI comments next to the article container. A
-        // comment is not content: the wrapper still has one sole element child,
-        // so the trimmer descends into it and reaches the trailing grid (#779).
+        // ESI comments beside the article container are not content: the wrapper keeps one sole element child,
+        // so the trimmer descends into it and reaches the trailing grid.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
         $html = '<div><div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -186,14 +171,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testDoesNotDescendIntoANonContainerSoleWrapper(): void
     {
-        // The sole top-level element is a <span>, not one of the recognised
-        // container tags (div/article/section/main), so the trimmer must not
-        // descend into it. Treated as a single opaque block, the article's
-        // one block is itself substantial (its combined text clears the
-        // threshold), so it is the boundary anchor and has no edge region —
-        // the grid inside survives even though it looks exactly like the
-        // removable pattern from
-        // testRemovesATrailingRelatedGridWithFingerprintAndLinkShape.
+        // A <span> is not a container tag, so the trimmer does not descend: the one opaque block is substantial
+        // and anchors with no edge, so the grid inside survives.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
         $html = '<span><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -205,11 +184,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testNeverExtendsTheLeadingEdgeBeyondItsComputedBound(): void
     {
-        // The first substantial paragraph sits at index 1, so the leading
-        // edge is exactly [0]: index 1 itself — a block that happens to
-        // carry two structural signals (fingerprint + email input) as well as
-        // enough prose to count as substantial — is the boundary anchor, not
-        // an edge candidate, and must survive untouched.
+        // The first substantial block, at index 1, is a fingerprint-plus-email combo: the leading edge is [0], and
+        // the combo, as the anchor, survives.
         $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
             . ProseParagraphs::SUBSTANTIAL . '</div>';
         $html = '<div><p>Short lead.</p>' . $comboAnchor . '<p>Filler.</p><p>' . ProseParagraphs::SUBSTANTIAL
@@ -220,11 +196,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testNeverShrinksTheTrailingEdgeBelowItsComputedBound(): void
     {
-        // Six leading substantial paragraphs put trailingStart right after
-        // the last one, so the trailing edge is exactly the last two
-        // indexes. A boilerplate block with two structural signals sits at
-        // the very last index and must be reachable and removed — nothing
-        // may narrow that range and skip it.
+        // Six substantial paragraphs, a filler, then boilerplate at the last index: the trailing edge is the last
+        // two blocks, and the boilerplate must be reached and removed.
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
         $html = '<div>'
@@ -239,12 +212,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLeadingBoundUsesTheFirstSubstantialIndexNotTheSecond(): void
     {
-        // The FIRST substantial block is at index 1 (a combo block: long
-        // enough to count and structurally boilerplate) and a second
-        // substantial paragraph sits later at index 3. The correct leading
-        // edge is [0] only; using the second substantial index instead of
-        // the first would widen it to [0,1] and wrongly catch the combo
-        // block at index 1.
+        // The first substantial index (1, a combo block) bounds the leading edge, not the second (3): the edge is
+        // [0], so the combo stays.
         $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
             . ProseParagraphs::SUBSTANTIAL . '</div>';
         $html = '<div><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -255,13 +224,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testTrailingBoundExcludesTheLastSubstantialIndexItself(): void
     {
-        // Eight blocks: six leading substantial paragraphs (indexes 0-5),
-        // then a combo block at index 6 that is itself long enough to count
-        // as substantial while also carrying two structural signals, then a
-        // filler at index 7. The last substantial index is 6, so the
-        // trailing edge must start at 7 — the combo block at 6 is the
-        // boundary anchor itself and must never be pulled into the trailing
-        // edge alongside it.
+        // The combo block at index 6 is the last substantial one, so the trailing edge starts at 7 and the combo,
+        // the anchor, stays.
         $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
             . ProseParagraphs::SUBSTANTIAL . '</div>';
         $html = '<div>'
@@ -276,16 +240,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testTrailingBoundStaysAtSubstantialIndexPlusOneNotMinusOne(): void
     {
-        // A substantial paragraph opens the article (index 0), so the
-        // leading edge is empty and cannot reach the boilerplate. Seven
-        // filler blocks and a closing substantial paragraph (index 8) put
-        // the last substantial index at 8, so trailingStart correctly
-        // computes to 9, past the last real index — the article ends on
-        // real content and has no trailing edge at all. A boilerplate block
-        // at index 7, immediately before that closing paragraph, sits in
-        // that undefined region and must be left alone. Were trailingStart
-        // computed as substantialIndex - 1 instead of + 1, it would land on
-        // 7 and wrongly pull the boilerplate into a trailing edge.
+        // Substantial paragraphs at 0 and 8 with boilerplate at 7: the trailing edge starts at 9, past the end,
+        // so 7 sits in the middle and stays.
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -297,11 +253,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testSubstantialityIgnoresPaddingWhitespaceAroundTheText(): void
     {
-        // The trailing block's real content is a 3-char link list ("ABC"),
-        // padded with 250 leading spaces so its raw (untrimmed) length would
-        // clear the 200-char substantial threshold. Trimmed, it is nowhere
-        // near substantial, so it must stay eligible for removal alongside
-        // the fingerprint + link-list signals it carries.
+        // 250 padding spaces around a three-letter link list: trimmed, the block is far from substantial, so it
+        // stays in the edge and goes.
         $padded = '<div class="related">' . str_repeat(' ', 250)
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -313,12 +266,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testSubstantialityCountsCharactersNotBytes(): void
     {
-        // The trailing block's trimmed text is "aaa...a" (185 chars) plus 10
-        // "ä" characters — 195 characters, so it stays under the 200-char
-        // substantial threshold. In UTF-8 those 10 "ä" cost 2 bytes each, so
-        // a byte-counting measure would read 205 and wrongly call it
-        // substantial. It carries a fingerprint and an email input, so it
-        // must stay removable.
+        // 185 "a" plus 10 "ä" are 195 characters (205 bytes), under the 200-character bar, so the block with a
+        // fingerprint and an email input stays in the edge and goes.
         $target = '<div class="related">' . str_repeat('a', 185) . str_repeat('ä', 10)
             . '<input type="email"></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -330,12 +279,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testSubstantialityThresholdIsInclusiveAtExactly200Characters(): void
     {
-        // The leading block's text is exactly 200 characters — at the
-        // threshold, not past it — so it counts as substantial and is the
-        // leading anchor itself (leadingEnd=0, excluded from the edge). It
-        // also carries two structural signals (fingerprint + email input),
-        // so if the threshold were exclusive it would wrongly fall into the
-        // leading edge and get removed.
+        // Exactly 200 characters is substantial, so the combo block is the leading anchor and stays.
         $target = '<div class="related">' . str_repeat('x', 200) . '<input type="email"></div>';
         $html = '<div>' . $target . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL
             . '</p><p>Filler.</p></div>';
@@ -345,15 +289,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testSubstantialIndexesAreNotCollapsedToJustTheFirst(): void
     {
-        // Eight blocks: a plain substantial paragraph at index 0, five short
-        // fillers, then at index 6 a combo block — long enough to count as
-        // substantial in its own right while also carrying two structural
-        // signals — and a filler at index 7. With both substantial indexes
-        // (0 and 6) tracked, the trailing edge starts at 7 and the combo
-        // block at 6 is the boundary anchor, left alone. Collapsing the
-        // substantial list down to just its first entry (index 0) would
-        // recompute the trailing edge from a stale, too-early anchor and
-        // wrongly pull the combo block at index 6 into it.
+        // Substantial blocks at 0 and 6 (a combo): the trailing edge starts after the last of them, so the combo
+        // is the anchor and stays.
         $comboAnchor = '<div class="related"><input type="email">' . str_repeat('x', 205) . '</div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>Filler.</p><p>Filler.</p><p>Filler.</p>'
             . '<p>Filler.</p><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p></div>';
@@ -376,10 +313,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testFewerThanThreeLinksIsNeverALinkListRegardlessOfRatio(): void
     {
-        // Only two links, whose text is the block's entire content (ratio
-        // 1.0). MIN_LINKS_FOR_LIST must reject this outright before the
-        // ratio is even considered — with only the fingerprint left as a
-        // signal, this trailing block stays.
+        // Two links are under MIN_LINKS_FOR_LIST whatever the ratio: only the fingerprint is left, so the block
+        // stays.
         $pair = '<div class="related"><a href="/a">A</a><a href="/b">B</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -390,12 +325,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkListRatioIgnoresPaddingWhitespaceInTheDenominator(): void
     {
-        // 300 leading spaces followed by three one-letter links: trimmed,
-        // the block's text is just "ABC" and the links account for all of
-        // it (ratio 1.0). Untrimmed, the denominator balloons to 303 and the
-        // ratio collapses to near zero. Combined with the fingerprint, the
-        // correct (trimmed) ratio gives two signals and this trailing block
-        // must be removed.
+        // 300 padding spaces before three one-letter links: trimmed, the links are all of the text (ratio 1.0), so
+        // with the fingerprint the block goes.
         $grid = '<div class="related">' . str_repeat(' ', 300)
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -407,11 +338,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkListRatioBoundaryOfExactlyPointSixCountsAsAList(): void
     {
-        // Denominator "ää" + "ABC" = 5 characters; numerator (the three
-        // one-letter links) = 3 characters. 3/5 = 0.6 exactly, at the
-        // LINK_TEXT_RATIO boundary, which is inclusive ("at least this
-        // ratio"). Combined with the fingerprint, that is two signals, so
-        // this trailing block must be removed.
+        // "ää" plus three one-letter links is 3/5 = 0.6 exactly, and LINK_TEXT_RATIO is inclusive: with the
+        // fingerprint, the block goes.
         $grid = '<div class="related">ää<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -422,12 +350,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkTextLengthCountsCharactersNotBytes(): void
     {
-        // Denominator: "Hello" (5 chars) + three one-char "ä" links = 8
-        // characters. Numerator: the three "ä" links = 3 characters.
-        // 3/8 = 0.375, below the 0.6 ratio, so this is NOT a link list —
-        // with only the fingerprint left, this trailing block stays. A
-        // byte-counting numerator would read 6 (each "ä" is 2 bytes) and
-        // wrongly cross the ratio threshold (6/8 = 0.75).
+        // The three "ä" links are 3 of 8 characters (0.375), not a list, so the block stays; counted in bytes
+        // they would read 6 of 8.
         $block = '<div class="related">Hello<a href="/a">ä</a><a href="/b">ä</a><a href="/c">ä</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -438,12 +362,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkTextLengthTrimsEachLinksOwnPadding(): void
     {
-        // Each link's text is padded (" A ", " B ", " C "); collapsed per
-        // link, the numerator is 3 characters against a collapsed block
-        // denominator of 11 ("Hello A B C"), giving ratio 3/11 ≈ 0.27 — below
-        // the 0.6 threshold, so with only the fingerprint left this trailing
-        // block stays. Without per-link collapsing, the padding would inflate
-        // the numerator to 9 and wrongly push the ratio to ≈0.82.
+        // Each link's padding collapses: 3 link characters of 11 (about 0.27) is not a list, so only the
+        // fingerprint is left and the block stays.
         $block = '<div class="related">Hello<a href="/a"> A </a><a href="/b"> B </a><a href="/c"> C </a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -454,12 +374,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkListRatioIsAQuotientNotAProduct(): void
     {
-        // Three short links ("a","b","c") sit inside a long, mostly-prose
-        // block, so the true ratio (3 link characters over ~230 block
-        // characters) is far below 0.6 — with only the fingerprint left,
-        // this trailing block stays. Multiplying the two lengths instead of
-        // dividing them would yield a huge number that clears any ratio
-        // threshold and wrongly remove it.
+        // Three one-letter links inside substantial prose are far below the ratio: only the fingerprint is left,
+        // so the block stays.
         $block = '<div class="related">' . ProseParagraphs::SUBSTANTIAL
             . '<a href="/a">a</a><a href="/b">b</a><a href="/c">c</a></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
@@ -471,10 +387,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testFormPresenceAloneCountsAsAStructuralSignalEvenWithoutEmail(): void
     {
-        // A <form> with a plain text input, no email field at all. The form
-        // check must short-circuit on the <form> element itself — combined
-        // with the fingerprint, that is two signals, so this trailing block
-        // must be removed.
+        // A <form> is a signal without any email input: with the fingerprint, the block goes.
         $block = '<div class="related"><form><input type="text"></form></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -498,13 +411,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testCorroboratingPhraseMatchIsCaseInsensitiveAcrossUmlauts(): void
     {
-        // The German fragment "ähnliche beiträge" only appears title-cased
-        // in the heading ("Ähnliche Beiträge"). A byte-wise lowercasing
-        // leaves the leading "Ä" untouched (it is outside the ASCII a-z
-        // range it knows how to fold), so the match only succeeds with a
-        // proper multibyte lowercase. One structural signal (the
-        // "comment-respond" fingerprint) plus this corroborating heading is
-        // enough to remove this leading block.
+        // "Ähnliche Beiträge" matches its lower-case fragment only through a multibyte lowercase; with the
+        // "comment-respond" fingerprint, the leading block goes.
         $prompt = '<div class="comment-respond"><h3>Ähnliche Beiträge</h3><p>Text.</p></div>';
         $html = '<div>' . $prompt . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL
             . '</p><p>'
@@ -515,10 +423,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testCorroboratingPhraseRequiresAnActualMatchNotAnyHeading(): void
     {
-        // A heading is present but its text matches none of the phrase
-        // fragments. One structural signal (the "related" fingerprint)
-        // without a real corroborating phrase is not enough under the
-        // conservative rule, so this trailing block stays.
+        // A heading that matches no phrase does not corroborate: one signal, so the block stays.
         $block = '<div class="related"><h3>Our Team History</h3><p>Text.</p></div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
@@ -566,8 +471,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testRemovesLeadingBoilerplateOnATwoBlockWrapper(): void
     {
-        // With the cap gone, a 2-block wrapper's leading link-list + phrase is
-        // reachable (floor(0.25 * 2) was 0 before).
+        // A two-block wrapper still has a leading edge: its link list plus phrase goes.
         $related = '<div class="related"><h3>Related posts</h3>'
             . '<a href="https://x.test/a">A</a><a href="https://x.test/b">B</a>'
             . '<a href="https://x.test/c">C</a></div>';
@@ -576,17 +480,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         self::assertStringNotContainsString('class="related"', $this->trimmed($body));
     }
 
-    /**
-     * Parses the fragment, runs the in-place trim, and serialises the shared
-     * document — mirroring the parse-once/serialise-once window ReaderBodyCleaner
-     * owns in the pipeline.
-     */
     public function testRemovesATrailingTeaserCardListWithoutFingerprintOrPhrase(): void
     {
-        // A publisher's "more on the topic" carousel: no fingerprint class, the
-        // section title in a <span> so no heading phrase can corroborate, but
-        // three links that each wrap a picture and a title. Link-dominated
-        // text plus picture cards are two structural signals (#779).
+        // A carousel with no fingerprint and its title in a <span>, so no phrase: link-dominated text plus
+        // picture cards are two signals.
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
             . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
@@ -650,10 +547,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testALinkDominatedBlockNeverAnchorsAnEdgeHoweverLongItRuns(): void
     {
-        // Seven teaser cards run past the 200-character prose bar, but their
-        // text is almost all link text: a list, not prose. It must not count
-        // as the article's last paragraph and shield itself from the trailing
-        // edge (#779).
+        // Seven teaser cards run past the 200-character bar, but link-dominated text is a list, not prose: it
+        // must not anchor the trailing edge and shield itself.
         $cards = '';
         foreach (['a', 'b', 'c', 'd', 'e', 'f', 'g'] as $slug) {
             $cards .= self::teaserCard('/' . $slug, 'Ein Teaser mit einer langen Überschrift, wie Verlage sie setzen');
@@ -667,10 +562,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testLinkRatioMeasuresCollapsedTextSoIndentationDoesNotDiluteIt(): void
     {
-        // Pretty-printed markup leaves a run of indentation between each link.
-        // Raw, that whitespace is 33 of 47 characters and drags the ratio to
-        // 0.3; collapsed, the links are 14 of 16 characters. Fingerprint plus
-        // link list: this trailing block must be removed.
+        // The ratio reads collapsed text, so pretty-printed indentation between the links does not dilute it:
+        // fingerprint plus link list, the block goes.
         $indent = "\n          ";
         $block = '<div class="related">' . $indent . '<a href="/a">Alpha</a>' . $indent
             . '<a href="/b">Beta</a>' . $indent . '<a href="/c">Gamma</a></div>';
@@ -683,10 +576,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     public function testSubstantialityMeasuresCollapsedTextSoIndentationDoesNotInflateIt(): void
     {
-        // 190 letters split by a 60-character whitespace run: raw, the block
-        // reads 250 characters and would anchor the trailing edge; collapsed,
-        // it is 191 and stays below the bar. Fingerprint plus email input:
-        // this trailing block must be removed.
+        // 190 letters around a 60-character newline run: collapsed, the block stays under the bar, so fingerprint
+        // plus email input removes it.
         $target = '<div class="related"><input type="email">' . str_repeat('x', 100)
             . str_repeat("\n", 60) . str_repeat('x', 90) . '</div>';
         $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'

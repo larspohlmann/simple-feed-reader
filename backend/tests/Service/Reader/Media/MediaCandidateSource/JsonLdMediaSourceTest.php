@@ -58,7 +58,6 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://x.test/poster.jpg', $found[0]->posterUrl);
     }
 
-    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
     public function testEmitsAPosterlessVideoObjectForTheScannerToResolve(): void
     {
         $html = '<html><body><script type="application/ld+json">'
@@ -87,7 +86,6 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertNull($found[0]->posterUrl);
     }
 
-    /** 5 Magazine's JSON-LD contentUrls are images; they must not become media. */
     public function testIgnoresAnImageContentUrl(): void
     {
         $html = '<html><body><script type="application/ld+json">'
@@ -156,10 +154,7 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://x.test/v.mp4', $found[0]->url);
     }
 
-    /**
-     * Al Jazeera: the provider has no poster of its own, so the declared
-     * thumbnail stands in and the body image reconciles.
-     */
+    /** The provider has no poster of its own, so the declared thumbnail stands in and the body image reconciles. */
     public function testAnEmbedWithoutAProviderPosterCarriesTheDeclaredThumbnail(): void
     {
         $thumbnail = 'https://www.aljazeera.com/wp-content/uploads/2026/08/image-1787184739.jpg?resize=1609%2C1080';
@@ -175,7 +170,7 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame($thumbnail, $found[0]->posterUrl);
     }
 
-    /** ZDF 491430: contentUrl is an HLS playlist, thumbnailUrl a two-entry array. */
+    /** ZDF: contentUrl is an HLS playlist, thumbnailUrl a two-entry array. */
     public function testAnHlsContentUrlYieldsAStreamWithTheFirstThumbnail(): void
     {
         $html = '<html><head><script type="application/ld+json">{"@type":"VideoObject",'
@@ -193,7 +188,7 @@ final class JsonLdMediaSourceTest extends TestCase
         self::assertSame('https://www.zdfheute.de/assets/istaf-102~1920x1080?cb=1', $found[0]->posterUrl);
     }
 
-    /** Al Jazeera 495829: one VideoObject declares its file and its player page — one asset, one player. */
+    /** One VideoObject declares its file and its player page: one asset, one player. */
     public function testAFileBeatsThePlayerPageDeclaredOnTheSameNode(): void
     {
         $html = '<html><body><script type="application/ld+json">'

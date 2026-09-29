@@ -35,7 +35,7 @@ final class AttributeMediaSourceTest extends TestCase
         );
     }
 
-    /** Deutschlandradio's data-audio-src, reached without naming Deutschlandradio. */
+    /** A data-audio-src attribute, found without naming its publisher. */
     public function testFindsAMediaUrlInAnyAttribute(): void
     {
         $html = '<body><div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
@@ -46,7 +46,7 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame(MediaKind::Audio, $found[0]->kind);
     }
 
-    /** ZEIT hides the narration mp3 in data-src on an audio inside a tts wrapper (#903). */
+    /** The narration mp3 hides in data-src on an audio inside a tts wrapper. */
     public function testFlagsNarrationFromTheFileHostOrTheHoldingElement(): void
     {
         $html = '<body><div data-audio-type="tts">'
@@ -68,7 +68,7 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertFalse($found[0]->narrated);
     }
 
-    /** ARD keeps its renditions in a data-v attribute, with the poster in og:image. */
+    /** Renditions in a data-v attribute, with the poster in og:image. */
     public function testFindsAVideoInAnAttributeAndTakesTheOgImagePoster(): void
     {
         $html = '<html><head><meta property="og:image" content="https://x.test/p.jpg"></head>'
@@ -80,7 +80,6 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame('https://x.test/p.jpg', $found[0]->posterUrl);
     }
 
-    /** The scanner rescues or drops a still-poster-less video; the source just reports it (#913). */
     public function testEmitsAVideoWithNoPosterForTheScannerToResolve(): void
     {
         $html = '<body><div data-v="https://x.test/clip.mp4"></div></body>';
@@ -92,7 +91,7 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertNull($found[0]->posterUrl);
     }
 
-    /** tagesschau's broadcast pages: no og:image, the still sits in the player wrapper beside the URL holder. */
+    /** No og:image: the still sits in the player wrapper beside the URL holder. */
     public function testTakesTheStillBesideThePlayerWhenThePageHasNoOgImage(): void
     {
         $html = '<body><div class="wrapper"><picture><img src="https://x.test/sendungsbild.jpg"></picture>'
@@ -193,7 +192,7 @@ final class AttributeMediaSourceTest extends TestCase
 
     public function testAnchorsARepeatedUrlWhereItFirstAppears(): void
     {
-        // ARD lists the same rendition in the player and again in a download menu.
+        // The same rendition sits in the player and again in a download menu.
         $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div>'
             . '<p>A download menu paragraph, long enough to be a prose block of its own.</p>'
@@ -226,7 +225,7 @@ final class AttributeMediaSourceTest extends TestCase
         self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
     }
 
-    /** NDR (#1058): a related-content teaser hides its clip in a config blob; it is not the article's media. */
+    /** A related-content teaser hides its clip in a config blob; it is not the article's media. */
     public function testSkipsAClipInsideARelatedContentTeaser(): void
     {
         $html = '<body><article>'

@@ -41,7 +41,7 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testKeepsAWhatsAppContactLinkThatCarriesNoPageUrl(): void
     {
-        // POLITICO's write-to-the-hosts link: a share host, but no page URL.
+        // A write-to-the-hosts link: a share host, but no page URL.
         $html = '<div><p>Body.</p>'
             . '<a href="https://api.whatsapp.com/send/?phone=32491050629&amp;text=Hey+Zoya+and+crew!">Message us</a>'
             . '</div>';
@@ -83,9 +83,8 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testRemovesANestedListShareBarIncludingItsLabel(): void
     {
-        // A <ul><li> bar is the common markup shape a hand-rolled share widget
-        // uses; the climb must see through the list structure to reach the
-        // wrapping label, not stop at the first <li> (#627 fix round 1).
+        // A hand-rolled share bar is a <ul><li>: the climb must see through the list to reach the wrapping
+        // label, not stop at the first <li>.
         $html = '<article><p>Body.</p>'
             . '<div><span>Share this article</span>'
             . '<ul class="bar">'
@@ -103,8 +102,8 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testKeepsAReddiGuidelinesLinkButRemovesAPlainRedditSubmitLink(): void
     {
-        // A path segment boundary, not a bare prefix: "submit-guidelines" is a
-        // different endpoint from "submit" and must not match it (#627 fix round 1).
+        // A path segment boundary, not a bare prefix: "submit-guidelines" is a different endpoint from
+        // "submit" and must not match it.
         $kept = $this->cleaned(
             '<div><p>Body.</p><a href="https://reddit.com/submit-guidelines?url=https://x.test/a">Guidelines</a></div>',
         );
@@ -118,8 +117,7 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testRemovesAFacebookSharerPhpLink(): void
     {
-        // The 5 Magazine / Nature shape: no "/sharer/" segment, just the bare
-        // "sharer.php" file — the "." must count as a boundary too (#627 fix round 2).
+        // No "/sharer/" segment, just the bare "sharer.php" file: the "." counts as a boundary too.
         $html = '<div><p>Body.</p>'
             . '<a href="https://www.facebook.com/sharer.php?u=https://5mag.test/a">Share</a></div>';
 
@@ -128,9 +126,8 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testRemovesALinkedInShareArticleLinkWithACamelCasePath(): void
     {
-        // Nature's shape: LinkedIn's own share link uses camelCase in the path
-        // ("/shareArticle"), which must still match the lowercase endpoint
-        // ("linkedin.com/sharearticle") (#627 fix round 3).
+        // LinkedIn's share link spells its path "/shareArticle", which must still match the lower-case endpoint
+        // "linkedin.com/sharearticle".
         $html = '<div><p>Body.</p>'
             . '<a href="https://www.linkedin.com/shareArticle?url=https://nature.test/a&amp;title=T">Share</a></div>';
 
@@ -139,9 +136,8 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testKeepsAWaMeLookAlikeDomainThatIsNotTheHostOnlyEndpoint(): void
     {
-        // "wa.me" is a host-only endpoint, so it must not gain the file-extension
-        // boundary that "facebook.com/sharer" earns from its path segment (#627
-        // fix round 3): "wa.me.example.com" is an unrelated domain.
+        // "wa.me" is a host-only endpoint, so it gets no file-extension boundary: "wa.me.example.com" is an
+        // unrelated domain.
         $html = '<div><p>Body.</p>'
             . '<a href="https://wa.me.example.com/share?u=https://x.test/a">Share</a></div>';
 
@@ -171,8 +167,7 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testRemovesAClusterWithAMultibyteLabelUnderTheCharacterBudget(): void
     {
-        // 40 "ü" characters: 40 chars by mb_strlen, ~80 bytes by strlen — an
-        // mb_strlen -> strlen mutant would wrongly see it as over budget.
+        // 40 "ü" are 40 characters but 80 bytes: the budget counts characters.
         $label = str_repeat('ü', 40);
         $html = '<div><span>' . $label . '</span>'
             . '<a href="https://x.com/intent/tweet?url=https://x.test/a">X</a></div>';
@@ -182,8 +177,8 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     public function testRemovesALinkBackToThePageItselfThatCarriesAShareAction(): void
     {
-        // Substack's "Share" button (#786): the post's own URL with `action=share`,
-        // so no share host is involved and the endpoint list never matches it.
+        // A "Share" button linking to the post's own URL with `action=share`: no share host is involved, so the
+        // endpoint list never matches it.
         $html = '<html lang="en"><head><link rel="canonical" href="https://pub.test/p/post"></head><body>'
             . '<p>Body.</p><p class="button-wrapper"><a href="https://pub.test/p/post'
             . '?utm_source=substack&amp;utm_medium=email&amp;utm_content=share&amp;action=share">'
