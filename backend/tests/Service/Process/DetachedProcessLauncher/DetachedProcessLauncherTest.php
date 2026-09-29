@@ -43,9 +43,8 @@ final class DetachedProcessLauncherTest extends TestCase
     }
 
     /**
-     * The launcher's contract is best-effort and silent (#371): on a host
-     * with exec() in disable_functions the call is an \Error, and the
-     * request must fall back to today's one-step advance rather than 500.
+     * The launcher is best-effort and silent: with exec() in disable_functions the call is an \Error, and the request
+     * must fall back to the one-step advance rather than a 500.
      */
     public function testAThrowingShellIsSwallowed(): void
     {

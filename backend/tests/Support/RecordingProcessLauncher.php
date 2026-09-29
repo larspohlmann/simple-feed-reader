@@ -7,11 +7,8 @@ namespace App\Tests\Support;
 use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
- * Records every detached launch instead of forking one, so a test can assert
- * both the command line a caller asked for and how many times it asked. The
- * count is load-bearing: RecommendationDrainOnTerminateListener fires at most
- * once per request or console command, and only a recorded list can tell one
- * launch from six (#371, #393).
+ * Records each launch instead of forking, so a test can assert the line and the count: the drain listener fires at
+ * most once per request or command, and only a recorded list tells one launch from six.
  */
 final class RecordingProcessLauncher implements DetachedProcessLauncherInterface
 {
