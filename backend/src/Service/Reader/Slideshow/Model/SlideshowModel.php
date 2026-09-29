@@ -18,7 +18,7 @@ final readonly class SlideshowModel
     /**
      * The floor lives here so every recognizer inherits it: fewer than two
      * distinct images is not a slideshow. A lone image is a single picture, and
-     * a row that repeats one image is a placeholder carousel, not a gallery (#1091).
+     * a row that repeats one image is a placeholder carousel, not a gallery.
      *
      * @param list<SlideModel> $slides
      */

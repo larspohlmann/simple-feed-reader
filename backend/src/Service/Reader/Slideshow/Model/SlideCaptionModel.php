@@ -6,7 +6,7 @@ namespace App\Service\Reader\Slideshow\Model;
 
 /**
  * The text that sits with a slide and, when the slide is a link, the URL it
- * points at. A slide with no text renders no caption (#930).
+ * points at. A slide with no text renders no caption.
  */
 final readonly class SlideCaptionModel
 {

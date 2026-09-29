@@ -13,12 +13,7 @@ use App\Service\Reader\Slideshow\SlideImageResolver;
 use Dom\Element;
 use Dom\HTMLDocument;
 
-/**
- * Recognizes the CSS-class carousel libraries from one config row per library:
- * Swiper/Splide/Glide/Embla/Owl/Flickity/Slick/tiny-slider and the "purple" CMS
- * gallery (slideshowcontainer › slideshow-image) share the shape container-class
- * › slide-class, so the rule table replaces a class per library.
- */
+/** Recognizes the CSS-class carousel libraries, one container-class › slide-class row each in RULES. */
 final readonly class MarkupCarouselRecognizer implements SlideshowRecognizerInterface
 {
     /** @var list<array{container: ?string, slide: ?string}> */

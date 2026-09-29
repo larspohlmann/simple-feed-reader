@@ -7,11 +7,8 @@ namespace App\Service\Reader\Slideshow\Model;
 use Dom\Element;
 
 /**
- * How to find the original carousel again in the cleaned body, so the inserter
- * can remove it — otherwise the recreated slideshow would sit beside the
- * publisher's broken original. The id is the sturdier key: readability merges a
- * wrapper chain onto one element, keeping the innermost id but the outermost
- * class, so a class-only signature loses the element the id still names.
+ * Finds the original carousel again in the cleaned body so the inserter can remove it. The id is the sturdier key:
+ * readability merges a wrapper chain into one element that keeps the innermost id but the outermost class.
  */
 final readonly class ContainerSignatureModel
 {
