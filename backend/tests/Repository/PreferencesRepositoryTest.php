@@ -10,11 +10,8 @@ use App\Repository\PreferencesRepository;
 use App\Tests\DbTestCase;
 
 /**
- * findWithDigestEnabled() is the one DQL statement SendDueDigestsTest cannot
- * exercise — that test stubs the repository entirely, so a wrong column, an
- * inverted boolean, or a DBAL boolean-literal bug in the query itself would
- * pass the whole suite silently (#636). This test runs the real query
- * against a real EntityManager instead.
+ * Runs findWithDigestEnabled()'s real query: SendDueDigestsTest stubs the repository, so a wrong column or an
+ * inverted boolean in it would pass every other test.
  */
 final class PreferencesRepositoryTest extends DbTestCase
 {

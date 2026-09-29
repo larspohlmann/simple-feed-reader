@@ -17,10 +17,8 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
 /**
- * The LIKE search over title and summary. Every assertion here uses ASCII
- * terms on purpose: MySQL's collation folds case and accents, SQLite's LIKE
- * folds ASCII case only, and this suite runs on SQLite natively. A test that
- * searched "Ubung" for "Übung" would pass in production and fail here.
+ * The LIKE search over title and summary, with ASCII terms only: MySQL's collation folds case and accents, SQLite's
+ * LIKE folds ASCII case only, so "Ubung" finding "Übung" would pass in production and fail here.
  */
 final class EntrySearchTest extends DbTestCase
 {
@@ -149,11 +147,8 @@ final class EntrySearchTest extends DbTestCase
 
     public function testEachTermIsBoundToItsOwnParameter(): void
     {
-        // Neither entry carries both terms, so the correct AND-of-terms query
-        // matches nothing. If every term's LIKE reused the same bound
-        // parameter name, all placeholders would silently collapse onto the
-        // last term's value, and the entry that happens to match only that
-        // last term would wrongly come back.
+        // Neither entry carries both terms, so nothing matches. Terms sharing one bound parameter would all take the
+        // last term's value, and the entry matching only that term would come back.
         $this->entry('first-term-only', 'Angular explained');
         $this->entry('second-term-only', 'Signals explained');
 
@@ -255,9 +250,7 @@ final class EntrySearchTest extends DbTestCase
 
     public function testClampsALimitOfZeroToOneRow(): void
     {
-        // searchForUser floors the limit at 1 (max(1, ...)) rather than
-        // passing an untouched 0 straight to setMaxResults(), which would
-        // return no rows at all.
+        // EntrySearchQuery clamps 0 to 1; an untouched 0 would reach setMaxResults() and return no rows.
         $this->entry('older', 'Angular one', null, '2026-07-10T00:00:00Z');
         $this->entry('newer', 'Angular two', null, '2026-07-12T00:00:00Z');
 
@@ -294,11 +287,8 @@ final class EntrySearchTest extends DbTestCase
         self::assertSame(['leading'], $this->search('punk '));
     }
 
-    // A whole-word match normalizes the HAYSTACK's punctuation to spaces. When
-    // the term was left un-normalized, any term carrying punctuation searched
-    // for something the haystack no longer contained and matched nothing at
-    // all, while the plain substring search matched fine. German prose makes
-    // that the common case rather than an exotic one.
+    // A whole-word match turns the haystack's punctuation into spaces, so the term must be normalized the same way;
+    // German prose makes a hyphenated term the common case.
     public function testATrailingSpaceMatchesAHyphenatedTerm(): void
     {
         $this->entry('hyphen', 'Die neue E-Mail-Adresse ist da');
@@ -315,11 +305,8 @@ final class EntrySearchTest extends DbTestCase
 
     public function testAHyphenatedTermMatchesTheSameWordWrittenWithAnEnDash(): void
     {
-        // Both sides normalize to "E Mail", so both must match. This is also
-        // the case that makes the cheap "%term%" prefilter unsound for a
-        // punctuated term: "E-Mail" is not a raw substring of "E–Mail", so a
-        // prefilter applied here would reject the row before the normalized
-        // check ever ran.
+        // Both normalize to "E Mail", so both match. It is also why a punctuated term skips the cheap "%term%"
+        // prefilter: "E-Mail" is not a raw substring of "E–Mail".
         $this->entry('endash', 'Die neue E–Mail kam an');
 
         self::assertSame(['endash'], $this->search('E-Mail '));
@@ -380,11 +367,8 @@ final class EntrySearchTest extends DbTestCase
 
     public function testAMultiTermWholeWordQueryChecksEachTermsOwnWordNotJustAnyTerms(): void
     {
-        // "punk" is only a substring here ("cyberpunk"), not a whole word, even
-        // though "perfect" is. Each term's whole-word check is bound to its own
-        // parameter; if the terms shared one bound value (e.g. all falling back
-        // to the last term's pattern), this would wrongly match on "perfect"
-        // alone without ever verifying "punk" as its own whole word.
+        // "punk" is only a substring here ("cyberpunk"); "perfect" is a whole word. Each term's check binds its own
+        // parameter, or this would match on "perfect" alone.
         $this->entry('miss', 'cyberpunk is perfect');
 
         self::assertSame([], $this->search('punk perfect '));

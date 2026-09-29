@@ -9,10 +9,7 @@ use App\Entity\Feed;
 use App\Repository\EntryRepository;
 use App\Tests\DbTestCase;
 
-/**
- * The restore's post-insert read-back (#456): the ids of the rows one batch
- * just wrote, and nothing else of the feed.
- */
+/** The restore's post-insert read-back: the ids of the rows one batch just wrote, and nothing else of the feed. */
 final class EntryIdsByGuidHashTest extends DbTestCase
 {
     public function testReturnsTheAskedHashesOfTheOneFeedOnly(): void

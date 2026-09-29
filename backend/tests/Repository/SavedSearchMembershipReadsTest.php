@@ -18,8 +18,8 @@ use App\Repository\SavedSearchListQuery;
 use App\Tests\DbTestCase;
 
 /**
- * Every saved-search read over the membership table (#1116): the list, the
- * badge ids, the mark-read set, the digest window and the per-card badge.
+ * Every saved-search read over the membership table: the list, the badge ids, the mark-read set, the digest window
+ * and the per-card badge.
  */
 final class SavedSearchMembershipReadsTest extends DbTestCase
 {

@@ -13,10 +13,8 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 
 /**
- * rowsByIdsForUser: the hydration step IndexedEntrySearch uses to turn a
- * search index's entry ids back into full list rows. It reuses the entry
- * list's own projection and subscription join, which is the point — see the
- * method's docblock on EntryListRepository.
+ * rowsByIdsForUser(), which turns a search index's ids back into list rows through the entry list's own projection
+ * and subscription join.
  */
 final class EntryRowsByIdsTest extends DbTestCase
 {

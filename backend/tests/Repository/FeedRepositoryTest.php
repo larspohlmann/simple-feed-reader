@@ -160,10 +160,8 @@ final class FeedRepositoryTest extends DbTestCase
 
     public function testForceTreatsAFutureLastFetchedAtAsEligible(): void
     {
-        // A worker on the wrong timezone stamped lastFetchedAt in the future in
-        // #151. Read by a correct clock, such a value must not count as "just
-        // fetched" and freeze the feed out of every refresh — a future fetch
-        // time is impossible, so the feed is due.
+        // A non-UTC worker stamped future fetch times in #151. A future fetch time is impossible, so the feed is due,
+        // not frozen out as "just fetched".
         $future = $this->feed('https://a.example.com/feed', $this->now->modify('+1 hour'));
         $future->recordSuccessfulFetch($this->now->modify('+59 minutes'), 60);
         $this->entityManager->flush();
