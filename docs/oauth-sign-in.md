@@ -149,10 +149,10 @@ It is deliberately **not** derived from the incoming request. Deriving it from
 the `Host` header would let anyone who can set that header point the redirect —
 and therefore the authorization code — somewhere else.
 
-`APP_FRONTEND_URL` (already used by the mailer) is the other half: it is where
-the callback sends the browser at step 3, and it is likewise a deployment-time
-value that no request can influence. It is **also the CORS origin** — see
-section 4.3, which matters more than it used to.
+`APP_FRONTEND_URL` (also the fallback base of the links in account mail) is the
+other half: it is where the callback sends the browser at step 3, and it is
+likewise a deployment-time value that no request can influence. It is **also
+the CORS origin** — see section 4.3.
 
 ### 4.1 It must be `https`, and that is not merely advice
 
@@ -409,15 +409,19 @@ the way back.
 
 Two things in the approval queue look like anomalies and are not.
 
-**No verification mail.** OAuth accounts are created in `pending_approval`, not
-`pending_verification`. Double opt-in exists to prove the address belongs to the
-person signing up, and the provider has already proved exactly that. There is no
-verification mail to chase because none was ever sent.
+**No verification mail.** OAuth accounts are created in `pending_approval` — or
+active at once when admin approval is off — never in `pending_verification`.
+Double opt-in exists to prove the address belongs to the person signing up, and
+the provider has already proved exactly that. There is no verification mail to
+chase because none was ever sent.
 
 **A `…@oauth.invalid` address.** Apple returns a user's address only on the
 *first* authorization. Someone who revokes access and signs in again arrives
 with a subject identifier and nothing else — so the account gets a synthetic
-`<provider>-<hash>@oauth.invalid` identifier. `.invalid` is reserved by RFC 2606
+`<provider>-<hash>@oauth.invalid` identifier. An address the provider did not
+verify, and an Apple private-relay address, get the same placeholder: neither
+may become the login identifier ([security.md](security.md#oauth-account-linking)).
+`.invalid` is reserved by RFC 2606
 and can never resolve, which is the point: it is visibly not a real address. The
 `identities` column in `GET /api/admin/users` tells you which provider such an
 account came from.
@@ -525,18 +529,19 @@ So: do not retry a failed exchange with the same code, and expect a page reload
 of `/auth/callback?code=…` to fail. Strip the query string from the URL once
 exchanged.
 
-**On whether to exchange automatically on landing — a change of advice.** This
-document previously said to do it *immediately* on route activation. That is
-still workable and is no longer a vulnerability, but the recommendation is now:
+**On whether to exchange automatically on landing.** Exchanging *immediately*
+on route activation is workable and is not a vulnerability; this repository's
+SPA does it. The recommendation is still:
 
 > Render a brief **"Continue as …"** confirmation and exchange on the click.
 
-The reasoning, stated plainly so you can overrule it: the gesture-free
-auto-POST is what made *both* halves of the login-CSRF attack in section 4.2
-work end to end. An attacker only had to get a victim's browser to *load* a URL,
-which is a link, an image tag or a redirect — no interaction at all. Both halves
-are now closed by the browser binding, and the binding is what the security
-rests on; the gesture is defence in depth, not the control.
+The reasoning, stated plainly so you can overrule it: without the browser
+binding, the gesture-free auto-POST is what would let *both* halves of the
+login-CSRF attack in section 4.2 work end to end. An attacker would only have
+to get a victim's browser to *load* a URL, which is a link, an image tag or a
+redirect — no interaction at all. The browser binding closes both halves, and
+the binding is what the security rests on; the gesture is defence in depth, not
+the control.
 
 But it is cheap defence in depth. It costs one click on a page the user reached
 by deliberately signing in, and it converts any future hole in the binding from
@@ -580,7 +585,8 @@ does. This is the one error the user can act on:
 
 - `pending_approval` — a brand new OAuth account, or one still in the queue.
   "Your account is waiting for an administrator to approve it." Expect this on
-  **every first-time OAuth signup**; it is the normal path, not an error.
+  **every first-time OAuth signup** while the instance requires admin approval;
+  it is the normal path, not an error.
 - `suspended` / `rejected` — an administrator's decision. Signing in with a
   second provider does not overrule it.
 
@@ -593,17 +599,18 @@ does. This is the one error the user can act on:
 address that already has a local account signs you into *that* account. An
 address the provider has not verified never links — it is treated as a brand
 new signup — because otherwise anyone who could set an arbitrary unverified
-address at any provider could claim any account here.
+address at any provider could claim any account here. An Apple private-relay
+address never links either: it names one app's view of an Apple user, not a
+person.
 
 **A user can hold several identities.** Google and Apple on one account is
 supported and expected; the admin list shows all of them.
 
 ## 8. Developer: adding a third provider
 
-The design spec claims a third provider is "one class and one env block". This
-section is that claim walked rather than asserted — the steps below were
-performed against this branch with a scratch provider, and the failure modes
-described are ones that actually occurred.
+A third provider is one class and one env block. This section walks that claim
+rather than asserting it — the steps below were performed with a scratch
+provider, and the failure modes described are ones that actually occurred.
 
 It works for any provider that speaks standard OpenID Connect authorization
 code + PKCE and returns an ID token from its token endpoint. A provider that
@@ -613,8 +620,8 @@ say) does not fit `AbstractOidcProvider` and needs its own implementation of
 
 ### 8.1 The class
 
-One file in `src/Service/OAuth/`, extending `AbstractOidcProvider`. Six methods,
-none of which contain a decision worth agonising over:
+One file in `src/Service/OAuth/OAuthProvider/`, extending `AbstractOidcProvider`.
+Eight methods, none of which contain a decision worth agonising over:
 
 | Method | What goes in it |
 | --- | --- |
@@ -627,7 +634,7 @@ none of which contain a decision worth agonising over:
 | `getClientId()` / `getClientSecret()` | Usually constructor-injected env vars. Apple overrides the secret to mint a fresh ES256 JWT per exchange. |
 
 If the provider needs a parameter OIDC does not define, override
-`extraAuthorizationParams()` — Apple's `response_mode=form_post` is the only
+`extraAuthorizationParameters()` — Apple's `response_mode=form_post` is the only
 current instance. Everything else about the authorization request, PKCE
 included, is assembled by the `final` `getAuthorizationUrl()` on the parent and
 is not yours to change.
@@ -672,8 +679,8 @@ false, and a deployment that does not want it does nothing at all.
 `#[Autowire('%env(NEW_OAUTH_CLIENT_ID)%')]` naming a variable that appears in no
 `.env` file passes `cache:clear` **and** passes `lint:container` — both stay
 green — and then throws `EnvNotFoundException: Environment variable not found`
-the first time anything touches the registry. Observed on this branch, not
-theorised. The blank line in `.env` is the fix.
+the first time anything touches the registry. Observed with a scratch provider,
+not theorised. The blank line in `.env` is the fix.
 
 ### 8.4 The redirect URI
 
@@ -690,15 +697,15 @@ section 4 covers why, and covers the failure modes when it does not.
 
 Mirror `GoogleOAuthProviderTest`: parse the authorization URL and pin every
 query parameter individually, including `code_challenge_method=S256`. That
-suite is what made the refactor extracting `getAuthorizationUrl()` safe, and it
-is what will catch an `extraAuthorizationParams()` override that stomps a
-standard parameter.
+suite is what will catch an `extraAuthorizationParameters()` override that
+stomps a standard parameter.
 
 You do **not** need a new flow test. `OAuthFlowTest` drives the whole
 redirect → callback → exchange path through `FakeOAuthProvider`, and everything
 it proves — the browser binding, the one-time code, the status gate — lives in
-the controller and the stores, which are provider-agnostic. Adding a
-near-duplicate flow test per provider would mean one cause failing in N files.
+`OAuthCallback`, `OAuthSignIn`, `FlowCookie` and the two stores, which are
+provider-agnostic. Adding a near-duplicate flow test per provider would mean
+one cause failing in N files.
 
 ### 8.6 What you do not have to touch
 
