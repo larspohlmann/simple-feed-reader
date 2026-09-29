@@ -19,7 +19,7 @@ use PHPUnit\Framework\TestCase;
  * passkey is being removed. Every other combination leaves the account with
  * some way back in, so removal is allowed.
  *
- * Both repositories are mocked rather than backed by a real database — this
+ * Both lookups are doubled rather than backed by a real database — this
  * is a pure decision over three inputs (passkey count, password hash,
  * identity existence), and mocking pins each test to exactly the combination
  * its row names, with no fixture noise from the other two. The expectation
