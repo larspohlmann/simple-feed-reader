@@ -13,12 +13,8 @@ use App\Service\Ai\Support\AiReadiness;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The accounts a scheduled sweep should start a run for right now (#333). A
- * user qualifies when they chose a cadence, their AI is ready, they have no
- * run in flight, and their newest run is at least one interval old. The
- * newest run's start time is the anchor, so any run — manual, worker, or cron
- * — resets the clock; a failed run therefore waits a full interval before the
- * next attempt rather than hammering a broken provider.
+ * The accounts a scheduled sweep should start a run for: a cadence chosen, AI ready, no run in flight, and the newest
+ * run at least one interval old. Any run resets that clock, so a failed run waits a full interval before the next.
  */
 final readonly class DueRecommendationRunFinder
 {

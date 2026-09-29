@@ -19,14 +19,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Creates or resumes the run a tick will advance. An account with no ready AI
- * configuration cannot start one; an already-active run is returned as-is, so a
- * second click opens no duplicate.
- *
- * Resuming a failed run is the user's call in the client (#329): a failed run
- * holds a frozen candidate snapshot that may now be stale. So start() always
- * begins fresh, while resume() leaves the frozen batch plan and recorded
- * winners intact, letting the next tick continue where the failure happened.
+ * Creates or resumes the run a tick will advance; an already-active run is returned as-is, so a second click opens no
+ * duplicate. start() always begins fresh; resume() keeps the frozen batch plan and the winners banked so far.
  */
 final readonly class RecommendationRunStarter
 {
@@ -64,10 +58,8 @@ final readonly class RecommendationRunStarter
     }
 
     /**
-     * Trims the account's run log to the retention window. It runs after the
-     * new run is flushed, so the new run counts inside the window and the runs
-     * holding a log stay exactly the constant. resume() never trims: a resumed
-     * run appends to the log it already has (#309).
+     * Runs after the new run is flushed, so the new run counts inside the RunLogRetention window. resume() never trims:
+     * a resumed run appends to its own log.
      */
     private function trimRunLog(User $user): void
     {
@@ -78,10 +70,7 @@ final readonly class RecommendationRunStarter
     }
 
     /**
-     * Resumes the latest run when it failed, continuing at the batch that
-     * failed rather than redoing the ones that succeeded. The client offers
-     * this only when it has seen a failed run, so a latest run that is missing
-     * or in any other state is a caller mistake, not a silent fresh start.
+     * Resumes the latest run only if it failed; any other latest run is a caller mistake, never a silent fresh start.
      *
      * @throws AiNotConfiguredException
      * @throws NoResumableRecommendationRunException
@@ -98,9 +87,7 @@ final readonly class RecommendationRunStarter
         }
 
         $latest->resume();
-        // Re-stamped, not left as it was: an account that switched model
-        // between the failure and the resume calls the new one, and a history
-        // row naming the old one would be a lie about what was billed (#409).
+        // Re-stamped: an account that switched model since the failure calls the new one, and its history must say so.
         $this->stampProvider($latest, $user);
         $this->entityManager->flush();
 
@@ -108,15 +95,8 @@ final readonly class RecommendationRunStarter
     }
 
     /**
-     * Copies the provider this run is about to call onto the run itself (#409).
-     * Copied, not read back later, because the configuration is editable: a
-     * history that renames last month's runs when the model changes is no
-     * history.
-     *
-     * The host only. A saved base URL with no host stamps null, not a fragment:
-     * `parse_url()` returns `false` on a malformed URL and `null` when there is
-     * no host, both collapsing to null. A genuine host of `'0'` must survive, so
-     * the check is `is_string()`, not truthiness, which `?:` would swallow.
+     * Copied onto the run, never read back from the editable configuration, so the history keeps each run's model.
+     * Host only, tested with is_string(): a host of '0' survives, a malformed or hostless URL stamps null.
      */
     private function stampProvider(RecommendationRun $run, User $user): void
     {

@@ -8,7 +8,7 @@ use App\Entity\RecommendationRun;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use Doctrine\ORM\EntityManagerInterface;
 
-/** The cross-tick retry distillation and consolidation share; the batch phase retries inside its tick (#344). */
+/** The cross-tick retry distillation and consolidation share; the batch phase retries inside its tick. */
 final readonly class InvalidReplyRetry
 {
     public function __construct(private EntityManagerInterface $entityManager)

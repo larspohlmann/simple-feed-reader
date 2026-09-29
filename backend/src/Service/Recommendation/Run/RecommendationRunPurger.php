@@ -11,10 +11,8 @@ use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Exception\RecommendationRunActiveException;
 
 /**
- * Clears an account's whole for-you list so a fresh run can rebuild it.
- * Children delete in an explicit order — logs, then items, then runs —
- * instead of leaning on DB-level cascades: portable across both suite
- * dialects, and the order lives in the code, not the schema.
+ * Clears an account's whole "For you" list so a fresh run can rebuild it: logs, then items, then runs, in code rather
+ * than through the schema's cascades, so the order holds on both suite dialects.
  */
 final readonly class RecommendationRunPurger
 {

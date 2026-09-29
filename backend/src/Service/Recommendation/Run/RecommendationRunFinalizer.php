@@ -14,12 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Every ending of a recommendation run funnels through here (#338 lifted it out
- * of RecommendationRunAdvancer): cut the ranked list to the picks limit,
- * re-check each surviving pick's entry still exists (the candidate pool can be
- * pruned mid-run), and write the survivors as RecommendationItems at dense
- * positions in pick order before completing the run. The cut lives here so a
- * new ending cannot ship an over-long list by forgetting to slice.
+ * Every ending of a run goes through here: cut the ranked list to the picks limit, drop picks whose entry was pruned
+ * mid-run, and write the rest as RecommendationItems at dense positions before completing the run.
  */
 final readonly class RecommendationRunFinalizer
 {
