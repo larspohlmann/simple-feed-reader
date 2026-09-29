@@ -283,6 +283,10 @@ All ruled; the plan is written as ruled.
 - **D-22 (`ParsesHtml` name): RULED, accepted** (F2): `document()`, the method #1202 left (R-5).
 - **D-23 (`applyFlags` WATCH): RULED, accepted: no change** (Scope table). No third copy exists; `BulkSubscriptionChange` carries the id list `SubscriptionChange` does not, so the two values stay apart.
 
+## Execution rulings (PR C)
+
+- **F9: strict types everywhere (final review B, M-1 and M-2; planner ruling).** A new PR F tooling task. `declare(strict_types=1)` goes into the seven Symfony recipe entry points (`public/index.php`, `bin/console` and the others). `Generic.PHP.RequireStrictTypes` alone (not full PSR-12, which generated migrations would fail) is scoped to `migrations/`, `bin/` (`bin/console` listed explicitly: no `.php` extension) and `public/`, and to the `tests/PhpStan` fixtures unless that clashes with their deliberate PSR-12 exclusion. Control: before the declarations, the sniff over the new paths lists exactly the seven entry points. Deletion checks, FAIL quoted: drop the declaration from one migration; separately from `bin/console`.
+
 ## Global Constraints
 
 - **Paths and commands are relative to `backend/`**, except steps marked "from the repository root", `docs/…` and `CLAUDE.md`. The #1202 scripts run as `php ../docs/superpowers/plans/2026-09-28-1202-scripts/<script>.php`.
