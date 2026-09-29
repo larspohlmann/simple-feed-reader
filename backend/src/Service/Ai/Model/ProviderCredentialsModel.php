@@ -7,15 +7,9 @@ namespace App\Service\Ai\Model;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 
 /**
- * An endpoint and the key that opens it, ready to use. The base URL is the
- * full OpenAI-compatible root the account entered, including any `/v1` — the
- * catalog appends `/models` and nothing else, because the path prefix differs
- * between providers and guessing it would break the ones that do not use it.
- *
- * NOTE ON SSRF: this URL deliberately does NOT pass through UrlGuard, so a
- * local provider works. That is a recorded exception to the standing boundary,
- * decided for #305; the reasoning and the accepted risk are in the design
- * spec. Do not copy this class as a template for any other outbound call.
+ * An endpoint and its key. The base URL is the full root as entered, `/v1` included; callers append only the path.
+ * It deliberately skips UrlGuard so a local provider works: never copy this for another outbound call.
+ * Accepted risk: docs/security.md#ai-provider-endpoints.
  */
 final readonly class ProviderCredentialsModel
 {
@@ -35,12 +29,7 @@ final readonly class ProviderCredentialsModel
         return new self(self::normalizeBaseUrl($baseUrl), trim($apiKey));
     }
 
-    /**
-     * A base URL that went through fromAccountInput() before it was stored, and
-     * a key the cipher just opened. Both are already in their normalised form,
-     * so re-validating them here would only invent a way for a stored row to
-     * stop working.
-     */
+    /** An already-validated stored base URL and a freshly opened key; re-validating could only break a row. */
     public static function fromStoredConfiguration(string $baseUrl, string $apiKey): self
     {
         return new self($baseUrl, $apiKey);
@@ -85,10 +74,7 @@ final readonly class ProviderCredentialsModel
             throw new ProviderUnreachableException('The address must start with http:// or https://.');
         }
 
-        // A query or fragment has nowhere to go once /models is appended — it would
-        // land after the appended path instead of before it, producing a URL the
-        // provider was never meant to receive. Reject it here, the one place this
-        // input is validated, instead of failing later as a confusing "unreachable".
+        // A query or fragment would land after the appended path; refused here, not later as "unreachable".
         if (isset($parts['query']) || isset($parts['fragment'])) {
             throw new ProviderUnreachableException('Remove the query string or fragment from the address.');
         }
