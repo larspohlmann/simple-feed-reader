@@ -18,6 +18,7 @@ use App\Repository\DuplicateCollapseDql;
 use App\Repository\EntryListRepository;
 use App\Repository\EntryListRow;
 use App\Repository\EntryListRowHydrator;
+use App\Repository\EntryProjection;
 use App\Repository\EntryQuery;
 use App\Repository\EntryScopePredicates;
 use App\Repository\Exception\RecordNotFoundException;
@@ -114,6 +115,8 @@ final class EntryListTest extends DbTestCase
         $scope = $container->get(EntryScopePredicates::class);
         /** @var DuplicateCollapseDql $collapse */
         $collapse = $container->get(DuplicateCollapseDql::class);
+        /** @var EntryProjection $projection */
+        $projection = $container->get(EntryProjection::class);
 
         return new EntryListRepository(
             $registry,
@@ -122,6 +125,7 @@ final class EntryListTest extends DbTestCase
             $scope,
             $collapse,
             new DateOrderedPage($windowSize),
+            $projection,
         );
     }
 
