@@ -24,7 +24,7 @@ final readonly class ServiceRoleClassCollector implements Collector
         return InClassNode::class;
     }
 
-    /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes its body names */
+    /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes a model's body names */
     public function processNode(Node $node, Scope $scope): ?array
     {
         $reflection = $node->getClassReflection();
@@ -33,7 +33,7 @@ final readonly class ServiceRoleClassCollector implements Collector
             return null;
         }
 
-        return [$name, $node->getOriginalNode()->getStartLine(), $this->dtoReferencesIn($node)];
+        return [$name, $node->getOriginalNode()->getStartLine(), $this->modelDtoReferencesIn($node)];
     }
 
     private static function isProductionListener(ClassReflection $reflection): bool
@@ -43,8 +43,11 @@ final readonly class ServiceRoleClassCollector implements Collector
     }
 
     /** @return list<string> */
-    private function dtoReferencesIn(InClassNode $node): array
+    private function modelDtoReferencesIn(InClassNode $node): array
     {
+        if (ServiceRoleNames::MODEL !== ServiceRoleNames::roleOfClass($node->getClassReflection()->getName())) {
+            return [];
+        }
         $references = [];
         foreach ($this->finder->findInstanceOf($node->getOriginalNode()->stmts, Name::class) as $name) {
             if (str_contains($name->toString(), '\\Dto\\')) {
