@@ -218,6 +218,10 @@ callback arriving in the final second of a state's life still hands the browser
 a code it can actually exchange. It is cleared on every failed callback, and on
 a successful exchange.
 
+#### The flow cookie
+
+`Secure` and the `__Host-` prefix hold on every deployment, localhost included; section 4.1 says why.
+
 It is `SameSite=None`, which looks like a weakening and is the opposite. Apple
 returns its callback as a **cross-site POST** (`response_mode=form_post`), and a
 `Lax` cookie is not sent on a cross-site POST — so `Lax` would leave Google
