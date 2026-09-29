@@ -6,8 +6,8 @@ namespace App\Service\Refresh\Model;
 
 /**
  * One feed's outcome plus how many entries its fetch created. The count feeds
- * the run-wide total that decides whether the refresh moves the change marker
- * (#720); every non-fetch outcome creates nothing.
+ * the run-wide total that decides whether the refresh moves the change marker;
+ * every non-fetch outcome creates nothing.
  */
 final readonly class FeedRefreshResultModel
 {

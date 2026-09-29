@@ -7,7 +7,7 @@ namespace App\Service\Refresh\ContentChangeMarker;
 /**
  * Moves the public change marker an open reader polls before it asks the API
  * for fresh counts. A moved marker means "an import stored new content"; an
- * unchanged one lets the tick stop before any PHP request (#720).
+ * unchanged one lets the tick stop before any PHP request.
  */
 interface ContentChangeMarkerInterface
 {

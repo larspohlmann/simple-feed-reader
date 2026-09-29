@@ -10,10 +10,8 @@ use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
- * The pre-seam default every existing feed row refreshes through: RSS/Atom
- * feed documents. Wraps FeedParser's format cascade rather than duplicating
- * it, so refresh, discovery and preview keep reading feed documents through
- * the one implementation.
+ * The default every feed row refreshes through: RSS/Atom documents, read by the FeedParser cascade that discovery
+ * and preview share.
  */
 final readonly class XmlBodyParser implements FeedBodyParserInterface
 {

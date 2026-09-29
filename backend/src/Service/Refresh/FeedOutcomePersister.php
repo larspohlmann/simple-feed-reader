@@ -55,7 +55,7 @@ final readonly class FeedOutcomePersister
             ORMException $exception
         ) {
             // A failed flush closes the EntityManager, so the run must stop here. The FK case is a feed whose
-            // last subscriber left mid-run and whose row was reclaimed under the fetch (#246).
+            // last subscriber left mid-run and whose row was reclaimed under the fetch.
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
                 ['url' => $feed->getUrl(), 'exception' => $exception],
@@ -75,7 +75,7 @@ final readonly class FeedOutcomePersister
 
             $parsed = $this->bodyParser->parse($feed, $response->modifiedBody());
             $createdEntries = $this->ingestor->ingest($feed, $parsed, $context);
-            // A backfilled image is not new content, so it stays out of the count (#148).
+            // A backfilled image is not new content, so it stays out of the count.
             $this->ingestor->fillMissingImages($feed, $parsed);
 
             return $this->storeFetched($feed, $response, $createdEntries);
@@ -113,7 +113,7 @@ final readonly class FeedOutcomePersister
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
         $this->entityManager->flush();
-        // Only the flush assigns ids, so indexing has to follow it (#432).
+        // Only the flush assigns ids, so indexing has to follow it.
         $this->indexer->index($createdEntries);
 
         return FeedRefreshResultModel::fetched(\count($createdEntries));

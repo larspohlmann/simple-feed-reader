@@ -13,10 +13,8 @@ enum FeedOutcome
     case Throttled;
 
     /**
-     * Whether the feed answered with something to show. Only those earn a
-     * favicon lookup: an icon beside no new content is a homepage round trip
-     * per sweep for a feed that may never recover — and for a throttled one it
-     * is a second request to a host that just asked for fewer.
+     * Whether the feed answered with something to show. Only those earn a favicon lookup: for any other, a homepage
+     * round trip goes to a feed that may never recover, or to a host that just asked for fewer requests.
      */
     public function broughtContent(): bool
     {

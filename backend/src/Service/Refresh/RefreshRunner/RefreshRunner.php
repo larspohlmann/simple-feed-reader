@@ -71,7 +71,7 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         $pass = new RefreshPass($feeds, $this->clock, $now->getTimestamp() + $request->budgetSeconds);
         $this->persistOutcomes($pass, $now);
 
-        // Before the abort branch: what an aborted run created before the failure is already committed (#720).
+        // Before the abort branch: what an aborted run created before the failure is already committed.
         if ($pass->tally->entriesCreated() > 0) {
             $this->changeMarker->markChanged();
         }
@@ -135,8 +135,8 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
         );
     }
 
-    // Started feeds are excluded by id: a 429 writes no fetch time (#290), so the due query alone would count a
-    // rationed feed as remaining forever and keep the client polling (#302).
+    // Started feeds are excluded by id: a 429 writes no fetch time, so the due query alone would count a rationed
+    // feed as remaining forever and keep the client polling (#302).
     private function countRemaining(DueFeedCriteria $criteria, RefreshPass $pass): int
     {
         return $this->feeds->countDue($criteria->excluding($pass->startedFeedIds()));
