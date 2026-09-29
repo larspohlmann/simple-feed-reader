@@ -10,15 +10,9 @@ use App\Service\Parser\Pass\FeedMediaNode;
 use App\Service\Parser\Support\MediaDuration;
 
 /**
- * Enumerates the media a feed item declares into the two lists the entry keeps:
- * visual media to show and enclosures to play or download. It reads only
- * attributes already present in the parsed feed — no fetch, no decode.
- *
- * A `<media:group>` is one logical item shipped as several renditions, so it
- * collapses to a single medium: the video it contains (with the group's
- * thumbnail as poster), or the widest image when it holds only images.
- * Top-level nodes each stand on their own. The lead image is NOT prepended here;
- * the ingest path merges it so `media[0]` stays the persisted lead.
+ * Splits a feed item's declared media into visual media and enclosures, from parsed attributes only. A `<media:group>`
+ * is one item in several renditions: it collapses to its video (group thumbnail as poster) or its widest image.
+ * The lead image is not prepended here; EntryMediaAssembler does that, so `media[0]` stays the persisted lead.
  */
 final readonly class ItemMediaExtractor
 {

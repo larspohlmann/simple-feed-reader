@@ -6,12 +6,7 @@ namespace App\Service\Parser\Support;
 
 use App\Service\Parser\Model\FeedMediaKind;
 
-/**
- * Whether a Media RSS element points at an image — the question
- * ItemImageExtractor asks when it keeps only the visual candidates. The full
- * image/audio/video/other decision lives in FeedMediaClassifier; this is the
- * image half of it, named for the one caller that needs exactly that.
- */
+/** The image half of FeedMediaClassifier's decision, for ItemImageExtractor's visual candidates. */
 final class MediaImageClassifier
 {
     public static function isImage(\DOMElement $element): bool

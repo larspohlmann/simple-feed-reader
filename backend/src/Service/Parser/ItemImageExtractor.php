@@ -10,18 +10,9 @@ use App\Service\Parser\Support\MediaImageClassifier;
 use Dom\Element;
 
 /**
- * Finds the best image attached to a feed item. Callers combine the sources in
- * the precedence their format prefers (Media RSS, then a format's enclosure,
- * then an inline <img>).
- *
- * Within Media RSS the WIDEST declared variant wins, not the first. Feeds
- * routinely ship a ladder of sizes — the Guardian publishes 140/460/700 in
- * ascending order, so "first" would persist a thumbnail too small to feature.
- * An element that declares no width loses to any element that declares one;
- * when nothing declares a width, document order decides.
- *
- * URLs are returned verbatim — callers that need an absolute URL resolve it
- * themselves.
+ * The images a feed item declares, source by source; FeedItemImageSelector combines them in each format's order.
+ * Within Media RSS the widest variant wins, not the first: feeds ship size ladders in ascending order (#148).
+ * An undeclared width loses to any declared one, with no widths document order decides, and URLs stay unresolved.
  */
 final readonly class ItemImageExtractor
 {
@@ -86,12 +77,8 @@ final readonly class ItemImageExtractor
     }
 
     /**
-     * Non-standard item-level <image>/<image_big> elements that carry the URL
-     * as a `url` attribute — the shape utopia.de and feeds like it use, which
-     * is neither Media RSS, nor an enclosure, nor an inline <img>. The larger
-     * <image_big> variant wins when present; within one variant the widest
-     * declared candidate wins. The `url` attribute is required, so the standard
-     * channel-level <image> (which nests a <url> child) never matches here.
+     * Non-standard item-level <image>/<image_big> carrying a `url` attribute: <image_big> wins, then the widest.
+     * Requiring the attribute keeps the standard channel <image>, which nests a <url> child, from matching.
      */
     public function fromCustomImageElement(\DOMElement $item): ?DeclaredImageModel
     {
