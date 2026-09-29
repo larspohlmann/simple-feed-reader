@@ -9,13 +9,7 @@ use App\Enum\UserStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
-/**
- * The admin's per-account limit controls: start or clear a trial, and set or
- * clear the per-user subscription cap. Starting a trial for, or clearing the
- * trial of, a trial-suspended account also restores its access — a silent
- * reinstatement, mirroring the suspended-restoration rule in
- * AdminUserController::approve().
- */
+/** Starting a trial, or clearing an expired one, reactivates the account without a mail: it is a reinstatement. */
 final readonly class UserLimits
 {
     public function __construct(

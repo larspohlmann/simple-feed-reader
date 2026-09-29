@@ -11,13 +11,6 @@ use App\Service\Admin\Model\UserFootprintModel;
 use App\Service\Subscription\SubscriptionLimitResolver;
 use Psr\Clock\ClockInterface;
 
-/**
- * The figures behind the admin's per-user detail screen.
- *
- * Deliberately one account at a time: it backs a detail page, not a list, so
- * the batched reads the list endpoint needs (SubscriptionCountsByUserId)
- * would buy nothing here.
- */
 final readonly class UserStatistics
 {
     /** No sign-in for this long marks an account dormant. */
@@ -33,13 +26,8 @@ final readonly class UserStatistics
     }
 
     /**
-     * The account's footprint over its own already-loaded subscriptions and
-     * tags — the caller (the admin detail controller) needs those same rows
-     * for its own response anyway, so this takes them rather than querying
-     * again for the subscription/tag join set.
-     *
-     * @param list<Subscription> $subscriptions the user's own subscriptions
-     * @param list<Tag> $tags the user's own tags
+     * @param list<Subscription> $subscriptions
+     * @param list<Tag> $tags
      */
     public function forUser(User $user, array $subscriptions, array $tags): UserFootprintModel
     {
@@ -66,10 +54,7 @@ final readonly class UserStatistics
         foreach ($subscriptions as $subscription) {
             $fetchedAt = $subscription->getFeed()->getLastFetchedAt();
 
-            // A feed that was never fetched is stale by definition, not fresh.
-            // Stale is inclusive ("7 OR MORE days"): exactly 7 days counts.
-            // Intentionally asymmetric with the dormant threshold below — per
-            // spec, do not harmonise the two operators.
+            // Inclusive (exactly 7 days is stale), unlike isDormant()'s strict `<`: the spec wants the asymmetry.
             if (null === $fetchedAt || $fetchedAt <= $cutoff) {
                 ++$stale;
             }
@@ -104,9 +89,7 @@ final readonly class UserStatistics
     {
         $cutoff = $now->modify(\sprintf('-%d days', self::DORMANT_AFTER_DAYS));
 
-        // Dormant is exclusive ("OLDER THAN 90 days"): exactly 90 days is not
-        // yet dormant. Intentionally asymmetric with the stale threshold
-        // above — per spec, do not harmonise the two operators.
+        // Exclusive (exactly 90 days is not yet dormant), unlike countStale()'s `<=`: the spec wants the asymmetry.
         return ($user->getLastLoginAt() ?? $user->getCreatedAt()) < $cutoff;
     }
 }

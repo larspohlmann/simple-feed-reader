@@ -7,15 +7,7 @@ namespace App\Service\Admin;
 use App\Entity\User;
 use App\Exception\ValidationException;
 
-/**
- * Guards against an admin removing their own access. The admin UI is the only
- * way back in, so an admin who rejects or suspends their own account is not
- * recoverable without database access.
- *
- * approve() deliberately has no such guard — see the note there. Activating an
- * account cannot lock anybody out, so the reject and suspend actions call this
- * and approve does not.
- */
+/** An admin who rejected or suspended their own account could get back in only through the database. */
 final readonly class SelfActionGuard
 {
     public function ensureNotSelf(User $target, User $admin): void
