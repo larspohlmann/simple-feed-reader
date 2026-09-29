@@ -112,7 +112,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // address. OAuth just proved somebody else does.
         self::assertNull($resolved->getPasswordHash());
         // And the wipe is stamped, which is what revokes any JWT the planter
-        // is still holding: PasswordChangeTokenInvalidator rejects tokens
+        // is still holding: InvalidatePasswordChangeTokensListener rejects tokens
         // issued before this instant.
         self::assertEquals($this->now(), $resolved->getPasswordChangedAt());
         // The provider proved this address, which is exactly what claimed the

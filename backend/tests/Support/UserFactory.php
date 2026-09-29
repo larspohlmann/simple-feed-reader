@@ -20,7 +20,7 @@ final readonly class UserFactory
     /**
      * $passwordChangedAt defaults to the fixed createdAt rather than to "now".
      * Tokens minted during a test therefore always carry an `iat` well after
-     * it, so App\Security\PasswordChangeTokenInvalidator stays out of the way
+     * it, so App\Security\InvalidatePasswordChangeTokensListener stays out of the way
      * of fixtures that are not about password changes. Tests that DO exercise
      * the boundary set the stamp explicitly.
      *

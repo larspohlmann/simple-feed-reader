@@ -389,7 +389,7 @@ final class PasswordResetTest extends WebTestCase
      * A token the attacker obtained $secondsAgo seconds ago. Minting it with an
      * explicit `iat` rather than sleeping keeps the test deterministic AND
      * meaningful: a token issued in the very same second as the reset is
-     * deliberately NOT revoked (see PasswordChangeTokenInvalidator), so a test
+     * deliberately NOT revoked (see InvalidatePasswordChangeTokensListener), so a test
      * that logs in and resets within one millisecond could never observe the
      * revocation it claims to check. This is a real, signed, otherwise-valid
      * token for the account — only its issue time is pinned.

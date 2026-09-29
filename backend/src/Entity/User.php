@@ -69,7 +69,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
      * attacker's token stayed live for a week. Password reset is the canonical
      * compromise-recovery action, so this closes that gap.
      *
-     * App\Security\PasswordChangeTokenInvalidator rejects any token whose `iat`
+     * App\Security\InvalidatePasswordChangeTokensListener rejects any token whose `iat`
      * is older than this. Nullable and additive: rows that predate the column
      * have no recorded change, and null correctly revokes nothing.
      */
