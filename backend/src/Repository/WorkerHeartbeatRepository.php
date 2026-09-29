@@ -62,7 +62,7 @@ final class WorkerHeartbeatRepository extends ServiceEntityRepository
         return array_column($rows, 'touchedAt', 'name');
     }
 
-    /** Idempotent by design: the drain command forgets from both its `finally` and its shutdown hook (#371). */
+    /** Idempotent by design: the drain command forgets from both its `finally` and its shutdown hook. */
     public function forget(string $name): void
     {
         $this->createQueryBuilder('heartbeat')

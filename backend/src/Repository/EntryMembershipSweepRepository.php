@@ -9,8 +9,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The membership sweep's two entry-side reads (#1116): the settled ceiling it
- * must not walk past, and the ascending id walk up to it.
+ * The membership sweep's two entry-side reads: the settled ceiling it must not walk past, and the ascending id walk
+ * up to it.
  *
  * @extends ServiceEntityRepository<Entry>
  */

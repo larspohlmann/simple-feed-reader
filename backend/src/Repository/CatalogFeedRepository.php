@@ -94,9 +94,8 @@ final class CatalogFeedRepository extends ServiceEntityRepository
     }
 
     /**
-     * Marks every enabled row as needing a fresh icon — the --force path.
-     * A bulk UPDATE, run ONCE before a force warm; the normal window then lets
-     * each row drop out of the due set as it is (re-)warmed, so the loop converges.
+     * Marks every enabled row as needing a fresh icon, once, before a --force warm; each row then leaves the due set
+     * as it is warmed, so the warm loop converges.
      *
      * @return int rows affected
      */

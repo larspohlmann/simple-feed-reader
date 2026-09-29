@@ -84,11 +84,8 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * One page of entries' states, keyed by entry id — the backup's per-batch
-     * join between an already-fetched page of entries and their states. Entry
-     * rides along eagerly since entryStateLine's guidHash comes from it; the
-     * feed url is not selected here because the caller already knows it from
-     * the same entry page.
+     * One page of entries' states keyed by entry id, for the backup's per-batch join. Entry is fetch-joined because
+     * the state line's guidHash comes from it.
      *
      * @param list<int> $entryIds
      *
@@ -123,11 +120,8 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * Total favourite, kept and viewed entries for the user, counting only
-     * entries whose feed the user still subscribes to — the same subscription
-     * gate the Favorites/Kept/Recently-read lists apply, so the sidebar badges
-     * match their lists (an orphaned state left behind by an unsubscribe is not
-     * counted).
+     * Favourite, kept and viewed totals, gated to still-subscribed feeds like the lists themselves, so a badge never
+     * counts a state an unsubscribe orphaned.
      *
      * @return array{favorites: int, kept: int, viewed: int}
      */
@@ -155,13 +149,9 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * The instants at which the user opened an article at or after $sinceUtc,
-     * one per open, for the reading-activity chart (#896). Scalars rather than
-     * entities, and gated to feeds the user still subscribes to — the same gate
-     * stateCountsForUser() applies, so the chart counts what the "Read" total
-     * counts. Bucketing into days is left to the caller: viewedAt is naive UTC
-     * and the buckets are cut in the viewer's zone, which no portable DQL
-     * expression can shift before grouping.
+     * Every article open at or after $sinceUtc, gated like stateCountsForUser() so the chart counts what "Read"
+     * counts. The caller buckets by day: viewedAt is naive UTC, the buckets are the viewer's, and no portable DQL
+     * shifts zones.
      *
      * @return list<\DateTimeImmutable>
      */
@@ -183,12 +173,8 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * The feeds the user has opened the most articles from, busiest first, for
-     * the About page's "Top feeds by read" chart (#896). One row per feed with
-     * its read total, gated to feeds still subscribed to and capped at $limit.
-     * Only the feed id and count travel: the title is resolved on the client
-     * from the subscription list it already holds, so it stays the custom title
-     * the sidebar shows.
+     * Read totals per still-subscribed feed, busiest first, at most $limit. Ids only: the client names each feed from
+     * its own subscription list, so the custom title shows.
      *
      * @return list<array{feedId: int, readCount: int}>
      */
@@ -245,15 +231,7 @@ final class EntryStateRepository extends ServiceEntityRepository implements Rest
     }
 
     /**
-     * Unread entry counts keyed by subscription id, in one query across all the
-     * user's subscriptions. Unread = no explicit state and above the watermark,
-     * OR an explicit isHidden=false row. Subscriptions with zero unread are
-     * absent from the map (the caller defaults them to 0).
-     *
-     * Lives here, not on SubscriptionRepository, because its subject is read
-     * state — it is rooted on Subscription with EntryState LEFT JOINed in,
-     * the opposite shape from stateCountsForUser() above, so it cannot be
-     * built with $this->createQueryBuilder() the way that method is.
+     * Unread counts keyed by subscription id, in one query; a subscription with none is absent (callers default 0).
      *
      * @return array<int, int>
      */

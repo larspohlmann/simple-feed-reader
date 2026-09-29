@@ -76,8 +76,8 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     }
 
     /**
-     * The feed rows behind a set of urls, indexed by url — one query for the
-     * whole set a restore file declares (#455). A url with no row is absent.
+     * The feed rows behind a set of urls, indexed by url: one query for the whole set a restore file declares. A url
+     * with no row is absent.
      *
      * @param list<string> $urls
      *
@@ -125,15 +125,8 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
     }
 
     /**
-     * Whether any account OTHER than this one reads the feed. A feed row is
-     * shared, and the restore asks this before it writes: one other subscriber
-     * makes the feed's entries a stranger's unread list, so the restore
-     * references the row and adds nothing to it.
-     *
-     * A question about the feed, answered here rather than on
-     * SubscriptionRepository, and as a yes/no rather than a count — no caller
-     * has any business with "how many strangers", and a bare number invites
-     * exactly that.
+     * Whether any other account subscribes. A restore asks before writing: another reader's unread list must not grow,
+     * so it references the row and adds nothing. A yes/no on purpose: no caller has business with how many strangers.
      */
     public function isReadByAnotherUser(int $feedId, int $excludedUserId): bool
     {
@@ -220,10 +213,8 @@ final class FeedRepository extends ServiceEntityRepository implements RestoreFee
             return;
         }
 
-        // A lastFetchedAt in the future is impossible under a correct clock, so
-        // something wrote it wrong -- a non-UTC worker did exactly that in #151,
-        // before the kernel pinned UTC. Treat it as stale rather than let it read
-        // as "just fetched" and freeze the feed out of every refresh in silence.
+        // A future lastFetchedAt is a clock fault (a non-UTC worker wrote them in #151): treat it as stale, or it reads
+        // as "just fetched" and the feed never refreshes again.
         $qb->andWhere(
             '(f.fetchSchedule.lastFetchedAt IS NULL'
             . ' OR f.fetchSchedule.lastFetchedAt <= :cooldownCutoff'
