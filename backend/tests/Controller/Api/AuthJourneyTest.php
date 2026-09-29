@@ -20,27 +20,9 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The composition test: register -> verify -> approve -> login -> /api/me, and
- * then suspend -> reinstate, driven entirely over HTTP.
- *
- * Every other test in this suite pins one seam in isolation, usually by seeding
- * the precondition it needs with UserFactory or by minting a JWT straight from
- * the token manager. That is the right shape for a unit of behaviour and the
- * wrong shape for the question asked here, which is whether the fifteen pieces
- * actually line up end to end. So nothing is seeded except the admin (who has
- * no signup path by design), and no state is nudged into place between steps:
- * each step's precondition is whatever the previous HTTP request left behind in
- * the database.
- *
- * The one shortcut is the verification token. It exists in exactly two places -
- * hashed in the database, and in plaintext inside the mail - and the test has
- * no inbox, so it is scraped out of the sent message. That is still the token
- * the register request itself produced, which is the property that matters;
- * this follows RegistrationTest::tokenFromMail() rather than inventing a
- * second approach.
- *
- * Runtime note: each journey solves one real ALTCHA challenge (~60 ms). That is
- * the proof-of-work doing its job, not a hung test.
+ * Register, verify, approve, log in, /api/me, then suspend and reinstate, over HTTP only: nothing but the admin is
+ * seeded, and each step starts from what the previous request left in the database. The verification token is read
+ * from the sent mail, its only plaintext copy. Each journey solves one real ALTCHA challenge (~60 ms).
  */
 final class AuthJourneyTest extends WebTestCase
 {
@@ -58,26 +40,14 @@ final class AuthJourneyTest extends WebTestCase
         $this->client = self::createClient();
         $this->seedEnabledMailInstance();
 
-        // Both the /register limiter and the firewall's login_throttling keep
-        // their counters in a FILESYSTEM pool, which outlives the kernel reboot
-        // between requests and the end of the run itself. This journey spends
-        // budget from both, so without a clear it passes on a fresh checkout
-        // and 429s on the second `composer test`. Same precedent as
-        // RegistrationTest and LoginTest.
+        // The /register limiter and login_throttling keep counters in a filesystem pool that outlives the run; this
+        // journey spends both budgets, so without a clear the second run 429s.
         $this->rateLimiterCache()->clear();
     }
 
-    // -- Journeys ---------------------------------------------------------
-
     /**
-     * Signup to authenticated request, with both gates in the way.
-     *
-     * The two 403s are the point of the double opt-in: the account is real and
-     * the password is correct from step 1 onwards, so the only thing keeping
-     * the user out is status - first their own unconfirmed address, then the
-     * admin queue. Asserting the problem `type` rather than the bare code is
-     * what distinguishes "refused because pending" from "refused for some other
-     * reason that happens to be a 403 too".
+     * The two 403s are the double opt-in: the password is right from step 1, so only the status keeps the user out.
+     * Asserting the problem `type`, not just 403, tells "pending" from any other refusal.
      */
     public function testAJourneyFromSignupToAnAuthenticatedRequest(): void
     {
@@ -90,18 +60,8 @@ final class AuthJourneyTest extends WebTestCase
     }
 
     /**
-     * The revocation story, which has only ever been checked in pieces.
-     *
-     * There are no refresh tokens and no blocklist, so suspension has to bite
-     * purely by the firewall re-reading the user on the next request. Both
-     * halves are driven by the admin HTTP endpoints: mutating the entity and
-     * flushing would leave the same object in the identity map and the
-     * assertion would hold even if nothing were ever reloaded.
-     *
-     * The reinstatement half also pins the silence. `approve` is the only route
-     * back from suspended, so it must work - but this user never sat in the
-     * queue, and mailing them "your account has been approved" would be a lie
-     * about an event that did not happen.
+     * Suspension bites only because the firewall re-reads the user. Both halves go through the admin endpoints: a
+     * mutated, flushed entity would pass without any reload. Reinstating through `approve` sends no "approved" mail.
      */
     public function testASuspendedUsersLiveTokenDiesAndReinstatementIsSilent(): void
     {
@@ -146,15 +106,9 @@ final class AuthJourneyTest extends WebTestCase
         self::assertSame(self::EMAIL, $this->payload()['email']);
     }
 
-    // -- The shared arc ---------------------------------------------------
-
     /**
-     * Steps 1-6 of the journey, asserted as it goes; returns the JWT the final
-     * login handed back.
-     *
-     * Shared because journey two starts where journey one ends, and reaching
-     * "active user holding a token they obtained by logging in" any other way
-     * would mean seeding the state this is supposed to be proving.
+     * Steps 1–6, asserted as it goes; returns the JWT the final login handed back. Both journeys start here, so the
+     * active user with a real login token is never seeded.
      */
     private function onboardThroughHttp(): string
     {
@@ -250,8 +204,6 @@ final class AuthJourneyTest extends WebTestCase
         return $token;
     }
 
-    // -- Reading the world ------------------------------------------------
-
     /**
      * Re-reads through the CURRENT kernel's entity manager, which is a fresh
      * one after each request's reboot - so this observes the database, not a
@@ -290,13 +242,9 @@ final class AuthJourneyTest extends WebTestCase
         return $matches[1];
     }
 
-    // -- Fixtures that have no HTTP path ----------------------------------
-
     /**
-     * The one seeded actor. Admins are provisioned out of band on purpose -
-     * there is no endpoint that grants ROLE_ADMIN - so there is no HTTP route
-     * to create one, and minting the admin's own token directly keeps the
-     * journey's login budget for the user under test.
+     * The one seeded actor: nothing grants ROLE_ADMIN over HTTP. Minting its token directly keeps the journey's login
+     * budget for the user under test.
      */
     private function adminToken(): string
     {

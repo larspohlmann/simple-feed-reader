@@ -332,10 +332,8 @@ final class PasswordResetTest extends WebTestCase
     }
 
     /**
-     * The reset-request endpoint mails a live account-takeover link. Without a
-     * cap, ALTCHA alone lets an attacker mail-bomb a known address at ~60 ms a
-     * message until the recipient stops trusting the sender - or the relay
-     * stops trusting us.
+     * The request mails a live account-takeover link, and ALTCHA alone would let an attacker mail-bomb an address at
+     * ~60 ms a message.
      */
     public function testSixthResetRequestFromOneIpIsThrottled(): void
     {
@@ -386,13 +384,8 @@ final class PasswordResetTest extends WebTestCase
     }
 
     /**
-     * A token the attacker obtained $secondsAgo seconds ago. Minting it with an
-     * explicit `iat` rather than sleeping keeps the test deterministic AND
-     * meaningful: a token issued in the very same second as the reset is
-     * deliberately NOT revoked (see InvalidatePasswordChangeTokensListener), so a test
-     * that logs in and resets within one millisecond could never observe the
-     * revocation it claims to check. This is a real, signed, otherwise-valid
-     * token for the account — only its issue time is pinned.
+     * A real token with a pinned `iat`, $secondsAgo in the past: a token from the reset's own second is deliberately
+     * not revoked, so a test without the offset could never observe the revocation.
      */
     private function stolenJwtFor(User $user, int $secondsAgo): string
     {
@@ -408,12 +401,8 @@ final class PasswordResetTest extends WebTestCase
     }
 
     /**
-     * Password reset is the canonical compromise-recovery action: the user has
-     * been phished, and resetting is how they evict the attacker. Before this
-     * was enforced it evicted nobody — the JWT is a bearer token signed over
-     * the account identity, nothing binds it to the password, and the Doctrine
-     * provider only reloads STATUS. A stolen token stayed live for its full
-     * 7-day TTL while the victim believed they had recovered.
+     * Reset is how a phished user evicts an attacker: nothing in the JWT binds it to the password, so a token issued
+     * before the reset must stop working. Why: docs/security.md#password-change
      */
     public function testResettingThePasswordRevokesTokensIssuedBeforeIt(): void
     {
@@ -461,10 +450,8 @@ final class PasswordResetTest extends WebTestCase
     }
 
     /**
-     * The other half, and the reason the comparison must be strict. A user who
-     * resets and immediately signs back in gets a token whose `iat` can land in
-     * the very same second as passwordChangedAt. A `<=` comparison would log
-     * them straight back out and make reset look broken.
+     * The other half, and why the comparison is strict: a login right after the reset can share its second, and `<=`
+     * would log the user straight back out.
      */
     public function testTheUserCanUseTheApiImmediatelyAfterResetting(): void
     {

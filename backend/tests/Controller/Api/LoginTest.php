@@ -20,12 +20,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 final class LoginTest extends WebTestCase
 {
-    /**
-     * login_throttling persists attempt counters in a filesystem cache pool, so
-     * they outlive both the test and the whole run. Left alone, the per-IP
-     * global limiter saturates and every later login test gets a 429 -
-     * order-dependent, history-dependent, and green only on a clean checkout.
-     */
+    /** login_throttling counters live in a filesystem pool that outlives the run; clear them or later tests 429. */
     protected function setUp(): void
     {
         parent::setUp();
@@ -57,12 +52,7 @@ final class LoginTest extends WebTestCase
         );
     }
 
-    /**
-     * json_decode yields a plain array; PHPStan cannot narrow the key type from
-     * assertIsArray alone, so the annotation stays honest about that.
-     *
-     * @return array<mixed>
-     */
+    /** @return array<mixed> */
     private function payload(KernelBrowser $client): array
     {
         $decoded = json_decode((string) $client->getResponse()->getContent(), true);
@@ -103,11 +93,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * The trap that comes with normalising on write: addresses are stored
-     * lowercase, so if the security provider queried the raw submission a user
-     * whose client capitalises the first letter would get a bare 401 forever,
-     * with the password they typed being correct. Both directions are checked -
-     * registering mixed and typing lower, and the reverse.
+     * Addresses are stored lowercase, so the provider must normalise the submission too, or a capitalised address
+     * would 401 forever with the right password. Both directions.
      *
      * @return iterable<string, array{string, string}>
      */
@@ -212,12 +199,7 @@ final class LoginTest extends WebTestCase
         self::assertSame('rate_limited', $this->payload($client)['type']);
     }
 
-    /**
-     * The throttle is keyed on the identifier as well as the IP, so a correct
-     * password must not be accepted once that identifier is locked out -
-     * otherwise the limiter would only be delaying an attacker who already
-     * knows the password.
-     */
+    /** The throttle keys on the identifier too, so a locked-out identifier refuses even the correct password. */
     public function testThrottleAlsoBlocksTheCorrectPassword(): void
     {
         $client = self::createClient();
@@ -251,14 +233,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * The bypass this closes. User::normalizeEmail() trims, so " bob@x" and
-     * "bob@x" authenticate as one account — but Symfony's
-     * DefaultLoginRateLimiter keys the bucket on mb_strtolower() of the RAW
-     * submitted identifier and never trims. Every fresh padding gets a fresh
-     * budget of five, and the per-identifier throttle stops existing.
-     *
-     * Five failures spread across five distinct paddings must exhaust the ONE
-     * bucket that the unpadded address also draws from.
+     * DefaultLoginRateLimiter keys on the raw lower-cased identifier while User::normalizeEmail() also trims: five
+     * failures over five paddings must exhaust the one bucket the unpadded address draws from.
      */
     public function testPaddedIdentifiersShareOneThrottleBucket(): void
     {
@@ -297,11 +273,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * Normalising the throttle key must not break authentication itself. A
-     * padded identifier resolves to a real account (the user provider trims
-     * too), so a padded submission with the CORRECT password still logs in —
-     * this is what stops the fix from becoming a lockout for anyone whose
-     * client appends a stray space.
+     * Normalising the throttle key must not break login: the provider trims too, so a padded address with the right
+     * password still logs in.
      */
     public function testPaddedIdentifierWithTheCorrectPasswordStillLogsIn(): void
     {
@@ -315,11 +288,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * The enumeration oracle this closes: while the status check ran in
-     * checkPreAuth it fired BEFORE the password was verified, so a suspended
-     * account answered 403-with-status to anyone who merely guessed the
-     * address. LoginUserChecker moved it to checkPostAuth. A wrong password
-     * must now be indistinguishable from any other bad login.
+     * A wrong password against a suspended account must be the ordinary 401: the status check runs post-auth, so a
+     * guessed address learns nothing.
      */
     public function testNonActiveAccountWithWrongPasswordIsIndistinguishableFrom401(): void
     {
@@ -358,14 +328,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * An account that exists only through a provider has no password hash at
-     * all. Symfony's CheckCredentialsListener returns before it reaches the
-     * hasher for those, so this request skips the argon2 every other login
-     * pays for — see App\Security\LoginTimingEqualizer, which buys it back.
-     *
-     * Asserted here as byte equality with an unknown address rather than as a
-     * duration: the response is the part a functional test can pin down, and
-     * the hash decision is covered by LoginTimingEqualizerTest.
+     * An OAuth-only account has no hash, so Symfony skips the hasher; the response must match an unknown address byte
+     * for byte. The hash itself is counted in testEveryCredentialFailureCostsTheSameOneHash.
      */
     public function testAPasswordLoginAgainstAnOAuthOnlyAccountIsIndistinguishableFromAnUnknownAddress(): void
     {
@@ -391,15 +355,8 @@ final class LoginTest extends WebTestCase
     }
 
     /**
-     * The response bytes above would look identical even if the equalizer never
-     * fired, so this counts the work the real, wired-up stack actually spends.
-     *
-     * It is a functional test rather than a call to equalize(): the whole
-     * mechanism depends on LoginFailureHandler recovering the submitted address
-     * from a request body the authenticator has already consumed, and a test
-     * that invokes the equalizer directly asserts that away — it would stay
-     * green with a handler that passed null every time, which would silently
-     * hash on every failure and lose the wrong-password case entirely.
+     * Counts the hashes the wired stack spends. Functional on purpose: LoginFailureHandler must recover the address
+     * from a consumed body, and a direct equalize() call would stay green if it always passed null.
      */
     public function testEveryCredentialFailureCostsTheSameOneHash(): void
     {
@@ -428,10 +385,7 @@ final class LoginTest extends WebTestCase
             $spent[$email] = $hashes->calls - $before;
         }
 
-        // Unknown and OAuth-only skipped the hasher inside the security layer,
-        // so the equalizer buys one hash back for each. The password account
-        // already paid for a real verify, so it buys none — one hash of work
-        // on all three paths, which is the whole point.
+        // Unknown and OAuth-only skipped the hasher, so each buys one back; the password account already verified one.
         self::assertSame(
             ['unknown@example.com' => 1, 'no-password@example.com' => 1, 'has-password@example.com' => 0],
             $spent,
