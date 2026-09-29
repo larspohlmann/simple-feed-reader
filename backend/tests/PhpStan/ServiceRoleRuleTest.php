@@ -15,6 +15,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private const string FIXTURES = __DIR__ . '/data/service-role-fixtures.php';
     private const string SHOP = 'App\Service\Shop\\';
     private const string TILL = 'App\Service\Till\Support\\';
+    private const string PROBE = 'App\Service\Probe\\';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
@@ -339,6 +340,17 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 793,
             ],
+            [self::probe('interfaceFolder', 'Sensor', self::OUTSIDE_ITS_FOLDER, 'Sensor\SensorInterface'), 803],
+            [self::probe('interfaceName', 'Sensor', self::NEEDS_SUFFIX, 'Sensor\SensorInterface'), 803],
+            [
+                self::probe(
+                    'interfaceFolder',
+                    'HeatSensor',
+                    'implements App\Service\Probe\Sensor, so it sits in that interface\'s folder',
+                    'Sensor\HeatSensor',
+                ),
+                807,
+            ],
         ]);
     }
 
@@ -421,6 +433,11 @@ final class ServiceRoleRuleTest extends RuleTestCase
     private static function till(string $class, string $problem): string
     {
         return self::message('supportShape', self::TILL . $class, $problem);
+    }
+
+    private static function probe(string $check, string $class, string $problem, string $home): string
+    {
+        return self::message($check, self::PROBE . $class, $problem, self::PROBE . $home);
     }
 
     private static function shop(string $check, string $class, string $problem, ?string $home = null): string

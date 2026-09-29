@@ -798,3 +798,17 @@ namespace App\Service\Ledger\Model {
         }
     }
 }
+
+namespace App\Service\Probe {
+    interface Sensor
+    {
+    }
+
+    final readonly class HeatSensor implements Sensor
+    {
+        public function celsius(): int
+        {
+            return 21;
+        }
+    }
+}

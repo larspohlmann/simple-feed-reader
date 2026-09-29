@@ -160,7 +160,10 @@ final readonly class ServiceRoleMap
         return $interfaces;
     }
 
-    /** The folder named after the interface; a folder that holds nothing but its family is renamed after it. */
+    /**
+     * The folder named after the interface; a folder that holds nothing but its family is renamed after it, unless it
+     * is the module root.
+     */
     public function interfaceFolder(string $interface): string
     {
         $namespace = ServiceRoleNames::namespaceOf($interface);
@@ -168,7 +171,7 @@ final readonly class ServiceRoleMap
         if (ServiceRoleNames::shortNameOf($namespace) === $base) {
             return $namespace;
         }
-        if ($this->holdsOnlyTheFamilyOf($interface)) {
+        if ($namespace !== ServiceRoleNames::moduleOf($interface) && $this->holdsOnlyTheFamilyOf($interface)) {
             return ServiceRoleNames::namespaceOf($namespace) . '\\' . $base;
         }
 
