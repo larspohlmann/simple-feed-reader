@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\MailSendFailure;
 
-/** Wire shape for the admin mail failure log (#882). */
+/** Wire shape for the admin mail failure log. */
 final class MailDeliveryHealthJson
 {
     /**

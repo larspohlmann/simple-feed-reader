@@ -16,18 +16,9 @@ use App\Entity\User;
 use App\Service\Admin\Model\UserFootprintModel;
 
 /**
- * The admin view of one account and of the approval queue.
- *
- * Every row here is hand-built on purpose, like GET /api/me: a column added to
- * User (or its neighbours) later must not reach an admin's browser merely
- * because it exists. Note what is absent — the password hash and every token
- * column. That is the reason this mapper exists rather than serialising the
- * entities.
- *
- * The builders are pure: each takes the rows the caller already loaded and does
- * not query. That is load-bearing — detail() loads its heavy subscription×tag
- * set once and threads it through, pinned by
- * AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist.
+ * The admin view of one account and of the approval queue, built field by field so a column added to User never
+ * reaches an admin's browser by default. The builders never query: AdminUserController::detail() loads the rows once
+ * (AdminUserControllerTest::testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist).
  */
 final class AdminUserJson
 {
@@ -53,10 +44,8 @@ final class AdminUserJson
                 'roles' => $user->getRoles(),
                 'createdAt' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
                 'approvedAt' => $user->getApprovedAt()?->format(\DateTimeInterface::ATOM),
-                // How this person signed up. An OAuth account has no
-                // verification mail for the admin to chase and may carry a
-                // synthetic <provider>-<hash>@oauth.invalid address, and both of
-                // those read as anomalies without this column.
+                // How this person signed up: an OAuth account has no verification mail to chase and may
+                // carry an `@oauth.invalid` placeholder, which both look like anomalies without it.
                 'identities' => $providersByUserId[$user->getId()] ?? [],
                 // Footprint at a glance. A user with none of either is absent
                 // from the batched counts, hence the ?? 0.
@@ -71,13 +60,8 @@ final class AdminUserJson
     }
 
     /**
-     * The user's own arrangement of their untagged/tagged "Feeds" list —
-     * Subscription::position, assigned on every create path and rewritten
-     * wholesale by the reorder endpoint. Sorted here rather than in
-     * SubscriptionRepository::findForUserWithTags() itself: that method has
-     * three other call sites (the reader's own subscription list, MarkReadService,
-     * OpmlExporter) whose ordering needs were not part of this change, so its
-     * existing createdAt/id order is left alone for them.
+     * The owner's own order (Subscription::position). Sorted here, not in findForUserWithTags(), whose other callers
+     * keep its createdAt/id order.
      *
      * @param list<Subscription> $subscriptions
      *

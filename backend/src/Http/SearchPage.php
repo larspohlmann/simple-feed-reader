@@ -21,12 +21,6 @@ final readonly class SearchPage
     /** @return array{entries: list<array<string, mixed>>, nextCursor: string|null, matchedWords: list<string>} */
     public static function of(EntrySearchResultModel $result, int $limit): array
     {
-        // withMatchCount(), not of(): matchCount is the read's own match count,
-        // which for indexed search can exceed count($result->rows) once hydration
-        // drops an id the caller may not see. Deciding "is there a next page" from
-        // the row count would read a full page as a short one. Search always ranks
-        // by publish instant, never view time, so its next cursor encodes
-        // effectiveDate.
         $page = EntryPage::withMatchCount(
             $result->rows,
             $limit,
