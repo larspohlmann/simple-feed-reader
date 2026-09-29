@@ -10,7 +10,6 @@ use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\ResponseClassifier;
@@ -18,6 +17,7 @@ use App\Service\Fetch\UrlGuard;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
@@ -102,7 +102,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $hostConcurrency,
             'TestAgent/1.0',
             $this->noEgressProxy(),
-            new FetchRetryPolicy($urlGuard),
+            FetchWiring::retryPolicy($urlGuard),
         );
     }
 

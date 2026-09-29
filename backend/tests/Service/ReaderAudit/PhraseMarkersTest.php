@@ -8,7 +8,7 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\Support\SuspiciousPhrases;
+use App\Service\ReaderAudit\SuspiciousPhrases;
 use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 
@@ -20,10 +20,12 @@ final class PhraseMarkersTest extends TestCase
         . 'Artikel beginnt und die Kopfzone endet, mit genug Zeichen dafuer. ';
 
     private PhraseMarkers $markers;
+    private SuspiciousPhrases $phrases;
 
     protected function setUp(): void
     {
         $this->markers = AuditMarkers::phrases();
+        $this->phrases = new SuspiciousPhrases();
     }
 
     public function testReportsAShareRowTheWidgetRemoverLeftBehind(): void
@@ -88,7 +90,7 @@ final class PhraseMarkersTest extends TestCase
     {
         // A phrase silently dropped from the table is a publisher stopping to be
         // reported, with nothing failing to say so.
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             $block = '<p>' . $family->phrases[0] . '</p>';
 
             self::assertSame([$family->code], $this->codesFor($block), $family->code);
@@ -100,7 +102,7 @@ final class PhraseMarkersTest extends TestCase
         // Not which phrase comes back — one listing contains another
         // ("menü" inside "hauptmenü") and the family answers with the first it
         // finds. What matters is that no listed wording goes unrecognised.
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             foreach ($family->phrases as $phrase) {
                 self::assertNotNull($family->matchIn($phrase), $family->code . ' / ' . $phrase);
             }
@@ -111,7 +113,7 @@ final class PhraseMarkersTest extends TestCase
     {
         // The limit is what separates a menu entry from a sentence, so it is
         // stated per family here and not only in the table.
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             $phrase = $family->phrases[0];
             $atLimit = str_pad($phrase, $family->maxBlockChars, 'x');
             $overLimit = str_pad($phrase, $family->maxBlockChars + 1, 'x');
@@ -127,7 +129,7 @@ final class PhraseMarkersTest extends TestCase
         // weight, a block limit or a phrase silently disappearing fails here
         // instead of quietly narrowing what the sweep reports.
         $table = [];
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             $table[$family->code] = [$family->weight, $family->maxBlockChars, $family->scope, \count($family->phrases)];
         }
 

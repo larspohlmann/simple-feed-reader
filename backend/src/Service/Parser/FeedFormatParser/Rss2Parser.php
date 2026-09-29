@@ -7,15 +7,15 @@ namespace App\Service\Parser\FeedFormatParser;
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\FeedItemImageSelector;
+use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
-use App\Service\Parser\Support\FeedItemImageSelector;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
-use App\Service\Parser\Support\ItemMediaExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
@@ -24,6 +24,12 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
     private const string WFW_NS = 'http://wellformedweb.org/CommentAPI/';
+
+    public function __construct(
+        private FeedItemImageSelector $imageSelector,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
 
     public function supports(\DOMElement $root): bool
     {
@@ -65,8 +71,8 @@ final readonly class Rss2Parser implements FeedFormatParserInterface
         $description = XmlHelper::childText($item, 'description');
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
 
-        $image = FeedItemImageSelector::fromRss2($item, $contentEncoded ?? $description);
-        $mediaBundle = ItemMediaExtractor::extract($item);
+        $image = $this->imageSelector->fromRss2($item, $contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for(XmlHelper::childText($item, 'guid'), $link, $title),

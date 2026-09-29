@@ -6,10 +6,10 @@ namespace App\Tests\Service\Fetch;
 
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -29,8 +29,9 @@ final class RedirectFollowerTest extends TestCase
             }
         };
 
-        return new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
+        return FetchWiring::redirectFollower(
+            new MockHttpClient($responses),
+            $this->noEgressProxy(),
             new UrlGuard($dns, new IpValidator()),
         );
     }

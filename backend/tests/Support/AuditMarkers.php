@@ -12,6 +12,7 @@ use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\LeadingRegion;
 use App\Service\ReaderAudit\PhraseMarkers;
 use App\Service\ReaderAudit\SocialWidgetMarkers;
+use App\Service\ReaderAudit\SuspiciousPhrases;
 
 /** The audit's marker rules over the reader's real leading-block rules, wired as the container wires them. */
 final class AuditMarkers
@@ -48,6 +49,6 @@ final class AuditMarkers
 
     public static function phrases(): PhraseMarkers
     {
-        return new PhraseMarkers(self::leadingRegion());
+        return new PhraseMarkers(self::leadingRegion(), new SuspiciousPhrases());
     }
 }

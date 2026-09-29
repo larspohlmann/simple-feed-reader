@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Support;
+namespace App\Service\Scraper;
 
+use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;
@@ -20,9 +21,9 @@ use Dom\Text;
  *   on heading-less cards would mash title, byline, and description together.
  * Length rules (min 5, truncate 300) are applied by the caller, CardFields.
  */
-final class CardTitle
+final readonly class CardTitle
 {
-    public static function of(Element $container, Element $anchor): ?string
+    public function of(Element $container, Element $anchor): ?string
     {
         return self::headingTitle($container)
             ?? self::classHintedTitle($container)
@@ -145,9 +146,5 @@ final class CardTitle
         }
 
         return null;
-    }
-
-    private function __construct()
-    {
     }
 }

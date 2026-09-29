@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\ScrapeLayer\ClusterLayer;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +18,7 @@ final class ClusterLayerTest extends TestCase
     {
         $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
 
-        return new ClusterLayer()->extract($doc, $baseUrl);
+        return new ClusterLayer(new CardTitle())->extract($doc, $baseUrl);
     }
 
     public function testFindsTagesschauTeaserCluster(): void
@@ -61,7 +62,7 @@ final class ClusterLayerTest extends TestCase
             \LIBXML_NOERROR
         );
 
-        $items = new ClusterLayer()->extract($doc, 'https://flat.test/');
+        $items = new ClusterLayer(new CardTitle())->extract($doc, 'https://flat.test/');
 
         self::assertCount(2000, $items);
         self::assertSame('https://flat.test/p/0', $items[0]->url);

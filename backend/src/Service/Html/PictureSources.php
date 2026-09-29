@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Html;
 
 use App\Service\Html\Model\ImageRenditionModel;
-use App\Service\Html\Support\DesktopViewport;
 use App\Service\Html\Support\ImageSourceUrl;
 use App\Service\Html\Support\Srcset;
 use Dom\Element;
@@ -24,6 +23,10 @@ final readonly class PictureSources
 {
     /** Attributes holding a candidate list, in the order publishers prefer them. */
     private const array SRCSET_ATTRIBUTES = ['data-lazy-srcset', 'data-srcset', 'srcset'];
+
+    public function __construct(private DesktopViewport $viewport)
+    {
+    }
 
     /**
      * The widest usable rendition the <source> set offers. When no source
@@ -61,7 +64,7 @@ final readonly class PictureSources
      *  the reader does not stand in for, or carries nothing loadable. */
     private function renditionOf(Element $source): ?ImageRenditionModel
     {
-        if (!DesktopViewport::admits($source->getAttribute('media'))) {
+        if (!$this->viewport->admits($source->getAttribute('media'))) {
             return null;
         }
 

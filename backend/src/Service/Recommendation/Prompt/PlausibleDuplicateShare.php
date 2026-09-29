@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Prompt\Support;
+namespace App\Service\Recommendation\Prompt;
 
 /**
  * How much of a dedup pool one reply may plausibly call duplicate.
@@ -20,7 +20,7 @@ final readonly class PlausibleDuplicateShare
 {
     private const int PERCENT = 50;
 
-    public static function exceededBy(int $namedCount, int $shownCount): bool
+    public function exceededBy(int $namedCount, int $shownCount): bool
     {
         return $namedCount > self::maximumFor($shownCount);
     }
@@ -28,9 +28,5 @@ final readonly class PlausibleDuplicateShare
     private static function maximumFor(int $shownCount): int
     {
         return intdiv($shownCount * self::PERCENT, 100);
-    }
-
-    private function __construct()
-    {
     }
 }

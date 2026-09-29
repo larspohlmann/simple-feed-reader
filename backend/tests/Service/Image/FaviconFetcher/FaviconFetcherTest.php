@@ -9,9 +9,9 @@ use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -49,7 +49,7 @@ final class FaviconFetcherTest extends TestCase
         };
 
         return new FaviconFetcher(
-            new FailoverRequestSender($client, $this->noEgressProxy()),
+            FetchWiring::failoverSender($client, $this->noEgressProxy()),
             new UrlGuard($resolver, new IpValidator()),
         );
     }

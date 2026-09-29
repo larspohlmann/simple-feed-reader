@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\ItemImageExtractor;
 use App\Service\Parser\WordPressJsonParser;
 use PHPUnit\Framework\TestCase;
 
@@ -27,7 +28,7 @@ final class WordPressJsonParserTest extends TestCase
 
     private function parse(string $body): \App\Service\Parser\Model\ParsedFeedModel
     {
-        return (new WordPressJsonParser())->parse($body);
+        return (new WordPressJsonParser(new ItemImageExtractor()))->parse($body);
     }
 
     public function testMapsAFullPost(): void

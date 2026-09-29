@@ -7,8 +7,8 @@ namespace App\Service\Scraper\Pass;
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\Support\Srcset;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Support\CardTitle;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 
@@ -39,7 +39,7 @@ final readonly class CardFields
     /** Child tags that make an element a wrapper rather than a text block. */
     private const array NON_LEAF_CHILDREN = ['P', 'DIV', 'UL', 'OL', 'H1', 'H2', 'H3', 'H4', 'ARTICLE', 'SECTION'];
 
-    public function __construct(private PageUrls $pageUrls)
+    public function __construct(private PageUrls $pageUrls, private CardTitle $cardTitle)
     {
     }
 
@@ -50,7 +50,7 @@ final readonly class CardFields
             return null;
         }
 
-        $title = self::title($container, $anchor);
+        $title = $this->title($container, $anchor);
         if ($title === null) {
             return null;
         }
@@ -64,9 +64,9 @@ final readonly class CardFields
         );
     }
 
-    private static function title(Element $container, Element $anchor): ?string
+    private function title(Element $container, Element $anchor): ?string
     {
-        $title = CardTitle::of($container, $anchor);
+        $title = $this->cardTitle->of($container, $anchor);
         if ($title === null || mb_strlen($title) < self::MIN_TITLE_LENGTH) {
             return null;
         }

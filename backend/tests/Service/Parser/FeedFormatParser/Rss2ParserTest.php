@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
 use App\Enum\CommentsLoad;
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Service\Parser\Model\ParsedEntryModel;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class Rss2ParserTest extends TestCase
@@ -30,7 +30,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML);
 
-        return (new Rss2Parser())->parse($document)->entries[0];
+        return FeedFormatParsers::rss2()->parse($document)->entries[0];
     }
 
     public function testCarriesPodcastEnclosureIntoAttachments(): void
@@ -51,7 +51,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         $bundle = $feed->entries[0]->media->mediaBundle;
         self::assertNotNull($bundle);
@@ -94,7 +94,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         self::assertCount(3, $feed->entries);
         self::assertSame('https://e/a.jpg', $feed->entries[0]->media->image?->url);
@@ -128,7 +128,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         self::assertCount(1, $feed->entries);
         $image = $feed->entries[0]->media->image;
@@ -164,7 +164,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -192,7 +192,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         self::assertSame('https://e/enclosure.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -219,7 +219,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         $image = $feed->entries[0]->media->image;
         self::assertNotNull($image);
@@ -255,7 +255,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        $feed = (new Rss2Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
 
         self::assertSame('The Weekly Review', $feed->title);
         self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
@@ -284,7 +284,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        self::assertSame('https://example.com', (new Rss2Parser())->parse($this->document($xml))->siteUrl);
+        self::assertSame('https://example.com', FeedFormatParsers::rss2()->parse($this->document($xml))->siteUrl);
     }
 
     public function testReadsTheChannelImage(): void
@@ -302,7 +302,9 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        self::assertSame('https://example.com/logo.png', (new Rss2Parser())->parse($this->document($xml))->imageUrl);
+        $feed = FeedFormatParsers::rss2()->parse($this->document($xml));
+
+        self::assertSame('https://example.com/logo.png', $feed->imageUrl);
     }
 
     public function testAChannelWithoutAnImageParsesToNull(): void
@@ -319,7 +321,7 @@ final class Rss2ParserTest extends TestCase
             </rss>
             XML;
 
-        self::assertNull((new Rss2Parser())->parse($this->document($xml))->imageUrl);
+        self::assertNull(FeedFormatParsers::rss2()->parse($this->document($xml))->imageUrl);
     }
 
     public function testWordPressCommentFeedIsAManualCommentsFeed(): void

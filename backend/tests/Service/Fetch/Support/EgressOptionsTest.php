@@ -90,4 +90,14 @@ final class EgressOptionsTest extends TestCase
         self::assertIsArray($curlOptions);
         self::assertTrue($curlOptions[\CURLOPT_FRESH_CONNECT] ?? false);
     }
+
+    public function testPinnedOnTheFirstAttemptAddsNoFreshConnectionExtra(): void
+    {
+        $guarded = new GuardedUrlModel('dual.example.com', ['2606:2800:220:1:248:1893:25c8:1946', '93.184.216.34']);
+
+        $options = EgressOptions::pinned($guarded, 0);
+
+        self::assertArrayHasKey('resolve', $options);
+        self::assertArrayNotHasKey('extra', $options);
+    }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Prompt\Support;
+namespace App\Service\Recommendation\Prompt;
 
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
@@ -64,7 +64,7 @@ final readonly class RecommendationAnswerBudget
      * one profile string regardless of item count. Pricing a batch at the
      * reason-bearing rate would multiply its budget for nothing (#437).
      */
-    public static function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
+    public function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
     {
         $expected = match ($schema) {
             RecommendationResponseSchema::Distillation => self::PROFILE_ANSWER_TOKENS,
@@ -81,12 +81,12 @@ final readonly class RecommendationAnswerBudget
      * The answer bound plus a reasoning headroom. Suppression only shrinks the headroom: the hint does not stop a
      * local model thinking (#493), and the headroom is a ceiling, not a reservation (#327).
      */
-    public static function outputBoundTokens(
+    public function outputBoundTokens(
         int $replyItemCount,
         RecommendationResponseSchema $schema,
         Reasoning $reasoning,
     ): int {
-        return self::answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($reasoning);
+        return $this->answerBoundTokens($replyItemCount, $schema) + self::reasoningHeadroomTokens($reasoning);
     }
 
     private static function reasoningHeadroomTokens(Reasoning $reasoning): int
@@ -95,9 +95,5 @@ final readonly class RecommendationAnswerBudget
             Reasoning::Suppressed => self::SUPPRESSED_REASONING_HEADROOM_TOKENS,
             Reasoning::Allowed => self::REASONING_HEADROOM_TOKENS,
         };
-    }
-
-    private function __construct()
-    {
     }
 }

@@ -8,7 +8,6 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
-use App\Service\Fetch\Support\CrossFamilyFailover;
 
 /**
  * What a failed fetch attempt earns next: the one direct fallback for a proxied
@@ -20,7 +19,7 @@ use App\Service\Fetch\Support\CrossFamilyFailover;
  */
 final readonly class FetchRetryPolicy
 {
-    public function __construct(private UrlGuard $urlGuard)
+    public function __construct(private UrlGuard $urlGuard, private CrossFamilyFailover $failover)
     {
     }
 
@@ -86,7 +85,7 @@ final readonly class FetchRetryPolicy
         }
 
         if ($failure instanceof FeedUnreachableException && null === $failure->statusCode) {
-            return CrossFamilyFailover::isWarranted($failure->getPrevious());
+            return $this->failover->isWarranted($failure->getPrevious());
         }
 
         return true;

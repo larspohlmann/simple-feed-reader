@@ -11,10 +11,10 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\FeedFetcher\HttpFeedFetcher;
-use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\ResponseClassifier;
 use App\Service\Fetch\UrlGuard;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
@@ -55,7 +55,7 @@ final class HttpFeedFetcherTest extends TestCase
             100,
             'TestAgent/1.0',
             $this->noEgressProxy(),
-            new FetchRetryPolicy($urlGuard),
+            FetchWiring::retryPolicy($urlGuard),
         ));
     }
 

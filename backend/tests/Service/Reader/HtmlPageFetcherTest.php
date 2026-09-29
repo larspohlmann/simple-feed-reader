@@ -6,14 +6,13 @@ namespace App\Tests\Service\Reader;
 
 use App\Http\SymfonyStatusReasonPhrases;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
-use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
-use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\HtmlPageFetcher;
 use App\Service\Reader\LandingChallenge;
 use App\Service\Reader\MetaRefreshTarget;
+use App\Tests\Support\FetchWiring;
 use App\Tests\Support\NoEgressProxy;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -44,8 +43,9 @@ final class HtmlPageFetcherTest extends TestCase
         };
 
         return new HtmlPageFetcher(
-            new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
+            FetchWiring::redirectFollower(
+                new MockHttpClient($responses),
+                $this->noEgressProxy(),
                 new UrlGuard($resolver, new IpValidator()),
             ),
             new MetaRefreshTarget(),

@@ -2,13 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Parser;
 
-use App\Service\Parser\Support\FeedItemImageSelector;
+use App\Service\Parser\FeedItemImageSelector;
+use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class FeedItemImageSelectorTest extends TestCase
 {
+    private FeedItemImageSelector $selector;
+
+    protected function setUp(): void
+    {
+        $this->selector = new FeedItemImageSelector(new ItemImageExtractor());
+    }
+
     private function rss2Item(string $innerXml): \DOMElement
     {
         $doc = new \DOMDocument();
@@ -38,7 +46,7 @@ final class FeedItemImageSelectorTest extends TestCase
         $item = $this->rss2Item('<enclosure url="http://files.example/lead.jpg" type="image/jpeg" length="0"/>');
         $body = '<p>x</p><img src="https://files.example/diagram.jpg" width="900" height="600">';
 
-        $image = FeedItemImageSelector::fromRss2($item, $body);
+        $image = $this->selector->fromRss2($item, $body);
 
         self::assertNotNull($image);
         self::assertSame('http://files.example/lead.jpg', $image->url);
@@ -51,7 +59,7 @@ final class FeedItemImageSelectorTest extends TestCase
         );
         $body = '<p>Hi <img src="https://s.w.org/images/core/emoji/15/72x72/1f642.png" class="wp-smiley"></p>';
 
-        $image = FeedItemImageSelector::fromRss2($item, $body);
+        $image = $this->selector->fromRss2($item, $body);
 
         self::assertNotNull($image);
         self::assertSame('http://site.example/lead-1200.jpg', $image->url);
@@ -61,7 +69,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $item = $this->rss2Item('<enclosure url="http://files.example/e.jpg" type="image/jpeg" length="0"/>');
 
-        $image = FeedItemImageSelector::fromRss2($item, '<p>no image here</p>');
+        $image = $this->selector->fromRss2($item, '<p>no image here</p>');
 
         self::assertNotNull($image);
         self::assertSame('http://files.example/e.jpg', $image->url);
@@ -69,7 +77,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testReturnsAnHttpBodyImageWhenThatIsAllThereIs(): void
     {
-        $image = FeedItemImageSelector::fromRss2(
+        $image = $this->selector->fromRss2(
             $this->rss2Item('<description>no media</description>'),
             '<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">',
         );
@@ -80,7 +88,7 @@ final class FeedItemImageSelectorTest extends TestCase
 
     public function testReturnsNullWhenNoSourceYieldsAnImage(): void
     {
-        self::assertNull(FeedItemImageSelector::fromRss2(
+        self::assertNull($this->selector->fromRss2(
             $this->rss2Item('<description>nothing</description>'),
             '<p>words only</p>',
         ));
@@ -90,7 +98,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $item = $this->rss2Item('<media:content url="https://i/big.jpg" medium="image" width="700"/>');
 
-        $image = FeedItemImageSelector::fromRss2($item, '<img src="https://i/body.jpg">');
+        $image = $this->selector->fromRss2($item, '<img src="https://i/body.jpg">');
 
         self::assertNotNull($image);
         self::assertSame('https://i/big.jpg', $image->url);
@@ -100,7 +108,7 @@ final class FeedItemImageSelectorTest extends TestCase
     {
         $entry = $this->atomEntry('<title>No media here</title>');
 
-        $image = FeedItemImageSelector::fromAtom($entry, 'http://www.w3.org/2005/Atom', [
+        $image = $this->selector->fromAtom($entry, 'http://www.w3.org/2005/Atom', [
             null,
             '<p>none</p>',
             '<img src="https://i/second.jpg">',

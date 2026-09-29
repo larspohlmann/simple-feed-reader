@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
+use App\Service\Html\DesktopViewport;
 use App\Service\Html\PictureSources;
 use App\Service\Reader\PageRepair\LazyImageSources;
 use PHPUnit\Framework\TestCase;
@@ -14,7 +15,7 @@ final class LazyImageSourcesTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->lazyImages = new LazyImageSources(new PictureSources());
+        $this->lazyImages = new LazyImageSources(new PictureSources(new DesktopViewport()));
     }
 
     public function testPromotesLazySourceOverPlaceholder(): void

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt;
 
 use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
-use App\Service\Recommendation\Prompt\Support\PlausibleDuplicateShare;
 
 /**
  * Turns one raw consolidation reply into validated picks and duplicate ids -- the call
@@ -24,6 +23,7 @@ final readonly class RecommendationConsolidationParser
     public function __construct(
         private ModelReplyJsonDecoder $decoder,
         private RecommendationPickSalvager $salvager,
+        private PlausibleDuplicateShare $duplicateShare,
     ) {
     }
 
@@ -50,7 +50,7 @@ final readonly class RecommendationConsolidationParser
 
         $duplicateIds = $this->salvageDuplicateIds($decoded['duplicates'] ?? [], $shownIds);
 
-        if (PlausibleDuplicateShare::exceededBy(\count($duplicateIds), \count($shownIds))) {
+        if ($this->duplicateShare->exceededBy(\count($duplicateIds), \count($shownIds))) {
             return ConsolidationParseResultModel::unusable();
         }
 

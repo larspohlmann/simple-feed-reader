@@ -9,7 +9,6 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
-use App\Service\ReaderAudit\Support\SuspiciousPhrases;
 
 /**
  * Scans the article's short blocks for the wording SuspiciousPhrases lists, each
@@ -23,15 +22,17 @@ use App\Service\ReaderAudit\Support\SuspiciousPhrases;
  */
 final readonly class PhraseMarkers
 {
-    public function __construct(private LeadingRegion $leadingRegion)
-    {
+    public function __construct(
+        private LeadingRegion $leadingRegion,
+        private SuspiciousPhrases $phrases,
+    ) {
     }
 
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body): array
     {
         $markers = [];
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             $marker = $this->firstMatch($family, $this->scopeFor($family, $body));
             if ($marker !== null) {
                 $markers[] = $marker;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\FeedFormatParser;
 
-use App\Service\Parser\FeedFormatParser\Rss1Parser;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class Rss1ParserTest extends TestCase
@@ -55,7 +55,7 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        $feed = (new Rss1Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
 
         self::assertCount(3, $feed->entries);
         self::assertSame('https://e/c.jpg', $feed->entries[0]->media->image?->url);
@@ -87,7 +87,7 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        $feed = (new Rss1Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
 
         self::assertCount(1, $feed->entries);
         $image = $feed->entries[0]->media->image;
@@ -121,7 +121,7 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        $feed = (new Rss1Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
 
         self::assertSame('https://e/media.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -150,7 +150,7 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        $feed = (new Rss1Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
 
         self::assertSame('https://e/custom.jpg', $feed->entries[0]->media->image?->url);
     }
@@ -180,7 +180,7 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        $feed = (new Rss1Parser())->parse($this->document($xml));
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
 
         self::assertSame('The Weekly Review', $feed->title);
         self::assertSame('An Odyssey for Our Own Time', $feed->entries[0]->title);
@@ -212,6 +212,38 @@ final class Rss1ParserTest extends TestCase
             </rdf:RDF>
             XML;
 
-        self::assertSame('https://example.com/logo.png', (new Rss1Parser())->parse($this->document($xml))->imageUrl);
+        $feed = FeedFormatParsers::rss1()->parse($this->document($xml));
+
+        self::assertSame('https://example.com/logo.png', $feed->imageUrl);
+    }
+
+    public function testCarriesAMediaContentAudioIntoTheEntryAttachments(): void
+    {
+        $xml = /** @lang TEXT */ <<<'XML'
+            <?xml version="1.0"?>
+            <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                     xmlns="http://purl.org/rss/1.0/"
+                     xmlns:media="http://search.yahoo.com/mrss/">
+              <channel rdf:about="https://e/">
+                <title>Feed</title>
+                <link>https://e/</link>
+                <description>Feed</description>
+              </channel>
+              <item rdf:about="https://e/audio">
+                <title>Audio Item</title>
+                <link>https://e/audio</link>
+                <description>desc</description>
+                <media:content url="https://cdn/ep.mp3" type="audio/mpeg"/>
+              </item>
+            </rdf:RDF>
+            XML;
+
+        $entry = FeedFormatParsers::rss1()->parse($this->document($xml))->entries[0];
+
+        $bundle = $entry->media->mediaBundle;
+
+        self::assertNotNull($bundle);
+        self::assertCount(1, $bundle->attachments);
+        self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
     }
 }

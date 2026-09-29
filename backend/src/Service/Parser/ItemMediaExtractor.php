@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Parser;
 
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\FeedMediaNode;
+use App\Service\Parser\Support\MediaDuration;
 
 /**
  * Enumerates the media a feed item declares into the two lists the entry keeps:
@@ -19,12 +20,12 @@ use App\Service\Parser\Pass\FeedMediaNode;
  * Top-level nodes each stand on their own. The lead image is NOT prepended here;
  * the ingest path merges it so `media[0]` stays the persisted lead.
  */
-final class ItemMediaExtractor
+final readonly class ItemMediaExtractor
 {
     private const string MEDIA_NS = 'http://search.yahoo.com/mrss/';
     private const string ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
 
-    public static function extract(\DOMElement $item): ParsedMediaBundleModel
+    public function extract(\DOMElement $item): ParsedMediaBundleModel
     {
         $fallbackDuration = self::itunesDuration($item);
         $media = [];
@@ -198,9 +199,5 @@ final class ItemMediaExtractor
         return $node instanceof \DOMElement
             && $node->localName === $localName
             && $node->namespaceURI === self::MEDIA_NS;
-    }
-
-    private function __construct()
-    {
     }
 }

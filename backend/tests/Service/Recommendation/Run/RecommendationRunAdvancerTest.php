@@ -32,7 +32,7 @@ use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Prompt\Support\RecommendationAnswerBudget;
+use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\TickDriver;
 use App\Service\Recommendation\Run\RecommendationRunAdvancer;
@@ -830,7 +830,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // holds both halves.
         self::assertTrue($batchCall['suppressReasoning']);
         self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(
+            (new RecommendationAnswerBudget())->outputBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
                 reasoning: Reasoning::Suppressed,

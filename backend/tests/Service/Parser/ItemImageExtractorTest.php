@@ -2,13 +2,20 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Parser;
 
-use App\Service\Parser\Support\ItemImageExtractor;
+use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase
 {
+    private ItemImageExtractor $extractor;
+
+    protected function setUp(): void
+    {
+        $this->extractor = new ItemImageExtractor();
+    }
+
     private function item(string $innerXml): \DOMElement
     {
         $doc = new \DOMDocument();
@@ -28,7 +35,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testPicksTheWidestMediaContentVariant(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:content url="https://i/small.jpg" medium="image" width="140"/>'
             . '<media:content url="https://i/mid.jpg" medium="image" width="460"/>'
             . '<media:content url="https://i/big.jpg" medium="image" width="700"/>',
@@ -42,7 +49,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testCapturesBothDeclaredDimensions(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:thumbnail url="https://i/t.jpg" width="948" height="474"/>',
         ));
 
@@ -53,7 +60,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAWiderContentBeatsAThumbnail(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:thumbnail url="https://i/t.jpg" width="240" height="135"/>'
             . '<media:content url="https://i/c.jpg" medium="image" width="2400"/>',
         ));
@@ -64,7 +71,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAnUndeclaredWidthLosesToADeclaredOne(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:content url="https://i/unknown.jpg" medium="image"/>'
             . '<media:content url="https://i/known.jpg" medium="image" width="300"/>',
         ));
@@ -75,7 +82,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAcceptsAMediaContentDeclaredByTypeInsteadOfMedium(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:content url="https://i/typed.png" type="image/png" width="300"/>',
         ));
 
@@ -85,14 +92,14 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresAMediaContentWithNeitherMediumNorTypeDeclared(): void
     {
-        self::assertNull(ItemImageExtractor::fromMedia($this->item(
+        self::assertNull($this->extractor->fromMedia($this->item(
             '<media:content url="https://i/episode.mp3" length="583910"/>',
         )));
     }
 
     public function testIgnoresAMediaContentWithAnExplicitNonImageKind(): void
     {
-        self::assertNull(ItemImageExtractor::fromMedia($this->item(
+        self::assertNull($this->extractor->fromMedia($this->item(
             '<media:content url="https://i/episode.mp3" medium="audio"/>'
             . '<media:content url="https://i/clip.mp4" type="video/mp4"/>',
         )));
@@ -107,7 +114,7 @@ final class ItemImageExtractorTest extends TestCase
      */
     public function testSelectsAWidestBareMediaContentByImageExtension(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:content width="140" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=140&amp;s=a"/>'
             . '<media:content width="460" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=460&amp;s=b"/>'
             . '<media:content width="700" url="https://i.guim.co.uk/img/media/x/master/4299.jpg?width=700&amp;s=c"/>',
@@ -120,7 +127,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testFallsBackToDocumentOrderWhenNothingDeclaresAWidth(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:content url="https://i/first.jpg" medium="image"/>'
             . '<media:content url="https://i/second.jpg" medium="image"/>',
         ));
@@ -131,7 +138,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testSearchesInsideAMediaGroup(): void
     {
-        $image = ItemImageExtractor::fromMedia($this->item(
+        $image = $this->extractor->fromMedia($this->item(
             '<media:group><media:content url="https://i/g.jpg" medium="image" width="500"/></media:group>',
         ));
 
@@ -141,7 +148,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReadsAnRssEnclosure(): void
     {
-        $image = ItemImageExtractor::fromRssEnclosure($this->item(
+        $image = $this->extractor->fromRssEnclosure($this->item(
             '<enclosure url="https://i/e.jpg" type="image/jpeg" length="0"/>',
         ));
 
@@ -152,14 +159,14 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresANonImageEnclosure(): void
     {
-        self::assertNull(ItemImageExtractor::fromRssEnclosure($this->item(
+        self::assertNull($this->extractor->fromRssEnclosure($this->item(
             '<enclosure url="https://i/a.mp3" type="audio/mpeg" length="10"/>',
         )));
     }
 
     public function testReadsAnInlineImgWithoutDimensions(): void
     {
-        $image = ItemImageExtractor::fromHtml('<p>x</p><img src="https://i/inline.jpg" alt="">');
+        $image = $this->extractor->fromHtml('<p>x</p><img src="https://i/inline.jpg" alt="">');
 
         self::assertNotNull($image);
         self::assertSame('https://i/inline.jpg', $image->url);
@@ -168,7 +175,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testTrimsSurroundingWhitespaceFromAnInlineImgSrc(): void
     {
-        $image = ItemImageExtractor::fromHtml('<img src="  https://i/inline.jpg  ">');
+        $image = $this->extractor->fromHtml('<img src="  https://i/inline.jpg  ">');
 
         self::assertNotNull($image);
         self::assertSame('https://i/inline.jpg', $image->url);
@@ -176,12 +183,12 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testAWhitespaceOnlyInlineImgSrcIsTreatedAsMissing(): void
     {
-        self::assertNull(ItemImageExtractor::fromHtml('<img src="   ">'));
+        self::assertNull($this->extractor->fromHtml('<img src="   ">'));
     }
 
     public function testReadsACustomImageElementWithItsDeclaredDimensions(): void
     {
-        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->item(
             '<image url="https://images.utopia.de/x/w:194/h:126/pic.jpg" width="194" height="126"/>',
         ));
 
@@ -193,7 +200,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testPrefersTheLargerImageBigVariantOverImage(): void
     {
-        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->item(
             '<image url="https://images.utopia.de/x/w:194/h:126/small.jpg" width="194" height="126"/>'
             . '<image_big url="https://images.utopia.de/x/w:640/h:300/big.jpg" width="640" height="300"/>',
         ));
@@ -206,7 +213,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testFallsBackToImageWhenNoImageBigIsPresent(): void
     {
-        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->item(
             '<image url="https://images.utopia.de/x/w:194/h:126/only.jpg" width="194" height="126"/>',
         ));
 
@@ -222,14 +229,14 @@ final class ItemImageExtractorTest extends TestCase
      */
     public function testIgnoresAStandardImageElementThatNestsAUrlChild(): void
     {
-        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->item(
             '<image><url>https://example.com/logo.png</url><title>Logo</title></image>',
         )));
     }
 
     public function testYieldsNothingWhenNoCustomImageElementIsPresent(): void
     {
-        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->item(
             '<description>No picture here.</description>',
         )));
     }
@@ -240,14 +247,14 @@ final class ItemImageExtractorTest extends TestCase
      */
     public function testIgnoresAUrlBearingElementThatIsNotACustomImageElement(): void
     {
-        self::assertNull(ItemImageExtractor::fromCustomImageElement($this->item(
+        self::assertNull($this->extractor->fromCustomImageElement($this->item(
             '<enclosure url="https://i/e.jpg" type="image/jpeg"/>',
         )));
     }
 
     public function testTrimsSurroundingWhitespaceFromACustomImageUrl(): void
     {
-        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->item(
             '<image_big url="  https://i/padded.jpg  " width="640"/>',
         ));
 
@@ -257,7 +264,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testPicksTheWidestAmongSeveralImageBigVariants(): void
     {
-        $image = ItemImageExtractor::fromCustomImageElement($this->item(
+        $image = $this->extractor->fromCustomImageElement($this->item(
             '<image_big url="https://i/narrow.jpg" width="200"/>'
             . '<image_big url="https://i/wide.jpg" width="800"/>',
         ));
@@ -269,7 +276,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReadsAnInlineImgWithAnUnquotedSrc(): void
     {
-        $image = ItemImageExtractor::fromHtml('<p>x</p><img width=287 height=107 src=https://i/webp.webp>');
+        $image = $this->extractor->fromHtml('<p>x</p><img width=287 height=107 src=https://i/webp.webp>');
 
         self::assertNotNull($image);
         self::assertSame('https://i/webp.webp', $image->url);
@@ -279,7 +286,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testCapturesDeclaredDimensionsFromAnInlineImg(): void
     {
-        $image = ItemImageExtractor::fromHtml('<img src="https://i/a.jpg" width="640" height="360">');
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" width="640" height="360">');
 
         self::assertNotNull($image);
         self::assertSame(640, $image->width);
@@ -288,7 +295,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testIgnoresNonIntegerDimensionAttributes(): void
     {
-        $image = ItemImageExtractor::fromHtml('<img src="https://i/a.jpg" width="100%" height="auto">');
+        $image = $this->extractor->fromHtml('<img src="https://i/a.jpg" width="100%" height="auto">');
 
         self::assertNotNull($image);
         self::assertNull($image->width);
@@ -297,7 +304,7 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testSkipsALeadingImgWithoutASrcAndTakesTheNext(): void
     {
-        $image = ItemImageExtractor::fromHtml('<img alt="spacer"><img src="https://i/real.jpg">');
+        $image = $this->extractor->fromHtml('<img alt="spacer"><img src="https://i/real.jpg">');
 
         self::assertNotNull($image);
         self::assertSame('https://i/real.jpg', $image->url);
@@ -305,12 +312,12 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testReturnsNullWhenTheHtmlHasNoImg(): void
     {
-        self::assertNull(ItemImageExtractor::fromHtml('<p>just words</p>'));
+        self::assertNull($this->extractor->fromHtml('<p>just words</p>'));
     }
 
     public function testSkipsADeclaredBeaconAndTakesTheNextImage(): void
     {
-        $image = ItemImageExtractor::fromHtml(
+        $image = $this->extractor->fromHtml(
             '<img src="https://pixel.wp.com/b.gif" width="1" height="1">'
             . '<img src="https://i/real.jpg" width="800" height="450">',
         );
@@ -323,14 +330,14 @@ final class ItemImageExtractorTest extends TestCase
 
     public function testADeclaredBeaconAloneYieldsNoImage(): void
     {
-        self::assertNull(ItemImageExtractor::fromHtml(
+        self::assertNull($this->extractor->fromHtml(
             '<img src="https://pixel.wp.com/b.gif" width="1" height="1">',
         ));
     }
 
     public function testAnImageWithOneSmallDeclaredEdgeIsKept(): void
     {
-        $image = ItemImageExtractor::fromHtml(
+        $image = $this->extractor->fromHtml(
             '<img src="http://www.techmeme.com/x/i1.jpg" width="134" height="76">',
         );
 

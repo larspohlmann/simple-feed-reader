@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper\Pass;
 
 use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
@@ -14,7 +15,7 @@ final class CardFieldsTest extends TestCase
 {
     private function cardFields(): CardFields
     {
-        return new CardFields(new PageUrls('https://site.test/'));
+        return new CardFields(new PageUrls('https://site.test/'), new CardTitle());
     }
 
     /** @return array{Element, Element} container + anchor from a snippet */

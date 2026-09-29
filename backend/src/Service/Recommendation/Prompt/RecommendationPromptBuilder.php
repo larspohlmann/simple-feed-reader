@@ -10,15 +10,14 @@ use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\Pass\PromptContext;
-use App\Service\Recommendation\Prompt\Support\RecommendationAnswerBudget;
 use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /**
  * Renders the prompt layers for the recommendation feature and partitions
- * the candidate pool into batches that fit the model's context window. Pure
- * computation: no collaborators, so every method is a straight function of
- * its arguments.
+ * the candidate pool into batches that fit the model's context window. Its one
+ * collaborator is the answer budget, so a batch's reserve and its request's
+ * output bound come from one place.
  */
 final readonly class RecommendationPromptBuilder
 {
@@ -69,6 +68,10 @@ final readonly class RecommendationPromptBuilder
     private const int DESCRIPTION_MAX_CHARS = 480;
     private const int DESCRIPTION_WINDOW_DIVISOR = 137;
 
+    public function __construct(private RecommendationAnswerBudget $answerBudget)
+    {
+    }
+
     public function descriptionLength(int $contextWindow): int
     {
         return min(
@@ -91,7 +94,7 @@ final readonly class RecommendationPromptBuilder
         $favoritesSection = $this->favoritesSection($history, $descriptionLength);
         $historyTokens = self::ESTIMATED_PROFILE_TOKENS + $this->tokens($favoritesSection);
         $cap = $settings->packing->batchSize->batchItemCap($settings->packing->maximumBatchSize);
-        $responseReserve = RecommendationAnswerBudget::answerBoundTokens(
+        $responseReserve = $this->answerBudget->answerBoundTokens(
             $cap,
             RecommendationResponseSchema::BatchScore,
         );
@@ -142,7 +145,7 @@ final readonly class RecommendationPromptBuilder
         for ($size = $ceiling; $size > $floor; --$size) {
             $callTokens = $fixedInputTokens
                 + $size * $perCandidateInputTokens
-                + RecommendationAnswerBudget::outputBoundTokens(
+                + $this->answerBudget->outputBoundTokens(
                     $size,
                     RecommendationResponseSchema::Consolidation,
                     $reasoning,

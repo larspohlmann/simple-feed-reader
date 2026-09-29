@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Parser\Support;
 
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Tests\Support\FeedFormatParsers;
 use PHPUnit\Framework\TestCase;
 
 final class ItemCategoryExtractorTest extends TestCase
@@ -137,7 +137,7 @@ final class ItemCategoryExtractorTest extends TestCase
         $doc = new \DOMDocument();
         $doc->loadXML($xml);
 
-        $feed = (new Rss2Parser())->parse($doc);
+        $feed = FeedFormatParsers::rss2()->parse($doc);
 
         self::assertCount(2, $feed->entries[0]->categories);
         self::assertSame('Politics', $feed->entries[0]->categories[0]->label);

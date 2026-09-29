@@ -13,10 +13,6 @@ use App\Service\Feed\OrphanedFeedReclaimer;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Parser\Factory\FeedParserFactory;
-use App\Service\Parser\FeedFormatParser\Atom03Parser;
-use App\Service\Parser\FeedFormatParser\Atom10Parser;
-use App\Service\Parser\FeedFormatParser\Rss1Parser;
-use App\Service\Parser\FeedFormatParser\Rss2Parser;
 use App\Service\Parser\FeedParser;
 use App\Service\Refresh\ContentChangeMarker\ContentChangeMarkerInterface;
 use App\Service\Refresh\FeedBodyParser;
@@ -170,10 +166,10 @@ final readonly class RefreshRunners
         return new FeedBodyParser(new ServiceLocator([
             XmlBodyParser::format() => static fn (): XmlBodyParser => new XmlBodyParser(
                 new FeedParser(new FeedParserFactory([
-                    new Rss2Parser(),
-                    new Atom10Parser(),
-                    new Atom03Parser(),
-                    new Rss1Parser(),
+                    FeedFormatParsers::rss2(),
+                    FeedFormatParsers::atom10(),
+                    FeedFormatParsers::atom03(),
+                    FeedFormatParsers::rss1(),
                 ])),
             ),
             ScrapedBodyParser::format() => static fn (): ScrapedBodyParser => new ScrapedBodyParser($extractor),

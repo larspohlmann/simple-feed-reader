@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace App\Service\Parser\FeedFormatParser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\FeedItemImageSelector;
+use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\Support\AtomDiscussion;
 use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
-use App\Service\Parser\Support\FeedItemImageSelector;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
-use App\Service\Parser\Support\ItemMediaExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 use App\Service\Url\Support\AbsoluteHttpUrl;
@@ -26,6 +26,12 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
  */
 abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 {
+    public function __construct(
+        private FeedItemImageSelector $imageSelector,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
+
     /** The single XML namespace this dialect uses throughout the document. */
     abstract protected function namespaceUri(): string;
 
@@ -102,12 +108,12 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
         }
 
         $contentHtml = $this->elementMarkup($entry, $ns, 'content');
-        $image = FeedItemImageSelector::fromAtom(
+        $image = $this->imageSelector->fromAtom(
             $entry,
             $ns,
             [$contentHtml, $this->elementMarkup($entry, $ns, 'summary')],
         );
-        $mediaBundle = ItemMediaExtractor::extract($entry);
+        $mediaBundle = $this->mediaExtractor->extract($entry);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($id, $link, $title),

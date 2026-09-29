@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Parser\FeedFormatParser;
 
 use App\Service\Parser\Exception\FeedParseException;
+use App\Service\Parser\ItemImageExtractor;
+use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
@@ -12,8 +14,6 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Parser\Support\FeedImageExtractor;
 use App\Service\Parser\Support\GuidFallback;
 use App\Service\Parser\Support\ItemCategoryExtractor;
-use App\Service\Parser\Support\ItemImageExtractor;
-use App\Service\Parser\Support\ItemMediaExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
@@ -23,6 +23,12 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
     private const string RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
+
+    public function __construct(
+        private ItemImageExtractor $imageExtractor,
+        private ItemMediaExtractor $mediaExtractor,
+    ) {
+    }
 
     public function supports(\DOMElement $root): bool
     {
@@ -64,10 +70,10 @@ final readonly class Rss1Parser implements FeedFormatParserInterface
         $about = trim($item->getAttributeNS(self::RDF_NS, 'about'));
         $description = XmlHelper::childText($item, 'description', self::RSS1_NS);
         $contentEncoded = XmlHelper::childText($item, 'encoded', self::CONTENT_NS);
-        $image = ItemImageExtractor::fromMedia($item)
-            ?? ItemImageExtractor::fromCustomImageElement($item)
-            ?? ItemImageExtractor::fromHtml($contentEncoded ?? $description);
-        $mediaBundle = ItemMediaExtractor::extract($item);
+        $image = $this->imageExtractor->fromMedia($item)
+            ?? $this->imageExtractor->fromCustomImageElement($item)
+            ?? $this->imageExtractor->fromHtml($contentEncoded ?? $description);
+        $mediaBundle = $this->mediaExtractor->extract($item);
 
         return new ParsedEntryModel(
             guid: GuidFallback::for($about === '' ? null : $about, $link, $title),

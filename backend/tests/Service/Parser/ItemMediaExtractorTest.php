@@ -2,14 +2,21 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Parser;
 
+use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\VisualMediaKind;
-use App\Service\Parser\Support\ItemMediaExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class ItemMediaExtractorTest extends TestCase
 {
+    private ItemMediaExtractor $extractor;
+
+    protected function setUp(): void
+    {
+        $this->extractor = new ItemMediaExtractor();
+    }
+
     private function rssItem(string $innerXml): \DOMElement
     {
         $doc = new \DOMDocument();
@@ -36,7 +43,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testPodcastEnclosureBecomesAnAttachmentWithMimeDurationAndSize(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<enclosure url="https://cdn/ep1.mp3" type="audio/mpeg" length="4200000"/>'
             . '<itunes:duration>1:02:03</itunes:duration>',
         ));
@@ -52,7 +59,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testMultipleTopLevelImagesBecomeMediaWithDimensions(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<media:content url="https://i/one.jpg" medium="image" width="800" height="600"/>'
             . '<media:content url="https://i/two.jpg" medium="image" width="400" height="300"/>',
         ));
@@ -68,7 +75,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testVideoGroupYieldsAVisualWithPosterAndAPlayableAttachment(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<media:group>'
             . '<media:content url="https://v/clip.mp4" medium="video" type="video/mp4" duration="90" fileSize="5000"/>'
             . '<media:thumbnail url="https://v/poster.jpg"/>'
@@ -89,7 +96,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testImageGroupCollapsesToTheWidestRendition(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<media:group>'
             . '<media:content url="https://i/140.jpg" medium="image" width="140"/>'
             . '<media:content url="https://i/700.jpg" medium="image" width="700"/>'
@@ -102,7 +109,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testAtomEnclosureLinkBecomesAnAttachment(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->atomEntry(
+        $bundle = $this->extractor->extract($this->atomEntry(
             '<link rel="enclosure" type="audio/mpeg" href="https://cdn/atom.mp3" length="1000"/>',
         ));
 
@@ -114,7 +121,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testAttachmentCarriesItsOwnMediaTitleWhenDeclared(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<media:content url="https://cdn/seg.mp3" type="audio/mpeg">'
             . '<media:title>Chapter two</media:title>'
             . '</media:content>',
@@ -126,7 +133,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testTopLevelVideoYieldsAVisualAndAPlayableAttachment(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<enclosure url="https://v/clip.mp4" type="video/mp4" length="5000"/>',
         ));
 
@@ -141,7 +148,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testTopLevelNonMediaEnclosureBecomesAnAttachmentOnly(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<enclosure url="https://cdn/paper.pdf" type="application/pdf" length="900"/>',
         ));
 
@@ -152,7 +159,7 @@ final class ItemMediaExtractorTest extends TestCase
 
     public function testUnknownTypelessNodeIsLeftOut(): void
     {
-        $bundle = ItemMediaExtractor::extract($this->rssItem(
+        $bundle = $this->extractor->extract($this->rssItem(
             '<media:content url="https://x/player-page"/>',
         ));
 
