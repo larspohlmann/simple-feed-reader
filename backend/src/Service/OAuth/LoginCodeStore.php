@@ -11,67 +11,12 @@ use Psr\Clock\ClockInterface;
 use Random\RandomException;
 
 /**
- * The handover between the provider callback and the SPA.
- *
- * The callback finishes holding an authenticated user but must answer with a
- * redirect — and a JWT in that query string would land in browser history,
- * `Referer` headers, and every proxy log in between. So the redirect carries
- * a code instead: worthless after 30 seconds or after one use, and the SPA
- * POSTs it back for the real token. 30 seconds is generous for "browser
- * follows a redirect, SPA boots" and short enough that a code captured from
- * a log is almost always dead on arrival. The window runs from issue and is
- * never extended by a read; refreshing on access would let a leaked code
- * live indefinitely while something kept touching it.
- *
- * The stored value is a user id, not a JWT: minting the token at exchange
- * time means its `iat` reflects when the session began, which matters
- * because password changes revoke tokens by comparing `iat` against
- * User::$passwordChangedAt.
- *
- * ## The code is NOT a bearer value, and used to be
- *
- * A short life and single use bound how long a leaked code was worth
- * stealing, not who could spend one — a different property, exactly as
- * `state` proving "this server started a flow" differs from "this browser
- * started it" (see OAuthStateStore).
- *
- * The attack the short window did not close: an attacker completes a genuine
- * sign-in in their own browser — forced by OAuthStateStore's binding — then
- * withholds the code. Inside its 30 seconds they point a victim at
- * `<frontend>/auth/callback?code=X`; the SPA exchanges on landing with no
- * user gesture, and the victim's browser ends up holding the ATTACKER's JWT,
- * landing every feed and article in the attacker's account. Thirty seconds
- * is ample, and it scripts.
- *
- * So the code carries the same browser binding the flow does. issue() stores
- * only the digest of the flow token the callback authenticated; consume()
- * requires the matching token back and compares with hash_equals. A missing
- * or wrong binding is null, indistinguishable from unknown, spent or
- * expired — telling them apart would confirm a captured code was live. The
- * binding is the flow cookie the browser already holds, not a second
- * secret, so there is one cookie name, one set of attributes, one lifetime
- * to keep in sync. See OAuthController::FLOW_COOKIE.
- *
- * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY — same caveat as
- * OAuthStateStore, same reason. consume() deletes before validating, so an
- * expired entry cannot be retried, but redemption is not atomic: PSR-6 has
- * no compare-and-swap, and `deleteItem()` returns true whether or not the
- * key existed. Two exchanges arriving together can both see `isHit()`, both
- * delete, and both get the same user id — the ordering narrows the window
- * between getItem() and deleteItem() but does not close it. Left unclosed
- * deliberately: the failure mode is one user receiving two JWTs instead of
- * one, and that user was entitled to a JWT. Nothing crosses a user boundary
- * — the code is unguessable and both racers already held it, a second token
- * worth no more than the first, expiring on the same schedule. A lock on
- * every exchange would buy nothing on shared hosting but a round trip.
- *
- * Guarantees: the code is unguessable, stored only as a digest, expires 30
- * seconds after issue regardless of reads, and cannot be redeemed twice in
- * sequence.
+ * Hands the callback's user to the SPA as a 30-second, single-use code bound to the flow cookie, so no JWT rides in a
+ * redirect. A wrong binding must look exactly like an unknown code. The accepted redemption race:
+ * docs/oauth-sign-in.md#storage-and-the-accepted-race
  */
 final readonly class LoginCodeStore
 {
-    /** Public so OAuthController can size the flow cookie to outlive it. */
     public const int LIFETIME_SECONDS = 30;
     private const string KEY_PREFIX = 'oauth_login_code_';
 
@@ -82,9 +27,6 @@ final readonly class LoginCodeStore
     }
 
     /**
-     * @param string $browserToken the flow binding the callback arrived with —
-     *                             the same value consume() will require back
-     *
      * @throws RandomException
      * @throws InvalidArgumentException
      */
@@ -108,8 +50,6 @@ final readonly class LoginCodeStore
     }
 
     /**
-     * @param string|null $browserToken the flow cookie the exchange arrived with, or null when it arrived with none
-     *
      * @throws InvalidTokenException when the code is unknown, spent, expired, or presented by another browser
      * @throws InvalidArgumentException
      */
@@ -148,23 +88,13 @@ final readonly class LoginCodeStore
         return $stored['user_id'];
     }
 
-    /**
-     * Hashed for the same reason ActionToken stores a digest: the code is a
-     * bearer credential, and the pool is a directory of files.
-     *
-     * Unsalted SHA-256 rather than a password hash, as in OAuthStateStore: the
-     * input is 32 bytes from random_bytes(), so there is no guessable preimage
-     * to protect and no reason to pay a work factor on every exchange.
-     */
     private static function keyFor(string $code): string
     {
         return self::KEY_PREFIX . self::digest($code);
     }
 
     /**
-     * The one hash used for both the cache key and the browser binding, so the
-     * two cannot drift apart. Unsalted SHA-256 for the reason given above:
-     * every input is 32 bytes from random_bytes().
+     * Unsalted SHA-256 is enough: every input is 32 random bytes. docs/oauth-sign-in.md#storage-and-the-accepted-race
      */
     private static function digest(string $value): string
     {

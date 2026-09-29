@@ -13,61 +13,12 @@ use Psr\Clock\ClockInterface;
 use Random\RandomException;
 
 /**
- * Holds the per-flow secrets between the redirect to the provider and the
- * provider's callback. Server-side and not in a session, because the API is
- * stateless and issues no session cookie.
- *
- * ## `state` alone is not enough
- *
- * On its own `state` is unguessable, was issued by this server, is destroyed on
- * first use, and expires in ten minutes — which proves only *this server started
- * some flow*, not *this browser started this flow*. The gap is login CSRF: an
- * attacker with a real account scripts start(), keeps `state`, approves at the
- * provider and captures `code` from the final redirect WITHOUT following it (so
- * the state is never burned), then gets a victim to open the callback URL. Both
- * values are genuine and unspent, every check passes, and the victim's browser
- * ends up authenticated AS THE ATTACKER. Proved by driving the endpoints with an
- * empty cookie jar.
- *
- * ## The binding
- *
- * start() also mints a `browserToken`, set as a cookie by the controller, and
- * stores only its DIGEST beside the flow; consume() requires the matching token
- * back and refuses a callback that cannot produce it as though the state were
- * unknown. Only a digest is stored, compared with hash_equals, for the same
- * reason the state is only ever a hashed cache key: while a flow is live the
- * token is a bearer credential, and a readable cache directory must not be a list
- * of usable ones. The token is minted here, not accepted from the caller, or an
- * attacker could pin the binding to a value they already know.
- *
- * **The cookie must be `SameSite=None`, and that is not a weakening.** Apple's
- * callback is a cross-site POST (`response_mode=form_post`), which a `Lax` cookie
- * is not sent on — so `Lax` would fail every Apple sign-in with `invalid_state`.
- * `None` requires `Secure`; the confidentiality `SameSite` would give is supplied
- * instead by the value being unguessable and single-use and by the `__Host-`
- * prefix, which forbids a `Domain` attribute so no other host can write this
- * cookie into the backend's origin. See OAuthController for the attributes.
- *
- * ONE FLOW PER BROWSER AT A TIME. One cookie name, so a second sign-in overwrites
- * the first flow's binding and the abandoned tab fails with `invalid_state`. The
- * alternative — a set of live bindings — lets a stranger calling an
- * unauthenticated endpoint write unboundedly to the browser. Somebody who opened
- * two consent screens just starts again.
- *
- * SINGLE USE IS BEST-EFFORT UNDER CONCURRENCY. consume() deletes the entry before
- * validating it, so a state that fails a check is still burned, but redemption is
- * not atomic: PSR-6 offers no compare-and-swap, so two callbacks arriving
- * together can both see isHit(), both delete, and both get the same
- * OAuthStartStateModel. That is deliberate: both racers then spend the SAME
- * authorization code at the provider, which is single-use there, so the second
- * exchange fails on the provider's authority; the race wastes a round trip,
- * cannot produce two sessions, and never crosses a user boundary. Closing it
- * would mean a lock on every callback — a real per-request cost on shared hosting
- * against no real threat.
+ * Holds a flow's secrets between the redirect and the callback, server-side because the API has no session. A digest
+ * of the flow cookie binds the flow to its browser; a missing or wrong cookie must fail like an unknown state.
+ * Storage and the accepted race: docs/oauth-sign-in.md#storage-and-the-accepted-race
  */
 final readonly class OAuthStateStore
 {
-    /** Public so OAuthController can size the flow cookie to outlive it. */
     public const int LIFETIME_SECONDS = 600;
     private const string KEY_PREFIX = 'oauth_state_';
 
@@ -122,8 +73,6 @@ final readonly class OAuthStateStore
     }
 
     /**
-     * @param string|null $browserToken the flow cookie, or null when the callback arrived without one, which fails
-     *
      * @throws InvalidOAuthStateException when the state is unknown, spent, expired, or presented by another browser
      * @throws InvalidArgumentException
      */
@@ -199,23 +148,13 @@ final readonly class OAuthStateStore
         return Base64UrlSafe::encodeUnpadded(hash('sha256', $codeVerifier, true));
     }
 
-    /**
-     * The cache key is a digest, not the state itself: while a flow is live the
-     * state is a bearer credential, and cache entries on shared hosting are files
-     * we do not own exclusively — a directory listing must not be a list of usable
-     * states. Unsalted SHA-256 suffices (the input is 32 bytes from random_bytes,
-     * so there is no guessable preimage) and bcrypt would only pay a work factor
-     * for nothing.
-     */
     private static function keyFor(string $state): string
     {
         return self::KEY_PREFIX . self::digest($state);
     }
 
     /**
-     * The one hash used for both the cache key and the browser binding, so the
-     * two cannot drift apart. Unsalted SHA-256 for the reason given above: every
-     * input is 32 bytes from random_bytes().
+     * Unsalted SHA-256 is enough: every input is 32 random bytes. docs/oauth-sign-in.md#storage-and-the-accepted-race
      */
     private static function digest(string $value): string
     {
