@@ -20,14 +20,9 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 
 /**
- * The sweep both the worker (a Docker tick loop) and the maintenance command
- * (Strato's external cron) call: find every account whose scheduled digest
- * occurrence has passed since it last sent, compose it, and mail it.
- *
- * This is the security boundary for the digest, not the settings UI: mail
- * capability and email verification are re-checked here even though the UI
- * already gates them, because a preferences row can outlive the state that
- * made it valid (mail disabled after the fact, verification revoked) (#636).
+ * Mails every account whose digest occurrence has passed since its last send, for the worker and the maintenance cron.
+ * The digest's security boundary: mail capability and email verification are re-checked here, because a preferences
+ * row can outlive the state that made it valid.
  */
 final readonly class SendDueDigests
 {
@@ -89,7 +84,7 @@ final readonly class SendDueDigests
         return $this->sendAndAdvance($user, $model, $preferences, $occurrence);
     }
 
-    /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick (#636). */
+    /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick. */
     private function sendAndAdvance(
         User $user,
         DigestModel $model,

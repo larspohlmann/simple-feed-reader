@@ -9,13 +9,8 @@ use App\Service\Clock\NaiveUtcClock;
 use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 
 /**
- * Applies a digest configuration write, including the one piece of business
- * logic that write carries: first-enable seeding (spec Q5). When the digest
- * transitions off→on for the first time, digestLastSentAt is seeded to "now"
- * so the first digest covers only entries that arrive after opt-in, rather
- * than replaying everything the account has ever accumulated. Kept out of the
- * controller — which has no room for a private method under ThinControllerRule
- * — and out of Preferences itself, which has no business reading a clock.
+ * Applies a digest configuration write. The first enable (no digestLastSentAt yet) seeds it to now, so the first
+ * digest covers only entries that arrive after opt-in, not the account's whole backlog.
  */
 final readonly class DigestEnablement
 {

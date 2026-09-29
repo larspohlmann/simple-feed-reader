@@ -10,11 +10,7 @@ use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\Model\DigestRenderedMailModel;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-/**
- * Renders a DigestModel to the plain-text subject and body an email carries
- * (#636). Plain text on purpose, matching AccountMailer: the API renders no
- * HTML anywhere else, and plain bodies survive every client.
- */
+/** Renders a DigestModel to the subject and the plain-text body, which an HTML digest keeps as its alternative part. */
 final readonly class DigestTextRenderer
 {
     public function __construct(private TranslatorInterface $translator)

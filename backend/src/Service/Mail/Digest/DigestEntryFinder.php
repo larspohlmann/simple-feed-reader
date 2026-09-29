@@ -10,9 +10,8 @@ use App\Repository\SavedSearchEntryRepository;
 use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
 
 /**
- * The digest's own read of a saved search: everything unread in the
- * search's membership table since the caller's last send, capped for one
- * email section (#636). The membership sweep keeps it current (#1116).
+ * The digest's read of a saved search: everything unread in its membership table since the last send, capped for one
+ * email section. The membership sweep keeps that table current.
  */
 final readonly class DigestEntryFinder
 {
@@ -32,10 +31,8 @@ final readonly class DigestEntryFinder
             return new DigestSearchMatchesModel([], 0);
         }
 
-        // Hydrate only the newest PER_SEARCH rows, not the whole match set: a wide
-        // window can match hundreds, and building every heavy list row to show ten
-        // would time the request out (#636). The ids arrive newest-first, so the
-        // head is the newest; totalCount stays the full pre-cap count for "+N more".
+        // Hydrate only the newest PER_SEARCH (the ids arrive newest-first): a wide window matches hundreds, and
+        // building every heavy row would time the request out. totalCount stays the pre-cap count for "+N more".
         $newestIds = \array_slice($ids, 0, self::PER_SEARCH);
 
         return new DigestSearchMatchesModel($this->entries->rowsByIdsForUser($userId, $newestIds), \count($ids));

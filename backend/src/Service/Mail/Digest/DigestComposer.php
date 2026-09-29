@@ -15,11 +15,8 @@ use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
 use App\Service\Text\Support\PlainText;
 
 /**
- * Builds one user's digest content: a group per `includeInDigest` saved search
- * that matched something new, in the user's saved-search order. A search with
- * no matches contributes nothing, and a user with nothing to report gets no
- * digest at all — the empty-skip that keeps the mailer from sending a blank
- * email (#636).
+ * One group per `includeInDigest` saved search with new matches, in the user's saved-search order. A user with nothing
+ * to report gets null, not an empty digest, so the mailer never sends a blank email.
  */
 final readonly class DigestComposer
 {

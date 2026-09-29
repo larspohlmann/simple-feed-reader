@@ -7,10 +7,8 @@ namespace App\Service\Mail\Digest;
 use App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface;
 
 /**
- * Builds absolute reader deep-links from the configured public base URL — the
- * same value every account email uses, so a digest link cannot point somewhere
- * a verification link would not (#636). Deep links are query params, not path
- * segments, so no server rewrite is involved.
+ * Builds absolute reader deep links from the public base URL every account email uses, so a digest link cannot point
+ * where a verification link would not. Query params, not path segments: no server rewrite is involved.
  */
 final readonly class DigestLinkBuilder
 {

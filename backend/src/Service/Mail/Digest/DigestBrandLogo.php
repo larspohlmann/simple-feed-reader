@@ -7,10 +7,7 @@ namespace App\Service\Mail\Digest;
 use App\Service\Mail\Digest\Exception\ImageProcessingException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
-/**
- * The fixed brand mark embedded in the digest header (#726), read straight from
- * disk — unlike article thumbnails and favicons, it is never fetched or resized.
- */
+/** The digest header's brand mark, read from disk: unlike thumbnails and favicons it is never fetched or resized. */
 final readonly class DigestBrandLogo
 {
     public function __construct(

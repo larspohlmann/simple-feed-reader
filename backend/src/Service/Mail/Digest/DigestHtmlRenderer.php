@@ -11,14 +11,7 @@ use App\Service\Mail\Digest\Model\DigestPageModel;
 use Psr\Clock\ClockInterface;
 use Twig\Environment;
 
-/**
- * Renders a capped DigestPageModel to the airy/light HTML email (#726) from Twig
- * templates in templates/emails/digest/. The layout is fluid under a device-width
- * viewport so iPhone Mail keeps it readable (#886); an Outlook ghost table holds
- * the 600px column on Outlook desktop. Styles live in a single <style> block and
- * are inlined at render by twig/cssinliner-extra. This service only shapes a view
- * context; the markup and its classes live in the templates.
- */
+/** Shapes a capped DigestPageModel into the context of templates/emails/digest/, which own the markup and styles. */
 final readonly class DigestHtmlRenderer
 {
     public const string LOGO_CID = 'digestlogo';
