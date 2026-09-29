@@ -9,6 +9,7 @@ use App\Repository\RecommendationCallRepository;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Recommendation\Run\Factory\RecommendationRunLogFactory;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

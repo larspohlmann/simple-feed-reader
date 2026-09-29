@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\OAuth\Oidc;
 
 use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
-use App\Service\OAuth\Oidc\IdTokenVerifier;
 use App\Service\OAuth\Oidc\Model\IdTokenModel;
-use App\Service\OAuth\Oidc\TokenEndpoint;
+use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 
 /**

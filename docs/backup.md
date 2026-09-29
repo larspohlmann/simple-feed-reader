@@ -380,7 +380,7 @@ a guard test:
 
 Read these before you change a backed-up entity or the restore endpoints.
 
-- `backend/tests/Service/Backup/BackupSchemaCoverageTest.php` reads the ORM
+- `backend/tests/Service/Backup/Support/BackupSchemaCoverageTest.php` reads the ORM
   mapping and demands a decision for each persisted field of each backed-up
   entity. A new column on a backed-up table makes this test red. The test also
   asserts that this page names each dropped entity and each dropped field, so

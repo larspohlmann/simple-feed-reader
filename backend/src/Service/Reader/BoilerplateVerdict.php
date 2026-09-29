@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\ClassTokenMatcher;
+use App\Service\Html\Support\ClassTokenMatcher;
+use App\Service\Reader\Support\BlockText;
 use Dom\Element;
 
 /**

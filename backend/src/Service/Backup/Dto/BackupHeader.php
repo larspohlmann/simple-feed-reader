@@ -6,6 +6,7 @@ namespace App\Service\Backup\Dto;
 
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\RestoreSourceModel;
+use App\Service\Backup\Support\LineField;
 
 /**
  * A backup part's first line: format version, provenance, and where this

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\PageTextBlocksModel;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use PHPUnit\Framework\Attributes\DataProvider;

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Support\LineField;
+
 /**
  * A tag attached to a subscription, referenced by name rather than id — the
  * restore re-creates or looks up tags before wiring subscriptions, so ids

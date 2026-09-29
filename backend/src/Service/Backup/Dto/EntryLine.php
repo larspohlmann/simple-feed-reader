@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\LineFieldWithDefault;
+
 /**
  * One entry belonging to a feed the account subscribes to.
  *

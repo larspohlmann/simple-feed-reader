@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Teaser;
 
-use App\Service\Fetch\UrlResolver;
+use App\Service\Fetch\Support\UrlResolver;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
-use App\Service\Reader\Media\PageFurniture;
-use App\Service\Reader\Media\PlayerPoster;
+use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\Support\PlayerPoster;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
-use App\Service\Text\Whitespace;
+use App\Service\Text\Support\Whitespace;
 use Dom\Element;
 use Dom\HTMLDocument;
 

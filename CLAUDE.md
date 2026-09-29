@@ -197,8 +197,9 @@ Enforced mechanically by `composer check` and `composer md`:
   (`minClasses`): a value threaded through one class's own private helpers is
   decomposition, and counting it buries the real tunnels. Tramp data means the
   value has no home: the fix is a context object or a per-pass collaborator that
-  holds it as a field, not a longer signature (see `Service/Fetch/PageUrls.php`
-  and `Service/Scraper/JsonLdArticles.php`). A ratchet like `minMsi` — tighten it
+  holds it as a field, not a longer signature (see
+  `Service/Fetch/Pass/PageUrls.php` and `Service/Scraper/Pass/JsonLdArticles.php`).
+  A ratchet like `minMsi` — tighten it
   as the tree catches up, never loosen it to make a branch pass, and never add a
   `--baseline` to a clean tree.
   **CI runs the tip of phptramp's `develop`, not the commit in `composer.lock`**

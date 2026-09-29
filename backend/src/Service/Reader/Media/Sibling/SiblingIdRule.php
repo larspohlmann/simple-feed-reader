@@ -6,6 +6,7 @@ namespace App\Service\Reader\Media\Sibling;
 
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
+use App\Service\Reader\Media\Sibling\Pass\SiblingSearch;
 
 /**
  * The page's other media, named beside a found one by a bare id: the found URL

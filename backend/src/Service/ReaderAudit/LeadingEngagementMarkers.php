@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit;
 
-use App\Service\Reader\LeadingEngagementRules;
+use App\Service\Reader\Support\LeadingEngagementRules;
 use App\Service\ReaderAudit\Model\BodyBlockModel;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;

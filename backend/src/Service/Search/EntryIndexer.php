@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
-use App\Service\Text\PlainText;
+use App\Service\Text\Support\PlainText;
 use Psr\Log\LoggerInterface;
 
 /**

@@ -13,7 +13,7 @@ use App\Entity\Subscription;
 use App\Entity\SubscriptionTag;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Service\Backup\BackupSchema;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * The write-direction declarations `BackupSchemaCoverageTest` owns, lifted

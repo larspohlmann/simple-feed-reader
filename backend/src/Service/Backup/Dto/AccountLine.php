@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Backup\Dto;
 
 use App\Enum\MagazineStyle;
+use App\Service\Backup\Support\LineField;
+use App\Service\Backup\Support\LineFieldWithDefault;
 
 /**
  * The account's own settings, exactly once per backup.

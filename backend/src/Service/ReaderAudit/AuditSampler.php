@@ -7,6 +7,7 @@ namespace App\Service\ReaderAudit;
 use App\Repository\ReaderAuditRepository;
 use App\Service\ReaderAudit\Model\AuditSampleModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
+use App\Service\ReaderAudit\Support\DatabaseValue;
 
 /**
  * Draws the audit sample stratified by feed: every feed gives one article before any gives a second. The shuffle is

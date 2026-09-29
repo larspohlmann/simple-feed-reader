@@ -1,0 +1,132 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Recommendation\Run\Pass;
+
+use App\Entity\CallOutcome;
+use App\Enum\CallVerdict;
+use App\Repository\CallSettlement;
+use App\Repository\RecommendationCallRepository;
+use App\Service\Ai\Completion\CompletionStreamObserver\CompletionStreamObserverInterface;
+use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
+use App\Service\Ai\Completion\Model\CompletionUsageModel;
+use Symfony\Component\Clock\ClockInterface;
+
+/**
+ * The stream observer for one recorded provider call (#309). Not readonly: its one piece of state is when it last
+ * checkpointed.
+ */
+final class RecordedCall implements CompletionStreamObserverInterface
+{
+    /** The issue's ~2 s pseudo-streaming cadence. */
+    private const int CHECKPOINT_SECONDS = 2;
+
+    private \DateTimeImmutable $lastCheckpointAt;
+
+    /**
+     * Tracked on every report, not only on the ones that checkpoint, so the
+     * final row records what the provider really sent rather than whatever
+     * the last throttled write happened to catch.
+     */
+    private int $wireBytes = 0;
+
+    /** Held until the call settles: a `length` beside an empty answer is a truncation (#327). */
+    private ?string $finishReason = null;
+
+    /**
+     * The provider's own accounting for this call, held like $finishReason
+     * and banked when the call settles (#409). Sticky: it arrives in one late
+     * message, so a later report without it must not erase it.
+     */
+    private ?CompletionUsageModel $usage = null;
+
+    /**
+     * Billed once per instance across every settle path; set only once
+     * bankUsage() writes, so a later path can still bank (#344, #409).
+     */
+    private bool $usageBanked = false;
+
+    public function __construct(
+        private readonly RecommendationCallRepository $calls,
+        private readonly ClockInterface $clock,
+        private readonly int $runId,
+        private readonly int $logId,
+    ) {
+        // The interval is armed at begin() time: begin() already persisted
+        // everything worth persisting at time zero, so the first checkpoint
+        // is due CHECKPOINT_SECONDS after the call went out.
+        $this->lastCheckpointAt = $clock->now();
+    }
+
+    public function streamProgressed(CompletionStreamProgressModel $progress): void
+    {
+        $this->wireBytes = $progress->wireBytes;
+        $this->finishReason = $progress->finishReason ?? $this->finishReason;
+        $this->usage = $progress->usage ?? $this->usage;
+
+        $now = $this->clock->now();
+        if ($now->getTimestamp() - $this->lastCheckpointAt->getTimestamp() < self::CHECKPOINT_SECONDS) {
+            return;
+        }
+        $this->lastCheckpointAt = $now;
+
+        $this->calls->recordStreamedChars($this->runId, $progress->wireBytes);
+        $this->calls->recordTranscript($this->logId, $progress->answerSoFar, $progress->wireBytes);
+    }
+
+    public function finishUsable(string $content): void
+    {
+        $this->finish($content, CallVerdict::Usable);
+    }
+
+    public function finishUnusable(string $content): void
+    {
+        $this->finish($content, CallVerdict::Unusable);
+    }
+
+    /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */
+    public function abortAfterTransportFailure(?string $errorDetail): void
+    {
+        $this->resetLiveness();
+        $this->bankUsage();
+
+        $this->calls->settleTransportFailure(
+            $this->settlement(CallVerdict::TransportFailed),
+            $errorDetail,
+        );
+    }
+
+    private function finish(string $content, CallVerdict $verdict): void
+    {
+        $this->resetLiveness();
+        $this->bankUsage();
+
+        $this->calls->settleAnswered($this->settlement($verdict), $content);
+    }
+
+    private function settlement(CallVerdict $verdict): CallSettlement
+    {
+        return new CallSettlement(
+            $this->logId,
+            new CallOutcome($verdict, $this->wireBytes, $this->clock->now(), $this->finishReason),
+        );
+    }
+
+    private function resetLiveness(): void
+    {
+        $this->calls->recordStreamedChars($this->runId, 0);
+    }
+
+    private function bankUsage(): void
+    {
+        $usage = $this->usage;
+
+        if (null === $usage || $this->usageBanked) {
+            return;
+        }
+        $this->usageBanked = true;
+
+        $this->calls->addUsage($this->runId, $usage);
+    }
+}

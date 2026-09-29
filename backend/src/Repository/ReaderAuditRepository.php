@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Service\ReaderAudit\DatabaseValue;
+use App\Service\ReaderAudit\Support\DatabaseValue;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 

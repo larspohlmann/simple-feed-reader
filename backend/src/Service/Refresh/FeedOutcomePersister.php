@@ -14,7 +14,7 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\FeedIngestContext;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Refresh\Model\FeedOutcome;
 use App\Service\Refresh\Model\FeedRefreshResultModel;

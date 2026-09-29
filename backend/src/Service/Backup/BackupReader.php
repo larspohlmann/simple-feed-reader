@@ -10,12 +10,15 @@ use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\FooterLine;
-use App\Service\Backup\Dto\LineField;
 use App\Service\Backup\Dto\SavedSearchLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\InvalidBackupException;
 use App\Service\Backup\Model\BackupLineOrderModel;
+use App\Service\Backup\Pass\BackupPartGuard;
+use App\Service\Backup\Support\BackupSchema;
+use App\Service\Backup\Support\GzipLineReader;
+use App\Service\Backup\Support\LineField;
 
 /**
  * Reads a backup file front to back, enforcing its grammar: one header first,

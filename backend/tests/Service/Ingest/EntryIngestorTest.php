@@ -10,7 +10,7 @@ use App\Entity\Feed;
 use App\Enum\CommentsLoad;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\FeedIngestContext;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Ingest\PlatformEntryRule\RedditEntryRule;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Parser\Model\ParsedAttachmentModel;

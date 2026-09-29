@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Model;
 
-use App\Service\Reader\ImageProxyUrl;
+use App\Service\Reader\Support\ImageProxyUrl;
 
 /** Fingerprints image URLs for broad rendition matching and conservative asset equality. */
 final readonly class ImageIdentityModel

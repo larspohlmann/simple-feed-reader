@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunRepository;
 use App\Repository\RecommendationSettingsRepository;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\AiReadiness;
+use App\Service\Ai\Support\AiReadiness;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

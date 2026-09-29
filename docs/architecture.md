@@ -204,7 +204,7 @@ cycle, so each one can be read, tested and moved without the others. Decided in 
 - **The cycles #1161 broke.** The favicon fetcher moved from `Catalog` to `Image` (now `FaviconFetcher`), ending a
   nine-module cycle through `Category`, `Discovery`, `Ingest`, `Opml`, `Parser`, `Scraper` and `Subscription`.
   The recommendation driver liveness (`WorkerPresence`, `SweepStreamHeartbeat`, `RecommendationDriverKind`) moved
-  from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin`.
+  from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin` (now `Url\Support\UrlOrigin`).
   `FeedScheduler` and `OrphanedFeedReclaimer` left the `Service` root for `Service/Feed`. #1159 had already removed
   `Fetch ↔ Proxy` and `Grafana ↔ Profiling`.
 - **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163) closed no cycle, so the cycle rule

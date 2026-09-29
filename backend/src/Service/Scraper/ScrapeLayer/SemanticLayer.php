@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Scraper\ScrapeLayer;
 
-use App\Service\Fetch\PageUrls;
-use App\Service\Scraper\CardFields;
+use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Scraper\Pass\CardFields;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

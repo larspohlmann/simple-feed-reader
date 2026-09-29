@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Support\LineField;
+
 /**
  * The account's per-entry state: read/favourite/kept/viewed flags and their
  * timestamps, matched to a restored entry by (feed, guidHash) — never by

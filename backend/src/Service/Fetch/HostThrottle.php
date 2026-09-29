@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch;
 
+use App\Service\Fetch\Support\HostKey;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;

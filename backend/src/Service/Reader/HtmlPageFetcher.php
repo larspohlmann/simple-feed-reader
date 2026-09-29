@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Fetch\ContentTypeCharset;
 use App\Service\Fetch\Exception\RedirectChainException;
-use App\Service\Fetch\LandedResponse;
+use App\Service\Fetch\Pass\LandedResponse;
 use App\Service\Fetch\RedirectFollower;
-use App\Service\Html\HtmlTranscoder;
+use App\Service\Fetch\Support\ContentTypeCharset;
+use App\Service\Html\Support\HtmlTranscoder;
 use App\Service\Reader\Exception\PageFetchException;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface;
-use App\Service\Text\Whitespace;
+use App\Service\Text\Support\Whitespace;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;

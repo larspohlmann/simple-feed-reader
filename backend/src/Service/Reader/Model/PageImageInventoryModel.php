@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Model;
 
-use App\Service\Html\Srcset;
+use App\Service\Html\Support\Srcset;
 use Dom\HTMLDocument;
 
 /**

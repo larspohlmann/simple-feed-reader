@@ -9,7 +9,8 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Text\PlainText;
+use App\Service\Parser\Support\ItemImageExtractor;
+use App\Service\Text\Support\PlainText;
 
 /**
  * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`)

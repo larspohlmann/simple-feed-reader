@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Service\Ai\Completion;
 
 use App\Service\Ai\Completion\CompletionStreamObserver\NullCompletionStreamObserver;
-use App\Service\Ai\Completion\ConcurrentCompletion;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\JsonSchemaModel;
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Ai\Completion\Model\RetryPlanModel;
+use App\Service\Ai\Completion\Pass\ConcurrentCompletion;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Exception\ProviderRateLimitedException;
 use App\Service\Ai\Exception\RetryableProviderException;

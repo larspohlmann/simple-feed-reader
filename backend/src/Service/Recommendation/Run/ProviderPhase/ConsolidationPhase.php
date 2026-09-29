@@ -6,9 +6,9 @@ namespace App\Service\Recommendation\Run\ProviderPhase;
 
 use App\Service\Recommendation\Run\InvalidReplyRetry;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationConsolidationResolver;
 use App\Service\Recommendation\Run\RecommendationRunFinalizer;
-use App\Service\Recommendation\Run\TickContext;
 
 /**
  * Finalizes the consolidated list; an unusable reply is retried, then the run completes with the undeduped

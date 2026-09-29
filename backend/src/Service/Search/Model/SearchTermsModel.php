@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Search\Model;
 
 use App\Exception\ValidationException;
-use App\Service\Text\Whitespace;
+use App\Service\Text\Support\Whitespace;
 
 /**
  * The terms a search runs on, parsed from one raw query string.

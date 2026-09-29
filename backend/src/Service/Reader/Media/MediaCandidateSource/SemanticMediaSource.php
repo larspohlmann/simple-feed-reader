@@ -8,8 +8,8 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
-use App\Service\Reader\Media\NarrationSignals;
-use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\Support\NarrationSignals;
+use App\Service\Reader\Media\Support\PageFurniture;
 use Dom\Element;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 

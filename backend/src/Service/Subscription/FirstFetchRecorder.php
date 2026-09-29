@@ -8,7 +8,7 @@ use App\Entity\Feed;
 use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Feed\FeedScheduler;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\FeedIngestContext;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Search\EntryIndexer;

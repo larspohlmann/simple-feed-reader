@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Scraper;
 
-use App\Service\Scraper\CardFields;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\HtmlItemExtractor;
+use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ClusterLayer;
 use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
 use App\Service\Scraper\ScrapeLayer\SemanticLayer;

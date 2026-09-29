@@ -8,9 +8,9 @@ use App\Enum\SourceFormat;
 use App\Service\Discovery\Model\FeedCandidateModel;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
-use App\Service\Fetch\PageUrls;
-use App\Service\Html\HtmlDocumentParser;
-use App\Service\Scraper\TextNormalizer;
+use App\Service\Fetch\Pass\PageUrls;
+use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
 /**

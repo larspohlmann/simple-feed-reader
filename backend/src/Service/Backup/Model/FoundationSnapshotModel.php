@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Model;
 
-use App\Service\Backup\BackupSchema;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * The foundation's record lines, encoded before the entry-part walk begins so

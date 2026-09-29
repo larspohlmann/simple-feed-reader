@@ -10,9 +10,9 @@ use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
 use App\Service\Recommendation\Run\Model\TickDriver;
+use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\RecommendationBatchWave;
 use App\Service\Recommendation\Run\RecommendationWaveConcurrency;
-use App\Service\Recommendation\Run\TickContext;
 use App\Service\Recommendation\Run\WaveContextLoader;
 use Doctrine\ORM\EntityManagerInterface;
 

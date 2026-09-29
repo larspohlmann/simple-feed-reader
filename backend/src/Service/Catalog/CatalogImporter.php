@@ -9,6 +9,7 @@ use App\Repository\CatalogFeedRepository;
 use App\Service\Catalog\Model\CatalogImportMode;
 use App\Service\Catalog\Model\CatalogImportResultModel;
 use App\Service\Catalog\Model\ParsedCatalogModel;
+use App\Service\Catalog\Pass\CatalogImportPass;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

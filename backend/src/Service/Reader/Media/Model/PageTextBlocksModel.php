@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Model;
 
-use App\Service\Reader\LeadingEngagementBlocks;
 use App\Service\Reader\Model\LeadingBlockModel;
+use App\Service\Reader\Support\LeadingEngagementBlocks;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\Node;

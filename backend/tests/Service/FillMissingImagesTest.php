@@ -8,7 +8,7 @@ use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Service\Image\Model\DeclaredImageModel;
 use App\Service\Ingest\EntryIngestor;
-use App\Service\Ingest\FeedIngestContext;
+use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;

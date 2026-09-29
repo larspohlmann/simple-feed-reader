@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Reader\BodyCleaning\BodyCleaningPass;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\Model\PageTextBlocksModel;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;

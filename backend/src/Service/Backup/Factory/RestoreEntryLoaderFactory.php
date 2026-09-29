@@ -9,9 +9,9 @@ use App\Repository\EntryBatchInserter;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Repository\FeedRepository;
-use App\Service\Backup\RestoreDestination;
-use App\Service\Backup\RestoreEntryLoader;
-use App\Service\Backup\RestoreFeedTargets;
+use App\Service\Backup\Pass\RestoreDestination;
+use App\Service\Backup\Pass\RestoreEntryLoader;
+use App\Service\Backup\Pass\RestoreFeedTargets;
 use App\Service\Search\EntryIndexer;
 use Doctrine\ORM\EntityManagerInterface;
 

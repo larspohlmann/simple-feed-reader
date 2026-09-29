@@ -8,7 +8,7 @@ use App\Service\Discovery\Model\DiscoveredFeedModel;
 use App\Service\Fetch\BatchFeedFetcher\BatchFeedFetcherInterface;
 use App\Service\Fetch\Model\FetchOutcomeModel;
 use App\Service\Fetch\Model\FetchTicketModel;
-use App\Service\Fetch\PageUrls;
+use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 

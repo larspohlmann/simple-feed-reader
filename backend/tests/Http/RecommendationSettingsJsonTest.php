@@ -7,7 +7,7 @@ namespace App\Tests\Http;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
-use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\TestCase;

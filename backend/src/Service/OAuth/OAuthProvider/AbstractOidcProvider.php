@@ -6,8 +6,8 @@ namespace App\Service\OAuth\OAuthProvider;
 
 use App\Service\OAuth\Exception\OAuthFailedException;
 use App\Service\OAuth\Model\OAuthIdentityModel;
-use App\Service\OAuth\Oidc\IdTokenVerifier;
-use App\Service\OAuth\Oidc\TokenEndpoint;
+use App\Service\OAuth\Oidc\Pass\IdTokenVerifier;
+use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

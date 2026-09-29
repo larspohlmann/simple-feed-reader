@@ -7,6 +7,8 @@ namespace App\Service\Recommendation\Run;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\RateLimitedCompletion;
 use App\Service\Ai\Factory\ProviderConnectionFactory;
+use App\Service\Recommendation\Run\Pass\RecordedCall;
+use App\Service\Recommendation\Run\Pass\TickContext;
 
 /**
  * One recorded provider call for the single-call phases (#493). Any failure, an unreadable key included, settles the

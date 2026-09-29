@@ -15,6 +15,7 @@ use App\Entity\Tag;
 use App\Entity\User;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * Shapes one backup record into its encoded NDJSON line. Every "…Line"

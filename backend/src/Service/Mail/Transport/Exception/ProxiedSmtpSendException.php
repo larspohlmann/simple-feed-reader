@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Transport\Exception;
 
-use App\Service\Fetch\ProxyHandshakeFailure;
+use App\Service\Fetch\Support\ProxyHandshakeFailure;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 /**

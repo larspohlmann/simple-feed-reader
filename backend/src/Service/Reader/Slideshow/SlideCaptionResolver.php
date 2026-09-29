@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Slideshow;
 
 use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
-use App\Service\Text\Whitespace;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Text\Support\Whitespace;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;

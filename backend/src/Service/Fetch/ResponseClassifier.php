@@ -12,6 +12,8 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\HeaderVerdictModel;
+use App\Service\Fetch\Support\ResponseHeader;
+use App\Service\Fetch\Support\UrlResolver;
 use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;

@@ -16,6 +16,8 @@ use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Subscription\Model\BulkSubscribeResultModel;
 use App\Service\Subscription\Model\TagStyleModel;
+use App\Service\Subscription\Pass\BulkSubscribeBatch;
+use App\Service\Subscription\Pass\BulkSubscribePositions;
 use App\Service\Tag\Factory\TagFactory;
 use App\Service\Tag\Model\TagDetailsModel;
 use Doctrine\ORM\EntityManagerInterface;

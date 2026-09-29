@@ -10,7 +10,7 @@ use App\Service\Discovery\ScrapeFallbackPolicy;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Ingest\EntrySnippet;
+use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 use App\Service\Parser\Model\ParsedEntryModel;
@@ -19,7 +19,7 @@ use App\Service\Preview\Exception\FeedPreviewException;
 use App\Service\Preview\Model\FeedPreviewItemModel;
 use App\Service\Preview\Model\FeedPreviewModel;
 use App\Service\Scraper\HtmlItemExtractor;
-use App\Service\Text\PlainText;
+use App\Service\Text\Support\PlainText;
 
 /**
  * Fetches a feed URL and summarizes its content shape — how many items it has,

@@ -6,7 +6,7 @@ namespace App\Service\Reader;
 
 use App\Service\Reader\Model\ImageIdentityModel;
 use App\Service\Reader\Model\LeadImageCandidateModel;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 
