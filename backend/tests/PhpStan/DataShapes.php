@@ -19,7 +19,7 @@ final readonly class DataShapes implements ServiceRoleChecker
             }
             $found = match ($class->role()) {
                 ServiceRoleNames::MODEL => self::modelViolations($map, $class),
-                ServiceRoleNames::DTO => $class->isStaticOnly() ? [] : self::dtoViolations($map, $class),
+                ServiceRoleNames::DTO => $class->shape->isStaticOnly() ? [] : self::dtoViolations($map, $class),
                 default => [],
             };
             $violations = [...$violations, ...$found];
@@ -58,10 +58,10 @@ final readonly class DataShapes implements ServiceRoleChecker
     private static function dataViolations(ServiceRoleMap $map, ServiceRoleClass $data, ServiceRoleCheck $check): array
     {
         $violations = [];
-        if (!$data->isFinalReadonly()) {
+        if (!$data->shape->isFinalReadonly()) {
             $violations[] = new ServiceRoleViolation($check, $data, 'is data, so it is final readonly');
         }
-        foreach ($data->suppliedConstructorTypes() as $type) {
+        foreach (SuppliedConstructorTypes::of($data->reflection) as $type) {
             if ($map->isCollaborator($type)) {
                 $violations[] = new ServiceRoleViolation(
                     $check,

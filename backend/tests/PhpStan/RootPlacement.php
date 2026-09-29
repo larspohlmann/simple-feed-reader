@@ -38,7 +38,7 @@ final readonly class RootPlacement implements ServiceRoleChecker
     {
         $role = $class->role();
         if (ServiceRoleNames::SUPPORT === $role) {
-            return $class->isStaticOnly() ? null : new ServiceRoleViolation(
+            return $class->shape->isStaticOnly() ? null : new ServiceRoleViolation(
                 ServiceRoleCheck::SupportHome,
                 $class,
                 'sits in Support/ but is not static-only',
@@ -47,7 +47,7 @@ final readonly class RootPlacement implements ServiceRoleChecker
         if (\in_array($role, self::SETTLED_ROLES, true)) {
             return self::isHelperInADataRole($class) ? self::staticOnlyViolation($class) : null;
         }
-        if ($class->isStaticOnly()) {
+        if ($class->shape->isStaticOnly()) {
             return self::staticOnlyViolation($class);
         }
         if (ServiceRoleNames::DTO === $role) {
@@ -68,8 +68,8 @@ final readonly class RootPlacement implements ServiceRoleChecker
     private static function isHelperInADataRole(ServiceRoleClass $class): bool
     {
         return \in_array($class->role(), self::DATA_ROLES, true)
-            && $class->isStaticOnly()
-            && $class->declaresStaticMethod();
+            && $class->shape->isStaticOnly()
+            && $class->shape->declaresStaticMethod();
     }
 
     private static function staticOnlyViolation(ServiceRoleClass $class): ServiceRoleViolation
@@ -115,14 +115,14 @@ final readonly class RootPlacement implements ServiceRoleChecker
     /** @param array<string, true> $seen classes already being decided, to terminate a holder cycle */
     private static function isPass(ServiceRoleMap $map, ServiceRoleClass $class, array $seen = []): bool
     {
-        if ($class->isStateful() || 1 === preg_match(self::PER_CALL_NAMES, $class->shortName())) {
+        if ($class->shape->isStateful() || 1 === preg_match(self::PER_CALL_NAMES, $class->shortName())) {
             return true;
         }
         if (isset($seen[$class->name()])) {
             return false;
         }
         $seen[$class->name()] = true;
-        foreach ($class->suppliedConstructorTypes() as $type) {
+        foreach (SuppliedConstructorTypes::of($class->reflection) as $type) {
             if ($map->isCollaborator($type) || self::holdsAPassBoundType($map, $type, $seen)) {
                 return true;
             }

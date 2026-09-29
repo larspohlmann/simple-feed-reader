@@ -28,7 +28,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
 
     private static function isService(ServiceRoleMap $map, ServiceRoleClass $class): bool
     {
-        if (!ServiceRoleNames::isService($class->name()) || !$class->isPlainClass() || $class->isStaticOnly()) {
+        if (!ServiceRoleNames::isService($class->name()) || !$class->isPlainClass() || $class->shape->isStaticOnly()) {
             return false;
         }
         if (!\in_array($class->role(), self::SERVICE_ROLES, true)) {
@@ -44,21 +44,21 @@ final readonly class ServiceShapes implements ServiceRoleChecker
     private static function shapeViolations(ServiceRoleClass $service): array
     {
         $violations = [];
-        if (!$service->isAbstract() && !$service->isFinal()) {
+        if (!$service->shape->isAbstract() && !$service->shape->isFinal()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::RootService,
                 $service,
                 'is a service, so it is final',
             );
         }
-        if (!$service->isReadonly() && !$service->isStateful() && $service->mayBeReadonly()) {
+        if (!$service->shape->isReadonly() && !$service->shape->isStateful() && $service->shape->mayBeReadonly()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::RootService,
                 $service,
                 'keeps no state, so it is readonly',
             );
         }
-        foreach ($service->suppliedConstructorTypes() as $type) {
+        foreach (SuppliedConstructorTypes::of($service->reflection) as $type) {
             $role = ServiceRoleNames::roleOfClass($type);
             if (\in_array($role, self::UNSUPPLIED_ROLES, true)) {
                 $violations[] = new ServiceRoleViolation(
@@ -75,7 +75,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
     /** @return list<ServiceRoleViolation> */
     private static function stateViolations(ServiceRoleClass $service): array
     {
-        if (!$service->isStateful() || $service->resetsItsState()) {
+        if (!$service->shape->isStateful() || $service->shape->resetsItsState()) {
             return [];
         }
 
@@ -84,7 +84,7 @@ final readonly class ServiceShapes implements ServiceRoleChecker
             $service,
             sprintf(
                 'keeps state in $%s; implement ResetInterface or add #[ProcessLifetimeState]',
-                implode(', $', $service->mutableProperties()),
+                implode(', $', $service->shape->mutableProperties()),
             ),
         )];
     }
