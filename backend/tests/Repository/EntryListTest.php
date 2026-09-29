@@ -102,9 +102,8 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * A repository wired with a small window, so the tag-scoped probe/window
-     * branch (#1099) can be forced through a handful of fixture rows instead
-     * of DateOrderedPage::DEFAULT_WINDOW_SIZE.
+     * A repository wired with a small window, so the tag-scoped probe/window branch can be forced through a handful
+     * of fixture rows instead of DateOrderedPage::DEFAULT_WINDOW_SIZE.
      */
     private function repositoryWithWindow(int $windowSize): EntryListRepository
     {
@@ -134,10 +133,8 @@ final class EntryListTest extends DbTestCase
     }
 
     /**
-     * The rows a listForUser() call returned and every query it issued, in
-     * order — the probe/window/fallback decision is verified against the query
-     * shape, since the rows are identical across every branch (#1099). One call,
-     * so the assertions never re-run the page.
+     * One listForUser() call's rows and every query it issued: the rows match across the probe, window and fallback
+     * branches, so only the query shape tells them apart.
      *
      * @return array{rows: list<EntryListRow>, queries: list<string>}
      */
@@ -335,12 +332,8 @@ final class EntryListTest extends DbTestCase
 
     public function testKeysetPaginatesCorrectlyAcrossATiedEffectiveDate(): void
     {
-        // A whole refresh run shares one effective date; id DESC is the only
-        // tiebreaker, so a page boundary that falls inside the tied group must
-        // neither skip nor repeat a row. An older row on a distinct date sits
-        // right after the tied group, so the same query also exercises the
-        // `effectiveDate <` disjunct of applyCursor()'s two-part predicate —
-        // the strict-less branch never fires on its own inside a tie.
+        // A refresh run shares one effective date, so a page boundary inside the tie, ordered by id DESC alone, must
+        // neither skip nor repeat a row. The older row after the tie exercises applyCursor()'s `effectiveDate <` half.
         $tied = '2026-07-01T00:00:00Z';
         $firstTied = $this->entryAt('e1', $tied, $tied);
         $secondTied = $this->entryAt('e2', $tied, $tied);

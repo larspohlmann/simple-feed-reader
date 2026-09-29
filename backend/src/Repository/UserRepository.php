@@ -34,19 +34,8 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The security layer's lookup, and the reason this repository implements
-     * UserLoaderInterface at all.
-     *
-     * The Doctrine `entity` provider's `property: email` option queries the
-     * submitted identifier verbatim. Since addresses are stored normalised,
-     * someone who registered as `bob@` and typed `Bob@` would get a bare 401
-     * with no explanation — a worse bug than the duplicate-account one
-     * normalisation set out to fix, and one that would only surface for users
-     * whose keyboard or mail client capitalises for them.
-     *
-     * Dropping `property` from security.yaml makes EntityUserProvider delegate
-     * here instead, so login, JWT-driven reloads and every other lookup share
-     * the entity's normalisation rather than reimplementing it.
+     * The user provider's lookup: security.yaml's entity provider names no `property`, so login and JWT reloads come
+     * here and share the entity's email normalisation.
      */
     public function loadUserByIdentifier(string $identifier): ?UserInterface
     {
@@ -54,12 +43,8 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The admin queue's listing. Oldest first, because the queue is worked
-     * front to back and the person who has waited longest should be on top.
-     *
-     * Unpaginated on purpose: the instance has no user cap but also no growth
-     * engine — every account passes through a human. If this ever returns more
-     * rows than an admin can scroll, pagination is the fix, not a LIMIT here.
+     * The admin queue, oldest first: whoever waited longest is on top. Unpaginated on purpose, since every account
+     * passes through a human; if it outgrows a scroll, paginate rather than LIMIT here.
      *
      * @param list<UserStatus>|null $statuses
      *
@@ -101,14 +86,8 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The throwaway accounts the e2e suites leave behind: the backend suite
-     * mints `e2e-…@example.com`, the Playwright onboarding journey
-     * `onboarding-…@example.com`, and neither cleans up its own rows, so the
-     * dev database accumulates them run after run (#184); both patterns end
-     * in `@example.com`, so a real address can never match.
-     * $protectedAdminEmail is excluded by name — the seeded admin shares the
-     * `e2e-` prefix but the suites log in with it, so it is a fixture to
-     * keep, not litter to collect.
+     * The accounts the e2e suites leave behind (`e2e-…` and `onboarding-…`, both `@example.com`, so no real address
+     * matches). $protectedAdminEmail shares the `e2e-` prefix but is the admin the suites log in with: it stays.
      *
      * @return list<User>
      */
@@ -133,20 +112,9 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The admins to notify when a new account needs approving: those who can
-     * actually act on it. A suspended or rejected admin is not a working
-     * recipient, so active status gates the list the same way the firewall
-     * gates the admin API.
-     *
-     * The role check runs in PHP, not the query: `roles` is portable
-     * JSON-as-text on both SQLite (tests) and MySQL (prod), so a portable
-     * `LIKE` would still need this same recheck to reject a
-     * `ROLE_ADMINISTRATOR` substring. Loading the whole active userbase to
-     * pick out a handful of admins is the real cost, acceptable since a
-     * queue entry is rare (every account passes through a human; see
-     * findForAdminList) and this runs off the request's critical path. If
-     * the userbase outgrows memory, a `LIKE '%ROLE_ADMIN%'` prefilter
-     * narrows hydration while keeping the recheck.
+     * The active admins, who get the new-account notice. Roles are checked in PHP: `roles` is JSON text on both
+     * engines, so a LIKE would also match `ROLE_ADMINISTRATOR`. Loading every active user is accepted: approvals are
+     * rare and off the request path.
      *
      * @return list<User>
      */
@@ -166,13 +134,8 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * The bootstrap invariant: does an administrator exist yet? Any status
-     * counts — gating on Active only would let a hijacker re-open first-run
-     * setup by getting the sole admin suspended.
-     *
-     * `roles` is portable JSON-as-text on SQLite and MySQL, so the LIKE narrows
-     * the hydration set but STILL needs the in-PHP recheck to reject a
-     * `ROLE_ADMINISTRATOR` substring — the same reasoning as findActiveAdmins().
+     * Whether first-run setup is closed. Any status counts: counting active admins only would let whoever gets the
+     * sole admin suspended re-open setup. The LIKE only narrows; isAdmin() rejects `ROLE_ADMINISTRATOR`.
      */
     public function hasAnyAdmin(): bool
     {
@@ -203,22 +166,8 @@ final class UserRepository extends ServiceEntityRepository implements UserLoader
     }
 
     /**
-     * How many administrators can actually act right now — the count
-     * AccountDeleter::ensureNotTheLastAdmin() needs.
-     *
-     * Deliberately status-aware, unlike hasAnyAdmin(): that method protects a
-     * different invariant (first-run setup must stay closed), and a suspended
-     * admin still satisfies it by design, so a hijacker cannot re-open setup
-     * by getting the sole admin suspended. This method protects "someone can
-     * act" — a suspended admin cannot, since nothing short of shell access
-     * flips their status back and `approve` sits behind ROLE_ADMIN on
-     * `^/api/admin/`. Counting all statuses would let one admin suspend a
-     * co-admin, then delete their own account, leaving a suspended admin
-     * nobody can reinstate.
-     *
-     * The LIKE narrows the hydration set but STILL needs the in-PHP recheck to
-     * reject a `ROLE_ADMINISTRATOR` substring — same reasoning as
-     * findActiveAdmins() and hasAnyAdmin().
+     * The admins who can act, for AccountDeleter::ensureNotTheLastAdmin(). Active only, unlike hasAnyAdmin(): only a
+     * shell reinstates a suspended admin, so counting them would let the last working admin delete their account.
      */
     public function countActiveAdmins(): int
     {

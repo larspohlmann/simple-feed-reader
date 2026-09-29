@@ -7,15 +7,8 @@ namespace App\Repository;
 use App\Entity\User;
 
 /**
- * One page of the for-you feed, as asked for. `EntryQuery` is the same idea for
- * the main list: the whole request travels as one value, so the responder, the
- * pager and the repository each read what they need off it instead of
- * forwarding four scalars none of them looks at (phptramp, and the reason
- * `EntryQuery` exists at all).
- *
- * It carries the `User` rather than an id because the responder needs the
- * entity for the caller's recommendation settings; the repository binds
- * `userId()`, the way every other query in here does.
+ * One page of the for-you feed, as asked for; `EntryQuery` is the main list's. It carries the `User` because the
+ * responder needs its recommendation settings; the repository binds `userId()`.
  */
 final readonly class ForYouFeedQuery
 {

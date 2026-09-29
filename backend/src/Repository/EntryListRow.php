@@ -30,10 +30,8 @@ final readonly class EntryListRow
         public bool $isKept,
         EntryListRowViewState $viewState,
         /**
-         * The subscription's mark-all-read watermark, already selected by the
-         * row projection. `isHidden` above has it folded in; it is carried
-         * separately only so a row materialised from this projection can record
-         * *when* the sweep hid the entry.
+         * The subscription's watermark, already folded into isHidden; carried so EntryStateResolver can record when
+         * it hid the entry.
          */
         public ?\DateTimeImmutable $markedReadUntil,
         /** @var list<self> */

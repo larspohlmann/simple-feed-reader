@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 /**
- * The single definition of "effective hidden": an explicit per-entry flag wins;
- * absent one, the subscription's mark-all-read watermark hides everything at
- * or below it. Extracted from EntryListRepository::rowIsHidden so the for-you feed
- * projection in RecommendationItemRepository can fold the same rule without
- * duplicating it.
+ * The one definition of "effectively hidden": an explicit per-entry flag wins; without one, the subscription's
+ * mark-all-read watermark hides everything at or below it.
  */
 final class EffectiveReadState
 {

@@ -7,10 +7,7 @@ namespace App\Repository;
 use App\Enum\ListOrder;
 use App\Pagination\EntryCursor;
 
-/**
- * Everything one combined saved-search read needs (#1116): the caller, the
- * searches by id, and the page.
- */
+/** Everything one combined saved-search read needs: the caller, the searches by id, and the page. */
 final readonly class SavedSearchListQuery
 {
     /** The effective page size — already clamped, never the raw request value. */

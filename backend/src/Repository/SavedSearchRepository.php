@@ -99,9 +99,8 @@ final class SavedSearchRepository extends ServiceEntityRepository implements Dig
     }
 
     /**
-     * Every search that has not yet checked every entry up to $ceiling, the
-     * furthest-behind first (#1116). Refreshed from the database: advanceMarks()
-     * writes marks with DQL, which an already-loaded entity would not reflect.
+     * Every search that has not yet checked every entry up to $ceiling, the furthest-behind first. Refreshed from the
+     * database: advanceMarks() writes marks with DQL, which an already-loaded entity would not reflect.
      *
      * @return list<SavedSearch>
      */
@@ -121,8 +120,8 @@ final class SavedSearchRepository extends ServiceEntityRepository implements Dig
     }
 
     /**
-     * Moves the given searches' marks up to $entryId — never back: a slower
-     * run that commits after a faster one must not undo its progress (#1116).
+     * Moves the given searches' marks up to $entryId, never back: a slower run that commits after a faster one must
+     * not undo its progress.
      *
      * @param non-empty-list<int> $savedSearchIds
      */

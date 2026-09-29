@@ -13,8 +13,8 @@ use App\Repository\EntryStateRepository;
 use App\Tests\DbTestCase;
 
 /**
- * The read side of the reading-activity chart (#896): every article open at or
- * after a lower bound, scoped to the user and to feeds still subscribed to.
+ * The read side of the reading-activity chart: every article open at or after a lower bound, scoped to the user and
+ * to feeds still subscribed to.
  */
 final class ViewedAtSinceTest extends DbTestCase
 {

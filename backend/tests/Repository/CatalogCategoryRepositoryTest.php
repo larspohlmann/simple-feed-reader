@@ -40,12 +40,8 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
             $entityManager->persist($row);
         }
         $entityManager->flush();
-        // Doctrine returns already-managed entities from the identity map without
-        // touching their to-many collections (UnitOfWork::createEntity() short-
-        // circuits unless Query::HINT_REFRESH is set), so a fetch-joined query run
-        // in the same process as the persist would leave $feeds looking empty. A
-        // real request never hits this — each one gets a fresh EntityManager —
-        // but the test must clear() to see what the repository actually returns.
+        // The persisting EntityManager hands back its managed entities with their collections untouched (no
+        // HINT_REFRESH), so $feeds would look empty; a real request has a fresh EntityManager.
         $entityManager->clear();
 
         $repository = self::getContainer()->get(CatalogCategoryRepository::class);

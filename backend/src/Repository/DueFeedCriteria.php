@@ -5,19 +5,9 @@ declare(strict_types=1);
 namespace App\Repository;
 
 /**
- * Which feeds one query counts as due for refresh.
- *
- * A parameter object, not seven positional arguments shared by findDue(),
- * countDue() and their builder — the scopes always travel together.
- *
- * $feedId selects one feed, "gone" ones included (the manual retry path).
- * $userId scopes to the user's feeds, $tagId further to one tag. $force
- * ignores the schedule but still respects $cooldownCutoff.
- *
- * $excludedFeedIds keeps a refresh sweep terminating: a feed already handled
- * must not count as still undone. Deriving that from the stored fetch time
- * instead spun the client's poll loop in #302 — a throttled feed never
- * stamps one.
+ * Which feeds one query counts as due. $feedId picks one feed, "gone" included; $force skips the schedule but not
+ * $cooldownCutoff. $excludedFeedIds keeps a sweep finite: a throttled feed stamps no fetch time, so deriving
+ * "handled" from that time spun the client's poll loop (#302).
  */
 final readonly class DueFeedCriteria
 {

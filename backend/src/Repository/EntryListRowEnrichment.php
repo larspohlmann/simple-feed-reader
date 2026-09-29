@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-/**
- * The two collections a dedicated loader batch-attaches to a row after its
- * base hydration — feed categories and owned saved-search membership.
- * Bundled as one value object so EntryListRow's constructor stays under
- * PHPMD's parameter-count gate.
- */
+/** The two collections a loader batch-attaches to a row after hydration: feed categories and saved searches. */
 final readonly class EntryListRowEnrichment
 {
     public function __construct(

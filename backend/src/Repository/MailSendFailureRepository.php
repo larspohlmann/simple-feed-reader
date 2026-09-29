@@ -49,7 +49,7 @@ final class MailSendFailureRepository extends ServiceEntityRepository
         return $this->count([]);
     }
 
-    /** Keeps the newest RETENTION rows: an outage retrying every five minutes must not grow the log (#882). */
+    /** Keeps the newest RETENTION rows: an outage retrying every five minutes must not grow the log. */
     public function pruneToRetention(): void
     {
         $ids = $this->rowIds->selectedBy(

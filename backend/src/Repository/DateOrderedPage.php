@@ -24,12 +24,8 @@ final readonly class DateOrderedPage
     }
 
     /**
-     * @param callable(): QueryBuilder $pageQuery   a fresh, fully-built page
-     *        query (ordered, scoped, collapsed, cursored, limited); called up
-     *        to twice
-     * @param callable(): QueryBuilder $windowProbe a fresh Entry-only query
-     *        selecting e.effectiveDate in the page's order, carrying the
-     *        page's own cursor
+     * @param callable(): QueryBuilder $pageQuery   a fresh, complete page query; called up to twice
+     * @param callable(): QueryBuilder $windowProbe a fresh Entry-only effectiveDate query in the page's order, cursored
      *
      * @return list<array<array-key, mixed>>
      */

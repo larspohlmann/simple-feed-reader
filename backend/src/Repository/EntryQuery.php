@@ -14,19 +14,8 @@ final readonly class EntryQuery
     public const int MAX_LIMIT = 100;
 
     /**
-     * The page size a requested limit actually becomes.
-     *
-     * Every reader of a keyset-paginated list must clamp identically to the
-     * serializer that decides whether the page was full — `EntryPage::of()`
-     * compares the row count against the effective size, so a one-off between
-     * two spellings makes `nextCursor` vanish on a boundary and the list stop
-     * short. It was written five times, in two different orderings; this is
-     * that rule, once.
-     *
-     * `EntryQuery` applies it at construction, so `$query->limit` is ALREADY
-     * the effective size. Stays public for `ForYouFeedQuery`, which clamps
-     * the ranked feed the same way at ITS construction, so neither pager
-     * clamps anything itself.
+     * The page size a requested limit becomes; every keyset query applies it at construction. `EntryPage::of()`
+     * judges a full page against that size, so a second spelling of the clamp drops `nextCursor` at a boundary.
      */
     public static function clampLimit(int $limit): int
     {
@@ -36,9 +25,6 @@ final readonly class EntryQuery
     /** The effective page size — already clamped, never the raw request value. */
     public int $limit;
 
-    /**
-     * @param int $limit the size the client asked for
-     */
     public function __construct(
         public int $userId,
         public EntryView $view = EntryView::All,

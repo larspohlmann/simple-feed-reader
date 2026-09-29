@@ -96,11 +96,8 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     }
 
     /**
-     * The whole table, walked in ascending-id slices for app:search:reindex.
-     * Id keyset (`id > :lastId`), never OFFSET: OFFSET re-scans and discards
-     * every prior row on each call, which turns a full-table walk quadratic
-     * once the table holds tens of thousands of rows. Feed is fetched eagerly
-     * so EntryIndexer::toIndexedEntries() costs no extra query per row.
+     * The whole table in ascending-id slices for app:search:reindex: an id keyset, never OFFSET, which re-scans every
+     * earlier row per slice. Feed is fetch-joined so EntryIndexer::toIndexedEntries() costs no query per row.
      *
      * @return list<Entry>
      */
@@ -175,11 +172,8 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     }
 
     /**
-     * The feed's whole guid hash ⇒ entry id map, as scalars — the restore's
-     * pre-load snapshot, which both drops the file's entries the feed already
-     * holds and attaches the file's entry states to rows whose ids the source
-     * instance never knew. Ids and hashes only — hydrating the entities would
-     * put a feed's entire back catalogue in memory for a two-column lookup.
+     * The feed's guid hash => entry id map as scalars, the restore's pre-load snapshot. Hydrating entities would put
+     * the feed's whole back catalogue in memory for a two-column lookup.
      *
      * @return array<string, int>
      */
@@ -189,8 +183,8 @@ final class EntryRepository extends ServiceEntityRepository implements RestoreEn
     }
 
     /**
-     * The ids of the rows a restore batch just inserted, found by the hashes
-     * it wrote (#456). Bounded by the batch, never by the feed.
+     * The ids of the rows a restore batch just inserted, found by the hashes it wrote. Bounded by the batch, never by
+     * the feed.
      *
      * @param list<string> $guidHashes
      *

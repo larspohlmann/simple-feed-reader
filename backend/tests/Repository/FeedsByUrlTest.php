@@ -8,9 +8,7 @@ use App\Entity\Feed;
 use App\Repository\FeedRepository;
 use App\Tests\DbTestCase;
 
-/**
- * The restore's one feed lookup for a whole file (#455).
- */
+/** The restore's one feed lookup for a whole file. */
 final class FeedsByUrlTest extends DbTestCase
 {
     public function testReturnsOnlyTheAskedUrlsIndexedByUrl(): void

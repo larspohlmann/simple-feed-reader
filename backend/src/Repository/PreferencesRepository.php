@@ -20,9 +20,8 @@ final class PreferencesRepository extends ServiceEntityRepository implements Dig
     }
 
     /**
-     * Every preferences row with the digest enabled, joined to its user, for the
-     * scheduler to test dueness against. Enabled is the only cheap pre-filter;
-     * dueness needs the timezone maths, so it is applied in PHP (#636).
+     * Every preferences row with the digest enabled, joined to its user, for the scheduler to test dueness against.
+     * Enabled is the only cheap pre-filter; dueness needs the timezone maths, so it is applied in PHP.
      *
      * @return list<Preferences>
      */
