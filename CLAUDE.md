@@ -206,7 +206,8 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
-  the two dependencies #1163 removed (`Reader → Search`, `Recommendation → Reader`).
+  three dependencies decided against (`Reader → Search`, `Recommendation → Reader`,
+  `Reading → Recommendation`); each message names its issue.
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
