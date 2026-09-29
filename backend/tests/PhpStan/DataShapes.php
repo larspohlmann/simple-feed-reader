@@ -13,8 +13,8 @@ final readonly class DataShapes implements ServiceRoleChecker
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
-        foreach ($map->classes() as $class) {
-            if (!ServiceRoleNames::isServiceOrHttp($class->name()) || !$class->isPlainClass()) {
+        foreach ($map->applicationClasses() as $class) {
+            if (!$class->isPlainClass()) {
                 continue;
             }
             $found = match ($class->role()) {

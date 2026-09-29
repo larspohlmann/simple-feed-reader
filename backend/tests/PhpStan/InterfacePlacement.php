@@ -18,10 +18,8 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
-        foreach ($map->classes() as $class) {
-            if (ServiceRoleNames::isServiceOrHttp($class->name())) {
-                $violations = [...$violations, ...self::violationsOf($map, $class)];
-            }
+        foreach ($map->applicationClasses() as $class) {
+            $violations = [...$violations, ...self::violationsOf($map, $class)];
         }
 
         return $violations;

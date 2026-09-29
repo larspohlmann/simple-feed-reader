@@ -18,8 +18,8 @@ final readonly class RoleFolderNames implements ServiceRoleChecker
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
-        foreach ($map->classes() as $class) {
-            if (!ServiceRoleNames::isServiceOrHttp($class->name()) || $class->isEnum()) {
+        foreach ($map->applicationClasses() as $class) {
+            if ($class->isEnum()) {
                 continue;
             }
             foreach (self::ROLES as $role => $check) {

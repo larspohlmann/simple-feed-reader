@@ -19,6 +19,9 @@ final readonly class ServiceRoleMap
     /** @var array<string, list<ServiceRoleClass>> */
     private array $classesByNamespace;
 
+    /** @var list<ServiceRoleClass> */
+    private array $applicationClasses;
+
     /**
      * @param array<string, ServiceRoleClass> $classes
      * @param array<string, true> $builtPerCall
@@ -37,6 +40,10 @@ final readonly class ServiceRoleMap
             $byNamespace[$class->namespace()][] = $class;
         }
         $this->classesByNamespace = $byNamespace;
+        $this->applicationClasses = array_values(array_filter(
+            $classes,
+            static fn (ServiceRoleClass $class): bool => ServiceRoleNames::isServiceOrHttp($class->name()),
+        ));
     }
 
     public static function fromCollected(ReflectionProvider $reflectionProvider, CollectedDataNode $node): self
@@ -97,6 +104,12 @@ final readonly class ServiceRoleMap
     public function classes(): array
     {
         return array_values($this->classes);
+    }
+
+    /** @return list<ServiceRoleClass> the classes in App\Service and App\Http, without the listeners elsewhere */
+    public function applicationClasses(): array
+    {
+        return $this->applicationClasses;
     }
 
     public function classFor(string $type): ?ServiceRoleClass

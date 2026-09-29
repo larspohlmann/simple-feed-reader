@@ -10,7 +10,7 @@ final readonly class SupportShapes implements ServiceRoleChecker
     public function violationsIn(ServiceRoleMap $map): array
     {
         $violations = [];
-        foreach ($map->classes() as $class) {
+        foreach ($map->applicationClasses() as $class) {
             if (self::isSupportHelper($class)) {
                 $violations = [...$violations, ...self::shapeViolations($class)];
             }
@@ -21,40 +21,40 @@ final readonly class SupportShapes implements ServiceRoleChecker
 
     private static function isSupportHelper(ServiceRoleClass $class): bool
     {
-        return ServiceRoleNames::isServiceOrHttp($class->name())
-            && ServiceRoleNames::SUPPORT === $class->role()
+        return ServiceRoleNames::SUPPORT === $class->role()
             && $class->isStaticOnly();
     }
 
     /** @return list<ServiceRoleViolation> */
     private static function shapeViolations(ServiceRoleClass $helper): array
     {
-        $violations = [];
-        if (!$helper->isFinal()) {
-            $violations[] = new ServiceRoleViolation(
+        return array_map(
+            static fn (string $problem): ServiceRoleViolation => new ServiceRoleViolation(
                 ServiceRoleCheck::SupportShape,
                 $helper,
-                'is a helper, so it is final',
-            );
+                $problem,
+            ),
+            self::problemsOf($helper),
+        );
+    }
+
+    /** @return list<string> */
+    private static function problemsOf(ServiceRoleClass $helper): array
+    {
+        $problems = [];
+        if (!$helper->isFinal()) {
+            $problems[] = 'is a helper, so it is final';
         }
         if (!$helper->hasPrivateConstructor()) {
-            $violations[] = new ServiceRoleViolation(
-                ServiceRoleCheck::SupportShape,
-                $helper,
-                'is a helper, so it is never instantiated; declare a private constructor',
-            );
+            $problems[] = 'is a helper, so it is never instantiated; declare a private constructor';
         }
         if ([] !== $helper->staticProperties()) {
-            $violations[] = new ServiceRoleViolation(
-                ServiceRoleCheck::SupportShape,
-                $helper,
-                sprintf(
-                    'keeps state in static $%s; a helper holds none, so the state goes to a service',
-                    implode(', $', $helper->staticProperties()),
-                ),
+            $problems[] = sprintf(
+                'keeps state in static $%s; a helper holds none, so the state goes to a service',
+                implode(', $', $helper->staticProperties()),
             );
         }
 
-        return $violations;
+        return $problems;
     }
 }
