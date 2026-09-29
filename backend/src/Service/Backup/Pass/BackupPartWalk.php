@@ -16,11 +16,8 @@ use App\Service\Backup\Support\BackupSchema;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * One export's walk over its subscribed feeds' entries, batched by keyset id
- * and buffered into byte-budgeted parts. The buffer, the provenance every
- * part's header repeats, and the running totals live here as fields for the
- * whole walk rather than travelling through method parameters, because they
- * are this walk's own state, not values its callers need to know about.
+ * One export's walk over its subscribed feeds' entries, batched by keyset id and buffered into byte-budgeted parts;
+ * the buffer, the provenance and the running totals are this walk's own state.
  */
 final class BackupPartWalk
 {

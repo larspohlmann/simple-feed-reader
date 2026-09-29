@@ -181,7 +181,7 @@ final class RestoreEntryLoader
 
     /**
      * The multi-row INSERT yields no per-row lastInsertId, so the ids are read
-     * back by the hashes just written — at most one batch of them (#456).
+     * back by the hashes just written — at most one batch of them.
      *
      * @param non-empty-list<EntryLine> $inserted
      */
