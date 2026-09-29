@@ -12,6 +12,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\EntrySearchResultModel;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -20,6 +21,8 @@ use PHPUnit\Framework\TestCase;
  */
 final class SearchPageTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testAnEmptyResultCarriesNoEntriesAndNoMatchedWords(): void
     {
         $page = SearchPage::of(EntrySearchResultModel::rowsOnly([]), 50);
@@ -129,7 +132,7 @@ final class SearchPageTest extends TestCase
         );
         // Entry has no id setter: the id only exists once Doctrine assigns it,
         // and this test builds the row by hand without booting the kernel.
-        new \ReflectionProperty(Entry::class, 'id')->setValue($entry, $id);
+        self::assignId($entry, $id);
 
         return new EntryListRow(
             entry: $entry,

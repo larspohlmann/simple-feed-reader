@@ -12,10 +12,13 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class SavedSearchPageTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testAFullPageAdvancesTheCursorPastItsLastRow(): void
     {
         $result = new SavedSearchEntriesResultModel([$this->row(4)]);
@@ -56,8 +59,7 @@ final class SavedSearchPageTest extends TestCase
         );
         // Entry has no id setter: the id only exists once Doctrine assigns it,
         // and this test builds the row by hand without booting the kernel.
-        $reflection = new \ReflectionProperty(Entry::class, 'id');
-        $reflection->setValue($entry, $id);
+        self::assignId($entry, $id);
 
         return new EntryListRow(
             entry: $entry,

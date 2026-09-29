@@ -9,10 +9,13 @@ use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase
 {
+    use AssignsEntityIds;
+
     private function settings(?string $model, ?string $name = null): AiProviderSettings
     {
         $settings = new AiProviderSettings(
@@ -40,7 +43,7 @@ final class AiSettingsJsonTest extends TestCase
      */
     private function withId(AiProviderSettings $settings, int $id): AiProviderSettings
     {
-        (new \ReflectionProperty(AiProviderSettings::class, 'id'))->setValue($settings, $id);
+        self::assignId($settings, $id);
 
         return $settings;
     }

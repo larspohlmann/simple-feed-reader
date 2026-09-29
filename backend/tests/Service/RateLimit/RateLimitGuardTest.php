@@ -7,12 +7,15 @@ namespace App\Tests\Service\RateLimit;
 use App\Entity\User;
 use App\Service\RateLimit\Exception\RateLimitedException;
 use App\Service\RateLimit\RateLimitGuard;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\RateLimiter\RateLimit;
 
 final class RateLimitGuardTest extends TestCase
 {
+    use AssignsEntityIds;
+
     private MockClock $clock;
 
     protected function setUp(): void
@@ -68,7 +71,7 @@ final class RateLimitGuardTest extends TestCase
     {
         $factory = $this->factoryReturning($this->accepted());
         $user = new User('rate-limited@example.com', $this->clock->now());
-        (new \ReflectionProperty(User::class, 'id'))->setValue($user, 42);
+        self::assignId($user, 42);
 
         $this->guard()->enforceForUser($factory, $user);
 

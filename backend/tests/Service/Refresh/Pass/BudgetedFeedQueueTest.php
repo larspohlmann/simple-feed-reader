@@ -6,11 +6,14 @@ namespace App\Tests\Service\Refresh\Pass;
 
 use App\Entity\Feed;
 use App\Service\Refresh\Pass\BudgetedFeedQueue;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
 final class BudgetedFeedQueueTest extends TestCase
 {
+    use AssignsEntityIds;
+
     /** @return list<Feed> */
     private function feeds(int $count): array
     {
@@ -27,7 +30,7 @@ final class BudgetedFeedQueueTest extends TestCase
     // and these tests build the row by hand without booting the kernel.
     private static function withId(Feed $feed, int $id): Feed
     {
-        (new \ReflectionProperty(Feed::class, 'id'))->setValue($feed, $id);
+        self::assignId($feed, $id);
 
         return $feed;
     }
