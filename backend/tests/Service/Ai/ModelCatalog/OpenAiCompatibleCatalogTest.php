@@ -305,4 +305,18 @@ final class OpenAiCompatibleCatalogTest extends TestCase
         $this->expectException(ProviderUnreachableException::class);
         ProviderCredentialsModel::fromAccountInput('https://api.example.test/v1#section', 'sk-test');
     }
+
+    public function testATransportFailureCarriesNoErrorCode(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('Connection refused');
+        });
+
+        try {
+            (new OpenAiCompatibleCatalog($client, 'SimpleFeedReader/1.0'))->listModels($this->credentials());
+            self::fail(ProviderUnreachableException::class . ' was not thrown.');
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame(0, $exception->getCode());
+        }
+    }
 }

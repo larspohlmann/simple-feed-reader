@@ -45,7 +45,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
     private const string NOW = '2026-08-28T09:30:00Z';
 
     private DigestSavedSearchesInterface&Stub $savedSearches;
-    private DigestRecipientsInterface&Stub $preferencesRepository;
+    private DigestRecipientsInterface&Stub $recipients;
     private MailSendFailureRepository $failures;
     private MailDeliveryHealth $health;
 
@@ -53,7 +53,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
     {
         parent::setUp();
         $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
-        $this->preferencesRepository = $this->createStub(DigestRecipientsInterface::class);
+        $this->recipients = $this->createStub(DigestRecipientsInterface::class);
 
         /** @var MailSendFailureRepository $failures */
         $failures = self::getContainer()->get(MailSendFailureRepository::class);
@@ -68,7 +68,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
         $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $mailer = $this->createStub(DigestMailerInterface::class);
         $mailer->method('send')->willThrowException(new TransportException('SMTP is down'));
@@ -87,7 +87,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
         $user = $this->verifiedUser();
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $this->givenOneMatch($user);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())->method('send');
@@ -100,7 +100,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
     private function sweep(DigestMailerInterface $mailer): SendDueDigests
     {
         return new SendDueDigests(
-            $this->preferencesRepository,
+            $this->recipients,
             new DigestSchedule('UTC'),
             new DigestComposer(
                 $this->savedSearches,

@@ -320,4 +320,33 @@ final class FaviconFetcherTest extends TestCase
         self::assertSame(['www.theverge.com' => '93.184.216.34'], $seenOptions['resolve'] ?? null);
         self::assertSame(0, $seenOptions['max_redirects'] ?? null);
     }
+
+    public function testARejectedFetchCarriesNoErrorCode(): void
+    {
+        $client = new MockHttpClient(static function (): never {
+            throw new TransportException('wrapped', previous: new ResponseTooLargeException('cap tripped'));
+        });
+
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail(FaviconRejectedException::class . ' was not thrown.');
+        } catch (FaviconRejectedException $caught) {
+            self::assertSame(0, $caught->getCode());
+        }
+    }
+
+    public function testAnUnavailableFetchCarriesNoErrorCode(): void
+    {
+        $client = new MockHttpClient(static function (): never {
+            throw new TransportException('Connection refused');
+        });
+
+        try {
+            $this->fetcher($client)->download(self::ICON_URL);
+            self::fail(FaviconUnavailableException::class . ' was not thrown.');
+        } catch (FaviconUnavailableException $caught) {
+            self::assertNotInstanceOf(FaviconRejectedException::class, $caught);
+            self::assertSame(0, $caught->getCode());
+        }
+    }
 }

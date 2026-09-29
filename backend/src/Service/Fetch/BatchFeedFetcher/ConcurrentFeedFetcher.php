@@ -69,12 +69,12 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     {
         try {
             $batchProxy = $this->egressProxySource->egressProxy();
-        } catch (SecretUnreadableException $e) {
+        } catch (SecretUnreadableException $exception) {
             // The proxy is enabled but its stored password cannot be opened, so
             // no feed in this batch can be reached. Report that per feed instead
             // of letting it escape: the sweep's `remaining` only decrements on a
             // yielded outcome, so an abort here would strand the whole run.
-            yield from $this->failEvery($tickets, $e);
+            yield from $this->failEvery($tickets, $exception);
 
             return;
         }
@@ -130,14 +130,14 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
             try {
                 $response = $this->send($attempt);
-            } catch (FetchException $e) {
+            } catch (FetchException $exception) {
                 $fallback = $this->retryPolicy->directFallbackFor($attempt);
                 if (null !== $fallback) {
                     $queue->requeue($fallback);
                     continue;
                 }
 
-                yield $attempt->key => FetchOutcomeModel::failed($e);
+                yield $attempt->key => FetchOutcomeModel::failed($exception);
                 continue;
             }
 
@@ -163,17 +163,17 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 
             try {
                 $verdict = $this->advance($response, $chunk, $attempt);
-            } catch (FetchException $e) {
+            } catch (FetchException $exception) {
                 $this->retire($queue, $inFlight, $response);
 
-                $requeue = $this->retryPolicy->nextAttemptAfter($attempt, $e);
+                $requeue = $this->retryPolicy->nextAttemptAfter($attempt, $exception);
                 if (null !== $requeue) {
                     $queue->requeue($requeue);
 
                     return;
                 }
 
-                yield $attempt->key => FetchOutcomeModel::failed($e);
+                yield $attempt->key => FetchOutcomeModel::failed($exception);
 
                 return;
             }
@@ -222,8 +222,8 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
             }
 
             return $chunk->isLast() ? $this->classifier->fromBody($response, $attempt) : null;
-        } catch (ExceptionInterface $e) {
-            throw FetchException::from($attempt->url, $e);
+        } catch (ExceptionInterface $exception) {
+            throw FetchException::from($attempt->url, $exception);
         }
     }
 
@@ -288,8 +288,8 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
                 },
                 ...$egress,
             ]);
-        } catch (ExceptionInterface $e) {
-            throw FetchException::from($attempt->url, $e);
+        } catch (ExceptionInterface $exception) {
+            throw FetchException::from($attempt->url, $exception);
         }
     }
 

@@ -42,12 +42,12 @@ final class SendDueDigestsHandlerTest extends DbTestCase
 
     public function testFiringWithNoDueAccountsCompletesWithoutThrowing(): void
     {
-        $preferences = $this->createStub(DigestRecipientsInterface::class);
-        $preferences->method('findWithDigestEnabled')->willReturn([]);
+        $recipients = $this->createStub(DigestRecipientsInterface::class);
+        $recipients->method('findWithDigestEnabled')->willReturn([]);
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->never())->method('send');
 
-        $this->handler($preferences, $mailer)->__invoke(new SendDueDigests());
+        $this->handler($recipients, $mailer)->__invoke(new SendDueDigests());
 
         $this->addToAssertionCount(1);
     }
@@ -60,19 +60,19 @@ final class SendDueDigestsHandlerTest extends DbTestCase
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $preferences = $this->createStub(DigestRecipientsInterface::class);
-        $preferences->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $recipients = $this->createStub(DigestRecipientsInterface::class);
+        $recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
 
-        $this->handler($preferences, $mailer, $savedSearches)->__invoke(new SendDueDigests());
+        $this->handler($recipients, $mailer, $savedSearches)->__invoke(new SendDueDigests());
     }
 
     public function testFiringLogsTheSweepReport(): void
     {
-        $preferences = $this->createStub(DigestRecipientsInterface::class);
-        $preferences->method('findWithDigestEnabled')->willReturn([]);
-        $service = $this->service($preferences, $this->createStub(DigestMailerInterface::class));
+        $recipients = $this->createStub(DigestRecipientsInterface::class);
+        $recipients->method('findWithDigestEnabled')->willReturn([]);
+        $service = $this->service($recipients, $this->createStub(DigestMailerInterface::class));
         $logger = new RecordingLogger();
 
         (new SendDueDigestsHandler($service, $logger))->__invoke(new SendDueDigests());
@@ -88,20 +88,20 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     }
 
     private function handler(
-        DigestRecipientsInterface&Stub $preferences,
+        DigestRecipientsInterface&Stub $recipients,
         DigestMailerInterface $mailer,
         ?DigestSavedSearchesInterface $savedSearches = null,
     ): SendDueDigestsHandler {
-        return new SendDueDigestsHandler($this->service($preferences, $mailer, $savedSearches), new NullLogger());
+        return new SendDueDigestsHandler($this->service($recipients, $mailer, $savedSearches), new NullLogger());
     }
 
     private function service(
-        DigestRecipientsInterface&Stub $preferences,
+        DigestRecipientsInterface&Stub $recipients,
         DigestMailerInterface $mailer,
         ?DigestSavedSearchesInterface $savedSearches = null,
     ): SendDueDigestsService {
         return new SendDueDigestsService(
-            $preferences,
+            $recipients,
             new DigestSchedule('UTC'),
             new DigestComposer(
                 $savedSearches ?? $this->createStub(DigestSavedSearchesInterface::class),

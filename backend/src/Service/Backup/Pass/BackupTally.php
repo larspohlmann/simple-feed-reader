@@ -119,11 +119,11 @@ final class BackupTally
             ));
         }
 
-        foreach ($line->tags as $ref) {
-            if (!isset($this->tagNames[$ref->name])) {
+        foreach ($line->tags as $tagReference) {
+            if (!isset($this->tagNames[$tagReference->name])) {
                 throw new InvalidBackupException(sprintf(
                     'A subscription names tag "%s", which the backup never declares.',
-                    $ref->name,
+                    $tagReference->name,
                 ));
             }
         }

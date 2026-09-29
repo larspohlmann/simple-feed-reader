@@ -151,8 +151,8 @@ final class RestoreEntryLoader
 
         try {
             $this->inserter->insert($target->feedId, $fresh);
-        } catch (DbalException $e) {
-            throw BackupLoadFailedException::duringEntries($e);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
         }
 
         $this->entriesCreated += \count($fresh);
@@ -229,8 +229,8 @@ final class RestoreEntryLoader
     {
         try {
             $this->entityManager->flush();
-        } catch (DbalException $e) {
-            throw BackupLoadFailedException::duringEntries($e);
+        } catch (DbalException $exception) {
+            throw BackupLoadFailedException::duringEntries($exception);
         }
 
         $userId = $this->user->requireId();

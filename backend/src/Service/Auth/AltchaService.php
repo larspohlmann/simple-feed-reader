@@ -207,9 +207,9 @@ final readonly class AltchaService
     private function isExpired(string $salt): bool
     {
         $query = parse_url('?' . (parse_url($salt, \PHP_URL_QUERY) ?? ''), \PHP_URL_QUERY);
-        parse_str(\is_string($query) ? $query : '', $params);
+        parse_str(\is_string($query) ? $query : '', $queryParameters);
 
-        $expires = $params['expires'] ?? null;
+        $expires = $queryParameters['expires'] ?? null;
         if (!\is_string($expires) || !ctype_digit($expires)) {
             return true;
         }

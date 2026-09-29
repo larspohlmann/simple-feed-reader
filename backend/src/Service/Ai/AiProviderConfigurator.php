@@ -47,7 +47,7 @@ final readonly class AiProviderConfigurator
     public function __construct(
         private ModelCatalogInterface $catalog,
         private ApiKeyCipher $cipher,
-        private AiProviderSettingsRepository $repository,
+        private AiProviderSettingsRepository $aiProviderSettings,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private AiConfigurationFactory $configurationFactory,
@@ -78,7 +78,7 @@ final readonly class AiProviderConfigurator
      */
     public function listConfigurations(User $user): array
     {
-        return $this->repository->findAllForUser($user);
+        return $this->aiProviderSettings->findAllForUser($user);
     }
 
     /**
@@ -92,7 +92,7 @@ final readonly class AiProviderConfigurator
         string $baseUrl,
         string $apiKey,
     ): AddedConfigurationModel {
-        if ($this->repository->countForUser($user) >= self::MAX_CONFIGURATIONS) {
+        if ($this->aiProviderSettings->countForUser($user) >= self::MAX_CONFIGURATIONS) {
             throw new TooManyConfigurationsException(
                 'This account already holds the maximum number of AI configurations.',
             );
@@ -123,7 +123,7 @@ final readonly class AiProviderConfigurator
     {
         $user = $source->getUser();
 
-        if ($this->repository->countForUser($user) >= self::MAX_CONFIGURATIONS) {
+        if ($this->aiProviderSettings->countForUser($user) >= self::MAX_CONFIGURATIONS) {
             throw new TooManyConfigurationsException(
                 'This account already holds the maximum number of AI configurations.',
             );
@@ -198,8 +198,8 @@ final readonly class AiProviderConfigurator
     {
         try {
             $apiKey = $this->cipher->open($settings->getUser()->requireId(), $settings->getSealedSecret());
-        } catch (SecretUnreadableException $e) {
-            throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $e);
+        } catch (SecretUnreadableException $exception) {
+            throw new AiKeyUnreadableException('The stored API key cannot be opened.', previous: $exception);
         }
 
         return ProviderCredentialsModel::fromStoredConfiguration($settings->getBaseUrl(), $apiKey);

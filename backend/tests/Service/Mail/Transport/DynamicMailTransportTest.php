@@ -106,6 +106,25 @@ final class DynamicMailTransportTest extends KernelTestCase
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
+    public function testAnUnreadableStoredPasswordCarriesNoErrorCode(): void
+    {
+        $row = new MailServerSettings();
+        $row->apply(
+            new MailConnection(true, 'smtp.relay.test', 587, 'alice', MailEncryption::Starttls, '', ''),
+            new SealedSecret('not base64!', 'bm9uY2U=', 'c2FsdA==', 1),
+        );
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($row);
+        $entityManager->flush();
+
+        try {
+            self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
+            self::fail(TransportException::class . ' was not thrown.');
+        } catch (TransportException $exception) {
+            self::assertSame(0, $exception->getCode());
+        }
+    }
+
     public function testItNamesItselfAsTheDynamicDsn(): void
     {
         self::assertSame(

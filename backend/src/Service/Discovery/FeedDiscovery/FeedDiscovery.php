@@ -71,8 +71,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             // The site has just asked us to slow down; the parallel guesses are
             // the opposite of that, and each would draw its own 429.
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Throttled);
-        } catch (FeedUnreachableException $e) {
-            return $this->feedTheSiteMightStillServe($url, $e);
+        } catch (FeedUnreachableException $exception) {
+            return $this->feedTheSiteMightStillServe($url, $exception);
         } catch (FetchException) {
             // Gone, over-size, SSRF-blocked: nothing usable ever arrived.
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Unreachable);

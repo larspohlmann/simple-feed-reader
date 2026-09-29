@@ -11,7 +11,7 @@ use App\Service\Backup\Support\LineField;
  * restore re-creates or looks up tags before wiring subscriptions, so ids
  * from the source account are meaningless on the target.
  */
-final readonly class SubscriptionTagRef
+final readonly class SubscriptionTagReference
 {
     public function __construct(
         public string $name,

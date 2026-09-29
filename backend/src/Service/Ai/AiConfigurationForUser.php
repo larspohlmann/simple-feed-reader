@@ -20,7 +20,7 @@ use App\Service\Ai\Exception\ConfigurationNotFoundException;
  */
 final readonly class AiConfigurationForUser
 {
-    public function __construct(private AiProviderSettingsRepository $repository)
+    public function __construct(private AiProviderSettingsRepository $aiProviderSettings)
     {
     }
 
@@ -29,7 +29,7 @@ final readonly class AiConfigurationForUser
      */
     public function require(User $user, int $id): AiProviderSettings
     {
-        return $this->repository->findOneForUser($user, $id)
+        return $this->aiProviderSettings->findOneForUser($user, $id)
             ?? throw new ConfigurationNotFoundException(sprintf('No AI configuration %d for this account.', $id));
     }
 }

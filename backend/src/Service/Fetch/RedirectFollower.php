@@ -57,8 +57,8 @@ final readonly class RedirectFollower
             $guarded = $this->urlGuard->assertSafe($url);
 
             return $this->requestSender->send('GET', $url, $guarded, ['max_redirects' => 0] + $options);
-        } catch (FetchException | ExceptionInterface $e) {
-            throw new RedirectChainException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+        } catch (FetchException | ExceptionInterface $exception) {
+            throw new RedirectChainException(sprintf('%s: %s', $url, $exception->getMessage()), previous: $exception);
         }
     }
 
@@ -66,8 +66,8 @@ final readonly class RedirectFollower
     {
         try {
             return $response->getStatusCode();
-        } catch (ExceptionInterface $e) {
-            throw new RedirectChainException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+        } catch (ExceptionInterface $exception) {
+            throw new RedirectChainException(sprintf('%s: %s', $url, $exception->getMessage()), previous: $exception);
         }
     }
 
@@ -81,8 +81,8 @@ final readonly class RedirectFollower
 
         try {
             return UrlResolver::resolve($url, $location);
-        } catch (FetchException $e) {
-            throw new RedirectChainException(sprintf('%s: %s', $url, $e->getMessage()), previous: $e);
+        } catch (FetchException $exception) {
+            throw new RedirectChainException(sprintf('%s: %s', $url, $exception->getMessage()), previous: $exception);
         }
     }
 }

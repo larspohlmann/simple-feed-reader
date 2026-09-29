@@ -13,7 +13,7 @@ use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 final readonly class EffectiveMailSettings implements MailSendingSettingsInterface
 {
     public function __construct(
-        private MailServerSettingsRepository $repository,
+        private MailServerSettingsRepository $mailServerSettings,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
     ) {
@@ -21,14 +21,14 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
 
     public function isSendingEnabled(): bool
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->mailServerSettings->findSingleton();
 
         return null !== $settings ? $settings->isEnabled() : $this->fallback->connection()->enabled;
     }
 
     public function identity(): MailIdentityModel
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->mailServerSettings->findSingleton();
 
         if (null !== $settings && '' !== $settings->getFromAddress()) {
             return new MailIdentityModel($settings->getFromAddress(), $settings->getFromName());
@@ -39,7 +39,7 @@ final readonly class EffectiveMailSettings implements MailSendingSettingsInterfa
 
     public function configuredTransport(): ?ResolvedMailTransportModel
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->mailServerSettings->findSingleton();
 
         if (null === $settings || '' === $settings->getHost()) {
             return null;

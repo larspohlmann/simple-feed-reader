@@ -39,7 +39,7 @@ final readonly class EntryIngestor
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private EntryRepository $entryRepository,
+        private EntryRepository $entries,
         private UrlNormalizer $urlNormalizer,
         private EntryCategoryWriter $categoryWriter,
         private PlatformEntryRules $platformRules,
@@ -107,7 +107,7 @@ final readonly class EntryIngestor
         }
 
         $hashes = $this->guidHashesOf($parsed->entries);
-        $existing = $this->entryRepository->findByFeedIndexedByGuidHash($feed, $hashes);
+        $existing = $this->entries->findByFeedIndexedByGuidHash($feed, $hashes);
 
         $updated = 0;
         foreach ($parsed->entries as $parsedEntry) {
@@ -158,11 +158,11 @@ final readonly class EntryIngestor
     private function deduplicatorFor(Feed $feed, array $incoming): EntryDeduplicator
     {
         return new EntryDeduplicator(
-            $this->entryRepository->existingGuidHashesForFeed(
+            $this->entries->existingGuidHashesForFeed(
                 $feed->requireId(),
                 array_map(static fn (IncomingEntryModel $candidate): string => $candidate->guidHash, $incoming),
             ),
-            $this->entryRepository->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
+            $this->entries->findExistingUrlHashes($feed, self::urlHashesOf($incoming)),
         );
     }
 

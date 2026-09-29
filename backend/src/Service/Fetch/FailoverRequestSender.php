@@ -66,10 +66,10 @@ final readonly class FailoverRequestSender
     {
         try {
             return $this->egressProxySource->egressProxy();
-        } catch (SecretUnreadableException $e) {
+        } catch (SecretUnreadableException $exception) {
             throw new TransportException(
-                sprintf('The instance egress proxy is unusable: %s', $e->getMessage()),
-                previous: $e,
+                sprintf('The instance egress proxy is unusable: %s', $exception->getMessage()),
+                previous: $exception,
             );
         }
     }

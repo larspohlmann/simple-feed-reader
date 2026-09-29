@@ -24,12 +24,12 @@ use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
 
@@ -54,17 +54,19 @@ final class SendDueDigestsTest extends DbTestCase
     private const string OCCURRENCE = '2026-08-28T08:00:00Z';
 
     private DigestSavedSearchesInterface&Stub $savedSearches;
-    private DigestRecipientsInterface&Stub $preferencesRepository;
+    private DigestRecipientsInterface&Stub $recipients;
     private DigestMailerInterface&MockObject $mailer;
     private EntityManagerInterface&Stub $entityManagerStub;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
-        $this->preferencesRepository = $this->createStub(DigestRecipientsInterface::class);
+        $this->recipients = $this->createStub(DigestRecipientsInterface::class);
         $this->mailer = $this->createMock(DigestMailerInterface::class);
         $this->entityManagerStub = $this->createStub(EntityManagerInterface::class);
+        $this->logger = new RecordingLogger();
     }
 
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
@@ -73,7 +75,7 @@ final class SendDueDigestsTest extends DbTestCase
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
@@ -101,7 +103,7 @@ final class SendDueDigestsTest extends DbTestCase
         $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable('2026-08-27T08:00:00Z'));
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-27T20:00:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
@@ -118,7 +120,7 @@ final class SendDueDigestsTest extends DbTestCase
         // digestLastSentAt already sits at the current occurrence: the next
         // occurrence has not arrived yet, so nothing should go out.
         $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -136,7 +138,7 @@ final class SendDueDigestsTest extends DbTestCase
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $prefs = $this->duePreferences($user, lastSentAt: $seededAt);
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -154,7 +156,7 @@ final class SendDueDigestsTest extends DbTestCase
         $prefs = $this->duePreferences($user, lastSentAt: null);
         $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
 
         $this->mailer->expects($this->never())->method('send');
 
@@ -168,11 +170,11 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnyPreferences(): void
     {
-        $preferencesRepository = $this->createMock(DigestRecipientsInterface::class);
-        $preferencesRepository->expects($this->never())->method('findWithDigestEnabled');
+        $recipients = $this->createMock(DigestRecipientsInterface::class);
+        $recipients->expects($this->never())->method('findWithDigestEnabled');
         $this->mailer->expects($this->never())->method('send');
 
-        $report = $this->sweep(mailEnabled: false, preferencesRepository: $preferencesRepository)->run();
+        $report = $this->sweep(mailEnabled: false, recipients: $recipients)->run();
 
         self::assertSame(0, $report->considered);
         self::assertSame(0, $report->sent);
@@ -189,7 +191,7 @@ final class SendDueDigestsTest extends DbTestCase
 
         $search = $this->givenOneMatch($dueUser, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
-        $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$duePrefs, $notDuePrefs]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$duePrefs, $notDuePrefs]);
 
         $this->mailer->expects($this->once())->method('send')
             ->with($dueUser, self::isInstanceOf(DigestModel::class));
@@ -216,7 +218,7 @@ final class SendDueDigestsTest extends DbTestCase
             [$failingUser->requireId(), [$failingSearch]],
             [$healthyUser->requireId(), [$healthySearch]],
         ]);
-        $this->preferencesRepository->method('findWithDigestEnabled')
+        $this->recipients->method('findWithDigestEnabled')
             ->willReturn([$failingPrefs, $healthyPrefs]);
 
         $this->mailer->expects($this->exactly(2))->method('send')
@@ -234,13 +236,34 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $healthyPrefs->getDigestLastSentAt());
     }
 
+    public function testAFailedSendIsLoggedWithTheRecipientAndTheTransportException(): void
+    {
+        $user = $this->verifiedUser();
+        $prefs = $this->duePreferences($user, lastSentAt: null);
+        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $failure = new TransportException('relay rejected the recipient');
+        $this->mailer->expects($this->once())->method('send')->willThrowException($failure);
+
+        $this->sweep()->run();
+
+        self::assertCount(1, $this->logger->records);
+        self::assertSame('error', $this->logger->records[0]['level']);
+        self::assertSame('Digest send failed: {userId} <{email}>', $this->logger->records[0]['message']);
+        self::assertSame(
+            ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $failure],
+            $this->logger->records[0]['context'],
+        );
+    }
+
     private function sweep(
         bool $mailEnabled = true,
         ?EntityManagerInterface $entityManager = null,
-        ?DigestRecipientsInterface $preferencesRepository = null,
+        ?DigestRecipientsInterface $recipients = null,
     ): SendDueDigests {
         return new SendDueDigests(
-            $preferencesRepository ?? $this->preferencesRepository,
+            $recipients ?? $this->recipients,
             new DigestSchedule('UTC'),
             new DigestComposer(
                 $this->savedSearches,
@@ -251,7 +274,7 @@ final class SendDueDigestsTest extends DbTestCase
             $this->mailCapability($mailEnabled),
             new MockClock(self::NOW),
             $entityManager ?? $this->entityManagerStub,
-            new NullLogger(),
+            $this->logger,
             new InMemoryMailFailureRecorder(),
         );
     }

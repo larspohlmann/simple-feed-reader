@@ -64,8 +64,8 @@ final readonly class OpenAiCompatibleCatalog implements ModelCatalogInterface
             }
 
             return $response->getContent();
-        } catch (ExceptionInterface $e) {
-            throw new ProviderUnreachableException('That address did not answer.', 0, $e);
+        } catch (ExceptionInterface $exception) {
+            throw new ProviderUnreachableException('That address did not answer.', 0, $exception);
         }
     }
 

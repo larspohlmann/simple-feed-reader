@@ -37,8 +37,8 @@ final readonly class CatalogDocument
     {
         try {
             $body = $this->bodyReader->read($opml);
-        } catch (InvalidOpmlException $e) {
-            throw new InvalidCatalogDocumentException($e->getMessage(), 0, $e);
+        } catch (InvalidOpmlException $exception) {
+            throw new InvalidCatalogDocumentException($exception->getMessage(), 0, $exception);
         }
 
         $categories = [];

@@ -189,4 +189,14 @@ final class CatalogDocumentTest extends TestCase
         $this->expectException(InvalidCatalogDocumentException::class);
         $this->parser()->parse('<opml version="2.0"><head/><body/></opml>');
     }
+
+    public function testMalformedOpmlIsRejectedWithoutAnErrorCode(): void
+    {
+        try {
+            $this->parser()->parse('<opml><body>');
+            self::fail(InvalidCatalogDocumentException::class . ' was not thrown.');
+        } catch (InvalidCatalogDocumentException $exception) {
+            self::assertSame(0, $exception->getCode());
+        }
+    }
 }
