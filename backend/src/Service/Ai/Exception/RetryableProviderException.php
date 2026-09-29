@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ai\Exception;
 
 /**
- * A provider status the run may wait out and retry: 429, 502, 503, 504. Carries
- * the parsed `Retry-After` when the response supplied one. Distinct from
- * ProviderUnreachableException so the advancer can tell a rate limit — which
- * throttles and retries — from a dead address, which fails fast.
+ * A status the run may wait out and retry (429, 502, 503, 504), with the parsed `Retry-After` when sent. Apart from
+ * ProviderUnreachableException so a rate limit throttles and retries while a dead address fails fast.
  */
 final class RetryableProviderException extends \RuntimeException
 {

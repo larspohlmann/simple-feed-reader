@@ -25,20 +25,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The writer of AiProviderSettings that owns the provider relationship —
- * creating, verifying, and removing a connection. Local edits to a saved row
- * (its name and preferences) live in AiConfigurationEditor instead.
- *
- * A write that reaches the provider is preceded by a live call to it, so a
- * stored configuration is one that worked. A failed verification throws before
- * anything is persisted, which is why the existing configuration survives a
- * mistyped key. The one write that does not call the provider is
- * duplicateConfiguration(): it reuses an already-verified row's credentials.
- *
- * An account may hold several configurations; at most one is active at a
- * time, tracked as a pointer on User rather than a per-row flag. Reads
- * everywhere else in the app (recommendations, the settings page's "ready"
- * state) resolve through that one pointer.
+ * Creates, verifies and removes provider connections. Every write is preceded by a live call, and a failed one
+ * persists nothing; only duplicateConfiguration() skips it, reusing a verified row's key. The active configuration
+ * is a single pointer on User, not a per-row flag.
  */
 final readonly class AiProviderConfigurator
 {
@@ -60,10 +49,8 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * Refuses an account with no active configuration, without doing any of
-     * the work that needs one. It exists so a caller holding a budget meant to
-     * cap outbound calls can decline before spending it, and it hands the row
-     * back so the call that follows the spend does not have to load it again.
+     * Refuses an account with no active configuration before a caller spends its outbound-call budget, and returns
+     * the row so the call after the spend need not load it again.
      *
      * @throws AiNotConfiguredException
      */
@@ -109,15 +96,11 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * A second model on a provider the account already configured needs the
-     * same endpoint and key, so this reuses both rather than making the account
-     * re-enter a key it can no longer read. The source is already a verified
-     * row, so no live call is made: the copy carries the source's verifiedAt.
-     * The model is deliberately left unset — choosing a different one is the
-     * whole point — and the copy is not activated.
+     * Copies the source's endpoint and sealed key, which the account cannot read back, without a live call: the copy
+     * keeps the verified source's verifiedAt. Its model stays unset and it is not activated.
      *
-     * @throws AiKeyUnreadableException       the source key cannot be opened
-     * @throws TooManyConfigurationsException the account is at the cap
+     * @throws AiKeyUnreadableException
+     * @throws TooManyConfigurationsException
      */
     public function duplicateConfiguration(AiProviderSettings $source): AiProviderSettings
     {
@@ -144,12 +127,7 @@ final readonly class AiProviderConfigurator
         return $this->ids($this->catalog->listModels($this->credentials($settings)));
     }
 
-    /**
-     * A configuration with no active sibling becomes active the moment it has
-     * a usable model — otherwise the account would have to make a second,
-     * separate call to start using the one connection it just finished
-     * setting up.
-     */
+    /** With no active sibling, a configuration becomes active as soon as it has a model: no separate activation. */
     public function chooseModel(AiProviderSettings $settings, string $model): void
     {
         $descriptor = $this->assertModelStillOffered($settings, $model);
@@ -215,11 +193,7 @@ final readonly class AiProviderConfigurator
     }
 
     /**
-     * The shared verify step behind both chooseModel() and activate(): a
-     * chosen model is only as good as the provider still offering it, so
-     * activating a configuration re-checks it exactly like choosing does.
-     * Returns the descriptor rather than stashing it on a field, so the two
-     * callers stay free of shared mutable state between the call and its use.
+     * The verify step behind chooseModel() and activate(): activating re-checks that the provider still offers it.
      *
      * @throws AiKeyUnreadableException
      * @throws CredentialsRejectedException

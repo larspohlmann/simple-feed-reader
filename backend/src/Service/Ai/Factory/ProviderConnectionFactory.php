@@ -11,13 +11,8 @@ use App\Service\Ai\Model\ProviderConnectionModel;
 use App\Service\Ai\Model\ProviderTimeoutsModel;
 
 /**
- * Turns a stored configuration into the connection a completion call needs.
- *
- * Separate from AiProviderConfigurator, which owns the provider relationship
- * — creating, verifying and removing a configuration. Reading one back as a
- * ready-to-use connection is a different job, and the configurator is the
- * class this codebase has to keep from growing: it opens the sealed key here
- * rather than duplicating the cipher call.
+ * Reads a stored configuration back as the connection a completion call needs, opening the key through
+ * AiProviderConfigurator::credentials() rather than a second cipher call.
  */
 final readonly class ProviderConnectionFactory
 {
