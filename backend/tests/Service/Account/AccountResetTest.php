@@ -126,6 +126,18 @@ final class AccountResetTest extends DbTestCase
         self::assertFalse($preferences->isScrapeFallbackEnabled());
     }
 
+    public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void
+    {
+        [$user] = $this->seedAccount('reset-identity-map@example.com');
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $user]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscriptionId = $subscription->requireId();
+
+        $this->reset()->reset($user);
+
+        self::assertNull($this->entityManager->find(Subscription::class, $subscriptionId));
+    }
+
     public function testLeavesTheAccountRowAndSharedRowsAlone(): void
     {
         [$user, $feed, $entry] = $this->seedAccount('reset-keeps@example.com');
