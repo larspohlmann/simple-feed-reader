@@ -46,6 +46,10 @@ final readonly class PlayerChromeCleaner implements BodyCleaningStepInterface
      *  all) is a "copy this embed" widget, not a code sample a reader wrote. */
     private const string EMBED_SNIPPET_PATTERN = '/<iframe\b[^>]*\bsrc=/i';
 
+    public function __construct(private NarrationSignals $narration)
+    {
+    }
+
     public function cleanIn(BodyCleaningPass $pass): void
     {
         $this->removePlayerChromeFrom($pass->document);
@@ -83,7 +87,7 @@ final readonly class PlayerChromeCleaner implements BodyCleaningStepInterface
     {
         $widgets = [];
         foreach ($document->querySelectorAll('*') as $element) {
-            if (NarrationSignals::declaredOn($element) && !$this->holdsPlayer($element)) {
+            if ($this->narration->declaredOn($element) && !$this->holdsPlayer($element)) {
                 $widgets[] = $element;
             }
         }

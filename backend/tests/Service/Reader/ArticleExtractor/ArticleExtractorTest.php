@@ -36,7 +36,11 @@ use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\MediaLanding;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
+use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\PageMediaScanner;
+use App\Service\Reader\Media\PlayerPoster;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Service\Reader\Media\StreamLocationResolver;
@@ -111,14 +115,14 @@ final class ArticleExtractorTest extends TestCase
                 new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
                 $this->mediaScanner(),
                 $slideshowScanner ?? new SlideshowScanner([]),
-                new TeaserPlayerScanner($this->urlKind()),
+                new TeaserPlayerScanner($this->urlKind(), new PageFurniture(), new PlayerPoster()),
                 self::paywallSignals(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
-                new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+                new SiblingMediaExtender(new SiblingIdRule(new NearbyPoster()), $landing, $this->urlKind()),
             ),
             $this->articleReadability(),
         );
@@ -126,7 +130,7 @@ final class ArticleExtractorTest extends TestCase
 
     private static function paywallSignals(): PaywallSignals
     {
-        $outsideFurniture = new OutsideFurniture();
+        $outsideFurniture = new OutsideFurniture(new PageFurniture());
 
         return new PaywallSignals(new PaywallBlocks($outsideFurniture), new MembershipCheckout($outsideFurniture));
     }
@@ -142,12 +146,18 @@ final class ArticleExtractorTest extends TestCase
         $providers = $this->providers();
 
         return new PageMediaScanner([
-            new JsonLdMediaSource($urlKind, $providers),
-            new PageEmbedSource($providers),
-            new AttributeMediaSource($urlKind, new MediaRelevance()),
-            new YouTubeIdAttributeSource($providers),
-            new SemanticMediaSource($urlKind),
-            new ScriptEmbedSource($providers),
+            new JsonLdMediaSource($urlKind, $providers, new PageFurniture()),
+            new PageEmbedSource($providers, new PageFurniture()),
+            new AttributeMediaSource(
+                $urlKind,
+                new MediaRelevance(),
+                new PageFurniture(),
+                new NarrationSignals(),
+                new PlayerPoster(),
+            ),
+            new YouTubeIdAttributeSource($providers, new PageFurniture()),
+            new SemanticMediaSource($urlKind, new PageFurniture(), new NarrationSignals()),
+            new ScriptEmbedSource($providers, new PageFurniture()),
         ]);
     }
 
@@ -504,14 +514,14 @@ final class ArticleExtractorTest extends TestCase
                 new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
                 $this->mediaScanner(),
                 new SlideshowScanner([]),
-                new TeaserPlayerScanner($this->urlKind()),
+                new TeaserPlayerScanner($this->urlKind(), new PageFurniture(), new PlayerPoster()),
                 self::paywallSignals(),
             ),
             $this->bodyCleaner(),
             new EntrySanitizer(new TrailingBlankRemover()),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
-                new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
+                new SiblingMediaExtender(new SiblingIdRule(new NearbyPoster()), $landing, $this->urlKind()),
             ),
             $this->articleReadability(),
         );

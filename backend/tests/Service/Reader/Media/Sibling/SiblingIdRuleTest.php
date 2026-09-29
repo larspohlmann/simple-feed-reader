@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\Media\Sibling;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use PHPUnit\Framework\TestCase;
 
@@ -45,7 +46,7 @@ final class SiblingIdRuleTest extends TestCase
             self::config('sgs-lange-wiesel-100', '260826-clip-2-hju-100'),
         );
 
-        $derived = (new SiblingIdRule())->derive($this->seed(), $html);
+        $derived = (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html);
 
         self::assertCount(2, $derived);
         self::assertSame(MediaKind::Stream, $derived[0]->kind);
@@ -63,7 +64,7 @@ final class SiblingIdRuleTest extends TestCase
             self::config('reaktion-anschlag-video-100', 'reaktion-second-100'),
         );
 
-        $derived = (new SiblingIdRule())->derive($this->seed(), $html);
+        $derived = (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html);
 
         self::assertCount(1, $derived);
         self::assertSame('https://a.test/assets/reaktion-first-100~1920x1080?cb=1', $derived[0]->posterUrl);
@@ -76,7 +77,7 @@ final class SiblingIdRuleTest extends TestCase
             $configs[] = self::config('nav-entry-' . $n . '-100', 'nav-' . $n);
         }
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), self::page(...$configs)));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), self::page(...$configs)));
     }
 
     public function testASiblingThePageNamesInsideAUrlIsLeftToTheUrlSources(): void
@@ -86,7 +87,7 @@ final class SiblingIdRuleTest extends TestCase
             self::config('gestern-clip-100', 'gestern'),
         ) . '<a href="https://a.test/api/video/gestern-clip-100.m3u8">yesterday</a>';
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html));
     }
 
     public function testASiblingWithoutAStillNearbyIsSkipped(): void
@@ -96,7 +97,7 @@ final class SiblingIdRuleTest extends TestCase
             self::config('reaktion-anschlag-video-100'),
         );
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html));
     }
 
     public function testASiblingInAnotherContextIsSkipped(): void
@@ -105,7 +106,7 @@ final class SiblingIdRuleTest extends TestCase
             . '\\"startImage\\":{\\"layouts\\":{\\"1x1\\":\\"https://a.test/assets/o~1x1\\"}}}}';
         $html = self::page(self::config('taktik-analyse-video-100', 'taktik'), $teaser);
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html));
     }
 
     public function testTheSeedsSuffixShapeIsRequired(): void
@@ -115,7 +116,7 @@ final class SiblingIdRuleTest extends TestCase
             self::config('reaktion-anschlag-video', 'reaktion'),
         );
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html));
     }
 
     public function testAnEmbedSeedDerivesNothing(): void
@@ -123,7 +124,7 @@ final class SiblingIdRuleTest extends TestCase
         $html = self::page(self::config('M1j_uRqKMKI', 'a'), self::config('Zx1_6F-nCaw', 'b'));
         $seed = $this->seed(MediaKind::Embed, 'https://www.youtube-nocookie.com/embed/M1j_uRqKMKI');
 
-        self::assertSame([], (new SiblingIdRule())->derive($seed, $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($seed, $html));
     }
 
     public function testASeedWhoseStemIsNotAnIdDerivesNothing(): void
@@ -131,7 +132,7 @@ final class SiblingIdRuleTest extends TestCase
         $html = self::page(self::config('main', 'a'), self::config('other', 'b'));
         $seed = $this->seed(MediaKind::Video, 'https://a.test/v/main.mp4');
 
-        self::assertSame([], (new SiblingIdRule())->derive($seed, $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($seed, $html));
     }
 
     public function testASeedNamedOnlyInsideUrlsDerivesNothing(): void
@@ -139,6 +140,6 @@ final class SiblingIdRuleTest extends TestCase
         $html = '<html><body><a href="/video/taktik-analyse-video-100.html">x</a>'
             . '<script>{"contentUrl":"https://a.test/api/video/taktik-analyse-video-100.m3u8"}</script></body></html>';
 
-        self::assertSame([], (new SiblingIdRule())->derive($this->seed(), $html));
+        self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), $html));
     }
 }

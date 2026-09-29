@@ -35,6 +35,9 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     public function __construct(
         private MediaUrlKind $kind,
         private MediaRelevance $relevance,
+        private PageFurniture $furniture,
+        private NarrationSignals $narration,
+        private PlayerPoster $playerPoster,
     ) {
     }
 
@@ -54,7 +57,7 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
     {
         $byKind = [];
         foreach ($document->querySelectorAll('*') as $element) {
-            if (PageFurniture::holds($element)) {
+            if ($this->furniture->holds($element)) {
                 continue;
             }
             foreach ($this->urlsOn($element) as $url) {
@@ -112,14 +115,14 @@ final readonly class AttributeMediaSource implements MediaCandidateSourceInterfa
         $best = $this->relevance->rank(array_keys($origins), $page->url)[0];
         $precedingText = $page->blocks->before($origins[$best]);
         if ($kind === MediaKind::Audio) {
-            $narrated = NarrationSignals::narrates($best, $origins[$best]);
+            $narrated = $this->narration->narrates($best, $origins[$best]);
 
             return new MediaCandidateModel(MediaKind::Audio, $best, null, null, $precedingText, $narrated);
         }
 
         // The poster may be absent here; the scanner rescues or drops a
         // still-poster-less video once every source has been merged (#913).
-        $poster = $page->posterUrl ?? PlayerPoster::near($origins[$best]);
+        $poster = $page->posterUrl ?? $this->playerPoster->near($origins[$best]);
 
         return new MediaCandidateModel($kind, $best, $poster, null, $precedingText);
     }

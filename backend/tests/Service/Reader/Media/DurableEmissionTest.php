@@ -16,6 +16,9 @@ use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaRelevance;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\PlayerPoster;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -84,10 +87,16 @@ final class DurableEmissionTest extends TestCase
         $providers = new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]);
 
         return match ($layer) {
-            'jsonLd' => new JsonLdMediaSource($urlKind, $providers),
+            'jsonLd' => new JsonLdMediaSource($urlKind, $providers, new PageFurniture()),
             'meta' => new MetaMediaSource($urlKind),
-            'semantic' => new SemanticMediaSource($urlKind),
-            default => new AttributeMediaSource($urlKind, new MediaRelevance()),
+            'semantic' => new SemanticMediaSource($urlKind, new PageFurniture(), new NarrationSignals()),
+            default => new AttributeMediaSource(
+                $urlKind,
+                new MediaRelevance(),
+                new PageFurniture(),
+                new NarrationSignals(),
+                new PlayerPoster(),
+            ),
         };
     }
 }

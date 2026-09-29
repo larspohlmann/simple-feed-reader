@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Paywall\MembershipCheckout;
 use App\Service\Reader\Paywall\OutsideFurniture;
 use App\Service\Reader\Paywall\PaywallBlocks;
@@ -77,7 +78,7 @@ final class PaywallSignalsTest extends TestCase
 
     private static function paywallSignals(): PaywallSignals
     {
-        $outsideFurniture = new OutsideFurniture();
+        $outsideFurniture = new OutsideFurniture(new PageFurniture());
 
         return new PaywallSignals(new PaywallBlocks($outsideFurniture), new MembershipCheckout($outsideFurniture));
     }

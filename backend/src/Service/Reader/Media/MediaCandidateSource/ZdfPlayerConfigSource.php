@@ -32,7 +32,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
         '#\\\\?"?content\\\\?"?\s*[:=]\s*\\\\?"?([A-Za-z0-9-]{6,})\\\\?"?\s*,\s*\\\\?"?startImage#i';
     private const string STREAM_URL = 'https://%s/api/video/%s.m3u8';
 
-    public function __construct(private MediaUrlKind $mediaUrlKind)
+    public function __construct(private MediaUrlKind $mediaUrlKind, private NearbyPoster $nearbyPoster)
     {
     }
 
@@ -61,7 +61,7 @@ final readonly class ZdfPlayerConfigSource implements MediaCandidateSourceInterf
         if ($resolved?->kind !== MediaKind::Stream) {
             return null;
         }
-        $poster = NearbyPoster::after($pageHtml, $position);
+        $poster = $this->nearbyPoster->after($pageHtml, $position);
         if ($poster === null) {
             return null;
         }

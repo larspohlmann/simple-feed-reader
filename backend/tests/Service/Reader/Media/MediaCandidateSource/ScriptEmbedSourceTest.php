@@ -10,6 +10,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\ScriptEmbedSource;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class ScriptEmbedSourceTest extends TestCase
@@ -18,7 +19,10 @@ final class ScriptEmbedSourceTest extends TestCase
 
     private function source(): ScriptEmbedSource
     {
-        return new ScriptEmbedSource(new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]));
+        return new ScriptEmbedSource(
+            new EmbedProviders([new YouTubeEmbedProvider(), new VimeoEmbedProvider()]),
+            new PageFurniture(),
+        );
     }
 
     /** @return list<MediaCandidateModel> */

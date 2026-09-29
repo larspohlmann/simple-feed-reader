@@ -17,7 +17,7 @@ final class PageFurnitureTest extends TestCase
         $element = $document->querySelector('#x');
         self::assertNotNull($element);
 
-        return PageFurniture::holds($element);
+        return (new PageFurniture())->holds($element);
     }
 
     public function testASidebarIsFurniture(): void

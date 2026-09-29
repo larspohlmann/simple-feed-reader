@@ -15,10 +15,14 @@ use Dom\HTMLDocument;
  */
 final readonly class ImageWrapperClassRemover implements PageRepairInterface
 {
+    public function __construct(private PageFurniture $furniture)
+    {
+    }
+
     public function repairIn(HTMLDocument $document): void
     {
         foreach ($document->querySelectorAll('img') as $image) {
-            if ($image->closest('a') === null && !PageFurniture::holds($image)) {
+            if ($image->closest('a') === null && !$this->furniture->holds($image)) {
                 $this->stripWrappersOf($image);
             }
         }

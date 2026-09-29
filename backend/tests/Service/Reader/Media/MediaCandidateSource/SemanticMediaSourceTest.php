@@ -11,6 +11,8 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\SemanticMediaSource;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\NarrationSignals;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class SemanticMediaSourceTest extends TestCase
@@ -22,10 +24,14 @@ final class SemanticMediaSourceTest extends TestCase
 
     private function source(): SemanticMediaSource
     {
-        return new SemanticMediaSource(new MediaUrlKind(
-            new DurableMediaUrl(),
-            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
-        ));
+        return new SemanticMediaSource(
+            new MediaUrlKind(
+                new DurableMediaUrl(),
+                new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+            ),
+            new PageFurniture(),
+            new NarrationSignals(),
+        );
     }
 
     public function testFindsAnAudioElement(): void

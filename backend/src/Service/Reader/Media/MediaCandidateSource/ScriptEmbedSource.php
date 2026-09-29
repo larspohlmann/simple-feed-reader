@@ -31,7 +31,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
 {
     private const string URL_PATTERN = '#https://[^"\'\s\\\\<>]+#i';
 
-    public function __construct(private EmbedProviders $providers)
+    public function __construct(private EmbedProviders $providers, private PageFurniture $furniture)
     {
     }
 
@@ -39,7 +39,7 @@ final readonly class ScriptEmbedSource implements MediaCandidateSourceInterface
     {
         $found = [];
         foreach ($page->document->querySelectorAll('script') as $script) {
-            if (PageFurniture::holds($script)) {
+            if ($this->furniture->holds($script)) {
                 continue;
             }
             // JSON-LD scripts are already handled by JsonLdMediaSource, which has

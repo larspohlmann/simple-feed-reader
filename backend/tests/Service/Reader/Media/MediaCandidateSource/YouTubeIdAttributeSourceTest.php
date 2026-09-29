@@ -8,6 +8,7 @@ use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeIdAttributeSourceTest extends TestCase
@@ -19,7 +20,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
 
     private function source(): YouTubeIdAttributeSource
     {
-        return new YouTubeIdAttributeSource(new EmbedProviders([new YouTubeEmbedProvider()]));
+        return new YouTubeIdAttributeSource(new EmbedProviders([new YouTubeEmbedProvider()]), new PageFurniture());
     }
 
     /** The Guardian's youtube-atom, reached without naming the Guardian. */

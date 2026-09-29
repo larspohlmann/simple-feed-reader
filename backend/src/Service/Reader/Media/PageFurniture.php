@@ -25,12 +25,8 @@ final readonly class PageFurniture
     private const string CHROME =
         'aside, nav, footer, [class^="teaser"], [class*=" teaser"], [class^="related"], [class*=" related"]';
 
-    public static function holds(Element $element): bool
+    public function holds(Element $element): bool
     {
         return $element->closest(self::CHROME) !== null;
-    }
-
-    private function __construct()
-    {
     }
 }

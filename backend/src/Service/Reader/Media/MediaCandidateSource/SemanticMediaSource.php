@@ -24,15 +24,18 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 70)]
 final readonly class SemanticMediaSource implements MediaCandidateSourceInterface
 {
-    public function __construct(private MediaUrlKind $urlKind)
-    {
+    public function __construct(
+        private MediaUrlKind $urlKind,
+        private PageFurniture $furniture,
+        private NarrationSignals $narration,
+    ) {
     }
 
     public function find(RawPageModel $page): array
     {
         $found = [];
         foreach ($page->document->querySelectorAll('audio, video') as $element) {
-            if (PageFurniture::holds($element)) {
+            if ($this->furniture->holds($element)) {
                 continue;
             }
             $candidate = $this->candidateFor($element, $page->blocks->before($element));
@@ -51,7 +54,7 @@ final readonly class SemanticMediaSource implements MediaCandidateSourceInterfac
             return null;
         }
         if (!$resolved->kind->isVideo()) {
-            $narrated = NarrationSignals::narrates($resolved->url, $element);
+            $narrated = $this->narration->narrates($resolved->url, $element);
 
             return new MediaCandidateModel($resolved->kind, $resolved->url, null, null, $precedingText, $narrated);
         }

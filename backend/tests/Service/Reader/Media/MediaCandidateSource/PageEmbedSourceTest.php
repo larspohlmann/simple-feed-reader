@@ -9,6 +9,7 @@ use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\PageEmbedSource;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
 use PHPUnit\Framework\TestCase;
 
 final class PageEmbedSourceTest extends TestCase
@@ -21,7 +22,8 @@ final class PageEmbedSourceTest extends TestCase
     private function source(): PageEmbedSource
     {
         return new PageEmbedSource(
-            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()])
+            new EmbedProviders([new YouTubeEmbedProvider(), new SoundCloudEmbedProvider()]),
+            new PageFurniture(),
         );
     }
 

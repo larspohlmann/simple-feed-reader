@@ -18,10 +18,14 @@ final readonly class OutsideFurniture
 {
     private const array DOCUMENT_ROOTS = ['html', 'body'];
 
+    public function __construct(private PageFurniture $furniture)
+    {
+    }
+
     public function holdsMatchFor(HTMLDocument $document, string $xpath): bool
     {
         foreach ((new XPath($document))->query($xpath) as $element) {
-            if ($element instanceof Element && !self::isDocumentRoot($element) && !PageFurniture::holds($element)) {
+            if ($element instanceof Element && !self::isDocumentRoot($element) && !$this->furniture->holds($element)) {
                 return true;
             }
         }

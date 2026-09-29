@@ -9,6 +9,7 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\ZdfPlayerConfigSource;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use PHPUnit\Framework\TestCase;
 
 final class ZdfPlayerConfigSourceTest extends TestCase
@@ -19,7 +20,10 @@ final class ZdfPlayerConfigSourceTest extends TestCase
 
     private function source(): ZdfPlayerConfigSource
     {
-        return new ZdfPlayerConfigSource(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
+        return new ZdfPlayerConfigSource(
+            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])),
+            new NearbyPoster(),
+        );
     }
 
     /** The page names each clip in a player config, escaped as it ships in the Next.js payload. */

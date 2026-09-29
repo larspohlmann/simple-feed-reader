@@ -30,6 +30,7 @@ use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
@@ -66,7 +67,7 @@ final class ReaderBodyCleanerTest extends TestCase
         return [
             new InBodyEmbedRewriter($embedProviders, $markup),
             new SubstackPosterLink(),
-            new PlayerChromeCleaner(),
+            new PlayerChromeCleaner(new NarrationSignals()),
             new NavigationChromeTrimmer(),
             new LeadingEngagementCleaner(new DateLineRecognizer(new StrictDateFormatterFactory())),
             new LeadingTitleRemover(),

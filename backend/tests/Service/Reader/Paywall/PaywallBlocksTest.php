@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Paywall\OutsideFurniture;
 use App\Service\Reader\Paywall\PaywallBlocks;
 use PHPUnit\Framework\TestCase;
@@ -100,6 +101,6 @@ final class PaywallBlocksTest extends TestCase
 
     private function blocks(): PaywallBlocks
     {
-        return new PaywallBlocks(new OutsideFurniture());
+        return new PaywallBlocks(new OutsideFurniture(new PageFurniture()));
     }
 }

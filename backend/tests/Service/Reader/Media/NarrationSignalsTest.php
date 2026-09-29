@@ -14,7 +14,7 @@ final class NarrationSignalsTest extends TestCase
     public function testFlagsWhenTheFileUrlItselfNamesNarration(): void
     {
         self::assertTrue(
-            NarrationSignals::narrates('https://zon-speechbert-production.test/articles/a/full.mp3', null),
+            (new NarrationSignals())->narrates('https://zon-speechbert-production.test/articles/a/full.mp3', null),
         );
     }
 
@@ -22,19 +22,19 @@ final class NarrationSignalsTest extends TestCase
     {
         $audio = $this->audioIn('<div data-audio-type="tts"><p><audio></audio></p></div>');
 
-        self::assertTrue(NarrationSignals::narrates('https://cdn.test/plain.mp3', $audio));
+        self::assertTrue((new NarrationSignals())->narrates('https://cdn.test/plain.mp3', $audio));
     }
 
     public function testDoesNotTreatHttpsOrAnOrdinaryAttributeAsNarration(): void
     {
         $audio = $this->audioIn('<div class="settings" data-x="chatts"><audio></audio></div>');
 
-        self::assertFalse(NarrationSignals::narrates('https://cdn.test/audio/ep-042.mp3', $audio));
+        self::assertFalse((new NarrationSignals())->narrates('https://cdn.test/audio/ep-042.mp3', $audio));
     }
 
     public function testAPlainPodcastFileIsNotNarration(): void
     {
-        self::assertFalse(NarrationSignals::narrates('https://pub.test/episodes/ep12.mp3', null));
+        self::assertFalse((new NarrationSignals())->narrates('https://pub.test/episodes/ep12.mp3', null));
     }
 
     private function audioIn(string $html): Element

@@ -8,6 +8,8 @@ use App\Service\Reader\Media\DurableMediaUrl;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\PageFurniture;
+use App\Service\Reader\Media\PlayerPoster;
 use App\Service\Reader\Media\Teaser\TeaserPlayerScanner;
 use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
@@ -20,7 +22,11 @@ final class TeaserPlayerScannerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->scanner = new TeaserPlayerScanner(new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])));
+        $this->scanner = new TeaserPlayerScanner(
+            new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([])),
+            new PageFurniture(),
+            new PlayerPoster(),
+        );
     }
 
     /** A block that pairs a player with its own still, a headline and a link is an inline media teaser. */

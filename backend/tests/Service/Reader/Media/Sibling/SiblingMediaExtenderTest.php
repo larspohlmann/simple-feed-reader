@@ -17,6 +17,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\SiblingIdRule;
 use App\Service\Reader\Media\Sibling\SiblingMediaExtender;
 use App\Tests\Support\NoEgressProxy;
@@ -62,7 +63,7 @@ final class SiblingMediaExtenderTest extends TestCase
         );
 
         return new SiblingMediaExtender(
-            new SiblingIdRule(),
+            new SiblingIdRule(new NearbyPoster()),
             $landing,
             new MediaUrlKind(new DurableMediaUrl(), new EmbedProviders([new YouTubeEmbedProvider()])),
         );

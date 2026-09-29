@@ -13,7 +13,7 @@ final readonly class NearbyPoster
     private const string NEVER_AN_IMAGE = '#\.(m3u8|mp4|mp3|js|css|json)(\?|$)#i';
     private const string DIMENSIONS = '/(\d+)x(\d+)/';
 
-    public static function after(string $html, int $position): ?string
+    public function after(string $html, int $position): ?string
     {
         preg_match_all(self::HTTPS_URL, substr($html, $position, self::WINDOW), $matches);
         $best = null;
@@ -44,9 +44,5 @@ final readonly class NearbyPoster
         [, $width, $height] = $matches[$count - 1];
 
         return (int) $width * (int) $height;
-    }
-
-    private function __construct()
-    {
     }
 }
