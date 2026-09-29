@@ -17,17 +17,8 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\RawMessage;
 
 /**
- * Flushes DeferredMailer once the work the user is waiting on is finished.
- *
- * kernel.terminate is the HTTP hook: the Runtime component sends the response,
- * calls fastcgi_finish_request() (or closes/flushes output buffers), and only
- * then calls Kernel::terminate — so the client already has its bytes and the
- * SMTP round trip is outside anything it can time. terminate is unconditional,
- * so deferring cannot silently drop a verification mail.
- *
- * console.terminate covers the other half: kernel.terminate never fires for CLI,
- * so a command sending account mail (admin approval, a maintenance script) would
- * otherwise queue into a DeferredMailer nothing drains.
+ * Sends DeferredMailer's queue once the response is on the wire (kernel.terminate), and after console commands, which
+ * never reach kernel.terminate.
  */
 #[AsEventListener(event: TerminateEvent::class, method: 'onKernelTerminate')]
 #[AsEventListener(event: ConsoleTerminateEvent::class, method: 'onConsoleTerminate')]
@@ -50,13 +41,7 @@ final readonly class DeferredMailFlushListener
         $this->flush();
     }
 
-    /**
-     * Failures are logged, never rethrown. The response has already gone out,
-     * so there is nobody left to tell: an exception escaping terminate would
-     * only turn a lost email into a lost email plus a fatal in the log with no
-     * indication of which message it was. One message failing must also not
-     * stop the rest of the queue.
-     */
+    /** Logs a failure and never rethrows: the response is gone, and one bad message must not stop the rest. */
     private function flush(): void
     {
         foreach ($this->mailer->take() as [$message, $envelope]) {
