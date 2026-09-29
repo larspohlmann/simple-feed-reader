@@ -7,15 +7,9 @@ namespace App\Service\Reading\Model;
 use App\Service\Clock\Model\ViewerTimeZoneModel;
 
 /**
- * The last N calendar days a reading-activity chart covers (#896), cut in the
- * viewer's own timezone. `localDates` is one 'Y-m-d' per day, oldest first, so
- * the chart can zero-fill a quiet day instead of dropping it. `sinceUtc` is the
- * lower bound the read query binds: local midnight of the oldest day expressed
- * in UTC, because that is the wall clock Doctrine persists `viewedAt` in.
- *
- * Days are stepped by `+1 day` from local midnight rather than by an hour count,
- * so a daylight-saving change inside the window keeps every bucket on its own
- * calendar day — the reason MonthWindowModel advances by a whole month.
+ * The last N calendar days of a reading-activity chart in the viewer's zone, each listed so a quiet day zero-fills.
+ * `sinceUtc` is the oldest day's local midnight in UTC, the wall clock `viewedAt` is persisted in. Days step by
+ * `+1 day`, never by a count of hours, so a daylight-saving change keeps every bucket on its own calendar day.
  */
 final readonly class ReadingWindowModel
 {

@@ -21,12 +21,8 @@ use App\Service\Backup\Support\GzipLineReader;
 use App\Service\Backup\Support\LineField;
 
 /**
- * Reads a backup file front to back, enforcing its grammar: one header first,
- * one account line, then tags, feeds, subscriptions, entries and entry states
- * in that order, closed by a footer whose counts must match what was read.
- * The footer is the truncation guard — without it, a gzip cut exactly at a
- * line boundary would read as a smaller, valid backup and the restore would
- * silently load a partial account.
+ * Reads a backup front to back in the order BackupLineOrderModel admits. The footer's counts are the truncation
+ * guard: a gzip cut at a line boundary would otherwise restore a partial account as a valid backup.
  */
 final readonly class BackupReader
 {
@@ -192,8 +188,6 @@ final readonly class BackupReader
             BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
             BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: read() handles header/footer, and BackupLineOrderModel
-            // refuses any other kind. Stays only for match exhaustiveness.
             default => throw new \LogicException(sprintf('BackupLineOrderModel admitted unknown kind "%s".', $kind)),
         };
     }
@@ -218,12 +212,8 @@ final readonly class BackupReader
     }
 
     /**
-     * A count key missing from the footer defaults to zero rather than
-     * failing outright: a file written before its kind existed (savedSearch
-     * joined after tag, feed, subscription, entry and entryState, still
-     * under the same schema version) never declares it, and genuinely has
-     * zero such lines. A missing key paired with a nonzero actual count is
-     * still refused — that combination cannot happen from age alone.
+     * A count key missing from the footer means zero: a file written before its kind existed (savedSearch) never
+     * declares it. A missing key with lines of that kind read is still refused.
      *
      * @param array<string, int> $actualCounts
      */

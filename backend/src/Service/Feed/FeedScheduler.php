@@ -55,7 +55,7 @@ final readonly class FeedScheduler
     public function recordThrottled(Feed $feed, ?int $retryAfterSeconds): void
     {
         $hostWait = $this->hostThrottle->record($feed->getUrl(), $retryAfterSeconds);
-        // Reddit resets in seconds, so only this feed, not the whole host, waits out its own cadence.
+        // A ration can reset in seconds, so without a Retry-After only this feed, not the host, waits out its cadence.
         $wait = $retryAfterSeconds === null ? max($hostWait, $this->cadenceSeconds($feed)) : $hostWait;
 
         $feed->scheduleNextFetchAt($this->clock->now()->modify(sprintf('+%d seconds', $wait)));
