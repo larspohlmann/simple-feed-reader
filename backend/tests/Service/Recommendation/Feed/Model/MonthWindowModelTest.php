@@ -23,10 +23,8 @@ final class MonthWindowModelTest extends TestCase
     }
 
     /**
-     * The stored value is naive UTC, so a Berlin viewer's August starts two
-     * hours before UTC midnight on 1 August and ends two hours before it on
-     * 1 September — which is exactly why the boundary cannot be the literal
-     * month string.
+     * Stored values are naive UTC, so a Berlin viewer's August starts and ends two hours before UTC midnight: the
+     * boundary cannot be the literal month string.
      */
     public function testShiftsTheBoundariesIntoUtcForAViewerAheadOfIt(): void
     {
@@ -37,11 +35,8 @@ final class MonthWindowModelTest extends TestCase
     }
 
     /**
-     * The mirror image of the Berlin case: a viewer behind UTC starts August
-     * *after* UTC midnight on 1 August. Both zones above sit at or ahead of
-     * UTC, so without this only one sign of the shift is pinned and an
-     * implementation that took the offset's absolute value would still pass.
-     * New York is on EDT (UTC-4) at both ends of August 2026.
+     * A viewer behind UTC (New York, on EDT at both ends of August 2026) starts August after UTC midnight: without
+     * this case an implementation that took the offset's absolute value would pass.
      */
     public function testShiftsTheBoundariesTheOtherWayForAViewerBehindUtc(): void
     {

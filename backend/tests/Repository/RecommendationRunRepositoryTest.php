@@ -88,14 +88,6 @@ final class RecommendationRunRepositoryTest extends DbTestCase
         self::assertSame($failedRun->getId(), $this->runs()->findLatestForUser($userB)?->getId());
     }
 
-    /**
-     * A firing's duration is the SUM over the runs it ticks and one run can
-     * spend a whole provider timeout, so an unbounded result turns a
-     * "ten-second" sweep into an hour-long one as accounts add up. Oldest
-     * first keeps the cap fair: the runs at the head of the queue are the
-     * ones that finish and leave, and every later run reaches the window in
-     * turn (#311 final review).
-     */
     public function testTheSweepSetIsBoundedAndTakesTheOldestRunsFirst(): void
     {
         $user = $this->user('many@example.com');

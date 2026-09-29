@@ -15,13 +15,7 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use App\Tests\DbTestCase;
 use App\Tests\Support\RecommendationRunFixtures;
 
-/**
- * recommendation_item.recommendation_run_id cascades on delete, so a test
- * driven through RecommendationRunPurger can never tell deleteForUser()'s own
- * explicit RowIds delete apart from the DB cascade doing the same job. This
- * pins deleteForUser() on its own, called directly, with no run deleted
- * alongside it.
- */
+/** The run FK cascades, so only a direct deleteForUser() call with no run deleted proves the method's own delete. */
 final class RecommendationItemRepositoryTest extends DbTestCase
 {
     private User $user;

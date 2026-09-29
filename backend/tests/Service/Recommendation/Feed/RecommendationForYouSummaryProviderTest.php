@@ -17,12 +17,8 @@ use App\Service\Recommendation\Feed\RecommendationForYouSummaryProvider;
 use App\Tests\DbTestCase;
 
 /**
- * The header/sidebar summary is a different read than the run report: the
- * report describes the latest run (which may have failed), while this
- * describes the surviving list — the deduped item count and the newest
- * *completed* run's timestamp. A failed run after two completed ones must
- * not move generatedAt, and a duplicate entry across runs must not double
- * count.
+ * The summary describes the surviving list, not the latest run: a failed run after completed ones must not move
+ * generatedAt, and an entry recommended by two runs counts once.
  */
 final class RecommendationForYouSummaryProviderTest extends DbTestCase
 {

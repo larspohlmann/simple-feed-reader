@@ -207,8 +207,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         $this->logs->deleteForUser($this->user);
 
-        // Bulk DQL bypasses the identity map: clear before asserting survival,
-        // or find() serves the stale in-memory row (see the #237 lesson).
+        // Bulk DQL bypasses the identity map: clear before asserting survival, or find() serves the stale in-memory
+        // row.
         $this->entityManager->clear();
         self::assertSame([], $this->logs->listForRun($this->user, $run->requireId()));
         self::assertNotNull($this->entityManager->find(RecommendationRunLog::class, $keptId));

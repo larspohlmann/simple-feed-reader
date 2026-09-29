@@ -77,8 +77,7 @@ final class ForYouFeedTest extends DbTestCase
         self::assertSame(88, $first['recommendationScore']);
     }
 
-    /** Debug keeps the per-run call logs and nothing else — it is not a second
-     *  way to reveal what the reader asked to keep hidden (#576). */
+    /** Debug keeps the call logs and nothing else: it is not a second way to reveal what the reader chose to hide. */
     public function testDebugAloneRevealsNeitherAnnotation(): void
     {
         $this->fixtures->debugEnabledSettings($this->user);
