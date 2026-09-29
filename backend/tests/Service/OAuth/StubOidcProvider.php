@@ -9,13 +9,8 @@ use Psr\Clock\ClockInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Exercises AbstractOidcProvider without pinning the tests to either real
- * provider's endpoints or credentials.
- *
- * The token endpoint is a constructor argument rather than a constant so one
- * test can point it at an `http://` URL and assert the scheme guard fires —
- * that guard is the precondition of the whole signature-verification exemption,
- * so it needs a test that can actually violate it.
+ * A configurable AbstractOidcProvider. The token endpoint is a constructor argument so a test can hand it an `http://`
+ * URL and see the scheme guard fire.
  */
 final readonly class StubOidcProvider extends AbstractOidcProvider
 {

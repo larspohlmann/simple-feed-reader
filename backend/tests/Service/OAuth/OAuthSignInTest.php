@@ -14,14 +14,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\NewUserStatus;
 use PHPUnit\Framework\Attributes\DataProvider;
 
-/**
- * The two legs of turning a provider-verified identity into a session.
- *
- * Every rule here used to live in OAuthController, spread across two actions.
- * OAuthFlowTest still covers them over real HTTP; these tests pin them at the
- * seam, where the status gate and the one-answer-for-every-failure rule are
- * decided.
- */
+/** The two legs at the seam where the status gate and the one-answer rule are decided; OAuthFlowTest covers HTTP. */
 final class OAuthSignInTest extends DbTestCase
 {
     private const BROWSER = 'the-browser-token';
@@ -61,10 +54,7 @@ final class OAuthSignInTest extends DbTestCase
     public function testAnInactiveUserStillGetsACodeSoTheExchangeCanExplainWhy(
         UserStatus $status,
     ): void {
-        // Refusing here would collapse "you are waiting for approval" into a
-        // generic redirect error. The code is worth nothing on its own: it names
-        // a user id, and the redemption re-runs the status gate before any token
-        // is minted.
+        // Not gated here: the redemption re-runs the status gate before any token is minted.
         $this->persistUser('bob@example.com', $status);
 
         $code = $this->signIn()->issueLoginCode($this->identity(), self::BROWSER);
@@ -98,12 +88,7 @@ final class OAuthSignInTest extends DbTestCase
         self::assertCount(3, explode('.', $token));
     }
 
-    /**
-     * Proves App\EventListener\StampLastLoginOnTokenIssueListener actually fires on
-     * this path: redeemLoginCode() mints the token through the real
-     * JwtManager/dispatcher, exactly as the HTTP endpoint does, so a direct
-     * call to the listener could never stand in for this.
-     */
+    /** Through the real JwtManager and dispatcher, which a direct call to StampLastLoginOnTokenIssueListener skips. */
     public function testRedeemingTheCodeStampsTheAccountsLastLoginAt(): void
     {
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
