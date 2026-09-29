@@ -12,7 +12,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<CatalogCategory>
  */
-class CatalogCategoryRepository extends ServiceEntityRepository
+final class CatalogCategoryRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {

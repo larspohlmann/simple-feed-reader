@@ -14,7 +14,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 /**
  * @extends ServiceEntityRepository<Subscription>
  */
-class SubscriptionRepository extends ServiceEntityRepository
+final class SubscriptionRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {

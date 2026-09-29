@@ -13,7 +13,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 /**
  * @extends ServiceEntityRepository<Tag>
  */
-class TagRepository extends ServiceEntityRepository
+final class TagRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {
