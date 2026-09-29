@@ -44,6 +44,41 @@ final class ServiceModuleCycleRuleTest extends RuleTestCase
         $this->analyse([self::fixture('LooseService')], [[self::message('Alpha -> LooseService -> Alpha'), 9]]);
     }
 
+    public function testEveryDistinctCycleIsReported(): void
+    {
+        $this->analyse(
+            [self::fixture('two-cycles')],
+            [
+                [self::message('Alpha -> Beta -> Alpha'), 23],
+                [self::message('Delta -> Gamma -> Delta'), 33],
+            ],
+        );
+    }
+
+    public function testModulesAreWalkedInNameOrder(): void
+    {
+        $this->analyse([self::fixture('beta-first')], [[self::message('Alpha -> Beta -> Alpha'), 13]]);
+    }
+
+    public function testAModulesDependenciesAreSearchedInNameOrder(): void
+    {
+        $this->analyse(
+            [self::fixture('two-ways-back')],
+            [
+                [self::message('Gamma -> Alpha -> Gamma'), 14],
+                [self::message('Alpha -> Beta -> Alpha'), 24],
+            ],
+        );
+    }
+
+    public function testAnEdgeSeenInTwoFilesReportsTheSiteInTheFileFirstByName(): void
+    {
+        $this->analyse(
+            [self::fixture('later-file'), self::fixture('earlier-file')],
+            [[self::message('Alpha -> Beta -> Alpha'), 23]],
+        );
+    }
+
     private static function fixture(string $name): string
     {
         return __DIR__ . '/data/service-module-cycle/' . $name . '.php';
