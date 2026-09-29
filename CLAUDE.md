@@ -90,7 +90,8 @@ Non-negotiables:
   A service module's root holds stateless `final readonly` services; domain
   data goes to `Model/` (never importing a `Dto/`), transfer shapes to `Dto/`,
   factories (build, never persist) to `Factory/`, per-call objects built with
-  `new` to `Pass/`, static-only helpers to `Support/`, and each interface with
+  `new` to `Pass/`, static-only helpers that compute (never a tuned verdict,
+  which is an injected service, §10) to `Support/`, and each interface with
   its same-module implementations to a folder named after it. A service that
   builds an entity with real construction logic and saves it is split into a
   `…Factory` and a service that persists. A stateful service implements

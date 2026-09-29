@@ -245,6 +245,13 @@ Decided in #1202.
 - **Per call or process lifetime.** A class production code builds with `new` outside a constructor is a model or a
   per-call object, never a service. A service that keeps state implements `ResetInterface`, so the Messenger worker
   drops it between messages, or carries `#[ProcessLifetimeState('why')]` when the state must outlive messages.
+- **`Support/` computes; a service decides.** A static helper answers from its arguments plus a standard, a wire
+  or file format, or this app's own schema (`Srcset`, `PlainText`, `LineField`). A verdict about third-party
+  content tuned against observed pages, feeds or model replies (a curated list, a measured threshold or window,
+  a precedence among candidate sources) is an injected root service (`PaywallSignals`, `PageFurniture`), and so
+  is a class that calls one. A model keeps the measurement and a service applies the verdict to it
+  (`BodyBlockModel::linkedTextLength()`, `LeadingRegion`). `Url\Support\FeedWebsite` is the one exception: its only
+  caller is the static `Http\SubscriptionJson` (#1169).
 - **Messaging.** Event listeners anywhere in `src`, Doctrine ones included, end in `Listener`; a message handler is its
   message's name plus `Handler`; `Worker/Message/` holds imperative names with no suffix; `src/Event/` holds past-tense
   facts.
