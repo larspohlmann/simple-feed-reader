@@ -322,7 +322,7 @@ jobs:
       # Activation deliberately checks only the three .env.local settings whose
       # absence fails silently. Everything else -- ALTCHA_HMAC_KEY,
       # a database that refuses the connection -- surfaces only once the app
-      # serves a request, and InsecureProductionConfigGuard answers 500 to
+      # serves a request, and InsecureProductionConfigGuardListener answers 500 to
       # every route when it is unhappy. Without this step that release would go
       # live and the deploy would report success. develop is continuously
       # deployed, so nobody is necessarily watching.
@@ -342,7 +342,7 @@ jobs:
             https://lars-pohlmann.de/reader/api/health \
             || { echo "!!! ${RELEASE_NAME} is live but /api/health is not answering." >&2
                  echo "!!! A 500 usually means .env.local: ALTCHA_HMAC_KEY unset" >&2
-                 echo "!!! makes InsecureProductionConfigGuard refuse every route." >&2
+                 echo "!!! makes InsecureProductionConfigGuardListener refuse every route." >&2
                  echo "!!! A 403 that outlives the retries means the mount is wrong, not stale." >&2
                  echo "!!! Roll back per deploy/strato/README.md." >&2
                  exit 1; }

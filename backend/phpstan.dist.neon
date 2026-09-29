@@ -23,6 +23,8 @@ parameters:
         - supportHome
         - rootService
         - statefulService
+        - listenerName
+        - handlerName
     paths:
         - src
         - tests

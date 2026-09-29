@@ -38,7 +38,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * it is for.
  */
 #[AsEventListener(event: KernelEvents::REQUEST, method: 'onKernelRequest', priority: 4096)]
-final readonly class InsecureProductionConfigGuard
+final readonly class InsecureProductionConfigGuardListener
 {
     /**
      * The literal committed to .env. Matching on the exact placeholder rather

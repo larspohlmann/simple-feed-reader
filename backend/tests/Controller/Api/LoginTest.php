@@ -6,7 +6,7 @@ namespace App\Tests\Controller\Api;
 
 use App\Entity\User;
 use App\Enum\UserStatus;
-use App\EventListener\AddUserIdClaimOnTokenIssue;
+use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Security\PasswordWorkEqualizer;
 use App\Tests\Support\HashCountingWork;
 use App\Tests\Support\UserFactory;
@@ -99,7 +99,7 @@ final class LoginTest extends WebTestCase
         /** @var JWTTokenManagerInterface $tokens */
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
 
-        self::assertSame($second->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
+        self::assertSame($second->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssueListener::CLAIM] ?? null);
     }
 
     /**

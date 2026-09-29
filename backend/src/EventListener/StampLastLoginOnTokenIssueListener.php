@@ -35,7 +35,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * would silently never fire.
  */
 #[AsEventListener(event: Events::JWT_CREATED, method: '__invoke')]
-final readonly class StampLastLoginOnTokenIssue
+final readonly class StampLastLoginOnTokenIssueListener
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

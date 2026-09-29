@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\EventListener;
 
-use App\EventListener\InsecureProductionConfigGuard;
+use App\EventListener\InsecureProductionConfigGuardListener;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
@@ -12,17 +12,19 @@ use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 use Symfony\Component\HttpKernel\KernelInterface;
 
-final class InsecureProductionConfigGuardTest extends TestCase
+final class InsecureProductionConfigGuardListenerTest extends TestCase
 {
     private const SAFE_KEY = 'a-real-long-random-production-secret';
 
-    private function guard(string $environment, string $altchaKey): InsecureProductionConfigGuard
+    private function guard(string $environment, string $altchaKey): InsecureProductionConfigGuardListener
     {
-        return new InsecureProductionConfigGuard($environment, $altchaKey);
+        return new InsecureProductionConfigGuardListener($environment, $altchaKey);
     }
 
-    private function request(InsecureProductionConfigGuard $guard, int $type = HttpKernelInterface::MAIN_REQUEST): void
-    {
+    private function request(
+        InsecureProductionConfigGuardListener $guard,
+        int $type = HttpKernelInterface::MAIN_REQUEST,
+    ): void {
         $guard->onKernelRequest(new RequestEvent(
             $this->createStub(KernelInterface::class),
             Request::create('/api/health'),
@@ -34,7 +36,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
     {
         $problems = $this->guard(
             'prod',
-            InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
+            InsecureProductionConfigGuardListener::PLACEHOLDER_ALTCHA_HMAC_KEY,
         )->problems();
 
         self::assertCount(1, $problems);
@@ -64,7 +66,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
     {
         $guard = $this->guard(
             $environment,
-            InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
+            InsecureProductionConfigGuardListener::PLACEHOLDER_ALTCHA_HMAC_KEY,
         );
 
         self::assertSame([], $guard->problems());
@@ -77,7 +79,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
     {
         $guard = $this->guard(
             'prod',
-            InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
+            InsecureProductionConfigGuardListener::PLACEHOLDER_ALTCHA_HMAC_KEY,
         );
 
         $this->expectException(\RuntimeException::class);
@@ -105,7 +107,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
         $this->request(
             $this->guard(
                 'prod',
-                InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
+                InsecureProductionConfigGuardListener::PLACEHOLDER_ALTCHA_HMAC_KEY,
             ),
             HttpKernelInterface::SUB_REQUEST,
         );
@@ -123,7 +125,7 @@ final class InsecureProductionConfigGuardTest extends TestCase
         self::assertIsString($dotEnv);
 
         self::assertStringContainsString(
-            'ALTCHA_HMAC_KEY=' . InsecureProductionConfigGuard::PLACEHOLDER_ALTCHA_HMAC_KEY,
+            'ALTCHA_HMAC_KEY=' . InsecureProductionConfigGuardListener::PLACEHOLDER_ALTCHA_HMAC_KEY,
             $dotEnv,
             'the guarded ALTCHA placeholder no longer matches .env',
         );

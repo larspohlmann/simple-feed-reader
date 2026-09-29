@@ -8,7 +8,7 @@ use App\Controller\Api\OAuthController;
 use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\UserStatus;
-use App\EventListener\AddUserIdClaimOnTokenIssue;
+use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Repository\UserRepository;
 use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthProviderRegistry;
@@ -150,7 +150,7 @@ final class OAuthFlowTest extends WebTestCase
 
         /** @var JWTTokenManagerInterface $tokens */
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
-        self::assertSame($bob->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
+        self::assertSame($bob->getId(), $tokens->parse($token)[AddUserIdClaimOnTokenIssueListener::CLAIM] ?? null);
 
         // 4. The token actually works, on the same route the password login's
         // token is proved against.

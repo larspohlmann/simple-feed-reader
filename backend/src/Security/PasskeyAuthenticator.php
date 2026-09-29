@@ -29,7 +29,7 @@ use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPasspor
  * $successHandler is the exact `lexik_jwt_authentication.handler.
  * authentication_success` service `json_login` uses, so both flows call the
  * same `JWTTokenManager::create()` and pick up every JWT-issuance listener —
- * StampLastLoginOnTokenIssue among them. $failureHandler is the same
+ * StampLastLoginOnTokenIssueListener among them. $failureHandler is the same
  * `App\Security\LoginFailureHandler`.
  *
  * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every passkey

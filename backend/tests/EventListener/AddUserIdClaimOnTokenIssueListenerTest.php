@@ -6,11 +6,11 @@ namespace App\Tests\EventListener;
 
 use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\User;
-use App\EventListener\AddUserIdClaimOnTokenIssue;
+use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Tests\DbTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
-final class AddUserIdClaimOnTokenIssueTest extends DbTestCase
+final class AddUserIdClaimOnTokenIssueListenerTest extends DbTestCase
 {
     public function testAnIssuedTokenCarriesTheAccountIdAsAClaim(): void
     {
@@ -23,7 +23,7 @@ final class AddUserIdClaimOnTokenIssueTest extends DbTestCase
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
         $claims = $tokens->parse($tokens->create($second));
 
-        self::assertSame($second->getId(), $claims[AddUserIdClaimOnTokenIssue::CLAIM] ?? null);
+        self::assertSame($second->getId(), $claims[AddUserIdClaimOnTokenIssueListener::CLAIM] ?? null);
     }
 
     public function testATokenForAnUnsavedAccountIsRefused(): void

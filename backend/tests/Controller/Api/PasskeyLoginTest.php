@@ -7,7 +7,7 @@ namespace App\Tests\Controller\Api;
 use App\Entity\InstanceSettingsUpdate;
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\EventListener\AddUserIdClaimOnTokenIssue;
+use App\EventListener\AddUserIdClaimOnTokenIssueListener;
 use App\Repository\UserPasskeyRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Passkey\AssertionVerifier;
@@ -135,7 +135,7 @@ final class PasskeyLoginTest extends ApiTestCase
         self::assertSame($this->claimsExcludingTiming($passwordToken), $this->claimsExcludingTiming($passkeyToken));
         self::assertSame(
             $user->getId(),
-            $this->claimsExcludingTiming($passkeyToken)[AddUserIdClaimOnTokenIssue::CLAIM] ?? null,
+            $this->claimsExcludingTiming($passkeyToken)[AddUserIdClaimOnTokenIssueListener::CLAIM] ?? null,
         );
     }
 

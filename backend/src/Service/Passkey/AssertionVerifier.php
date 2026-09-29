@@ -50,7 +50,7 @@ use Webauthn\TrustPath\EmptyTrustPath;
  * the same method the options endpoint uses — not a second private copy, so the
  * two cannot drift apart.
  *
- * verify() flushes explicitly rather than relying on StampLastLoginOnTokenIssue's
+ * verify() flushes explicitly rather than relying on StampLastLoginOnTokenIssueListener's
  * incidental flush on JWTCreatedEvent: this class owns the entity it mutates, so
  * it owns persisting the mutation.
  */
