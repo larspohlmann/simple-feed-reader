@@ -28,7 +28,7 @@ final readonly class RegistrationService
         private AccountMailerInterface $mailer,
         private PasswordWorkEqualizerInterface $work,
         private EventDispatcherInterface $events,
-        private SignupUserFactory $signupUsers,
+        private SignupUserFactory $signupUserFactory,
         private PasswordResetter $passwords,
     ) {
     }
@@ -56,7 +56,7 @@ final readonly class RegistrationService
             return;
         }
 
-        $user = $this->signupUsers->create($email, $plainPassword, $locale);
+        $user = $this->signupUserFactory->create($email, $plainPassword, $locale);
         $this->em->persist($user);
 
         try {

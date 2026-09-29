@@ -23,7 +23,7 @@ final readonly class EntrySearchController
 {
     public function __construct(
         private EntrySearchInterface $search,
-        private EntrySearchRequestFactory $requests,
+        private EntrySearchRequestFactory $requestFactory,
         private EntryListRowEnricher $enricher,
         private SearchMarkReadService $searchMarkRead,
     ) {
@@ -32,7 +32,7 @@ final readonly class EntrySearchController
     #[Route('', name: 'api_entries_search', methods: ['GET'])]
     public function search(Request $request, #[CurrentUser] User $user): JsonResponse
     {
-        $query = $this->requests->fromRequest($request, $user);
+        $query = $this->requestFactory->fromRequest($request, $user);
         $result = $this->search->search($query);
         $rows = $this->enricher->enrich($result->rows, $user->requireId());
 

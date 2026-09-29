@@ -15,7 +15,7 @@ final readonly class ApiExceptionListener
 {
     public function __construct(
         private ProblemCatalog $problems,
-        private ProblemResponseFactory $responses,
+        private ProblemResponseFactory $responseFactory,
     ) {
     }
 
@@ -26,6 +26,6 @@ final readonly class ApiExceptionListener
             return;
         }
 
-        $event->setResponse($this->responses->create($this->problems->resolve($event->getThrowable(), $path)));
+        $event->setResponse($this->responseFactory->create($this->problems->resolve($event->getThrowable(), $path)));
     }
 }

@@ -24,7 +24,7 @@ final readonly class ActiveMailTransportFactory
     public function __construct(
         private ConfiguredProxySourceInterface $proxySource,
         private HttpClientInterface $httpClient,
-        private EsmtpTransportFactory $esmtpTransports,
+        private EsmtpTransportFactory $esmtpTransportFactory,
     ) {
     }
 
@@ -34,7 +34,7 @@ final readonly class ActiveMailTransportFactory
         LoggerInterface $logger,
     ): TransportInterface {
         if (!$resolved->useProxy) {
-            return $this->esmtpTransports->from($resolved, $dispatcher, $logger);
+            return $this->esmtpTransportFactory->from($resolved, $dispatcher, $logger);
         }
 
         $proxy = $this->proxySource->configuredProxy();

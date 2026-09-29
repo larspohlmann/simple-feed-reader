@@ -76,7 +76,9 @@ Non-negotiables:
   every event listener in `src`, and a worker handler is its message's name plus
   `Handler` (#1202). An interface ends in `Interface`, with the role before it
   in a role folder (`…FactoryInterface`, `…ModelInterface`,
-  `…ExceptionInterface`). If a name needs a comment to be understood, rename it.
+  `…ExceptionInterface`). A property holding a `…Factory` or `…FactoryInterface`
+  ends in `Factory` too (`$tagFactory`, never `$tags`, which elsewhere names a
+  repository). If a name needs a comment to be understood, rename it.
 - **Functions do one thing**, at a single level of abstraction, and stay short.
   Extract until each method reads as a sentence about *what*, not *how*.
 - **Few parameters.** Three is a lot; more means a DTO or value object is missing.

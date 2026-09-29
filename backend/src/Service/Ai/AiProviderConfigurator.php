@@ -50,7 +50,7 @@ final readonly class AiProviderConfigurator
         private AiProviderSettingsRepository $repository,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
-        private AiConfigurationFactory $configurations,
+        private AiConfigurationFactory $configurationFactory,
     ) {
     }
 
@@ -101,7 +101,7 @@ final readonly class AiProviderConfigurator
         $credentials = ProviderCredentialsModel::fromAccountInput($baseUrl, $apiKey);
         $descriptors = $this->catalog->listModels($credentials);
 
-        $configuration = $this->configurations->create($user, $name, $credentials);
+        $configuration = $this->configurationFactory->create($user, $name, $credentials);
         $this->entityManager->persist($configuration);
         $this->entityManager->flush();
 
@@ -129,7 +129,7 @@ final readonly class AiProviderConfigurator
             );
         }
 
-        $copy = $this->configurations->duplicate($source, $this->credentials($source));
+        $copy = $this->configurationFactory->duplicate($source, $this->credentials($source));
         $this->entityManager->persist($copy);
         $this->entityManager->flush();
 

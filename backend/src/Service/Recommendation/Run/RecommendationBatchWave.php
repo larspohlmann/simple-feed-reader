@@ -34,7 +34,7 @@ final readonly class RecommendationBatchWave
 {
     public function __construct(
         private RateLimitedCompletion $completion,
-        private ProviderConnectionFactory $connections,
+        private ProviderConnectionFactory $connectionFactory,
         private RecommendationCallRecorder $callRecorder,
         private RecommendationPromptBuilder $promptBuilder,
         private RecommendationPickParser $parser,
@@ -173,7 +173,7 @@ final readonly class RecommendationBatchWave
     {
         try {
             return $this->completion->completeMany(
-                $this->connections->forSettings($tick->connection),
+                $this->connectionFactory->forSettings($tick->connection),
                 $calls,
                 $tick->retryPlan(),
             );

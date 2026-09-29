@@ -41,7 +41,7 @@ final readonly class RecommendationRunAdvancer
         private RecommendationRunRepository $runs,
         private LockFactory $lockFactory,
         private AiProviderConfigurator $configurator,
-        private ProviderConnectionFactory $connections,
+        private ProviderConnectionFactory $connectionFactory,
         private ClockInterface $clock,
         private EntityManagerInterface $entityManager,
         private RecommendationSettingsResolver $settingsResolver,
@@ -96,7 +96,7 @@ final readonly class RecommendationRunAdvancer
         $settings = $this->configurator->settingsFor($user);
         $timeouts = null === $settings
             ? ProviderTimeoutsModel::standard()
-            : $this->connections->timeoutsFor($settings);
+            : $this->connectionFactory->timeoutsFor($settings);
 
         return $timeouts->firstByteSeconds + self::LOCK_TTL_MARGIN_SECONDS;
     }

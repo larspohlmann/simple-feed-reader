@@ -18,18 +18,20 @@ use App\Service\Tag\Model\TagDetailsModel;
 /** The rows a backup's foundation lines describe, as the file states them. */
 final readonly class RestoredFoundationFactory
 {
-    public function __construct(private TagFactory $tags, private FeedFactory $feeds)
+    public function __construct(private TagFactory $tagFactory, private FeedFactory $feedFactory)
     {
     }
 
     public function tag(User $user, TagLine $line): Tag
     {
-        return $this->tags->create($user, new TagDetailsModel($line->name, $line->color, $line->icon), $line->position);
+        $details = new TagDetailsModel($line->name, $line->color, $line->icon);
+
+        return $this->tagFactory->create($user, $details, $line->position);
     }
 
     public function feed(FeedLine $line): Feed
     {
-        $feed = $this->feeds->create($line->url, $line->sourceFormat, $line->title);
+        $feed = $this->feedFactory->create($line->url, $line->sourceFormat, $line->title);
         $feed->setSiteUrl($line->siteUrl);
         $feed->setDescription($line->description);
         $feed->setFaviconUrl($line->faviconUrl);

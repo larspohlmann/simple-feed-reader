@@ -18,7 +18,7 @@ final readonly class RecommendationProviderCall
 {
     public function __construct(
         private RateLimitedCompletion $completion,
-        private ProviderConnectionFactory $connections,
+        private ProviderConnectionFactory $connectionFactory,
     ) {
     }
 
@@ -26,7 +26,7 @@ final readonly class RecommendationProviderCall
     {
         try {
             return $this->completion->complete(
-                $this->connections->forSettings($tick->connection),
+                $this->connectionFactory->forSettings($tick->connection),
                 $request,
                 $recordedCall,
                 $tick->retryPlan(),

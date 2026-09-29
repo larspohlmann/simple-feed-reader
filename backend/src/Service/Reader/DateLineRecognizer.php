@@ -21,7 +21,7 @@ final class DateLineRecognizer
     /** @var array<string, array<int, \IntlDateFormatter>> */
     private array $dateFormatters = [];
 
-    public function __construct(private readonly DateFormatterFactoryInterface $formatters)
+    public function __construct(private readonly DateFormatterFactoryInterface $formatterFactory)
     {
     }
 
@@ -50,7 +50,7 @@ final class DateLineRecognizer
 
     private function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
     {
-        $formatter = $this->dateFormatters[$locale][$style] ??= $this->formatters->build($locale, $style);
+        $formatter = $this->dateFormatters[$locale][$style] ??= $this->formatterFactory->build($locale, $style);
 
         $position = 0;
         $timestamp = $formatter->parse($text, $position);
