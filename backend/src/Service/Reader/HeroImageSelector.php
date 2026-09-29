@@ -47,7 +47,7 @@ final readonly class HeroImageSelector
 
         // Blank or unparsable html leaves no body to judge, so the candidate
         // stands. The parser wraps a bare fragment in <html><body> on its own.
-        $body = HtmlDocumentParser::parseOrNull($bodyHtml)?->body;
+        $body = HtmlDocumentParser::parseOrEmpty($bodyHtml)->body;
         if ($body === null || !$this->bodyContainsImage($body)) {
             return $candidate;
         }

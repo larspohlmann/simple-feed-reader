@@ -41,8 +41,8 @@ final readonly class ExtractedBodyModel
 
     public static function fromHtml(string $html): self
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        if ($document === null || $document->body === null) {
+        $document = HtmlDocumentParser::parseOrEmpty($html);
+        if ($document->body === null) {
             return new self('', [], [], [], 0, 0);
         }
 

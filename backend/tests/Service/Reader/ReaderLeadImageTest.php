@@ -74,7 +74,7 @@ final class ReaderLeadImageTest extends TestCase
     /** The body markup as the parser round-trips it, with no restore applied. */
     private function unchangedBody(string $bodyHtml): string
     {
-        return (string) HtmlDocumentParser::parseOrNull($bodyHtml)?->body?->innerHTML;
+        return (string) HtmlDocumentParser::parseOrEmpty($bodyHtml)->body?->innerHTML;
     }
 
     public function testPrependsTheLeadWhenTheBodyBuriesADifferentImage(): void

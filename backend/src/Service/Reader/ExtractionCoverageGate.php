@@ -97,7 +97,7 @@ final readonly class ExtractionCoverageGate
 
     private function plainText(string $html): string
     {
-        $body = HtmlDocumentParser::parseOrNull($html)?->body;
+        $body = HtmlDocumentParser::parseOrEmpty($html)->body;
         $text = $body === null
             ? html_entity_decode(strip_tags($html))
             : (string) $body->textContent;

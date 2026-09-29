@@ -51,10 +51,7 @@ final readonly class WordPressRestProbe
 
     public function offer(string $body, string $pageUrl): ?FeedCandidateModel
     {
-        $document = HtmlDocumentParser::parseOrNull($body);
-        if (null === $document) {
-            return null;
-        }
+        $document = HtmlDocumentParser::parseOrEmpty($body);
 
         $pageUrls = new PageUrls($pageUrl);
         $postsUrl = $this->postsUrl($this->restRoot($document, $pageUrls, $body));
