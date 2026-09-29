@@ -25,28 +25,15 @@ final class UserPasskey
     private User $user;
 
     /**
-     * `_bin` collation, pinned explicitly, for the same reason as
-     * {@see UserIdentity::$providerUserId}: without it MySQL inherits the
-     * table's default collation and compares this column case-insensitively,
-     * while SQLite compares it case-sensitively.
-     *
-     * A credential id is an opaque token minted by the authenticator, not a
-     * word; `a` and `A` are simply different identifiers, and treating them as
-     * equal would let one credential resolve to another's row.
+     * `_bin` collation pinned, as on {@see UserIdentity::$providerUserId}: an opaque credential id compares
+     * case-sensitively on both engines, or `a` could resolve to `A`'s row.
      */
     #[ORM\Column(length: 255, options: ['collation' => 'utf8mb4_bin'])]
     private string $credentialId;
 
     /**
-     * `_bin` collation, pinned for the same reason as $credentialId above.
-     *
-     * `Webauthn\CredentialRecord` requires a non-nullable `userHandle`,
-     * checked on every assertion. The handle is 32 random bytes,
-     * base64url-encoded. It is deliberately NOT the e-mail address — the
-     * authenticator stores the handle and syncs it to the user's password
-     * manager, so it must carry no personal data — and NOT the numeric account
-     * id, because that would leak how many accounts this instance has and in
-     * what order they were made.
+     * `_bin`, as $credentialId. 32 random bytes, base64url: never the e-mail (authenticators sync the handle to a
+     * password manager) nor the account id (it would leak the account count and order).
      */
     #[ORM\Column(length: 64, options: ['collation' => 'utf8mb4_bin'])]
     private string $userHandle;
@@ -144,9 +131,7 @@ final class UserPasskey
     }
 
     /**
-     * The only mutator. Sets the clock and the counter together, because a
-     * use that advanced one without the other would be a half-written row:
-     * a stamped `lastUsedAt` with a stale counter would let a cloned
+     * The only mutator. Clock and counter move together: a stamped use with a stale counter would let a cloned
      * authenticator replay an old signature undetected.
      */
     public function recordUse(\DateTimeImmutable $at, int $signatureCounter): void
