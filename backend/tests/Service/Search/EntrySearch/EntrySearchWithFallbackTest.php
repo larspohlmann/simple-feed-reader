@@ -133,9 +133,8 @@ final class EntrySearchWithFallbackTest extends DbTestCase
 
     public function testAnUnavailableEngineFallsBackToTheDatabaseAndLogsExactlyOneWarning(): void
     {
-        $reader = new FakeSearchIndexReader(
-            failure: new SearchEngineUnavailableException('The search engine did not answer.'),
-        );
+        $failure = new SearchEngineUnavailableException('The search engine did not answer.');
+        $reader = new FakeSearchIndexReader(failure: $failure);
         $logSpy = new TestHandler();
 
         $result = $this->fallback($reader, new Logger('test', [$logSpy]), 'http://meilisearch.test')
@@ -143,7 +142,9 @@ final class EntrySearchWithFallbackTest extends DbTestCase
 
         self::assertSame([], $result->matchedWords);
         self::assertTrue($logSpy->hasWarningRecords());
-        self::assertCount(1, $logSpy->getRecords());
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame($failure, $records[0]->context['exception']);
     }
 
     public function testAnUnreadSearchStillRanksThroughTheConfiguredEngine(): void
