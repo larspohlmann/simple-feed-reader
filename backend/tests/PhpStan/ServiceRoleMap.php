@@ -165,7 +165,7 @@ final readonly class ServiceRoleMap
     public function interfaceFolder(string $interface): string
     {
         $namespace = ServiceRoleNames::namespaceOf($interface);
-        $base = ServiceRoleNames::withoutSuffix(ServiceRoleNames::shortNameOf($interface), 'Interface');
+        $base = ServiceRoleNames::interfaceBaseOf($interface);
         if (ServiceRoleNames::shortNameOf($namespace) === $base) {
             return $namespace;
         }
@@ -174,13 +174,6 @@ final readonly class ServiceRoleMap
         }
 
         return $namespace . '\\' . $base;
-    }
-
-    public function interfaceHome(string $interface): string
-    {
-        $base = ServiceRoleNames::withoutSuffix(ServiceRoleNames::shortNameOf($interface), 'Interface');
-
-        return $this->interfaceFolder($interface) . '\\' . $base . 'Interface';
     }
 
     public function folderInterfaceOf(string $namespace): ?string

@@ -44,7 +44,8 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
     /** @return list<ServiceRoleViolation> */
     private static function interfaceViolations(ServiceRoleMap $map, ServiceRoleClass $interface): array
     {
-        $home = $map->interfaceHome($interface->name());
+        $folder = $map->interfaceFolder($interface->name());
+        $home = $folder . '\\' . ServiceRoleNames::interfaceBaseOf($interface->name()) . 'Interface';
         $violations = [];
         if (!str_ends_with($interface->shortName(), 'Interface')) {
             $violations[] = new ServiceRoleViolation(
@@ -54,7 +55,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
                 $home,
             );
         }
-        if ($map->interfaceFolder($interface->name()) !== $interface->namespace()) {
+        if ($folder !== $interface->namespace()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::InterfaceFolder,
                 $interface,
@@ -73,7 +74,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
         if (str_ends_with($interface->shortName(), $suffix)) {
             return [];
         }
-        $base = ServiceRoleNames::withoutSuffix($interface->shortName(), 'Interface');
+        $base = ServiceRoleNames::interfaceBaseOf($interface->name());
 
         return [new ServiceRoleViolation(
             ServiceRoleCheck::InterfaceName,

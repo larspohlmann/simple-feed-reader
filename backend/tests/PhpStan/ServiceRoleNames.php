@@ -108,6 +108,11 @@ final class ServiceRoleNames
         return false === $position ? $namespace : implode('\\', \array_slice($segments, 0, $position + 1));
     }
 
+    public static function interfaceBaseOf(string $interface): string
+    {
+        return self::withoutSuffix(self::shortNameOf($interface), 'Interface');
+    }
+
     public static function withoutSuffix(string $name, string $suffix): string
     {
         return str_ends_with($name, $suffix) ? substr($name, 0, -\strlen($suffix)) : $name;
