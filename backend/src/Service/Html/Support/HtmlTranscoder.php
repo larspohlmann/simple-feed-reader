@@ -7,10 +7,8 @@ namespace App\Service\Html\Support;
 use Dom\HTMLDocument;
 
 /**
- * Re-encodes a page whose charset only its HTTP Content-Type declared as
- * self-describing UTF-8, once, at the fetch boundary (#904). The HTML5 parser
- * sees only the bytes, so it cannot honour the header — and it trusts a stale
- * <meta charset> over UTF-8 bytes, so the declaration is rewritten as well.
+ * Re-encodes, at the fetch boundary, a page whose charset only its HTTP Content-Type declared. The HTML5 parser sees
+ * only the bytes and trusts a stale <meta charset> over them, so the declaration is rewritten to UTF-8 as well.
  */
 final class HtmlTranscoder
 {

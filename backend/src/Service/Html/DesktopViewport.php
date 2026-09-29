@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Html;
 
 /**
- * Stands in for the viewport a <source media> query is evaluated against. The
- * reader shows one rendition in a desktop column, so it reads like a desktop
- * window: a source scoped to narrower viewports is a mobile art-direction crop
- * and no candidate (zeit lists those first, entry 497686), and one scoped to
- * wider viewports is a crop for a screen the reader is not.
- *
- * Only `min-width` and `max-width` in px are read. A query counts as the
- * conjunction of its conditions, and a condition the reader cannot evaluate
- * admits the source.
+ * Evaluates a <source media> query as a desktop window would: the reader shows one rendition in a desktop column.
+ * Only px `min-width` and `max-width` are read, as a conjunction, and a condition it cannot read admits the source.
  */
 final readonly class DesktopViewport
 {
