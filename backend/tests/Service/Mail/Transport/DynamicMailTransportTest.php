@@ -9,6 +9,7 @@ use App\Entity\MailServerSettings;
 use App\Entity\SealedSecret;
 use App\Enum\MailEncryption;
 use App\Enum\ProxyType;
+use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
@@ -106,7 +107,7 @@ final class DynamicMailTransportTest extends KernelTestCase
         self::getContainer()->get(DynamicMailTransport::class)->activeTransport();
     }
 
-    public function testAnUnreadableStoredPasswordCarriesNoErrorCode(): void
+    public function testAnUnreadableStoredPasswordCarriesNoErrorCodeAndItsCause(): void
     {
         $row = new MailServerSettings();
         $row->apply(
@@ -122,6 +123,7 @@ final class DynamicMailTransportTest extends KernelTestCase
             self::fail(TransportException::class . ' was not thrown.');
         } catch (TransportException $exception) {
             self::assertSame(0, $exception->getCode());
+            self::assertInstanceOf(SecretUnreadableException::class, $exception->getPrevious());
         }
     }
 
