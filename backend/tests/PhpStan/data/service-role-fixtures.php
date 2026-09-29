@@ -812,3 +812,32 @@ namespace App\Service\Probe {
         }
     }
 }
+
+namespace App\Doctrine\Fixtures {
+    use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
+    use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
+
+    #[AsDoctrineListener(event: 'onFlush')]
+    final readonly class FlushWatcher
+    {
+        public function onFlush(): void
+        {
+        }
+    }
+
+    #[AsEntityListener(event: 'postUpdate', method: 'postUpdate', entity: 'App\Entity\Feed')]
+    final readonly class FeedTouch
+    {
+        public function postUpdate(): void
+        {
+        }
+    }
+
+    #[AsDoctrineListener(event: 'onFlush')]
+    final readonly class FlushCountListener
+    {
+        public function onFlush(): void
+        {
+        }
+    }
+}

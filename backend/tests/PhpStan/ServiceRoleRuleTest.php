@@ -344,6 +344,8 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 807,
             ],
+            [self::doctrineListener('FlushWatcher'), 820],
+            [self::doctrineListener('FeedTouch'), 828],
         ]);
     }
 
@@ -387,18 +389,21 @@ final class ServiceRoleRuleTest extends RuleTestCase
 
     private static function listenerMessage(): string
     {
-        return self::message(
-            'listenerName',
-            self::LISTENER,
-            'is an event listener, so its name ends in Listener',
-            self::LISTENER . 'Listener',
-        );
+        return self::listener(self::LISTENER);
     }
 
     private static function securityListener(string $class): string
     {
-        $name = 'App\Security\Fixtures\\' . $class;
+        return self::listener('App\Security\Fixtures\\' . $class);
+    }
 
+    private static function doctrineListener(string $class): string
+    {
+        return self::listener('App\Doctrine\Fixtures\\' . $class);
+    }
+
+    private static function listener(string $name): string
+    {
         return self::message(
             'listenerName',
             $name,

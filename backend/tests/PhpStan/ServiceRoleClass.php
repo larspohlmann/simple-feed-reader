@@ -16,6 +16,12 @@ final readonly class ServiceRoleClass
 
     private const string LISTENER_ATTRIBUTE = 'Symfony\\Component\\EventDispatcher\\Attribute\\AsEventListener';
 
+    private const array CLASS_LISTENER_ATTRIBUTES = [
+        self::LISTENER_ATTRIBUTE,
+        'Doctrine\\Bundle\\DoctrineBundle\\Attribute\\AsDoctrineListener',
+        'Doctrine\\Bundle\\DoctrineBundle\\Attribute\\AsEntityListener',
+    ];
+
     private const string SUBSCRIBER_INTERFACE = 'Symfony\\Component\\EventDispatcher\\EventSubscriberInterface';
 
     private const string DEPENDENCY_INJECTION_ATTRIBUTES = 'Symfony\\Component\\DependencyInjection\\Attribute\\';
@@ -29,26 +35,26 @@ final readonly class ServiceRoleClass
     ) {
     }
 
-    /** In App\EventListener, or declared a listener by attribute on the class or a method, or a subscriber. */
+    /** In App\EventListener, or declared a Symfony or Doctrine listener by attribute, or a subscriber. */
     public static function isEventListener(ClassReflection $reflection): bool
     {
-        if (
-            ServiceRoleNames::isListener($reflection->getName())
+        return ServiceRoleNames::isListener($reflection->getName())
             || $reflection->implementsInterface(self::SUBSCRIBER_INTERFACE)
-        ) {
-            return true;
-        }
-        $native = $reflection->getNativeReflection();
-        if ([] !== $native->getAttributes(self::LISTENER_ATTRIBUTE)) {
-            return true;
-        }
-        foreach ($native->getMethods() as $method) {
-            if ([] !== $method->getAttributes(self::LISTENER_ATTRIBUTE)) {
-                return true;
-            }
-        }
+            || self::declaresListenerAttribute($reflection);
+    }
 
-        return false;
+    private static function declaresListenerAttribute(ClassReflection $reflection): bool
+    {
+        $native = $reflection->getNativeReflection();
+        $onClass = array_any(
+            self::CLASS_LISTENER_ATTRIBUTES,
+            static fn (string $attribute): bool => [] !== $native->getAttributes($attribute),
+        );
+
+        return $onClass || array_any(
+            $native->getMethods(),
+            static fn (\ReflectionMethod $method): bool => [] !== $method->getAttributes(self::LISTENER_ATTRIBUTE),
+        );
     }
 
     public function name(): string
