@@ -9,19 +9,8 @@ use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 
 /**
- * Stands in for Google at the network boundary, so the flow tests exercise
- * every one of our own moving parts — state, PKCE, login code, linking, status
- * gate, JWT — without a network.
- *
- * The real providers' own code is covered separately: AbstractOidcProviderTest
- * drives the token exchange and every ID-token check through MockHttpClient,
- * and the two provider tests pin their authorization URLs. What is NOT covered
- * anywhere, by design, is the providers' actual behaviour — that is the
- * boundary the design spec draws.
- *
- * Not `readonly`: the recorders below are the only way a test can see the
- * state, nonce and challenge the controller minted, since those values leave
- * the server only inside a URL we hand to the provider.
+ * Stands in for Google at the network boundary so the flow tests run every part of ours without a network. Not
+ * readonly: the recorders are the only way a test sees the state, nonce and challenge the controller minted.
  */
 final class FakeOAuthProvider implements OAuthProviderInterface
 {

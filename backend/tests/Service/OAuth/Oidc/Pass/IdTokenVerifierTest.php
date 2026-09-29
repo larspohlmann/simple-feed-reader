@@ -13,12 +13,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * The deciding half of reading an ID token.
- *
- * These are unit tests for the verifier on its own. AbstractOidcProviderTest
- * covers the same rejections through the real entry point — deliberately, not
- * redundantly: these pin each rule and its message, that one pins that the
- * rules are still reached from a live exchange.
+ * Each rule and its message; AbstractOidcProviderTest proves the same rules are reached from a live exchange.
  */
 final class IdTokenVerifierTest extends TestCase
 {
@@ -51,10 +46,7 @@ final class IdTokenVerifierTest extends TestCase
 
     public function testAnEmptyExpectedNonceIsRefusedBeforeAnyComparison(): void
     {
-        // hash_equals('', '') is true, so an empty expectation would accept a
-        // token carrying an empty nonce — defeating the one check that ties the
-        // token to the browser that started the flow. Refused outright, so the
-        // comparison is never asked to defend a value that cannot defend itself.
+        // hash_equals('', '') is true, so an empty expectation is refused outright.
         $this->assertRejectedWith(
             'no nonce to check the id_token against',
             $this->token($this->claims(['nonce' => ''])),

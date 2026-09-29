@@ -11,12 +11,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The decoding half of reading an ID token, separated from the deciding half.
- *
- * Everything here answers "what shape did the provider send", never "do we
- * accept it" — the accessors return null for a claim of the wrong type rather
- * than throwing, so {@see IdTokenVerifier} can state each rejection with the
- * message that belongs to that claim.
+ * The shape reader: accessors return null for a wrong-typed claim, so {@see IdTokenVerifier} words each rejection.
  */
 final class IdTokenClaimsModelTest extends TestCase
 {
@@ -29,11 +24,7 @@ final class IdTokenClaimsModelTest extends TestCase
 
     public function testAPayloadIsDecodedAsBase64UrlNotPlainBase64(): void
     {
-        // `-` and `_` stand in for `+` and `/`, and a JWT always uses the
-        // URL-safe alphabet. This value is chosen because it encodes to both of
-        // them, so a decoder using the plain alphabet cannot pass by luck —
-        // asserted below rather than assumed, since which characters come out
-        // depends on where the value lands in the payload.
+        // `>>>???` encodes to both `-` and `_` (asserted below), so a plain-alphabet decoder cannot pass by luck.
         $value = '>>>???';
         $token = $this->token(['sub' => $value]);
         self::assertStringContainsString('-', $token->jwt);
@@ -105,13 +96,7 @@ final class IdTokenClaimsModelTest extends TestCase
         );
     }
 
-    /**
-     * Asserts the reason reached the LOG and not the caller.
-     *
-     * $logDetail is the internal description; the user-facing message is the
-     * same sentence for every OAuth failure on purpose, so asserting on
-     * getMessage() here would both fail and test the wrong thing.
-     */
+    /** Asserts the reason reached $logDetail: the caller's message is one sentence for every OAuth failure. */
     private function assertRejectedWith(string $logDetail, IdTokenModel $token): void
     {
         try {

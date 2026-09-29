@@ -5,41 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 /**
- * A throwaway EC P-256 keypair for the Apple client-secret tests, generated at
- * run time and never written to disk.
- *
- * ## Why this is not a fixture file
- *
- * It used to be `tests/Fixtures/oauth/apple-test-key.p8` — a real, if worthless,
- * EC private key committed to a public repository. Nothing was exposed by it:
- * it signs assertions for a Team ID and Key ID that do not exist, so the worst
- * an attacker can do with it is fail to authenticate to Apple.
- *
- * It was removed anyway, for two reasons that have nothing to do with that key:
- *
- * 1. **Secret scanners cannot tell.** GitHub push protection, trufflehog and
- *    every CI security step match on the PEM armour, not on whether the key is
- *    live. A committed `BEGIN PRIVATE KEY` is a permanent finding somebody has
- *    to trIage and then suppress — and a suppression is a thing that later
- *    hides a real one.
- * 2. **This is a showcase repository, so the pattern gets copied.** "The tests
- *    read the signing key from a file in the repo" is a fine shape right up
- *    until somebody follows it with a key that matters. Generating the key
- *    means there is no file to helpfully replace.
- *
- * ## Why generated rather than gitignored
- *
- * A gitignored `var/` file would also keep it out of the repo, but it adds a
- * path that must exist before the suite runs, a cleanup story, and a way for a
- * stale key to survive across runs. The keypair costs about a millisecond and
- * is memoised for the process, so generating it is cheaper than managing it.
- *
- * ## What this does not change
- *
- * Every test that used the fixture verified a signature it had just produced,
- * against the matching public half — none of them pinned key material or a
- * fixed signature. So the values being different on every run is invisible to
- * them, which is exactly why this swap was safe to make.
+ * A throwaway EC P-256 keypair for the Apple client-secret tests, generated per process and never written to disk:
+ * a committed PEM is a permanent secret-scanner finding, and a pattern others copy with a key that matters.
  */
 final class AppleTestKey
 {
