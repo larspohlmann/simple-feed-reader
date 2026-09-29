@@ -19,10 +19,6 @@ final class EntrySanitizerTest extends TestCase
 
     public function testStripsScriptsAndEventHandlers(): void
     {
-        // @lang TEXT: this markup is deliberately hostile and malformed — it is
-        // what the sanitizer has to strip — so the injected-HTML complaints
-        // about the missing `alt`, the unresolvable `src` and the obsolete
-        // handler attribute are all pointing at the fixture's whole purpose.
         $clean = (string) $this->sanitizer->sanitize(
             /** @lang TEXT */
             '<p onclick="evil()">Hi</p><script>alert(1)</script><img src="x" onerror="evil()">',
@@ -88,8 +84,6 @@ final class EntrySanitizerTest extends TestCase
 
     public function testStripsDangerousEmbeddedContent(): void
     {
-        // @lang TEXT: `evil.swf` must stay an unresolvable path — stripping the
-        // elements that reference it is what the test asserts.
         $dirty = /** @lang TEXT */ '<iframe src="https://evil.example.com/"></iframe>'
             . '<object data="evil.swf"></object>'
             . '<embed src="evil.swf">'
@@ -107,8 +101,6 @@ final class EntrySanitizerTest extends TestCase
 
     public function testStripsDataUriImages(): void
     {
-        // @lang TEXT: the `alt`-less data-URI image is the input under test, so
-        // it stays exactly as written.
         $clean = (string) $this->sanitizer->sanitize(
             /** @lang TEXT */
             '<img src="data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==">',
@@ -120,7 +112,7 @@ final class EntrySanitizerTest extends TestCase
     /**
      * Both bodies of article HTML cross this barrier — the feed's on ingest and
      * the extracted one on every reader request — so trimming the blank tail
-     * here is what keeps it out of every client's article (#296).
+     * here is what keeps it out of every client's article.
      */
     public function testTrimsTheBlankTailAFeedLeftBehind(): void
     {

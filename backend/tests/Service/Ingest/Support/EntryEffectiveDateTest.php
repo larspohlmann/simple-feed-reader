@@ -64,16 +64,8 @@ final class EntryEffectiveDateTest extends TestCase
     }
 
     /**
-     * The clamp guard is `$publishedAt > $context->fetchedAt`: strictly later,
-     * not later-or-equal. An article stamped at exactly the fetch instant is
-     * not "later than" it, so the guard must not fire — the resolution has to
-     * fall through to the first-fetch rule and hand back the caller's own
-     * $publishedAt object, not a substitute built from $context->fetchedAt.
-     *
-     * A formatted-string assertion cannot tell the two apart: both objects
-     * carry the same instant, so they format identically whether the guard
-     * fired or not. Only object identity exposes which branch ran, so this
-     * test asserts assertSame() on the object itself.
+     * The clamp is strictly later (`>`): a date equal to the fetch instant falls through to the first-fetch rule and
+     * returns the caller's own object. Both carry the same instant, so only assertSame() tells the branches apart.
      */
     public function testAPublishedDateEqualToTheFetchInstantOnAFirstFetchKeepsTheCallersOwnObject(): void
     {
