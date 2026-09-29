@@ -49,30 +49,31 @@ final readonly class NormalizedLoginRateLimiter implements PeekableRequestRateLi
 
     public function consume(Request $request): RateLimit
     {
-        return $this->inner->consume($this->normalize($request));
+        $this->normalizeLastUsername($request);
+
+        return $this->inner->consume($request);
     }
 
     public function peek(Request $request): RateLimit
     {
-        return $this->inner->peek($this->normalize($request));
+        $this->normalizeLastUsername($request);
+
+        return $this->inner->peek($request);
     }
 
     public function reset(Request $request): void
     {
-        $this->inner->reset($this->normalize($request));
+        $this->normalizeLastUsername($request);
+        $this->inner->reset($request);
     }
 
-    private function normalize(Request $request): Request
+    private function normalizeLastUsername(Request $request): void
     {
         $identifier = $request->attributes->get(SecurityRequestAttributes::LAST_USERNAME);
-
-        if (\is_string($identifier)) {
-            $request->attributes->set(
-                SecurityRequestAttributes::LAST_USERNAME,
-                User::normalizeEmail($identifier),
-            );
+        if (!\is_string($identifier)) {
+            return;
         }
 
-        return $request;
+        $request->attributes->set(SecurityRequestAttributes::LAST_USERNAME, User::normalizeEmail($identifier));
     }
 }
