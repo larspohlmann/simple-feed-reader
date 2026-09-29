@@ -9,21 +9,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Promotes a content photo out of a <button> wrapper. Some sites (bild.de #955)
- * wrap each article image in a lightbox-trigger button; readability drops every
- * <button> with its whole subtree, so the photo vanishes and its sibling
- * <figcaption> is left orphaned. Unwrapping the button first keeps the photo in
- * place.
- *
- * Only a real content photo is rescued, never a genuine image-button — a
- * control (play, share, menu) whose face is an icon. The two are told apart by
- * size: an icon and a tracking beacon are small, an article photo is not. So a
- * button is unwrapped only for an image whose declared dimensions clear the
- * icon ceiling; anything smaller, undimensioned, or without a real source is
- * left for readability to discard as chrome.
- *
- * Runs after LazyImageSources, which has already resolved every lazy `src` and
- * removed images with no usable source, so a surviving button image is loadable.
+ * Unwraps a <button> around a content photo, which readability would drop with the button. Only an image with an
+ * absolute source and both declared edges above the icon ceiling counts; an icon control stays for readability to
+ * discard. It relies on LazyImageSources running first, so the source it checks is the resolved one.
  */
 final readonly class ImageButtonUnwrapper implements PageRepairInterface
 {

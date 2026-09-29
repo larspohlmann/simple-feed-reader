@@ -9,12 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Promotes the real photo lazy-loading sites hide inside <noscript> (heise
- * ships it there, next to a `data:` placeholder <img>). The HTML5 parser keeps
- * <noscript> content as ordinary DOM with scripting disabled, but the
- * sanitizer drops the whole tag with its content, so the image never reaches
- * the client unless it is promoted out first (#894). A <noscript> with no
- * image is a no-JS text fallback and is left alone.
+ * Promotes the image a lazy-loading page hides in <noscript>, which the sanitizer would drop with the tag, and removes
+ * the placeholder <img> before it. A <noscript> without an image is a no-JS text fallback and stays.
  */
 final readonly class NoscriptImageUnwrapper implements PageRepairInterface
 {
@@ -66,7 +62,6 @@ final readonly class NoscriptImageUnwrapper implements PageRepairInterface
                 ->isSameAsset(ImageIdentityModel::fromUrl($noscriptImageSource));
     }
 
-    /** An <img>, or a wrapper around exactly one and no text of its own. */
     private function isSingleImageShape(Element $element): bool
     {
         if ($element->localName === 'img') {

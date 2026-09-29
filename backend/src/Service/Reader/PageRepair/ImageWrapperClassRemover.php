@@ -9,9 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Readability removes a text-less `…Media…`-classed <div>, taking its picture
- * with it (#789). A one-image text-less wrapper carries no scoring signal
- * worth keeping; a linked image is a card, so it keeps its classes.
+ * Readability removes a text-less `…Media…`-classed <div>, taking its picture with it. A one-image text-less
+ * wrapper carries no scoring signal worth keeping; a linked image is a card, so it keeps its classes.
  */
 final readonly class ImageWrapperClassRemover implements PageRepairInterface
 {
