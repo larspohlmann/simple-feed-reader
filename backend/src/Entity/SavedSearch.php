@@ -34,10 +34,8 @@ final class SavedSearch
     private string $term;
 
     /**
-     * The stable URL slug, "<id>-<slug of term>". Null only in the instant
-     * between persisting the row (which assigns the id) and setting the slug
-     * from it; every stored row has one. Immutable once set — the term never
-     * changes, so the slug never does.
+     * The URL slug "<id>-<slug of term>", immutable once set. Null only between the persist that assigns the id and
+     * setting the slug from it.
      */
     #[ORM\Column(length: 130, nullable: true)]
     private ?string $slug = null;
@@ -54,14 +52,11 @@ final class SavedSearch
     #[ORM\Column(options: ['default' => 0])]
     private int $position = 0;
 
-    /** Whether new matches feed this user's email digest (#636). */
+    /** Whether new matches feed this user's email digest. */
     #[ORM\Column(name: 'include_in_digest', options: ['default' => false])]
     private bool $includeInDigest = false;
 
-    /**
-     * The membership sweep's high-water mark: every entry with an id up to
-     * this one has been checked against this search's terms (#1116).
-     */
+    /** The membership sweep's high-water mark: every entry up to this id has been checked against the terms. */
     #[ORM\Column(name: 'matched_up_to_entry_id', options: ['default' => 0])]
     private int $matchedUpToEntryId = 0;
 

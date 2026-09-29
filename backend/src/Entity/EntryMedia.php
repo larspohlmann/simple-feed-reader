@@ -8,16 +8,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * An entry's feed-declared media, split into the two lists it keeps: visual
- * media to show and enclosures to play or download.
- *
- * Embedded into Entry as one field rather than two of its own columns — the same
- * move EntryImage makes, and for the same reason: PHPMD's field-count ceiling on
- * Entry is a proxy for a real seam, and these two lists are stamped and read
- * together. Each list is a nullable JSON column; an empty list persists as null,
- * the "no media" case the reader treats as first-class, exactly like a null
- * image. The array<->object mapping lives here so Entry keeps only thin
- * accessors and no serialization logic.
+ * An entry's feed-declared media, stamped and read together: visual media to show and enclosures to play or
+ * download. An empty list persists as null, the "no media" case.
  */
 #[ORM\Embeddable]
 final class EntryMedia

@@ -12,10 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Table(name: 'entry_state')]
 final class EntryState
 {
-    // No `nullable: false` on these two join columns: they are part of the
-    // composite identifier, and Doctrine forces identifier join columns to
-    // NOT NULL regardless. Stating it is a no-op the ORM deprecates (and warns
-    // about in dev.log), so only onDelete — which is a real choice — remains.
+    // No `nullable: false` on these identifier join columns: Doctrine forces them NOT NULL and deprecates saying so.
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
@@ -119,11 +116,8 @@ final class EntryState
     }
 
     /**
-     * "viewed" records that the user actively opened and read the entry (#307),
-     * so a repeat open keeps the first open's timestamp. Only opening or the tick
-     * sets it — never a mark-all-read sweep. It sets the viewed flag alone; the
-     * subset invariant (viewed ⇒ hidden) is enforced centrally on flush by
-     * ViewedImpliesHiddenListener (#482), so no caller has to remember the coupling.
+     * Records the first open; a repeat open keeps its timestamp. Only opening or the tick sets it, never a
+     * mark-all-read sweep. ViewedImpliesHiddenListener hides the entry on flush, so no caller has to.
      */
     public function markViewed(\DateTimeImmutable $when): void
     {
@@ -134,12 +128,7 @@ final class EntryState
         $this->viewedAt = $when;
     }
 
-    /**
-     * Un-tick (#482): the user is no longer counted as having read the article,
-     * so it drops out of "Recently read" and returns to the recommender pool. The
-     * read flag stays — being read is sticky, so the entry does not come back to
-     * the unread list.
-     */
+    /** Un-tick: out of "Recently read" and back in the recommender pool, but still read, so not back in unread. */
     public function clearViewed(): void
     {
         $this->isViewed = false;
@@ -152,13 +141,7 @@ final class EntryState
         $this->hiddenAt = $when;
     }
 
-    /**
-     * Marking an entry unread also clears "opened": the two describe the same
-     * act from the user's side (#478), so unread returns the entry to the
-     * recommender's candidate pool and drops it from the "Recently read" list.
-     * A bare read toggle never set "opened" in the first place, so an entry the
-     * user only marked read — never opened — simply has nothing to clear here.
-     */
+    /** Unread also clears "opened": the entry returns to the recommender pool and leaves "Recently read". */
     public function markUnread(): void
     {
         $this->isHidden = false;

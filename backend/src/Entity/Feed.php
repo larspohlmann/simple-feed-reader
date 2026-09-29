@@ -40,10 +40,8 @@ final class Feed
     private ?string $faviconUrl = null;
 
     /**
-     * The image the feed publishes for ITSELF — its logo or banner, from RSS
-     * <channel><image> or Atom <logo>. Not $faviconUrl: that one is the site's
-     * icon, resolved by RefreshRunner from the page rather than read from the
-     * feed document.
+     * The feed's own logo or banner (RSS <channel><image>, Atom <logo>). The site's icon is $faviconUrl, which
+     * MissingFaviconResolver looks up from the homepage.
      */
     #[ORM\Column(length: 2048, nullable: true)]
     private ?string $imageUrl = null;
@@ -51,13 +49,7 @@ final class Feed
     #[ORM\Column(length: 20, enumType: FeedStatus::class)]
     private FeedStatus $status = FeedStatus::Active;
 
-    /**
-     * How this feed's body is turned into entries: SourceFormat::XML (RSS/Atom
-     * via FeedParser) or SourceFormat::SCRAPED (HTML listing via
-     * HtmlItemExtractor). Open string matching FeedCandidateModel::$format — see
-     * App\Enum\SourceFormat for why this is not a backed enum. The default
-     * stays a literal so the ORM attribute and column stay self-describing.
-     */
+    /** How the body becomes entries: a SourceFormat value, an open string by design (SourceFormat says why). */
     #[ORM\Column(length: 20, options: ['default' => 'xml'])]
     private string $sourceFormat = 'xml';
 

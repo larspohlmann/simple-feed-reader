@@ -66,14 +66,8 @@ final class Entry
     private \DateTimeImmutable $createdAt;
 
     /**
-     * The list-sort instant, decided by EntryEffectiveDate at ingest and never
-     * recomputed here. It used to be `publishedAt ?? createdAt`, derived in this
-     * class so it could not drift; the rule now needs the fetch that stored the
-     * entry and the feed's previous fetch, which an entity has no business
-     * knowing. The invariant moved to one policy with its own tests (#384).
-     * Materialized rather than COALESCE'd so idx_entry_effective can serve the
-     * reader's sort. The column default exists only for the migration on SQLite,
-     * which cannot add a NOT NULL column without one.
+     * The list-sort instant, decided at ingest by EntryEffectiveDate from the fetch history and never recomputed here.
+     * Materialized so idx_entry_effective serves the sort; the column default exists only for SQLite's migration.
      */
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['default' => '1970-01-01 00:00:00'])]
     private \DateTimeImmutable $effectiveDate;
