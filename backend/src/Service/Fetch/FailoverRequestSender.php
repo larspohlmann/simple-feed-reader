@@ -16,9 +16,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Sends a guard-validated request over a resolved egress proxy first, falling
- * back to pinned direct families. happy-eyeballs races only at TCP connect, so a
- * post-connect TLS reset (heise) or route-specific error status (taz) needs this.
+ * Sends a guard-validated request over the egress proxy first, then over each pinned address family. Happy eyeballs
+ * races only at TCP connect, so a reset after connect or a route-specific error status needs this.
  */
 final readonly class FailoverRequestSender
 {
@@ -30,13 +29,9 @@ final readonly class FailoverRequestSender
     }
 
     /**
-     * @param array<string, mixed> $options request options; any `resolve` is
-     *                                       overridden per family attempt
+     * @param array<string, mixed> $options any `resolve` is overridden per family attempt
      *
-     * @throws TransportExceptionInterface when the proxied attempt fails with no
-     *                                      direct fallback (terminal, before any
-     *                                      pinned family is tried), or when the
-     *                                      final pinned family's connection fails
+     * @throws TransportExceptionInterface when the proxied attempt fails without fallback, or the last family fails
      */
     public function send(string $method, string $url, GuardedUrlModel $guarded, array $options): ResponseInterface
     {
@@ -53,12 +48,8 @@ final readonly class FailoverRequestSender
     }
 
     /**
-     * An enabled proxy whose stored password cannot be opened is a transport
-     * failure, not a reason to fall through to a direct request: falling
-     * through would leak the real server IP that the proxy exists to hide. The
-     * translation keeps this method's contract, so the callers' existing
-     * transport-error handling reports it instead of a raw RuntimeException
-     * escaping into a 500.
+     * An unreadable proxy password is a transport failure, never a fall-through to a direct request, which would leak
+     * the server IP the proxy hides. Callers already report transport errors, so it cannot escape as a 500.
      *
      * @throws TransportExceptionInterface when the egress cannot be resolved
      */
@@ -111,8 +102,7 @@ final readonly class FailoverRequestSender
     }
 
     /**
-     * @param array<string, mixed> $options request options; any `resolve` is
-     *                                       overridden per family attempt
+     * @param array<string, mixed> $options
      *
      * @throws TransportExceptionInterface when the final family's connection fails
      */

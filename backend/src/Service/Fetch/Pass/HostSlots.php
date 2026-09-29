@@ -7,12 +7,7 @@ namespace App\Service\Fetch\Pass;
 use App\Service\Fetch\Model\FetchAttemptModel;
 use App\Service\Fetch\Support\HostKey;
 
-/**
- * How many requests to each host the sweep currently has in flight, capped so a
- * host concentration cannot become a burst. The engine acquires a slot when a
- * request goes on the wire and releases it when the response retires; a feed
- * that finds its host full waits for a slot rather than earning a 429.
- */
+/** In-flight requests per host, capped so a feed whose host is full waits for a slot instead of earning a 429. */
 final class HostSlots
 {
     /** @var array<string, int> */
