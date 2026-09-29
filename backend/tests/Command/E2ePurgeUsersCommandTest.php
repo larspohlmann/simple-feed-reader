@@ -123,12 +123,7 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
         self::assertStringContainsString('Purged 0 e2e fixture account(s).', $tester->getDisplay());
     }
 
-    /**
-     * A fixture account owns subscriptions, tags and read state. All of them
-     * must leave with it — an orphan row would outlive the account it belongs to
-     * and keep polluting the per-user views the issue is about. The child rows
-     * follow via their FK ON DELETE CASCADE, which this asserts end to end.
-     */
+    /** Subscriptions, tags and read state leave with the account through their FK ON DELETE CASCADE, end to end. */
     public function testChildRowsLeaveWithTheAccount(): void
     {
         $fixture = $this->seedUser('e2e-owner@example.com');

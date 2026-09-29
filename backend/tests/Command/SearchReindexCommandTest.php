@@ -21,13 +21,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
- * SearchReindexCommand is the repair path EntryIndexer's swallowed
- * SearchEngineUnavailableException leans on, and what an operator runs after
- * pointing an existing install at MEILISEARCH_URL for the first time. The
- * writer here is always RecordingSearchIndexWriter — no running Meilisearch
- * — so these tests prove the command's own orchestration: configure-then-clear
- * ordering, id-keyset batching, the reported count, and both non-zero-exit
- * paths (no engine configured; an engine that never answers).
+ * No running Meilisearch: RecordingSearchIndexWriter stands in, so these pin the command's own orchestration
+ * (configure then clear, id-keyset batches, the count, both non-zero exits).
  */
 final class SearchReindexCommandTest extends DbTestCase
 {

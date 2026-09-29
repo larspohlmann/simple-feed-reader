@@ -32,10 +32,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
 
     private function tester(FaviconFetcherInterface $fetcher): CommandTester
     {
-        // The warmer autowires the interfaces, which Symfony auto-aliases to the
-        // single concrete implementation. The test container honours set() on the
-        // concrete service ids, so override those — an interface mock satisfies
-        // the constructor's interface type.
+        // The warmer's interfaces auto-alias to the concrete ids, and the test container replaces those.
         self::getContainer()->set(FaviconFetcher::class, $fetcher);
 
         // Stub resolution too, so the warmer's up-front resolveAll() never

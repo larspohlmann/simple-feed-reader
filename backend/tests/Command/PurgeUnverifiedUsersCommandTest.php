@@ -20,11 +20,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
 
 /**
- * Clock strategy: the ambient clock is left alone. Cases that only care about
- * "old" versus "recent" seed createdAt relative to real now — the boundary is
- * 48 hours away, far outside any plausible test runtime. The one case that
- * pins the exact cutoff constructs the command with its own MockClock, so no
- * other test in the suite is affected.
+ * The ambient clock stays: the 48-hour boundary is far from any test's runtime, and the one case pinning the exact
+ * cutoff builds the command with its own MockClock.
  */
 final class PurgeUnverifiedUsersCommandTest extends DbTestCase
 {
@@ -150,17 +147,8 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     }
 
     /**
-     * OAuth accounts are created in pending_approval and may legitimately sit
-     * there for weeks waiting for an admin — there is no verification mail
-     * whose absence would ever make them "abandoned". If the purge query
-     * widens to cover pending_approval, this goes red.
-     *
-     * Narrower than the pending_approval row of survivingStatuses() above, and
-     * kept separate on purpose: that case would still pass if somebody excluded
-     * only *password* accounts from a widened purge. This one names the OAuth
-     * shape — an identity row, and no password at all — which is the account
-     * whose deletion would be silent and unrecoverable, since the user has no
-     * password reset to fall back on and no mail was ever sent about it.
+     * An OAuth account (an identity, no password) waits in pending_approval legitimately and could never recover from
+     * deletion. Separate from survivingStatuses(), which still passes if a widened purge spares only password accounts.
      */
     public function testItNeverDeletesAnOAuthAccountAwaitingApproval(): void
     {

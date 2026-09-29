@@ -94,10 +94,8 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
     }
 
     /**
-     * The fixture feed points at a reserved host that never resolves, so it is
-     * never fetched — but the row must still exist for the subscription to
-     * reference it, carry a title (the magazine kicker "source"), and be marked
-     * already-fetched so the reader skips its post-onboarding sweep.
+     * The fixture feed is never fetched, but the subscription needs its row: titled (the magazine kicker's source) and
+     * marked fetched, so the reader skips its post-onboarding sweep.
      */
     public function testCreatesTheFixtureFeedItSubscribesTo(): void
     {
@@ -129,13 +127,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         self::assertSame(1, $this->countRows('entry'));
     }
 
-    /**
-     * The fixture entry's publishedAt feeds App\Http\EntryJson's 'publishedAt'
-     * field, the same field a normally-ingested entry always carries. Leaving
-     * it unset would make the fixture diverge from every real entry the
-     * magazine-kicker smokes otherwise render, silently changing what those
-     * smokes are exercising.
-     */
+    /** A real entry always carries publishedAt; without it the fixture would change what the kicker smokes render. */
     public function testSeedsTheEntryWithAPublishedDate(): void
     {
         $this->seedAdmin();
@@ -164,12 +156,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         self::assertSame(1, $this->countRows('entry'));
     }
 
-    /**
-     * An admin that already owns a real subscription still gets the fixture:
-     * "at least one subscription" used to be the whole contract, but the reader
-     * shell mounting is not enough — the #155 clip specs need THIS entry
-     * visible, so the fixture is unconditional and additive.
-     */
+    /** The fixture is additive: the one-line-clip specs need THIS entry visible, not just any subscription. */
     public function testAddsTheFixtureAlongsideAnAdminsExistingSubscription(): void
     {
         $admin = $this->seedAdmin();
@@ -186,14 +173,7 @@ final class E2eSeedAdminSubscriptionCommandTest extends DbTestCase
         self::assertInstanceOf(Feed::class, $this->fixtureFeed());
     }
 
-    /**
-     * A feed can outlive its entry — nothing else in this codebase deletes an
-     * Entry without its Feed today, but the seed command must not assume that
-     * stays true forever. A feed row surviving without its entry reproduces
-     * the exact symptom of no fixture at all (an empty reader with the
-     * subscription still in the sidebar), so a re-run must repair it rather
-     * than trust the feed's mere existence.
-     */
+    /** A feed that survived without its entry looks exactly like no fixture at all, so a re-run recreates the entry. */
     public function testRecreatesTheEntryWhenTheFeedSurvivedWithoutIt(): void
     {
         $this->seedAdmin();
