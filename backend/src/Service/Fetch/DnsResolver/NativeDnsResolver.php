@@ -12,7 +12,7 @@ namespace App\Service\Fetch\DnsResolver;
  * getaddrinfo() would turn every one of them into a live loopback SSRF, since
  * those APIs do apply that parsing and UrlGuard never sees the decoded address.
  */
-final class NativeDnsResolver implements DnsResolverInterface
+final readonly class NativeDnsResolver implements DnsResolverInterface
 {
     public function resolve(string $hostname): array
     {

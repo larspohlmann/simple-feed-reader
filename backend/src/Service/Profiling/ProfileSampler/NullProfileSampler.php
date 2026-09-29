@@ -6,7 +6,7 @@ namespace App\Service\Profiling\ProfileSampler;
 
 use App\Service\Profiling\Model\CollapsedProfileModel;
 
-final class NullProfileSampler implements ProfileSamplerInterface
+final readonly class NullProfileSampler implements ProfileSamplerInterface
 {
     public function isAvailable(): bool
     {

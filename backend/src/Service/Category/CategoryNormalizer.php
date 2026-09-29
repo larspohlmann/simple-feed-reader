@@ -12,7 +12,7 @@ use App\Service\Parser\Model\ParsedCategoryModel;
  * persist: trimmed, de-duplicated on (canonical key, scheme), capped against
  * abusive feeds. Pure — no I/O.
  */
-final class CategoryNormalizer
+final readonly class CategoryNormalizer
 {
     private const int MAX_PER_ENTRY = 30;
     private const int LABEL_MAX = 128;

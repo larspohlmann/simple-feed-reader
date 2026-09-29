@@ -17,18 +17,18 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
  * SECURITY: this is the only barrier between feed-supplied HTML and the SPA,
  * which holds a JWT in localStorage — a stored XSS here is account takeover.
  */
-final class EntrySanitizer
+final readonly class EntrySanitizer
 {
     private const int MAX_INPUT_LENGTH = 150_000;
 
-    private readonly HtmlSanitizerInterface $sanitizer;
+    private HtmlSanitizerInterface $sanitizer;
 
     /**
      * The blank-tail trimmer is optional so the many tests that construct this
      * barrier directly keep working; the container still injects the service.
      */
     public function __construct(
-        private readonly TrailingBlankRemover $blankTail = new TrailingBlankRemover(),
+        private TrailingBlankRemover $blankTail = new TrailingBlankRemover(),
     ) {
         // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse the
         // PHP 8.4 "new without parentheses" chain yet — keep the parens. See #183.

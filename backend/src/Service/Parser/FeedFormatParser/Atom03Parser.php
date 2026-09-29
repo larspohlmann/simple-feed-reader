@@ -9,7 +9,7 @@ namespace App\Service\Parser\FeedFormatParser;
  * Still served by major publishers (e.g. tagesschau's primary feed). It dates
  * entries with <issued>/<modified> and names the feed description <tagline>.
  */
-final class Atom03Parser extends AbstractAtomParser
+final readonly class Atom03Parser extends AbstractAtomParser
 {
     public const string NAMESPACE = 'http://purl.org/atom/ns#';
 

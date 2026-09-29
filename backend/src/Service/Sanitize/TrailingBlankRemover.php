@@ -19,7 +19,7 @@ namespace App\Service\Sanitize;
  * DOM round-trip: re-serialising every article to delete its last empty tag
  * would rewrite markup this class has no business touching.
  */
-final class TrailingBlankRemover
+final readonly class TrailingBlankRemover
 {
     /** What a block may hold and still count as empty. */
     private const string BLANK = '(?:\s|&nbsp;|&#0*160;|&#x0*a0;|\x{00A0}|<br\b[^>]*>)';

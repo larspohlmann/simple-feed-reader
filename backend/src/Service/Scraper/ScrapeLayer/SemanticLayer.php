@@ -15,7 +15,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * more article elements, each treated as one card around its first link.
  */
 #[AsTaggedItem(priority: 20)]
-final class SemanticLayer implements ScrapeLayerInterface
+final readonly class SemanticLayer implements ScrapeLayerInterface
 {
     private const int MIN_ARTICLES = 3;
 

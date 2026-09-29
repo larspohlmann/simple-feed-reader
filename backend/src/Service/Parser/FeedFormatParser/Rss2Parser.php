@@ -19,7 +19,7 @@ use App\Service\Parser\Support\ItemMediaExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
-final class Rss2Parser implements FeedFormatParserInterface
+final readonly class Rss2Parser implements FeedFormatParserInterface
 {
     private const string CONTENT_NS = 'http://purl.org/rss/1.0/modules/content/';
     private const string DC_NS = XmlHelper::DUBLIN_CORE_NAMESPACE;

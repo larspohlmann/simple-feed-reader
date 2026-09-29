@@ -19,7 +19,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * The layer reads the blocks; JsonLdArticles walks what they decode to.
  */
 #[AsTaggedItem(priority: 30)]
-final class JsonLdLayer implements ScrapeLayerInterface
+final readonly class JsonLdLayer implements ScrapeLayerInterface
 {
     public function extract(HTMLDocument $doc, string $baseUrl): array
     {

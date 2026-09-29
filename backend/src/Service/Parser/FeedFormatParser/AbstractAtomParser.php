@@ -24,7 +24,7 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
  * handful of element names is identical between Atom 1.0 and Atom 0.3, so the
  * subclasses declare only those differences and inherit the traversal here.
  */
-abstract class AbstractAtomParser implements FeedFormatParserInterface
+abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
 {
     /** The single XML namespace this dialect uses throughout the document. */
     abstract protected function namespaceUri(): string;
