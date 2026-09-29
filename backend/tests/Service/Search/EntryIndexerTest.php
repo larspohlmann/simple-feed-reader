@@ -14,13 +14,8 @@ use Monolog\Logger;
 use Psr\Log\NullLogger;
 
 /**
- * EntryIndexer turns persisted Entry rows into IndexedEntryModel documents and
- * hands them to a SearchIndexWriterInterface. Entries are persisted through the real
- * EntityManager (not built by hand) because the one thing worth pinning here
- * — the document really does carry the id Doctrine assigned — only means
- * anything against a real id, and RefreshRunnerTest /
- * FirstFetchRecorderTest cover that this class is actually called after the
- * caller's flush, not before.
+ * Persists entries through the real EntityManager, because the one thing worth pinning is that each document carries
+ * the id Doctrine assigned.
  */
 final class EntryIndexerTest extends DbTestCase
 {
@@ -60,11 +55,7 @@ final class EntryIndexerTest extends DbTestCase
         self::assertSame(['configure', 'upsert'], $writer->calls);
     }
 
-    /**
-     * RefreshRunner calls index() once per feed and a sweep processes up to
-     * 50 feeds — without this, an idempotent but pointless settings PATCH
-     * would go out on every one of them.
-     */
+    /** FeedOutcomePersister calls index() once per feed, up to 50 per sweep: the settings PATCH must go out once. */
     public function testConfigureIsSentOnlyOnceAcrossTwoIndexCalls(): void
     {
         $writer = new RecordingSearchIndexWriter();
@@ -77,12 +68,7 @@ final class EntryIndexerTest extends DbTestCase
         self::assertSame(['configure', 'upsert', 'upsert'], $writer->calls);
     }
 
-    /**
-     * A configure() failure must not be remembered as success: the next
-     * index() call has to retry, which is what lets a search engine that was
-     * down at ingest time become usable once it comes back without anyone
-     * running a provisioning command.
-     */
+    /** A failed configure() is not remembered: the next index() retries, so an engine back from an outage recovers. */
     public function testAFailedConfigureIsRetriedOnTheNextIndexCall(): void
     {
         $writer = new RecordingSearchIndexWriter(new SearchEngineUnavailableException('down'));
@@ -127,13 +113,8 @@ final class EntryIndexerTest extends DbTestCase
     }
 
     /**
-     * PlainText::from() alone has no concept of block-level boundaries, so
-     * "<p>Deployed to the cloud</p><p>Computing costs fell</p>" would index as
-     * the single unsearchable token "cloudComputing" — silently breaking
-     * search for the word that opens the second paragraph of nearly every
-     * multi-paragraph entry. EntryIndexer must go through
-     * PlainText::fromHtmlBlocks() instead, so the words on either side of the
-     * boundary stay separate and findable.
+     * PlainText::from() would fuse "cloud</p><p>Computing" into one token; fromHtmlBlocks() keeps the words at a
+     * paragraph boundary apart.
      */
     public function testContentAtAParagraphBoundaryStaysTwoSeparateWords(): void
     {

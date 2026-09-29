@@ -15,17 +15,6 @@ use App\Service\Search\EntrySearch\LikeEntrySearch;
 use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 
-/**
- * The seam an Elasticsearch implementation would replace. This test covers the
- * BEHAVIOUR only, so it builds the implementation directly.
- *
- * Nothing here guards the DI binding, and nothing can: Symfony autowires
- * EntrySearchInterface because exactly one service implements it, so removing
- * the explicit alias in services.yaml changes nothing until a second
- * implementation exists. The alias is kept because it states the binding and
- * makes that second implementation a one-line change rather than an ambiguity
- * error.
- */
 final class LikeEntrySearchTest extends DbTestCase
 {
     public function testFindsASubscribedEntryByTerm(): void
@@ -58,10 +47,7 @@ final class LikeEntrySearchTest extends DbTestCase
         self::assertCount(1, $result->rows);
         self::assertSame('Angular 20 ships', $result->rows[0]->entry->getTitle());
         self::assertSame([], $result->matchedWords);
-        // The database path's matchCount is the row count — nothing removes
-        // rows after the query runs, unlike the indexed search's hydration
-        // step — so EntrySearchResultModel must default it from count($rows)
-        // rather than the caller having to say so.
+        // Nothing drops rows after the LIKE query, so matchCount defaults to count($rows).
         self::assertSame(1, $result->matchCount);
     }
 

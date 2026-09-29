@@ -8,10 +8,8 @@ use App\Service\Search\Index\Model\IndexedEntryModel;
 use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 
 /**
- * Records every call instead of talking to an engine, so EntryIndexerTest can
- * assert both WHAT was sent and, via $calls, the ORDER methods ran in
- * (index() must configure() before it upsert()s). An optional $failure lets a
- * test drive the "engine unavailable" path without a running Meilisearch.
+ * Records what was sent and, in $calls, the order (index() must configure() before it upsert()s); an optional
+ * $failure drives the engine-unavailable path.
  */
 final class RecordingSearchIndexWriter implements SearchIndexWriterInterface
 {

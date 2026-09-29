@@ -9,13 +9,8 @@ use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
- * Stands in for the engine gateway. By default find() answers with the
- * matches it was built with, so IndexedEntrySearchTest can assert on exactly
- * what it was asked without a running Meilisearch. An optional $failure makes
- * it throw instead, driving EntrySearchWithFallbackTest's broken-engine
- * paths — the same shape RecordingSearchIndexWriter already uses for its own
- * failure case, kept identical because the read and write sides of the
- * gateway are deliberately symmetric.
+ * Answers find() with the matches it was built with, or throws $failure when given one, the same shape as
+ * RecordingSearchIndexWriter.
  */
 final class FakeSearchIndexReader implements SearchIndexReaderInterface
 {

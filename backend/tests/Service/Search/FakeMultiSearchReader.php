@@ -9,11 +9,8 @@ use App\Service\Search\Index\Model\IndexSearchModel;
 use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 
 /**
- * Drives the combined saved-search engine path without a running Meilisearch.
- * Each findMany() call answers the next queued round (a list of IndexMatchesModel,
- * one per search in request order); it records every round it received so a
- * test can assert on the searches and the paging it drove. find() is unused
- * here — the combined path only ever batches.
+ * Answers each findMany() with the next queued round and records every round, so a test can assert on the searches
+ * and paging the combined saved-search path drove. find() is unused: that path only batches.
  */
 final class FakeMultiSearchReader implements SearchIndexReaderInterface
 {

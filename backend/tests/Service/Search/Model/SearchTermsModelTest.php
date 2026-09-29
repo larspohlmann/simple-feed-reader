@@ -71,10 +71,7 @@ final class SearchTermsModelTest extends TestCase
 
     public function testAcceptsExactlyOneHundredMultibyteCharacters(): void
     {
-        // 100 "ü" characters is exactly at the character-count ceiling, but
-        // 200 bytes — well past it. A byte-counting strlen(), or a boundary
-        // widened from > to >=, would both wrongly reject this input; only
-        // mb_strlen() with a strict > gets it right.
+        // 100 "ü" are exactly the character ceiling but 200 bytes: only mb_strlen() with a strict > accepts them.
         $terms = SearchTermsModel::fromInput(str_repeat('ü', 100));
 
         self::assertCount(1, $terms->terms);
@@ -136,11 +133,7 @@ final class SearchTermsModelTest extends TestCase
         }
     }
 
-    // A trailing no-break space (U+00A0) — left behind by a paste or an
-    // autocorrect — must be read exactly like a trailing plain space: the
-    // frontend's own trailing-space check runs on JavaScript's `\s`, which
-    // already treats an NBSP as whitespace, so the server disagreeing would
-    // silently strand a search (#408 follow-up).
+    // A trailing no-break space must read like a plain one, as JavaScript's `\s` in the client already reads it.
     public function testATrailingNoBreakSpaceSwitchesToWholeWordMode(): void
     {
         $terms = SearchTermsModel::fromInput("punk\u{00A0}");

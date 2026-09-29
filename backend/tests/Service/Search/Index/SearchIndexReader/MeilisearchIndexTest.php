@@ -47,12 +47,7 @@ final class MeilisearchIndexTest extends TestCase
         return new IndexSearchModel(SearchTermsModel::fromInput('widgets gizmos'), [1, 2], null, 20);
     }
 
-    /**
-     * A client that answers every request with $response and records the one
-     * request it received in $this->capturedRequest — every test in this file
-     * makes exactly one call through the adapter, so one captured request is
-     * always enough.
-     */
+    /** Answers every request with $response and captures it; each test makes exactly one call. */
     private function clientCapturing(MockResponse $response): MockHttpClient
     {
         return new MockHttpClient(
@@ -152,7 +147,7 @@ final class MeilisearchIndexTest extends TestCase
         $client = $this->clientCapturing(new MockResponse('{"hits":[]}'));
         // Wrapping the query in double quotes is the phrase signal
         // (SearchTermsModel::fromInput); Meilisearch's own phrase syntax then asks
-        // for those words in order and adjacent (#702).
+        // for those words in order and adjacent.
         $this->index($client)->find(
             new IndexSearchModel(SearchTermsModel::fromInput('"widgets gizmos"'), [1, 2], null, 20),
         );
@@ -255,7 +250,7 @@ final class MeilisearchIndexTest extends TestCase
         $decoded = $this->capturedJsonObject();
         self::assertSame(['id'], $decoded['attributesToRetrieve']);
         self::assertSame(['title', 'summary'], $decoded['attributesToHighlight']);
-        // Sentinel tags, not <mark> — see MeilisearchIndex's class docblock for why.
+        // Sentinel tags, not <mark>: see MeilisearchIndex::HIGHLIGHT_START.
         self::assertSame('[[sfr:hl]]', $decoded['highlightPreTag']);
         self::assertSame('[[/sfr:hl]]', $decoded['highlightPostTag']);
     }
@@ -492,9 +487,8 @@ final class MeilisearchIndexTest extends TestCase
         $this->index($client)->upsert([$entry]);
 
         self::assertSame('POST', $this->capturedRequest['method']);
-        // primaryKey=id is mandatory: a document carrying both `id` and
-        // `feedId` defeats Meilisearch's primary-key inference (see
-        // MeilisearchIndex::upsert()'s comment and the probe it links to).
+        // primaryKey=id is mandatory: a document carrying both `id` and `feedId`
+        // defeats Meilisearch's primary-key inference (docs/meilisearch-wire-format.md).
         self::assertSame(
             self::BASE_URL . '/indexes/entries/documents?primaryKey=id',
             $this->capturedRequest['url'],
@@ -571,13 +565,8 @@ final class MeilisearchIndexTest extends TestCase
     }
 
     /**
-     * An install may leave MEILISEARCH_URL empty on purpose — search is
-     * optional. Every ingest-time write must then do nothing at all, rather
-     * than build a relative URL from an empty base, have the HTTP client
-     * refuse it, and turn each of hundreds of maintenance ticks into an
-     * error line (#816). The read path already routes around an unconfigured
-     * engine in EntrySearchWithFallback; these pin the same for writes at the
-     * one place that talks to the engine.
+     * An empty MEILISEARCH_URL is a supported setup: every write must do nothing, not fail on a relative URL on each
+     * maintenance tick.
      */
     public function testConfigureIsANoOpWhenNoEngineIsConfigured(): void
     {

@@ -25,14 +25,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 /**
- * EntrySearchWithFallback is what services.yaml actually hands out for
- * EntrySearchInterface — the piece that makes the engine optional. Both
- * collaborators are real here: LikeEntrySearch's own query behaviour is
- * LikeEntrySearchTest's job and IndexedEntrySearch's is
- * IndexedEntrySearchTest's, so this test only has to prove which of the two
- * answers a given search, and what (if anything) gets logged while deciding.
- * The engine side is driven through FakeSearchIndexReader (built with a
- * $failure to drive the broken-engine paths), never a running Meilisearch.
+ * Proves which implementation answers and what is logged; each one's query behaviour is its own test's job. The
+ * engine side is FakeSearchIndexReader, never a running Meilisearch.
  */
 final class EntrySearchWithFallbackTest extends DbTestCase
 {
@@ -149,11 +143,8 @@ final class EntrySearchWithFallbackTest extends DbTestCase
 
     public function testAnUnreadSearchStillRanksThroughTheConfiguredEngine(): void
     {
-        // Read state lives in the database, not the index, but the ENGINE still
-        // ranks the matches — IndexedEntrySearch drops the read rows after
-        // hydration. So an unread search must not bypass a configured engine
-        // and fall back to the LIKE query, which would lose typo tolerance and
-        // relevance ranking exactly when the reader is refining a real search.
+        // Read state is filtered after hydration while the engine still ranks, so an unread search must not bypass a
+        // configured engine for the LIKE query.
         $reader = new FakeSearchIndexReader(matchedWords: ['engine-word']);
         $logSpy = new TestHandler();
 
