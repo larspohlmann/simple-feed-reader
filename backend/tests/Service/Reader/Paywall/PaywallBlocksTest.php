@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Reader\Paywall\OutsideFurniture;
 use App\Service\Reader\Paywall\PaywallBlocks;
 use PHPUnit\Framework\TestCase;
 
@@ -86,7 +87,7 @@ final class PaywallBlocksTest extends TestCase
         );
         self::assertNotNull($document);
 
-        self::assertFalse(PaywallBlocks::foundOutsideFurnitureIn($document));
+        self::assertFalse($this->blocks()->foundOutsideFurnitureIn($document));
     }
 
     private function hasGate(string $body): bool
@@ -94,6 +95,11 @@ final class PaywallBlocksTest extends TestCase
         $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
         self::assertNotNull($document);
 
-        return PaywallBlocks::foundOutsideFurnitureIn($document);
+        return $this->blocks()->foundOutsideFurnitureIn($document);
+    }
+
+    private function blocks(): PaywallBlocks
+    {
+        return new PaywallBlocks(new OutsideFurniture());
     }
 }

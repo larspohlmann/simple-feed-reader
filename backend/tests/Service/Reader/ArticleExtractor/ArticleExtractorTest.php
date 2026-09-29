@@ -14,6 +14,7 @@ use App\Service\Fetch\IpValidator;
 use App\Service\Fetch\RedirectFollower;
 use App\Service\Fetch\UrlGuard;
 use App\Service\Reader\ArticleExtractor\ArticleExtractor;
+use App\Service\Reader\ArticlePageReader;
 use App\Service\Reader\ArticleReadability;
 use App\Service\Reader\FetchedPageNormalizer;
 use App\Service\Reader\HtmlPageFetcher;
@@ -45,6 +46,10 @@ use App\Service\Reader\Model\EntryHintsModel;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
 use App\Service\Reader\Model\FeedMediaModel;
+use App\Service\Reader\Paywall\MembershipCheckout;
+use App\Service\Reader\Paywall\OutsideFurniture;
+use App\Service\Reader\Paywall\PaywallBlocks;
+use App\Service\Reader\Paywall\PaywallSignals;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\RelatedTeaserGridRemover;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
@@ -102,18 +107,28 @@ final class ArticleExtractorTest extends TestCase
                 'TestAgent/1.0',
                 new SymfonyStatusReasonPhrases(),
             ),
-            new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
+            new ArticlePageReader(
+                new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
+                $this->mediaScanner(),
+                $slideshowScanner ?? new SlideshowScanner([]),
+                new TeaserPlayerScanner($this->urlKind()),
+                self::paywallSignals(),
+            ),
             $this->bodyCleaner(),
             new EntrySanitizer(new TrailingBlankRemover()),
-            $this->mediaScanner(),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
                 new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
             ),
-            $slideshowScanner ?? new SlideshowScanner([]),
-            new TeaserPlayerScanner($this->urlKind()),
             $this->articleReadability(),
         );
+    }
+
+    private static function paywallSignals(): PaywallSignals
+    {
+        $outsideFurniture = new OutsideFurniture();
+
+        return new PaywallSignals(new PaywallBlocks($outsideFurniture), new MembershipCheckout($outsideFurniture));
     }
 
     private function bodyCleaner(): ReaderBodyCleaner
@@ -485,16 +500,19 @@ final class ArticleExtractorTest extends TestCase
                 'TestAgent/1.0',
                 new SymfonyStatusReasonPhrases(),
             ),
-            new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
+            new ArticlePageReader(
+                new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
+                $this->mediaScanner(),
+                new SlideshowScanner([]),
+                new TeaserPlayerScanner($this->urlKind()),
+                self::paywallSignals(),
+            ),
             $this->bodyCleaner(),
             new EntrySanitizer(new TrailingBlankRemover()),
-            $this->mediaScanner(),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
                 new SiblingMediaExtender(new SiblingIdRule(), $landing, $this->urlKind()),
             ),
-            new SlideshowScanner([]),
-            new TeaserPlayerScanner($this->urlKind()),
             $this->articleReadability(),
         );
 

@@ -6,6 +6,9 @@ namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\RawPageModel;
+use App\Service\Reader\Paywall\MembershipCheckout;
+use App\Service\Reader\Paywall\OutsideFurniture;
+use App\Service\Reader\Paywall\PaywallBlocks;
 use App\Service\Reader\Paywall\PaywallSignals;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
@@ -64,12 +67,19 @@ final class PaywallSignalsTest extends TestCase
 
     private function isPreview(string $html): bool
     {
-        return PaywallSignals::isPreview($this->rawPage($html), HtmlDocumentParser::parse($html));
+        return self::paywallSignals()->isPreview($this->rawPage($html), HtmlDocumentParser::parse($html));
     }
 
     private function rawPage(string $html): HTMLDocument
     {
         return RawPageModel::parse($html, 'https://example.test/')->document;
+    }
+
+    private static function paywallSignals(): PaywallSignals
+    {
+        $outsideFurniture = new OutsideFurniture();
+
+        return new PaywallSignals(new PaywallBlocks($outsideFurniture), new MembershipCheckout($outsideFurniture));
     }
 
     private function page(string $body, ?string $jsonLd = null): string

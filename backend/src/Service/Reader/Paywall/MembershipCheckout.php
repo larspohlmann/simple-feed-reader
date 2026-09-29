@@ -18,9 +18,13 @@ final readonly class MembershipCheckout
     private const array CHECKOUT_ENDPOINTS = ['memberful.com/checkout'];
     private const string LOWER_HREF = 'translate(@href, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")';
 
-    public static function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    public function __construct(private OutsideFurniture $outsideFurniture)
     {
-        return OutsideFurniture::holdsMatchFor($document, self::checkoutLinkQuery());
+    }
+
+    public function foundOutsideFurnitureIn(HTMLDocument $document): bool
+    {
+        return $this->outsideFurniture->holdsMatchFor($document, self::checkoutLinkQuery());
     }
 
     private static function checkoutLinkQuery(): string
@@ -31,9 +35,5 @@ final readonly class MembershipCheckout
         );
 
         return '//*[local-name()="a" and (' . implode(' or ', $endpoints) . ')]';
-    }
-
-    private function __construct()
-    {
     }
 }

@@ -18,7 +18,7 @@ final readonly class OutsideFurniture
 {
     private const array DOCUMENT_ROOTS = ['html', 'body'];
 
-    public static function holdsMatchFor(HTMLDocument $document, string $xpath): bool
+    public function holdsMatchFor(HTMLDocument $document, string $xpath): bool
     {
         foreach ((new XPath($document))->query($xpath) as $element) {
             if ($element instanceof Element && !self::isDocumentRoot($element) && !PageFurniture::holds($element)) {
@@ -32,9 +32,5 @@ final readonly class OutsideFurniture
     private static function isDocumentRoot(Element $element): bool
     {
         return \in_array($element->localName, self::DOCUMENT_ROOTS, true);
-    }
-
-    private function __construct()
-    {
     }
 }
