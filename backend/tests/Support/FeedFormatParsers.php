@@ -15,6 +15,10 @@ use App\Service\Parser\ItemMediaExtractor;
 /** The format parsers over the real image and media policies, wired as the container wires them. */
 final class FeedFormatParsers
 {
+    private function __construct()
+    {
+    }
+
     public static function rss2(): Rss2Parser
     {
         return new Rss2Parser(self::imageSelector(), new ItemMediaExtractor());
