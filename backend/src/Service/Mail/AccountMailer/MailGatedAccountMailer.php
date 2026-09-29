@@ -11,11 +11,8 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
 /**
- * On a mailless instance (issue #230) every account mail is a no-op that leaves
- * a log line, instead of a send that silently succeeds into null://null. The
- * log line is what makes "no approval mail went out" visible to the operator
- * rather than a mystery. Decorates AccountMailer so no send site has to know
- * whether mail is on.
+ * On a mailless instance every account mail is a logged no-op, not a silent send into null://null: the log line is
+ * how an operator sees that no approval mail went out.
  */
 #[AsDecorator(decorates: AccountMailer::class)]
 final readonly class MailGatedAccountMailer implements AccountMailerInterface

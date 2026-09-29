@@ -15,10 +15,8 @@ use Symfony\Component\Mailer\SentMessage;
 use Symfony\Component\Mailer\Transport\AbstractTransport;
 
 /**
- * Sends one message over SMTP through the configured egress proxy, using ext-curl
- * (which tunnels SMTP over SOCKS5/HTTP natively). Extends the public
- * AbstractTransport, so it keeps Mailer's event/logging integration and depends
- * on no @internal Mailer class -- a Mailer upgrade cannot silently break it.
+ * Sends one message over SMTP through the egress proxy with ext-curl, which tunnels SMTP over SOCKS5/HTTP natively.
+ * Extends the public AbstractTransport and no @internal Mailer class, so a Mailer upgrade cannot silently break it.
  */
 final class CurlSmtpTransport extends AbstractTransport
 {
