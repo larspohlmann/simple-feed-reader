@@ -9,25 +9,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Http\AccessMap;
 
 /**
- * Every passkey enrolment path sits under `^/api/auth/`, which access_control
- * already makes PUBLIC_ACCESS, and the first matching rule wins (#624). Two
- * rules added above that line are meant to close this off for all four
- * enrolment paths — including the `{id}` form of the delete route — before
- * their controllers exist.
- *
- * This queries the real `security.access_map` service directly instead of
- * making an HTTP request through the kernel. That is deliberate, not a
- * shortcut: `/passkey/register`, `/passkeys` and `/passkeys/{id}` have no
- * controller until Tasks 7 and 8 land, and a path with no matching route 404s
- * before the security layer ever runs — `bin/console debug:event-dispatcher
- * kernel.request` shows `RouterListener` at priority 32 firing before the
- * firewall at priority 8, and the router's `NotFoundHttpException` stops the
- * `kernel.request` event right there. An HTTP-level test of those three paths
- * would therefore see 404 today regardless of whether the access_control fix
- * is even present, proving nothing. Querying `AccessMap::getPatterns()` —
- * exactly what the firewall's own `AccessListener` calls — tests the
- * configuration itself, so it is meaningful for a path whose controller does
- * not exist yet and stays meaningful once it does.
+ * The enrolment paths sit under the public `^/api/auth/`, and the first access_control match wins. This asks the
+ * real `security.access_map`, as AccessListener does, rather than sending requests, so it tests the rules even for
+ * a path whose route would answer first.
  */
 final class PasskeyEnrolmentAccessControlTest extends KernelTestCase
 {
@@ -56,11 +40,8 @@ final class PasskeyEnrolmentAccessControlTest extends KernelTestCase
     }
 
     /**
-     * /passkey/login stays public on purpose — spec §4.2, the login flow is
-     * discoverable-credential only, so the server does not know an account
-     * until the assertion comes back. A rule as broad as
-     * `^/api/auth/passkey/register` matching it too would be exactly the kind
-     * of prefix accident this whole test exists to catch.
+     * /passkey/login stays public: a discoverable login knows no account until the assertion returns. A rule as broad
+     * as `^/api/auth/passkey/register` catching it is the prefix accident this test is for.
      */
     public function testTheLoginPathStaysPublic(): void
     {

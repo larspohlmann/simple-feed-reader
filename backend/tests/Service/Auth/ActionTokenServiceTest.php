@@ -139,10 +139,8 @@ final class ActionTokenServiceTest extends DbTestCase
     }
 
     /**
-     * The purge command removes unverified users, and action_token's foreign key
-     * is ON DELETE CASCADE, so redeeming a link belonging to a purged account
-     * must come back as an ordinary "no such token" rather than exploding on a
-     * dangling reference.
+     * The purge deletes unverified users and action_token cascades, so a purged account's link must read as an
+     * unknown token, not a dangling reference.
      */
     public function testConsumeRejectsATokenWhoseUserHasBeenDeleted(): void
     {
@@ -160,11 +158,8 @@ final class ActionTokenServiceTest extends DbTestCase
     }
 
     /**
-     * Later tasks fetch this service straight out of the test container to mint
-     * a token. Redefining a service in services_test.yaml replaces its autowired
-     * definition instead of amending it, so a missing `autowire: true` there
-     * fails only at fetch time — this keeps that failure from surfacing as a
-     * baffling error inside an unrelated feature test.
+     * Functional tests fetch this service from the test container. Redefining it in services_test.yaml replaces the
+     * autowired definition, so a missing `autowire: true` would surface there as a baffling error.
      */
     public function testTheServiceIsFetchableFromTheTestContainer(): void
     {

@@ -11,15 +11,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 
-/**
- * Note on runtime: the tests here that call solve() brute-force a *real*
- * proof-of-work rather than stubbing one, because a payload the service will
- * accept can only be produced by actually solving. At the configured difficulty
- * that is ~60 ms of hashing per solved payload, so this file — and the
- * registration and password-reset functional tests, which build payloads the
- * same way — run visibly slower than the rest of the suite. That is the PoW
- * doing its job, not a hung test.
- */
+/** The solve() tests brute-force a real proof-of-work (~60 ms each): only a solved payload passes verify(). */
 final class AltchaServiceTest extends TestCase
 {
     private const HMAC_KEY = 'test-hmac-key';
@@ -167,13 +159,8 @@ final class AltchaServiceTest extends TestCase
     }
 
     /**
-     * `number` arrives from the client and is concatenated into a hash input.
-     * A number outside the difficulty window cannot have come from solving a
-     * challenge we issued, so it is refused before it is hashed at all.
-     *
-     * The below-floor cases are the ones that matter: without them an attacker
-     * could mint and solve a trivially cheap challenge, and the difficulty
-     * floor would constrain only honest clients.
+     * A `number` outside the window cannot come from a challenge we issued, so it is refused unhashed. The cases below
+     * the floor matter most: without them the floor binds only honest clients.
      *
      * @return iterable<string, array{int}>
      */

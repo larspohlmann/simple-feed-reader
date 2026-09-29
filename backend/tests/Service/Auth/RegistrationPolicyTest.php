@@ -12,12 +12,7 @@ use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Settings\InstanceSettings;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * Both collaborators are `final readonly`/`final`, including the repository
- * behind InstanceSettings, so PHPUnit cannot double them. We boot the kernel
- * and drive the real InstanceSettings service instead — the same workaround
- * InstanceSettingsTest uses for this exact final-class constraint.
- */
+/** InstanceSettings is final, so this boots the kernel and drives the real service instead of a double. */
 final class RegistrationPolicyTest extends KernelTestCase
 {
     private InstanceSettings $settings;
