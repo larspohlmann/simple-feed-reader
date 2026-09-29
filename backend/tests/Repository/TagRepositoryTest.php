@@ -19,7 +19,7 @@ final class TagRepositoryTest extends DbTestCase
         $owner = $this->userFactory()->create('tag-owner@example.com');
         $tag = $this->tag($owner);
 
-        self::assertSame($tag, $this->repo()->getOneForUser($owner->requireId(), $tag->requireId()));
+        self::assertSame($tag, $this->repository()->getOneForUser($owner->requireId(), $tag->requireId()));
     }
 
     public function testGetOneForUserRefusesAnotherUsersTag(): void
@@ -30,15 +30,15 @@ final class TagRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such tag.');
 
-        $this->repo()->getOneForUser($stranger->requireId(), $tag->requireId());
+        $this->repository()->getOneForUser($stranger->requireId(), $tag->requireId());
     }
 
-    private function repo(): TagRepository
+    private function repository(): TagRepository
     {
-        $repo = $this->entityManager->getRepository(Tag::class);
-        self::assertInstanceOf(TagRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Tag::class);
+        self::assertInstanceOf(TagRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function userFactory(): UserFactory

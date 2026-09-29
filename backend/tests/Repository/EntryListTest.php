@@ -31,7 +31,7 @@ final class EntryListTest extends DbTestCase
 {
     private User $user;
     private Feed $feed;
-    private Subscription $sub;
+    private Subscription $subscription;
 
     protected function setUp(): void
     {
@@ -44,8 +44,12 @@ final class EntryListTest extends DbTestCase
         $this->feed->setTitle('Example');
         $this->entityManager->persist($this->feed);
 
-        $this->sub = new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($this->sub);
+        $this->subscription = new Subscription(
+            $this->user,
+            $this->feed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $this->entityManager->persist($this->subscription);
 
         $this->entityManager->flush();
     }
@@ -53,7 +57,7 @@ final class EntryListTest extends DbTestCase
     private function entry(string $guid, string $published): Entry
     {
         $publishedAt = new \DateTimeImmutable($published);
-        $e = new Entry(
+        $entry = new Entry(
             $this->feed,
             $guid,
             'https://example.com/' . $guid,
@@ -61,11 +65,11 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $publishedAt,
         );
-        $e->setPublishedAt($publishedAt);
-        $this->entityManager->persist($e);
+        $entry->setPublishedAt($publishedAt);
+        $this->entityManager->persist($entry);
         $this->entityManager->flush();
 
-        return $e;
+        return $entry;
     }
 
     /**
@@ -75,7 +79,7 @@ final class EntryListTest extends DbTestCase
      */
     private function entryAt(string $guid, string $createdAt, string $effectiveDate, ?Feed $feed = null): Entry
     {
-        $e = new Entry(
+        $entry = new Entry(
             $feed ?? $this->feed,
             $guid,
             'https://example.com/' . $guid,
@@ -83,18 +87,18 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable($createdAt),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->entityManager->persist($e);
+        $this->entityManager->persist($entry);
         $this->entityManager->flush();
 
-        return $e;
+        return $entry;
     }
 
-    private function repo(): EntryListRepository
+    private function repository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     /**
@@ -102,7 +106,7 @@ final class EntryListTest extends DbTestCase
      * branch (#1099) can be forced through a handful of fixture rows instead
      * of DateOrderedPage::DEFAULT_WINDOW_SIZE.
      */
-    private function repoWithWindow(int $windowSize): EntryListRepository
+    private function repositoryWithWindow(int $windowSize): EntryListRepository
     {
         $container = self::getContainer();
         /** @var ManagerRegistry $registry */
@@ -137,12 +141,12 @@ final class EntryListTest extends DbTestCase
      *
      * @return array{rows: list<EntryListRow>, queries: list<string>}
      */
-    private function recordedList(EntryListRepository $repo, EntryQuery $query): array
+    private function recordedList(EntryListRepository $repository, EntryQuery $query): array
     {
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
-        $rows = $repo->listForUser($query);
+        $rows = $repository->listForUser($query);
 
         return ['rows' => $rows, 'queries' => $recorder->queries()];
     }
@@ -154,11 +158,11 @@ final class EntryListTest extends DbTestCase
     {
         $feed = new Feed('https://tagged.example.com/feed.xml');
         $this->entityManager->persist($feed);
-        $sub = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
-        $sub->addTag($tag);
-        $this->entityManager->persist($sub);
+        $subscription->addTag($tag);
+        $this->entityManager->persist($subscription);
         $this->entityManager->flush();
 
         return [$feed, $tag];
@@ -193,7 +197,7 @@ final class EntryListTest extends DbTestCase
     private function joinPrefixQueries(EntryQuery $query): array
     {
         return array_values(array_filter(
-            $this->recordedList($this->repo(), $query)['queries'],
+            $this->recordedList($this->repository(), $query)['queries'],
             static fn (string $sql): bool => str_contains($sql, 'JOIN_PREFIX'),
         ));
     }
@@ -232,7 +236,7 @@ final class EntryListTest extends DbTestCase
         $this->entryAt('tied-second', $tied, $tied);
         $this->entryAt('older', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
 
-        $rows = $this->repo()->listForUser(
+        $rows = $this->repository()->listForUser(
             new EntryQuery($this->user->requireId(), order: ListOrder::OldestFirst),
         );
 
@@ -248,10 +252,10 @@ final class EntryListTest extends DbTestCase
         $this->entryAt('e3', $tied, $tied);
         $userId = $this->user->requireId();
 
-        $page1 = $this->repo()->listForUser(new EntryQuery($userId, limit: 2, order: ListOrder::OldestFirst));
+        $page1 = $this->repository()->listForUser(new EntryQuery($userId, limit: 2, order: ListOrder::OldestFirst));
         self::assertSame(['e1', 'e2'], $this->guids($page1));
 
-        $page2 = $this->repo()->listForUser(new EntryQuery(
+        $page2 = $this->repository()->listForUser(new EntryQuery(
             $userId,
             cursor: $this->cursorAfter($page1[1]),
             limit: 2,
@@ -272,7 +276,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($lateState);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(
+        $rows = $this->repository()->listForUser(
             new EntryQuery($this->user->requireId(), view: EntryView::Viewed, order: ListOrder::OldestFirst),
         );
 
@@ -284,7 +288,7 @@ final class EntryListTest extends DbTestCase
         $userId = $this->user->requireId();
 
         self::assertSame([], $this->joinPrefixQueries(
-            new EntryQuery($userId, EntryView::All, subscriptionId: $this->sub->getId()),
+            new EntryQuery($userId, EntryView::All, subscriptionId: $this->subscription->getId()),
         ));
         self::assertSame([], $this->joinPrefixQueries(new EntryQuery($userId, EntryView::Favorites)));
     }
@@ -294,11 +298,11 @@ final class EntryListTest extends DbTestCase
         $this->entry('a', '2026-07-10T00:00:00Z');
         $this->entry('b', '2026-07-12T00:00:00Z');
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
 
         self::assertCount(2, $rows);
         self::assertSame('Title b', $rows[0]->entry->getTitle());
-        self::assertSame($this->sub->getId(), $rows[0]->subscriptionId);
+        self::assertSame($this->subscription->getId(), $rows[0]->subscriptionId);
         self::assertSame('Example', $rows[0]->subscriptionTitle);
         self::assertFalse($rows[0]->isHidden);
     }
@@ -310,7 +314,7 @@ final class EntryListTest extends DbTestCase
         $this->entryAt('sunk', $fetchedAt, '2020-03-01T00:00:00Z');
         $this->entryAt('fresh', $fetchedAt, $fetchedAt);
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
 
         self::assertSame(['fresh', 'sunk'], array_map(
             static fn ($row) => $row->entry->getGuid(),
@@ -323,7 +327,7 @@ final class EntryListTest extends DbTestCase
         $this->entryAt('older', '2026-07-01T00:00:00Z', '2026-07-10T00:00:00Z');
         $this->entryAt('newer', '2026-07-01T00:00:00Z', '2026-07-15T00:00:00Z');
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
 
         self::assertSame('newer', $rows[0]->entry->getGuid());
         self::assertSame('older', $rows[1]->entry->getGuid());
@@ -338,13 +342,13 @@ final class EntryListTest extends DbTestCase
         // `effectiveDate <` disjunct of applyCursor()'s two-part predicate —
         // the strict-less branch never fires on its own inside a tie.
         $tied = '2026-07-01T00:00:00Z';
-        $e1 = $this->entryAt('e1', $tied, $tied);
-        $e2 = $this->entryAt('e2', $tied, $tied);
-        $e3 = $this->entryAt('e3', $tied, $tied);
+        $firstTied = $this->entryAt('e1', $tied, $tied);
+        $secondTied = $this->entryAt('e2', $tied, $tied);
+        $thirdTied = $this->entryAt('e3', $tied, $tied);
         $older = $this->entryAt('older', '2026-06-01T00:00:00Z', '2026-06-01T00:00:00Z');
 
-        $page1 = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), limit: 2));
-        self::assertSame([$e3->getGuid(), $e2->getGuid()], array_map(
+        $page1 = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), limit: 2));
+        self::assertSame([$thirdTied->getGuid(), $secondTied->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $page1,
         ));
@@ -353,9 +357,9 @@ final class EntryListTest extends DbTestCase
             $page1[1]->entry->getEffectiveDate(),
             $page1[1]->entry->requireId(),
         );
-        $page2 = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), cursor: $cursor, limit: 2));
+        $page2 = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), cursor: $cursor, limit: 2));
 
-        self::assertSame([$e1->getGuid(), $older->getGuid()], array_map(
+        self::assertSame([$firstTied->getGuid(), $older->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $page2,
         ));
@@ -365,57 +369,60 @@ final class EntryListTest extends DbTestCase
     {
         $this->entry('old', '2026-07-05T00:00:00Z');
         $this->entry('new', '2026-07-20T00:00:00Z');
-        $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         $this->entityManager->flush();
 
-        $all = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $all = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         $byGuid = [];
-        foreach ($all as $r) {
-            $byGuid[$r->entry->getGuid()] = $r;
+        foreach ($all as $row) {
+            $byGuid[$row->entry->getGuid()] = $row;
         }
         self::assertTrue($byGuid['old']->isHidden);   // under the watermark
         self::assertFalse($byGuid['new']->isHidden);  // above it
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
         self::assertSame('new', $unread[0]->entry->getGuid());
     }
 
     public function testExplicitStateBeatsWatermark(): void
     {
-        $e = $this->entry('x', '2026-07-05T00:00:00Z');
-        $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $entry = $this->entry('x', '2026-07-05T00:00:00Z');
+        $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
         // Explicitly unread despite being under the watermark.
-        $state = new EntryState($this->user, $e);
+        $state = new EntryState($this->user, $entry);
         $state->markUnread();
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
         self::assertFalse($unread[0]->isHidden);
     }
 
     public function testFavoritesAndKeptViews(): void
     {
-        $fav = $this->entry('fav', '2026-07-05T00:00:00Z');
+        $favorite = $this->entry('fav', '2026-07-05T00:00:00Z');
         $kept = $this->entry('kept', '2026-07-06T00:00:00Z');
         $this->entry('plain', '2026-07-07T00:00:00Z');
 
-        $s1 = new EntryState($this->user, $fav);
-        $s1->markFavorite();
-        $s2 = new EntryState($this->user, $kept);
-        $s2->markKept();
-        $this->entityManager->persist($s1);
-        $this->entityManager->persist($s2);
+        $favoriteState = new EntryState($this->user, $favorite);
+        $favoriteState->markFavorite();
+        $keptState = new EntryState($this->user, $kept);
+        $keptState->markKept();
+        $this->entityManager->persist($favoriteState);
+        $this->entityManager->persist($keptState);
         $this->entityManager->flush();
 
-        $favs = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Favorites));
-        self::assertCount(1, $favs);
-        self::assertSame('fav', $favs[0]->entry->getGuid());
-        self::assertTrue($favs[0]->isFavorite);
+        $favorites = $this->repository()->listForUser(new EntryQuery(
+            $this->user->requireId(),
+            view: EntryView::Favorites,
+        ));
+        self::assertCount(1, $favorites);
+        self::assertSame('fav', $favorites[0]->entry->getGuid());
+        self::assertTrue($favorites[0]->isFavorite);
 
-        $kepts = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Kept));
+        $kepts = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Kept));
         self::assertCount(1, $kepts);
         self::assertSame('kept', $kepts[0]->entry->getGuid());
     }
@@ -438,7 +445,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($lateState);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Viewed));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Viewed));
 
         self::assertSame(['early', 'late'], array_map(
             static fn ($row) => $row->entry->getGuid(),
@@ -460,7 +467,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($secondState);
         $this->entityManager->flush();
 
-        $page1 = $this->repo()->listForUser(
+        $page1 = $this->repository()->listForUser(
             new EntryQuery($this->user->requireId(), view: EntryView::Viewed, limit: 1),
         );
         self::assertCount(1, $page1);
@@ -472,7 +479,7 @@ final class EntryListTest extends DbTestCase
             $page1[0]->viewedAt ?? throw new \LogicException('A viewed row must carry a viewedAt.'),
             $page1[0]->entry->requireId(),
         );
-        $page2 = $this->repo()->listForUser(
+        $page2 = $this->repository()->listForUser(
             new EntryQuery($this->user->requireId(), view: EntryView::Viewed, cursor: $cursor, limit: 1),
         );
         self::assertCount(1, $page2);
@@ -483,11 +490,11 @@ final class EntryListTest extends DbTestCase
     {
         $otherFeed = new Feed('https://other.example.com/feed.xml');
         $this->entityManager->persist($otherFeed);
-        $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $otherSubscription = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
-        $otherSub->addTag($tag);
-        $this->entityManager->persist($otherSub);
+        $otherSubscription->addTag($tag);
+        $this->entityManager->persist($otherSubscription);
         $this->entityManager->flush();
 
         $this->entry('untagged', '2026-07-05T00:00:00Z');
@@ -503,7 +510,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($tagged);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
         self::assertCount(1, $rows);
         self::assertSame('tagged', $rows[0]->entry->getGuid());
     }
@@ -514,8 +521,8 @@ final class EntryListTest extends DbTestCase
         $this->entry('e2', '2026-07-11T00:00:00Z');
         $this->entry('e3', '2026-07-12T00:00:00Z');
 
-        $page1 = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), subscriptionId: $this->sub->getId(), limit: 2),
+        $page1 = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), subscriptionId: $this->subscription->getId(), limit: 2),
         );
         self::assertCount(2, $page1);
         self::assertSame('e3', $page1[0]->entry->getGuid());
@@ -525,7 +532,7 @@ final class EntryListTest extends DbTestCase
             $page1[1]->entry->getEffectiveDate(),
             $page1[1]->entry->requireId(),
         );
-        $page2 = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), cursor: $cursor, limit: 2));
+        $page2 = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), cursor: $cursor, limit: 2));
         self::assertCount(1, $page2);
         self::assertSame('e1', $page2[0]->entry->getGuid());
     }
@@ -536,8 +543,8 @@ final class EntryListTest extends DbTestCase
 
         $otherFeed = new Feed('https://other.example.com/feed.xml');
         $this->entityManager->persist($otherFeed);
-        $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($otherSub);
+        $otherSubscription = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($otherSubscription);
         $otherEntry = new Entry(
             $otherFeed,
             'other',
@@ -549,8 +556,8 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($otherEntry);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), subscriptionId: $this->sub->getId()),
+        $rows = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), subscriptionId: $this->subscription->getId()),
         );
 
         self::assertSame([$ownEntry->getId()], array_map(static fn ($row) => $row->entry->getId(), $rows));
@@ -566,9 +573,9 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($orphan);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
-        foreach ($rows as $r) {
-            self::assertNotSame('orphan', $r->entry->getGuid());
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
+        foreach ($rows as $row) {
+            self::assertNotSame('orphan', $row->entry->getGuid());
         }
     }
 
@@ -582,7 +589,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         $byGuid = [];
         foreach ($rows as $row) {
             $byGuid[$row->entry->getGuid()] = $row->isViewed;
@@ -597,12 +604,16 @@ final class EntryListTest extends DbTestCase
 
         $excludedFeed = new Feed('https://excluded.example.com/feed.xml');
         $this->entityManager->persist($excludedFeed);
-        $excludedSub = new Subscription($this->user, $excludedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $excludedSub->setIncludeInAllItems(false);
+        $excludedSubscription = new Subscription(
+            $this->user,
+            $excludedFeed,
+            new \DateTimeImmutable('2026-07-01T00:00:00Z'),
+        );
+        $excludedSubscription->setIncludeInAllItems(false);
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
-        $excludedSub->addTag($tag);
-        $this->entityManager->persist($excludedSub);
+        $excludedSubscription->addTag($tag);
+        $this->entityManager->persist($excludedSubscription);
         $entryB = new Entry(
             $excludedFeed,
             'b',
@@ -617,21 +628,24 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($favoriteState);
         $this->entityManager->flush();
 
-        $all = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $all = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $all));
 
-        $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $unread = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $unread));
 
-        $own = $this->repo()->listForUser(
-            new EntryQuery($this->user->requireId(), subscriptionId: $excludedSub->getId()),
+        $own = $this->repository()->listForUser(
+            new EntryQuery($this->user->requireId(), subscriptionId: $excludedSubscription->getId()),
         );
         self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $own));
 
-        $tagged = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
+        $tagged = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
         self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $tagged));
 
-        $favorites = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Favorites));
+        $favorites = $this->repository()->listForUser(new EntryQuery(
+            $this->user->requireId(),
+            view: EntryView::Favorites,
+        ));
         self::assertContains($entryB->getId(), array_map(static fn ($row) => $row->entry->getId(), $favorites));
     }
 
@@ -653,7 +667,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($strangerState);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertCount(1, $rows);
         self::assertSame('shared', $rows[0]->entry->getGuid());
         self::assertFalse($rows[0]->isHidden, 'must not inherit the stranger\'s read flag');
@@ -684,7 +698,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($hiddenCopy);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId()));
 
         self::assertCount(1, $rows);
         self::assertSame('survivor', $rows[0]->entry->getGuid());
@@ -698,11 +712,11 @@ final class EntryListTest extends DbTestCase
     {
         $otherFeed = new Feed('https://other.example.com/feed.xml');
         $this->entityManager->persist($otherFeed);
-        $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $otherSubscription = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
         $this->entityManager->persist($tag);
-        $otherSub->addTag($tag);
-        $this->entityManager->persist($otherSub);
+        $otherSubscription->addTag($tag);
+        $this->entityManager->persist($otherSubscription);
 
         $outOfScopeCopy = new Entry(
             $this->feed,
@@ -726,7 +740,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($taggedEntry);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
 
         self::assertCount(1, $rows);
         self::assertSame('tagged', $rows[0]->entry->getGuid());
@@ -770,7 +784,7 @@ final class EntryListTest extends DbTestCase
         $this->entry('a', '2026-07-05T00:00:00Z');
 
         $queries = $this->recordedList(
-            $this->repo(),
+            $this->repository(),
             new EntryQuery($this->user->requireId(), EntryView::All),
         )['queries'];
 
@@ -781,19 +795,19 @@ final class EntryListTest extends DbTestCase
     public function testFewerThanWindowSizeRowsBeyondCursorRunsASingleHintedQuery(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
 
-        $repo = $this->repoWithWindow(5);
+        $repository = $this->repositoryWithWindow(5);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 10);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         $queries = $recorded['queries'];
         self::assertCount(2, $queries, 'a null probe must still run exactly one hinted page query');
         self::assertStringNotContainsString('JOIN_PREFIX', $queries[0], 'the probe itself is never hinted');
         self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
 
-        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -802,19 +816,19 @@ final class EntryListTest extends DbTestCase
     public function testDenseTagWindowedAttemptEqualsThePlainQuerysPage(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
         $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         $queries = $recorded['queries'];
         self::assertCount(2, $queries, 'a full windowed page must never fall back');
         self::assertStringContainsString('JOIN_PREFIX', $queries[1]);
 
-        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -827,18 +841,18 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($filler, 'f1', '2026-07-10T00:00:00Z');
         $this->entryIn($filler, 'f2', '2026-07-09T00:00:00Z');
         $this->entryIn($filler, 'f3', '2026-07-08T00:00:00Z');
-        $t1 = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         $queries = $recorded['queries'];
         self::assertCount(3, $queries, 'a short windowed page must fall back to a third, plain query');
         self::assertStringNotContainsString('JOIN_PREFIX', $queries[2], 'the fallback is deliberately unhinted');
 
-        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -851,34 +865,34 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($filler, 'f1', '2026-07-10T00:00:00Z');
         $this->entryIn($filler, 'f2', '2026-07-09T00:00:00Z');
         $this->entryIn($filler, 'f3', '2026-07-08T00:00:00Z');
-        $t1 = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
-        $rows = $repo->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 5));
+        $repository = $this->repositoryWithWindow(2);
+        $rows = $repository->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 5));
 
-        self::assertSame([$t1->getGuid()], array_map(static fn ($row) => $row->entry->getGuid(), $rows));
+        self::assertSame([$firstEntry->getGuid()], array_map(static fn ($row) => $row->entry->getGuid(), $rows));
     }
 
     public function testATiedWindowBoundaryIsIncludedWholeAndNeverTriggersAnUnnecessaryFallback(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
         // t2 and t3 share an effectiveDate and straddle the window pivot; t3 is
         // created second so it sorts first on the id DESC tiebreak.
-        $t2 = $this->entryIn($feed, 't2', '2026-07-05T00:00:00Z');
-        $t3 = $this->entryIn($feed, 't3', '2026-07-05T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-05T00:00:00Z');
+        $thirdEntry = $this->entryIn($feed, 't3', '2026-07-05T00:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 3);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         self::assertCount(
             2,
             $recorded['queries'],
             'an inclusive >= window bound must keep the tie in one windowed attempt',
         );
 
-        self::assertSame([$t1->getGuid(), $t3->getGuid(), $t2->getGuid()], array_map(
+        self::assertSame([$firstEntry->getGuid(), $thirdEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -887,17 +901,17 @@ final class EntryListTest extends DbTestCase
     public function testCursorContinuesAWindowedPageWithoutGapOrOverlap(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-14T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-13T00:00:00Z');
-        $t3 = $this->entryIn($feed, 't3', '2026-07-12T00:00:00Z');
-        $t4 = $this->entryIn($feed, 't4', '2026-07-11T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-14T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-13T00:00:00Z');
+        $thirdEntry = $this->entryIn($feed, 't3', '2026-07-12T00:00:00Z');
+        $fourthEntry = $this->entryIn($feed, 't4', '2026-07-11T00:00:00Z');
         $this->entryIn($feed, 't5', '2026-07-10T00:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
-        $page1 = $repo->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
-        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+        $page1 = $repository->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $page1,
         ));
@@ -910,9 +924,9 @@ final class EntryListTest extends DbTestCase
 
         // A probe without the cursor predicate still falls back to a correct
         // page (just via a 3rd query), so only the query count catches it.
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         self::assertCount(2, $recorded['queries'], 'the cursor must keep this page windowed, not fall back');
-        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+        self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -932,7 +946,7 @@ final class EntryListTest extends DbTestCase
             limit: 2,
             order: ListOrder::OldestFirst,
         );
-        $recorded = $this->recordedList($this->repoWithWindow(2), $query);
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
         self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
         self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
@@ -944,15 +958,15 @@ final class EntryListTest extends DbTestCase
         foreach (['t1' => 10, 't2' => 11, 't3' => 12, 't4' => 13, 't5' => 14] as $guid => $day) {
             $this->entryIn($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', $day));
         }
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
-        $page1 = $repo->listForUser(
+        $page1 = $repository->listForUser(
             new EntryQuery($userId, tagId: $tag->getId(), limit: 2, order: ListOrder::OldestFirst),
         );
         self::assertSame(['t1', 't2'], $this->guids($page1));
 
-        $recorded = $this->recordedList($repo, new EntryQuery(
+        $recorded = $this->recordedList($repository, new EntryQuery(
             $userId,
             tagId: $tag->getId(),
             cursor: $this->cursorAfter($page1[1]),
@@ -966,19 +980,19 @@ final class EntryListTest extends DbTestCase
     public function testCursorContinuesAFallbackPageWithoutGapOrOverlap(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
-        $t3 = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
-        $t4 = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $thirdEntry = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
+        $fourthEntry = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
         $filler = $this->fillerFeed();
         $this->entryIn($filler, 'g1', '2026-07-08T18:00:00Z');
         $this->entryIn($filler, 'g2', '2026-07-08T12:00:00Z');
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
-        $page1 = $repo->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
-        self::assertSame([$t1->getGuid(), $t2->getGuid()], array_map(
+        $page1 = $repository->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
+        self::assertSame([$firstEntry->getGuid(), $secondEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $page1,
         ));
@@ -989,9 +1003,9 @@ final class EntryListTest extends DbTestCase
         );
         $query = new EntryQuery($userId, tagId: $tag->getId(), cursor: $cursor, limit: 2);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         self::assertCount(3, $recorded['queries'], 'the second page must independently fall back');
-        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+        self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $recorded['rows'],
         ));
@@ -1000,18 +1014,18 @@ final class EntryListTest extends DbTestCase
     public function testUnreadViewOnADenseTagWhoseNewestEntriesAreAllReadFallsBack(): void
     {
         [$feed, $tag] = $this->taggedFeedAndSubscription();
-        $t1 = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
-        $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
-        $t3 = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
-        $t4 = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
-        $this->entityManager->persist($this->hidden($t1));
-        $this->entityManager->persist($this->hidden($t2));
+        $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
+        $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
+        $thirdEntry = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
+        $fourthEntry = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
+        $this->entityManager->persist($this->hidden($firstEntry));
+        $this->entityManager->persist($this->hidden($secondEntry));
         $this->entityManager->flush();
 
-        $repo = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), view: EntryView::Unread, tagId: $tag->getId(), limit: 2);
 
-        $recorded = $this->recordedList($repo, $query);
+        $recorded = $this->recordedList($repository, $query);
         self::assertCount(
             3,
             $recorded['queries'],
@@ -1019,7 +1033,7 @@ final class EntryListTest extends DbTestCase
         );
 
         $rows = $recorded['rows'];
-        self::assertSame([$t3->getGuid(), $t4->getGuid()], array_map(
+        self::assertSame([$thirdEntry->getGuid(), $fourthEntry->getGuid()], array_map(
             static fn ($row) => $row->entry->getGuid(),
             $rows,
         ));
@@ -1031,7 +1045,7 @@ final class EntryListTest extends DbTestCase
     {
         $entry = $this->entry('owned-row', '2026-07-02T00:00:00Z');
 
-        $row = $this->repo()->getRowForUser($this->user->requireId(), $entry->requireId());
+        $row = $this->repository()->getRowForUser($this->user->requireId(), $entry->requireId());
 
         self::assertSame($entry->requireId(), $row->entry->requireId());
     }
@@ -1043,14 +1057,14 @@ final class EntryListTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such entry.');
 
-        $this->repo()->getRowForUser($this->user->requireId(), $entry->requireId());
+        $this->repository()->getRowForUser($this->user->requireId(), $entry->requireId());
     }
 
     public function testFindOneSubscribedForUserFindsNothingInAFeedTheUserDoesNotSubscribeTo(): void
     {
         $entry = $this->entryOfAnUnsubscribedFeed('foreign-lookup');
 
-        self::assertNull($this->repo()->findOneSubscribedForUser($this->user->requireId(), $entry->requireId()));
+        self::assertNull($this->repository()->findOneSubscribedForUser($this->user->requireId(), $entry->requireId()));
     }
 
     public function testGetOneSubscribedForUserReturnsASubscribedEntry(): void
@@ -1059,7 +1073,7 @@ final class EntryListTest extends DbTestCase
 
         self::assertSame(
             $entry,
-            $this->repo()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId()),
+            $this->repository()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId()),
         );
     }
 
@@ -1070,7 +1084,7 @@ final class EntryListTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such entry.');
 
-        $this->repo()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId());
+        $this->repository()->getOneSubscribedForUser($this->user->requireId(), $entry->requireId());
     }
 
     private function entryOfAnUnsubscribedFeed(string $guid): Entry

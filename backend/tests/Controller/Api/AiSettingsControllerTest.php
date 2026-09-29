@@ -567,7 +567,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         $user = $this->users()->findOneByEmail($email);
         self::assertInstanceOf(User::class, $user);
 
-        for ($i = 0; $i < 20; ++$i) {
+        for ($index = 0; $index < 20; ++$index) {
             $configuration = AiProviderSettingsFactory::build(
                 $user,
                 baseUrl: self::BASE_URL,

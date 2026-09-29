@@ -24,9 +24,9 @@ final class MoveFeedToTagTest extends WebTestCase
         $user = $this->user('mover@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $tech = $this->makeTag($user, 'Tech', 1);
-        $x = $this->makeSub($user, 'https://x.example.com/rss', 0, $tech, 0);
-        $y = $this->makeSub($user, 'https://y.example.com/rss', 0, $tech, 1);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $ahead = $this->makeSubscription($user, 'https://x.example.com/rss', 0, $tech, 0);
+        $behind = $this->makeSubscription($user, 'https://y.example.com/rss', 0, $tech, 1);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -38,9 +38,9 @@ final class MoveFeedToTagTest extends WebTestCase
 
         $this->entityManager()->clear();
         $positions = $this->tagFeedPositions($client, $user, $tech->requireId());
-        self::assertSame(0, $positions[$x->requireId()]);
+        self::assertSame(0, $positions[$ahead->requireId()]);
         self::assertSame(1, $positions[$moved->requireId()]);
-        self::assertSame(2, $positions[$y->requireId()]);
+        self::assertSame(2, $positions[$behind->requireId()]);
         $newsFeeds = $this->tagFeedPositions($client, $user, $news->requireId());
         self::assertArrayNotHasKey($moved->requireId(), $newsFeeds);
     }
@@ -51,7 +51,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $user = $this->user('mover-body@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $tech = $this->makeTag($user, 'Tech', 1);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -75,7 +75,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $stranger = $this->user('stranger@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $theirs = $this->makeTag($stranger, 'Theirs', 0);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -133,18 +133,23 @@ final class MoveFeedToTagTest extends WebTestCase
         return $tag;
     }
 
-    private function makeSub(User $user, string $url, int $position, ?Tag $tag = null, int $tagPos = 0): Subscription
-    {
+    private function makeSubscription(
+        User $user,
+        string $url,
+        int $position,
+        ?Tag $tag = null,
+        int $tagPosition = 0,
+    ): Subscription {
         $feed = new Feed($url);
         $this->entityManager()->persist($feed);
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $sub->setPosition($position);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $subscription->setPosition($position);
         if (null !== $tag) {
-            $sub->addTag($tag, $tagPos);
+            $subscription->addTag($tag, $tagPosition);
         }
-        $this->entityManager()->persist($sub);
+        $this->entityManager()->persist($subscription);
 
-        return $sub;
+        return $subscription;
     }
 
     /** @param array<string, mixed> $body */
@@ -166,12 +171,12 @@ final class MoveFeedToTagTest extends WebTestCase
     private function tagFeedPositions(KernelBrowser $client, User $user, int $tagId): array
     {
         $client->request('GET', '/api/subscriptions', server: $this->headers($user));
-        $data = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertIsArray($data);
-        self::assertIsArray($data['subscriptions']);
+        $responseBody = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
+        self::assertIsArray($responseBody);
+        self::assertIsArray($responseBody['subscriptions']);
 
         $out = [];
-        foreach ($data['subscriptions'] as $subscription) {
+        foreach ($responseBody['subscriptions'] as $subscription) {
             self::assertIsArray($subscription);
             self::assertIsArray($subscription['tags']);
             foreach ($subscription['tags'] as $tag) {

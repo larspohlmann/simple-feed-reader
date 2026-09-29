@@ -90,8 +90,8 @@ final class DatabaseSavedSearchMatcherTest extends DbTestCase
     {
         $entry = $this->entry('a', 'term07 and term30');
         $searches = [];
-        for ($i = 1; $i <= 30; $i++) {
-            $searches[] = $this->search($i, \sprintf('term%02d', $i));
+        for ($number = 1; $number <= 30; $number++) {
+            $searches[] = $this->search($number, \sprintf('term%02d', $number));
         }
 
         $matches = $this->matcher()->matchingIds($searches, [$entry->requireId()]);

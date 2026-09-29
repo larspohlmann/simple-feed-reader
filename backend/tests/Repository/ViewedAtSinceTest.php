@@ -18,12 +18,12 @@ use App\Tests\DbTestCase;
  */
 final class ViewedAtSinceTest extends DbTestCase
 {
-    private function repo(): EntryStateRepository
+    private function repository(): EntryStateRepository
     {
-        $repo = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entry(Feed $feed, string $guid): Entry
@@ -63,7 +63,7 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->openedAt($user, $feed, 'after', new \DateTimeImmutable('2026-09-04T10:00:00Z'));
         $this->entityManager->flush();
 
-        $opens = $this->repo()->viewedAtSince(
+        $opens = $this->repository()->viewedAtSince(
             $user->requireId(),
             new \DateTimeImmutable('2026-09-01T00:00:00Z'),
         );
@@ -87,7 +87,7 @@ final class ViewedAtSinceTest extends DbTestCase
 
         self::assertSame(
             [],
-            $this->repo()->viewedAtSince($user->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
+            $this->repository()->viewedAtSince($user->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
         );
     }
 
@@ -110,7 +110,7 @@ final class ViewedAtSinceTest extends DbTestCase
 
         self::assertSame(
             [],
-            $this->repo()->viewedAtSince($mine->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
+            $this->repository()->viewedAtSince($mine->requireId(), new \DateTimeImmutable('2026-09-01T00:00:00Z')),
         );
     }
 
@@ -131,7 +131,7 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->openedAt($user, $orphanFeed, 'orphan-1', $when);
         $this->entityManager->flush();
 
-        $ranking = $this->repo()->readCountsByFeed($user->requireId(), 5);
+        $ranking = $this->repository()->readCountsByFeed($user->requireId(), 5);
 
         self::assertSame(
             [
@@ -153,6 +153,6 @@ final class ViewedAtSinceTest extends DbTestCase
         }
         $this->entityManager->flush();
 
-        self::assertCount(2, $this->repo()->readCountsByFeed($user->requireId(), 2));
+        self::assertCount(2, $this->repository()->readCountsByFeed($user->requireId(), 2));
     }
 }

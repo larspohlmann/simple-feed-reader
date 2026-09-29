@@ -14,21 +14,21 @@ use App\Tests\DbTestCase;
 
 final class StateCountsTest extends DbTestCase
 {
-    private function repo(): EntryStateRepository
+    private function repository(): EntryStateRepository
     {
-        $repo = $this->entityManager->getRepository(EntryState::class);
-        self::assertInstanceOf(EntryStateRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(EntryState::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
-    private function entry(Feed $feed, string $g): Entry
+    private function entry(Feed $feed, string $guid): Entry
     {
         $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
-        $e = new Entry($feed, $g, null, $g, $createdAt, $createdAt);
-        $this->entityManager->persist($e);
+        $entry = new Entry($feed, $guid, null, $guid, $createdAt, $createdAt);
+        $this->entityManager->persist($entry);
 
-        return $e;
+        return $entry;
     }
 
     public function testCountsFavoriteKeptAndViewedForSubscribedFeeds(): void
@@ -40,9 +40,9 @@ final class StateCountsTest extends DbTestCase
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($user, $feed, $when));
 
-        $fav = new EntryState($user, $this->entry($feed, 'fav'));
-        $fav->markFavorite();
-        $this->entityManager->persist($fav);
+        $favorite = new EntryState($user, $this->entry($feed, 'fav'));
+        $favorite->markFavorite();
+        $this->entityManager->persist($favorite);
 
         $kept = new EntryState($user, $this->entry($feed, 'kept'));
         $kept->markKept();
@@ -66,7 +66,7 @@ final class StateCountsTest extends DbTestCase
 
         $this->entityManager->flush();
 
-        $counts = $this->repo()->stateCountsForUser($user->requireId());
+        $counts = $this->repository()->stateCountsForUser($user->requireId());
         self::assertSame(2, $counts['favorites']); // fav + both
         self::assertSame(2, $counts['kept']); // kept + both
         self::assertSame(1, $counts['viewed']); // viewed only
@@ -86,13 +86,13 @@ final class StateCountsTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        self::assertSame(1, $this->repo()->stateCountsForUser($user->requireId())['viewed']);
+        self::assertSame(1, $this->repository()->stateCountsForUser($user->requireId())['viewed']);
 
         // Unread clears "opened", so the viewed count falls back to zero.
         $state->markUnread();
         $this->entityManager->flush();
 
-        self::assertSame(0, $this->repo()->stateCountsForUser($user->requireId())['viewed']);
+        self::assertSame(0, $this->repository()->stateCountsForUser($user->requireId())['viewed']);
     }
 
     public function testIgnoresStatesForFeedsTheUserNoLongerSubscribesTo(): void
@@ -112,7 +112,7 @@ final class StateCountsTest extends DbTestCase
         $this->entityManager->persist($orphan);
         $this->entityManager->flush();
 
-        $counts = $this->repo()->stateCountsForUser($user->requireId());
+        $counts = $this->repository()->stateCountsForUser($user->requireId());
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
         self::assertSame(0, $counts['viewed']);
@@ -137,7 +137,7 @@ final class StateCountsTest extends DbTestCase
         $this->entityManager->persist($theirs);
         $this->entityManager->flush();
 
-        $counts = $this->repo()->stateCountsForUser($mine->requireId());
+        $counts = $this->repository()->stateCountsForUser($mine->requireId());
         self::assertSame(0, $counts['favorites']);
         self::assertSame(0, $counts['kept']);
         self::assertSame(0, $counts['viewed']);

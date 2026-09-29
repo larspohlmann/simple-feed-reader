@@ -170,12 +170,12 @@ final class SubscriptionJsonTest extends TestCase
         $feed->setSiteUrl('https://example.com');
         $feed->setFaviconUrl('https://example.com/favicon.ico');
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-02-04T10:11:12Z'), 60);
-        $sub = new Subscription($user, $feed, $now);
+        $subscription = new Subscription($user, $feed, $now);
         $tag = new Tag($user, 'news');
         $tag->setColor('#ff8800');
-        $sub->addTag($tag);
+        $subscription->addTag($tag);
 
-        $shape = SubscriptionJson::one($sub);
+        $shape = SubscriptionJson::one($subscription);
 
         self::assertSame('Example Feed', $shape['title']);
         self::assertNull($shape['customTitle']);
@@ -210,11 +210,11 @@ final class SubscriptionJsonTest extends TestCase
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
         $user = new User('u@example.com', $now);
         $feed = new Feed('https://example.com/feed.xml');
-        $sub = new Subscription($user, $feed, $now);
-        $sub->setIncludeInAllItems(false);
-        $sub->setIncludeInForYou(true);
+        $subscription = new Subscription($user, $feed, $now);
+        $subscription->setIncludeInAllItems(false);
+        $subscription->setIncludeInForYou(true);
 
-        $shape = SubscriptionJson::one($sub);
+        $shape = SubscriptionJson::one($subscription);
 
         self::assertFalse($shape['includeInAllItems']);
         self::assertTrue($shape['includeInForYou']);
@@ -225,15 +225,15 @@ final class SubscriptionJsonTest extends TestCase
         $now = new \DateTimeImmutable('2026-02-03T04:05:06Z');
         $user = new User('u@example.com', $now);
         $feed = new Feed('https://example.com/feed.xml'); // no title set
-        $sub = new Subscription($user, $feed, $now);
-        $sub->setCustomTitle('My Name');
+        $subscription = new Subscription($user, $feed, $now);
+        $subscription->setCustomTitle('My Name');
 
-        $shape = SubscriptionJson::one($sub);
+        $shape = SubscriptionJson::one($subscription);
         self::assertSame('My Name', $shape['title']);
         self::assertSame('My Name', $shape['customTitle']);
 
-        $sub->setCustomTitle(null);
-        $shape = SubscriptionJson::one($sub);
+        $subscription->setCustomTitle(null);
+        $shape = SubscriptionJson::one($subscription);
         self::assertSame('https://example.com/feed.xml', $shape['title']); // url fallback
         // A never-fetched feed reports a null last-refreshed time.
         self::assertNull($shape['lastFetchedAt']);
@@ -252,9 +252,9 @@ final class SubscriptionJsonTest extends TestCase
                 60,
             );
         }
-        $sub = new Subscription($user, $feed, $now);
+        $subscription = new Subscription($user, $feed, $now);
 
-        $shape = SubscriptionJson::one($sub);
+        $shape = SubscriptionJson::one($subscription);
 
         self::assertSame('erroring', $shape['status']);
         self::assertSame('2026-01-28T09:00:00+00:00', $shape['lastSuccessfulFetchAt']);

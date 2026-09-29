@@ -847,9 +847,9 @@ final class OAuthFlowTest extends WebTestCase
     {
         $this->fakeProvider(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
-        for ($i = 1; $i <= 20; ++$i) {
+        for ($attempt = 1; $attempt <= 20; ++$attempt) {
             $this->startFlow();
-            self::assertResponseStatusCodeSame(302, "start attempt {$i} should be within budget");
+            self::assertResponseStatusCodeSame(302, "start attempt {$attempt} should be within budget");
         }
 
         $this->startFlow();

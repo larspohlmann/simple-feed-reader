@@ -34,12 +34,12 @@ final class EntryStateRepositoryTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    private function repo(): EntryStateRepository
+    private function repository(): EntryStateRepository
     {
-        $repo = self::getContainer()->get(EntryStateRepository::class);
-        self::assertInstanceOf(EntryStateRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryStateRepository::class);
+        self::assertInstanceOf(EntryStateRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entry(string $guid): Entry
@@ -68,7 +68,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $result = $this->repo()->entryIdsWithStateForUser(
+        $result = $this->repository()->entryIdsWithStateForUser(
             $this->user->requireId(),
             [$withState->requireId(), $withoutState->requireId()],
         );
@@ -78,12 +78,12 @@ final class EntryStateRepositoryTest extends DbTestCase
 
     public function testEmptyEntryIdListReturnsEmptyWithoutQuerying(): void
     {
-        self::assertSame([], $this->repo()->entryIdsWithStateForUser($this->user->requireId(), []));
+        self::assertSame([], $this->repository()->entryIdsWithStateForUser($this->user->requireId(), []));
     }
 
     public function testForUserByEntryIdsWithEmptyListReturnsEmptyWithoutQuerying(): void
     {
-        self::assertSame([], $this->repo()->forUserByEntryIds($this->user->requireId(), []));
+        self::assertSame([], $this->repository()->forUserByEntryIds($this->user->requireId(), []));
     }
 
     public function testForUserByEntryIdsIsKeyedByEntryIdAndHoldsOnlyTheAskedUsersStates(): void
@@ -106,7 +106,7 @@ final class EntryStateRepositoryTest extends DbTestCase
         $this->entityManager->persist($theirState);
         $this->entityManager->flush();
 
-        $result = $this->repo()->forUserByEntryIds(
+        $result = $this->repository()->forUserByEntryIds(
             $this->user->requireId(),
             [$shared->requireId(), $withoutState->requireId()],
         );
@@ -122,10 +122,10 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, null);
-        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
 
-        self::assertSame(1, $this->repo()->countForUser($userId));
+        self::assertSame(1, $this->repository()->countForUser($userId));
     }
 
     public function testEnsureRowDoesNotClobberAnExistingRowsFlags(): void
@@ -134,17 +134,17 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
 
-        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        $state = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         $state->markFavorite();
         $this->entityManager->flush();
 
-        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
 
         $this->entityManager->clear();
-        $reloaded = $this->repo()->findOneForUserEntry($userId, $entryId);
+        $reloaded = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isFavorite());
     }
@@ -156,10 +156,10 @@ final class EntryStateRepositoryTest extends DbTestCase
         $entryId = $entry->requireId();
         $watermark = new \DateTimeImmutable('2026-07-08T09:30:00');
 
-        $this->repo()->ensureRow($userId, $entryId, $watermark);
+        $this->repository()->ensureRow($userId, $entryId, $watermark);
 
         $this->entityManager->clear();
-        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        $state = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertTrue($state->isHidden());
         self::assertEquals($watermark, $state->getHiddenAt());
@@ -171,10 +171,10 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
 
         $this->entityManager->clear();
-        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        $state = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertFalse($state->isFavorite());
         self::assertFalse($state->isKept());
@@ -188,10 +188,10 @@ final class EntryStateRepositoryTest extends DbTestCase
         $userId = $this->user->requireId();
         $entryId = $entry->requireId();
 
-        $this->repo()->ensureRow($userId, $entryId, null);
+        $this->repository()->ensureRow($userId, $entryId, null);
 
         $this->entityManager->clear();
-        $state = $this->repo()->findOneForUserEntry($userId, $entryId);
+        $state = $this->repository()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertFalse($state->isHidden());
         self::assertNull($state->getHiddenAt());

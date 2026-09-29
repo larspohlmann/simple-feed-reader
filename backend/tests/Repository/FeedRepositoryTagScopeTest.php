@@ -27,9 +27,9 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
 
         $tagged = new Feed('https://example.com/tagged.xml');
         $this->entityManager->persist($tagged);
-        $taggedSub = new Subscription($owner, $tagged, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $taggedSub->addTag($tag);
-        $this->entityManager->persist($taggedSub);
+        $taggedSubscription = new Subscription($owner, $tagged, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
+        $taggedSubscription->addTag($tag);
+        $this->entityManager->persist($taggedSubscription);
 
         $untagged = new Feed('https://example.com/untagged.xml');
         $this->entityManager->persist($untagged);
@@ -39,16 +39,16 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
 
         $this->entityManager->flush();
 
-        $repo = $this->entityManager->getRepository(Feed::class);
-        self::assertInstanceOf(FeedRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
         $ownerId = $owner->requireId();
         $tagId = $tag->requireId();
 
-        $due = $repo->findDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true), 50);
-        self::assertSame([$tagged->getId()], array_map(static fn (Feed $f): ?int => $f->getId(), $due));
-        self::assertSame(1, $repo->countDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true)));
+        $due = $repository->findDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true), 50);
+        self::assertSame([$tagged->getId()], array_map(static fn (Feed $feed): ?int => $feed->getId(), $due));
+        self::assertSame(1, $repository->countDue(new DueFeedCriteria($now, $ownerId, tagId: $tagId, force: true)));
     }
 
     public function testTagScopeExcludesAnotherUsersFeedWithTheSameTagName(): void
@@ -66,25 +66,29 @@ final class FeedRepositoryTagScopeTest extends DbTestCase
 
         $strangerFeed = new Feed('https://example.com/stranger.xml');
         $this->entityManager->persist($strangerFeed);
-        $strangerSub = new Subscription($stranger, $strangerFeed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $strangerSub->addTag($strangerTag);
-        $this->entityManager->persist($strangerSub);
+        $strangerSubscription = new Subscription(
+            $stranger,
+            $strangerFeed,
+            new \DateTimeImmutable('2026-01-01T00:00:00Z'),
+        );
+        $strangerSubscription->addTag($strangerTag);
+        $this->entityManager->persist($strangerSubscription);
 
         $this->entityManager->flush();
 
-        $repo = $this->entityManager->getRepository(Feed::class);
-        self::assertInstanceOf(FeedRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Feed::class);
+        self::assertInstanceOf(FeedRepository::class, $repository);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
 
         // The owner scoping their own tag id must not reach the stranger's feed,
         // even though the tag shares a name.
-        $due = $repo->findDue(
+        $due = $repository->findDue(
             new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
             50,
         );
         self::assertCount(0, $due);
-        self::assertSame(0, $repo->countDue(
+        self::assertSame(0, $repository->countDue(
             new DueFeedCriteria($now, $owner->requireId(), tagId: $ownerTag->requireId(), force: true),
         ));
     }

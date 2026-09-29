@@ -12,14 +12,14 @@ use App\Tests\Support\QueryRecorder;
 
 final class CategoryRepositoryTest extends DbTestCase
 {
-    private CategoryRepository $repository;
+    private CategoryRepository $categories;
 
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var CategoryRepository $repository */
-        $repository = $this->entityManager->getRepository(Category::class);
-        $this->repository = $repository;
+        /** @var CategoryRepository $categories */
+        $categories = $this->entityManager->getRepository(Category::class);
+        $this->categories = $categories;
     }
 
     public function testEmptyInputReturnsEmptyArrayWithoutQueryingTheDatabase(): void
@@ -28,7 +28,7 @@ final class CategoryRepositoryTest extends DbTestCase
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
 
-        $result = $this->repository->findExistingByIdentities([]);
+        $result = $this->categories->findExistingByIdentities([]);
 
         self::assertSame([], $result);
         self::assertSame(
@@ -49,7 +49,7 @@ final class CategoryRepositoryTest extends DbTestCase
         $normalizedPolitics = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
         $normalizedWorld = new NormalizedCategoryModel('world', 'World', 'https://b.test');
 
-        $resolved = $this->repository->findExistingByIdentities([$normalizedPolitics, $normalizedWorld]);
+        $resolved = $this->categories->findExistingByIdentities([$normalizedPolitics, $normalizedWorld]);
 
         self::assertCount(2, $resolved);
         self::assertSame($politics, $resolved[$normalizedPolitics->identity()]);
@@ -63,7 +63,7 @@ final class CategoryRepositoryTest extends DbTestCase
         $this->entityManager->flush();
 
         $unknown = new NormalizedCategoryModel('unknown', 'Unknown', '');
-        $resolved = $this->repository->findExistingByIdentities([
+        $resolved = $this->categories->findExistingByIdentities([
             new NormalizedCategoryModel('politics', 'Politics', ''),
             $unknown,
         ]);
@@ -83,7 +83,7 @@ final class CategoryRepositoryTest extends DbTestCase
         $normalizedA = new NormalizedCategoryModel('politics', 'Politics', 'https://a.test');
         $normalizedB = new NormalizedCategoryModel('politics', 'Politics', 'https://b.test');
 
-        $resolved = $this->repository->findExistingByIdentities([$normalizedA, $normalizedB]);
+        $resolved = $this->categories->findExistingByIdentities([$normalizedA, $normalizedB]);
 
         self::assertSame($schemeA, $resolved[$normalizedA->identity()]);
         self::assertSame($schemeB, $resolved[$normalizedB->identity()]);

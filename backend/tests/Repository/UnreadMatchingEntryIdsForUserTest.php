@@ -41,12 +41,12 @@ final class UnreadMatchingEntryIdsForUserTest extends DbTestCase
         $this->entityManager->flush();
     }
 
-    private function repo(): EntryListRepository
+    private function repository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entry(
@@ -71,7 +71,7 @@ final class UnreadMatchingEntryIdsForUserTest extends DbTestCase
     /** @return list<int> */
     private function ids(string $input, string $until = '2100-01-01T00:00:00Z'): array
     {
-        return $this->repo()->unreadMatchingEntryIdsForUser(
+        return $this->repository()->unreadMatchingEntryIdsForUser(
             new EntrySearchQuery($this->user->requireId(), SearchTermsModel::fromInput($input)),
             new \DateTimeImmutable($until),
         );

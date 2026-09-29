@@ -40,7 +40,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -62,7 +62,7 @@ final class DuplicateCollapseTest extends DbTestCase
         );
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($solo->requireId(), view: EntryView::All));
+        $rows = $this->repository()->listForUser(new EntryQuery($solo->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($onlyCopy->getId(), $rows[0]->entry->getId());
@@ -77,7 +77,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->entityManager->persist($read);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -89,10 +89,10 @@ final class DuplicateCollapseTest extends DbTestCase
         $two = $this->entry($this->feedB, 'b-guid', null, null, '2026-07-05T10:00:00Z');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(2, $rows);
-        $ids = array_map(static fn ($r) => $r->entry->getId(), $rows);
+        $ids = array_map(static fn ($row) => $row->entry->getId(), $rows);
         self::assertContains($one->getId(), $ids);
         self::assertContains($two->getId(), $ids);
     }
@@ -106,7 +106,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $match->setTitle('Lübeck Zugausfälle am Wochenende');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+        $rows = $this->repository()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
             SearchTermsModel::fromInput('Zugausfälle'),
         ));
@@ -123,7 +123,7 @@ final class DuplicateCollapseTest extends DbTestCase
 
         // Meilisearch matched only the higher-id copy; the lower-id copy is not in
         // the set, so it must not win and delete the article from the results.
-        $rows = $this->repo()->rowsByIdsForUser($this->user->requireId(), [$higher->requireId()]);
+        $rows = $this->repository()->rowsByIdsForUser($this->user->requireId(), [$higher->requireId()]);
 
         self::assertCount(1, $rows);
         self::assertSame($higher->getId(), $rows[0]->entry->getId());
@@ -139,7 +139,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher->setTitle('Lübeck Zugausfälle am Wochenende');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->searchForUser(new EntrySearchQuery(
+        $rows = $this->repository()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
             SearchTermsModel::fromInput('Zugausfälle'),
         ));
@@ -156,7 +156,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->rowsByIdsForUser(
+        $rows = $this->repository()->rowsByIdsForUser(
             $this->user->requireId(),
             [$lower->requireId(), $higher->requireId()],
         );
@@ -171,7 +171,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
@@ -189,19 +189,19 @@ final class DuplicateCollapseTest extends DbTestCase
         $this->entityManager->persist($read);
         $this->entityManager->flush();
 
-        $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
+        $rows = $this->repository()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
         self::assertCount(1, $rows);
         self::assertSame($lower->getId(), $rows[0]->entry->getId());
         self::assertSame([], $rows[0]->duplicates); // the read copy is out of unread scope
     }
 
-    private function repo(): EntryListRepository
+    private function repository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function feed(string $url, string $title): Feed
@@ -215,10 +215,10 @@ final class DuplicateCollapseTest extends DbTestCase
 
     private function subscribe(User $user, Feed $feed): Subscription
     {
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($subscription);
 
-        return $sub;
+        return $subscription;
     }
 
     private function entry(Feed $feed, string $guid, ?string $url, ?string $urlHash, string $effective): Entry

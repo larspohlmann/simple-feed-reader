@@ -55,17 +55,20 @@ final readonly class DataShapes implements ServiceRoleChecker
     }
 
     /** @return list<ServiceRoleViolation> */
-    private static function dataViolations(ServiceRoleMap $map, ServiceRoleClass $data, ServiceRoleCheck $check): array
-    {
+    private static function dataViolations(
+        ServiceRoleMap $map,
+        ServiceRoleClass $dataClass,
+        ServiceRoleCheck $check,
+    ): array {
         $violations = [];
-        if (!$data->shape->isFinalReadonly()) {
-            $violations[] = new ServiceRoleViolation($check, $data, 'is data, so it is final readonly');
+        if (!$dataClass->shape->isFinalReadonly()) {
+            $violations[] = new ServiceRoleViolation($check, $dataClass, 'is data, so it is final readonly');
         }
-        foreach (SuppliedConstructorTypes::of($data->reflection) as $type) {
+        foreach (SuppliedConstructorTypes::of($dataClass->reflection) as $type) {
             if ($map->isCollaborator($type)) {
                 $violations[] = new ServiceRoleViolation(
                     $check,
-                    $data,
+                    $dataClass,
                     sprintf('is data but takes the service %s', $type),
                 );
             }

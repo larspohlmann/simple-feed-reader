@@ -23,14 +23,14 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
 {
     use SeedsUsers;
 
-    private SubscriptionRepository $repository;
+    private SubscriptionRepository $subscriptions;
 
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var SubscriptionRepository $repository */
-        $repository = $this->entityManager->getRepository(Subscription::class);
-        $this->repository = $repository;
+        /** @var SubscriptionRepository $subscriptions */
+        $subscriptions = $this->entityManager->getRepository(Subscription::class);
+        $this->subscriptions = $subscriptions;
     }
 
     private function feed(string $url): Feed
@@ -60,7 +60,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $user = $this->user('next-position-empty@example.com');
         $this->entityManager->flush();
 
-        self::assertSame(0, $this->repository->nextPositionForUser($user->requireId()));
+        self::assertSame(0, $this->subscriptions->nextPositionForUser($user->requireId()));
     }
 
     public function testNextPositionForUserIsOnePastTheCurrentMaximum(): void
@@ -69,7 +69,7 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $this->subscribe($user, $this->feed('https://a.example/feed.xml'), 4);
         $this->entityManager->flush();
 
-        self::assertSame(5, $this->repository->nextPositionForUser($user->requireId()));
+        self::assertSame(5, $this->subscriptions->nextPositionForUser($user->requireId()));
     }
 
     /**
@@ -85,11 +85,11 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $second = $this->subscribe($user, $this->feed('https://b.example/feed.xml'));
         $this->entityManager->flush();
 
-        $rows = $this->repository->findForUserWithTags($user->requireId());
+        $rows = $this->subscriptions->findForUserWithTags($user->requireId());
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],
-            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
+            array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $rows),
         );
     }
 
@@ -110,11 +110,11 @@ final class SubscriptionPositionAndCountsTest extends DbTestCase
         $second->addTag($tag, 1);
         $this->entityManager->flush();
 
-        $rows = $this->repository->findForUserByTagId($user->requireId(), $tag->requireId());
+        $rows = $this->subscriptions->findForUserByTagId($user->requireId(), $tag->requireId());
 
         self::assertSame(
             [$first->requireId(), $second->requireId()],
-            array_map(static fn (Subscription $s): int => $s->requireId(), $rows),
+            array_map(static fn (Subscription $subscription): int => $subscription->requireId(), $rows),
         );
     }
 }

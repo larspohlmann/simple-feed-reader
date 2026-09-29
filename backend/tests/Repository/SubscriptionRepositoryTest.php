@@ -22,7 +22,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
 
         self::assertSame(
             $subscription,
-            $this->repo()->getOneForUser($owner->requireId(), $subscription->requireId()),
+            $this->repository()->getOneForUser($owner->requireId(), $subscription->requireId()),
         );
     }
 
@@ -34,7 +34,7 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $this->expectException(RecordNotFoundException::class);
         $this->expectExceptionMessage('No such subscription.');
 
-        $this->repo()->getOneForUser($stranger->requireId(), $subscription->requireId());
+        $this->repository()->getOneForUser($stranger->requireId(), $subscription->requireId());
     }
 
     public function testFindIncludedInAllItemsForUserSkipsHiddenFeedsAndOtherUsers(): void
@@ -54,17 +54,17 @@ final class SubscriptionRepositoryTest extends DbTestCase
             [$included->requireId(), $alsoIncluded->requireId()],
             array_map(
                 static fn (Subscription $subscription): int => $subscription->requireId(),
-                $this->repo()->findIncludedInAllItemsForUser($owner->requireId()),
+                $this->repository()->findIncludedInAllItemsForUser($owner->requireId()),
             ),
         );
     }
 
-    private function repo(): SubscriptionRepository
+    private function repository(): SubscriptionRepository
     {
-        $repo = $this->entityManager->getRepository(Subscription::class);
-        self::assertInstanceOf(SubscriptionRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Subscription::class);
+        self::assertInstanceOf(SubscriptionRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function userFactory(): UserFactory

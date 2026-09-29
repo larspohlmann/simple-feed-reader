@@ -249,11 +249,11 @@ final class ReaderAuditCommandTest extends DbTestCase
         $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
 
         $entries = [];
-        for ($i = 0; $i < $count; ++$i) {
+        for ($index = 0; $index < $count; ++$index) {
             $entry = new Entry(
                 $feed,
                 'guid-' . uniqid('', true),
-                'https://cli.example.com/article-' . $i,
+                'https://cli.example.com/article-' . $index,
                 'An article',
                 new \DateTimeImmutable('-1 hour'),
                 new \DateTimeImmutable('-1 hour'),

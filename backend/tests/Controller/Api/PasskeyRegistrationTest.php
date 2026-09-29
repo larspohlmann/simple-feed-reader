@@ -664,16 +664,16 @@ final class PasskeyRegistrationTest extends ApiTestCase
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<string, mixed> $payload
      *
      * @return array<string, mixed>
      */
-    private function arrayValue(array $data, string $key): array
+    private function arrayValue(array $payload, string $key): array
     {
-        self::assertIsArray($data[$key]);
+        self::assertIsArray($payload[$key]);
 
         /** @var array<string, mixed> $value */
-        $value = $data[$key];
+        $value = $payload[$key];
 
         return $value;
     }

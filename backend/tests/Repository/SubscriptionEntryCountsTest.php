@@ -20,9 +20,9 @@ final class SubscriptionEntryCountsTest extends DbTestCase
     {
         $user = $this->user('reader@example.com');
         $feed = $this->feed('https://example.com/f.xml');
-        $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->entityManager->persist($sub);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
+        $this->entityManager->persist($subscription);
         $read = $this->entry($feed, 'a', '2026-07-20');
         $this->entry($feed, 'b', '2026-07-05');
         $this->entry($feed, 'c', '2026-07-21');
@@ -31,9 +31,9 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entityManager->persist($state);
         $this->entityManager->flush();
 
-        $counts = $this->repo()->entryCountsForUser($user->requireId());
+        $counts = $this->repository()->entryCountsForUser($user->requireId());
 
-        self::assertSame([$sub->requireId() => 3], $counts);
+        self::assertSame([$subscription->requireId() => 3], $counts);
     }
 
     public function testLeavesOutSubscriptionsWithoutEntriesAndOtherUsersFeeds(): void
@@ -49,7 +49,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $this->entry($theirs, 'x', '2026-07-20');
         $this->entityManager->flush();
 
-        self::assertSame([], $this->repo()->entryCountsForUser($user->requireId()));
+        self::assertSame([], $this->repository()->entryCountsForUser($user->requireId()));
     }
 
     /**
@@ -61,26 +61,26 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $user = $this->user('reader@example.com');
         $first = $this->feed('https://example.com/first.xml');
         $second = $this->feed('https://example.com/second.xml');
-        $firstSub = new Subscription($user, $first, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $secondSub = new Subscription($user, $second, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($firstSub);
-        $this->entityManager->persist($secondSub);
+        $firstSubscription = new Subscription($user, $first, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $secondSubscription = new Subscription($user, $second, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($firstSubscription);
+        $this->entityManager->persist($secondSubscription);
         $this->entry($first, 'a', '2026-07-01');
         $this->entry($second, 'b', '2026-07-02');
         $this->entry($second, 'c', '2026-07-03');
         $this->entityManager->flush();
 
-        $counts = $this->repo()->entryCountsForUser($user->requireId());
+        $counts = $this->repository()->entryCountsForUser($user->requireId());
 
-        self::assertSame([$firstSub->requireId() => 1, $secondSub->requireId() => 2], $counts);
+        self::assertSame([$firstSubscription->requireId() => 1, $secondSubscription->requireId() => 2], $counts);
     }
 
-    private function repo(): SubscriptionRepository
+    private function repository(): SubscriptionRepository
     {
-        $repo = $this->entityManager->getRepository(Subscription::class);
-        self::assertInstanceOf(SubscriptionRepository::class, $repo);
+        $repository = $this->entityManager->getRepository(Subscription::class);
+        self::assertInstanceOf(SubscriptionRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function feed(string $url): Feed

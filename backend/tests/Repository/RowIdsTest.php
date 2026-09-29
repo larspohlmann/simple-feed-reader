@@ -16,11 +16,11 @@ final class RowIdsTest extends DbTestCase
 {
     public function testSelectedByReadsExactlyTheMatchingRows(): void
     {
-        [$a, $b] = $this->store('a@example.test', 'b@example.test');
+        [$first, $second] = $this->store('a@example.test', 'b@example.test');
 
         $ids = $this->rowIds()->selectedBy($this->idsOf('a@example.test', 'b@example.test'));
 
-        self::assertEqualsCanonicalizing([$a->requireId(), $b->requireId()], $ids);
+        self::assertEqualsCanonicalizing([$first->requireId(), $second->requireId()], $ids);
     }
 
     public function testDeleteRemovesExactlyTheNamedRows(): void

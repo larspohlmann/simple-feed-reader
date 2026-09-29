@@ -54,11 +54,11 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
         $rows = $repository->findEnabledWithFeeds();
 
         self::assertSame(['Technology', 'Science'], array_map(
-            static fn (CatalogCategory $c): string => $c->getName(),
+            static fn (CatalogCategory $category): string => $category->getName(),
             $rows,
         ));
         self::assertSame(['Ars Technica', 'The Verge'], array_map(
-            static fn (CatalogFeed $f): string => $f->getTitle(),
+            static fn (CatalogFeed $feed): string => $feed->getTitle(),
             $rows[0]->getEnabledFeeds(),
         ));
     }

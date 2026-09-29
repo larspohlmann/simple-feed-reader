@@ -165,8 +165,8 @@ final class OnboardingControllerTest extends WebTestCase
         self::assertNotNull($user);
 
         // One short of the cap, so a two-feed selection lands one and skips one.
-        for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER - 1; ++$i) {
-            $feed = new Feed(\sprintf('https://filler%d.example.com/rss.xml', $i));
+        for ($index = 0; $index < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER - 1; ++$index) {
+            $feed = new Feed(\sprintf('https://filler%d.example.com/rss.xml', $index));
             $entityManager->persist($feed);
             $entityManager->persist(new Subscription($user, $feed, $clock->now()));
         }

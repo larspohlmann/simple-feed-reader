@@ -22,19 +22,19 @@ if ($_SERVER['APP_DEBUG']) {
 // The JWT keypair is gitignored, so CI and fresh checkouts have none. Tests
 // need a real keypair (Lexik signs with RS256), so generate one on demand.
 // The passphrase comes from .env — deliberately a throwaway in dev/test.
-$jwtDir = dirname(__DIR__) . '/config/jwt';
+$jwtDirectory = dirname(__DIR__) . '/config/jwt';
 // The second is_dir() covers a concurrent run winning the race to create it.
-if (!is_dir($jwtDir) && !mkdir($jwtDir, 0o777, true) && !is_dir($jwtDir)) {
+if (!is_dir($jwtDirectory) && !mkdir($jwtDirectory, 0o777, true) && !is_dir($jwtDirectory)) {
     fwrite(STDERR, sprintf(
         "\nCould not create the JWT key directory %s; aborting before tests run.\n",
-        $jwtDir,
+        $jwtDirectory,
     ));
     exit(1);
 }
 // Regenerate when *either* file is missing, and overwrite unconditionally: a
 // half-present pair would otherwise make the command refuse to write and wedge
 // the suite until config/jwt was cleared by hand.
-if (!file_exists($jwtDir . '/private.pem') || !file_exists($jwtDir . '/public.pem')) {
+if (!file_exists($jwtDirectory . '/private.pem') || !file_exists($jwtDirectory . '/public.pem')) {
     passthru(sprintf(
         'php "%s/bin/console" lexik:jwt:generate-keypair --env=test --overwrite --quiet',
         dirname(__DIR__),
