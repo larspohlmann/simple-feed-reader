@@ -181,6 +181,9 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`PersistenceClassesAreFinalRule`** (`tests/PhpStan/PersistenceClassesAreFinalRule.php`) — every class
   in `src/Entity` and `src/Repository` is `final`. A test that needs a repository double doubles the
   interface its consumer owns (`SavedSearchMembershipWriterInterface`, `UserByEmailInterface`, #1169).
+- **`NoCollaboratorDefaultRule`** (`tests/PhpStan/NoCollaboratorDefaultRule.php`) — a service, controller,
+  listener, command or HTTP class never defaults a constructor parameter with `new`; tests pass the
+  collaborator in. Models, DTOs and per-call objects may default a value.
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out

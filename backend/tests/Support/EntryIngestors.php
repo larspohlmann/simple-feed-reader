@@ -16,6 +16,7 @@ use App\Service\Ingest\EntryIngestor;
 use App\Service\Ingest\Factory\IngestedEntryFactory;
 use App\Service\Ingest\PlatformEntryRules;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Service\Url\UrlNormalizer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -45,7 +46,7 @@ final class EntryIngestors
             new UrlNormalizer(),
             new EntryCategoryWriter($em, $categoryRepository, new CategoryNormalizer()),
             $platformRules,
-            new IngestedEntryFactory(new EntrySanitizer(), $imageWriter),
+            new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
             $imageWriter,
         );
     }

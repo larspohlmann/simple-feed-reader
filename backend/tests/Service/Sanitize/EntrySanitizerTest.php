@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Sanitize;
 
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\TestCase;
 
 final class EntrySanitizerTest extends TestCase
@@ -13,7 +14,7 @@ final class EntrySanitizerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->sanitizer = new EntrySanitizer();
+        $this->sanitizer = new EntrySanitizer(new TrailingBlankRemover());
     }
 
     public function testStripsScriptsAndEventHandlers(): void
@@ -145,7 +146,7 @@ final class EntrySanitizerTest extends TestCase
             . '<img src="https://img/1.jpg" alt="a" loading="eager"></li>'
             . '<li><img src="https://img/2.jpg" alt="b" loading="lazy"></li></ol></figure>';
 
-        $clean = (new EntrySanitizer())->sanitize($html);
+        $clean = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($html);
 
         self::assertNotNull($clean);
         self::assertStringContainsString('class="reader-slideshow"', $clean);
@@ -158,7 +159,7 @@ final class EntrySanitizerTest extends TestCase
             . '<li><img src="https://img/1.jpg" alt="a"></li>'
             . '<li><img src="https://img/2.jpg" alt="b"></li></ol></figure>';
 
-        $clean = (new EntrySanitizer())->sanitize($html);
+        $clean = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($html);
 
         self::assertNotNull($clean);
         self::assertStringNotContainsString('onclick', $clean);

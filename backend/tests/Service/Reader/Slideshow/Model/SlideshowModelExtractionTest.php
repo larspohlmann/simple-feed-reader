@@ -17,6 +17,7 @@ use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
@@ -55,7 +56,7 @@ final class SlideshowModelExtractionTest extends TestCase
             BodyCleaningInputs::withSlideshows($this->scanner()->scan($rawDocument)),
         );
 
-        $safe = (new EntrySanitizer())->sanitize($clean);
+        $safe = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($clean);
         self::assertIsString($safe);
         self::assertStringContainsString('First headline', $safe);
         self::assertStringContainsString('https://www.example.com/first-article', $safe);
