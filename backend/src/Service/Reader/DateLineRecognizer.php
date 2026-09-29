@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\DependencyInjection\ProcessLifetimeState;
+use App\Service\Reader\Factory\DateFormatterFactoryInterface;
 
 #[ProcessLifetimeState('Formatters are immutable per locale and format')]
 final class DateLineRecognizer
 {
-    /** A date line is short; the locales the reader serves and the spelled-out date styles. */
     private const int DATE_LINE_MAX_CHARS = 48;
     private const array DATE_LINE_LOCALES = ['de', 'en_US', 'en_GB'];
     private const array DATE_LINE_STYLES = [
@@ -18,16 +18,11 @@ final class DateLineRecognizer
         \IntlDateFormatter::MEDIUM,
     ];
 
-    /** @var \Closure(string, int): \IntlDateFormatter */
-    private readonly \Closure $buildFormatter;
-
-    /** @var array<string, array<int, \IntlDateFormatter>> strict formatters by locale and style, reused across calls */
+    /** @var array<string, array<int, \IntlDateFormatter>> */
     private array $dateFormatters = [];
 
-    /** @param (\Closure(string, int): \IntlDateFormatter)|null $buildFormatter */
-    public function __construct(?\Closure $buildFormatter = null)
+    public function __construct(private readonly DateFormatterFactoryInterface $formatters)
     {
-        $this->buildFormatter = $buildFormatter ?? self::strictDateFormatter(...);
     }
 
     /**
@@ -55,7 +50,7 @@ final class DateLineRecognizer
 
     private function consumesWholeStringAsDate(string $text, string $locale, int $style): bool
     {
-        $formatter = $this->dateFormatters[$locale][$style] ??= ($this->buildFormatter)($locale, $style);
+        $formatter = $this->dateFormatters[$locale][$style] ??= $this->formatters->build($locale, $style);
 
         $position = 0;
         $timestamp = $formatter->parse($text, $position);
@@ -63,19 +58,5 @@ final class DateLineRecognizer
         // parse() reports the stop position in code points, so compare with
         // mb_strlen: a byte length rejects any date with a non-ASCII month (März).
         return $timestamp !== false && $position === mb_strlen($text);
-    }
-
-    private static function strictDateFormatter(string $locale, int $style): \IntlDateFormatter
-    {
-        $formatter = new \IntlDateFormatter(
-            $locale,
-            $style,
-            \IntlDateFormatter::NONE,
-            'UTC',
-            \IntlDateFormatter::GREGORIAN,
-        );
-        $formatter->setLenient(false);
-
-        return $formatter;
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\Factory\StrictDateFormatterFactory;
+use App\Tests\Support\RecordingDateFormatterFactory;
 use PHPUnit\Framework\TestCase;
 
 final class DateLineRecognizerTest extends TestCase
@@ -13,7 +15,7 @@ final class DateLineRecognizerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->recognizer = new DateLineRecognizer();
+        $this->recognizer = new DateLineRecognizer(new StrictDateFormatterFactory());
     }
 
     public function testDateLineMatchesGermanEnglishAndNumericForms(): void
@@ -58,56 +60,42 @@ final class DateLineRecognizerTest extends TestCase
 
     public function testBuildsOneFormatterPerLocaleAndStyleAndReusesItOnEveryLaterCall(): void
     {
-        $built = [];
-        $recognizer = new DateLineRecognizer(self::recordingBuilder($built));
+        $formatters = new RecordingDateFormatterFactory();
+        $recognizer = new DateLineRecognizer($formatters);
 
         $recognizer->isDateLine('Hamburg 1');
         $recognizer->isDateLine('Hamburg 2');
 
-        self::assertCount(9, $built);
-        self::assertSame($built, array_values(array_unique($built)));
+        self::assertCount(9, $formatters->built());
+        self::assertSame($formatters->built(), array_values(array_unique($formatters->built())));
     }
 
     public function testParsesNothingForTextWithoutADigitOrLongerThanTheCap(): void
     {
-        $built = [];
-        $recognizer = new DateLineRecognizer(self::recordingBuilder($built));
+        $formatters = new RecordingDateFormatterFactory();
+        $recognizer = new DateLineRecognizer($formatters);
 
         self::assertFalse($recognizer->isDateLine('Hamburg'));
         self::assertFalse($recognizer->isDateLine(str_repeat('a', 48) . '1'));
 
-        self::assertSame([], $built);
+        self::assertSame([], $formatters->built());
     }
 
     public function testParsesTextExactlyAtTheCap(): void
     {
-        $built = [];
+        $formatters = new RecordingDateFormatterFactory();
 
-        (new DateLineRecognizer(self::recordingBuilder($built)))->isDateLine(str_repeat('a', 47) . '1');
+        (new DateLineRecognizer($formatters))->isDateLine(str_repeat('a', 47) . '1');
 
-        self::assertCount(9, $built);
+        self::assertCount(9, $formatters->built());
     }
 
     public function testCountsTheCapInCharactersNotBytes(): void
     {
-        $built = [];
+        $formatters = new RecordingDateFormatterFactory();
 
-        (new DateLineRecognizer(self::recordingBuilder($built)))->isDateLine(str_repeat('ä', 40) . '1');
+        (new DateLineRecognizer($formatters))->isDateLine(str_repeat('ä', 40) . '1');
 
-        self::assertCount(9, $built);
-    }
-
-    /**
-     * @param list<string> $built
-     *
-     * @return \Closure(string, int): \IntlDateFormatter
-     */
-    private static function recordingBuilder(array &$built): \Closure
-    {
-        return static function (string $locale, int $style) use (&$built): \IntlDateFormatter {
-            $built[] = $locale . '|' . $style;
-
-            return new \IntlDateFormatter($locale, $style, \IntlDateFormatter::NONE, 'UTC');
-        };
+        self::assertCount(9, $formatters->built());
     }
 }

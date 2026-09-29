@@ -22,6 +22,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\Factory\StrictDateFormatterFactory;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -65,7 +66,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new SubstackPosterLink(),
             new PlayerChromeCleaner(),
             new NavigationChromeTrimmer(),
-            new LeadingEngagementCleaner(new DateLineRecognizer()),
+            new LeadingEngagementCleaner(new DateLineRecognizer(new StrictDateFormatterFactory())),
             new LeadingTitleRemover(),
             new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new SlideshowInserter(new SlideshowMarkup()),
