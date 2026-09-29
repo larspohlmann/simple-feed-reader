@@ -10,12 +10,7 @@ use App\Tests\Support\EnablesMailInTests;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The account's own view of, and write path onto, its locale. Tokens are
- * minted straight from the JWT manager rather than through POST
- * /api/auth/login, so these cases never touch the login throttler's
- * filesystem pool and cannot be poisoned by it.
- */
+/** Tokens come straight from the JWT manager, so no case touches, or is poisoned by, the login throttler's pool. */
 final class MeControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
@@ -292,13 +287,7 @@ final class MeControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(409);
     }
 
-    /**
-     * The lockout chain the status-blind countAdmins() used to miss: two
-     * active admins both count, but suspending one leaves only one admin able
-     * to act at all. countActiveAdmins() must refuse the remaining admin's
-     * self-delete here, or the instance is left with a suspended admin nobody
-     * can reinstate (approve sits behind ROLE_ADMIN on ^/api/admin/).
-     */
+    /** With the other admin suspended, the last active admin's self-delete must be refused: nobody could reinstate. */
     public function testTheLastActiveAdminCannotSelfDeleteAfterSuspendingTheOtherAdmin(): void
     {
         $client = static::createClient();

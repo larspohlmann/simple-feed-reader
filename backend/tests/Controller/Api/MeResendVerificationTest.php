@@ -12,17 +12,8 @@ use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * Self-service reissue of the address-verification mail (#636). Safe to call
- * repeatedly: RegistrationService::resendVerification() is a no-op once the
- * address is proven, so this endpoint never queues a second mail for an
- * already-verified account.
- *
- * Both tests authenticate an Active account, never PendingVerification: the
- * API firewall's UserChecker rejects a non-Active status on every request
- * (see App\Security\UserChecker), so a PendingVerification account can never
- * hold a usable bearer token in the first place. The account this endpoint
- * exists for is the one the spec calls out — an Active account whose address
- * is unverified because mail was off at registration and got turned on later.
+ * Authenticates an Active account whose address is unverified (mail was off at registration): UserChecker rejects
+ * any non-Active account on every request, so a PendingVerification account never holds a usable token.
  */
 final class MeResendVerificationTest extends ApiTestCase
 {

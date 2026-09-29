@@ -61,13 +61,7 @@ final class VersionControllerTest extends WebTestCase
         self::assertSame('dev', $payload['version']);
     }
 
-    /**
-     * The update check is folded into the same payload, and the suite must
-     * reach it without ever calling GitHub: GITHUB_RELEASE_REPOSITORY is forced
-     * empty in phpunit.dist.xml, so the reader returns null and the endpoint
-     * reports no update. A non-null `latest` here would mean a live call leaked
-     * into the test run.
-     */
+    /** GITHUB_RELEASE_REPOSITORY is empty in phpunit.dist.xml, so a non-null `latest` means a live call leaked. */
     public function testExposesTheUpdateCheckWithoutReachingGitHub(): void
     {
         $client = self::createClient();
@@ -84,12 +78,7 @@ final class VersionControllerTest extends WebTestCase
         self::assertFalse($payload['updateAvailable']);
     }
 
-    /**
-     * The empty-repository test above can only ever see a null latest, so it
-     * cannot pin how a real release is shaped into the payload. This drives the
-     * action with a populated report — no kernel, no network — to assert the
-     * nested `latest` object and the `updateAvailable` flag it carries.
-     */
+    /** The kernel test above only ever sees a null `latest`; this drives the action directly with a real release. */
     public function testMapsAnAvailableReleaseIntoThePayload(): void
     {
         $reporter = $this->reporterReporting(

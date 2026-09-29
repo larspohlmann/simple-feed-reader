@@ -17,9 +17,8 @@ use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * The "send me a test digest" button (#636): a preview send over the last N
- * days that never advances digestLastSentAt, gated on mail being on and the
- * address being verified, and capped by the digest_test limiter.
+ * The "send me a test digest" button: a preview send over the last N days that never advances digestLastSentAt,
+ * gated on mail being on and the address being verified, and capped by the digest_test limiter.
  */
 final class MeDigestTestControllerTest extends ApiTestCase
 {
@@ -46,11 +45,8 @@ final class MeDigestTestControllerTest extends ApiTestCase
     }
 
     /**
-     * A verified user with one includeInDigest saved search that already has
-     * one unread member inside the requested window. The digest now reads the
-     * membership table (#1116) rather than matching terms live, so the entry
-     * is persisted as a SavedSearchEntry directly, standing in for the sweep
-     * a real create would trigger.
+     * A verified user whose includeInDigest search already has one unread member in the window. The digest reads
+     * memberships, so the SavedSearchEntry is persisted directly, standing in for the sweep a create would run.
      */
     private function verifiedUserWithAMatchingDigestSearch(string $email): User
     {
@@ -100,10 +96,7 @@ final class MeDigestTestControllerTest extends ApiTestCase
 
         self::assertResponseIsSuccessful();
         self::assertSame(['sent' => true], $this->payload($client));
-        // assertEmailCount, not a raw getMailerMessages() count: Mailer::send()
-        // dispatches one "queued" pre-send MessageEvent plus one real-send event
-        // per message when Messenger is wired in (see RegistrationTest's
-        // identical use), and the constraint is what filters to the latter.
+        // assertEmailCount, not getMailerMessages(): with Messenger, each send also records a "queued" event.
         self::assertEmailCount(1);
     }
 

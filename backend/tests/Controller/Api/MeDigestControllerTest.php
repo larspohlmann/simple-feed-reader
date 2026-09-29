@@ -9,12 +9,7 @@ use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The account's own write path onto its email-digest configuration (#636),
- * including the first-enable seeding of digestLastSentAt (spec Q5): the first
- * digest a newly-opted-in account receives must cover only entries that
- * arrive after opt-in, not everything the account has ever accumulated.
- */
+/** Includes first-enable seeding: an account's first digest covers only entries that arrive after it opts in. */
 final class MeDigestControllerTest extends ApiTestCase
 {
     /** Attaches a bearer token to every subsequent request this client makes. */
