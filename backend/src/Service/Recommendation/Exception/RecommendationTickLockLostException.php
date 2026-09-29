@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Exception;
 
 /**
- * Another process holds this tick's per-user lock now (#444).
- *
- * Control flow, not a fault: nothing failed, and the provider call this tick
- * paid for succeeded. What this signals is that the run has a second tick
- * working on it, so writing what this one computed would double-bank the
- * winners the lock exists to serialise. The tick unwinds at its next
- * checkpoint and leaves the run to the process that owns it.
+ * Control flow, not a fault: another process holds this tick's per-user lock now, and writing this tick's result would
+ * double-bank the winners. The tick unwinds at its next checkpoint and leaves the run to the lock's owner.
  */
 final class RecommendationTickLockLostException extends \RuntimeException
 {

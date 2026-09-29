@@ -5,24 +5,18 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Feed\Model;
 
 /**
- * The header/sidebar's view of the for-you list: how many entries survive
- * and when the list was last refreshed. Deliberately not part of
- * RecommendationRunReportModel — that describes the latest run (which may have
- * failed), while this describes the surviving list.
+ * The header's and sidebar's view of the surviving for-you list, which a later failed run leaves untouched; the latest
+ * run itself is RecommendationRunReportModel.
  */
 final readonly class RecommendationForYouSummaryModel
 {
     public function __construct(
-        // The count of UNREAD surviving picks — the same "unread" the rest of
-        // the sidebar counts, so the For-You badge drops to zero once the reader
-        // has read every pick (#724).
+        // Unread picks only, the sidebar's own "unread", so the badge drops to zero once every pick is read.
         public int $itemCount,
         // The count of ALL surviving picks, unlike itemCount which is unread-only.
         public int $totalCount,
         public ?\DateTimeImmutable $generatedAt,
-        // The newest completed run's id — the run whose generation time the
-        // header shows. The client suppresses that one run's divider by id
-        // rather than by matching timestamps across two serializers (#348).
+        // The run whose time the header shows; the client hides that run's divider by id, not by matching timestamps.
         public ?int $newestRunId = null,
     ) {
     }
