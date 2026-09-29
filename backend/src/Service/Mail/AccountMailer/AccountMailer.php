@@ -84,14 +84,14 @@ final readonly class AccountMailer implements AccountMailerInterface
     }
 
     /**
-     * @param array<string, string> $params
+     * @param array<string, string> $translationParameters
      * @throws TransportExceptionInterface
      */
-    private function send(User $user, string $key, array $params): void
+    private function send(User $user, string $key, array $translationParameters): void
     {
         $locale = $user->getLocale();
         $subject = $this->translator->trans("$key.subject", [], 'emails', $locale);
-        $body = $this->translator->trans("$key.body", $params, 'emails', $locale);
+        $body = $this->translator->trans("$key.body", $translationParameters, 'emails', $locale);
         $identity = $this->mailSettings->identity();
 
         $this->mailer->send(

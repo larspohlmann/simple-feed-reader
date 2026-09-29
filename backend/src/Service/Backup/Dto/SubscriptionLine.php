@@ -13,7 +13,7 @@ use App\Service\Backup\Support\LineFieldWithDefault;
 final readonly class SubscriptionLine
 {
     /**
-     * @param list<SubscriptionTagRef> $tags
+     * @param list<SubscriptionTagReference> $tags
      */
     public function __construct(
         public string $feedUrl,
@@ -47,12 +47,12 @@ final readonly class SubscriptionLine
     /**
      * @param array<string, mixed> $line
      *
-     * @return list<SubscriptionTagRef>
+     * @return list<SubscriptionTagReference>
      */
     private static function tagsFromLine(array $line): array
     {
         return array_map(
-            SubscriptionTagRef::fromLine(...),
+            SubscriptionTagReference::fromLine(...),
             LineField::objectList($line, 'tags'),
         );
     }

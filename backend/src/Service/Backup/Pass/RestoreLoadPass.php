@@ -184,8 +184,8 @@ final class RestoreLoadPass
         ));
 
         $subscription = $this->foundationFactory->subscription($this->user, $feed, $line);
-        foreach ($line->tags as $ref) {
-            $subscription->addTag($this->tagNamed($ref->name), $ref->position);
+        foreach ($line->tags as $tagReference) {
+            $subscription->addTag($this->tagNamed($tagReference->name), $tagReference->position);
         }
 
         $this->entityManager->persist($subscription);

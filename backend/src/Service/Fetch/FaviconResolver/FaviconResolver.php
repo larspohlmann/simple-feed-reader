@@ -113,16 +113,16 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     /** The best https icon a page's <link> tags advertise, or null. */
     private function pickIcon(string $html, PageUrls $pageUrls): ?string
     {
-        $dom = new \DOMDocument();
+        $document = new \DOMDocument();
         $previous = libxml_use_internal_errors(true);
         // LIBXML_NONET: never let the parser dereference external entities.
-        $dom->loadHTML($html, \LIBXML_NONET);
+        $document->loadHTML($html, \LIBXML_NONET);
         libxml_clear_errors();
         libxml_use_internal_errors($previous);
 
         $best = null;
         $bestSize = -1;
-        foreach ($dom->getElementsByTagName('link') as $link) {
+        foreach ($document->getElementsByTagName('link') as $link) {
             // Matches "icon", "shortcut icon" and "apple-touch-icon".
             if (!str_contains(strtolower(trim($link->getAttribute('rel'))), 'icon')) {
                 continue;
@@ -165,8 +165,8 @@ final readonly class FaviconResolver implements FaviconResolverInterface
 
         $largest = 0;
         foreach (preg_split('/\s+/', $sizes) ?: [] as $token) {
-            if (1 === preg_match('/^(\d+)x\d+$/', $token, $m)) {
-                $largest = max($largest, (int) $m[1]);
+            if (1 === preg_match('/^(\d+)x\d+$/', $token, $matches)) {
+                $largest = max($largest, (int) $matches[1]);
             }
         }
 

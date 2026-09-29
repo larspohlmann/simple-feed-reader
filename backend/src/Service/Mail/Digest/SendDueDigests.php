@@ -32,7 +32,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 final readonly class SendDueDigests
 {
     public function __construct(
-        private DigestRecipientsInterface $preferences,
+        private DigestRecipientsInterface $recipients,
         private DigestSchedule $schedule,
         private DigestComposer $composer,
         private DigestMailerInterface $mailer,
@@ -55,10 +55,10 @@ final readonly class SendDueDigests
         $sent = 0;
         $skippedEmpty = 0;
 
-        foreach ($this->preferences->findWithDigestEnabled() as $prefs) {
+        foreach ($this->recipients->findWithDigestEnabled() as $preferences) {
             ++$considered;
 
-            $attempt = $this->attemptSend($prefs, $now);
+            $attempt = $this->attemptSend($preferences, $now);
             if (DigestAttempt::Sent === $attempt) {
                 ++$sent;
             } elseif (DigestAttempt::NothingToReport === $attempt) {
@@ -69,31 +69,31 @@ final readonly class SendDueDigests
         return new DigestSweepReportModel($considered, $sent, $skippedEmpty);
     }
 
-    private function attemptSend(Preferences $prefs, \DateTimeImmutable $now): DigestAttempt
+    private function attemptSend(Preferences $preferences, \DateTimeImmutable $now): DigestAttempt
     {
-        $occurrence = $this->dueOccurrence($prefs, $now);
+        $occurrence = $this->dueOccurrence($preferences, $now);
         if (null === $occurrence) {
             return DigestAttempt::NotDue;
         }
 
-        $user = $prefs->getUser();
+        $user = $preferences->getUser();
         if (!$user->isEmailVerified()) {
             return DigestAttempt::Ineligible;
         }
 
-        $model = $this->composer->compose($user, $prefs->getDigestLastSentAt() ?? $occurrence);
+        $model = $this->composer->compose($user, $preferences->getDigestLastSentAt() ?? $occurrence);
         if (null === $model) {
             return DigestAttempt::NothingToReport;
         }
 
-        return $this->sendAndAdvance($user, $model, $prefs, $occurrence);
+        return $this->sendAndAdvance($user, $model, $preferences, $occurrence);
     }
 
     /** One recipient's transport failure must not stop the sweep; the untouched watermark retries it next tick (#636). */
     private function sendAndAdvance(
         User $user,
         DigestModel $model,
-        Preferences $prefs,
+        Preferences $preferences,
         \DateTimeImmutable $occurrence,
     ): DigestAttempt {
         try {
@@ -109,21 +109,21 @@ final readonly class SendDueDigests
         }
 
         $this->health->recordSuccess();
-        $prefs->setDigestLastSentAt($occurrence);
+        $preferences->setDigestLastSentAt($occurrence);
         $this->entityManager->flush();
 
         return DigestAttempt::Sent;
     }
 
     /** The schedule's occurrence, but only if it is newer than the last send. */
-    private function dueOccurrence(Preferences $prefs, \DateTimeImmutable $now): ?\DateTimeImmutable
+    private function dueOccurrence(Preferences $preferences, \DateTimeImmutable $now): ?\DateTimeImmutable
     {
-        $occurrence = $this->schedule->mostRecentDue($prefs, $now);
+        $occurrence = $this->schedule->mostRecentDue($preferences, $now);
         if (null === $occurrence) {
             return null;
         }
 
-        $lastSent = $prefs->getDigestLastSentAt();
+        $lastSent = $preferences->getDigestLastSentAt();
 
         return (null === $lastSent || $lastSent < $occurrence) ? $occurrence : null;
     }
