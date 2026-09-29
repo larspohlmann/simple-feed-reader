@@ -14,12 +14,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Fetches every URL in resources/catalog/catalog.opml and reports the ones that
- * no longer serve a feed. Reads the SHIPPED DOCUMENT, not the database: this
- * checks what we hand a new install, which is the thing that rots unnoticed.
- *
- * Run on a schedule, never as a PR gate — 111 publisher domains produce enough
- * rate limits, bot blocks and transient outages to make a merge check useless.
+ * Reports the URLs in the shipped resources/catalog/catalog.opml that no longer serve a feed; it reads the document,
+ * not the database. A scheduled check, never a PR gate: 111 publisher domains always have some outage or bot block.
  */
 #[AsCommand(
     name: 'app:catalog:check-urls',

@@ -18,14 +18,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * Seeds (or promotes) a single active admin so the e2e suite has an account that
- * can drive the approval queue and accept a scraped feed candidate. There is no
- * admin-creation endpoint, and the e2e suite is black-box, so this is the one
- * out-of-band fixture it needs.
- *
- * Refuses to run under APP_ENV=prod: this mints an active admin from a
- * CLI-supplied password, which must never be reachable on a production host.
- * Idempotent — a second run promotes and re-hashes rather than duplicating.
+ * Seeds or promotes one active admin for the black-box e2e suite, which has no other way to get one. Idempotent.
+ * Refuses under APP_ENV=prod: it mints an admin from a password given on the command line.
  */
 #[AsCommand(
     name: 'app:e2e:seed-admin',
@@ -72,10 +66,8 @@ final class E2eSeedAdminCommand extends Command
         $user->setRoles(['ROLE_ADMIN']);
         $user->approve($now);
         $user->setPasswordHash($this->hasher->hashPassword($user, $password), $now);
-        // The scrape fallback is opt-in, so an account left at the default never
-        // gets a scraped candidate: discovery answers an empty list for a page that
-        // advertises no feed. The reader suite covers exactly that fallback, so the
-        // fixture has to state the preference rather than inherit it.
+        // The scrape fallback is opt-in and the reader suite exercises it, so the fixture states the preference
+        // rather than inherit the default.
         $user->getPreferences()->setScrapeFallbackEnabled(true);
 
         $this->entityManager->persist($user);

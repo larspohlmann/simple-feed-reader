@@ -14,10 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Deletes accounts that never confirmed their email. Without this, registering
- * and abandoning reserves an address forever, since the unique constraint on
- * email would block the real owner from ever signing up.
- *
+ * Deletes accounts that never confirmed their email, so an abandoned registration does not reserve the address.
  * Runs over SSH: `php83 -q -f bin/console app:users:purge-unverified`.
  */
 #[AsCommand(
@@ -47,10 +44,8 @@ final class PurgeUnverifiedUsersCommand extends Command
         $stale = $this->users->findUnverifiedCreatedBefore($cutoff);
 
         foreach ($stale as $user) {
-            // remove(), not a DQL bulk DELETE: going through the ORM keeps the
-            // unit of work aware of what left, and the action_token rows follow
-            // via the FK's ON DELETE CASCADE. A bulk DELETE would bypass the
-            // unit of work entirely.
+            // remove(), not a bulk DQL DELETE, so the unit of work knows what left; the action_token rows follow by
+            // FK ON DELETE CASCADE.
             $this->entityManager->remove($user);
         }
 

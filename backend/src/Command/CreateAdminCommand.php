@@ -16,13 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Creates the first administrator on a fresh install. Unlike app:e2e:seed-admin
- * this is prod-safe: it is the supported bootstrap for a shell/exec operator.
- *
- * Refuses when an administrator already exists, so a re-run cannot silently mint
- * a second bootstrap admin; --force overrides for recovery. The password is read
- * from a hidden prompt, never a CLI argument — an argument leaks into shell
- * history and the process list.
+ * Creates the first administrator; the prod-safe bootstrap (app:e2e:seed-admin is not). Refuses while an admin exists
+ * unless --force. The password comes from a hidden prompt, never an argument: shell history and ps would show it.
  */
 #[AsCommand(
     name: 'app:admin:create',
