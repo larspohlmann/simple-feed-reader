@@ -133,3 +133,20 @@ namespace App\Tests\Fixtures {
         }
     }
 }
+
+namespace App\Service\LocatorFixtures {
+    use App\Entity\Feed;
+    use Doctrine\ORM\EntityManagerInterface;
+
+    final readonly class LocatesARepository
+    {
+        public function __construct(private EntityManagerInterface $em)
+        {
+        }
+
+        public function repository(): object
+        {
+            return $this->em->getRepository(Feed::class);
+        }
+    }
+}

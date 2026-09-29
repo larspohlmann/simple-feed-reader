@@ -26,6 +26,7 @@ final class QueriesLiveInRepositoriesRuleTest extends RuleTestCase
                 [self::message('App\Service\Fixtures\BuildsDql', '->createQueryBuilder()'), 26],
                 [self::message('App\Service\Fixtures\HoldsTheConnection', 'Doctrine\DBAL\Connection'), 32],
                 [self::message('App\Controller\Fixtures\ReachesForTheConnection', '->getConnection()'), 80],
+                [self::message('App\Service\LocatorFixtures\LocatesARepository', '->getRepository()'), 149],
             ],
         );
     }
