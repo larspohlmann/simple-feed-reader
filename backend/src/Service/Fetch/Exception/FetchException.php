@@ -9,12 +9,8 @@ use App\Service\Fetch\Support\ProxyHandshakeFailure;
 abstract class FetchException extends \RuntimeException
 {
     /**
-     * The HTTP client wraps exceptions thrown inside on_progress, so a
-     * ResponseTooLargeException raised there arrives back here buried inside
-     * $previous. Unwrapping it at every catch site is exactly the kind of step
-     * a future edit forgets; centralising it here makes forgetting impossible —
-     * an empty catch block is the only way left to skip it, and no reviewer
-     * misses that.
+     * The HTTP client wraps an exception thrown inside on_progress, so a ResponseTooLargeException raised there comes
+     * back buried in $previous. Every catch site goes through here, so none can forget to unwrap it.
      */
     public static function from(string $url, \Throwable $previous): self
     {

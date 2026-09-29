@@ -7,22 +7,12 @@ namespace App\Service\Fetch\Exception;
 final class ResponseTooLargeException extends FetchException
 {
     /**
-     * The one size a feed response may reach. Two guards measure it — wire bytes
-     * as they arrive, and the buffered body afterwards — and they only bound the
-     * same memory while they quote the same number, so the number lives here,
-     * beside the failure it produces, instead of once per fetcher.
+     * The one feed-response size limit. The wire-byte guard and the buffered-body guard bound the same memory only
+     * while they quote the same number.
      */
     private const int MAX_BYTES = 5_000_000;
 
-    /**
-     * Both size guards call this at their own checkpoint — wire bytes as they
-     * arrive, before a URL is even resolved, and the buffered body once the
-     * response is complete. Each guard collapses to one unconditional line,
-     * while the limit itself and the two message shapes it produces live only
-     * here.
-     *
-     * @throws self when $observedBytes exceeds the limit
-     */
+    /** @throws self when $observedBytes exceeds the limit */
     public static function throwIfExceeded(int $observedBytes, ?string $url = null): void
     {
         if ($observedBytes <= self::MAX_BYTES) {

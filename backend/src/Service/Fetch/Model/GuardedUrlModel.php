@@ -19,10 +19,8 @@ final readonly class GuardedUrlModel
     }
 
     /**
-     * The address override for the HTTP client's `resolve` option, curl's
-     * CURLOPT_RESOLVE multi-address form. Pinning every validated address, not
-     * only the first, lets happy-eyeballs fall back across A/AAAA records, so a
-     * host whose IPv4 route is dead still connects over IPv6.
+     * The `resolve` option in curl's CURLOPT_RESOLVE multi-address form. Pinning every validated address lets happy
+     * eyeballs fall back across A and AAAA records when one family's route is dead.
      */
     public function pinnedAddresses(): string
     {
@@ -30,20 +28,13 @@ final readonly class GuardedUrlModel
     }
 
     /**
-     * The `resolve`-option values to try in turn, most-capable first. The first
-     * pins every address so happy-eyeballs races both families, rescuing one
-     * that's dead at TCP connect — but not one that connects and only then dies:
-     * heise's IPv6 route from Strato completes the TCP handshake and resets
-     * during TLS, so the client commits to it and never falls back. The later
-     * pins narrow to one family each so the caller can re-drive over the family
-     * that works. A single-family host yields the one pin only.
+     * The `resolve` values to try in turn: every address first, so happy eyeballs races both families, then one family
+     * each, so the caller can re-drive past a family that connects and then resets. A single-family host gets one.
      *
      * @return non-empty-list<string>
      */
     public function pinnedAddressAttempts(): array
     {
-        // Keys are irrelevant here: the results are only imploded and tested for
-        // emptiness, so array_filter's preserved keys need no reindexing.
         $ipv6 = array_filter($this->ips, static fn (string $ip): bool => str_contains($ip, ':'));
         $ipv4 = array_filter($this->ips, static fn (string $ip): bool => !str_contains($ip, ':'));
 
