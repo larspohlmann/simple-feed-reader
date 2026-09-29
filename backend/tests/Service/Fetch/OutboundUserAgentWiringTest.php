@@ -10,32 +10,12 @@ use App\Service\Reader\HtmlPageFetcher;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
-/**
- * Every outbound request must announce ONE User-Agent, and that string must not
- * advertise a host.
- *
- * Both halves are load-bearing, and both were learned the hard way (#255).
- *
- * The host rule: Akamai Bot Manager rejects a User-Agent containing a
- * domain-shaped token. It does not answer 403 — it completes the TLS handshake
- * and then resets the HTTP/2 stream, so the transport reports nothing at all and
- * the reader tells the user to "check the address" for a feed that is perfectly
- * fine. The courteous `(+https://…)` self-identification cost us every cbc.ca
- * feed. An invented domain is blocked exactly like a real one, so this is a
- * pattern match on "the agent advertises a host", not domain reputation.
- *
- * The one-value rule: the catalog rot check used to send a User-Agent of its
- * own. A publisher that blocks the fetcher but not the checker would then leave
- * the rot check reporting a healthy catalog while no user could subscribe — the
- * probe has to be indistinguishable from the traffic it is a probe for.
- */
+/** Every outbound request sends `outbound_user_agent`, and it names no host; config/services.yaml says why. */
 final class OutboundUserAgentWiringTest extends KernelTestCase
 {
     /**
-     * Matches a domain-shaped token: labels joined by dots ending in a
-     * two-letter-or-longer TLD. Deliberately loose — it flags `example.com`
-     * inside a URL, inside an email address and bare, while leaving a version
-     * like `1.0` alone (no alphabetic TLD follows the dot).
+     * A domain-shaped token, deliberately loose: it flags `example.com` in a URL, in an email address and bare, but
+     * not a version like `1.0`, where no alphabetic TLD follows the dot.
      */
     private const string HOST_SHAPED = '/[a-z0-9-]+\.[a-z]{2,}/i';
 

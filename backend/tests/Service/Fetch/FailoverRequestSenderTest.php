@@ -26,9 +26,8 @@ final class FailoverRequestSenderTest extends TestCase
 
     public function testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders(): void
     {
-        // The both-families pin leads with the IPv6 address; a route that resets
-        // at the TLS handshake (heise's IPv6 from Strato) is a transport error
-        // the client cannot recover from on its own.
+        // The both-families pin leads with IPv6; a route that resets at the TLS handshake is a transport error the
+        // client cannot recover from on its own.
         $client = new MockHttpClient(static function (string $method, string $url, array $options): MockResponse {
             /** @var array<string, string> $resolve */
             $resolve = $options['resolve'];
@@ -64,8 +63,7 @@ final class FailoverRequestSenderTest extends TestCase
 
     public function testFailsOverToTheNextFamilyOnAnErrorStatus(): void
     {
-        // taz.de forbids its IPv6 range from Strato (403) while IPv4 serves 200;
-        // the error status must fall over to the family that answers.
+        // IPv6 answers 403 while IPv4 serves 200: the error status must fall over to the family that answers.
         $client = new MockHttpClient([
             new MockResponse('forbidden over IPv6', ['http_code' => 403]),
             new MockResponse('served over IPv4', ['http_code' => 200]),
@@ -113,10 +111,8 @@ final class FailoverRequestSenderTest extends TestCase
 
     public function testForcesAFreshConnectionOnAFailoverRetry(): void
     {
-        // curl pools connections by host:port. The dead family's connection can be
-        // alive and keep-alive (taz's IPv6 answers 403), so without a fresh
-        // connection the IPv4 retry would reuse it and get 403 again. The first
-        // attempt reuses the pool as normal; every retry must not.
+        // curl pools connections by host:port, so an IPv4 retry would reuse the dead family's keep-alive connection
+        // and get its 403 again. The first attempt reuses the pool; every retry must not.
         /** @var list<bool> $freshConnectPerAttempt */
         $freshConnectPerAttempt = [];
         $capture = function (string $method, string $url, array $options) use (&$freshConnectPerAttempt): MockResponse {

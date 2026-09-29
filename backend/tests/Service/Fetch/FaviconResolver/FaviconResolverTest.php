@@ -22,10 +22,6 @@ final class FaviconResolverTest extends TestCase
 
     private function page(string $head): FetchResponseModel
     {
-        // @lang TEXT: every caller passes a deliberately fake icon path, because
-        // resolving those paths is what the tests are about. Turning the HTML
-        // injection off keeps PhpStorm from reporting them as unresolvable, and
-        // from asking for a `lang` attribute the fixture does not need.
         return FetchResponseModel::fetched(
             'https://blog.example.com/',
             permanentRedirect: false,
@@ -51,8 +47,6 @@ final class FaviconResolverTest extends TestCase
     public function testResolvesRelativeIconAgainstTheFinalUrl(): void
     {
         $fetcher = new StubFeedFetcher();
-        // @lang TEXT: deliberately fake icon paths — resolving them is what the
-        // test asserts — so the "cannot resolve file" hint is wrong here.
         $fetcher->willReturn(
             'https://blog.example.com',
             $this->page(/** @lang TEXT */ '<link rel="shortcut icon" href="/assets/icon.png">'),
@@ -66,8 +60,6 @@ final class FaviconResolverTest extends TestCase
     public function testPrefersTheLargestDeclaredSize(): void
     {
         $fetcher = new StubFeedFetcher();
-        // Deliberately fake icon paths — picking the larger of them is what the
-        // test asserts — so the "cannot resolve file" hint is wrong here.
         /** @noinspection HtmlUnknownTarget */
         $fetcher->willReturn(
             'https://blog.example.com',
@@ -150,8 +142,6 @@ final class FaviconResolverTest extends TestCase
     public function testResolvesManySitesInOneBatch(): void
     {
         $fetcher = new StubFeedFetcher();
-        // @lang TEXT: `/a.png` must stay a fake path — resolving it is the point
-        // of the test — so the "cannot resolve file" hint is wrong here.
         $fetcher->willReturn(
             'https://one.example.com',
             FetchResponseModel::fetched(
@@ -195,12 +185,8 @@ final class FaviconResolverTest extends TestCase
     }
 
     /**
-     * BatchFeedFetcherInterface::fetchAll() only promises never to throw for
-     * an individual site's outcome — an invariant violation inside the
-     * fetcher itself (StubFeedFetcher's own "you forgot to stub this URL"
-     * guard is a stand-in for one) is a different failure shape entirely,
-     * and it must not escape resolveAll(): every site still gets the
-     * conventional fallback rather than blowing up the whole batch.
+     * An invariant failure inside the batch fetcher itself (StubFeedFetcher's unstubbed-URL guard stands in for one)
+     * must not escape resolveAll(): every site still gets the /favicon.ico fallback.
      */
     public function testABatchLevelFailureDegradesEverySiteToTheFallback(): void
     {
