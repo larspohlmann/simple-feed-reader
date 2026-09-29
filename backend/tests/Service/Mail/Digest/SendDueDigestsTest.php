@@ -24,12 +24,12 @@ use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use App\Tests\Support\InMemoryMailFailureRecorder;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\SavedSearchMatchFixture;
 use App\Tests\Support\SeedsDigestReaders;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\MockObject\Stub;
-use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
 
@@ -57,6 +57,7 @@ final class SendDueDigestsTest extends DbTestCase
     private DigestRecipientsInterface&Stub $recipients;
     private DigestMailerInterface&MockObject $mailer;
     private EntityManagerInterface&Stub $entityManagerStub;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
@@ -65,6 +66,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->recipients = $this->createStub(DigestRecipientsInterface::class);
         $this->mailer = $this->createMock(DigestMailerInterface::class);
         $this->entityManagerStub = $this->createStub(EntityManagerInterface::class);
+        $this->logger = new RecordingLogger();
     }
 
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
@@ -234,6 +236,27 @@ final class SendDueDigestsTest extends DbTestCase
         self::assertEquals(new \DateTimeImmutable(self::OCCURRENCE), $healthyPrefs->getDigestLastSentAt());
     }
 
+    public function testAFailedSendIsLoggedWithTheRecipientAndTheTransportException(): void
+    {
+        $user = $this->verifiedUser();
+        $prefs = $this->duePreferences($user, lastSentAt: null);
+        $search = $this->givenOneMatch($user, new \DateTimeImmutable('2026-08-28T08:30:00Z'));
+        $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
+        $this->recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $failure = new TransportException('relay rejected the recipient');
+        $this->mailer->expects($this->once())->method('send')->willThrowException($failure);
+
+        $this->sweep()->run();
+
+        self::assertCount(1, $this->logger->records);
+        self::assertSame('error', $this->logger->records[0]['level']);
+        self::assertSame('Digest send failed: {userId} <{email}>', $this->logger->records[0]['message']);
+        self::assertSame(
+            ['userId' => $user->getId(), 'email' => $user->getEmail(), 'exception' => $failure],
+            $this->logger->records[0]['context'],
+        );
+    }
+
     private function sweep(
         bool $mailEnabled = true,
         ?EntityManagerInterface $entityManager = null,
@@ -251,7 +274,7 @@ final class SendDueDigestsTest extends DbTestCase
             $this->mailCapability($mailEnabled),
             new MockClock(self::NOW),
             $entityManager ?? $this->entityManagerStub,
-            new NullLogger(),
+            $this->logger,
             new InMemoryMailFailureRecorder(),
         );
     }
