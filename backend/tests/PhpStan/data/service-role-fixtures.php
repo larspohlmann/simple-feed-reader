@@ -657,3 +657,51 @@ namespace App\Service\Knot {
         }
     }
 }
+
+namespace App\Service\Till\Support {
+    final class Change
+    {
+        private function __construct()
+        {
+        }
+
+        public static function due(int $paid, int $price): int
+        {
+            return $paid - $price;
+        }
+    }
+
+    final class Coins
+    {
+        public static function count(int $cents): int
+        {
+            return intdiv($cents, 100);
+        }
+    }
+
+    final class Drawer
+    {
+        private static int $opened = 0;
+
+        private function __construct()
+        {
+        }
+
+        public static function open(): int
+        {
+            return ++self::$opened;
+        }
+    }
+
+    class Receipt
+    {
+        private function __construct()
+        {
+        }
+
+        public static function line(string $item): string
+        {
+            return $item;
+        }
+    }
+}

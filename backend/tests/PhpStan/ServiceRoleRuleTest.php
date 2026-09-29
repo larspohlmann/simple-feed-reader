@@ -14,6 +14,7 @@ final class ServiceRoleRuleTest extends RuleTestCase
 {
     private const string FIXTURES = __DIR__ . '/data/service-role-fixtures.php';
     private const string SHOP = 'App\Service\Shop\\';
+    private const string TILL = 'App\Service\Till\Support\\';
     private const string NEEDS_SUFFIX = 'is an interface, so its name ends in Interface';
     private const string OUTSIDE_ITS_FOLDER = 'sits outside the folder named after it';
     private const string NOT_READONLY = 'keeps no state, so it is readonly';
@@ -300,6 +301,15 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 644,
             ],
+            [self::till('Coins', 'is a helper, so it is never instantiated; declare a private constructor'), 674],
+            [
+                self::till(
+                    'Drawer',
+                    'keeps state in static $opened; a helper holds none, so the state goes to a service',
+                ),
+                682,
+            ],
+            [self::till('Receipt', 'is a helper, so it is final'), 696],
         ]);
     }
 
@@ -362,6 +372,11 @@ final class ServiceRoleRuleTest extends RuleTestCase
             'is an event listener, so its name ends in Listener',
             self::LISTENER . 'Listener',
         );
+    }
+
+    private static function till(string $class, string $problem): string
+    {
+        return self::message('supportShape', self::TILL . $class, $problem);
     }
 
     private static function shop(string $check, string $class, string $problem, ?string $home = null): string

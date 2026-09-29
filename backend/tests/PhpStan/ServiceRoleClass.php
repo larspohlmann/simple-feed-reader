@@ -112,6 +112,26 @@ final readonly class ServiceRoleClass
         return false;
     }
 
+    public function hasPrivateConstructor(): bool
+    {
+        $constructor = $this->reflection->getNativeReflection()->getConstructor();
+
+        return null !== $constructor && $constructor->isPrivate();
+    }
+
+    /** @return list<string> the names of the class's own static properties */
+    public function staticProperties(): array
+    {
+        $static = [];
+        foreach ($this->reflection->getNativeReflection()->getProperties(\ReflectionProperty::IS_STATIC) as $property) {
+            if ($property->getDeclaringClass()->getName() === $this->name()) {
+                $static[] = $property->getName();
+            }
+        }
+
+        return $static;
+    }
+
     /** @return list<string> the names of the class's own properties that are neither static nor readonly */
     public function mutableProperties(): array
     {

@@ -35,6 +35,7 @@ final readonly class ServiceRoleRule implements Rule
             new RoleFolderInterfaces(),
             new DataShapes(),
             new RootPlacement(),
+            new SupportShapes(),
             new ServiceShapes(),
             new MessagingNames(),
         ];
