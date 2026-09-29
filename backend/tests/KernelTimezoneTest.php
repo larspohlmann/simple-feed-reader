@@ -10,13 +10,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * The database stores datetimes as naive UTC, so PHP's default timezone MUST
- * be UTC in every process — otherwise Doctrine hydrates a stored value in the
- * worker's local zone and the API serializes a wrong instant. This is not
- * hypothetical: Strato's externally-routed web workers default to
- * Europe/Berlin, which shipped `publishedAt: …+02:00` and made every entry
- * render two hours older than it is (#153). Booting the kernel must pin UTC
- * regardless of what the host's ini or a previous caller set.
+ * Datetimes are stored as naive UTC, so booting the kernel must pin PHP's zone to UTC whatever the host's ini says:
+ * Strato's web workers default to Europe/Berlin, and every entry rendered two hours old (#153).
  */
 final class KernelTimezoneTest extends KernelTestCase
 {

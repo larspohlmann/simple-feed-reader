@@ -9,10 +9,8 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 (new Dotenv())->bootEnv(dirname(__DIR__) . '/.env');
 
-// Under a parallel runner every worker gets a TEST_TOKEN. doctrine.yaml already
-// turns that into a MySQL dbname suffix; SQLite and the cache pools need the
-// token applied here, before anything reads the environment. Must run before
-// the database is rebuilt below, which is what would otherwise be shared.
+// A parallel worker's TEST_TOKEN must reach SQLite and the cache pools before anything reads the environment or the
+// database below is rebuilt; doctrine.yaml turns it into MySQL's dbname suffix.
 WorkerIsolation::applyToEnvironment();
 
 if ($_SERVER['APP_DEBUG']) {
@@ -46,10 +44,8 @@ if (!file_exists($jwtDirectory . '/private.pem') || !file_exists($jwtDirectory .
     }
 }
 
-// Rebuild the test database once per process, before DAMA transaction wrapping
-// starts. Recreating the database (not just the schema) ensures a half-built
-// database from an interrupted run cannot wedge the bootstrap. SQLite cannot
-// list databases (which --if-exists needs), so its file is removed directly.
+// Rebuild the test database once per process, before DAMA wraps transactions. Dropping the database, not just the
+// schema, recovers a half-built one; SQLite cannot list databases for --if-exists, so its file is deleted instead.
 $rawDatabaseUrl = $_SERVER['DATABASE_URL'] ?? '';
 $databaseUrl = is_string($rawDatabaseUrl) ? $rawDatabaseUrl : '';
 
