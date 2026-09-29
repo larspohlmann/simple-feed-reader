@@ -31,7 +31,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
     /**
      * Created once, up front: createClient() refuses to run after any other
-     * container access (factory(), em()…) has already booted the kernel, so
+     * container access (factory(), entityManager()…) has already booted the kernel, so
      * every other helper below must reuse this one browser instead of
      * calling createClient() again.
      */
