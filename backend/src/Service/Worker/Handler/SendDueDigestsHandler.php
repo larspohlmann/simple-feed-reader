@@ -9,11 +9,7 @@ use App\Service\Worker\Message\SendDueDigests;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-/**
- * Fires every hour and delegates straight to the sweep service (#636);
- * nothing here re-derives dueness or otherwise second-guesses the service's
- * own report.
- */
+/** Delegates straight to SendDueDigests: nothing here re-derives dueness or second-guesses the service's report. */
 #[AsMessageHandler]
 final readonly class SendDueDigestsHandler
 {

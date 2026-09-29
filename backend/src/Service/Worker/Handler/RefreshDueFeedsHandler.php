@@ -10,12 +10,7 @@ use App\Service\Worker\Message\RefreshDueFeeds;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-/**
- * The 2026-08-07 decision that brings scheduled refresh to worker-equipped
- * installs (#311); poll-only (Strato) installs stay manual. Fires every five
- * minutes and delegates straight to RefreshRunner — nothing here re-derives
- * `remaining` or otherwise second-guesses the runner's own report.
- */
+/** Delegates straight to RefreshRunner: nothing here re-derives `remaining` or second-guesses the runner's report. */
 #[AsMessageHandler]
 final readonly class RefreshDueFeedsHandler
 {

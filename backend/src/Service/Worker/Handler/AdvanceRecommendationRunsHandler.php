@@ -10,14 +10,8 @@ use App\Service\Worker\WorkerRunSweep;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 /**
- * The worker side of the driver-agnostic tick (#311): every ten seconds this
- * runs one worker-regime sweep over the active runs. The sweep itself lives
- * in WorkerRunSweep (#371) because the on-demand drain command is the same
- * regime -- this handler only binds it to the messenger firing.
- *
- * This is the one place the persistent worker's own liveness key is claimed:
- * only a process that keeps firing this handler is the worker the settings
- * card means when it says an install needs no cron.
+ * Runs one WorkerRunSweep per ten-second firing. The only place the persistent worker's liveness key is claimed: the
+ * settings card reads that key to tell whether an install still needs a cron.
  */
 #[AsMessageHandler]
 final readonly class AdvanceRecommendationRunsHandler
