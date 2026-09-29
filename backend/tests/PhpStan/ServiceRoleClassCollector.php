@@ -10,6 +10,7 @@ use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
+use PHPStan\Reflection\ClassReflection;
 
 /** @implements Collector<InClassNode, array{string, int, list<string>}> */
 final readonly class ServiceRoleClassCollector implements Collector
@@ -26,12 +27,19 @@ final readonly class ServiceRoleClassCollector implements Collector
     /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes its body names */
     public function processNode(Node $node, Scope $scope): ?array
     {
-        $name = $node->getClassReflection()->getName();
-        if (!ServiceRoleNames::isServiceOrHttp($name) && !ServiceRoleNames::isListener($name)) {
+        $reflection = $node->getClassReflection();
+        $name = $reflection->getName();
+        if (!ServiceRoleNames::isServiceOrHttp($name) && !self::isProductionListener($reflection)) {
             return null;
         }
 
         return [$name, $node->getOriginalNode()->getStartLine(), $this->dtoReferencesIn($node)];
+    }
+
+    private static function isProductionListener(ClassReflection $reflection): bool
+    {
+        return ServiceRoleNames::isProductionNamespace(ServiceRoleNames::namespaceOf($reflection->getName()))
+            && ServiceRoleClass::isEventListener($reflection);
     }
 
     /** @return list<string> */

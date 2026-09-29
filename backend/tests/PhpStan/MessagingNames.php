@@ -23,7 +23,7 @@ final readonly class MessagingNames implements ServiceRoleChecker
     private static function listenerViolation(ServiceRoleClass $class): ?ServiceRoleViolation
     {
         if (
-            !ServiceRoleNames::isListener($class->name()) || !$class->isPlainClass()
+            !$class->isPlainClass() || !ServiceRoleClass::isEventListener($class->reflection)
             || str_ends_with($class->shortName(), 'Listener')
         ) {
             return null;

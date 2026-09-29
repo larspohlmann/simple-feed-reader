@@ -733,3 +733,47 @@ namespace App\Service\Till\Model {
         }
     }
 }
+
+namespace App\Security\Fixtures {
+    use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+    use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+
+    #[AsEventListener(event: 'kernel.request')]
+    final readonly class GuardTheDoor
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+
+    final readonly class WatchTheWindow
+    {
+        #[AsEventListener(event: 'kernel.response')]
+        public function onResponse(): void
+        {
+        }
+    }
+
+    final readonly class CountTheVisitors implements EventSubscriberInterface
+    {
+        public static function getSubscribedEvents(): array
+        {
+            return [];
+        }
+    }
+
+    #[AsEventListener(event: 'kernel.request')]
+    final readonly class LockTheDoorListener
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+
+    final readonly class OpenTheDoor
+    {
+        public function __invoke(): void
+        {
+        }
+    }
+}

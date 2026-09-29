@@ -328,6 +328,9 @@ final class ServiceRoleRuleTest extends RuleTestCase
                 ),
                 724,
             ],
+            [self::securityListener('GuardTheDoor'), 741],
+            [self::securityListener('WatchTheWindow'), 749],
+            [self::securityListener('CountTheVisitors'), 757],
         ]);
     }
 
@@ -341,6 +344,9 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [self::shop('rootService', 'Register', self::TAKES_A_MODEL), 178],
             [self::listenerMessage(), 493],
             [self::takesADto(), 563],
+            [self::securityListener('GuardTheDoor'), 741],
+            [self::securityListener('WatchTheWindow'), 749],
+            [self::securityListener('CountTheVisitors'), 757],
         ]);
     }
 
@@ -389,6 +395,18 @@ final class ServiceRoleRuleTest extends RuleTestCase
             self::LISTENER,
             'is an event listener, so its name ends in Listener',
             self::LISTENER . 'Listener',
+        );
+    }
+
+    private static function securityListener(string $class): string
+    {
+        $name = 'App\Security\Fixtures\\' . $class;
+
+        return self::message(
+            'listenerName',
+            $name,
+            'is an event listener, so its name ends in Listener',
+            $name . 'Listener',
         );
     }
 

@@ -14,6 +14,10 @@ final readonly class ServiceRoleClass
         'Monolog\\ResettableInterface',
     ];
 
+    private const string LISTENER_ATTRIBUTE = 'Symfony\\Component\\EventDispatcher\\Attribute\\AsEventListener';
+
+    private const string SUBSCRIBER_INTERFACE = 'Symfony\\Component\\EventDispatcher\\EventSubscriberInterface';
+
     private const string DEPENDENCY_INJECTION_ATTRIBUTES = 'Symfony\\Component\\DependencyInjection\\Attribute\\';
 
     /** @param list<string> $dtoReferences */
@@ -23,6 +27,28 @@ final readonly class ServiceRoleClass
         public int $line,
         public array $dtoReferences,
     ) {
+    }
+
+    /** In App\EventListener, or declared a listener by attribute on the class or a method, or a subscriber. */
+    public static function isEventListener(ClassReflection $reflection): bool
+    {
+        if (
+            ServiceRoleNames::isListener($reflection->getName())
+            || $reflection->implementsInterface(self::SUBSCRIBER_INTERFACE)
+        ) {
+            return true;
+        }
+        $native = $reflection->getNativeReflection();
+        if ([] !== $native->getAttributes(self::LISTENER_ATTRIBUTE)) {
+            return true;
+        }
+        foreach ($native->getMethods() as $method) {
+            if ([] !== $method->getAttributes(self::LISTENER_ATTRIBUTE)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function name(): string
