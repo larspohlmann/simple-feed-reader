@@ -8,6 +8,7 @@ use App\Entity\InstanceSetting;
 use App\Entity\InstanceSettingsUpdate;
 use App\Repository\InstanceSettingRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Reads and writes the instance-wide settings row. The rest of the app
@@ -20,10 +21,10 @@ use Doctrine\ORM\EntityManagerInterface;
  * `final class`, not `final readonly`: settings() memoises the resolved row so
  * a request reading several settings (a WebAuthn ceremony reads it three or
  * four times) issues one SELECT. The memo is a plain field — request-scoped
- * under PHP-FPM, never promote it to a shared cache. update() clears it so a
- * read after a write sees the new value.
+ * under PHP-FPM and dropped between worker messages by reset(); never promote it to a shared cache. update() clears
+ * it so a read after a write sees the new value.
  */
-final class InstanceSettings
+final class InstanceSettings implements ResetInterface
 {
     private ?InstanceSetting $memoisedSettings = null;
 
@@ -74,6 +75,11 @@ final class InstanceSettings
 
         $setting->apply($update);
         $this->em->flush();
+        $this->memoisedSettings = null;
+    }
+
+    public function reset(): void
+    {
         $this->memoisedSettings = null;
     }
 

@@ -345,6 +345,7 @@ services:
     # fetch it. Same `autowire` caveat as above.
     App\Service\Settings\InstanceSettings:
         autowire: true
+        autoconfigure: true
         public: true
 
     # StubChatClient replaces the real provider call for every recommendation
