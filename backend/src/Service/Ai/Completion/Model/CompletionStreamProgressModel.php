@@ -5,22 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Ai\Completion\Model;
 
 /**
- * One report of a streamed provider call's progress.
- *
- * The two numbers differ and the debug view (#309) needs both: `answerSoFar`
- * is what the model has answered, `wireBytes` what it has sent. A reasoning
- * model spends megabytes of the second while the first stays empty; without
- * it, that call looks identical to a mute provider (#320).
- *
- * `finishReason` is the provider's account of why it stopped — `length` tells
- * the debug view `max_tokens` truncated the answer, the difference between a
- * starved reasoning model and a mute provider (#327). Null until stamped.
- *
- * `usage` is the provider's own accounting — tokens and price (#409). It rides
- * here rather than being threaded through the client, advancer and wave as a
- * parameter: this object already travels transport-to-observer, and a value
- * with no home is what phptramp catches. Null until the usage message, and for
- * a provider that never sends one.
+ * One progress report of a streamed call. `wireBytes` is kept beside `answerSoFar` because a reasoning model sends
+ * megabytes while its answer stays empty. `finishReason` (`length`: `max_tokens` cut the answer) and `usage` stay
+ * null until the provider sends them.
  */
 final readonly class CompletionStreamProgressModel
 {
