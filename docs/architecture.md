@@ -188,7 +188,7 @@ Repository → Service value imports (`SearchTermsModel`, `LikePattern`, `Normal
 `MonthWindowModel`, `CompletionUsageModel`…) are an open question; the rule below does not check `App\Repository`.
 
 Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
-`DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code), both in `backend/tests/PhpStan/` and run by
+`DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code, `App\Doctrine` included), both in `backend/tests/PhpStan/` and run by
 `composer stan`.
 
 ## 9. Service modules form no cycle

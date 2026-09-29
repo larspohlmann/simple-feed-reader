@@ -109,7 +109,7 @@ Non-negotiables:
 - **Domain code knows no HTTP.** `DomainKnowsNoHttpRule` forbids `App\Http\*`,
   anything in `App\Dto\*`, and Symfony's HttpFoundation and HTTP-exception classes,
   class names in strings included, in `Service`, `Repository`, `Entity`, `Enum`,
-  `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
+  `Doctrine`, `Exception` and `Pagination`. A controller hands a service a `Service/<Module>` value
   (`$request->toChange()`) or a plain field, never the DTO (#1182). Services build no
   response arrays either: a `src/Http/*Json` mapper shapes every response, and a value
   that serialises for a store names the method after it (`toLogContext()`,

@@ -21,6 +21,7 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
     private const string API_PROBLEM = 'App\Http\Problem\ApiProblem';
     private const string FEED_JSON = 'App\Http\RecommendationFeedJson';
     private const string GAPS = 'App\Service\Fixtures\Gaps';
+    private const string DOCTRINE = 'App\Doctrine\Fixtures';
 
     protected function getRule(): Rule
     {
@@ -67,6 +68,8 @@ final class DomainKnowsNoHttpRuleTest extends RuleTestCase
                 [self::message(self::GAPS, 'App\Http\\'), 155],
                 [self::message(self::GAPS, 'App\Dto\Tag\CreateTagRequest'), 160],
                 [self::message(self::GAPS, strtolower(self::ACCESS_DENIED)), 165],
+                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 171],
+                [self::message(self::DOCTRINE, self::FOUNDATION . 'Request'), 175],
             ],
         );
     }

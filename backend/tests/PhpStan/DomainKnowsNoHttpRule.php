@@ -26,6 +26,7 @@ final readonly class DomainKnowsNoHttpRule implements Rule
         'App\\Repository\\',
         'App\\Entity\\',
         'App\\Enum\\',
+        'App\\Doctrine\\',
         'App\\Exception\\',
     ];
 
