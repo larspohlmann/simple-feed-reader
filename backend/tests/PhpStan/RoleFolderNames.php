@@ -10,7 +10,10 @@ namespace App\Tests\PhpStan;
  */
 final readonly class RoleFolderNames implements ServiceRoleChecker
 {
-    private const array SUFFIXES = [ServiceRoleNames::FACTORY => 'Factory', ServiceRoleNames::MODEL => 'Model'];
+    private const array ROLES = [
+        ServiceRoleNames::FACTORY => ServiceRoleCheck::FactoryName,
+        ServiceRoleNames::MODEL => ServiceRoleCheck::ModelName,
+    ];
 
     public function violationsIn(ServiceRoleMap $map): array
     {
@@ -19,8 +22,8 @@ final readonly class RoleFolderNames implements ServiceRoleChecker
             if (!ServiceRoleNames::isServiceOrHttp($class->name()) || $class->isEnum()) {
                 continue;
             }
-            foreach (self::SUFFIXES as $role => $suffix) {
-                $violation = self::violationFor($class, $role, $suffix);
+            foreach (self::ROLES as $role => $check) {
+                $violation = self::violationFor($class, $role, $check);
                 if (null !== $violation) {
                     $violations[] = $violation;
                 }
@@ -30,9 +33,12 @@ final readonly class RoleFolderNames implements ServiceRoleChecker
         return $violations;
     }
 
-    private static function violationFor(ServiceRoleClass $class, string $role, string $suffix): ?ServiceRoleViolation
-    {
-        $expected = $class->isInterface() ? $suffix . 'Interface' : $suffix;
+    private static function violationFor(
+        ServiceRoleClass $class,
+        string $role,
+        ServiceRoleCheck $check,
+    ): ?ServiceRoleViolation {
+        $expected = $class->isInterface() ? $role . 'Interface' : $role;
         $inFolder = $role === $class->role();
         if ($inFolder && $class->isInterface()) {
             return null;
@@ -41,7 +47,6 @@ final readonly class RoleFolderNames implements ServiceRoleChecker
         if ($inFolder === $named) {
             return null;
         }
-        $check = ServiceRoleNames::FACTORY === $role ? ServiceRoleCheck::FactoryName : ServiceRoleCheck::ModelName;
         if ($inFolder) {
             return new ServiceRoleViolation(
                 $check,

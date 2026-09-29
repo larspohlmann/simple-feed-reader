@@ -85,7 +85,7 @@ final readonly class RootPlacement implements ServiceRoleChecker
     private static function isPlacedByItsInterfaceOrName(ServiceRoleMap $map, ServiceRoleClass $class): bool
     {
         return ServiceRoleNames::FACTORY === $class->role()
-            || str_ends_with($class->shortName(), 'Factory')
+            || str_ends_with($class->shortName(), ServiceRoleNames::FACTORY)
             || [] !== $map->sameModuleInterfaces($class);
     }
 
@@ -102,7 +102,7 @@ final readonly class RootPlacement implements ServiceRoleChecker
                 $class->roleHome(ServiceRoleNames::PASS),
             );
         }
-        $name = str_ends_with($class->shortName(), 'Model') ? $class->shortName() : $class->shortName() . 'Model';
+        $name = ServiceRoleNames::withoutSuffix($class->shortName(), ServiceRoleNames::MODEL) . ServiceRoleNames::MODEL;
 
         return new ServiceRoleViolation(
             ServiceRoleCheck::ModelHome,

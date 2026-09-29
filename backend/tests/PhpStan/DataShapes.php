@@ -47,7 +47,7 @@ final readonly class DataShapes implements ServiceRoleChecker
     private static function dtoViolations(ServiceRoleMap $map, ServiceRoleClass $dto): array
     {
         $violations = self::dataViolations($map, $dto, ServiceRoleCheck::DtoShape);
-        if (str_ends_with($dto->shortName(), 'Model')) {
+        if (str_ends_with($dto->shortName(), ServiceRoleNames::MODEL)) {
             $violations[] = new ServiceRoleViolation(ServiceRoleCheck::DtoShape, $dto, 'is a DTO named like a model');
         }
 
