@@ -10,11 +10,6 @@ use App\Repository\RecommendationItemRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationForYouSummaryModel;
 
-/**
- * Builds the for-you summary from two independent reads: the deduped item
- * count and the newest completed run's timestamp. Kept as its own service so
- * Task 3's purge endpoint can reuse it without re-deriving either number.
- */
 final readonly class RecommendationForYouSummaryProvider
 {
     public function __construct(

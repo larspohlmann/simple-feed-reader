@@ -25,12 +25,7 @@ final readonly class RecommendationDebugLogLoader
     }
 
     /**
-     * @param int $requestedRunId any id outside the retention window selects
-     *                            the newest run instead — including the 0 an
-     *                            absent query parameter reads as, and a
-     *                            selection the window has since dropped. A
-     *                            stale pick lands on something real rather
-     *                            than on an empty panel
+     * An id outside the retention window, the 0 of an absent query parameter included, selects the newest run instead.
      */
     public function forUser(User $user, int $requestedRunId): RecommendationDebugLogModel
     {

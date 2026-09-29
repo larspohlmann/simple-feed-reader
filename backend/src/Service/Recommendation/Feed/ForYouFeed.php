@@ -14,9 +14,7 @@ use App\Service\Recommendation\Settings\RecommendationSettingsResolver;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * A page of the user's for-you feed (#321), enriched like every entry list, with the annotations the
- * reader's "show reasons" preference allows. Debug is deliberately not consulted here: it keeps the
- * per-run call logs, not a second way into the feed's annotations (#576).
+ * A page of the user's for-you feed, enriched like every entry list, annotated as the reader's "show reasons" allows.
  */
 final readonly class ForYouFeed
 {
