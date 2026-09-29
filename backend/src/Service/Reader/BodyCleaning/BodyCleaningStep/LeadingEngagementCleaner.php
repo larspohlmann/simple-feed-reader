@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\DateLineRecognizer;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Reader\Pass\LeadingFurniture;
 use App\Service\Reader\Support\LeadingEngagementBlocks;
@@ -18,6 +19,10 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
 {
     private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
 
+    public function __construct(private DateLineRecognizer $dateLines)
+    {
+    }
+
     public function cleanIn(BodyCleaningPass $pass): void
     {
         $this->removeFrom($pass->document, $pass->input->entryAuthor);
@@ -29,7 +34,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
             return;
         }
 
-        $furniture = new LeadingFurniture($entryAuthor);
+        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines);
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
         $anchor = $furniture->bodyStart($blocks);

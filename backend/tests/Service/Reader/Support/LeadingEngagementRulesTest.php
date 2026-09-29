@@ -123,29 +123,6 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertFalse(LeadingEngagementRules::isReadingTime('min'));
     }
 
-    public function testDateLineMatchesGermanEnglishAndNumericForms(): void
-    {
-        self::assertTrue(LeadingEngagementRules::isDateLine('7. September 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('07. September 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('Montag, 7. September 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('07.09.2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('September 7, 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('Sep 01, 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('7 September 2026'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('2026-09-01'));
-        self::assertTrue(LeadingEngagementRules::isDateLine('1. März 2026'));
-    }
-
-    public function testDateLineRejectsWordsBareMonthsYearsAndSentences(): void
-    {
-        self::assertFalse(LeadingEngagementRules::isDateLine('Im Jahr 2026 passierte viel'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('Hamburg'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('September'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('2026'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('9 min.'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('0'));
-    }
-
     public function testBareNumberMatchesDigitsOnly(): void
     {
         self::assertTrue(LeadingEngagementRules::isBareNumber('0'));
@@ -182,12 +159,6 @@ final class LeadingEngagementRulesTest extends TestCase
         self::assertTrue(LeadingEngagementRules::isKicker('One Two Three', 0));
         self::assertFalse(LeadingEngagementRules::isKicker('One Two Three Four', 0));
         self::assertFalse(LeadingEngagementRules::isKicker(str_repeat('a', 31), 0));
-    }
-
-    public function testDateLineIsAnchoredForTheNumericForm(): void
-    {
-        self::assertFalse(LeadingEngagementRules::isDateLine('x2026-09-01'));
-        self::assertFalse(LeadingEngagementRules::isDateLine('2026-09-01x'));
     }
 
     public function testHasAuthorTreatsNullAndBlankAsNoAuthor(): void

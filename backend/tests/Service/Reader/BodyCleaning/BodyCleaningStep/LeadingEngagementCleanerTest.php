@@ -7,6 +7,7 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Service\Reader\DateLineRecognizer;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +22,7 @@ final class LeadingEngagementCleanerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->cleaner = new LeadingEngagementCleaner();
+        $this->cleaner = new LeadingEngagementCleaner(new DateLineRecognizer());
     }
 
     public function testRemovesLeadingEmojiOnlyBlocksIncludingVariationSelectors(): void

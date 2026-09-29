@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Pass;
 
+use App\Service\Reader\DateLineRecognizer;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Reader\Support\BlockText;
 use App\Service\Reader\Support\LeadingEngagementBlocks;
@@ -16,7 +17,7 @@ use App\Service\Reader\Support\LeadingEngagementRules;
  */
 final readonly class LeadingFurniture
 {
-    public function __construct(private ?string $entryAuthor)
+    public function __construct(private ?string $entryAuthor, private DateLineRecognizer $dateLines)
     {
     }
 
@@ -69,7 +70,7 @@ final readonly class LeadingFurniture
             || LeadingEngagementRules::isCounter($block->text)
             || LeadingEngagementRules::isBareNumber($block->text)
             || LeadingEngagementRules::isReadingTime($block->text)
-            || LeadingEngagementRules::isDateLine($block->text)
+            || $this->dateLines->isDateLine($block->text)
             || LeadingEngagementBlocks::isTimeOnly($block->element)
             || ($this->hasAuthor() && LeadingEngagementRules::isByline($block->text));
     }
