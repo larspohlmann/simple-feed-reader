@@ -7,7 +7,9 @@ namespace App\Tests\Service\Fetch\FaviconResolver;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\FaviconResolver\FaviconResolver;
 use App\Service\Fetch\Model\FetchResponseModel;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\StubFeedFetcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -213,5 +215,43 @@ final class FaviconResolverTest extends TestCase
 
         self::assertSame('https://one.example.com/favicon.ico', $icons[7]);
         self::assertSame('https://two.example.com/favicon.ico', $icons[9]);
+    }
+
+    public function testABatchLevelFailureIsLoggedWithItsException(): void
+    {
+        $logger = new RecordingLogger();
+
+        (new FaviconResolver(new StubFeedFetcher(), $logger))->resolveAll([7 => 'https://one.example.com/feed']);
+
+        self::assertCount(1, $logger->records);
+        self::assertSame('error', $logger->records[0]['level']);
+        self::assertSame('Favicon batch fetch failed', $logger->records[0]['message']);
+        self::assertInstanceOf(\Throwable::class, $logger->records[0]['context']['exception'] ?? null);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function malformedSizes(): iterable
+    {
+        yield 'a unit after the height' => ['64x64px'];
+        yield 'a prefix before the width' => ['x64x64'];
+    }
+
+    #[DataProvider('malformedSizes')]
+    public function testASizesTokenThatIsNotExactlyWidthByHeightScoresNothing(string $sizes): void
+    {
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willReturn(
+            'https://blog.example.com',
+            $this->page(
+                '<link rel="icon" sizes="8x8" href="/small.png">'
+                . '<link rel="icon" sizes="' . $sizes . '" href="/malformed.png">',
+            ),
+        );
+
+        $icons = $this->resolver($fetcher)->resolveAll([1 => 'https://blog.example.com/']);
+
+        self::assertSame('https://blog.example.com/small.png', $icons[1]);
     }
 }
