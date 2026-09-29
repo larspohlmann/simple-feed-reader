@@ -43,10 +43,8 @@ final class SubscriptionJsonTest extends TestCase
 
     public function testCapsALongDescription(): void
     {
-        // 3-byte-per-character text: a byte-based substr(…, 0, 1000) would cut
-        // roughly 333 characters plus a broken trailing byte sequence, not the
-        // 1000-character prefix mb_substr produces. That divergence is the
-        // point — an ASCII fixture cannot tell mb_substr and substr apart.
+        // 3-byte characters, because an ASCII fixture cannot tell mb_substr() from substr(): a byte cut would keep
+        // about 333 characters and a broken trailing sequence.
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setDescription(str_repeat('あ', 1200));
 

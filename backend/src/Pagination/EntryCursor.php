@@ -9,14 +9,8 @@ use App\Pagination\Exception\MalformedCursorException;
 use ParagonIE\ConstantTime\Base64UrlSafe;
 
 /**
- * Opaque keyset-pagination cursor for the entry list: base64url of
- * "<sortInstant ISO8601>|<id>". The client treats it as a token; the format
- * is ours to change.
- *
- * `sortInstant` is the row's position along whichever instant the list orders
- * by (see EntryListSort): the entry's publish instant for every date-ordered
- * list, the caller's view instant for the "viewed" history. `id` breaks the
- * ties it leaves, and there are many — a whole refresh run shares one instant.
+ * Opaque keyset cursor for the entry list: base64url of "<sortInstant ISO8601>|<id>", ours to change. `sortInstant`
+ * is the instant the list orders by (EntryListSort); `id` breaks its many ties, as a refresh run shares one instant.
  */
 final readonly class EntryCursor
 {
@@ -41,10 +35,8 @@ final readonly class EntryCursor
     }
 
     /**
-     * The upper bound of a keyset walk that must include every row AT $until, not
-     * only those strictly before it. The keyset predicate is strict (id < c.id),
-     * so the max int id admits every real (auto-increment) id at $until. Internal
-     * to the engine mark-read enumeration; never encoded for a client.
+     * An upper bound that admits every row AT $until, not only those before it: the keyset predicate is strict, so
+     * the max int id stands in for the id. Never encoded for a client.
      */
     public static function inclusiveUpperBound(\DateTimeImmutable $until): self
     {

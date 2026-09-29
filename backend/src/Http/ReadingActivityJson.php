@@ -7,10 +7,8 @@ namespace App\Http;
 use App\Service\Reading\Model\ReadingActivityModel;
 
 /**
- * The wire shape of the reading-activity chart (#896): one entry per day of the
- * window in order, each carrying the day and how many articles the account
- * opened on it, plus the window's total. Quiet days are present with a count of
- * zero so the client draws a continuous axis rather than skipping gaps.
+ * The reading-activity chart: one entry per day of the window, in order, quiet days at zero so the client draws a
+ * continuous axis, plus the window's total.
  *
  * @phpstan-type ReadingActivityPayload array{
  *     days: list<array{date: string, count: int}>,

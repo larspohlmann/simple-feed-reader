@@ -14,10 +14,8 @@ use App\Service\Search\Model\SearchTermsModel;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
- * Turns one HTTP request into a search query, and refuses anything it does not
- * understand. An unknown parameter is rejected rather than ignored: silently
- * dropping `tag=3` would answer a search the caller did not ask for, and a
- * caller who believes the filter applied has no way to tell.
+ * Turns one request into a search query and rejects any parameter it does not know: a silently dropped `tag=3`
+ * would answer a search the caller did not ask for.
  */
 final readonly class EntrySearchRequestFactory
 {
@@ -54,7 +52,7 @@ final readonly class EntrySearchRequestFactory
 
     /**
      * A plain string read, not getString(): `q[]=x` then gets the validation_error naming the field that every
-     * other invalid input here gets, instead of a bare request_error without field detail (#410).
+     * other invalid input here gets, instead of a bare request_error without field detail.
      */
     private function singleValue(Request $request, string $name): string
     {

@@ -9,11 +9,7 @@ use App\Repository\EntryListRow;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
 
-/**
- * The `{entries, nextCursor}` shape every keyset-paginated entry list
- * returns. One rule, shared by the entry list and (later) entry search, so
- * the keyset-cursor decision exists exactly once.
- */
+/** The `{entries, nextCursor}` shape of every keyset-paginated entry list; the one place the cursor is decided. */
 final readonly class EntryPage
 {
     private function __construct()
@@ -22,15 +18,8 @@ final readonly class EntryPage
 
     /**
      * @param list<EntryListRow> $rows
-     * @param int                $limit the EFFECTIVE page size the read used
-     *                                  (`EntryQuery::$limit` / `EntrySearchQuery::$limit`,
-     *                                  both clamped at construction) — never a raw
-     *                                  request value, or a page of MAX_LIMIT rows
-     *                                  answered to `?limit=500` would look short
-     *                                  and silently end the list
-     * @param EntryListSort      $sort  the order the rows came back in, so the
-     *                                  next cursor encodes the same instant the
-     *                                  keyset predicate will compare against
+     * @param int                $limit the clamped `EntryQuery::$limit`, never the raw `?limit=`: against a raw 500,
+     *                                  a full page of MAX_LIMIT rows would look short and end the list
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
@@ -40,22 +29,9 @@ final readonly class EntryPage
     }
 
     /**
-     * As of(), but for a caller whose row count can be lower than what the
-     * underlying read actually matched: IndexedEntrySearch asks the search
-     * engine for $limit ids, then hydrates through the caller's subscription
-     * join, which silently drops any id the join's access check rejects (a
-     * ghost id left by a failed async index delete, say). Deciding "is there
-     * another page" from count($rows) then mistakes a full page of engine
-     * matches for a short one and ends pagination early. $matchCount is the
-     * read's own count before any such drop; search passes it explicitly, and
-     * of() above just supplies count($rows) where nothing removes rows after.
-     *
-     * The cursor comes from the row the caller must resume past. That is the
-     * last returned row for a plain read, but a post-filtered read (the indexed
-     * unread search drops the read rows of a page after hydration) passes its
-     * last candidate as $continuationRow so a fully-read page still advances
-     * rather than ending the list. Either way the cursor names a real position,
-     * never a dropped id's.
+     * As of(), for a read that can return fewer rows than it matched (search hydration drops ids the caller may not
+     * see): $matchCount decides whether a next page exists, and a post-filtered read resumes past $continuationRow,
+     * its last candidate, so a page whose rows were all filtered out still advances.
      *
      * @param list<EntryListRow> $rows
      *
@@ -79,10 +55,8 @@ final readonly class EntryPage
 
     private static function cursorFromRow(?EntryListRow $row, EntryListSort $sort): ?string
     {
-        // A full page whose every candidate was dropped by hydration leaves no
-        // row to build a cursor from. Ending pagination here is the safe choice:
-        // the ghost ids are cleared by the next app:search:reindex (or a later
-        // page whose candidates DO survive reopens the cursor there).
+        // Every candidate was dropped by hydration: no row to resume past, so the list ends. The next
+        // app:search:reindex clears the ghost ids.
         if ($row === null) {
             return null;
         }

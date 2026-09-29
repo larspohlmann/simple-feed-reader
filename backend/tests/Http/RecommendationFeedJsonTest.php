@@ -52,8 +52,8 @@ final class RecommendationFeedJsonTest extends TestCase
             new FeedAnnotationVisibilityModel(showExplanation: false),
         ));
 
-        // Present even with both annotations hidden — the divider is a
-        // normal-user feature (#348).
+        // Present even with both annotations hidden: the divider is a
+        // normal-user feature.
         self::assertSame(1, $result['entries'][0]['runId']);
         self::assertSame('2026-08-07T09:05:00+00:00', $result['entries'][0]['runGeneratedAt']);
     }

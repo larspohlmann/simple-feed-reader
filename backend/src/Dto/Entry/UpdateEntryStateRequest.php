@@ -16,9 +16,8 @@ final readonly class UpdateEntryStateRequest
         public ?bool $isHidden = null,
         public ?bool $isFavorite = null,
         public ?bool $isKept = null,
-        // Both directions (#482): true opens/reads the entry, false un-ticks it.
-        // Setting viewed also hides (ViewedImpliesHiddenListener); un-ticking
-        // leaves the entry hidden.
+        // True opens the entry, false un-ticks it. Setting viewed also hides it
+        // (ViewedImpliesHiddenListener); un-ticking leaves the entry hidden.
         public ?bool $isViewed = null,
     ) {
     }

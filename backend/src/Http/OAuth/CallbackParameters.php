@@ -12,16 +12,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class CallbackParameters
 {
-    /**
-     * Reads a callback parameter from the query string or the form body, and
-     * from nowhere else.
-     *
-     * Explicitly NOT Request::get(): that also searches the request attributes,
-     * where the router puts `{provider}` and `_route`. A callback parameter
-     * must come from the provider, not the routing table — a reader that falls
-     * back to an attribute is one route placeholder away from surprising.
-     * Blank counts as absent, so `?code=` fails a non-empty-string check.
-     */
+    /** Never Request::get(), which also reads route attributes such as `{provider}`. A blank value counts as absent. */
     public static function read(Request $request, string $name): ?string
     {
         $value = $request->query->get($name) ?? $request->request->get($name);

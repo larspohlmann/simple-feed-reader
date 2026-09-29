@@ -8,16 +8,8 @@ use App\Service\Passkey\Model\PasskeyAttestationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * The body of a passkey registration ("attestation") ceremony's completion
- * (#624): the opaque handle PasskeyChallengeStore issued alongside the
- * options, the browser's raw `navigator.credentials.create()` response, and
- * the label the account chooses for this credential.
- *
- * $credential is intentionally untyped beyond "an array": it is opaque,
- * client-supplied WebAuthn wire data that AttestationVerifier hands straight
- * to the WebAuthn library's own deserializer, which is where its shape is
- * actually enforced. Validating it twice, once loosely here and once for
- * real in the library, would only risk the two disagreeing.
+ * The completion of a passkey registration. `$credential` stays an untyped array on purpose: it is opaque WebAuthn
+ * wire data, and AttestationVerifier hands it to the library's deserializer, which is where its shape is enforced.
  */
 final readonly class RegisterPasskeyRequest
 {

@@ -8,10 +8,6 @@ use App\Http\ReadingActivityJson;
 use App\Service\Reading\Model\ReadingActivityModel;
 use PHPUnit\Framework\TestCase;
 
-/**
- * The reading-activity wire shape (#896): one entry per window day in order,
- * quiet days zero-filled, plus the window total.
- */
 final class ReadingActivityJsonTest extends TestCase
 {
     public function testZeroFillsQuietDaysKeepsTheDayOrderAndCarriesTheFeedRanking(): void

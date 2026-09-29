@@ -22,10 +22,8 @@ final readonly class MaintenanceTokenGuard
     }
 
     /**
-     * Prefer the header: a query-string token ends up in Apache access logs,
-     * proxy logs, and Referer headers. The query parameter stays supported for
-     * callers that cannot set headers, but the scheduled pinger should use the
-     * header form.
+     * The header is preferred: a query-string token lands in access logs, proxy logs and Referer headers. The query
+     * form stays for callers that cannot set a header.
      */
     public function isAuthorized(Request $request): bool
     {

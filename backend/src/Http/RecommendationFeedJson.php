@@ -11,12 +11,8 @@ use App\Service\Recommendation\Feed\Model\ForYouFeedPageModel;
 final class RecommendationFeedJson
 {
     /**
-     * A page of the for-you feed. Each entry carries `runId` and
-     * `runGeneratedAt` unconditionally — the run-boundary divider is a
-     * normal-user feature (#348) — then `recommendationReason` and
-     * `recommendationScore` together, iff the reader asked to see why an
-     * article was picked (#576; see FeedAnnotationVisibilityModel for why the two
-     * travel as one).
+     * A page of the for-you feed. `runId` and `runGeneratedAt` ride on every entry for the run divider; the reason and
+     * the score only when the reader asked why, and always together (FeedAnnotationVisibilityModel).
      *
      * @return array{entries: list<array<string, mixed>>, nextCursor: string|null}
      */
@@ -36,10 +32,7 @@ final class RecommendationFeedJson
     private static function entries(array $rows, FeedAnnotationVisibilityModel $visibility): array
     {
         return array_map(static function (RecommendationFeedRow $row) use ($visibility): array {
-            // runId + runGeneratedAt are unconditional: the divider needs the
-            // run's identity and generation time on every row. The ATOM format
-            // matches the run report's forYou.generatedAt, so the client can tell
-            // the newest run's picks from the rest by their generation instant (#348).
+            // ATOM, like the run report's forYou.generatedAt: the client compares them to find the newest run's picks.
             $entry = EntryJson::listRow($row->row) + [
                 'runId' => $row->runId,
                 'runGeneratedAt' => $row->runGeneratedAt?->format(\DateTimeInterface::ATOM),

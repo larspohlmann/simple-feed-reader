@@ -46,10 +46,8 @@ final class RecommendationRunHistoryJsonTest extends TestCase
     }
 
     /**
-     * resume() puts a failed run back into RUNNING and deliberately leaves the
-     * completedAt of the attempt that failed standing, so the row really does
-     * arrive here carrying both. Reporting that time — and the duration of
-     * that dead attempt — beside a RUNNING badge is the bug this guards.
+     * resume() leaves a failed attempt's completedAt on a RUNNING run; neither that time nor its duration may be
+     * reported beside the RUNNING badge.
      */
     public function testAResumedRunReportsNeitherACompletionTimeNorADuration(): void
     {

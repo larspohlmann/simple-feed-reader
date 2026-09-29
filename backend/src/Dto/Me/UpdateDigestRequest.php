@@ -10,11 +10,8 @@ use App\Service\Mail\Digest\Model\DigestConfigurationModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * The whole digest configuration in one write. Every field is required, with no
- * default, for the same reason UpdatePreferencesRequest is: a value that
- * degrades quietly to a default is indistinguishable from one the user set.
- * Kept separate from UpdatePreferencesRequest so a scrape-fallback toggle need
- * not resend the digest and vice versa (#180's reasoning, #636).
+ * The whole digest configuration in one write. No field has a default: a value that falls back quietly cannot be
+ * told from one the user set. Separate from UpdatePreferencesRequest so neither write resends the other.
  */
 final readonly class UpdateDigestRequest
 {

@@ -14,19 +14,14 @@ final readonly class SubscribeRequest
     public string $url;
 
     /**
-     * Candidate format the client picked ('scraped' subscribes the page
-     * itself, skipping re-discovery). Deliberately not an enum choice:
-     * unknown values simply take the default discovery path, so old
-     * clients and new formats never hard-fail validation.
+     * 'scraped' subscribes the page itself, without re-discovery. Not an enum on purpose: any other value, even one
+     * an old client or a new format sends, takes the discovery path instead of failing validation.
      */
     #[Assert\Length(max: 20)]
     public ?string $format;
 
     /**
-     * Tag ids to attach to the new feed, picked in the same add-feed form.
-     * Ownership is enforced when the ids are resolved (non-owned ids are
-     * dropped, mirroring the PATCH tag-sync), so validation here only pins the
-     * shape: a list of positive integers.
+     * Tag ids for the new feed. Ids the caller does not own are dropped when resolved, so this validates only shape.
      *
      * @var list<int>
      */
@@ -48,11 +43,8 @@ final readonly class SubscribeRequest
     }
 
     /**
-     * Let users type a bare host: "example.com" becomes "https://example.com"
-     * so it survives the Url constraint below and reaches discovery. A value
-     * that already carries any scheme is left untouched — an unsupported one
-     * (e.g. ftp://) then fails the protocol check rather than being masked.
-     * Nonsense stays nonsense: prefixing a scheme never rescues "not a url".
+     * Prefixes `https://` to a bare host so "example.com" passes the Url constraint. A value with any scheme stays as
+     * it is, so `ftp://` still fails the protocol check.
      */
     private static function normalizeUrl(string $url): string
     {

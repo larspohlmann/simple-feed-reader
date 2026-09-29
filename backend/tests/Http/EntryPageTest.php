@@ -67,13 +67,8 @@ final class EntryPageTest extends TestCase
     }
 
     /**
-     * The clamp used to live in two places: the repository capped the rows it
-     * read, and EntryPage re-derived the same cap from the raw request value to
-     * decide whether the page was full. The two spellings had to stay
-     * character-identical. They no longer exist — the query object clamps once
-     * at construction and hands the effective size to both — and this states
-     * the failure that would return if a caller ever passed the raw value
-     * again.
+     * The page size must be the query's clamped limit: passing the raw request value would read a full page of
+     * MAX_LIMIT rows as short and end the list.
      */
     public function testAFullPageFromARequestAboveTheCeilingStillOffersACursor(): void
     {
@@ -105,11 +100,8 @@ final class EntryPageTest extends TestCase
     }
 
     /**
-     * The regression this branch shipped: IndexedEntrySearch can hand back
-     * fewer rows than the engine actually matched, because hydration drops
-     * any id the caller's subscription join rejects. withMatchCount() must
-     * decide "is there a next page" from that engine count, not count($rows),
-     * or a full page of matches with one dropped id silently looks short.
+     * Hydration can drop an id the caller's subscription join rejects, so withMatchCount() must decide on the engine's
+     * count: a full page of matches with one dropped id must not look short.
      */
     public function testAFullMatchCountStillOffersACursorWhenARowWasDropped(): void
     {
@@ -126,11 +118,7 @@ final class EntryPageTest extends TestCase
         self::assertSame(9, $cursor->id);
     }
 
-    /**
-     * A genuinely final page — the engine itself returned fewer ids than the
-     * limit — must still end pagination. Fixing the truncation bug must not
-     * turn into a cursor that never runs out.
-     */
+    /** A genuinely final page, where the engine matched fewer ids than the limit, still ends the list. */
     public function testAShortMatchCountOffersNoNextCursorEvenWithRows(): void
     {
         $row = $this->rowForEntry(9, new \DateTimeImmutable('2026-07-12T00:00:00Z'));
@@ -141,10 +129,8 @@ final class EntryPageTest extends TestCase
     }
 
     /**
-     * The residual case named in the fix: a full page of matches where EVERY
-     * id was dropped by hydration leaves no surviving row to build a cursor
-     * from. Pagination ends here rather than crashing or fabricating a
-     * cursor; a later app:search:reindex clears the ghost ids that caused it.
+     * A full page of matches whose every id was dropped has no row to build a cursor from: the list ends instead of
+     * failing or inventing one.
      */
     public function testAFullMatchCountWithNoSurvivingRowsOffersNoNextCursor(): void
     {
@@ -170,10 +156,8 @@ final class EntryPageTest extends TestCase
     }
 
     /**
-     * A post-filtered read (the indexed unread search) returns only some rows
-     * of a page but must resume past the LAST candidate it saw, not the last
-     * row it shows. Given a continuation row, the cursor keys off it — so a page
-     * that filtered its tail away still advances instead of re-reading it.
+     * A post-filtered read resumes past the last candidate it saw, not the last row it shows, so a page whose tail
+     * was filtered away still advances.
      */
     public function testAContinuationRowDecidesTheCursorOverTheLastReturnedRow(): void
     {

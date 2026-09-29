@@ -8,14 +8,8 @@ use App\Entity\UserPasskey;
 use App\Service\Passkey\Model\AccountPasskeysModel;
 
 /**
- * The passkey listing body (#624): the rows plus the three values the WebAuthn
- * Signal API needs (#727), which `register/options` already discloses to the
- * same authenticated user.
- *
- * The two options factories already return their body in its final wire
- * shape — the identical `{options, handle}` for both ceremonies — so they
- * need no mapper here and their controller actions hand the array straight
- * to the response.
+ * The passkey listing: the rows plus the three values the WebAuthn Signal API needs, which `register/options` already
+ * discloses to the same user. The options factories return their final wire shape, so they need no mapper.
  *
  * @phpstan-type PasskeyRow array{id: ?int, label: string, createdAt: string, lastUsedAt: ?string}
  * @phpstan-type PasskeyListingBody array{

@@ -10,10 +10,7 @@ use App\Service\Reader\Model\ExtractionResultModel;
 final class ReaderJson
 {
     /**
-     * The reader body carries its own lead picture (#681), so the only hero the
-     * response still declares is the original view's — the feed image, shown when
-     * the feed body has none. The field rides on both branches: a failed
-     * extraction has no reader body, but the original view still has its hero.
+     * `originalHero` rides on both branches: the original view shows the feed image even when extraction failed.
      *
      * @return array{status: 'ok', url: string, title: string, byline: string|null,
      *   siteName: string|null, contentHtml: string, excerpt: string|null, paywalled: bool,

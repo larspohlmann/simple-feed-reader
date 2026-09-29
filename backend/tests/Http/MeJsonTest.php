@@ -11,13 +11,7 @@ use App\Http\MeJson;
 use App\Tests\Support\AiProviderSettingsFactory;
 use PHPUnit\Framework\TestCase;
 
-/**
- * MeJson's `ai` block is the one part of the profile that reads an
- * association rather than a plain column, and #334 changed what it reads
- * from (the account's single provider row, to whichever of its many
- * configurations is active) — so this pins that it reflects the ACTIVE
- * configuration specifically, not just "the account has one".
- */
+/** MeJson's `ai` block reads an association, not a column: it must report the ACTIVE configuration, not just any. */
 final class MeJsonTest extends TestCase
 {
     private function user(): User
@@ -54,11 +48,8 @@ final class MeJsonTest extends TestCase
     }
 
     /**
-     * A second configuration existing — even a fully verified one, complete
-     * with its own chosen model — must not change what /api/me reports as
-     * long as it never became the active one. Without this, a bug that read
-     * "any configuration" instead of "the active one" would still pass the
-     * single-configuration case above.
+     * A second, fully verified configuration that never became active must not change the reported state; the
+     * single-configuration case above cannot tell "the active one" from "any".
      */
     public function testASecondNonActiveConfigurationDoesNotChangeTheReportedState(): void
     {

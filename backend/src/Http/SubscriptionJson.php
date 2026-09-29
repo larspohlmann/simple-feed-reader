@@ -40,10 +40,8 @@ final class SubscriptionJson
     }
 
     /**
-     * The embedded tag's `position` is this feed's order WITHIN that tag (the
-     * join position) — not the tag's own sidebar order, which the tag-list
-     * endpoint carries. `position` at the top level is the feed's order in the
-     * untagged "Feeds" list.
+     * An embedded tag's `position` is this feed's order within that tag, not the tag's sidebar order; the top-level
+     * `position` is the feed's order in the untagged "Feeds" list.
      *
      * @return array{
      *   id: int|null, feedId: int|null, title: string, customTitle: string|null, feedUrl: string,
@@ -65,8 +63,6 @@ final class SubscriptionJson
 
         $tags = [];
         foreach ($subscription->getSubscriptionTags() as $subscriptionTag) {
-            // Canonical tag shape, but with the JOIN position (this feed's order
-            // within the tag) in place of the tag's own sidebar position.
             $tags[] = [...TagJson::one($subscriptionTag->getTag()), 'position' => $subscriptionTag->getPosition()];
         }
 
@@ -100,21 +96,14 @@ final class SubscriptionJson
         ];
     }
 
-    /**
-     * Where the feed's website is. FeedWebsite holds the rule, because it took
-     * four separate feed pathologies to arrive at and deserves its own tests.
-     */
     private static function siteUrl(Feed $feed): ?string
     {
         return FeedWebsite::of($feed->getUrl(), $feed->getSiteUrl());
     }
 
     /**
-     * Reduced to plain text at the boundary so the SPA never has to make a
-     * sanitiser decision. A reduction with no letter and no digit is not a
-     * description — Deutschlandfunk's feed describes itself as a single ">",
-     * which reached the reader as a stray character. Dropping it here rather
-     * than at ingest also repairs rows already stored.
+     * Plain text, so the SPA never makes a sanitiser decision. A reduction with no letter or digit is dropped (a feed
+     * describing itself as ">"); doing it here, not at ingest, also covers rows already stored.
      */
     private static function description(Feed $feed): ?string
     {

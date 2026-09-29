@@ -21,12 +21,6 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/**
- * Split out of EntryController (#592): the reader action pulls in extraction,
- * hero resolution and its own rate limiter, none of which the rest of the
- * entry endpoints need — folding it back in would push that controller's
- * constructor past what ExcessiveParameterList allows.
- */
 #[Route('/api/entries')]
 final readonly class EntryReaderController
 {
@@ -62,7 +56,7 @@ final readonly class EntryReaderController
             ));
 
         // A confident-but-wrong extraction (page furniture instead of the article)
-        // is failed here so the client falls back to the feed body (#654).
+        // is failed here so the client falls back to the feed body.
         $result = $this->coverageGate->verify($result, $entry->getArticleContentHtml());
 
         $originalHero = $this->originalHero->resolve($entry);

@@ -7,11 +7,8 @@ namespace App\Http;
 use App\Service\Subscription\Model\SubscriptionTalliesModel;
 
 /**
- * The sidebar poll's cheap payload (#720): every subscription's unread count
- * plus the three surface totals, and nothing else. It replaces the 137 KB
- * bootstrap on a tick that only needs the numbers — no feeds, no tags, no
- * descriptions. A subscription absent from the list has no entries; the
- * client defaults it to zero against the list it already holds.
+ * The sidebar poll's payload: each subscription's counts and the three surface totals, nothing else. A subscription
+ * missing from the list has no entries; the client counts it as zero.
  */
 final class SubscriptionCountsJson
 {
