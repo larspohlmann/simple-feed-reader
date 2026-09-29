@@ -7,12 +7,7 @@ namespace App\Dto\Admin;
 use App\Service\Catalog\Model\CatalogImportMode;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * The document arrives as OPML *text* inside an ordinary JSON body: the admin UI
- * reads the chosen file and posts its contents verbatim, so no multipart
- * handling is needed and the admin API stays pure JSON. CatalogDocument does the
- * real validation.
- */
+/** OPML text in a JSON body, so the admin API stays pure JSON; CatalogDocument does the real validation. */
 final readonly class CatalogImportRequest
 {
     public function __construct(

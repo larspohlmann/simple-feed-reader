@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dto\Admin;
 
-/**
- * The account identity fields the admin detail screen shows. Hand-built by
- * the controller field-by-field — never hydrated from the User entity as a
- * whole — so a column added to User later cannot reach an admin's browser
- * merely because it exists. Note what is absent: the password hash and every
- * token column.
- */
+/** The account fields the admin detail shows, picked one by one in AdminUserJson::account(), never the whole User. */
 final readonly class AdminUserAccount
 {
     /**

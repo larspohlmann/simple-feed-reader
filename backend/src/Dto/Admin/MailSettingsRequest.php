@@ -12,9 +12,8 @@ use App\Service\Mail\Settings\Model\MailSettingsUpdateModel;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
- * Every setting is required: its controller maps it with {@see FullReplacePayload::CONTEXT}, without which a
- * missing nullable setting reads as null. The password is an optional three-state intent: null keeps the stored
- * secret, a string replaces it, `removePassword` clears it.
+ * Every setting is required: the controller maps it with {@see FullReplacePayload::CONTEXT}, or a missing nullable
+ * setting reads as null. The password: null keeps the stored secret, a string replaces it, `removePassword` clears it.
  *
  * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier, not a behavioural method.
  */

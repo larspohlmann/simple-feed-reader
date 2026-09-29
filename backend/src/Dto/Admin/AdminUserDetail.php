@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Dto\Admin;
 
 /**
- * The full payload of GET /api/admin/users/{id}: one account's identity,
- * footprint, and its complete tag and subscription lists. Passed straight to
- * JsonResponse — json_encode walks the public readonly properties of this and
- * every nested DTO, so the wire shape is exactly what PHPStan already checked.
+ * The payload of GET /api/admin/users/{id}. JsonResponse encodes its public properties and those of every nested
+ * DTO, so these classes are the wire shape.
  */
 final readonly class AdminUserDetail
 {
