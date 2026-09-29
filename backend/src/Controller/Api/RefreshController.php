@@ -23,13 +23,13 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
  * `remaining` reaches 0. `progress` is the run as a whole — every
  * slice of it — and is the only figure a client should render.
  */
-final class RefreshController
+final readonly class RefreshController
 {
     public function __construct(
-        private readonly TrackedRefreshRunner $trackedRefreshRunner,
-        private readonly UserRefreshScope $scope,
-        private readonly RateLimitGuard $rateLimitGuard,
-        private readonly RateLimiterFactoryInterface $refreshLimiter,
+        private TrackedRefreshRunner $trackedRefreshRunner,
+        private UserRefreshScope $scope,
+        private RateLimitGuard $rateLimitGuard,
+        private RateLimiterFactoryInterface $refreshLimiter,
     ) {
     }
 

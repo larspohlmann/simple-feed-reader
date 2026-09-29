@@ -54,7 +54,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * do not reorder these methods.
  */
 #[Route('/api/auth/oauth')]
-final class OAuthController
+final readonly class OAuthController
 {
     /**
      * Browser-binding cookie name, re-exported from the collaborator that owns
@@ -70,14 +70,14 @@ final class OAuthController
     private const string PROVIDER_PATTERN = '[a-z][a-z0-9_-]{1,31}';
 
     public function __construct(
-        private readonly OAuthProviderRegistry $providers,
-        private readonly OAuthStateStore $stateStore,
-        private readonly OAuthSignIn $signIn,
-        private readonly OAuthCallback $callback,
-        private readonly RateLimitGuard $rateLimitGuard,
-        private readonly RateLimiterFactoryInterface $oauthStartLimiter,
-        private readonly FlowCookie $flowCookie,
-        private readonly OAuthRedirectFactory $oauthRedirect,
+        private OAuthProviderRegistry $providers,
+        private OAuthStateStore $stateStore,
+        private OAuthSignIn $signIn,
+        private OAuthCallback $callback,
+        private RateLimitGuard $rateLimitGuard,
+        private RateLimiterFactoryInterface $oauthStartLimiter,
+        private FlowCookie $flowCookie,
+        private OAuthRedirectFactory $oauthRedirect,
     ) {
     }
 
