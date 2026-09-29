@@ -485,10 +485,12 @@ services:
     # entries above. Test environment only — production keeps them private.
     App\Service\Recommendation\Run\TickLockKeepalive:
         autowire: true
+        autoconfigure: true
         public: true
 
     App\Service\Recommendation\Run\SweepStreamHeartbeat:
         autowire: true
+        autoconfigure: true
         public: true
 
     App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface:
