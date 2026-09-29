@@ -7,6 +7,7 @@ namespace App\Service\Recommendation\Run;
 use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface;
 use App\Service\Recommendation\Run\Model\RecommendationDriverKind;
 use Symfony\Component\Clock\ClockInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Keeps a sweeping worker's liveness fresh while it sits inside a provider
@@ -30,7 +31,7 @@ use Symfony\Component\Clock\ClockInterface;
  * runs in a web request too, but drives every account's run on the install's
  * behalf, which is what a driver kind means here.
  */
-final class SweepStreamHeartbeat implements CompletionStreamHeartbeatInterface
+final class SweepStreamHeartbeat implements CompletionStreamHeartbeatInterface, ResetInterface
 {
     /**
      * Far below FRESH_SECONDS, so the gap between two writes cannot be
@@ -69,6 +70,11 @@ final class SweepStreamHeartbeat implements CompletionStreamHeartbeatInterface
     {
         $this->sweepingAs = null;
         $this->lastBeatAt = null;
+    }
+
+    public function reset(): void
+    {
+        $this->sweepEnded();
     }
 
     public function beat(): void

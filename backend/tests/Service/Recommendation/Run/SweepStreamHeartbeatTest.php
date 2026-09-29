@@ -43,6 +43,18 @@ final class SweepStreamHeartbeatTest extends DbTestCase
         );
     }
 
+    public function testAResetBetweenMessagesDisarmsIt(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $heartbeat = new SweepStreamHeartbeat($this->presence($clock), $clock);
+        $heartbeat->sweepStarted(RecommendationDriverKind::PersistentWorker);
+
+        $heartbeat->reset();
+        $heartbeat->beat();
+
+        self::assertNull($this->touchedAt(RecommendationDriverKind::PersistentWorker));
+    }
+
     /**
      * A streamed answer delivers deltas many times a second and each write is
      * a row update, so the beats are throttled. The throttle has to stay far
