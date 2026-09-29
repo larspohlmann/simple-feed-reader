@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Fetch\BatchFeedFetcher;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
@@ -19,6 +18,7 @@ use App\Service\Fetch\Model\HeaderDecision;
 use App\Service\Fetch\Pass\FetchQueue;
 use App\Service\Fetch\Pass\HostSlots;
 use App\Service\Fetch\ResponseClassifier;
+use App\Service\Fetch\Support\EgressOptions;
 use App\Service\Fetch\UrlGuard;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;

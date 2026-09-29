@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Model;
 
-use App\Service\Backup\BackupSchema;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * The file grammar: a header first, kind ranks never moving backwards, header/account/footer at most once.

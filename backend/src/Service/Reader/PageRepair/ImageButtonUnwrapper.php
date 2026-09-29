@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 

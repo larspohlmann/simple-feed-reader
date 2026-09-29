@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\Pass;
 
-use App\Service\Parser\FeedMediaClassifier;
-use App\Service\Parser\MediaDuration;
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedAttachmentModel;
 use App\Service\Parser\Model\ParsedMediumModel;
 use App\Service\Parser\Model\VisualMediaKind;
+use App\Service\Parser\Support\FeedMediaClassifier;
+use App\Service\Parser\Support\MediaDuration;
 
 /**
  * One feed media element — a `<media:content>`, `<media:thumbnail>`, or an

@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Scraper\Pass;
 
 use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Parser\DateParser;
+use App\Service\Parser\Support\DateParser;
 use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\TextNormalizer;
+use App\Service\Scraper\Support\TextNormalizer;
 
 /**
  * The articles one page's JSON-LD blocks describe, collected node by node.

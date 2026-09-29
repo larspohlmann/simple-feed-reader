@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Html\ImageSourceUrl;
 use App\Service\Html\Model\ImageRenditionModel;
 use App\Service\Html\PictureSources;
-use App\Service\Html\Srcset;
+use App\Service\Html\Support\ImageSourceUrl;
+use App\Service\Html\Support\Srcset;
 use Dom\Element;
 use Dom\HTMLDocument;
 

@@ -6,12 +6,12 @@ namespace App\Service\Ingest\Factory;
 
 use App\Entity\Entry;
 use App\Entity\Feed;
-use App\Service\Ingest\EntryEffectiveDate;
 use App\Service\Ingest\EntryImageWriter;
-use App\Service\Ingest\EntryMediaAssembler;
-use App\Service\Ingest\EntrySnippet;
 use App\Service\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingest\Pass\FeedIngestContext;
+use App\Service\Ingest\Support\EntryEffectiveDate;
+use App\Service\Ingest\Support\EntryMediaAssembler;
+use App\Service\Ingest\Support\EntrySnippet;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Sanitize\EntrySanitizer;

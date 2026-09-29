@@ -9,6 +9,7 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunTimingRepository;
 use App\Service\Recommendation\Run\Model\PhaseDurationsModel;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Symfony\Component\Clock\ClockInterface;
 
 /**

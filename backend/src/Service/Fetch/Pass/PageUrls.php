@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Pass;
 
 use App\Service\Fetch\Exception\FeedUnreachableException;
-use App\Service\Fetch\UrlResolver;
-use App\Service\Url\AbsoluteHttpUrl;
-use App\Service\Url\UrlOrigin;
+use App\Service\Fetch\Support\UrlResolver;
+use App\Service\Url\Support\AbsoluteHttpUrl;
+use App\Service\Url\Support\UrlOrigin;
 
 /**
  * The URL context of one page, bound once and asked many times.

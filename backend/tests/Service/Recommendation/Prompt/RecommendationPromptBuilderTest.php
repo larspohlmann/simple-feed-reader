@@ -12,7 +12,7 @@ use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Prompt\Pass\PromptContext;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 use PHPUnit\Framework\Attributes\DataProvider;

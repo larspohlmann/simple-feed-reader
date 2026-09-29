@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;

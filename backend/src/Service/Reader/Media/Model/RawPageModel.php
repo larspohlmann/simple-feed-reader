@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Media\Model;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use Dom\HTMLDocument;
 
 /** One parse of the raw article page, shared by every MediaCandidateSource. */

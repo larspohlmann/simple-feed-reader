@@ -17,7 +17,7 @@ use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 use App\Service\Recommendation\Prompt\RecommendationPickParser;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\BatchWaveResultModel;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\WaveBatchModel;

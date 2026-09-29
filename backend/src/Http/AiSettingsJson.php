@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\AiProviderSettings;
 use App\Entity\User;
-use App\Service\Ai\AiReadiness;
+use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**

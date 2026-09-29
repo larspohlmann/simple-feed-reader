@@ -4,18 +4,18 @@ declare(strict_types=1);
 
 namespace App\Service\Parser\FeedFormatParser;
 
-use App\Service\Parser\DateParser;
 use App\Service\Parser\Exception\FeedParseException;
-use App\Service\Parser\FeedImageExtractor;
-use App\Service\Parser\GuidFallback;
-use App\Service\Parser\ItemCategoryExtractor;
-use App\Service\Parser\ItemImageExtractor;
-use App\Service\Parser\ItemMediaExtractor;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\XmlHelper;
-use App\Service\Text\PlainText;
+use App\Service\Parser\Support\DateParser;
+use App\Service\Parser\Support\FeedImageExtractor;
+use App\Service\Parser\Support\GuidFallback;
+use App\Service\Parser\Support\ItemCategoryExtractor;
+use App\Service\Parser\Support\ItemImageExtractor;
+use App\Service\Parser\Support\ItemMediaExtractor;
+use App\Service\Parser\Support\XmlHelper;
+use App\Service\Text\Support\PlainText;
 
 final class Rss1Parser implements FeedFormatParserInterface
 {

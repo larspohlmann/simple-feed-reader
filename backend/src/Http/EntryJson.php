@@ -6,7 +6,7 @@ namespace App\Http;
 
 use App\Entity\EntryMedia;
 use App\Repository\EntryListRow;
-use App\Service\Text\EntryExcerpt;
+use App\Service\Text\Support\EntryExcerpt;
 
 /**
  * Two shapes off one row: listRow() drops contentHtml for a plain-text

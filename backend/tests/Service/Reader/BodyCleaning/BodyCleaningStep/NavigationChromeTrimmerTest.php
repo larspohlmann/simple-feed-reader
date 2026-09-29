@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 
 /**

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Proxy;
 
 use App\Service\Crypto\Exception\SecretUnreadableException;
-use App\Service\Fetch\EgressOptions;
-use App\Service\Fetch\ProxyHandshakeFailure;
+use App\Service\Fetch\Support\EgressOptions;
+use App\Service\Fetch\Support\ProxyHandshakeFailure;
 use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use App\Service\Proxy\Model\ProxyTestFailure;
 use App\Service\Proxy\Model\ProxyTestResultModel;

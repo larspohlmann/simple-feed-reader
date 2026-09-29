@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 
 /**
  * The target of a client-side redirect a landed page performs with a zero-delay

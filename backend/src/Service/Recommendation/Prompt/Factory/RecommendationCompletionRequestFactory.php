@@ -8,7 +8,7 @@ use App\Entity\AiProviderSettings;
 use App\Service\Ai\Completion\Model\CompletionRequestModel;
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\Model\CallPromptModel;
-use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
+use App\Service\Recommendation\Prompt\Support\RecommendationAnswerBudget;
 
 /** Builds every phase's request, so a prompt and its output bound are always derived together. */
 final readonly class RecommendationCompletionRequestFactory

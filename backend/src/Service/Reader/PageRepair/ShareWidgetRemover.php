@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\PageRepair;
 
-use App\Service\Html\ClassTokenMatcher;
+use App\Service\Html\Support\ClassTokenMatcher;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\XPath;

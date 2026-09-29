@@ -7,7 +7,7 @@ namespace App\Service\Ingest;
 use App\Entity\Entry;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Url\HttpsImageUrl;
+use App\Service\Url\Support\HttpsImageUrl;
 
 /** Stores a feed-declared image on an entry: trusted at ingest when natively https and fully sized, else pending. */
 final readonly class EntryImageWriter

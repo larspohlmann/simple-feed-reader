@@ -8,9 +8,9 @@ use App\Service\Catalog\Exception\BrokenCatalogUrlException;
 use App\Service\Catalog\Model\BrokenCatalogUrlModel;
 use App\Service\Catalog\Model\CatalogDocumentFeedModel;
 use App\Service\Catalog\Model\CatalogUrlReportModel;
-use App\Service\Fetch\EgressOptions;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Fetch\Support\EgressOptions;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 

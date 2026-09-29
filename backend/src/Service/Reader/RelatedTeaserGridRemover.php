@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader;
 
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Service\Reader\Support\BlockText;
 use Dom\Element;
 use Dom\HTMLDocument;
 

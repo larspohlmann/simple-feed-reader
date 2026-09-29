@@ -11,7 +11,7 @@ use App\Service\Catalog\Model\CatalogDocumentFeedModel;
 use App\Service\Catalog\Model\ParsedCatalogModel;
 use App\Service\Opml\Exception\InvalidOpmlException;
 use App\Service\Opml\OpmlBodyReader;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
  * Parses and fully validates a catalog OPML document.

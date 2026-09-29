@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Pass;
 
-use App\Service\Fetch\HostKey;
 use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Support\HostKey;
 
 /**
  * How many requests to each host the sweep currently has in flight, capped so a

@@ -7,7 +7,7 @@ namespace App\Service\Ingest\PlatformEntryRule;
 use App\Entity\Discussion;
 use App\Enum\CommentsLoad;
 use App\Service\Parser\Model\ParsedEntryModel;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final readonly class RedditEntryRule implements PlatformEntryRuleInterface
 {

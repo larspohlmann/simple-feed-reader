@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Pass;
 
-use App\Service\Reader\BlockText;
-use App\Service\Reader\LeadingEngagementBlocks;
-use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
+use App\Service\Reader\Support\BlockText;
+use App\Service\Reader\Support\LeadingEngagementBlocks;
+use App\Service\Reader\Support\LeadingEngagementRules;
 
 /**
  * Decides which leading blocks are article-head furniture rather than content,

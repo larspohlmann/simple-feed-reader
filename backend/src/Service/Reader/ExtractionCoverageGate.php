@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\Text\Whitespace;
+use App\Service\Text\Support\Whitespace;
 
 /**
  * Guards against a confident-but-wrong extraction. Readability sometimes picks

@@ -20,7 +20,7 @@ use App\Service\Ai\Exception\ProviderRunawayException;
 use App\Service\Ai\Exception\ProviderUnreachableException;
 use App\Service\Ai\Exception\RetryableProviderException;
 use App\Service\Ai\Model\ProviderConnectionModel;
-use App\Service\Fetch\ResponseHeader;
+use App\Service\Fetch\Support\ResponseHeader;
 use Symfony\Contracts\HttpClient\ChunkInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

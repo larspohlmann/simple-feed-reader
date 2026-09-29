@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit\Model;
 
-use App\Service\ReaderAudit\DatabaseValue;
+use App\Service\ReaderAudit\Support\DatabaseValue;
 
 /**
  * What the audit learned about one article, and the row the report prints. It

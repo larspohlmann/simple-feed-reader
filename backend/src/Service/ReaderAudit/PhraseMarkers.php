@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
+use App\Service\ReaderAudit\Support\SuspiciousPhrases;
 
 /**
  * Scans the article's short blocks for the wording SuspiciousPhrases lists, each

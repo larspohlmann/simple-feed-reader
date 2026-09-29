@@ -9,10 +9,10 @@ use App\Entity\EntryState;
 use App\Repository\EntryRepository;
 use App\Repository\EntryStateRepository;
 use App\Service\Backup\BackupLines;
-use App\Service\Backup\BackupSchema;
 use App\Service\Backup\Dto\BackupTotals;
 use App\Service\Backup\Model\BackupPartModel;
 use App\Service\Backup\Model\BackupProvenanceModel;
+use App\Service\Backup\Support\BackupSchema;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**

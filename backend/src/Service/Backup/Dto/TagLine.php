@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Dto;
 
+use App\Service\Backup\Support\LineField;
+
 /**
  * One of the account's tags.
  */

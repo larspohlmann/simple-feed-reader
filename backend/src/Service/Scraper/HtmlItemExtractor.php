@@ -5,14 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Scraper;
 
 use App\Service\Image\Model\DeclaredImageModel;
-use App\Service\Parser\GuidFallback;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
+use App\Service\Parser\Support\GuidFallback;
 use App\Service\Scraper\Exception\HtmlExtractionException;
 use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\Pass\CardFields;
 use App\Service\Scraper\ScrapeLayer\ScrapeLayerInterface;
+use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 

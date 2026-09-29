@@ -6,8 +6,8 @@ namespace App\Service\Mail\Transport\Pass;
 
 use App\Service\Fetch\Model\ProxyConfigModel;
 use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
-use App\Service\Mail\Transport\CurlSmtpOptions;
 use App\Service\Mail\Transport\Exception\ProxiedSmtpSendException;
+use App\Service\Mail\Transport\Support\CurlSmtpOptions;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mailer\Exception\TransportException;

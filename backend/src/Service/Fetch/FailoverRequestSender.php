@@ -9,6 +9,8 @@ use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\Exception\ProxiedAttemptFailedException;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Fetch\Support\CrossFamilyFailover;
+use App\Service\Fetch\Support\EgressOptions;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http;
 
 use App\Entity\User;
-use App\Service\Ai\AiReadiness;
+use App\Service\Ai\Support\AiReadiness;
 
 /**
  * The client's view of its own account. Deliberately hand-built rather than

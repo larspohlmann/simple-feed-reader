@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Backup\Pass;
 
 use App\Service\Backup\BackupReader;
-use App\Service\Backup\BackupSchema;
 use App\Service\Backup\Dto\BackupHeader;
 use App\Service\Backup\Exception\InvalidBackupException;
+use App\Service\Backup\Support\BackupSchema;
 
 /**
  * Enforces one part's kind grammar and its entry ceiling. A fresh instance

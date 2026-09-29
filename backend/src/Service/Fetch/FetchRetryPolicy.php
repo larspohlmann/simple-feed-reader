@@ -8,6 +8,7 @@ use App\Service\Fetch\Exception\FeedUnreachableException;
 use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
+use App\Service\Fetch\Support\CrossFamilyFailover;
 
 /**
  * What a failed fetch attempt earns next: the one direct fallback for a proxied

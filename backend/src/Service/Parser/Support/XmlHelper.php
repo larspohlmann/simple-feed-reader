@@ -1,0 +1,92 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Service\Parser\Support;
+
+use App\Service\Url\Support\AbsoluteHttpUrl;
+
+final class XmlHelper
+{
+    /**
+     * Dublin Core elements namespace. RSS 1.0/2.0 and the Atom 0.3 feeds of
+     * some publishers (tagesschau, NDR) carry the entry date as <dc:date> here
+     * rather than in the feed dialect's own date element.
+     */
+    public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
+
+    /**
+     * Trimmed text content of the first matching direct child element that
+     * HAS text, or null when none does.
+     *
+     * The first-with-text rule is not fussiness. Matching runs on local name,
+     * so an unqualified lookup for 'link' also matches <atom:link/>, and RSS
+     * 2.0 feeds routinely open their channel with a self-referencing
+     * <atom:link rel="self"/> before the real <link>. Returning on that first
+     * match left Al Jazeera and every feed shaped like it with no site URL at
+     * all.
+     */
+    public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            $text = trim($child->textContent);
+            if ($text !== '') {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * First matching direct child element, or null when absent. childText()
+     * cannot serve here: a feed's <image> holds its address in a grandchild
+     * <url>, so the element itself has to be handed back to be descended into.
+     */
+    public static function childElement(
+        \DOMElement $parent,
+        string $localName,
+        ?string $namespaceUri = null,
+    ): ?\DOMElement {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            return $child;
+        }
+
+        return null;
+    }
+
+    public static function childHttpUrl(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
+    {
+        foreach (self::childElements($parent, $localName, $namespaceUri) as $child) {
+            $text = trim($child->textContent);
+            if (AbsoluteHttpUrl::matches($text)) {
+                return $text;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Every direct child element with this local name. A null $namespaceUri
+     * matches any namespace — the one place that rule is written down.
+     *
+     * @return iterable<\DOMElement>
+     */
+    public static function childElements(
+        \DOMElement $parent,
+        string $localName,
+        ?string $namespaceUri,
+    ): iterable {
+        foreach ($parent->childNodes as $child) {
+            if (!$child instanceof \DOMElement || $child->localName !== $localName) {
+                continue;
+            }
+            if ($namespaceUri !== null && $child->namespaceURI !== $namespaceUri) {
+                continue;
+            }
+
+            yield $child;
+        }
+    }
+}

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Scraper\ScrapeLayer;
 
 use App\Service\Fetch\Pass\PageUrls;
-use App\Service\Html\JsonLd;
+use App\Service\Html\Support\JsonLd;
 use App\Service\Scraper\Pass\JsonLdArticles;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Pass;
 
-use App\Service\Fetch\ResponseHeader;
+use App\Service\Fetch\Support\ResponseHeader;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**

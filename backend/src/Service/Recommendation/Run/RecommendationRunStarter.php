@@ -10,10 +10,11 @@ use App\Enum\RunStatus;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Ai\AiProviderConfigurator;
-use App\Service\Ai\AiReadiness;
 use App\Service\Ai\Exception\AiNotConfiguredException;
+use App\Service\Ai\Support\AiReadiness;
 use App\Service\Recommendation\Exception\NoResumableRecommendationRunException;
 use App\Service\Recommendation\Run\Model\RecommendationRunReportModel;
+use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 

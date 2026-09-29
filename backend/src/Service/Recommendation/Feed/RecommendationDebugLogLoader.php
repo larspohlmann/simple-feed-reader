@@ -9,7 +9,7 @@ use App\Entity\User;
 use App\Repository\RecommendationRunLogRepository;
 use App\Repository\RecommendationRunRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
-use App\Service\Recommendation\Run\RunLogRetention;
+use App\Service\Recommendation\Run\Support\RunLogRetention;
 
 /**
  * What the debug panel shows: the runs it may switch between, and the rows of the one it is looking at.

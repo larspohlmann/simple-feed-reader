@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Model;
 
-use App\Service\Text\Whitespace;
-use App\Service\Url\AbsoluteHttpUrl;
+use App\Service\Text\Support\Whitespace;
+use App\Service\Url\Support\AbsoluteHttpUrl;
 use Dom\Element;
 use Dom\HTMLDocument;
 

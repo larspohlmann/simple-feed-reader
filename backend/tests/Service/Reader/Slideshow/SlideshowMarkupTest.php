@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow;
 
-use App\Service\Html\HtmlDocumentParser;
+use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
 use App\Service\Reader\Slideshow\Model\SlideModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;

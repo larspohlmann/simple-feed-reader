@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Doctrine\WordBoundaries;
-use App\Service\Search\LikePattern;
 use App\Service\Search\Model\SearchTermsModel;
+use App\Service\Search\Support\LikePattern;
 use Doctrine\ORM\QueryBuilder;
 
 /**

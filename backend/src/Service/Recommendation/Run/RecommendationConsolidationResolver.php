@@ -15,7 +15,7 @@ use App\Service\Recommendation\Prompt\RecommendationCandidateLoader;
 use App\Service\Recommendation\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Prompt\RecommendationHistoryLoader;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
-use App\Service\Recommendation\Prompt\RecommendationPromptText;
+use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Run\Model\CallSlotModel;
 use App\Service\Recommendation\Run\Model\ConsolidationOutcomeModel;
 use App\Service\Recommendation\Run\Pass\TickContext;

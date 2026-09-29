@@ -12,7 +12,7 @@ use App\Service\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Mail\Digest\Model\DigestGroupModel;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\Model\DigestSearchMatchesModel;
-use App\Service\Text\PlainText;
+use App\Service\Text\Support\PlainText;
 
 /**
  * Builds one user's digest content: a group per `includeInDigest` saved search

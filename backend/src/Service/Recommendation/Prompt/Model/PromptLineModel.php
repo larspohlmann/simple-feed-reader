@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt\Model;
 
 use App\Repository\TitledEntry;
-use App\Service\Text\PlainText;
+use App\Service\Text\Support\PlainText;
 
 /** One entry in a prompt; only candidate lines print their id, so a history line gives the model nothing to pick. */
 final readonly class PromptLineModel

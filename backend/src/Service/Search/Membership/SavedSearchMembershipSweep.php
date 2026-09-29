@@ -13,7 +13,7 @@ use App\Service\Search\Membership\Model\SweepBudgetModel;
 use App\Service\Search\Membership\Pass\SweepTally;
 use App\Service\Search\Membership\SavedSearchMatcher\SavedSearchMatcherInterface;
 use App\Service\Search\Membership\SavedSearchMembershipWriter\SavedSearchMembershipWriterInterface;
-use App\Service\Search\SavedSearchTerms;
+use App\Service\Search\Support\SavedSearchTerms;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
