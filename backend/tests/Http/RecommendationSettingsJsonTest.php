@@ -26,13 +26,8 @@ final class RecommendationSettingsJsonTest extends TestCase
     }
 
     /**
-     * The settings card must show the prompt the batch call actually sends,
-     * not the superseded rank-then-dedup prompt (#493 Task 13, Ruling F).
-     * `RecommendationPromptText::SYSTEM_ROLE`/`OUTPUT_CONTRACT` no longer
-     * exist, so this pins the emitted strings directly to
-     * `BATCH_SYSTEM_ROLE`/`BATCH_OUTPUT_CONTRACT` -- an assertion that fails
-     * outright if `fixedPrompt` is ever repointed away from the live batch
-     * prompt again.
+     * The settings card shows the prompt the batch call sends: `fixedPrompt` must stay pointed at
+     * `BATCH_SYSTEM_ROLE` and `BATCH_OUTPUT_CONTRACT`.
      */
     public function testFixedPromptIsTheBatchPromptTheRunnerActuallySends(): void
     {

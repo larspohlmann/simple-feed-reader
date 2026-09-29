@@ -54,10 +54,8 @@ final class ClientErrorReportRequestTest extends KernelTestCase
     }
 
     /**
-     * Proves the whole point of this DTO: `#[MapRequestPayload]` deserializes
-     * a JSON body the same way this test does, via SerializerInterface, and
-     * relies on the `@param list<ClientErrorItem>` phpdoc alone to know each
-     * array element denormalizes into a ClientErrorItem, not a plain array.
+     * `#[MapRequestPayload]` deserializes as this test does, and only the `@param list<ClientErrorItem>` phpdoc tells
+     * it each element is a ClientErrorItem, not an array.
      */
     public function testDeserializingAJsonBatchHydratesEachItemAsAClientErrorItem(): void
     {

@@ -56,11 +56,8 @@ final class SearchPageTest extends TestCase
     }
 
     /**
-     * The bug this branch fixes: IndexedEntrySearch can report a matchCount
-     * higher than count($rows) when hydration drops an id (a ghost left by a
-     * failed async index delete, for one). SearchPage must still offer a
-     * cursor in that case, or the client believes it has reached the end of
-     * the results.
+     * Indexed search can match more ids than hydrate (a ghost left by a failed async index delete); SearchPage must
+     * still offer a cursor then, or the client thinks the results ended.
      */
     public function testAFullEngineMatchStillOffersACursorWhenARowWasDropped(): void
     {
@@ -74,10 +71,7 @@ final class SearchPageTest extends TestCase
         );
     }
 
-    /**
-     * A genuinely final page — the engine itself matched fewer ids than the
-     * limit — must still end pagination once the truncation bug is fixed.
-     */
+    /** A genuinely final page, where the engine matched fewer ids than the limit, still ends pagination. */
     public function testAShortEngineMatchOffersNoNextCursor(): void
     {
         $result = new EntrySearchResultModel([$this->row(7)], ['angular'], matchCount: 1);
@@ -88,10 +82,8 @@ final class SearchPageTest extends TestCase
     }
 
     /**
-     * The database path: LikeEntrySearch's row count IS its match count
-     * (nothing removes rows after the query runs), so rowsOnly() must default
-     * matchCount to count($rows) and the resulting page must be unchanged
-     * from before this fix.
+     * LikeEntrySearch's row count is its match count, so rowsOnly() defaults matchCount to count($rows) and a full
+     * page keeps its cursor.
      */
     public function testTheDatabasePathOffersACursorFromRowCountAlone(): void
     {
@@ -103,10 +95,8 @@ final class SearchPageTest extends TestCase
     }
 
     /**
-     * The indexed unread search returns only the unread rows of a page but must
-     * resume past the last candidate it hydrated (continuationRow). SearchPage
-     * must forward that row so the cursor keys off it, not off the shown rows —
-     * otherwise a page whose tail was read re-reads it or, when empty, stops.
+     * SearchPage forwards the continuation row, so the cursor resumes past the last hydrated candidate, not the last
+     * shown row; otherwise a page whose tail was read re-reads it or, when empty, stops.
      */
     public function testTheContinuationRowDecidesTheCursor(): void
     {

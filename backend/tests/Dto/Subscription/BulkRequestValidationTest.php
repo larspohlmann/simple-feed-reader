@@ -37,12 +37,8 @@ final class BulkRequestValidationTest extends KernelTestCase
     }
 
     /**
-     * The cap is a hard technical ceiling on one request's payload, not "every
-     * feed the caller could own" (#659 review): an admin can raise a single
-     * account's subscription limit above MAX_SUBSCRIPTIONS_PER_USER via
-     * SubscriptionLimitResolver, so a request naming more ids than the global
-     * default must still validate as long as it stays under the technical
-     * ceiling.
+     * The cap bounds one request's payload, not what the caller may own: an admin can raise an account's limit above
+     * MAX_SUBSCRIPTIONS_PER_USER, so more ids than that must still validate.
      */
     public function testMoreIdsThanTheDefaultAccountCapAreAccepted(): void
     {
