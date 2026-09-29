@@ -37,11 +37,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame(480, $this->builder->descriptionLength(200000));
     }
 
-    /**
-     * The quote goes into a JSON request body. `substr` would cut a multi-byte
-     * sequence in half and make `json_encode` fail, costing the retry the clip
-     * exists to enable — and this reader's feeds are German.
-     */
     public function testAClippedReplyIsStillValidUtf8(): void
     {
         $tail = $this->builder->correctiveTail(str_repeat('ü', 3000), 'Try again.');
@@ -55,12 +50,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /**
-     * The batch ceiling is no longer one constant for every endpoint (#437).
-     * A small local model asked to hold 45 entries in order is at the edge of
-     * what it can do, and the failure mode is a repetition loop rather than a
-     * wrong ranking, so the connection's own ceiling decides the split.
-     */
     public function testThePackerHonoursTheCeilingItsSettingsCarry(): void
     {
         $candidates = array_map(
@@ -77,13 +66,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame([30, 30, 30, 10], array_map('count', $batches));
     }
 
-    /**
-     * There is nothing to correct against when the reply is empty, and a
-     * blocking-shape runaway produces exactly that: the body never parsed, so
-     * the partial answer is ''. Appending it anyway put an empty assistant turn
-     * in the retry beside a correction referring to a reply the model cannot
-     * see — a retry no different from the attempt that failed (#437 review).
-     */
     public function testAnEmptyReplyAddsNoCorrectiveTail(): void
     {
         $messages = [['role' => 'user', 'content' => 'rank these']];
@@ -92,13 +74,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame($messages, $this->builder->messagesWithCorrectiveTail($messages, "  \n ", 'Try again.'));
     }
 
-    /**
-     * The tail quotes the model's own reply back so it can see what was wrong
-     * with it. A reply that ran away is the case that breaks: echoing tens of
-     * kilobytes of a repetition loop spends the context on it and re-primes
-     * the very loop the retry exists to break (#437). The head carries the
-     * whole signal.
-     */
     public function testTheCorrectiveTailClipsAReplyTooLongToQuoteBack(): void
     {
         $tail = $this->builder->correctiveTail(str_repeat('{"id": 349500}, ', 4000), 'Try again.');
@@ -146,14 +121,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringNotContainsString(str_repeat('a', 2001), $tail[0]['content']);
     }
 
-    /**
-     * A sanity check for the ordinary, cap-bound case: at a generous context
-     * window the batch cap (the default maximumBatchSize of 100) binds before
-     * either the old or the new token formula does, so a 200-candidate pool
-     * packs into the minimum the cap allows either way. This does not exercise
-     * the reserve/history-budget swap — see
-     * testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave for that.
-     */
     public function testScoreOnlyBatchesFitTheCapBoundBatchCountAtAGenerousWindow(): void
     {
         $candidates = array_map(
@@ -176,18 +143,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * The batch call only ever asks for a score, not a reason, and its history
-     * budget is the not-yet-distilled profile plus FAVORITES rather than the
-     * full three-section history — both reserves are far smaller than the old
-     * reason-bearing, three-section formula. A Large batch size lifts the cap
-     * to 200 (2 × the 100 automatic ceiling), past the 200 candidates, so the
-     * token budget alone decides the split here. At this window the old formula's
-     * budget goes negative — a 70-token-per-pick reserve plus the full
-     * three-section history outweighs it — so the packer falls back to
-     * MINIMUM_BATCH_SIZE-sized batches, about 20 of them for 200 candidates.
-     * The new formula's smaller score-only reserve and profile+FAVORITES-only
-     * history budget stay positive, so the same pool packs into 5 near-full
-     * batches instead (#493).
+     * A Large batch size lifts the cap to 200, past these 200 candidates, so the token budget alone splits them. The
+     * score-only reserve and the profile-plus-FAVORITES history leave room for at most five batches.
      */
     public function testScoreOnlyBatchesPackLargerThanReasonBearingWouldHave(): void
     {
@@ -225,15 +182,8 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsWhenTheBudgetOverflows(): void
     {
-        // 35 candidates at this window/picksLimit split into 20 + 15 purely on
-        // the token budget: both resulting batches stay well under
-        // MAXIMUM_BATCH_SIZE (40), so the cap plays no part in the split — only
-        // the budget does. A window of 8192 (as this test used before the cap
-        // existed) fits all 35 in one batch, so the window was shrunk instead
-        // of the candidate count grown, keeping the split budget-driven rather
-        // than cap-driven. The window is raised by the constant reserve (2250)
-        // to keep the same budget now that the reserve no longer scales with
-        // picksLimit.
+        // Window 4029 leaves a budget below zero, so these 35 candidates split into MINIMUM_BATCH_SIZE batches, far
+        // below the cap of 100: the budget splits them, not the cap.
         $candidateCount = 35;
         $candidates = array_map(
             static fn (int $id): PromptLineModel => self::line($id, "Candidate $id", 400),
@@ -244,8 +194,6 @@ final class RecommendationPromptBuilderTest extends TestCase
 
         self::assertGreaterThan(1, \count($batches));
         foreach ($batches as $batch) {
-            // Below the 40-candidate cap, so the split above is proven to come
-            // from the token budget, not from the cap.
             self::assertLessThan(40, \count($batch));
         }
 
@@ -255,9 +203,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingCapsBatchSizeEvenWhenTheBudgetWouldAllowMore(): void
     {
-        // A huge window and short lines mean the token budget never binds —
-        // every candidate would fit in one batch on budget alone. Only the
-        // MAXIMUM_BATCH_SIZE cap (100) can be splitting these into 100/100/50.
+        // A huge window and short lines keep the token budget from binding: only the batch cap (100) splits these.
         $candidateCount = 250;
         $candidates = array_map(
             static fn (int $id): PromptLineModel => new PromptLineModel($id, "C$id", 'F', 'D', null),
@@ -274,9 +220,6 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingFiveHundredCandidatesIntoFiveBatchesUnderTheDefaultCap(): void
     {
-        // With MAXIMUM_BATCH_SIZE raised to 100 in #493 (score-only batches), the
-        // default 500-candidate pool packs into 5 batches of 100 under a huge
-        // budget — under half the 12 it took at the old reason-bearing cap.
         $candidateCount = 500;
         $candidates = array_map(
             static fn (int $id): PromptLineModel => new PromptLineModel($id, "C$id", 'F', 'D', null),
@@ -319,10 +262,8 @@ final class RecommendationPromptBuilderTest extends TestCase
             viewed: [],
         );
 
-        // At a 32k context the full 32k reasoning headroom alone overruns the
-        // window for any shortlist above the floor, so the call falls back to
-        // the floor (CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit) — a small
-        // connection is never handed a consolidation call it cannot answer.
+        // At a 32k context the 32k reasoning headroom alone overruns the window above the floor, so the size falls
+        // back to CONSOLIDATION_MIN_INPUT_FACTOR × picksLimit.
         $size = $this->builder->consolidationInputSize(
             new PromptContext($history, $this->settings(32768, 50), 'A profile.'),
             Reasoning::Allowed,
@@ -494,12 +435,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('- [7] ', $user);
     }
 
-    /**
-     * The model quantises: 29 of one run's 50 picks scored exactly 85, and the
-     * prose asking it to separate near-equals made it worse, not better. The
-     * scale is now 0-1000 and the prompt says outright what to do with the
-     * room (#403).
-     */
     public function testTheRubricAsksForExactValuesOnAThousandPointScale(): void
     {
         $system = $this->builder->batchMessages(
@@ -514,12 +449,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * The batch prompt asked for every candidate and, in the same breath, told
-     * the model to omit the duplicates of a story it had already scored. It
-     * resolved the conflict by omitting: 3.2% of production candidates were
-     * never scored, and an unscored candidate can never be recommended (#399).
-     * Duplicates belong to the dedup phase, which sees the whole ranked list
-     * rather than one random sample of it.
+     * An unscored candidate can never be recommended, so the batch prompt never asks for one to be left out:
+     * duplicates are the consolidation phase's to find.
      */
     public function testTheBatchPromptNeverAsksForACandidateToBeLeftOut(): void
     {
@@ -532,11 +463,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringNotContainsString('omit the others', $system);
     }
 
-    /**
-     * The count is the model's own check on "return one object per line", and
-     * it counts the lines rendered into this batch -- not the pool, and not the
-     * batch cap (#399, and the same reasoning as the dedup frame in #396).
-     */
+    /** The count is of the lines rendered into this batch, not the pool and not the batch cap. */
     public function testTheCandidateHeaderNamesHowManyLinesTheBatchHolds(): void
     {
         $candidateLines = array_map(
@@ -584,12 +511,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringNotContainsString('The full candidate set has', $messages[1]['content']);
     }
 
-    /**
-     * The batch call sees a not-yet-distilled PROFILE plus FAVORITES only —
-     * KEPT and VIEWED stay in the history the distillation phase reads, but
-     * never reach the batch prompt itself (#493). The reply is score-only:
-     * the contract asks for "score" and not "reason".
-     */
     public function testBatchMessagesCarryProfileAndFavouritesOnly(): void
     {
         $history = new RecommendationHistoryModel(
@@ -648,7 +569,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /** The caller names the correction, so the consolidation phase can ask for its own thing back (#396). */
     public function testTheCorrectionIsTheOnePassedIn(): void
     {
         $messages = $this->builder->messagesWithCorrectiveTail(
@@ -752,10 +672,8 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingSplitsExactlyAtTheMinimumBatchSizeWhenTheBudgetOverflowsEarly(): void
     {
-        // Window 3125 (raised by the constant reserve of 2250) with picksLimit 1
-        // makes the budget just 1 token, so every candidate after the first
-        // overflows it; only the >= MINIMUM_BATCH_SIZE guard decides where each
-        // batch actually ends.
+        // Window 3125 leaves a budget below zero, so every candidate overflows it: only the >= MINIMUM_BATCH_SIZE
+        // guard decides where each batch ends.
         $candidates = array_map(
             static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 124),
@@ -768,10 +686,8 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingResetsUsedTokensExactlyAtEachSplitBoundary(): void
     {
-        // Window 3189 (raised by the constant reserve of 2250) with picksLimit 1
-        // puts the budget exactly one token below where the 11th candidate line
-        // would land: a one-token error in either the starting or the
-        // post-split reset of $used shifts the split point.
+        // Window 3189 also leaves a budget below zero, so each split falls at MINIMUM_BATCH_SIZE whatever $used
+        // holds: this pins the batch boundaries, not the reset of $used.
         $candidates = array_map(
             static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 124),
@@ -784,13 +700,8 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     public function testPackingBudgetIsSensitiveToEveryTermInItsFormula(): void
     {
-        // Window 3195 (raised by the constant reserve of 2250) with picksLimit 1
-        // makes the budget land exactly on the 10-candidate boundary (shifted down
-        // one candidate versus the old flat per-pick multiplier, now that RecommendationAnswerBudget's
-        // floor and ANSWER_BOUND_PERCENT bound decide responseReserve):
-        // used+lineTokens equals the budget for the 11th candidate, so the
-        // strict `>` (not `>=`) leaves it in the first batch, and a sign error
-        // in subtracting the history tokens shifts the split.
+        // Window 3195 leaves a budget of -1264 tokens, so the minimum batch size splits 10 and 10. Flipping the sign
+        // of any term (overhead, reply reserve, history) lifts it past the 120 tokens that fit all 20 in one batch.
         $candidates = array_map(
             static fn (int $id): PromptLineModel => new PromptLineModel($id, 'T', 'F', 'D', null),
             range(100, 119),
@@ -802,13 +713,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     }
 
     /**
-     * An empty FAVORITES section is too small to make the sign of
-     * ESTIMATED_PROFILE_TOKENS + tokens($favoritesSection) matter --
-     * testPackingBudgetIsSensitiveToEveryTermInItsFormula's near-zero history
-     * leaves a `+` and a `-` indistinguishable there. A real, sizeable
-     * FAVORITES section makes the two diverge by thousands of tokens: a `-`
-     * would inflate the budget instead of spending it, fitting every
-     * candidate in one batch instead of two.
+     * A sizeable FAVORITES section, because an empty one cannot tell `+` from `-` in ESTIMATED_PROFILE_TOKENS +
+     * tokens($favoritesSection): a `-` would inflate the budget and fit every candidate in one batch instead of two.
      */
     public function testHistoryTokensAreAddedToTheBudgetNotSubtracted(): void
     {
@@ -873,11 +779,6 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertSame([20, 10], array_map('count', $batches));
     }
 
-    /**
-     * The distillation call is the one place the model sees the full,
-     * three-section history: the batch and consolidation calls only ever see
-     * the not-yet-distilled PROFILE plus FAVORITES (#493).
-     */
     public function testDistillMessagesCarryAllThreeHistorySections(): void
     {
         $history = new RecommendationHistoryModel(
@@ -921,12 +822,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /**
-     * The consolidation call sees the same profile+FAVORITES fidelity as the
-     * batch call, not the full history — KEPT and VIEWED never reach it — plus
-     * the ranked shortlist rendered candidate-style so each line carries its id
-     * (#493, Q6 correction).
-     */
+    /** The shortlist is rendered candidate-style, so each line carries its id. */
     public function testConsolidationMessagesCarryProfileFavouritesAndShortlist(): void
     {
         $pool = [['id' => 5, 'score' => 900, 'reason' => '']];
@@ -943,8 +839,7 @@ final class RecommendationPromptBuilderTest extends TestCase
             $lines,
         );
 
-        // Anchored to "PROFILE:\n" + the text, not merely both present, so a
-        // mutant that reverses the concatenation order still fails this.
+        // Anchored to the header, not merely both present: the text must follow "PROFILE:\n".
         self::assertStringContainsString("PROFILE:\nLikes Rust.", $messages[1]['content']);
         self::assertStringContainsString('FAVORITES', $messages[1]['content']);
         self::assertStringNotContainsString('KEPT', $messages[1]['content']);
@@ -952,13 +847,10 @@ final class RecommendationPromptBuilderTest extends TestCase
         self::assertStringContainsString('[5]', $messages[1]['content']);
         self::assertStringContainsString('Rust 2.0 released', $messages[1]['content']);
         self::assertStringContainsString('duplicates', $messages[0]['content']);
-        // CONSOLIDATION_ROLE also mentions "duplicates" on its own, so this
-        // pins the OUTPUT_CONTRACT half specifically — a mutant that drops it
-        // from the concatenation must not pass on the ROLE text alone.
+        // CONSOLIDATION_ROLE mentions "duplicates" too, so this pins the output contract's own sentence.
         self::assertStringContainsString('Reply with JSON only, no prose', $messages[0]['content']);
-        // The 0-1000 calibration must survive: the local model scores on a
-        // 0-100 scale without the explicit bands + three-digit anchor + the
-        // anti-0-100 guard, which stored every reason at a tenth of its value.
+        // The 0-1000 calibration must survive: without the explicit bands, the three-digit anchor and the anti-0-100
+        // guard the local model scores on 0-100, and every score is stored at a tenth of its value.
         self::assertStringContainsString('900-1000', $messages[0]['content']);
         self::assertStringContainsString('do not score on a 0-100 scale', $messages[0]['content']);
         self::assertStringContainsString('Score every candidate line, never leave one out', $messages[0]['content']);
@@ -998,12 +890,7 @@ final class RecommendationPromptBuilderTest extends TestCase
         );
     }
 
-    /**
-     * A pool entry whose line has since been pruned (id absent from
-     * $linesById) must be dropped from the rendered shortlist, not carried
-     * through as a null — candidateLine() is typed to PromptLineModel and would
-     * fatal on one.
-     */
+    /** A pruned entry (absent from $linesById) is dropped, not carried as a null: candidateLine() would fatal on it. */
     public function testConsolidationMessagesDropsAPrunedPoolEntryFromTheShortlist(): void
     {
         $pool = [
