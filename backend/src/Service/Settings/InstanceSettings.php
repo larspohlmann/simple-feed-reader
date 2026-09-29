@@ -20,9 +20,10 @@ use Symfony\Contracts\Service\ResetInterface;
  *
  * `final class`, not `final readonly`: settings() memoises the resolved row so
  * a request reading several settings (a WebAuthn ceremony reads it three or
- * four times) issues one SELECT. The memo is a plain field — request-scoped
- * under PHP-FPM and dropped between worker messages by reset(); never promote it to a shared cache. update() clears
- * it so a read after a write sees the new value.
+ * four times) issues one SELECT. The memo is a plain field, request-scoped
+ * under PHP-FPM and dropped between worker messages by reset(); never promote
+ * it to a shared cache. update() clears it so a read after a write sees the
+ * new value.
  */
 final class InstanceSettings implements ResetInterface
 {

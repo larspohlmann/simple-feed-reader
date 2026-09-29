@@ -54,7 +54,7 @@ final class InstanceSettingsTest extends KernelTestCase
             $reflection->getMethods(\ReflectionMethod::IS_PUBLIC),
             static fn (\ReflectionMethod $method): bool => !$method->isStatic()
                 && !$method->isConstructor()
-                && 'reset' !== $method->getName()
+                && 'void' !== (string) $method->getReturnType()
                 && 0 === $method->getNumberOfParameters(),
         );
         self::assertNotEmpty($getters, 'Expected InstanceSettings to expose at least one getter.');
