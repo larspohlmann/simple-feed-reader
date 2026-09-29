@@ -22,11 +22,8 @@ final readonly class ProxyConfigModel
         // On by default. When false, a proxied fetch that fails is terminal — the
         // fetchers never retry directly, so the real server IP is never revealed.
         public bool $directFallback = true,
-        // Off by default: SOCKS5 uses `socks5`, so curl resolves the name here.
-        // `socks5h` hands the name to the proxy (better privacy, geo-restricted
-        // hosts resolve from the proxy's vantage) but only works on a proxy that
-        // resolves names. Private Internet Access answers every name with "host
-        // unreachable" (#490).
+        // Off by default, so curl resolves names here. `socks5h` hands them to the proxy, which only works on a proxy
+        // that resolves names: Private Internet Access answers every name with "host unreachable" (#490).
         public bool $remoteDns = false,
     ) {
     }
@@ -52,8 +49,6 @@ final readonly class ProxyConfigModel
         ]);
     }
 
-    /** Whether curl resolves the destination name on this host, rather than the
-     *  proxy doing it. Only a plain-`socks5` proxy does. */
     public function resolvesLocally(): bool
     {
         return ProxyType::Socks5 === $this->type && !$this->remoteDns;

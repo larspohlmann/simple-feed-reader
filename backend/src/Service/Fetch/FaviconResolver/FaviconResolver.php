@@ -11,12 +11,8 @@ use App\Service\Fetch\Pass\PageUrls;
 use Psr\Log\LoggerInterface;
 
 /**
- * Best-effort favicon resolution for a batch of feeds' sites. Fetches each
- * site homepage concurrently through the SSRF-guarded batch fetcher, parses
- * its <link rel="...icon..."> tags and returns the largest https icon per
- * site, falling back to the /favicon.ico convention. Never throws: a favicon
- * is a nicety, so any failure degrades to the fallback (or null) rather than
- * disturbing the refresh that asked for it.
+ * Best-effort favicons for a batch of feeds' sites: the largest https icon each homepage's <link> tags advertise,
+ * else /favicon.ico. Never throws: a favicon must not disturb the refresh that asked for it.
  */
 final readonly class FaviconResolver implements FaviconResolverInterface
 {
@@ -29,13 +25,9 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     }
 
     /**
-     * Resolve a favicon for each site, fetching the homepages concurrently.
+     * @param array<int, string> $baseUrlsByFeedId a feed's siteUrl, or its feed URL when it has none
      *
-     * @param array<int, string> $baseUrlsByFeedId a feed's siteUrl or, failing
-     *                                             that, its feed URL
-     *
-     * @return array<int, string|null> an https URL per input key, or null when
-     *                                 the URL carried no host to derive one from
+     * @return array<int, string|null> an https icon URL per key; null when the URL carries no host
      */
     public function resolveAll(array $baseUrlsByFeedId): array
     {
@@ -54,14 +46,8 @@ final readonly class FaviconResolver implements FaviconResolverInterface
     }
 
     /**
-     * Fetches every homepage in one batch and resolves each to an icon URL.
-     * `BatchFeedFetcherInterface::fetchAll()` promises never to throw for an
-     * individual site's outcome, but that promise does not cover an invariant
-     * violation inside the fetcher itself (an exhausted queue pulled once too
-     * often, a misconfigured concurrency, ...) — a bug there is still not
-     * this best-effort component's business to propagate. Any site the batch
-     * never got a turn to answer for still falls back to the /favicon.ico
-     * convention rather than being silently dropped from the result.
+     * Catches even the batch fetcher's own invariant failures, which a best-effort component does not propagate, and
+     * falls back to /favicon.ico for every site the batch never answered for.
      *
      * @param array<int, string> $origins
      *
@@ -74,9 +60,6 @@ final readonly class FaviconResolver implements FaviconResolverInterface
 
         try {
             foreach ($this->fetcher->fetchAll($tickets) as $feedId => $outcome) {
-                // fetchAll's key type is the wider int|string of any batch
-                // caller; this resolver's own contract is keyed by feed id,
-                // always an int.
                 $feedId = (int) $feedId;
                 $icons[$feedId] = mb_substr(
                     $this->iconFrom($outcome, $origins[$feedId]) ?? $origins[$feedId] . '/favicon.ico',
@@ -110,7 +93,6 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         return '' === trim($body) ? null : $this->pickIcon($body, new PageUrls($response->finalUrl));
     }
 
-    /** The best https icon a page's <link> tags advertise, or null. */
     private function pickIcon(string $html, PageUrls $pageUrls): ?string
     {
         $document = new \DOMDocument();
@@ -173,7 +155,6 @@ final readonly class FaviconResolver implements FaviconResolverInterface
         return $largest;
     }
 
-    /** "https://host" derived from any URL, or null when it carries no host. */
     private static function httpsOrigin(string $url): ?string
     {
         $host = parse_url($url, \PHP_URL_HOST);

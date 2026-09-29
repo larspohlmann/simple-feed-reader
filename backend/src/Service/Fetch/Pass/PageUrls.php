@@ -9,30 +9,18 @@ use App\Service\Fetch\Support\UrlResolver;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 use App\Service\Url\Support\UrlOrigin;
 
-/**
- * The URL context of one page, bound once and asked many times.
- *
- * Everything that reads a page — the scraper layers, feed discovery, the
- * favicon resolver — resolves the references it finds against that page. The
- * page URL is per-pass state, so it lives here rather than travelling as a
- * parameter through every private helper down to the resolution itself.
- *
- * UrlResolver stays the algorithm and keeps its one-shot callers: a Location
- * header resolved against the URL that produced it has a base, but no page.
- */
+/** The URL context of one page, bound once and asked many times. */
 final readonly class PageUrls
 {
     public function __construct(private string $pageUrl)
     {
     }
 
-    /** Scheme, host and port of the page, or null when it names no host. */
     public function origin(): ?string
     {
         return UrlOrigin::of($this->pageUrl);
     }
 
-    /** The page's own path, always leading-slashed: "/" when it carries none. */
     public function path(): string
     {
         $path = parse_url($this->pageUrl, \PHP_URL_PATH);
@@ -47,12 +35,8 @@ final readonly class PageUrls
     }
 
     /**
-     * Absolute http(s) URL of a reference found on the page, or null when it
-     * names nothing fetchable.
-     *
-     * Empty references and non-http(s) schemes (javascript:, mailto:, data:, …)
-     * are rejected up front — resolving such a scheme against the page would
-     * otherwise produce a syntactically valid-looking https URL.
+     * An absolute http(s) URL, or null. A non-http(s) scheme (javascript:, mailto:, data:) is refused before
+     * resolving, which would dress it up as a valid-looking https URL.
      */
     public function httpUrl(?string $reference): ?string
     {
@@ -70,7 +54,6 @@ final readonly class PageUrls
         return AbsoluteHttpUrl::orNull($resolved);
     }
 
-    /** Whether a resolved URL leads back to the page itself, trailing slash aside. */
     public function isPageItself(string $url): bool
     {
         return rtrim($url, '/') === rtrim($this->pageUrl, '/');
