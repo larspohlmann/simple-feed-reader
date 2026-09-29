@@ -18,6 +18,14 @@ final class ContainerSignatureModelTest extends TestCase
         self::assertNotNull(ContainerSignatureModel::fromClassAttribute('carousel gallery 0'));
     }
 
+    public function testExtraWhitespaceBetweenClassTokensDoesNotChangeTheSignature(): void
+    {
+        self::assertEquals(
+            ContainerSignatureModel::fromClassAttribute('carousel gallery'),
+            ContainerSignatureModel::fromClassAttribute('carousel   gallery'),
+        );
+    }
+
     public function testEmptyClassAttributeProducesNoSignature(): void
     {
         self::assertNull(ContainerSignatureModel::fromClassAttribute(''));
