@@ -133,6 +133,16 @@ final class SearchReindexCommandTest extends DbTestCase
         self::assertSame([2, 2, 1], array_map(count(...), $writer->upserts));
     }
 
+    public function testLeavesNoIndexedEntryInTheIdentityMap(): void
+    {
+        $this->persistEntries(5);
+        $this->entityManager->clear();
+
+        $this->tester(new RecordingSearchIndexWriter(), batchSize: 2)->execute([]);
+
+        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[Entry::class] ?? []);
+    }
+
     public function testReportsTheIndexedCount(): void
     {
         $this->persistEntries(3);
