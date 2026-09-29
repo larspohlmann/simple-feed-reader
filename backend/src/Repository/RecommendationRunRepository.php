@@ -22,11 +22,6 @@ final class RecommendationRunRepository extends ServiceEntityRepository
         parent::__construct($registry, RecommendationRun::class);
     }
 
-    /**
-     * Every reading of "still needs ticking" starts here, so the filter is
-     * written once and each caller adds only what makes it its own question:
-     * one account's run, a count, or the sweep's ordered window.
-     */
     private function activeStatusQuery(): QueryBuilder
     {
         return $this->createQueryBuilder('r')
@@ -57,12 +52,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * The run's status as the database holds it right now, deliberately read
-     * as a scalar so the identity map cannot answer with the copy the caller
-     * is itself mutating. RecommendationTickCheckpoint needs exactly that:
-     * after a provider call it must learn whether someone else stopped the
-     * run meanwhile, and a managed entity would simply hand back the stale
-     * in-memory status.
+     * Read as a scalar, so the identity map cannot answer with the copy the caller is itself mutating:
+     * RecommendationTickCheckpoint must learn whether another process stopped the run meanwhile.
      */
     public function statusOf(int $runId): ?RunStatus
     {
@@ -77,15 +68,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * Whether any run anywhere still needs driving. A count, not a fetch: the
-     * terminate listener asks this on every request and must not pay for
-     * hydration to learn the answer is no.
-     *
-     * The count itself is a scan, not an index seek: the only index on the
-     * table leads with `user_id`, and this filters on `status` alone. That is
-     * the right trade at this table's size -- one run row per generation, per
-     * account -- and it is why the answer is not cached and why no index was
-     * added for it.
+     * A count, not a fetch: the terminate listener asks on every request. It scans, as no index leads with `status`;
+     * at one row per generation per account that is the right trade, so it is neither cached nor indexed.
      */
     public function hasActiveRun(): bool
     {
@@ -98,14 +82,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * The account's newest run, optionally of one status only.
-     *
-     * The two readings are one query because they differ in nothing but that
-     * filter: callers driving a run want whatever ran last, whatever became of
-     * it, while the for-you summary wants the newest *completed* run — the one
-     * that produced the surviving list, which a later failed run never touched.
-     * Its id and completedAt drive the header's "Last refreshed" hint and the
-     * for-you divider suppression.
+     * The account's newest run, or its newest of one status: the for-you summary wants the newest completed run, the
+     * one that produced the surviving list, whatever a later run did.
      */
     public function findLatestForUser(User $user, ?RunStatus $status = null): ?RecommendationRun
     {
@@ -125,13 +103,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * How many runs one worker firing may tick. A firing's duration is the
-     * SUM over the runs it touches, and one run can spend a whole provider
-     * timeout, so an unbounded set turns a "ten-second" sweep into an
-     * hour-long one. Oldest-first ordering keeps a capped sweep fair: a run
-     * only leaves the set by completing or failing, so the head of the queue
-     * drains under a bounded number of firings and every later run reaches
-     * the window in turn -- first come, first served, and nobody starves.
+     * A firing lasts the sum of its runs, each up to a provider timeout, so one firing ticks at most this many. Oldest
+     * first keeps a capped sweep fair: a run leaves the set only by finishing, so every later run reaches the window.
      */
     private const int MAXIMUM_RUNS_PER_SWEEP = 10;
 
@@ -154,9 +127,8 @@ final class RecommendationRunRepository extends ServiceEntityRepository
     }
 
     /**
-     * The account's newest runs, newest first — the retention window the
-     * debug log is trimmed to, and the list the debug panel offers to switch
-     * between (#401).
+     * The account's newest runs, newest first: the retention window the debug log is trimmed to, and the runs the
+     * debug panel offers to switch between.
      *
      * @return list<RecommendationRun>
      */

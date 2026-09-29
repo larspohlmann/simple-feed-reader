@@ -13,14 +13,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The run log read behind the phase-weighted time-left estimate (#638): for an
- * account's most recent completed runs, the wall-clock span of each phase and
- * how many batches the batch phase covered. {@see PhaseDurationsModel} turns these
- * spans into the averages the estimate weights its remaining work by.
- *
- * A span is derived in PHP from MIN(createdAt)/MAX(finishedAt) rather than in
- * SQL, so no dialect-specific date arithmetic leaks into the query — the suite
- * runs it on both SQLite and MySQL.
+ * Each phase's wall-clock span and batch count for the account's latest completed runs, which PhaseDurationsModel
+ * averages into the time-left estimate. Spans are computed in PHP from MIN/MAX, so the query stays dialect-free.
  *
  * @extends ServiceEntityRepository<RecommendationRunLog>
  */

@@ -22,7 +22,7 @@ final readonly class RecommendationCandidateRepository
 
     /**
      * The newest entries since $since the reader has not favorited, kept or viewed, one copy per duplicate group.
-     * Read entries stay eligible (#386).
+     * Read entries stay eligible.
      *
      * @return list<TitledEntry>
      */
@@ -76,7 +76,7 @@ final readonly class RecommendationCandidateRepository
         return $row;
     }
 
-    /** Shared by the outer query and the collapse semi-join, so the two cannot drift and reopen a hole (#496). */
+    /** Shared by the outer query and the collapse semi-join, so the two cannot drift apart. */
     private function poolScope(QueryBuilder $inner, EntryAliases $aliases): void
     {
         $inner->andWhere(\sprintf('%s.includeInForYou = true', $aliases->subscription))

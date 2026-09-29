@@ -84,10 +84,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     }
 
     /**
-     * How many attempts a given call has already recorded, so the caller can
-     * number the next one. Scoped to the run (not the user), phase and batch
-     * number — distill and consolidate have no batch number, and SQL `= NULL`
-     * never matches, so that case needs an explicit `IS NULL`.
+     * The attempts one call has recorded, scoped to run, phase and batch number. Distill and consolidate have no batch
+     * number, and `= NULL` never matches, so that case needs `IS NULL`.
      */
     public function countAttempts(RecommendationRun $run, CallPhase $phase, ?int $batchNumber): int
     {
@@ -159,9 +157,8 @@ final class RecommendationRunLogRepository extends ServiceEntityRepository
     }
 
     /**
-     * Drops every log row of the account except those belonging to the named
-     * runs — the retention window at the start of a run (#401). An empty keep
-     * list is a full wipe, which is what deleteForUser() asks for.
+     * Drops every log row of the account except those of the named runs, the retention window at the start of a run.
+     * An empty keep list is a full wipe, which is what deleteForUser() asks for.
      *
      * @param list<int> $keptRunIds
      */

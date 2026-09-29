@@ -59,7 +59,7 @@ final readonly class RecommendationCallRepository
         ], ['id' => $settlement->logId]);
     }
 
-    /** SQL arithmetic, not read-modify-write: a #344 wave settles several calls against one run. */
+    /** SQL arithmetic, not read-modify-write: one batch wave settles several calls against the same run. */
     public function addUsage(int $runId, CompletionUsageModel $usage): void
     {
         $this->connection->executeStatement(

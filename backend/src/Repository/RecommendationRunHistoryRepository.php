@@ -13,15 +13,7 @@ use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * The read side of the run cost history (#409): one calendar month, the
- * whole-account spend timeline, and the all-time total.
- *
- * A previous review rejected an earlier version of this class for holding
- * only a verbatim copy of findNewestForUser(), split off to dodge a PHPMD
- * count inflated by that duplicate. This one holds three distinct queries —
- * pageForMonth(), spendTimeline(), totalCostNanoCredits() — plus their
- * shared projection, duplicates nothing, and gives RecommendationRunRepository
- * back the headroom PHPMD's ceiling had run out of.
+ * The run cost history's reads: one month's page, the spend timeline, and the all-time total.
  *
  * @extends ServiceEntityRepository<RecommendationRun>
  *
@@ -41,13 +33,7 @@ use Doctrine\Persistence\ManagerRegistry;
  */
 final class RecommendationRunHistoryRepository extends ServiceEntityRepository
 {
-    /**
-     * How many runs one page of history holds (#409). The list is a spending
-     * record a human reads, not a dataset — fifty rows is more than anyone
-     * scrolls through in one month, and totalCostNanoCredits() below is
-     * computed over every run anyway, so this cap never makes the number on
-     * screen wrong.
-     */
+    /** Runs per page. totalCostNanoCredits() sums every run, so the cap never changes the total shown. */
     public const int HISTORY_LIMIT = 50;
 
     public function __construct(ManagerRegistry $registry)
@@ -56,18 +42,8 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * One month's runs, newest first, as scalars rather than entities. A
-     * RecommendationRun carries the frozen candidate pool, every batch winner
-     * with its free-text reason, the last rejected provider reply and the
-     * error text — none of which belongs on a path that formats twelve numbers.
-     *
-     * Reads one row past the limit purely as "there is another page"; a COUNT
-     * for the same answer would be a second query on every page.
-     *
-     * $beforeRunId pages backwards within the month. Ids ascend with creation
-     * time, so one integer expresses the whole keyset — unlike the opaque
-     * composite RecommendationCursor, which exists because the for-you feed
-     * orders by two columns and this does not.
+     * One month's runs as scalars, newest first: an entity drags the frozen pool, the winners and the provider replies.
+     * One row past the limit says another page exists; $beforeRunId pages back, as ids ascend with creation time.
      *
      * @return list<HistoryRow>
      */
@@ -90,18 +66,8 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every run's creation time and price, newest first — the two scalars the
-     * month summaries are built from.
-     *
-     * Grouped in PHP, deliberately: DQL has no month extraction, and buckets
-     * must be cut in the viewer's timezone while the column holds naive UTC,
-     * which no portable expression can shift before grouping. The alternative
-     * is platform-branched native SQL, which this codebase confines to
-     * migrations.
-     *
-     * The cost is this read: two scalars for every run the account owns — the
-     * same shape #409's first pass removed from the history page, which pulled
-     * twelve fields plus the JSON and TEXT columns above.
+     * Every run's creation time and price, newest first, grouped by month in PHP: DQL has no month extraction, and the
+     * buckets are cut in the viewer's zone while the column holds naive UTC.
      *
      * @return list<array{createdAt: \DateTimeImmutable, costNanoCredits: int|string|null}>
      */
@@ -118,19 +84,10 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /**
-     * The account's whole spend, summed in the database over every run it
-     * ever made — deliberately not over one page of it. An account whose runs
-     * all went unpriced sums to null, which is the honest answer: nothing
-     * reported a price, as opposed to everything reporting zero.
-     */
+    /** Summed over every run, not one page; null when no run reported a price, which is not the same as zero. */
     public function totalCostNanoCredits(User $user): ?int
     {
         $total = $this->createQueryBuilder('r')
-            // The seven usage columns live behind a ProviderUsage embeddable
-            // (PHPMD TooManyFields on RecommendationRun). The *column* names
-            // are unprefixed and unchanged, but the DQL field path is not:
-            // `r.costNanoCredits` throws "has no field or association named".
             ->select('SUM(r.providerUsage.costNanoCredits)')
             ->andWhere('r.user = :user')
             ->setParameter('user', $user)
@@ -140,12 +97,6 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
         return null === $total ? null : (int) $total;
     }
 
-    /**
-     * The twelve-field scalar select every history row needs, scoped to one
-     * account. Extracted so pageForMonth() adds only a date range and a
-     * limit on top of it, instead of the field list — and the embeddable's
-     * DQL-path comment — existing twice.
-     */
     private function historyRowsFor(User $user): QueryBuilder
     {
         return $this->createQueryBuilder('r')
@@ -154,8 +105,6 @@ final class RecommendationRunHistoryRepository extends ServiceEntityRepository
                 'r.status AS status',
                 'r.createdAt AS createdAt',
                 'r.completedAt AS completedAt',
-                // The embeddable's DQL field path, not the column name — see
-                // totalCostNanoCredits() above for why the two differ.
                 'r.providerUsage.providerHost AS providerHost',
                 'r.providerUsage.model AS model',
                 'r.providerUsage.promptTokens AS promptTokens',
