@@ -57,7 +57,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
 
         $video = array_values(array_filter(
             $media->candidates,
-            static fn ($c): bool => $c->kind === MediaKind::Video,
+            static fn ($candidate): bool => $candidate->kind === MediaKind::Video,
         ));
 
         self::assertNotSame([], $video);
@@ -98,7 +98,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             'https://www.tagesschau.de/inland/innenpolitik/merz-linke-sachsen-anhalt-100.html',
         );
 
-        $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
+        $kinds = array_map(static fn ($candidate): MediaKind => $candidate->kind, $media->candidates);
         self::assertSame([MediaKind::Video], $kinds);
     }
 
@@ -110,7 +110,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             'https://www.vice.com/en/article/4-remixes-from-the-2000s/',
         );
 
-        $urls = array_map(static fn ($c): string => $c->url, $media->candidates);
+        $urls = array_map(static fn ($candidate): string => $candidate->url, $media->candidates);
         self::assertSame([
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa1',
             'https://www.youtube-nocookie.com/embed/aaaaaaaaaa2',
@@ -182,7 +182,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             'https://www.mediathek.test/video/tv-2031',
         );
 
-        $kinds = array_map(static fn ($c): MediaKind => $c->kind, $media->candidates);
+        $kinds = array_map(static fn ($candidate): MediaKind => $candidate->kind, $media->candidates);
         self::assertSame([MediaKind::Video], $kinds);
     }
 
@@ -206,13 +206,13 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
             'https://www.tagesschau.de/tagesschau_in_einfacher_sprache/tse-1410.html',
         );
 
-        $kinds = array_map(static fn ($c) => $c->kind, $media->candidates);
+        $kinds = array_map(static fn ($candidate) => $candidate->kind, $media->candidates);
         self::assertContains(MediaKind::Video, $kinds);
         self::assertContains(MediaKind::Audio, $kinds);
         self::assertNotContains(MediaKind::Stream, $kinds, 'the file beside the HLS master wins');
         $videos = array_values(array_filter(
             $media->candidates,
-            static fn ($c): bool => $c->kind === MediaKind::Video,
+            static fn ($candidate): bool => $candidate->kind === MediaKind::Video,
         ));
         self::assertStringContainsString('sendungsbild-1789662', (string) $videos[0]->posterUrl);
     }

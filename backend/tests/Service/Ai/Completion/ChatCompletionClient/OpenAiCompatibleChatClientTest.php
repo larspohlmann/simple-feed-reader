@@ -382,8 +382,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->clientUsing($client)
                 ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
-        } catch (ProviderUnreachableException $e) {
-            self::assertSame('That provider sent nothing for more than 180 seconds.', $e->getMessage());
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That provider sent nothing for more than 180 seconds.', $exception->getMessage());
         }
 
         // A stalled response is canceled rather than left open — leaving it
@@ -427,7 +427,7 @@ final class OpenAiCompatibleChatClientTest extends TestCase
      * check: if "$status >= 300" ever loosened to "$status > 300", 300 would
      * fall through to getContent(), which Symfony's HttpClientInterface
      * raises as RedirectionException for any unfollowed 3xx — caught by the
-     * same `catch (ExceptionInterface $e)`, but rewritten to the generic
+     * same `catch (ExceptionInterface $exception)`, but rewritten to the generic
      * "That address did not answer." rather than this status-carrying one.
      * Same exception type either way; different message.
      */
@@ -619,8 +619,8 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             $this->clientUsing($client)
                 ->complete($this->connection(), $this->request(), new NullCompletionStreamObserver());
             self::fail(ProviderUnreachableException::class . ' was not thrown.');
-        } catch (ProviderUnreachableException $e) {
-            self::assertSame('That address did not answer.', $e->getMessage());
+        } catch (ProviderUnreachableException $exception) {
+            self::assertSame('That address did not answer.', $exception->getMessage());
         }
     }
 

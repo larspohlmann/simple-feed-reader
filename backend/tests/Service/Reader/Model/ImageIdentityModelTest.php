@@ -9,9 +9,9 @@ use PHPUnit\Framework\TestCase;
 
 final class ImageIdentityModelTest extends TestCase
 {
-    private function sameImage(string $a, string $b): bool
+    private function sameImage(string $left, string $right): bool
     {
-        return ImageIdentityModel::fromUrl($a)->matches(ImageIdentityModel::fromUrl($b));
+        return ImageIdentityModel::fromUrl($left)->matches(ImageIdentityModel::fromUrl($right));
     }
 
     public function testMatchesTheSamePhotoAcrossFormatAndSizeVariants(): void

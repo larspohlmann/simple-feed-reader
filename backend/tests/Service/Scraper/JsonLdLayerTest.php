@@ -17,9 +17,9 @@ final class JsonLdLayerTest extends TestCase
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture): array
     {
-        $doc = $this->document($this->scrapedFixture($fixture));
+        $document = $this->document($this->scrapedFixture($fixture));
 
-        return new JsonLdLayer()->extract($doc, 'https://news.test/section/');
+        return new JsonLdLayer()->extract($document, 'https://news.test/section/');
     }
 
     public function testExtractsItemListWithFields(): void
@@ -34,11 +34,11 @@ final class JsonLdLayerTest extends TestCase
 
     public function testIgnoresPagesWithoutArticleStructures(): void
     {
-        $doc = $this->document(
+        $document = $this->document(
             '<html lang="en"><body><script type="application/ld+json">{"@type":"Organization","name":"X"}</script>'
             . '</body></html>'
         );
-        self::assertSame([], new JsonLdLayer()->extract($doc, 'https://news.test/'));
+        self::assertSame([], new JsonLdLayer()->extract($document, 'https://news.test/'));
     }
 
     /**
@@ -72,11 +72,11 @@ final class JsonLdLayerTest extends TestCase
                 ],
             ],
         ], \JSON_THROW_ON_ERROR);
-        $doc = $this->document(
+        $document = $this->document(
             '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
         );
 
-        $items = new JsonLdLayer()->extract($doc, 'https://news.test/');
+        $items = new JsonLdLayer()->extract($document, 'https://news.test/');
 
         self::assertCount(1, $items);
         self::assertSame('https://news.test/abstract-story', $items[0]->url);
@@ -92,12 +92,12 @@ final class JsonLdLayerTest extends TestCase
     public function testGraphCollectionIsBoundedAtMaxCollect(): void
     {
         $nodes = [];
-        for ($i = 0; $i < 500; ++$i) {
+        for ($index = 0; $index < 500; ++$index) {
             $nodes[] = [
                 '@type' => 'Article',
-                'url' => '/a/' . $i,
-                'headline' => 'Headline number ' . $i,
-                'description' => 'A description for article number ' . $i
+                'url' => '/a/' . $index,
+                'headline' => 'Headline number ' . $index,
+                'description' => 'A description for article number ' . $index
                     . ' that is comfortably over forty characters long.',
             ];
         }
@@ -105,11 +105,11 @@ final class JsonLdLayerTest extends TestCase
             '@context' => 'https://schema.org',
             '@graph' => $nodes,
         ], \JSON_THROW_ON_ERROR);
-        $doc = $this->document(
+        $document = $this->document(
             '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
         );
 
-        $items = new JsonLdLayer()->extract($doc, 'https://x.test/');
+        $items = new JsonLdLayer()->extract($document, 'https://x.test/');
 
         self::assertCount(200, $items);
         self::assertSame('https://x.test/a/0', $items[0]->url);

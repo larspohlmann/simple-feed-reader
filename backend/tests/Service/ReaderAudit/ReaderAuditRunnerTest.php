@@ -216,7 +216,10 @@ final class ReaderAuditRunnerTest extends TestCase
         ];
         $findings = iterator_to_array($runner->run($entries, new ReaderLinkModel('http://localhost:4200')));
 
-        self::assertSame([1, 2], array_map(static fn (AuditFindingModel $f): int => $f->entryId, $findings));
+        self::assertSame(
+            [1, 2],
+            array_map(static fn (AuditFindingModel $finding): int => $finding->entryId, $findings),
+        );
     }
 
     public function testACrashedPageStillCarriesItsLinkSoItCanBeOpened(): void

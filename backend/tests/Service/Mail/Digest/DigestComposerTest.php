@@ -56,9 +56,14 @@ final class DigestComposerTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$rust, $golang]);
 
         $newestId = null;
-        for ($i = 1; $i <= 12; ++$i) {
+        for ($index = 1; $index <= 12; ++$index) {
             $effectiveDate = new \DateTimeImmutable('2026-08-15T12:00:00Z');
-            $entry = $this->member($rust, 'Entry ' . $i, 'Feed ' . $i, $effectiveDate->modify('-' . $i . ' minutes'));
+            $entry = $this->member(
+                $rust,
+                'Entry ' . $index,
+                'Feed ' . $index,
+                $effectiveDate->modify('-' . $index . ' minutes'),
+            );
             $newestId ??= $entry->getId();
         }
 
@@ -181,17 +186,17 @@ final class DigestComposerTest extends DbTestCase
 
     private function members(): SavedSearchEntryRepository
     {
-        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entryListRepository(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 }

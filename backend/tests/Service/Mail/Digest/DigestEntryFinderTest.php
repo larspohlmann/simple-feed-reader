@@ -52,8 +52,8 @@ final class DigestEntryFinderTest extends DbTestCase
     public function testHydratesOnlyThePerSearchNewestButKeepsTheFullTotal(): void
     {
         $newestFirst = [];
-        for ($i = 12; $i >= 1; --$i) {
-            $newestFirst[] = $this->member(\sprintf('2026-07-%02dT00:00:00Z', 15 + $i));
+        for ($index = 12; $index >= 1; --$index) {
+            $newestFirst[] = $this->member(\sprintf('2026-07-%02dT00:00:00Z', 15 + $index));
         }
         $this->member('2026-07-10T00:00:00Z');
         $this->hide($this->member('2026-07-16T00:00:00Z'));

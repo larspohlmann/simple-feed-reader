@@ -111,11 +111,11 @@ final class OAuthStateStoreTest extends TestCase
      */
     public function testOneFlowsBrowserTokenDoesNotRedeemAnother(): void
     {
-        $a = $this->store->start('google');
-        $b = $this->store->start('google');
+        $firstFlow = $this->store->start('google');
+        $secondFlow = $this->store->start('google');
 
         $this->assertRefused(
-            fn () => $this->store->consume($a->state, $b->browserToken),
+            fn () => $this->store->consume($firstFlow->state, $secondFlow->browserToken),
             InvalidOAuthStateException::class,
             'The state was redeemed.',
         );
@@ -149,12 +149,12 @@ final class OAuthStateStoreTest extends TestCase
 
     public function testEveryFlowGetsADistinctBrowserToken(): void
     {
-        $a = $this->store->start('google');
-        $b = $this->store->start('google');
+        $firstFlow = $this->store->start('google');
+        $secondFlow = $this->store->start('google');
 
-        self::assertNotNull($a->browserToken);
-        self::assertNotSame($a->browserToken, $b->browserToken);
-        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $a->browserToken);
+        self::assertNotNull($firstFlow->browserToken);
+        self::assertNotSame($firstFlow->browserToken, $secondFlow->browserToken);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $firstFlow->browserToken);
     }
 
     /**
@@ -212,12 +212,12 @@ final class OAuthStateStoreTest extends TestCase
 
     public function testEveryFlowGetsDistinctSecrets(): void
     {
-        $a = $this->store->start('google');
-        $b = $this->store->start('google');
+        $firstFlow = $this->store->start('google');
+        $secondFlow = $this->store->start('google');
 
-        self::assertNotSame($a->state, $b->state);
-        self::assertNotSame($a->nonce, $b->nonce);
-        self::assertNotSame($a->codeVerifier, $b->codeVerifier);
+        self::assertNotSame($firstFlow->state, $secondFlow->state);
+        self::assertNotSame($firstFlow->nonce, $secondFlow->nonce);
+        self::assertNotSame($firstFlow->codeVerifier, $secondFlow->codeVerifier);
     }
 
     /**

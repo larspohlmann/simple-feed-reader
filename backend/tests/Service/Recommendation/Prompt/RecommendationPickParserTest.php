@@ -339,9 +339,9 @@ final class RecommendationPickParserTest extends TestCase
         self::assertSame([2, 1], array_map(static fn ($pick) => $pick->entryId, $result->picks));
     }
 
-    /** @param array<mixed> $data */
-    private static function encode(array $data): string
+    /** @param array<mixed> $reply */
+    private static function encode(array $reply): string
     {
-        return json_encode($data, \JSON_THROW_ON_ERROR);
+        return json_encode($reply, \JSON_THROW_ON_ERROR);
     }
 }

@@ -63,8 +63,8 @@ final class CategoryNormalizerTest extends TestCase
     public function testCapsCountAtThirty(): void
     {
         $raw = [];
-        for ($i = 0; $i < 40; $i++) {
-            $raw[] = new ParsedCategoryModel('cat' . $i);
+        for ($index = 0; $index < 40; $index++) {
+            $raw[] = new ParsedCategoryModel('cat' . $index);
         }
 
         self::assertCount(30, $this->normalizer->normalize($raw));

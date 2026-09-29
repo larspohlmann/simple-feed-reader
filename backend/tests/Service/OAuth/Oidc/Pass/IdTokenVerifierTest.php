@@ -351,8 +351,8 @@ final class IdTokenVerifierTest extends TestCase
     ): void {
         try {
             $this->verifier()->verify($token, $expectedNonce);
-        } catch (OAuthFailedException $e) {
-            self::assertSame($logDetail, $e->logDetail);
+        } catch (OAuthFailedException $exception) {
+            self::assertSame($logDetail, $exception->logDetail);
 
             return;
         }
@@ -391,7 +391,7 @@ final class IdTokenVerifierTest extends TestCase
      */
     private function token(array $claims): IdTokenModel
     {
-        $encode = static fn (string $data): string => rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+        $encode = static fn (string $bytes): string => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
 
         return new IdTokenModel(
             $encode('{"alg":"RS256","typ":"JWT"}')

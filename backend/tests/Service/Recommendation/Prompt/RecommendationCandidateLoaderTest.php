@@ -54,7 +54,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([$readByFlag->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$readByFlag->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testEntriesAtOrBeforeTheMarkedReadWatermarkStayCandidates(): void
@@ -74,7 +74,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         self::assertEqualsCanonicalizing(
             [$beforeWatermark->getId(), $afterWatermark->getId()],
-            array_map(static fn ($l) => $l->entryId, $lines),
+            array_map(static fn ($line) => $line->entryId, $lines),
         );
     }
 
@@ -88,7 +88,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnUnreadKeptEntryIsExcluded(): void
@@ -101,7 +101,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnUnreadViewedEntryIsExcluded(): void
@@ -114,7 +114,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnUnreadEntryWithNoStateRowIsReturned(): void
@@ -123,7 +123,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([$noState->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$noState->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnUnreadEntryWithAllInteractionFlagsFalseIsReturned(): void
@@ -137,7 +137,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([$untouched->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$untouched->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testReturnsTheUnreadCandidatesAsAMultiset(): void
@@ -152,7 +152,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         self::assertEqualsCanonicalizing(
             ['newer', 'older'],
-            array_map(static fn ($l) => $l->title, $lines),
+            array_map(static fn ($line) => $line->title, $lines),
         );
     }
 
@@ -170,7 +170,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         self::assertCount(2, $lines);
         self::assertEqualsCanonicalizing(
             ['c', 'b'],
-            array_map(static fn ($l) => $l->title, $lines),
+            array_map(static fn ($line) => $line->title, $lines),
         );
     }
 
@@ -184,8 +184,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $second = $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242));
 
         self::assertSame(
-            array_map(static fn ($l) => $l->title, $first),
-            array_map(static fn ($l) => $l->title, $second),
+            array_map(static fn ($line) => $line->title, $first),
+            array_map(static fn ($line) => $line->title, $second),
         );
     }
 
@@ -203,7 +203,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         );
 
         $shuffled = array_map(
-            static fn ($l) => $l->title,
+            static fn ($line) => $line->title,
             $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242)),
         );
 
@@ -221,7 +221,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         }
 
         $ids = array_map(
-            static fn ($l) => $l->entryId,
+            static fn ($line) => $line->entryId,
             $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242)),
         );
 
@@ -240,7 +240,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest(orderSeed: 4242));
 
-        self::assertSame([$only->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$only->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testLinesForIdsDropsPrunedIds(): void
@@ -445,7 +445,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        self::assertSame([$included->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$included->getId()], array_map(static fn ($line) => $line->entryId, $lines));
 
         $linesById = $this->loader()->linesForIds(
             $this->userId(),
@@ -473,7 +473,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $this->poolRequest(since: '2026-07-10T00:00:00Z'),
         );
 
-        self::assertSame([$inside->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$inside->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testAnEntryExactlyOnTheWindowBoundaryIsIncluded(): void
@@ -486,7 +486,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         );
 
         // `>=`, not `>`: the boundary instant belongs to the window.
-        self::assertSame([$onBoundary->getId()], array_map(static fn ($l) => $l->entryId, $lines));
+        self::assertSame([$onBoundary->getId()], array_map(static fn ($line) => $line->entryId, $lines));
     }
 
     public function testCrossFeedDuplicateIsOfferedOnce(): void
@@ -507,7 +507,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        $ids = array_map(static fn ($l) => $l->entryId, $lines);
+        $ids = array_map(static fn ($line) => $line->entryId, $lines);
         self::assertContains($lower->getId(), $ids);
         self::assertNotContains($higher->getId(), $ids);
         self::assertSame(1, \count(array_filter($ids, static fn ($id) => $id === $lower->getId())));
@@ -540,7 +540,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
-        $ids = array_map(static fn ($l) => $l->entryId, $lines);
+        $ids = array_map(static fn ($line) => $line->entryId, $lines);
         self::assertContains($higher->getId(), $ids);
         self::assertNotContains($lower->getId(), $ids);
     }
@@ -557,7 +557,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         );
 
         // The cap selects the newest inside the window, never reaching past it.
-        self::assertSame(['newer-inside'], array_map(static fn ($l) => $l->title, $lines));
+        self::assertSame(['newer-inside'], array_map(static fn ($line) => $line->title, $lines));
     }
 
     private function poolRequest(

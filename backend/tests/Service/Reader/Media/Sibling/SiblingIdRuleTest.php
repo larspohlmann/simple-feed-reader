@@ -73,8 +73,8 @@ final class SiblingIdRuleTest extends TestCase
     public function testAContextWithMoreThanFiveSiblingsIsAListNotTheArticle(): void
     {
         $configs = [self::config('taktik-analyse-video-100', 'taktik')];
-        foreach (range(1, 6) as $n) {
-            $configs[] = self::config('nav-entry-' . $n . '-100', 'nav-' . $n);
+        foreach (range(1, 6) as $number) {
+            $configs[] = self::config('nav-entry-' . $number . '-100', 'nav-' . $number);
         }
 
         self::assertSame([], (new SiblingIdRule(new NearbyPoster()))->derive($this->seed(), self::page(...$configs)));

@@ -177,9 +177,9 @@ final class AppleClientSecretFactoryTest extends TestCase
         try {
             $factory->create();
             self::fail('expected the signing failure to surface');
-        } catch (OAuthFailedException $e) {
-            self::assertSame('apple client secret could not be signed', $e->logDetail);
-            self::assertNotNull($e->getPrevious());
+        } catch (OAuthFailedException $exception) {
+            self::assertSame('apple client secret could not be signed', $exception->logDetail);
+            self::assertNotNull($exception->getPrevious());
         }
     }
 

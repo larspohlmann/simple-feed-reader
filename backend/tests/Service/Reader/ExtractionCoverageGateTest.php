@@ -112,7 +112,7 @@ final class ExtractionCoverageGateTest extends TestCase
     /** `token1 token2 … tokenN` — every four-word window is a distinct shingle. */
     private function distinctWords(int $count): string
     {
-        return implode(' ', array_map(static fn (int $i): string => 'token' . $i, range(1, $count)));
+        return implode(' ', array_map(static fn (int $index): string => 'token' . $index, range(1, $count)));
     }
 
     private function firstWords(string $text, int $count): string

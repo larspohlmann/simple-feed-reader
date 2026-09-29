@@ -15,8 +15,8 @@ final class CardTitleTest extends TestCase
 
     private function anchor(string $html): Element
     {
-        $doc = $this->document("<html lang=\"en\"><body>{$html}</body></html>");
-        $anchor = $doc->querySelector('a');
+        $document = $this->document("<html lang=\"en\"><body>{$html}</body></html>");
+        $anchor = $document->querySelector('a');
         \assert($anchor instanceof Element);
 
         return $anchor;

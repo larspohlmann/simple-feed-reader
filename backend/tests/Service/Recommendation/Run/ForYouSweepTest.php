@@ -92,8 +92,8 @@ final class ForYouSweepTest extends DbTestCase
         $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $this->entityManager->flush();
 
-        for ($i = 0; $i < 5; $i++) {
-            $this->fixtures->entry($feed, $email . '-entry-' . $i, 60 - $i);
+        for ($index = 0; $index < 5; $index++) {
+            $this->fixtures->entry($feed, $email . '-entry-' . $index, 60 - $index);
         }
 
         return $user;

@@ -753,8 +753,8 @@ final class AccountRestorerTest extends DbTestCase
         try {
             $this->restorer()->start($this->reload($user), $gzip, null);
             self::fail('The restore ran without the REPLACE confirmation.');
-        } catch (ValidationException $e) {
-            self::assertArrayHasKey('confirm', $e->errors);
+        } catch (ValidationException $exception) {
+            self::assertArrayHasKey('confirm', $exception->errors);
         }
 
         $this->entityManager->clear();

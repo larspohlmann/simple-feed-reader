@@ -113,8 +113,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testSnapshotTickPartitionsCandidatesAndReportsRunning(): void
     {
         $this->seedReadyAiSettings($this->user);
-        for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, 60 - $i);
+        for ($index = 0; $index < 5; $index++) {
+            $this->entry('entry-' . $index, 60 - $index);
         }
         $this->starter()->start($this->user);
         $runId = $this->runs()->findActiveForUser($this->user)?->getId();
@@ -1461,8 +1461,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $config->setSuppressReasoning(false);
         $this->entityManager->flush();
 
-        for ($i = 0; $i < 3; $i++) {
-            $this->entry('entry-' . $i, 60 - $i);
+        for ($index = 0; $index < 3; $index++) {
+            $this->entry('entry-' . $index, 60 - $index);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
@@ -1624,7 +1624,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // Batch two fails at the transport ceiling -- now that an unusable
         // batch degrades instead of failing, this is the run's remaining fatal
         // path, and it is what leaves a resumable failure at batch two.
-        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES; $i++) {
+        for ($index = 0; $index < RecommendationRun::MAX_TRANSPORT_FAILURES; $index++) {
             $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
             try {
                 $this->advancer()->advance($this->user);
@@ -1689,7 +1689,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedMultiBatchFixture();
         $this->startSnapshotAndDistill();
 
-        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $i++) {
+        for ($index = 0; $index < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $index++) {
             $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down'));
             try {
                 $this->advancer()->advance($this->user);
@@ -1788,7 +1788,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // Two more failures: had the earlier one not been reset, this would
         // already be at the ceiling.
-        for ($i = 0; $i < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $i++) {
+        for ($index = 0; $index < RecommendationRun::MAX_TRANSPORT_FAILURES - 1; $index++) {
             $this->stubChatClient()->queueFailure(new ProviderUnreachableException('down again'));
             try {
                 $this->advancer()->advance($this->user);
@@ -2022,8 +2022,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testSingleBatchRunStillRunsConsolidationBeforeFinalizing(): void
     {
         $this->seedReadyAiSettings($this->user);
-        for ($i = 0; $i < 5; $i++) {
-            $this->entry('entry-' . $i, 60 - $i);
+        for ($index = 0; $index < 5; $index++) {
+            $this->entry('entry-' . $index, 60 - $index);
         }
         $this->starter()->start($this->user);
         $this->advancer()->advance($this->user); // snapshot tick
@@ -2953,10 +2953,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedReadyAiSettings($this->user);
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
-        for ($i = 0; $i < self::MULTI_BATCH_ENTRY_COUNT; $i++) {
+        for ($index = 0; $index < self::MULTI_BATCH_ENTRY_COUNT; $index++) {
             $entry = $this->entry(
-                sprintf('entry-%02d', $i),
-                1440 - $i,
+                sprintf('entry-%02d', $index),
+                1440 - $index,
             );
             $entry->setSummary($summary);
         }
@@ -2974,8 +2974,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
 
-        for ($i = 0; $i < self::SINGLE_BATCH_ENTRY_COUNT; $i++) {
-            $this->entry('entry-' . $i, 60 - $i);
+        for ($index = 0; $index < self::SINGLE_BATCH_ENTRY_COUNT; $index++) {
+            $this->entry('entry-' . $index, 60 - $index);
         }
         $this->entityManager->flush();
 
@@ -3013,10 +3013,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->fixtures->capBatchesAt($this->user, (int) ceil($entryCount / $batchCount));
 
         $summary = str_repeat('Lorem ipsum dolor sit amet consectetur adipiscing elit. ', 5);
-        for ($i = 0; $i < $entryCount; $i++) {
+        for ($index = 0; $index < $entryCount; $index++) {
             $entry = $this->entry(
-                sprintf('entry-%02d', $i),
-                1440 - $i,
+                sprintf('entry-%02d', $index),
+                1440 - $index,
             );
             $entry->setSummary($summary);
         }

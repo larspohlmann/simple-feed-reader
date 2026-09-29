@@ -19,12 +19,12 @@ final class FeedItemImageSelectorTest extends TestCase
 
     private function rss2Item(string $innerXml): \DOMElement
     {
-        $doc = new \DOMDocument();
+        $document = new \DOMDocument();
         /** @noinspection XmlUnusedNamespaceDeclaration */
         $rss = '<rss xmlns:media="http://search.yahoo.com/mrss/"><channel><item>'
             . $innerXml . '</item></channel></rss>';
-        $doc->loadXML($rss);
-        $item = $doc->getElementsByTagName('item')->item(0);
+        $document->loadXML($rss);
+        $item = $document->getElementsByTagName('item')->item(0);
         self::assertInstanceOf(\DOMElement::class, $item);
 
         return $item;
@@ -32,10 +32,10 @@ final class FeedItemImageSelectorTest extends TestCase
 
     private function atomEntry(string $innerXml): \DOMElement
     {
-        $doc = new \DOMDocument();
+        $document = new \DOMDocument();
         $atom = '<entry xmlns="http://www.w3.org/2005/Atom">' . $innerXml . '</entry>';
-        $doc->loadXML($atom);
-        $entry = $doc->documentElement;
+        $document->loadXML($atom);
+        $entry = $document->documentElement;
         self::assertInstanceOf(\DOMElement::class, $entry);
 
         return $entry;

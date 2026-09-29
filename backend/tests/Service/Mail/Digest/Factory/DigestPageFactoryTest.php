@@ -19,7 +19,7 @@ final class DigestPageFactoryTest extends TestCase
 
     private function group(string $term, int $count, int $totalCount): DigestGroupModel
     {
-        $entries = array_map(fn (int $i): DigestEntryModel => $this->entry("{$term} {$i}"), range(1, $count));
+        $entries = array_map(fn (int $index): DigestEntryModel => $this->entry("{$term} {$index}"), range(1, $count));
 
         return new DigestGroupModel(
             $term,

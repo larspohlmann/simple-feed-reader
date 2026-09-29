@@ -154,9 +154,9 @@ final class SendTestDigestTest extends DbTestCase
 
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $dir = \dirname(__DIR__, 4) . '/translations';
-        $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
-        $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+        $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
         $links = new DigestLinkBuilder(new FixedPublicBaseUrl('https://reader.example'));
 
         $embedder = $this->createStub(DigestImageEmbedderInterface::class);
@@ -226,17 +226,17 @@ final class SendTestDigestTest extends DbTestCase
 
     private function members(): SavedSearchEntryRepository
     {
-        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entries(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 }

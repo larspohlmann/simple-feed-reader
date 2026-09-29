@@ -63,7 +63,7 @@ final class ExtractedBodyModelTest extends TestCase
         // make every stray empty element a menu entry.
         $body = ExtractedBodyModel::fromHtml('<p><a href="/a"></a></p><p>Text</p>');
 
-        self::assertSame(['Text'], array_map(static fn (BodyBlockModel $b): string => $b->text, $body->blocks));
+        self::assertSame(['Text'], array_map(static fn (BodyBlockModel $block): string => $block->text, $body->blocks));
     }
 
     public function testHasArticleTextAnswersWhetherThePageYieldedAnArticleAtAll(): void
@@ -98,7 +98,10 @@ final class ExtractedBodyModelTest extends TestCase
 
         self::assertCount(2, $body->blocks[0]->links);
         self::assertSame(2, $body->blocks[0]->outboundLinks());
-        self::assertSame(['eins', 'zwei'], array_map(static fn ($l): string => $l->text, $body->blocks[0]->links));
+        self::assertSame(
+            ['eins', 'zwei'],
+            array_map(static fn ($link): string => $link->text, $body->blocks[0]->links),
+        );
         self::assertSame(13, $body->blocks[0]->length());
     }
 
@@ -122,7 +125,10 @@ final class ExtractedBodyModelTest extends TestCase
     {
         $body = ExtractedBodyModel::fromHtml('<ul><li>Eins</li></ul><p>Zwei</p>');
 
-        self::assertSame(['li', 'p'], array_map(static fn (BodyBlockModel $b): string => $b->tag, $body->blocks));
+        self::assertSame(
+            ['li', 'p'],
+            array_map(static fn (BodyBlockModel $block): string => $block->tag, $body->blocks),
+        );
     }
 
     public function testCountsHeadingsOfEveryLevel(): void

@@ -51,7 +51,7 @@ final class RateLimitedCompletionTest extends TestCase
     private function calls(int $count): array
     {
         $calls = [new ConcurrentCompletion($this->request(), new NullCompletionStreamObserver())];
-        for ($i = 1; $i < $count; $i++) {
+        for ($index = 1; $index < $count; $index++) {
             $calls[] = new ConcurrentCompletion($this->request(), new NullCompletionStreamObserver());
         }
 
@@ -140,7 +140,7 @@ final class RateLimitedCompletionTest extends TestCase
     public function testWorkerBudgetAccumulatesAcrossRetries(): void
     {
         $chat = new StubChatClient();
-        for ($i = 0; $i < 4; $i++) {
+        for ($index = 0; $index < 4; $index++) {
             $chat->queueFailure(new RetryableProviderException(429, 45));
         }
         $clock = $this->newClock();
@@ -156,7 +156,7 @@ final class RateLimitedCompletionTest extends TestCase
     public function testWorkerExhaustsRetriesAndKeepsTheRetryableFailure(): void
     {
         $chat = new StubChatClient();
-        for ($i = 0; $i < 4; $i++) { // initial + 3 retries, all 429
+        for ($index = 0; $index < 4; $index++) { // initial + 3 retries, all 429
             $chat->queueFailure(new RetryableProviderException(429));
         }
         $clock = $this->newClock();

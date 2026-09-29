@@ -190,10 +190,10 @@ final class FirstFetchRecorderTest extends DbTestCase
     private function parsedEntries(int $count): array
     {
         $entries = [];
-        for ($i = 0; $i < $count; $i++) {
+        for ($index = 0; $index < $count; $index++) {
             $entries[] = $this->parsedEntry(
-                'guid-' . $i,
-                new \DateTimeImmutable(sprintf('2026-01-01 00:00:00 +%d minutes', $i)),
+                'guid-' . $index,
+                new \DateTimeImmutable(sprintf('2026-01-01 00:00:00 +%d minutes', $index)),
             );
         }
 

@@ -24,16 +24,16 @@ final class FeedTagMoveTest extends DbTestCase
         $user = $this->user('inserter@example.com');
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
-        $x = $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
-        $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
+        $ahead = $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
+        $behind = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 1));
         $this->entityManager->flush();
 
-        self::assertSame(0, TagJoins::positionOf($x, $tech));
+        self::assertSame(0, TagJoins::positionOf($ahead, $tech));
         self::assertSame(1, TagJoins::positionOf($moved, $tech));
-        self::assertSame(2, TagJoins::positionOf($y, $tech));
+        self::assertSame(2, TagJoins::positionOf($behind, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
 
@@ -57,16 +57,16 @@ final class FeedTagMoveTest extends DbTestCase
         $user = $this->user('deduper@example.com');
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
-        $x = $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
-        $y = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
+        $ahead = $this->taggedSubscription($user, 'https://x.example.com/rss', [[$tech, 0]]);
+        $behind = $this->taggedSubscription($user, 'https://y.example.com/rss', [[$tech, 1]]);
         $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0], [$tech, 2]]);
 
         $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 0));
         $this->entityManager->flush();
 
         self::assertSame(0, TagJoins::positionOf($moved, $tech));
-        self::assertSame(1, TagJoins::positionOf($x, $tech));
-        self::assertSame(2, TagJoins::positionOf($y, $tech));
+        self::assertSame(1, TagJoins::positionOf($ahead, $tech));
+        self::assertSame(2, TagJoins::positionOf($behind, $tech));
         self::assertSame(['Tech'], $this->tagNames($moved));
     }
 

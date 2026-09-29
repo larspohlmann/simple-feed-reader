@@ -473,21 +473,28 @@ final class BackupSchemaCoverageTest extends DbTestCase
      */
     public function testEveryDroppedThingAppearsInTheUserFacingDoc(): void
     {
-        $doc = (string) file_get_contents(__DIR__ . '/../../../../../docs/backup.md');
+        $documentation = (string) file_get_contents(__DIR__ . '/../../../../../docs/backup.md');
 
-        $this->assertEveryEntityIsMentioned(self::INSTANCE_SCOPED, $doc, self::SECTION_INSTANCE_SCOPED);
-        $this->assertEveryEntityIsMentioned(self::ACCOUNT_SCOPED_WHOLLY_DROPPED, $doc, self::SECTION_WHOLLY_DROPPED);
+        $this->assertEveryEntityIsMentioned(self::INSTANCE_SCOPED, $documentation, self::SECTION_INSTANCE_SCOPED);
+        $this->assertEveryEntityIsMentioned(
+            self::ACCOUNT_SCOPED_WHOLLY_DROPPED,
+            $documentation,
+            self::SECTION_WHOLLY_DROPPED,
+        );
 
-        $this->assertEveryFieldHasARow(self::NOT_BACKED_UP, $doc, self::SECTION_DROPPED_FIELDS);
-        $this->assertEveryFieldHasARow(self::NEVER_BACKED_UP, $doc, self::SECTION_NEVER_WRITTEN);
+        $this->assertEveryFieldHasARow(self::NOT_BACKED_UP, $documentation, self::SECTION_DROPPED_FIELDS);
+        $this->assertEveryFieldHasARow(self::NEVER_BACKED_UP, $documentation, self::SECTION_NEVER_WRITTEN);
     }
 
     /**
      * @param array<class-string, string> $declarations
      */
-    private function assertEveryEntityIsMentioned(array $declarations, string $doc, string $sectionMarker): void
-    {
-        $section = $this->sectionOf($doc, $sectionMarker);
+    private function assertEveryEntityIsMentioned(
+        array $declarations,
+        string $documentation,
+        string $sectionMarker,
+    ): void {
+        $section = $this->sectionOf($documentation, $sectionMarker);
 
         foreach (array_keys($declarations) as $entityClass) {
             $shortName = (new \ReflectionClass($entityClass))->getShortName();
@@ -506,9 +513,9 @@ final class BackupSchemaCoverageTest extends DbTestCase
     /**
      * @param array<class-string, array<string, string>> $declarations
      */
-    private function assertEveryFieldHasARow(array $declarations, string $doc, string $sectionMarker): void
+    private function assertEveryFieldHasARow(array $declarations, string $documentation, string $sectionMarker): void
     {
-        $section = $this->sectionOf($doc, $sectionMarker);
+        $section = $this->sectionOf($documentation, $sectionMarker);
 
         foreach ($declarations as $entityClass => $fields) {
             foreach (array_keys($fields) as $field) {
@@ -531,13 +538,13 @@ final class BackupSchemaCoverageTest extends DbTestCase
      * higher level. Empty is not a passing state: a renumbered page has to
      * fail here, rather than let every search run against nothing and pass.
      */
-    private function sectionOf(string $doc, string $marker): string
+    private function sectionOf(string $documentation, string $marker): string
     {
         $level = \strlen(explode(' ', $marker, 2)[0]);
         $collected = [];
         $inside = false;
 
-        foreach (explode("\n", $doc) as $line) {
+        foreach (explode("\n", $documentation) as $line) {
             if (!$inside) {
                 $inside = str_starts_with($line, $marker);
                 continue;

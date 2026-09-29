@@ -55,13 +55,13 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     public function testFiringSendsTheDigestForADueVerifiedAccount(): void
     {
         $user = $this->verifiedUser();
-        $prefs = $this->duePreferences($user);
+        $duePreferences = $this->duePreferences($user);
         $search = (new SavedSearchMatchFixture($this->entityManager))
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $recipients = $this->createStub(DigestRecipientsInterface::class);
-        $recipients->method('findWithDigestEnabled')->willReturn([$prefs]);
+        $recipients->method('findWithDigestEnabled')->willReturn([$duePreferences]);
         $mailer = $this->createMock(DigestMailerInterface::class);
         $mailer->expects($this->once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
 
@@ -128,28 +128,28 @@ final class SendDueDigestsHandlerTest extends DbTestCase
     /** Daily cadence, send hour 8, so at NOW (09:30) the occurrence is 08:00 today. */
     private function duePreferences(User $user): Preferences
     {
-        $prefs = $user->getPreferences();
-        $prefs->setDigestEnabled(true);
-        $prefs->setDigestCadence(DigestCadence::Daily);
-        $prefs->setDigestSendHour(8);
-        $prefs->setDigestLastSentAt(null);
+        $duePreferences = $user->getPreferences();
+        $duePreferences->setDigestEnabled(true);
+        $duePreferences->setDigestCadence(DigestCadence::Daily);
+        $duePreferences->setDigestSendHour(8);
+        $duePreferences->setDigestLastSentAt(null);
 
-        return $prefs;
+        return $duePreferences;
     }
 
     private function members(): SavedSearchEntryRepository
     {
-        $repo = self::getContainer()->get(SavedSearchEntryRepository::class);
-        self::assertInstanceOf(SavedSearchEntryRepository::class, $repo);
+        $repository = self::getContainer()->get(SavedSearchEntryRepository::class);
+        self::assertInstanceOf(SavedSearchEntryRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 
     private function entries(): EntryListRepository
     {
-        $repo = self::getContainer()->get(EntryListRepository::class);
-        self::assertInstanceOf(EntryListRepository::class, $repo);
+        $repository = self::getContainer()->get(EntryListRepository::class);
+        self::assertInstanceOf(EntryListRepository::class, $repository);
 
-        return $repo;
+        return $repository;
     }
 }

@@ -106,7 +106,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
     private function liveReportWithBatches(int $batches): RecommendationRunReportModel
     {
         $run = new RecommendationRun($this->user, new \DateTimeImmutable(self::RUN_START));
-        $run->snapshot(array_map(static fn (int $i): array => [$i], range(1, $batches)));
+        $run->snapshot(array_map(static fn (int $index): array => [$index], range(1, $batches)));
         $run->markFirstBatchStarted();
 
         return RecommendationRunReportModel::fromRun($run);

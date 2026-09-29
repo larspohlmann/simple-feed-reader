@@ -42,9 +42,9 @@ final class AccountMailerTest extends TestCase
         // localised bodies rather than a fixture that could drift from them.
         $translator = new Translator('en');
         $translator->addLoader('yaml', new YamlFileLoader());
-        $dir = \dirname(__DIR__, 4) . '/translations';
-        $translator->addResource('yaml', "{$dir}/emails.en.yaml", 'en', 'emails');
-        $translator->addResource('yaml', "{$dir}/emails.de.yaml", 'de', 'emails');
+        $translationsDirectory = \dirname(__DIR__, 4) . '/translations';
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.en.yaml", 'en', 'emails');
+        $translator->addResource('yaml', "{$translationsDirectory}/emails.de.yaml", 'de', 'emails');
 
         $publicBaseUrl = new class implements PublicBaseUrlInterface {
             public function get(): string
@@ -230,11 +230,11 @@ final class AccountMailerTest extends TestCase
     {
         $user = new User('new@example.com', new \DateTimeImmutable('2026-07-21 12:00:00'));
 
-        yield 'verification' => [static fn (AccountMailer $m) => $m->sendVerification($user, 'tok')];
-        yield 'approved' => [static fn (AccountMailer $m) => $m->sendApproved($user)];
-        yield 'password reset' => [static fn (AccountMailer $m) => $m->sendPasswordReset($user, 'tok')];
-        yield 'admin pending approval' => [static function (AccountMailer $m) use ($user): void {
-            $m->sendPendingApprovalNotice($user, new PendingApprovalNoticeModel(
+        yield 'verification' => [static fn (AccountMailer $mailer) => $mailer->sendVerification($user, 'tok')];
+        yield 'approved' => [static fn (AccountMailer $mailer) => $mailer->sendApproved($user)];
+        yield 'password reset' => [static fn (AccountMailer $mailer) => $mailer->sendPasswordReset($user, 'tok')];
+        yield 'admin pending approval' => [static function (AccountMailer $mailer) use ($user): void {
+            $mailer->sendPendingApprovalNotice($user, new PendingApprovalNoticeModel(
                 'newcomer@example.com',
                 RegistrationMethod::EmailPassword,
                 null,

@@ -18,9 +18,9 @@ final class SemanticLayerTest extends TestCase
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
-        $doc = $this->document($this->scrapedFixture($fixture));
+        $document = $this->document($this->scrapedFixture($fixture));
 
-        return new SemanticLayer(new CardTitle())->extract($doc, $baseUrl);
+        return new SemanticLayer(new CardTitle())->extract($document, $baseUrl);
     }
 
     public function testExtractsRepeatedArticleElements(): void
@@ -33,10 +33,10 @@ final class SemanticLayerTest extends TestCase
 
     public function testFewerThanThreeArticlesYieldsNothing(): void
     {
-        $doc = $this->document(
+        $document = $this->document(
             '<html lang="en"><body><article><h2><a href="/one">Single article headline</a></h2></article>'
             . '</body></html>'
         );
-        self::assertSame([], new SemanticLayer(new CardTitle())->extract($doc, 'https://blog.test/'));
+        self::assertSame([], new SemanticLayer(new CardTitle())->extract($document, 'https://blog.test/'));
     }
 }

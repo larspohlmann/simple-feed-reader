@@ -89,8 +89,8 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
     public function testAnUnreadableProxyPasswordFailsEveryFeedInsteadOfAbortingTheSweep(): void
     {
         $seen = [];
-        $client = new MockHttpClient(function (string $m, string $u, array $o) use (&$seen): MockResponse {
-            $seen[] = $u;
+        $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen): MockResponse {
+            $seen[] = $url;
 
             return new MockResponse('ok');
         });

@@ -161,8 +161,8 @@ final class TokenEndpointTest extends TestCase
     {
         try {
             $endpoint->fetch('c', 'v');
-        } catch (OAuthFailedException $e) {
-            self::assertSame($logDetail, $e->logDetail);
+        } catch (OAuthFailedException $exception) {
+            self::assertSame($logDetail, $exception->logDetail);
 
             return;
         }

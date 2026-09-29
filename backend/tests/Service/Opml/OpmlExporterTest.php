@@ -15,10 +15,10 @@ final class OpmlExporterTest extends DbTestCase
 {
     private function exporter(): OpmlExporter
     {
-        $svc = self::getContainer()->get(OpmlExporter::class);
-        self::assertInstanceOf(OpmlExporter::class, $svc);
+        $exporter = self::getContainer()->get(OpmlExporter::class);
+        self::assertInstanceOf(OpmlExporter::class, $exporter);
 
-        return $svc;
+        return $exporter;
     }
 
     public function testExportsTaggedAndUntaggedFeeds(): void
@@ -37,11 +37,11 @@ final class OpmlExporterTest extends DbTestCase
         $tag = new Tag($user, 'Daily');
         $this->entityManager->persist($tag);
 
-        $s1 = new Subscription($user, $tagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $s1->addTag($tag);
-        $this->entityManager->persist($s1);
-        $s2 = new Subscription($user, $untagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->entityManager->persist($s2);
+        $taggedSubscription = new Subscription($user, $tagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $taggedSubscription->addTag($tag);
+        $this->entityManager->persist($taggedSubscription);
+        $untaggedSubscription = new Subscription($user, $untagged, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($untaggedSubscription);
         $this->entityManager->flush();
 
         $xml = $this->exporter()->export($user);
@@ -54,8 +54,8 @@ final class OpmlExporterTest extends DbTestCase
         self::assertStringContainsString('xmlUrl="https://blog.example.com/feed.xml"', $xml);
 
         // It must be well-formed and re-parseable.
-        $doc = new \DOMDocument();
-        self::assertTrue($doc->loadXML($xml));
+        $document = new \DOMDocument();
+        self::assertTrue($document->loadXML($xml));
     }
 
     public function testTheHeadTitlesTheExportAndTheMarkupIsIndented(): void

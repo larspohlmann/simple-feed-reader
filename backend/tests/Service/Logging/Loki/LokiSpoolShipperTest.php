@@ -99,8 +99,8 @@ final class LokiSpoolShipperTest extends TestCase
 
     public function testShipsAtMostOneHundredFilesPerCallOldestFirst(): void
     {
-        for ($i = 0; $i < 101; ++$i) {
-            $this->spool([['ts' => (string) $i, 'line' => '{"m":"a"}', 'labels' => ['app' => 'sfr']]]);
+        for ($index = 0; $index < 101; ++$index) {
+            $this->spool([['ts' => (string) $index, 'line' => '{"m":"a"}', 'labels' => ['app' => 'sfr']]]);
         }
         $http = new MockHttpClient(fn (): MockResponse => new MockResponse('', ['http_code' => 204]));
         $shipper = new LokiSpoolShipper(new LokiClient($http, new StubLokiEndpoint()), $this->spoolDirectory);

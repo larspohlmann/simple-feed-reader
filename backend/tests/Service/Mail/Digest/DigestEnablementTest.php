@@ -24,9 +24,9 @@ final class DigestEnablementTest extends TestCase
     public function testItAppliesAllFourSettings(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
+        $preferences = $this->preferences();
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Weekly,
             sendHour: 9,
@@ -34,21 +34,21 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertTrue($prefs->isDigestEnabled());
-        self::assertSame(DigestCadence::Weekly, $prefs->getDigestCadence());
-        self::assertSame(9, $prefs->getDigestSendHour());
-        self::assertSame(3, $prefs->getDigestWeekday());
+        self::assertTrue($preferences->isDigestEnabled());
+        self::assertSame(DigestCadence::Weekly, $preferences->getDigestCadence());
+        self::assertSame(9, $preferences->getDigestSendHour());
+        self::assertSame(3, $preferences->getDigestWeekday());
     }
 
     public function testFirstOffToOnTransitionSeedsDigestLastSentAtToNow(): void
     {
         $now = new \DateTimeImmutable('2026-08-28T12:00:00Z');
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock($now)));
-        $prefs = $this->preferences();
-        self::assertFalse($prefs->isDigestEnabled());
-        self::assertNull($prefs->getDigestLastSentAt());
+        $preferences = $this->preferences();
+        self::assertFalse($preferences->isDigestEnabled());
+        self::assertNull($preferences->getDigestLastSentAt());
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -56,18 +56,18 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertEquals($now, $prefs->getDigestLastSentAt());
+        self::assertEquals($now, $preferences->getDigestLastSentAt());
     }
 
     public function testANonTransitioningEnabledWriteDoesNotMoveDigestLastSentAt(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
-        $prefs->setDigestEnabled(true);
+        $preferences = $this->preferences();
+        $preferences->setDigestEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
-        $prefs->setDigestLastSentAt($seededAt);
+        $preferences->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Weekly,
             sendHour: 10,
@@ -75,17 +75,17 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertEquals($seededAt, $prefs->getDigestLastSentAt());
+        self::assertEquals($seededAt, $preferences->getDigestLastSentAt());
     }
 
     public function testAnAlreadyDisabledWriteThatStaysDisabledDoesNotSeed(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
-        self::assertFalse($prefs->isDigestEnabled());
-        self::assertNull($prefs->getDigestLastSentAt());
+        $preferences = $this->preferences();
+        self::assertFalse($preferences->isDigestEnabled());
+        self::assertNull($preferences->getDigestLastSentAt());
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: false,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -93,19 +93,19 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertFalse($prefs->isDigestEnabled());
-        self::assertNull($prefs->getDigestLastSentAt());
+        self::assertFalse($preferences->isDigestEnabled());
+        self::assertNull($preferences->getDigestLastSentAt());
     }
 
     public function testDisablingDoesNotSeedOrClearDigestLastSentAt(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
-        $prefs->setDigestEnabled(true);
+        $preferences = $this->preferences();
+        $preferences->setDigestEnabled(true);
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
-        $prefs->setDigestLastSentAt($seededAt);
+        $preferences->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: false,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -113,22 +113,22 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertFalse($prefs->isDigestEnabled());
-        self::assertEquals($seededAt, $prefs->getDigestLastSentAt());
+        self::assertFalse($preferences->isDigestEnabled());
+        self::assertEquals($seededAt, $preferences->getDigestLastSentAt());
     }
 
     public function testReenablingAfterDisableDoesNotReseedBecauseLastSentAtIsAlreadySet(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
-        $prefs->setDigestEnabled(false);
+        $preferences = $this->preferences();
+        $preferences->setDigestEnabled(false);
         // Simulates an account that already received at least one digest before
         // being turned off: digestLastSentAt is set, even though isDigestEnabled
         // is currently false.
         $seededAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
-        $prefs->setDigestLastSentAt($seededAt);
+        $preferences->setDigestLastSentAt($seededAt);
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -136,16 +136,16 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        self::assertEquals($seededAt, $prefs->getDigestLastSentAt());
+        self::assertEquals($seededAt, $preferences->getDigestLastSentAt());
     }
 
     public function testANonUtcClockIsNormalisedToNaiveUtcBeforeSeeding(): void
     {
         $clock = new MockClock('2026-08-28T12:00:00+02:00');
         $enablement = new DigestEnablement(new NaiveUtcClock($clock));
-        $prefs = $this->preferences();
+        $preferences = $this->preferences();
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -153,7 +153,7 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Html,
         ));
 
-        $seededAt = $prefs->getDigestLastSentAt();
+        $seededAt = $preferences->getDigestLastSentAt();
         self::assertNotNull($seededAt);
         self::assertSame('UTC', $seededAt->getTimezone()->getName());
         self::assertEquals(new \DateTimeImmutable('2026-08-28T10:00:00Z'), $seededAt);
@@ -162,9 +162,9 @@ final class DigestEnablementTest extends TestCase
     public function testApplyToSetsTheDigestFormat(): void
     {
         $enablement = new DigestEnablement(new NaiveUtcClock(new MockClock('2026-08-28T12:00:00Z')));
-        $prefs = $this->preferences();
+        $preferences = $this->preferences();
 
-        $enablement->applyTo($prefs, new DigestConfigurationModel(
+        $enablement->applyTo($preferences, new DigestConfigurationModel(
             enabled: true,
             cadence: DigestCadence::Daily,
             sendHour: 8,
@@ -172,6 +172,6 @@ final class DigestEnablementTest extends TestCase
             format: DigestFormat::Text,
         ));
 
-        self::assertSame(DigestFormat::Text, $prefs->getDigestFormat());
+        self::assertSame(DigestFormat::Text, $preferences->getDigestFormat());
     }
 }
