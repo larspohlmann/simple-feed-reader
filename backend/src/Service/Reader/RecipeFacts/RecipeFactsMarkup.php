@@ -9,10 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Builds the reader's own fact block: a <dl> of label/value pairs, each pair
- * wrapped in a <div> so the client can lay the pairs out as a row of cells.
- * class="reader-recipe-facts" on the <figure> is the client marker; it is the
- * one attribute channel that crosses EntrySanitizer (a class on <figure>).
+ * Builds the reader's fact block: a <dl> whose label/value pairs each sit in a <div>, so the client lays them out in
+ * a row. `reader-recipe-facts` on the <figure> is the client marker: a class on <figure> crosses EntrySanitizer.
  */
 final readonly class RecipeFactsMarkup
 {

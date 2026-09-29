@@ -10,11 +10,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Recognizes a recipe plugin's fact block (servings / calories / total time)
- * from one rule per plugin: the shape is container-class › item-class with a
- * label/value/unit class inside each item, so a plugin is a single rule row.
- * The publisher lays the items out in a row with its own stylesheet, which the
- * sanitizer never receives; recognizing the block lets the reader relay it.
+ * Recognizes a recipe plugin's fact block (servings, calories, total time) from one rule row per plugin: container
+ * class › item class, with label/value/unit classes inside each item. Its row layout lives in a stylesheet the
+ * sanitizer never receives, so the reader rebuilds the block.
  */
 final readonly class RecipeFactsRecognizer
 {

@@ -10,7 +10,7 @@ use Dom\HTMLDocument;
 
 /**
  * The reader paywall verdict: the publisher's schema.org `isAccessibleForFree` declaration decides. A page that
- * declares nothing is a preview when a gated block (#908) or a membership checkout (#998) sits outside the page
+ * declares nothing is a preview when a gated block or a membership checkout sits outside the page
  * furniture. Judged before readability consumes the normalised document.
  */
 final readonly class PaywallSignals
