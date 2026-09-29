@@ -17,7 +17,6 @@ use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
-use Symfony\Component\Mailer\Mailer;
 use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
@@ -72,8 +71,7 @@ final readonly class MailConnectionTester
         MailIdentityModel $identity,
     ): MailTestResultModel {
         try {
-            $mailer = new Mailer($transport);
-            $mailer->send(
+            $transport->send(
                 (new Email())
                     ->from(new Address($identity->address, $identity->name))
                     ->to($recipient)

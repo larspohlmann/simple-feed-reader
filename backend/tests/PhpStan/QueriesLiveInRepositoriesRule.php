@@ -18,7 +18,8 @@ use PHPStan\Rules\RuleErrorBuilder;
 
 /**
  * Queries live in src/Repository (#1170, docs/architecture.md §7): elsewhere no class builds DQL, opens a
- * QueryBuilder or holds the DBAL connection. src/Doctrine extends the ORM itself and is exempt, as are the tests.
+ * QueryBuilder, holds the DBAL connection or pulls a repository out of the EntityManager. src/Doctrine extends the
+ * ORM itself and is exempt, as are the tests.
  *
  * @implements Rule<InClassNode>
  */
@@ -26,7 +27,13 @@ final readonly class QueriesLiveInRepositoriesRule implements Rule
 {
     private const array EXEMPT_NAMESPACES = ['App\\Repository\\', 'App\\Doctrine\\', 'App\\Tests\\'];
 
-    private const array QUERY_METHODS = ['createNativeQuery', 'createQuery', 'createQueryBuilder', 'getConnection'];
+    private const array QUERY_METHODS = [
+        'createNativeQuery',
+        'createQuery',
+        'createQueryBuilder',
+        'getConnection',
+        'getRepository',
+    ];
 
     private const array QUERY_TYPES = [
         'Doctrine\\DBAL\\Connection',

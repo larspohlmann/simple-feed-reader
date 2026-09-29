@@ -25,6 +25,7 @@ final readonly class ActionTokenService
     public function __construct(
         private EntityManagerInterface $em,
         private ClockInterface $clock,
+        private ActionTokenRepository $tokens,
     ) {
     }
 
@@ -43,7 +44,7 @@ final readonly class ActionTokenService
 
         // Retire outstanding tokens of the same purpose so a link that leaked
         // earlier stops working the moment a fresh one is requested.
-        foreach ($this->repository()->findUnconsumedFor($user, $purpose) as $existing) {
+        foreach ($this->tokens->findUnconsumedFor($user, $purpose) as $existing) {
             $existing->setConsumedAt($now);
         }
 
@@ -62,7 +63,7 @@ final readonly class ActionTokenService
     /** Every failure mode is the same exception, so a guesser cannot tell which one it hit. */
     public function consume(string $plainToken, TokenPurpose $purpose): User
     {
-        $token = $this->repository()->findOneByHashAndPurpose(hash('sha256', $plainToken), $purpose);
+        $token = $this->tokens->findOneByHashAndPurpose(hash('sha256', $plainToken), $purpose);
         $now = $this->clock->now();
 
         if (null === $token || null !== $token->getConsumedAt() || $token->isExpiredAt($now)) {
@@ -73,13 +74,5 @@ final readonly class ActionTokenService
         $this->em->flush();
 
         return $token->getUser();
-    }
-
-    private function repository(): ActionTokenRepository
-    {
-        /** @var ActionTokenRepository $repository */
-        $repository = $this->em->getRepository(ActionToken::class);
-
-        return $repository;
     }
 }

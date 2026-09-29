@@ -12,6 +12,7 @@ use App\Service\Ingest\Model\IncomingEntryModel;
 use App\Service\Ingest\Pass\FeedIngestContext;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -93,7 +94,7 @@ final class IngestedEntryFactoryTest extends TestCase
     private function factory(): IngestedEntryFactory
     {
         return new IngestedEntryFactory(
-            new EntrySanitizer(),
+            new EntrySanitizer(new TrailingBlankRemover()),
             new EntryImageWriter(new NaiveUtcClock(new MockClock('2026-09-21 12:00:00', 'UTC'))),
         );
     }

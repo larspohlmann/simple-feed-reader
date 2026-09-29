@@ -6,7 +6,10 @@ namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
+use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
+use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\BodyCleaningPasses;
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +19,8 @@ final class RecipeFactsCleanerTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        (new RecipeFactsCleaner())->cleanIn(BodyCleaningPasses::over($document));
+        $cleaner = new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup());
+        $cleaner->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();
     }
@@ -60,7 +64,8 @@ final class RecipeFactsCleanerTest extends TestCase
 
     public function testTheFigureMarkerSurvivesTheSanitizer(): void
     {
-        $clean = (new EntrySanitizer())->sanitize($this->clean('<body>' . self::WPZOOM_BLOCK . '</body>'));
+        $sanitizer = new EntrySanitizer(new TrailingBlankRemover());
+        $clean = $sanitizer->sanitize($this->clean('<body>' . self::WPZOOM_BLOCK . '</body>'));
 
         self::assertNotNull($clean);
         self::assertStringContainsString('class="reader-recipe-facts"', $clean);

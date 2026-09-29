@@ -93,3 +93,7 @@ services:
         class: App\Tests\PhpStan\PersistenceClassesAreFinalRule
         tags:
             - phpstan.rules.rule
+    -
+        class: App\Tests\PhpStan\NoCollaboratorDefaultRule
+        tags:
+            - phpstan.rules.rule

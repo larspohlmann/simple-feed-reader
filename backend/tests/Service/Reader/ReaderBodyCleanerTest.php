@@ -36,6 +36,8 @@ use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Reader\ReaderBodyCleaner;
 use App\Service\Reader\ReaderLeadImage;
+use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
+use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use PHPUnit\Framework\TestCase;
@@ -70,7 +72,7 @@ final class ReaderBodyCleanerTest extends TestCase
             new LeadingTitleRemover(),
             new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
             new SlideshowInserter(new SlideshowMarkup()),
-            new RecipeFactsCleaner(),
+            new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
             new DuplicateBlockCollapser($embedProviders),
             new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),

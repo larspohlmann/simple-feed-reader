@@ -7,6 +7,7 @@ namespace App\Tests\Service\Auth;
 use App\Entity\ActionToken;
 use App\Entity\User;
 use App\Enum\TokenPurpose;
+use App\Repository\ActionTokenRepository;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Tests\DbTestCase;
@@ -26,7 +27,9 @@ final class ActionTokenServiceTest extends DbTestCase
         parent::setUp();
 
         $this->clock = new MockClock('2026-07-21 12:00:00');
-        $this->service = new ActionTokenService($this->em, $this->clock);
+        $repository = $this->em->getRepository(ActionToken::class);
+        self::assertInstanceOf(ActionTokenRepository::class, $repository);
+        $this->service = new ActionTokenService($this->em, $this->clock, $repository);
 
         $this->user = new User('token@example.com', $this->clock->now());
         $this->em->persist($this->user);

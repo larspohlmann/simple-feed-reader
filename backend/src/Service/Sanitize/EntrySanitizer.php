@@ -23,13 +23,8 @@ final readonly class EntrySanitizer
 
     private HtmlSanitizerInterface $sanitizer;
 
-    /**
-     * The blank-tail trimmer is optional so the many tests that construct this
-     * barrier directly keep working; the container still injects the service.
-     */
-    public function __construct(
-        private TrailingBlankRemover $blankTail = new TrailingBlankRemover(),
-    ) {
+    public function __construct(private TrailingBlankRemover $blankTail)
+    {
         // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse the
         // PHP 8.4 "new without parentheses" chain yet — keep the parens. See #183.
         $config = (new HtmlSanitizerConfig())

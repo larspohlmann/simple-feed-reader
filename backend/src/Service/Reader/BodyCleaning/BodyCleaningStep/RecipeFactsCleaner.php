@@ -15,8 +15,8 @@ use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 final readonly class RecipeFactsCleaner implements BodyCleaningStepInterface
 {
     public function __construct(
-        private RecipeFactsRecognizer $recognizer = new RecipeFactsRecognizer(),
-        private RecipeFactsMarkup $markup = new RecipeFactsMarkup(),
+        private RecipeFactsRecognizer $recognizer,
+        private RecipeFactsMarkup $markup,
     ) {
     }
 

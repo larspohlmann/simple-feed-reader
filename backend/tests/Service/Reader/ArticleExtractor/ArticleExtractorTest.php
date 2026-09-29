@@ -53,6 +53,7 @@ use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
 use App\Service\Reader\Slideshow\SlideshowScanner;
 use App\Service\Sanitize\EntrySanitizer;
+use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Service\Reader\FetchedPageNormalizerTest;
 use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\NoEgressProxy;
@@ -103,7 +104,7 @@ final class ArticleExtractorTest extends TestCase
             ),
             new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
-            new EntrySanitizer(),
+            new EntrySanitizer(new TrailingBlankRemover()),
             $this->mediaScanner(),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
@@ -486,7 +487,7 @@ final class ArticleExtractorTest extends TestCase
             ),
             new FetchedPageNormalizer(FetchedPageNormalizerTest::repairs()),
             $this->bodyCleaner(),
-            new EntrySanitizer(),
+            new EntrySanitizer(new TrailingBlankRemover()),
             $this->mediaScanner(),
             new BodyMediaResolver(
                 new StreamLocationResolver($landing, $this->urlKind()),
@@ -618,7 +619,8 @@ final class ArticleExtractorTest extends TestCase
 
         $result = $extractor->extract('https://site.test/post');
 
-        self::assertNull((new EntrySanitizer())->sanitize('<svg><text>' . $prose . '</text></svg>'));
+        $sanitizer = new EntrySanitizer(new TrailingBlankRemover());
+        self::assertNull($sanitizer->sanitize('<svg><text>' . $prose . '</text></svg>'));
         self::assertFalse($result->ok);
         self::assertSame(ExtractionFailure::Empty, $result->reason);
         self::assertSame('https://site.test/post', $result->url);
