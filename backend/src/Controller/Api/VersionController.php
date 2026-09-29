@@ -9,13 +9,7 @@ use App\Service\Version\VersionReporter;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Which build the API is running, and whether a newer release exists upstream.
- * The SPA carries its own version baked in at build time and compares the two:
- * when they differ, the browser is holding a cached bundle from an earlier
- * release. `latest`/`updateAvailable` drive the sidebar's update badge; both
- * fall silent (null / false) whenever the upstream check has nothing to report.
- */
+/** The running build and newest upstream release; the SPA compares `version` with its own to spot a stale bundle. */
 final readonly class VersionController
 {
     #[Route('/api/version', name: 'api_version', methods: ['GET'])]
