@@ -20,19 +20,9 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Runs the reader's extract-and-clean pipeline over a stratified sample of the
- * articles a user is subscribed to, and writes one JSON line per article with
- * the markers that say the cleaning probably went wrong. `app:reader:audit:report`
- * turns those lines into the ranked, clickable list.
- *
- * Split into sweep and report on purpose: the sweep is a thousand outbound page
- * fetches and takes minutes, the report is instant and gets re-run every time a
- * threshold or a phrase is questioned. The sweep also shards — the same seed
- * draws the same sample in every shard, so `--shards=8 --shard=0..7` in parallel
- * covers the sample once with no coordination.
- *
- * Never a CI gate: publisher outages, bot walls and rate limits make the result
- * a survey, not a verdict. Same reasoning as app:catalog:check-urls.
+ * Writes one JSON line of suspicion markers per article in a stratified sample of a user's articles, for
+ * app:reader:audit:report. Every shard draws the same sample from the seed, so `--shards=8 --shard=0..7` cover it
+ * once. A survey, never a CI gate.
  */
 #[AsCommand(
     name: 'app:reader:audit',

@@ -14,15 +14,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Warms every missing or stale catalog favicon, looping CatalogFaviconWarmer
- * until nothing is left (or, with --limit, one bounded slice).
- *
- * A convenience, not the mechanism: the admin UI drives the same warmer over
- * HTTP after an import, so an install that never runs a console command still
- * gets its icons. This exists for cron and for operators who prefer a shell.
- *
- * Self-limiting: minutes on the first run against an empty cache, a no-op after,
- * because cached rows match neither the missing nor the stale predicate.
+ * Warms every missing or stale catalog favicon through CatalogFaviconWarmer, or one slice with --limit. A convenience
+ * for cron and shells: the admin UI drives the same warmer after an import. A no-op once the cache is warm.
  */
 #[AsCommand(
     name: 'app:catalog:warm-favicons',

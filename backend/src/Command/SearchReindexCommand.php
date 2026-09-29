@@ -18,26 +18,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Rebuilds the search index from the database. Two jobs, both repair:
- * EntryIndexer's ingest-time writes swallow SearchEngineUnavailableException (an
- * outage must never break a feed refresh), so this recovers what they missed;
- * and it is what an operator runs once after pointing an install at
- * MEILISEARCH_URL, since pre-existing entries stay unindexed until then.
- *
- * Failure handling is the INVERSE of EntrySearchWithFallback's: no engine means a
- * search falls back to the database (not an error), but a reindex with no engine
- * has nothing to rebuild and no fallback, so it exits non-zero -- and an engine
- * erroring partway through must not report success (see execute()).
- *
- * Walks `entry` in ascending-id batches (EntryRepository::entriesAfterId(), never
- * OFFSET), clearing the entity manager between them to bound memory over tens of
- * thousands of rows.
- *
- * Meilisearch writes are asynchronous -- 202 now, indexed later (measured,
- * `docs/meilisearch-wire-format.md`) -- so SearchIndexWriterInterface returns void rather
- * than polling; a reindex-only poll would duplicate the one class that knows the
- * wire format. This command reports only that every batch was accepted, not that
- * the engine has caught up (see the closing `note()`).
+ * Rebuilds the search index from the database: the repair for writes EntryIndexer swallowed during an outage, and the
+ * first run after setting MEILISEARCH_URL. Unlike a search, a missing or failing engine exits non-zero.
  */
 #[AsCommand(
     name: 'app:search:reindex',
@@ -45,13 +27,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 )]
 final class SearchReindexCommand extends Command
 {
-    /**
-     * Chosen to match the DELETE_CHUNK_SIZE convention EntryPruner /
-     * OrphanedFeedReclaimer already use for bulk work over `entry` — large
-     * enough that a full table walk stays a handful of round-trips to the
-     * engine, small enough that one batch's entities plus their joined feed
-     * are a rounding error against a normal PHP memory limit.
-     */
+    /** DELETE_CHUNK_SIZE's value (EntryPruner, OrphanedFeedReclaimer): few engine round-trips, little memory each. */
     private const int BATCH_SIZE = 500;
 
     public function __construct(

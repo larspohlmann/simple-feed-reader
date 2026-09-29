@@ -12,9 +12,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * The rebuild path for saved_search_entry (#1116): after a search-engine
- * reindex has settled, or whenever the table is suspect. Rows are never
- * removed; the re-walk only adds what the matcher finds missing.
+ * The rebuild path for saved_search_entry: after a search-engine reindex has settled, or whenever the table is
+ * suspect. Rows are never removed; the re-walk only adds what the matcher finds missing.
  */
 #[AsCommand(
     name: 'app:saved-search:rematch',
