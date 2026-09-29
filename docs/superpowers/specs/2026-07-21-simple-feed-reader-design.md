@@ -149,38 +149,52 @@ enforcement is `ROLE_ADMIN` on `/api/admin/*` in `security.yaml`.
 - Token stored in `localStorage`, attached by an Angular HTTP interceptor.
 - Revocation: the Doctrine user provider loads the user from the DB on every
   request anyway; a `UserChecker` rejects non-`active` users. Suspension takes
-  effect on the next request.
+  effect on the next request. A password change revokes older tokens:
+  `InvalidatePasswordChangeTokensListener` rejects a token whose `iat`
+  predates `User::passwordChangedAt`.
 - XSS exposure is bounded by Angular template escaping plus server-side
-  sanitization of the only third-party HTML we render (article content).
+  sanitization (`EntrySanitizer`) of the third-party HTML we render: feed
+  content, reader-view articles and comments.
 
 ### Identities
 
 ```
-User          id, email, passwordHash|null, roles, status, createdAt, approvedAt
+User          id, email, passwordHash|null, roles, status, createdAt, approvedAt,
+              emailVerifiedAt, lastLoginAt, passwordChangedAt, locale,
+              trialEndsAt|null, maxSubscriptions|null
 UserIdentity  id, user→User, provider (google|apple|…), providerUserId,
               email|null, createdAt      UNIQUE(provider, providerUserId)
+UserPasskey   id, user→User, credentialId, userHandle, publicKey,
+              signatureCounter, aaguid, transports, label, createdAt,
+              lastUsedAt                 UNIQUE(credentialId)
 ```
 
-A user may hold several identities (password + Google + Apple). New providers
-are a new `provider` value plus one provider class — no migration.
+A user may hold several ways to sign in (password, Google, Apple, any number of
+passkeys). New OAuth providers are a new `provider` value plus one provider
+class — no migration.
 
 ### OAuth flow (Google + Apple, both in v1)
 
-Authorization-code flow, server-side, via `knpuniversity/oauth2-client-bundle`
-behind a small `OAuthProviderInterface`:
+Authorization-code flow, server-side, through a hand-written OpenID Connect
+client (`AbstractOidcProvider`, ID tokens checked by `IdTokenVerifier`) behind
+`App\Service\OAuth\OAuthProvider\OAuthProviderInterface`. Operator setup and
+the full contract are in [docs/oauth-sign-in.md](../../oauth-sign-in.md):
 
-1. `GET /api/auth/oauth/{provider}` → 302 to provider (server-stored `state`)
-2. Provider callback → backend exchanges code, obtains verified identity
-3. Known `UserIdentity` → issue JWT. Unknown → create user in
-   `pending_approval` (OAuth verifies identity; the admin decides membership)
+1. `GET /api/auth/oauth/{provider}` → 302 to provider (server-stored `state`,
+   bound to the browser by a flow cookie)
+2. Provider callback (`GET`, or `POST` for Apple's form_post) → backend
+   exchanges code, obtains verified identity
+3. Known `UserIdentity` → issue JWT. Unknown → create the user, in
+   `pending_approval` while admin approval is on (OAuth verifies identity; the
+   admin decides membership)
 4. Backend redirects to the SPA with a **one-time login code** (30 s TTL,
    single use); SPA exchanges it via `POST /api/auth/oauth/exchange` for the
    JWT. The JWT itself never appears in a URL.
 
 **Linking rule:** if the provider-verified email matches an existing account,
 link the identity to it. Apple private-relay addresses
-(`…@privaterelay.appleid.com`) never match and simply become new pending
-accounts.
+(`…@privaterelay.appleid.com`) never match and simply become new accounts
+([docs/security.md](../../security.md#oauth-account-linking)).
 
 ### Registration (email + password)
 
@@ -201,11 +215,17 @@ pending_verification ──(email link, 24h)──▶ pending_approval ──(ad
   on `register` and `password-reset-request` — the two anonymous
   email-triggering endpoints. Login is protected by Symfony login throttling
   instead.
-- **Mailer:** Symfony Mailer over Strato SMTP. Exactly three mails: verify,
-  approved, password reset. OAuth users skip email verification entirely.
-- Growth is controlled by **manual approval** (no hard numeric cap): every
-  new account waits in `pending_approval` until an admin approves or rejects
-  it.
+- **Mailer:** Symfony Mailer over the SMTP transport the admin saves in the UI
+  (`MAILER_DSN=dynamic://default`), falling back to `MAILER_FALLBACK_DSN`.
+  Account mails: verify, approved, password reset, and a pending-approval
+  notice to admins; besides them, the opt-in digest and the admin's test mail.
+  OAuth users skip email verification entirely.
+- Growth is controlled by **manual approval**: every new account waits in
+  `pending_approval` until an admin approves or rejects it. Email confirmation
+  and approval are instance settings the admin can turn off (both on by
+  default); a step that is off is skipped, and email confirmation is off
+  whenever mail is. Each account also has a subscription cap (500 unless the
+  admin sets another) and an optional trial end, after which it is suspended.
 
 ## Data model
 
@@ -216,48 +236,69 @@ subscriptions.
 User          (see above)
 
 Feed          id, url (unique), siteUrl, title, description, faviconUrl,
-              status (active|erroring|gone), lastFetchedAt, nextFetchAt,
-              fetchIntervalMinutes, consecutiveFailures, lastErrorMessage,
-              etag, lastModified
+              imageUrl, sourceFormat (xml|wp-json|scraped),
+              status (active|erroring|gone), etag, lastModified,
+              lastFetchedAt, lastSuccessfulFetchAt, lastNewEntryAt,
+              nextFetchAt, fetchIntervalMinutes, consecutiveFailures,
+              lastErrorMessage
 
 Entry         id, feed→Feed, guid, url, title, author, summary,
-              contentHtml (sanitized at ingest), publishedAt, createdAt
+              contentHtml (sanitized at ingest), publishedAt, createdAt,
+              effectiveDate (the list-sort instant), image, media, discussion
               UNIQUE(feed, guidHash)          # guidHash = sha256(guid)
 
-Tag           id, user→User, name, color|null, icon|null
+Tag           id, user→User, name, color|null, icon|null, position
               UNIQUE(user, name)              # icon = named Material Symbol
 
 Subscription  id, user→User, feed→Feed, customTitle|null,
-              markedReadUntil|null, createdAt
+              markedReadUntil|null, createdAt, position,
+              includeInAllItems, includeInForYou
               UNIQUE(user, feed)
-              tags ↔ many-to-many via subscription_tag
+              tags ↔ many-to-many via subscription_tag (SubscriptionTag,
+              which also holds the feed's position inside the tag)
 
-EntryState    user→User, entry→Entry, isRead, isFavorite, isKept, readAt
+EntryState    user→User, entry→Entry, isHidden, isFavorite, isKept, isViewed,
+              hiddenAt, viewedAt
               PK(user, entry)
 ```
+
+The other entities, by area: `ActionToken` and `Preferences` (accounts),
+`SavedSearch` and `SavedSearchEntry` (saved searches), `RecommendationRun`,
+`RecommendationItem`, `RecommendationRunLog`, `RecommendationSettings` and
+`AiProviderSettings` ("For you"), `CatalogCategory` and `CatalogFeed` (the
+catalog), `InstanceSetting`, `MailServerSettings`, `ProxyServerSettings` and
+`GrafanaSettings` (admin settings), `MailSendFailure` and `WorkerHeartbeat`
+(operations).
 
 Key decisions:
 
 - **Sparse read state.** An `EntryState` row exists only after an explicit
   action. "Mark all read" writes a `markedReadUntil` watermark on the
-  subscription; unread = entries newer than the watermark minus
-  explicitly-read rows.
+  subscription and hides the state rows that already exist; unread = entries
+  newer than the watermark minus hidden rows. `isHidden` takes an entry off
+  the unread lists; `isViewed` means the user opened it (the "Recently read"
+  view), and viewed implies hidden (`ViewedImpliesHiddenListener`).
 - **Tags, not folders.** A subscription can carry multiple tags. Untagged is a
   legitimate state (shown under "All", no forced bucket). Unread counts per
   tag may overlap — correct behavior.
 - **Tag icons** are named identifiers from the Material Symbols set, rendered
-  via `<mat-icon>`. No uploads. Backend validates length/charset only.
+  by the shared `app-icon` component with the `material-symbols` font. No
+  uploads. Backend validates length/charset only.
 - **`favorite` vs `keep`:** favorite = curation ("this is great"),
   keep = retention instruction ("don't delete"). Both are independent flags;
   both protect from pruning. Sidebar gets a Favorites view and a Kept view
   (a protect flag you cannot review is a leak).
 - **Sanitize at ingest** (symfony/html-sanitizer), store clean HTML, serve
   raw. The DB never contains live XSS.
-- **Retention:** entries older than ~90 days are pruned during refresh runs
-  unless any user's state row has `isFavorite` or `isKept` (`NOT EXISTS`).
-  Protection is global across users — inherent to shared entries, documented.
-- **Portability:** SQLite is the dev/test default, MySQL production. Only the
-  DSN differs. Portable column types only; `guidHash` exists so the unique
+- **Retention:** entries fetched more than 90 days ago, and a feed's entries
+  beyond its newest 2,000, are pruned during all-due refresh runs (the worker,
+  the maintenance endpoints and the CLI; never a user's own refresh), unless
+  any user's state row has `isFavorite` or `isKept` (`NOT EXISTS`). Each feed
+  keeps its newest 20 however old. Protection is global across users —
+  inherent to shared entries, documented.
+- **Portability:** SQLite is the native dev/test default; MySQL runs on Strato
+  and in the Docker stacks, and the production stack can run on SQLite. Only
+  the DSN differs. Portable column types only; `guidHash` exists so the unique
   index behaves identically on both.
 
 ## Fetch pipeline
