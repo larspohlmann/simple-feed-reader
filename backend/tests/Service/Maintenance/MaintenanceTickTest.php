@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\PendingImageVerificationRepository;
-use App\Repository\PreferencesRepository;
 use App\Service\Clock\NaiveUtcClock;
 use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Image\ImageVerificationSweep;
@@ -18,6 +17,7 @@ use App\Service\Logging\Loki\LokiSpoolShipper;
 use App\Service\Logging\Loki\Model\LokiSpoolReportModel;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
@@ -54,7 +54,7 @@ final class MaintenanceTickTest extends DbTestCase
 
     /**
      * An aborted refresh closed the shared EntityManager, so the sweeps must not run; the throwing
-     * PreferencesRepository stub fails this test if SendDueDigests::run() is ever reached on that path.
+     * DigestRecipientsInterface stub fails this test if SendDueDigests::run() is ever reached on that path.
      */
     public function testSkipsTheRecommendationSweepWhenRefreshAborts(): void
     {
@@ -91,7 +91,7 @@ final class MaintenanceTickTest extends DbTestCase
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
         self::assertInstanceOf(ForYouSweep::class, $forYouSweep);
 
-        $throwingPreferences = $this->createStub(PreferencesRepository::class);
+        $throwingPreferences = $this->createStub(DigestRecipientsInterface::class);
         $throwingPreferences->method('findWithDigestEnabled')->willThrowException(
             new \LogicException('SendDueDigests::run() must not be called when refresh aborted'),
         );

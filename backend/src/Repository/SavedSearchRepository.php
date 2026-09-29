@@ -6,6 +6,7 @@ namespace App\Repository;
 
 use App\Entity\SavedSearch;
 use App\Repository\Exception\RecordNotFoundException;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ManagerRegistry;
@@ -14,7 +15,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 /**
  * @extends ServiceEntityRepository<SavedSearch>
  */
-class SavedSearchRepository extends ServiceEntityRepository
+final class SavedSearchRepository extends ServiceEntityRepository implements DigestSavedSearchesInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

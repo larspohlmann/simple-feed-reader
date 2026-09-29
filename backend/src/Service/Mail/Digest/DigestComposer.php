@@ -7,7 +7,7 @@ namespace App\Service\Mail\Digest;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Repository\EntryListRow;
-use App\Repository\SavedSearchRepository;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Mail\Digest\Model\DigestEntryModel;
 use App\Service\Mail\Digest\Model\DigestGroupModel;
 use App\Service\Mail\Digest\Model\DigestModel;
@@ -26,7 +26,7 @@ final readonly class DigestComposer
     private const int SUMMARY_MAX = 200;
 
     public function __construct(
-        private SavedSearchRepository $savedSearches,
+        private DigestSavedSearchesInterface $savedSearches,
         private DigestEntryFinder $finder,
         private DigestLinkBuilder $links,
     ) {

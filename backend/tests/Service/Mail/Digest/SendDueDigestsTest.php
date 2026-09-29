@@ -9,13 +9,13 @@ use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Enum\DigestCadence;
 use App\Repository\EntryListRepository;
-use App\Repository\PreferencesRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\SendDueDigests;
@@ -53,16 +53,16 @@ final class SendDueDigestsTest extends DbTestCase
     private const string NOW = '2026-08-28T09:30:00Z';
     private const string OCCURRENCE = '2026-08-28T08:00:00Z';
 
-    private SavedSearchRepository&Stub $savedSearches;
-    private PreferencesRepository&Stub $preferencesRepository;
+    private DigestSavedSearchesInterface&Stub $savedSearches;
+    private DigestRecipientsInterface&Stub $preferencesRepository;
     private DigestMailerInterface&MockObject $mailer;
     private EntityManagerInterface&Stub $emStub;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->savedSearches = $this->createStub(SavedSearchRepository::class);
-        $this->preferencesRepository = $this->createStub(PreferencesRepository::class);
+        $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
+        $this->preferencesRepository = $this->createStub(DigestRecipientsInterface::class);
         $this->mailer = $this->createMock(DigestMailerInterface::class);
         $this->emStub = $this->createStub(EntityManagerInterface::class);
     }
@@ -168,7 +168,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnyPreferences(): void
     {
-        $preferencesRepository = $this->createMock(PreferencesRepository::class);
+        $preferencesRepository = $this->createMock(DigestRecipientsInterface::class);
         $preferencesRepository->expects(self::never())->method('findWithDigestEnabled');
         $this->mailer->expects(self::never())->method('send');
 
@@ -237,7 +237,7 @@ final class SendDueDigestsTest extends DbTestCase
     private function sweep(
         bool $mailEnabled = true,
         ?EntityManagerInterface $em = null,
-        ?PreferencesRepository $preferencesRepository = null,
+        ?DigestRecipientsInterface $preferencesRepository = null,
     ): SendDueDigests {
         return new SendDueDigests(
             $preferencesRepository ?? $this->preferencesRepository,

@@ -190,6 +190,8 @@ services:
     App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface: '@App\Repository\UserIdentityRepository'
     App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface: '@App\Repository\UserPasskeyRepository'
     App\Service\Auth\UserByEmail\UserByEmailInterface: '@App\Repository\UserRepository'
+    App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface: '@App\Repository\PreferencesRepository'
+    App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface: '@App\Repository\SavedSearchRepository'
     App\Service\Version\ReleaseVersionReader\ReleaseVersionReaderInterface: '@App\Service\Version\ReleaseVersionReader\FileReleaseVersionReader'
     App\Service\Version\LatestReleaseReader\LatestReleaseReaderInterface: '@App\Service\Version\LatestReleaseReader\GitHubLatestReleaseReader'
     App\Service\Logging\TraceContext\TraceContextInterface: '@App\Service\Logging\TraceContext\OtelTraceContext'

@@ -9,7 +9,6 @@ use App\Entity\User;
 use App\Enum\DigestFormat;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestBrandLogo;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
@@ -18,6 +17,7 @@ use App\Service\Mail\Digest\DigestImageEmbedder\DigestImageEmbedderInterface;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailer;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Mail\Digest\DigestTextRenderer;
 use App\Service\Mail\Digest\Factory\DigestMailFactory;
 use App\Service\Mail\Digest\Factory\DigestPageFactory;
@@ -51,7 +51,7 @@ use Symfony\Component\Translation\Translator;
  */
 final class SendTestDigestTest extends DbTestCase
 {
-    private SavedSearchRepository&Stub $savedSearches;
+    private DigestSavedSearchesInterface&Stub $savedSearches;
     private DigestMailerInterface&Stub $mailer;
     private User $user;
 
@@ -62,7 +62,7 @@ final class SendTestDigestTest extends DbTestCase
     {
         parent::setUp();
         $this->sentEmails = [];
-        $this->savedSearches = $this->createStub(SavedSearchRepository::class);
+        $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $this->mailer = $this->createStub(DigestMailerInterface::class);
 
         $this->user = new User('digest-test@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
