@@ -18,7 +18,7 @@ final readonly class CommentProse
         'immutable', 'impure', 'infection-ignore-all', 'inheritdoc', 'internal', 'pure', 'todo',
     ];
 
-    public function __construct(private PhpDocTypeReader $types)
+    public function __construct(private PhpDocTypeReader $typeReader)
     {
     }
 
@@ -50,8 +50,8 @@ final readonly class CommentProse
             return PhpDocReading::closed($statement);
         }
         $tag = self::textAfter(self::TOOL_PREFIX, strtolower($match['tag']));
-        if ($this->types->reads($tag)) {
-            return $this->types->read($tag, $match['argument']);
+        if ($this->typeReader->reads($tag)) {
+            return $this->typeReader->read($tag, $match['argument']);
         }
 
         return PhpDocReading::closed(self::reasonAfter($tag, trim($match['argument'])));
