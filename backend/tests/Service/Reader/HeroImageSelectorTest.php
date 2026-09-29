@@ -45,9 +45,8 @@ final class HeroImageSelectorTest extends TestCase
 
     public function testSuppressesTheHeroWhenAnImageFollowsBodyText(): void
     {
-        // The #657 rule is coarse: any image suppresses the hero, wherever it
-        // sits. beat.de opens with a paragraph, then repeats the photo as a
-        // different CDN file — a second copy on top would stack the same picture.
+        // Any image suppresses the hero, wherever it sits: a body photo may be the hero again as a different CDN
+        // file, and a second copy on top would stack the same picture.
         $hero = 'https://cdn.test/hero.jpg';
         $body = '<p>Intro paragraph.</p><figure><img src="https://cdn.test/body.jpg" alt=""></figure>';
 
