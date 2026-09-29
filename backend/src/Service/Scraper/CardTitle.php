@@ -2,8 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Scraper\Support;
+namespace App\Service\Scraper;
 
+use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 use Dom\Node;
 use Dom\Text;

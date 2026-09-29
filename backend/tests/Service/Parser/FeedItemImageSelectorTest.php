@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Parser;
 
-use App\Service\Parser\Support\FeedItemImageSelector;
+use App\Service\Parser\FeedItemImageSelector;
 use PHPUnit\Framework\TestCase;
 
 final class FeedItemImageSelectorTest extends TestCase

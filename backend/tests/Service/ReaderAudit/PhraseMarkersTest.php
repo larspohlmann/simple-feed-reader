@@ -8,7 +8,7 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;
 use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\Support\SuspiciousPhrases;
+use App\Service\ReaderAudit\SuspiciousPhrases;
 use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 

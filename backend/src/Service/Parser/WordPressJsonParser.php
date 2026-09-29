@@ -9,7 +9,6 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\Model\ParsedEntryMediaModel;
 use App\Service\Parser\Model\ParsedEntryModel;
 use App\Service\Parser\Model\ParsedFeedModel;
-use App\Service\Parser\Support\ItemImageExtractor;
 use App\Service\Text\Support\PlainText;
 
 /**

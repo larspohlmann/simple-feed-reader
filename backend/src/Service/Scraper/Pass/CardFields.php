@@ -7,8 +7,8 @@ namespace App\Service\Scraper\Pass;
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Html\Support\Srcset;
 use App\Service\Parser\Support\DateParser;
+use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Model\ScrapedItemModel;
-use App\Service\Scraper\Support\CardTitle;
 use App\Service\Scraper\Support\TextNormalizer;
 use Dom\Element;
 

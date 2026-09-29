@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\ReaderAudit\Support;
+namespace App\Service\ReaderAudit;
 
 use App\Service\ReaderAudit\Model\PhraseFamilyModel;
 use App\Service\ReaderAudit\Model\PhraseScope;

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Support;
 
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 

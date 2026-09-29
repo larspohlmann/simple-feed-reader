@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Service\Html;
 
 use App\Service\Html\Model\ImageRenditionModel;
-use App\Service\Html\Support\DesktopViewport;
 use App\Service\Html\Support\ImageSourceUrl;
 use App\Service\Html\Support\Srcset;
 use Dom\Element;

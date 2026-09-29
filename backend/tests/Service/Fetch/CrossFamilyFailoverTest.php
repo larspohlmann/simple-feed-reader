@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Fetch\Support;
+namespace App\Tests\Service\Fetch;
 
-use App\Service\Fetch\Support\CrossFamilyFailover;
+use App\Service\Fetch\CrossFamilyFailover;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TimeoutException;
 use Symfony\Component\HttpClient\Exception\TransportException;

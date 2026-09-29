@@ -10,7 +10,7 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * Adds the feed-supplied image to entry. App\Service\Parser\Support\ItemImageExtractor
+ * Adds the feed-supplied image to entry. App\Service\Parser\ItemImageExtractor
  * has always extracted it and App\Service\EntryIngestor has always dropped it,
  * so the magazine layout (#148) had almost nothing to render.
  *

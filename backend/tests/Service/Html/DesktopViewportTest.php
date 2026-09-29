@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Html\Support;
+namespace App\Tests\Service\Html;
 
-use App\Service\Html\Support\DesktopViewport;
+use App\Service\Html\DesktopViewport;
 use PHPUnit\Framework\TestCase;
 
 final class DesktopViewportTest extends TestCase

@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Parser\Support;
+namespace App\Service\Parser;
 
 use App\Service\Parser\Model\FeedMediaKind;
 use App\Service\Parser\Model\ParsedMediaBundleModel;
 use App\Service\Parser\Pass\FeedMediaNode;
+use App\Service\Parser\Support\MediaDuration;
 
 /**
  * Enumerates the media a feed item declares into the two lists the entry keeps:

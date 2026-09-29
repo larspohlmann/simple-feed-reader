@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Prompt\Support;
+namespace App\Service\Recommendation\Prompt;
 
 use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;

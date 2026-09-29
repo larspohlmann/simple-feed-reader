@@ -11,7 +11,7 @@ use App\Service\Ai\Completion\Model\Reasoning;
 use App\Service\Recommendation\Prompt\Factory\RecommendationCompletionRequestFactory;
 use App\Service\Recommendation\Prompt\Model\CallPromptModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
-use App\Service\Recommendation\Prompt\Support\RecommendationAnswerBudget;
+use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 use PHPUnit\Framework\TestCase;
 
 final class RecommendationCompletionRequestFactoryTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Html\Support;
+namespace App\Service\Html;
 
 /**
  * Stands in for the viewport a <source media> query is evaluated against. The

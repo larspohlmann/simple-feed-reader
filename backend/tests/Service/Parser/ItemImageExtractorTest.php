@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Parser\Support;
+namespace App\Tests\Service\Parser;
 
-use App\Service\Parser\Support\ItemImageExtractor;
+use App\Service\Parser\ItemImageExtractor;
 use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Prompt\Support;
+namespace App\Service\Recommendation\Prompt;
 
 /**
  * How much of a dedup pool one reply may plausibly call duplicate.
