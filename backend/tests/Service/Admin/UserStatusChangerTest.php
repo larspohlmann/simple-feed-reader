@@ -16,12 +16,6 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The status-transition decisions extracted from AdminUserController — see
- * AdminUserControllerTest for the same behaviour proved end to end through
- * the HTTP layer. These cases pin the mail-or-silent decision and the
- * self-guard delegation directly against the service.
- */
 final class UserStatusChangerTest extends DbTestCase
 {
     private function factory(): UserFactory

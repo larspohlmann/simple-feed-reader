@@ -99,12 +99,7 @@ final class EntryExcerptTest extends TestCase
         self::assertSame(rtrim(str_repeat($word, 71)), $excerpt);
     }
 
-    /**
-     * 500 multibyte characters ('é' is 2 bytes) is 999 bytes: a byte-length
-     * check would wrongly treat this as over the limit and trim the trailing
-     * word off at the last space, where a character-length check leaves it
-     * untouched.
-     */
+    /** 500 characters but 999 bytes: a byte-length check would trim the trailing word a character check keeps. */
     public function testDoesNotTruncateTextAtOrUnderTheCharacterLimitEvenWhenItsByteLengthIsOver(): void
     {
         $body = str_repeat('é', 490) . ' ' . str_repeat('é', 9);

@@ -36,10 +36,8 @@ final class DetachedConsoleCommandLineTest extends TestCase
     }
 
     /**
-     * A web SAPI's own binary (Strato: cgi-fcgi) cannot run bin/console, and
-     * guessing a path would spawn garbage -- refusing to build a line is what
-     * makes the whole feature silently self-disable on such a host until the
-     * env var names the real CLI binary.
+     * A web SAPI's own binary cannot run bin/console, and a guessed path would spawn garbage: without configuration
+     * no line is built, which disables the launch on such a host.
      */
     public function testRefusesToBuildALineUnderAWebSapiWithoutConfiguration(): void
     {

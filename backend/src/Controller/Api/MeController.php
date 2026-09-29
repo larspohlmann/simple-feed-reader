@@ -10,7 +10,6 @@ use App\Dto\Me\UpdateLocaleRequest;
 use App\Dto\Me\UpdateMagazineStyleRequest;
 use App\Dto\Me\UpdatePreferencesRequest;
 use App\Entity\User;
-use App\Http\MeJson;
 use App\Http\MeProfileJson;
 use App\Service\Account\AccountDeleter;
 use App\Service\Account\AccountPreferencesWriter;
@@ -25,10 +24,6 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
-/**
- * The client's view of its own account. The response shape is hand-built in
- * {@see MeJson}, not serialised from the entity — see the note there.
- */
 final readonly class MeController
 {
     public function __construct(
@@ -65,7 +60,7 @@ final readonly class MeController
 
     /**
      * Split from the locale PATCH: folding them would force every preference write to resend the language, or
-     * cost the locale its 422-on-unsupported-value guarantee (#180).
+     * cost the locale its 422-on-unsupported-value guarantee.
      */
     #[Route('/api/me/preferences', name: 'api_me_update_preferences', methods: ['PATCH'])]
     public function updatePreferences(
@@ -77,7 +72,7 @@ final readonly class MeController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /** Its own PATCH for the reason updatePreferences() gives (#723). */
+    /** Its own PATCH for the reason updatePreferences() gives. */
     #[Route('/api/me/magazine-style', name: 'api_me_update_magazine_style', methods: ['PATCH'])]
     public function updateMagazineStyle(
         #[CurrentUser] User $user,
@@ -88,10 +83,7 @@ final readonly class MeController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /**
-     * Its own PATCH for the reason updatePreferences() gives (#636). First-enable
-     * seeding of digestLastSentAt lives in DigestEnablement, not here.
-     */
+    /** Its own PATCH for the reason updatePreferences() gives. */
     #[Route('/api/me/digest', name: 'api_me_update_digest', methods: ['PATCH'])]
     public function updateDigest(
         #[CurrentUser] User $user,
@@ -102,10 +94,6 @@ final readonly class MeController
         return new JsonResponse($this->profile->of($user));
     }
 
-    /**
-     * A one-off preview digest over the last `days` days. SendTestDigest never moves digestLastSentAt, so the
-     * button can be pressed any number of times without disturbing the real cadence (#636).
-     */
     #[Route('/api/me/digest/test', name: 'api_me_digest_test', methods: ['POST'])]
     public function sendTestDigest(
         #[CurrentUser] User $user,
@@ -118,11 +106,6 @@ final readonly class MeController
         return new JsonResponse(['sent' => $sent]);
     }
 
-    /**
-     * Reissues the address-verification mail for an account that has not yet
-     * proved its address (#636). Idempotent: RegistrationService::resendVerification()
-     * is a no-op once the address is verified.
-     */
     #[Route('/api/me/resend-verification', name: 'api_me_resend_verification', methods: ['POST'])]
     public function resendVerification(#[CurrentUser] User $user): JsonResponse
     {

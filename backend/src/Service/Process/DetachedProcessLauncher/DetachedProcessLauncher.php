@@ -31,10 +31,7 @@ final readonly class DetachedProcessLauncher implements DetachedProcessLauncherI
 
             $this->shell->runDetached($shellCommandLine);
         } catch (\Throwable $exception) {
-            // Swallowing a Throwable is this class's documented contract,
-            // not an oversight: the launch is a speed-up, and a host that
-            // cannot spawn must degrade to the poll/cron path without the
-            // user ever seeing an error (#371).
+            // Never rethrow: the interface promises best-effort, and the poll/cron path carries the work.
             $this->logger->info('Detached launch failed; the poll/cron path carries the work.', [
                 'command' => $consoleCommandName,
                 'exception' => $exception,

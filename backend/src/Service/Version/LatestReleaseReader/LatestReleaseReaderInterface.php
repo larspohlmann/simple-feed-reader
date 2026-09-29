@@ -8,11 +8,6 @@ use App\Service\Version\Model\LatestReleaseModel;
 
 interface LatestReleaseReaderInterface
 {
-    /**
-     * The newest published release upstream, or null when there is none to
-     * report — no release cut yet, the source unreachable, or the check turned
-     * off. A null is not an error the caller must handle: it means "say
-     * nothing", which is exactly the resting state of the update badge.
-     */
+    /** Null when there is nothing to report (none cut, source unreachable, check off): silence, not an error. */
     public function read(): ?LatestReleaseModel;
 }

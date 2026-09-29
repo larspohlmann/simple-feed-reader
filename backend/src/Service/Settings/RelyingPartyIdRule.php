@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Settings;
 
 /**
- * Whether a relying-party id could work at all. It is NOT checked against the
- * host the server thinks it is on: only the browser knows the origin it is
- * really at, and it enforces the match itself with a SecurityError. A server
- * that guessed would refuse correct configurations behind a proxy.
+ * Whether an id could work at all, never whether it matches this host: the browser enforces the origin match, and a
+ * server that guessed would refuse correct configurations behind a proxy.
  */
 final readonly class RelyingPartyIdRule
 {

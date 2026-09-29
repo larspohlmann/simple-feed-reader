@@ -12,14 +12,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Reads the newest published release from GitHub and holds it for a while, so
- * "is there a newer version?" costs one request per cache window however many
- * users ask. Every failure mode — the source unreachable, rate-limited, no
- * release cut yet, or the check switched off with an empty repository — reads
- * as null rather than an error: the badge simply stays silent.
- *
- * Only a success is cached. A transient failure is not "the answer", so it must
- * not pin the badge shut for the whole window; the next request retries.
+ * Caches only a success, so a transient failure never pins the update badge shut for the whole window. Every
+ * failure, and an empty repository, reads as null: the badge stays silent.
  */
 final readonly class GitHubLatestReleaseReader implements LatestReleaseReaderInterface
 {

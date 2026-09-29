@@ -58,15 +58,8 @@ final class MeTest extends WebTestCase
     }
 
     /**
-     * Suspension must bite on the very next request. That is only true if the
-     * firewall re-reads the user from the database instead of trusting the
-     * claims baked into the still-valid JWT.
-     *
-     * The suspension is therefore applied with raw SQL, behind the ORM's back.
-     * Mutating the managed entity and flushing would leave the same object
-     * sitting in the identity map, so the assertion would hold even if nothing
-     * were ever re-read - the test would pass without testing anything. A row
-     * changed by SQL alone can only be observed by an actual reload.
+     * Suspends by raw SQL, behind the ORM's back: a flushed entity would stay in the identity map and pass without
+     * any reload, so only SQL proves the firewall re-reads the user instead of trusting the JWT's claims.
      */
     public function testSuspensionTakesEffectOnTheNextRequest(): void
     {

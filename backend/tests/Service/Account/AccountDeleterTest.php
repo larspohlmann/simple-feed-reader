@@ -82,14 +82,7 @@ final class AccountDeleterTest extends DbTestCase
         self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($feedId));
     }
 
-    /**
-     * The User <-> AiProviderSettings relation is unidirectional (#334 review):
-     * User carries only the active pointer, not an inverse Collection, so
-     * nothing in the ORM's own unit-of-work graph walks from the removed User
-     * to its configuration rows. This proves the DB-level FK ON DELETE CASCADE
-     * on user_ai_settings.user_id — which AccountDeleter's class doc now
-     * lists — really does the cleanup on its own.
-     */
+    /** User holds no inverse collection of its AI configurations: only the FK ON DELETE CASCADE can remove them. */
     public function testDeletionTakesTheAccountsAiConfigurations(): void
     {
         $admin = $this->userFactory->create('admin-ai@example.com', roles: ['ROLE_ADMIN']);
@@ -116,12 +109,8 @@ final class AccountDeleterTest extends DbTestCase
     }
 
     /**
-     * The full two-table cycle, not just one edge of it: app_user.
-     * active_ai_config_id points at user_ai_settings (ON DELETE SET NULL)
-     * while user_ai_settings.user_id points back at app_user (ON DELETE
-     * CASCADE). Activating the configuration before deleting the account is
-     * what puts the pointer in place, so the delete must resolve both FKs
-     * without a constraint violation and must not leave the row behind.
+     * The full cycle: app_user.active_ai_config_id points at user_ai_settings (ON DELETE SET NULL), whose user_id
+     * points back (ON DELETE CASCADE). The delete must resolve both without a violation and leave no row behind.
      */
     public function testDeletionResolvesTheActiveAiConfigurationCycle(): void
     {

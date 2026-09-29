@@ -5,34 +5,15 @@ declare(strict_types=1);
 namespace App\Service\Url\Support;
 
 /**
- * Where to send a reader who asks to visit a feed's website.
- *
- * A feed's own <link> is the obvious answer and is wrong often enough that it
- * cannot be used unchecked. Measured against a real 111-feed library: just
- * under half publish no <link> at all; several point it at the feed document
- * the reader already has (Telepolis, Politico); one leaked an internal
- * Kubernetes service name (ZDFheute); one points at a `feeds.` host that
- * serves no site (Nature).
- *
- * So the published link is used only when it names somewhere a person could
- * go; otherwise the feed's own address supplies the origin — a feed nearly
- * always lives on the site it describes.
- *
- * This is a presentation decision, never a persisted one. Feed::$siteUrl
- * keeps exactly what the publisher said: the backup carries that column, and
- * a guess written into it would restore as though the publisher had said it.
+ * The feed's <link> when a person could go there, else the feed's own origin (in a 111-feed survey, just under half
+ * published no link). Never persist the guess: Feed::$siteUrl keeps what the publisher said, and a backup restores it.
  */
 final class FeedWebsite
 {
     /** Subdomains that serve feeds rather than a site, stripped to reach the site itself. */
     private const array FEED_SUBDOMAINS = ['feeds', 'feed', 'rss', 'atom'];
 
-    /**
-     * Hosts that syndicate other people's feeds. Their address says nothing
-     * about who publishes the feed — the Symfony blog's feed lives on
-     * feedburner.com — so when one of these is all we have, the honest answer
-     * is no website rather than a link to the syndicator.
-     */
+    /** Their address says nothing about who publishes the feed, so a feed found only there has no website. */
     private const array SYNDICATORS = ['feedburner.com', 'feedproxy.google.com', 'feedpress.me', 'rss.app'];
 
     /** A path ending this way is a feed document, whoever links to it. */

@@ -38,11 +38,7 @@ final class AccountResetTest extends DbTestCase
         return $service;
     }
 
-    /**
-     * Seeds one full account and returns [user, feed, entry, run].
-     *
-     * @return array{0: User, 1: Feed, 2: Entry, 3: RecommendationRun}
-     */
+    /** @return array{0: User, 1: Feed, 2: Entry, 3: RecommendationRun} */
     private function seedAccount(string $email): array
     {
         $user = $this->user($email);
@@ -99,8 +95,7 @@ final class AccountResetTest extends DbTestCase
 
         $this->reset()->reset($user);
 
-        // Bulk DQL bypasses the identity map — clear before every "is gone"
-        // assertion, or find() serves the stale in-memory row (#412 spec).
+        // Bulk DQL bypasses the identity map: clear before every "is gone" assertion, or find() serves the stale row.
         $this->entityManager->clear();
         self::assertSame([], $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $userId]));
         self::assertSame([], $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId]));
@@ -181,10 +176,7 @@ final class AccountResetTest extends DbTestCase
                 ->getRepository(SubscriptionTag::class)
                 ->findBy(['subscription' => $bystanderSubscriptions[0]]),
         );
-        // Proves the recommendation-child subquery correlates by the RIGHT
-        // user: the bystander's run is untouched, so nothing here is masked
-        // by the victim's own run-delete cascade — unlike the "gone" side of
-        // this statement, this assertion cannot pass by accident.
+        // The subquery must correlate by the right user; unlike the "gone" side, no run-delete cascade can mask this.
         self::assertCount(
             1,
             $this->entityManager->getRepository(RecommendationItem::class)->findBy(['run' => $bystanderRunId]),

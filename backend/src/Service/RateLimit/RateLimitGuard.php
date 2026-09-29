@@ -10,15 +10,6 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
-/**
- * Consumes one token from a rate limiter and throws when the budget is spent.
- *
- * Two entry points, keyed differently on purpose. The difference is
- * security-relevant, so it is split into two methods rather than hidden behind a
- * key-string flag: {@see self::enforceForClient()} keys on the client IP and
- * carries the trusted-proxy caveat, {@see self::enforceForUser()} keys on the
- * authenticated user's id.
- */
 final readonly class RateLimitGuard
 {
     public function __construct(private ClockInterface $clock)

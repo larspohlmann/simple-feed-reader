@@ -6,13 +6,7 @@ namespace App\Service\Settings\PasskeyRelyingParty;
 
 use App\Service\Settings\RelyingPartyChangeGuard;
 
-/**
- * The WebAuthn relying party this instance registers and asserts credentials
- * against (#624). `id()` is baked into every stored credential at
- * registration time — see {@see RelyingPartyChangeGuard} for why altering it is
- * guarded — while `name()` is cosmetic, shown only by the authenticator's own
- * UI.
- */
+/** id() is baked into each stored credential, so {@see RelyingPartyChangeGuard} guards a change; name() is cosmetic. */
 interface PasskeyRelyingPartyInterface
 {
     /** The relying-party id: a registrable domain, with no scheme or port. */

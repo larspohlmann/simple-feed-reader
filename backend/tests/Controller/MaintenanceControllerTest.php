@@ -23,9 +23,8 @@ use Symfony\Component\Lock\LockFactory;
 final class MaintenanceControllerTest extends WebTestCase
 {
     /**
-     * Subscribed, not just persisted: `/maintenance/refresh` always prunes
-     * (#246), so an unsubscribed feed would be swept before this test's
-     * fetcher stub ever sees it.
+     * Subscribed, not just persisted: `/maintenance/refresh` always prunes, so an unsubscribed feed would be swept
+     * before this test's fetcher stub ever sees it.
      */
     private function feedFor(KernelBrowser $client, string $url): Feed
     {
@@ -211,12 +210,8 @@ final class MaintenanceControllerTest extends WebTestCase
 
         self::assertResponseIsSuccessful();
         self::assertResponseHeaderSame('Content-Type', 'application/json');
-        // Shared SQLite DB: other test classes may have left runs, so assert
-        // the report's shape, not exact zero counts. Left untyped (not the
-        // array{...} shape used elsewhere in this file) so PHPStan does not
-        // treat the assertIsInt() calls below as already-proven and flag them
-        // as redundant (staticMethod.alreadyNarrowedType) — they are the point
-        // of this test.
+        // Shape, not counts: the shared database may hold other classes' runs. Untyped on purpose, so PHPStan keeps
+        // the assertIsInt() calls below, which are this test's point.
         /** @var array<string, mixed> $payload */
         $payload = json_decode((string) $client->getResponse()->getContent(), true, 512, JSON_THROW_ON_ERROR);
         self::assertIsInt($payload['startedRuns']);

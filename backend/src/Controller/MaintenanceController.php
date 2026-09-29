@@ -18,12 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Machine-facing maintenance actions, authenticated by a shared token
- * (constant-time comparison) instead of JWT. Called by the scheduled GitHub
- * Actions pinger or any external cron service — there is no crontab on the
- * production host.
- */
+/** Cron-facing actions, authenticated by MaintenanceTokenGuard's shared token instead of a JWT. */
 final readonly class MaintenanceController
 {
     public function __construct(
@@ -54,9 +49,8 @@ final readonly class MaintenanceController
     }
 
     /**
-     * Starts the accounts that are due and advances every active run once, so
-     * an install without the background worker can drive scheduled generation
-     * from an external cron (#333). One tick per run keeps the request bounded.
+     * Starts the due accounts and advances every active run once, so an install without the worker can drive
+     * scheduled generation from cron. One tick per run keeps the request bounded.
      */
     #[Route('/maintenance/recommendations/sweep', name: 'maintenance_recommendations_sweep', methods: ['POST'])]
     public function sweepRecommendations(Request $request): JsonResponse

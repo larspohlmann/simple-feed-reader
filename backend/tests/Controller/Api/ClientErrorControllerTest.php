@@ -15,14 +15,8 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
 /**
- * kernel.terminate — which LokiFlushListener hooks to drain LokiPushHandler's
- * buffer — runs synchronously inside KernelBrowser::request(), before control
- * returns here. So a report already reached and left the buffer by the time a
- * test method can inspect it; there is nothing left to read. The tests that
- * need to see what was recorded install a real LokiClient wired to a
- * MockHttpClient (installLokiCapture()) so the terminate-time flush lands in
- * an inspectable capture instead of a live network call, the same technique
- * LokiClientTest already uses for the client in isolation.
+ * kernel.terminate flushes LokiPushHandler's buffer inside KernelBrowser::request(), so it is empty by the time a
+ * test looks: a test that inspects a report captures the flush with installLokiCapture().
  */
 final class ClientErrorControllerTest extends ApiTestCase
 {
@@ -184,14 +178,7 @@ final class ClientErrorControllerTest extends ApiTestCase
         return $client;
     }
 
-    /**
-     * Replaces the real LokiClient with one wired to a MockHttpClient, so the
-     * push that LokiFlushListener triggers on kernel.terminate lands in
-     * {@see self::$lokiPushes} instead of attempting a real network call.
-     * Must run before anything logs to the client_errors channel — the
-     * container caches LokiPushHandler (and the LokiClient it was built
-     * with) on first use, same as LokiClientTest's own MockHttpClient setup.
-     */
+    /** Must run before anything logs to client_errors: the container keeps the LokiClient it built on first use. */
     private function installLokiCapture(): void
     {
         $this->lokiPushes = [];

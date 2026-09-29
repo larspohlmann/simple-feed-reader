@@ -11,19 +11,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Reads and writes the instance-wide settings row. The rest of the app
- * depends on this, never on the entity or repository directly.
- *
- * `settings()` handles "no row yet": a fresh, unpersisted InstanceSetting
- * already carries its declared defaults, so every getter reads off it instead
- * of duplicating a fallback that could drift from the entity.
- *
- * `final class`, not `final readonly`: settings() memoises the resolved row so
- * a request reading several settings (a WebAuthn ceremony reads it three or
- * four times) issues one SELECT. The memo is a plain field, request-scoped
- * under PHP-FPM and dropped between worker messages by reset(); never promote
- * it to a shared cache. update() clears it so a read after a write sees the
- * new value.
+ * The row is memoised per request and reset() drops it between worker messages: never promote it to a shared cache.
+ * With no row yet, getters read an unpersisted InstanceSetting, so the entity's defaults are the only fallback.
  */
 final class InstanceSettings implements ResetInterface
 {
@@ -84,11 +73,6 @@ final class InstanceSettings implements ResetInterface
         $this->memoisedSettings = null;
     }
 
-    /**
-     * Never persisted: a fresh InstanceSetting stands in for the no-row case
-     * only for the span of one read. update() above has its own
-     * findSingleton()-then-persist path and never calls this.
-     */
     private function settings(): InstanceSetting
     {
         return $this->memoisedSettings ??= $this->storedSettings->findSingleton() ?? new InstanceSetting();

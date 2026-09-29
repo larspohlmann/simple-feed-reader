@@ -31,20 +31,8 @@ final class InstanceSettingsTest extends KernelTestCase
     }
 
     /**
-     * The entity is the single source of truth for what a setting means when
-     * nobody has set it: every InstanceSettings getter, with no row present,
-     * must return exactly what a freshly constructed InstanceSetting reports
-     * on its own. This fails if a getter ever grows its own `??` fallback
-     * that disagrees with the entity's property default.
-     *
-     * Reflects over InstanceSettings' own zero-argument public methods
-     * rather than naming each getter by hand: a hand-enumerated
-     * list catches an EXISTING getter regaining a drifting fallback, but a
-     * NEW setting added with its own literal default would add a getter this
-     * test never calls, and pass silently — precisely the drift this test
-     * exists to catch. update() is the only public method with a required
-     * parameter, so filtering on parameter count excludes it without naming
-     * it specifically.
+     * With no row, every getter must match a fresh InstanceSetting, so none grows its own `??` default. It reflects
+     * over the zero-argument public methods, so a new getter is covered without being named here.
      */
     public function testEveryGetterMatchesAFreshInstanceSettingWhenNoRowExists(): void
     {
@@ -72,25 +60,13 @@ final class InstanceSettingsTest extends KernelTestCase
         }
     }
 
-    /**
-     * Deliberately false (#624 follow-up, addendum — the product owner
-     * reversed the original `true` default): "activated" should mean
-     * activated, so a fresh install ships with passkey sign-in invisible
-     * until an admin opts in, even though the relying party would derive
-     * correctly with no configuration at all.
-     */
+    /** Off until an admin opts in, although the relying party would derive correctly with no configuration. */
     public function testPasskeySignInDefaultsToDisabledWhenNoRowExists(): void
     {
         self::assertFalse($this->settings->passkeySignInEnabled());
     }
 
-    /**
-     * Sets it to TRUE and reads TRUE back, deliberately — not false: the
-     * no-row default is ALSO false now, so a round trip that merely sets and
-     * reads false back would pass even if update()/apply() silently did
-     * nothing at all. Setting the non-default value is what actually proves
-     * persistence.
-     */
+    /** Sets the non-default TRUE: a round trip of false would pass even if update() did nothing. */
     public function testPasskeySignInEnabledRoundTrips(): void
     {
         $this->settings->update(new InstanceSettingsUpdate(
@@ -145,12 +121,6 @@ final class InstanceSettingsTest extends KernelTestCase
         self::assertSame('My Reader', $this->settings->getPasskeyRpName());
     }
 
-    /**
-     * The row is resolved once per request, not once per getter: reading five
-     * settings in a row must issue a single SELECT. This is the whole reason
-     * the memo exists (#725) — a WebAuthn ceremony reads the row three or four
-     * times, and each read used to be its own round trip.
-     */
     public function testResolvesTheRowOnceAcrossSeveralGetters(): void
     {
         /** @var QueryRecorder $recorder */
@@ -171,13 +141,7 @@ final class InstanceSettingsTest extends KernelTestCase
         );
     }
 
-    /**
-     * update() must drop the memo, so the admin who just saved reads back their
-     * own new value in the same request — not the row memoised before the save.
-     * Deliberately no em->clear() here: clearing would hide a missing memo
-     * invalidation. This test is what stops a future change reintroducing the
-     * stale read (#725).
-     */
+    /** No em->clear() on purpose: clearing would hide a missing memo invalidation. */
     public function testReadAfterWriteInTheSameRequestReturnsTheNewValue(): void
     {
         self::assertTrue($this->settings->requireEmailConfirmation());

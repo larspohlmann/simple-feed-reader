@@ -5,23 +5,9 @@ declare(strict_types=1);
 namespace App\Service\Url\Support;
 
 /**
- * The one rule for accepting an image URL a feed supplied, shared by
- * everything that stores one: entry images, and a feed's own logo.
- *
- * Rejected, never repaired, in the two ways it can be unusable:
- *
- * - Scheme: the reader SPA is served over https, so http:// is
- *   mixed-content-blocked — dead weight, silently. A `//host/path`
- *   protocol-relative URL is unambiguous and upgraded; a `data:` URI or a
- *   site-relative path has no scheme to upgrade and no base URL is plumbed
- *   this deep to resolve one against, so it is dropped. The same check keeps
- *   `javascript:` out of the DOM.
- * - Length: a URL over the column's limit is NOT truncated — cutting it at
- *   that many characters produces a different, broken URL that 404s in the
- *   reader, not a shortened valid one.
- *
- * {@see orNullUpgrading} is the card-image variant: it upgrades http:// to
- * https:// instead of rejecting it.
+ * Accepts a feed-supplied image URL only as https (a //host URL is upgraded) and within MAX_LENGTH, never repairing
+ * one: http is mixed-content-blocked, a truncated URL is a different broken one, and the scheme check keeps
+ * `javascript:` out of the DOM.
  */
 final class HttpsImageUrl
 {

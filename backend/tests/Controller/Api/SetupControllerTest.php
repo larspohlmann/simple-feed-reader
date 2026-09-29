@@ -26,16 +26,8 @@ final class SetupControllerTest extends WebTestCase
     private const string SECRET = 'test-setup-secret-abcdef0123456789';
 
     /**
-     * The per-IP `setup` limiter stores its state in a FILESYSTEM pool, which
-     * survives the kernel reboot between requests *and* the end of the run —
-     * see RegistrationTest for the same reset, needed for the same reason.
-     *
-     * Unlike RegistrationTest, each test method here boots its own client
-     * (some need `enableSecret()` called first, so a shared setUp()-built
-     * client would boot before that env override is in place). Booting here
-     * only to read the cache pool, then shutting back down, clears the pool
-     * without leaving a kernel behind that would make every test's own
-     * `self::createClient()` throw "the kernel should only be booted once".
+     * The `setup` limiter's filesystem pool outlives every kernel, so it is cleared here. The kernel is shut down
+     * again because some tests call enableSecret() before their own createClient() boots one.
      */
     protected function setUp(): void
     {
@@ -49,12 +41,8 @@ final class SetupControllerTest extends WebTestCase
     }
 
     /**
-     * Restores the empty string .env ships, rather than unsetting the key
-     * outright: %env(ADMIN_SETUP_SECRET)% is resolved at container-runtime on
-     * every kernel boot (bootstrap.php only runs Dotenv once per process), so
-     * an outright unset() leaves the variable genuinely undefined for every
-     * later test in the whole PHPUnit run — not just this file — and turns
-     * `status()`/`createAdmin()` into a 500 instead of the closed-endpoint 404.
+     * Restores .env's empty string rather than unsetting: an unset ADMIN_SETUP_SECRET stays undefined for the rest
+     * of the run and turns status() and createAdmin() into a 500 instead of the closed endpoint's 404.
      */
     protected function tearDown(): void
     {
@@ -134,16 +122,6 @@ final class SetupControllerTest extends WebTestCase
         self::assertTrue($body['mailEnabled']);
     }
 
-    /**
-     * Public and anonymous on purpose (#624 follow-up): a visitor is allowed
-     * to know whether this instance can complete a passkey sign-in, but never
-     * anything about which accounts exist — see PasskeySignInAvailability's
-     * own docblock for why this reads no credential or user row.
-     *
-     * Off by default (addendum: the product owner reversed the original
-     * `true` default) — a fresh install ships with passkey sign-in invisible
-     * until an admin opts in.
-     */
     public function testStatusReportsPasskeySignInUnavailableByDefault(): void
     {
         $client = self::createClient();
