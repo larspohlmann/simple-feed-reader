@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Recommendation\Feed\Model;
+namespace App\Service\Clock\Model;
 
 /**
- * The timezone a client wants its run history bucketed by (#409).
+ * The IANA timezone a client wants its day and month buckets cut in (#409).
  *
  * Runs are stored as naive UTC, but the card prints each row in the reader's
  * own zone, so months must be cut in that same zone — otherwise a late-evening

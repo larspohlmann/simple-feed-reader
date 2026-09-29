@@ -58,3 +58,13 @@ namespace App\Service\Recommendation\Feed\Fixtures {
         }
     }
 }
+
+namespace App\Service\Reading\Fixtures\TimeZone {
+    final class ReadingKnowsRecommendations
+    {
+        public function zone(): string
+        {
+            return \App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel::class;
+        }
+    }
+}

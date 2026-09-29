@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Settings;
 
-use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
@@ -67,12 +68,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -84,9 +81,9 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertNotNull($reloaded);
         $values = $reloaded->values();
         self::assertSame('Only cats.', $values->guidancePrompt);
-        self::assertSame(10, $values->favoritesCap);
-        self::assertSame(20, $values->keptCap);
-        self::assertSame(30, $values->viewedCap);
+        self::assertSame(10, $values->historyCaps->favorites);
+        self::assertSame(20, $values->historyCaps->kept);
+        self::assertSame(30, $values->historyCaps->viewed);
         self::assertSame(65536, $values->contextWindow);
         self::assertSame(RecommendationBatchSize::Large, $values->batchSize);
         self::assertTrue($values->debugEnabled);
@@ -103,12 +100,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
@@ -134,12 +127,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -155,6 +144,11 @@ final class RecommendationSettingsWriterTest extends DbTestCase
      * A fresh user out of setUp() never had a settings row created for it;
      * this name exists to make that precondition explicit at the call site.
      */
+    private function nonDefaultHistoryCaps(): RecommendationHistoryCaps
+    {
+        return new RecommendationHistoryCaps(10, 20, 30);
+    }
+
     private function userWithoutSettingsRow(): User
     {
         return $this->user;

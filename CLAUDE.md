@@ -122,9 +122,10 @@ Non-negotiables:
   extension uses lives with them, so persistence never imports a service: `App\Entity`
   for what an entity stores, embeds, takes or returns, `App\Enum` for enums an entity or
   a repository uses, `App\Doctrine` for the persistence plumbing the ORM extensions
-  share. Module enums, including ones several `Service/*` modules share, stay in their
-  owning module for now ([docs/architecture.md](docs/architecture.md) §8,
-  `PersistenceKnowsNoServiceRule`).
+  share. Module enums, including ones several `Service/*` modules share, stay in the
+  module that owns their meaning ([docs/architecture.md](docs/architecture.md) §8,
+  `PersistenceKnowsNoServiceRule`). A repository names only Service values (a model, a
+  helper, an exception) and the interfaces it implements.
 - **Service modules form no cycle.** A module is the first directory under
   `src/Service`, and every service belongs to one. When two modules need each other,
   the class moves to the module that owns it, or the lower module owns an interface

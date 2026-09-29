@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Feed\Model;
 
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Exception\UnknownHistoryMonthException;
 use App\Service\Recommendation\Feed\Model\MonthWindowModel;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 

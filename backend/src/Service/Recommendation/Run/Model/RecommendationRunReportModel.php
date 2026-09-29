@@ -63,7 +63,7 @@ final readonly class RecommendationRunReportModel
 
     public static function fromRun(RecommendationRun $run): self
     {
-        $progress = $run->progress();
+        $progress = $run->getProgress();
 
         return new self(
             $run->getStatus()->value,

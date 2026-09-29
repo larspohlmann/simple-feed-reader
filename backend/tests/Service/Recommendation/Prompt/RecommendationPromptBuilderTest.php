@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Prompt;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Ai\Completion\Model\Reasoning;
@@ -1067,12 +1069,8 @@ final class RecommendationPromptBuilderTest extends TestCase
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $guidancePrompt,
-            favoritesCap: 40,
-            keptCap: 40,
-            viewedCap: 80,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: $picksLimit,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, $picksLimit),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: $contextWindow,
                 contextWindowSource: 'default',

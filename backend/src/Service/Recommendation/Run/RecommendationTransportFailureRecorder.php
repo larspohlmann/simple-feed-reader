@@ -15,7 +15,7 @@ use Symfony\Component\Clock\ClockInterface;
  * banking write, for the same reason: the counter and the fail() the ceiling
  * triggers are the run's own state, and a tick that may no longer write must
  * write none of it (#439). The entity cannot refuse it --
- * RecommendationRun::recordTransportFailure() judges the status this tick read
+ * RecommendationRun::getRunningCallAttempts() judges the status this tick read
  * before the call, so a run another process has since completed is failed
  * over it.
  *
@@ -43,7 +43,7 @@ final readonly class RecommendationTransportFailureRecorder
     {
         $this->checkpoint->guard($run);
 
-        $run->recordTransportFailure();
+        $run->getRunningCallAttempts()->recordTransportFailure();
         if ($run->hasExhaustedTransportRetries()) {
             // The real per-call detail, not a hardcoded "could not be reached":
             // most transport failures are the provider refusing or truncating a

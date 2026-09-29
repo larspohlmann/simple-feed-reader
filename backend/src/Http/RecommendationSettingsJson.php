@@ -47,12 +47,12 @@ final class RecommendationSettingsJson
                 'contextWindow' => null,
             ],
             'expertBounds' => RecommendationSettingsBounds::EXPERT_FIELDS,
-            'favoritesCap' => $effective->favoritesCap,
-            'keptCap' => $effective->keptCap,
-            'viewedCap' => $effective->viewedCap,
-            'candidatePoolSize' => $effective->candidatePoolSize,
-            'lookbackDays' => $effective->lookbackDays,
-            'picksLimit' => $effective->picksLimit,
+            'favoritesCap' => $effective->historyCaps->favorites,
+            'keptCap' => $effective->historyCaps->kept,
+            'viewedCap' => $effective->historyCaps->viewed,
+            'candidatePoolSize' => $effective->poolLimits->candidatePoolSize,
+            'lookbackDays' => $effective->poolLimits->lookbackDays,
+            'picksLimit' => $effective->poolLimits->picksLimit,
             'contextWindow' => $effective->packing->contextWindow,
             'contextWindowOverride' => 'user' === $effective->packing->contextWindowSource
                 ? $effective->packing->contextWindow

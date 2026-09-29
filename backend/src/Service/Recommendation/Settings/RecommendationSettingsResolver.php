@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
-use App\Entity\RecommendationSettings;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
 use App\Repository\RecommendationSettingsRepository;
@@ -40,14 +41,8 @@ final readonly class RecommendationSettingsResolver
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $row?->values()->guidancePrompt,
             profileText: $row?->values()->profileText,
-            favoritesCap: $row?->values()->favoritesCap ?? RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: $row?->values()->keptCap ?? RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: $row?->values()->viewedCap ?? RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: $row?->values()->candidatePoolSize
-                ?? RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: $row?->values()->lookbackDays
-                ?? RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: $row?->values()->picksLimit ?? RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: $row?->values()->historyCaps ?? RecommendationHistoryCaps::defaults(),
+            poolLimits: $row?->values()->poolLimits ?? RecommendationPoolLimits::defaults(),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: $window,
                 contextWindowSource: $source,

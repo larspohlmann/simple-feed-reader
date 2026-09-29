@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Run\Pass;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
@@ -41,12 +43,8 @@ final class TickContextTest extends TestCase
             $connection,
             new EffectiveRecommendationSettingsModel(
                 guidancePrompt: null,
-                favoritesCap: 40,
-                keptCap: 40,
-                viewedCap: 80,
-                candidatePoolSize: 500,
-                lookbackDays: 2,
-                picksLimit: 50,
+                historyCaps: RecommendationHistoryCaps::defaults(),
+                poolLimits: RecommendationPoolLimits::defaults(),
                 packing: new RecommendationPackingSettingsModel(
                     contextWindow: 32768,
                     contextWindowSource: 'fallback',

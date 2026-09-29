@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Dto\Recommendation;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettingsValues;
 use App\Enum\RecommendationBatchSize;
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
@@ -68,12 +70,8 @@ final readonly class SaveRecommendationSettingsRequest
     {
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
-            favoritesCap: $this->favoritesCap,
-            keptCap: $this->keptCap,
-            viewedCap: $this->viewedCap,
-            candidatePoolSize: $this->candidatePoolSize,
-            lookbackDays: $this->lookbackDays,
-            picksLimit: $this->picksLimit,
+            historyCaps: new RecommendationHistoryCaps($this->favoritesCap, $this->keptCap, $this->viewedCap),
+            poolLimits: new RecommendationPoolLimits($this->candidatePoolSize, $this->lookbackDays, $this->picksLimit),
             contextWindow: $this->contextWindow,
             batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,

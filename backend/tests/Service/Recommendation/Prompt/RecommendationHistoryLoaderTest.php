@@ -7,6 +7,8 @@ namespace App\Tests\Service\Recommendation\Prompt;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -104,6 +106,28 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
         $history = $this->loader()->load($this->userId(), $this->settings(viewedCap: 1));
 
         self::assertSame(['F'], array_map(static fn ($l) => $l->title, $history->viewed));
+    }
+
+    public function testEachHistoryListReadsItsOwnCap(): void
+    {
+        foreach (['A', 'B', 'C'] as $index => $guid) {
+            $favorite = new EntryState($this->user, $this->entry('F' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
+            $favorite->markFavorite();
+            $kept = new EntryState($this->user, $this->entry('K' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
+            $kept->markKept();
+            $viewed = new EntryState($this->user, $this->entry('V' . $guid, '2026-07-1' . $index . 'T00:00:00Z'));
+            $viewed->markViewed(new \DateTimeImmutable('2026-07-15T1' . $index . ':00:00Z'));
+            $this->em->persist($favorite);
+            $this->em->persist($kept);
+            $this->em->persist($viewed);
+        }
+        $this->em->flush();
+
+        $history = $this->loader()->load($this->userId(), $this->settings(favoritesCap: 1, keptCap: 2, viewedCap: 3));
+
+        self::assertCount(1, $history->favorites);
+        self::assertCount(2, $history->kept);
+        self::assertCount(3, $history->viewed);
     }
 
     public function testViewedOrdersByViewedAtNotEffectiveDate(): void
@@ -208,12 +232,8 @@ final class RecommendationHistoryLoaderTest extends DbTestCase
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
-            favoritesCap: $favoritesCap,
-            keptCap: $keptCap,
-            viewedCap: $viewedCap,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: new RecommendationHistoryCaps($favoritesCap, $keptCap, $viewedCap),
+            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: 32768,
                 contextWindowSource: 'fallback',

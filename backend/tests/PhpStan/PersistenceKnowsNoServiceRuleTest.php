@@ -20,7 +20,7 @@ final class PersistenceKnowsNoServiceRuleTest extends RuleTestCase
 
     protected function getRule(): Rule
     {
-        return new PersistenceKnowsNoServiceRule(new NodeFinder());
+        return new PersistenceKnowsNoServiceRule(new NodeFinder(), ['App\Repository\Fixtures\EntryBatchInserter']);
     }
 
     public function testItReportsServicesInEntitiesEnumsAndTheOrmExtensionsOnly(): void
@@ -43,12 +43,37 @@ final class PersistenceKnowsNoServiceRuleTest extends RuleTestCase
         );
     }
 
+    public function testARepositoryNamesOnlyServiceValuesExceptWhereAllowed(): void
+    {
+        $this->analyse(
+            [
+                __DIR__ . '/data/persistence-knows-no-service/SpeaksServiceValues.php',
+                __DIR__ . '/data/persistence-knows-no-service/EntryBatchInserter.php',
+            ],
+            [
+                [self::repositoryMessage('App\Service\Url\UrlNormalizer'), 13],
+                [self::repositoryMessage('App\Service\Backup\Dto\EntryLine'), 14],
+                [self::repositoryMessage('App\Service\Url\UrlNormalizer'), 18],
+                [self::repositoryMessage('App\Service\Backup\Dto\EntryLine'), 24],
+            ],
+        );
+    }
+
     private static function message(string $namespaceName, string $reference): string
     {
         return sprintf(
             'Persistence code must not know a service: %s references %s. '
             . 'Move the shared value to App\Entity, App\Enum or App\Doctrine (docs/architecture.md §8).',
             $namespaceName,
+            $reference,
+        );
+    }
+
+    private static function repositoryMessage(string $reference): string
+    {
+        return sprintf(
+            'Repositories name only Service values: App\Repository\Fixtures references %s. Hand the repository '
+            . 'a model, a helper\'s result or an interface it implements (docs/architecture.md §8).',
             $reference,
         );
     }

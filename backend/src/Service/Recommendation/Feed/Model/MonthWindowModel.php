@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Feed\Model;
 
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Exception\UnknownHistoryMonthException;
 
 /**

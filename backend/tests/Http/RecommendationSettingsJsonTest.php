@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Http;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Enum\RecommendationBatchSize;
 use App\Http\RecommendationSettingsJson;
@@ -120,12 +122,8 @@ final class RecommendationSettingsJsonTest extends TestCase
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: EffectiveRecommendationSettingsModel::FALLBACK_CONTEXT_WINDOW,
                 contextWindowSource: 'fallback',

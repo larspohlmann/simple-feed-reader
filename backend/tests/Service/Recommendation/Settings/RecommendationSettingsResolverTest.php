@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Settings;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
@@ -39,11 +41,11 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $effective = $this->resolver()->forUser($this->user);
 
         self::assertNull($effective->guidancePrompt);
-        self::assertSame(40, $effective->favoritesCap);
-        self::assertSame(40, $effective->keptCap);
-        self::assertSame(80, $effective->viewedCap);
-        self::assertSame(500, $effective->candidatePoolSize);
-        self::assertSame(50, $effective->picksLimit);
+        self::assertSame(40, $effective->historyCaps->favorites);
+        self::assertSame(40, $effective->historyCaps->kept);
+        self::assertSame(80, $effective->historyCaps->viewed);
+        self::assertSame(500, $effective->poolLimits->candidatePoolSize);
+        self::assertSame(50, $effective->poolLimits->picksLimit);
         self::assertSame(32768, $effective->packing->contextWindow);
         self::assertSame('fallback', $effective->packing->contextWindowSource);
         self::assertSame(RecommendationBatchSize::Medium, $effective->packing->batchSize);
@@ -66,12 +68,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($this->user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 400,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            poolLimits: new RecommendationPoolLimits(400, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -82,11 +80,11 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $effective = $this->resolver()->forUser($this->user);
 
         self::assertSame('Only cats.', $effective->guidancePrompt);
-        self::assertSame(10, $effective->favoritesCap);
-        self::assertSame(20, $effective->keptCap);
-        self::assertSame(30, $effective->viewedCap);
-        self::assertSame(400, $effective->candidatePoolSize);
-        self::assertSame(50, $effective->picksLimit);
+        self::assertSame(10, $effective->historyCaps->favorites);
+        self::assertSame(20, $effective->historyCaps->kept);
+        self::assertSame(30, $effective->historyCaps->viewed);
+        self::assertSame(400, $effective->poolLimits->candidatePoolSize);
+        self::assertSame(50, $effective->poolLimits->picksLimit);
         self::assertSame(65536, $effective->packing->contextWindow);
         self::assertSame('user', $effective->packing->contextWindowSource);
         self::assertSame(RecommendationBatchSize::Large, $effective->packing->batchSize);
@@ -202,12 +200,8 @@ final class RecommendationSettingsResolverTest extends DbTestCase
         $row = new RecommendationSettings($user);
         $row->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Run;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
@@ -41,12 +43,8 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $writer->save($user, new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

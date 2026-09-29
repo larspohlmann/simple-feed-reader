@@ -177,19 +177,25 @@ and ORM extensions — never imports a service. Decided in #1182.
   and the recommendation defaults as constants on `RecommendationSettings`.
 - **`App\Enum`** holds the enums an entity or a repository uses (`FeedStatus`, `ListOrder`, `DigestCadence`,
   `MagazineStyle`, `MailKind`, `RecommendationBatchSize`…). It does not fold into `App\Entity`: several of its enums
-  never touch an entity. Module enums, including ones several `Service/*` modules share, stay in their owning module
-  for now (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`, `TickDriver`,
-  `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`).
+  never touch an entity: it also holds the value sets a stored column is limited to when no entity type names them
+  (`SupportedLocale`, the locales `User::$locale` may hold, which the request DTO, `translation.yaml` and the signup
+  factory all read; `SourceFormat`). Module enums, including ones several `Service/*` modules share, stay in the
+  module that owns their meaning (`ScrapeFallback`, `SocksReplyCode`, `CatalogImportMode`, `CommentsStatus`,
+  `TickDriver`, `RecommendationDriverKind`, `ScrapeFailureReason`, `VisualMediaKind`): `ServiceModuleCycleRule`
+  guarantees sharing one closes no cycle, and an enum that returns a Service value (`TickDriver::retryPlan()`)
+  could not move below the services anyway (#1169).
 - **`App\Doctrine`** holds the persistence plumbing the ORM extensions share: `WordBoundaries`.
 - **`App\Dto`** is HTTP input. A controller turns a request DTO into a service value (`$request->toUpdate()`,
   `->toChange()`) or passes a plain field; no domain class imports `App\Dto`.
 
-Repository → Service value imports (`SearchTermsModel`, `LikePattern`, `NormalizedCategoryModel`,
-`MonthWindowModel`, `CompletionUsageModel`…) are an open question; the rule below does not check `App\Repository`.
+A repository speaks the domain's values: it may name a Service `Model/`, `Support/` or `Exception/` class
+(`SearchTermsModel`, `LikePattern`, `MonthWindowModel`) and the `…Interface` it implements, never a service, a DTO
+or a per-call object. `EntryBatchInserter` is the one exception: the restore's bulk insert reads the backup's line
+format and hashes each URL itself, 14 times faster than going through the ORM (#1169).
 
-Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`) and
-`DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code, `App\Doctrine` included), both in `backend/tests/PhpStan/` and run by
-`composer stan`.
+Enforced by `PersistenceKnowsNoServiceRule` (no `App\Service` in `App\Entity`, `App\Enum` or `App\Doctrine`; only
+Service values in `App\Repository`) and `DomainKnowsNoHttpRule` (no `App\Http` or `App\Dto` in domain code,
+`App\Doctrine` included), both in `backend/tests/PhpStan/` and run by `composer stan`.
 
 ## 9. Service modules form no cycle
 
@@ -206,8 +212,9 @@ cycle, so each one can be read, tested and moved without the others. Decided in 
   from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin` (now `Url\Support\UrlOrigin`).
   `FeedScheduler` and `OrphanedFeedReclaimer` left the `Service` root for `Service/Feed`. #1159 had already removed
   `Fetch ↔ Proxy` and `Grafana ↔ Profiling`.
-- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163) closed no cycle, so the cycle rule
-  would not stop them coming back; `ServiceModuleBoundaryRule` names them.
+- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163), and `Reading → Recommendation`
+  (#1169: the viewer time zone moved to `Service/Clock`), closed no cycle, so the cycle rule would not stop them
+  coming back; `ServiceModuleBoundaryRule` names them.
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and

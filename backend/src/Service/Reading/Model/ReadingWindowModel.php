@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reading\Model;
 
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 
 /**
  * The last N calendar days a reading-activity chart covers (#896), cut in the

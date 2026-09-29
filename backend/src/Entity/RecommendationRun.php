@@ -17,20 +17,6 @@ use Doctrine\ORM\Mapping as ORM;
  * The candidate pool is frozen at snapshot time so that a resumed run retries
  * the exact failed batch (#308); history is deliberately NOT frozen — it only
  * shades the prompt.
- *
- * The public surface sits over PHPMD's ten-method ceiling, accepted by the
- * suppression below: every state transition is its own named method
- * (snapshot, recordBatchWinners, recordInvalidReply, recordTransportFailure,
- * recordProfile, complete, fail, cancel, resume), plus the checkpoint-reading
- * queries and stampProvider() (called by RecommendationRunStarter at start
- * and resume, #409) — none is a duplicate a merge could remove, and none can
- * be renamed to the rule's get/set ignore pattern without lying about what it
- * does. The usage columns already moved off as the ProviderUsage embeddable,
- * profileText/distilled as RunProfile (#493), and attempts/transportFailures/
- * lastInvalidReply as RunCallAttempts (#947) — the field-count fix this same
- * finding keeps pointing at.
- *
- * @SuppressWarnings("PHPMD.TooManyPublicMethods")
  */
 #[ORM\Entity(repositoryClass: RecommendationRunRepository::class)]
 #[ORM\Table(name: 'recommendation_run')]
@@ -175,7 +161,7 @@ final class RecommendationRun
         return $this->candidateBatches ?? [];
     }
 
-    public function progress(): RecommendationRunProgress
+    public function getProgress(): RecommendationRunProgress
     {
         return RecommendationRunProgress::forBatchPlan(
             $this->candidateBatches,
@@ -235,20 +221,6 @@ final class RecommendationRun
         );
     }
 
-    public function recordInvalidReply(string $reply): void
-    {
-        $this->guardStatus(RunStatus::Running, 'recordInvalidReply');
-
-        $this->callAttempts->recordInvalidReply($reply);
-    }
-
-    public function recordTransportFailure(): void
-    {
-        $this->guardStatus(RunStatus::Running, 'recordTransportFailure');
-
-        $this->callAttempts->recordTransportFailure();
-    }
-
     public function hasExhaustedTransportRetries(): bool
     {
         return $this->callAttempts->transportFailures() >= self::MAX_TRANSPORT_FAILURES;
@@ -257,6 +229,14 @@ final class RecommendationRun
     public function getLastInvalidReply(): ?string
     {
         return $this->callAttempts->lastInvalidReply();
+    }
+
+    /** The call attempts of a running run: an unusable reply or a transport failure is recorded through them. */
+    public function getRunningCallAttempts(): RunningCallAttempts
+    {
+        $this->guardStatus(RunStatus::Running, 'record a call attempt on');
+
+        return new RunningCallAttempts($this->callAttempts);
     }
 
     /**
@@ -298,24 +278,12 @@ final class RecommendationRun
         return $this->streamedChars;
     }
 
-    public function mustWaitBeforeRetry(\DateTimeImmutable $now): bool
+    public function isRetryDeferredAt(\DateTimeImmutable $now): bool
     {
         return $this->throttle->mustWait($now);
     }
 
-    public function deferRetryUntil(\DateTimeImmutable $when): void
-    {
-        $this->guardStatus(RunStatus::Running, 'defer a recommendation run');
-        $this->throttle->deferUntil($when);
-    }
-
-    public function reduceWaveConcurrency(int $configuredCap): void
-    {
-        $this->guardStatus(RunStatus::Running, 'reduce the wave concurrency of');
-        $this->throttle->reduceConcurrency($configuredCap);
-    }
-
-    public function waveConcurrencyCap(int $configuredCap): int
+    public function getWaveConcurrencyCap(int $configuredCap): int
     {
         return $this->throttle->effectiveCap($configuredCap);
     }
@@ -323,6 +291,14 @@ final class RecommendationRun
     public function getRetryNotBefore(): ?\DateTimeImmutable
     {
         return $this->throttle->retryNotBefore();
+    }
+
+    /** The throttle of a running run: a rate limit defers it and narrows the next wave through it. */
+    public function getRunningThrottle(): RunningThrottle
+    {
+        $this->guardStatus(RunStatus::Running, 'throttle');
+
+        return new RunningThrottle($this->throttle);
     }
 
     /**
@@ -376,7 +352,7 @@ final class RecommendationRun
 
         $this->terminate(RunStatus::Completed, $when);
         $this->batchProgress->completeAllBatches(
-            $this->progress()->batchesTotal ?? $this->batchProgress->batchesDone(),
+            $this->getProgress()->batchesTotal ?? $this->batchProgress->batchesDone(),
         );
         $this->callAttempts->resetTransportFailures();
         $this->throttle->clearDeferral();

@@ -169,7 +169,7 @@ final class RecommendationDebugLogControllerTest extends WebTestCase
         [$headers, $user] = $this->auth('debug-log-run-summary@example.test');
         $run = $this->fixtures()->createRun($user);
         $run->snapshot([[1]]);
-        $run->recordInvalidReply('bad reply');
+        $run->getRunningCallAttempts()->recordInvalidReply('bad reply');
         $run->fail('The model did not return a usable ranking.', new \DateTimeImmutable('2026-08-08T10:05:00Z'));
         $this->em()->flush();
 

@@ -7,6 +7,8 @@ namespace App\Tests\Service\Backup;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\SavedSearch;
@@ -277,12 +279,8 @@ final class AccountBackupExporterTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only long reads.',
-            favoritesCap: 40,
-            keptCap: 40,
-            viewedCap: 80,
-            candidatePoolSize: 1000,
-            lookbackDays: 2,
-            picksLimit: 50,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(1000, 2, 50),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,

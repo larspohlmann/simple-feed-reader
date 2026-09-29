@@ -53,8 +53,8 @@ final readonly class SnapshotPhase
 
         return $this->candidateLoader->load($tick->userId(), new CandidatePoolRequestModel(
             // P<N>D is calendar-day arithmetic: N x 24 h only because Kernel pins the process timezone to UTC.
-            since: $now->sub(new \DateInterval(\sprintf('P%dD', $tick->settings->lookbackDays))),
-            poolSize: $tick->settings->candidatePoolSize,
+            since: $now->sub(new \DateInterval(\sprintf('P%dD', $tick->settings->poolLimits->lookbackDays))),
+            poolSize: $tick->settings->poolLimits->candidatePoolSize,
             orderSeed: (int) $now->getTimestamp(),
         ));
     }

@@ -8,7 +8,9 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Feed;
 use App\Entity\Preferences;
+use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
@@ -66,12 +68,8 @@ final class AccountResetTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'be nice',
-            favoritesCap: 1,
-            keptCap: 1,
-            viewedCap: 1,
-            candidatePoolSize: 10,
-            lookbackDays: 7,
-            picksLimit: 3,
+            historyCaps: new RecommendationHistoryCaps(1, 1, 1),
+            poolLimits: new RecommendationPoolLimits(10, 7, 3),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

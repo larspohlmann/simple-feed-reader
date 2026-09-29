@@ -73,7 +73,7 @@ final readonly class BatchPhase implements ProviderPhaseInterface
 
     private function waveSize(TickContext $tick): int
     {
-        $progress = $tick->run->progress();
+        $progress = $tick->run->getProgress();
         if (0 === $progress->nextBatchIndex) {
             return 1;
         }

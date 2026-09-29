@@ -27,6 +27,10 @@ final readonly class ServiceModuleBoundaryRule implements Rule
         'App\\Service\\Recommendation\\' => [
             'App\\Service\\Reader\\' => 'Mark-read goes through Service/Reading, not the article extractor (#1163).',
         ],
+        'App\\Service\\Reading\\' => [
+            'App\\Service\\Recommendation\\' => 'Reading sits below recommendations; '
+                . 'the viewer time zone lives in Service/Clock (#1169).',
+        ],
     ];
 
     /** @var array<string, ClassNameReferences> */

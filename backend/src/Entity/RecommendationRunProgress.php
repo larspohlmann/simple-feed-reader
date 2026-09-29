@@ -12,7 +12,7 @@ namespace App\Entity;
  * Everything the run derives rather than stores lives here, so a caller asks
  * one object what state the run is in instead of the entity growing a query
  * method per question. This is a plain value object — it holds no persistence mapping and
- * is rebuilt on every call to {@see RecommendationRun::progress()}.
+ * is rebuilt on every call to {@see RecommendationRun::getProgress()}.
  */
 final readonly class RecommendationRunProgress
 {

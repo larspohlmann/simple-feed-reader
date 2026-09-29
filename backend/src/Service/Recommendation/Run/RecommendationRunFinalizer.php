@@ -36,7 +36,7 @@ final readonly class RecommendationRunFinalizer
      */
     public function finalize(RecommendationRun $run, array $ranked): RecommendationRunReportModel
     {
-        $picks = \array_slice($ranked, 0, $this->settingsResolver->forUser($run->getUser())->picksLimit);
+        $picks = \array_slice($ranked, 0, $this->settingsResolver->forUser($run->getUser())->poolLimits->picksLimit);
         $existingIds = $this->entries->findExistingIds(array_map(
             static fn (array $pick): int => $pick['id'],
             $picks,

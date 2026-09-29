@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Feed;
 
+use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Feed\HistoryMonthSummariser;
-use App\Service\Recommendation\Feed\Model\ViewerTimeZoneModel;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
