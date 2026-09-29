@@ -29,10 +29,6 @@ final class AccountMailerTest extends TestCase
     {
         $this->sent = [];
 
-        // A stub rather than a mock: the assertions are all made against the
-        // captured Email objects, so configuring call expectations here would
-        // only duplicate them (and PHPUnit 12 emits a notice for mocks that
-        // never have any).
         $transport = $this->createStub(MailerInterface::class);
         $transport->method('send')->willReturnCallback(function (Email $email): void {
             $this->sent[] = $email;
@@ -203,12 +199,7 @@ final class AccountMailerTest extends TestCase
         self::assertStringContainsString('token=a%2Bb%2Fc%3Dd', (string) $this->sent[0]->getTextBody());
     }
 
-    /**
-     * `rawurlencode` is RFC 3986 percent-encoding, which is the correct choice
-     * for a query *value*: unlike `urlencode` it leaves a space as %20 rather
-     * than `+`, and `+` itself becomes %2B instead of surviving literally to be
-     * misread as a space by the recipient.
-     */
+    /** rawurlencode (RFC 3986), not urlencode: a space becomes %20 and `+` becomes %2B, never a `+` read as a space. */
     public function testTokenEncodingUsesRfc3986NotFormEncoding(): void
     {
         $this->mailer->sendVerification($this->user(), 'a b+c');
@@ -268,9 +259,8 @@ final class AccountMailerTest extends TestCase
     }
 
     /**
-     * Header-injection probe. Registration input validation (Task 12) is the
-     * real defence, but confirm the mime layer refuses control characters on
-     * its own so a gap upstream cannot turn into a smuggled Bcc.
+     * Header-injection probe: registration validation is the real defence, but the mime layer must refuse control
+     * characters on its own, so a gap upstream cannot become a smuggled Bcc.
      */
     public function testAnEmailContainingCrlfIsRejectedByTheMimeLayer(): void
     {

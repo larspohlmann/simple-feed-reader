@@ -39,15 +39,8 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /**
- * The "send me a test digest" action (#636): it must compose over exactly the
- * requested window measured back from the clock, send only when there is
- * something to report, and never touch digestLastSentAt — that watermark is
- * DigestEnablement's and the real scheduled send's job, not a preview
- * button's.
- *
- * DigestEntryFinder now reads the membership table through
- * SavedSearchEntryRepository, which is `final` and cannot be doubled, so a
- * match here is a real persisted saved-search member (#1116).
+ * Composes over exactly the requested window back from the clock, sends only when there is something to report, and
+ * never touches digestLastSentAt: that watermark belongs to DigestEnablement and the scheduled send.
  */
 final class SendTestDigestTest extends DbTestCase
 {
@@ -112,12 +105,7 @@ final class SendTestDigestTest extends DbTestCase
         self::assertTrue($result);
     }
 
-    /**
-     * The window is measured from the clock, not from digestLastSentAt: a test
-     * send previews "the last N days", independent of when the real schedule
-     * last ran. An entry just inside that window is matched; one just outside
-     * it is not.
-     */
+    /** The window runs back from the clock, not from digestLastSentAt, and its boundary is exclusive. */
     public function testTheSinceCutoffPassedToTheFinderIsDaysBeforeNowAndIsExclusive(): void
     {
         $fixture = new SavedSearchMatchFixture($this->entityManager);
@@ -140,11 +128,7 @@ final class SendTestDigestTest extends DbTestCase
         self::assertFalse($result, 'An entry one second outside the window must not be matched.');
     }
 
-    /**
-     * A real DigestMailer/DigestMailFactory chain (task 8's pattern), fed by a
-     * stubbed transport, proves SendTestDigest routes through the format
-     * branch end to end rather than through a mocked mailer.
-     */
+    /** A real DigestMailer and DigestMailFactory over a stubbed transport, so the format branch runs end to end. */
     private function realMailer(): DigestMailer
     {
         $transport = $this->createStub(MailerInterface::class);

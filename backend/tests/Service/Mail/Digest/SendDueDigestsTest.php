@@ -34,17 +34,9 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
- * The sweep is the actual security boundary for the digest (#636): the
- * settings UI already gates enablement and verification, but a stale row can
- * outlive the state that made it valid, so this test drives the real
- * DigestSchedule and DigestComposer rather than mocking the dueness maths
- * away, and pins the three branches that decide whether digestLastSentAt
- * moves: advance only on a real send, never on an empty compose, never on an
- * unverified or not-yet-due account.
- *
- * DigestEntryFinder now reads the membership table through
- * SavedSearchEntryRepository, which is `final` and cannot be doubled, so a
- * "due user with matches" is a real persisted saved-search member (#1116).
+ * The sweep is the digest's security boundary, because a stale row can outlive the state that made it valid. With the
+ * real schedule and composer, digestLastSentAt advances only on a real send: never on an empty compose, an unverified
+ * or a not-yet-due account.
  */
 final class SendDueDigestsTest extends DbTestCase
 {
@@ -92,10 +84,8 @@ final class SendDueDigestsTest extends DbTestCase
     }
 
     /**
-     * The composer must search from the last send, not from the occurrence
-     * that just became due: an entry that landed the day before, after the
-     * last digest went out, is new to the reader and must be reported even
-     * though it predates today's occurrence.
+     * The composer searches from the last send, not from the new occurrence: an entry that landed after the last
+     * digest but before today's occurrence is still new to the reader.
      */
     public function testSinceIsTheLastSendNotJustTheOccurrenceThatBecameDue(): void
     {
