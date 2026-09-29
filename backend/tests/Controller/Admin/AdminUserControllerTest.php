@@ -47,12 +47,12 @@ final class AdminUserControllerTest extends WebTestCase
 
     private function factory(): UserFactory
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($em, $hasher);
+        return new UserFactory($entityManager, $hasher);
     }
 
     private function tokenFor(User $user): string
@@ -128,10 +128,10 @@ final class AdminUserControllerTest extends WebTestCase
     /** Links a provider identity to an already-persisted user. */
     private function link(User $user, string $provider, string $providerUserId): void
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist(new UserIdentity($user, $provider, $providerUserId, new \DateTimeImmutable()));
-        $em->flush();
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist(new UserIdentity($user, $provider, $providerUserId, new \DateTimeImmutable()));
+        $entityManager->flush();
     }
 
     /**
@@ -141,20 +141,20 @@ final class AdminUserControllerTest extends WebTestCase
      */
     private function seedFootprint(User $user, int $subscriptionCount, int $tagCount): void
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         for ($i = 0; $i < $subscriptionCount; ++$i) {
             $feed = new Feed(sprintf('https://example.com/footprint-%d-%d.xml', $user->requireId(), $i));
-            $em->persist($feed);
-            $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+            $entityManager->persist($feed);
+            $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
         }
 
         for ($i = 0; $i < $tagCount; ++$i) {
-            $em->persist(new Tag($user, sprintf('footprint-tag-%d-%d', $user->requireId(), $i)));
+            $entityManager->persist(new Tag($user, sprintf('footprint-tag-%d-%d', $user->requireId(), $i)));
         }
 
-        $em->flush();
+        $entityManager->flush();
     }
 
     public function testAnonymousIsRejectedWithProblemJson(): void
@@ -386,9 +386,9 @@ final class AdminUserControllerTest extends WebTestCase
         $target->approve($original);
         $target->suspend();
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->flush();
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->flush();
         $id = $target->requireId();
 
         $this->call('POST', self::LIST . '/' . $id . '/approve', $this->tokenFor($admin));
@@ -829,18 +829,18 @@ final class AdminUserControllerTest extends WebTestCase
         $token = $this->tokenFor($admin);
         $user = $this->factory()->create('stale-fetcher@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         $feed = new Feed('https://example.com/stale-fetcher.xml');
         $feed->setTitle('Stale Fetcher Weekly');
         $lastFetch = new \DateTimeImmutable('-10 days');
         $feed->recordSuccessfulFetch($lastFetch, 60);
-        $em->persist($feed);
+        $entityManager->persist($feed);
 
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('-30 days'));
-        $em->persist($subscription);
-        $em->flush();
+        $entityManager->persist($subscription);
+        $entityManager->flush();
 
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
@@ -905,8 +905,8 @@ final class AdminUserControllerTest extends WebTestCase
         $token = $this->tokenFor($admin);
         $user = $this->factory()->create('librarian@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         $tagArchive = new Tag($user, 'archive');
         $tagArchive->setColor('#00ff00');
@@ -916,15 +916,15 @@ final class AdminUserControllerTest extends WebTestCase
         $tagReading->setColor('#ff0000');
         $tagReading->setIcon('book-icon');
         $tagReading->setPosition(1);
-        $em->persist($tagArchive);
-        $em->persist($tagReading);
+        $entityManager->persist($tagArchive);
+        $entityManager->persist($tagReading);
 
         $feedOne = new Feed('https://example.com/librarian-one.xml');
         $feedOne->setTitle('Librarian Weekly');
-        $em->persist($feedOne);
+        $entityManager->persist($feedOne);
         $feedTwo = new Feed('https://example.com/librarian-two.xml');
         $feedTwo->setTitle('Second Shelf');
-        $em->persist($feedTwo);
+        $entityManager->persist($feedTwo);
 
         // Inserted FIRST but placed SECOND by position — a return to
         // createdAt/insertion ordering is caught. Its two tags are also
@@ -936,15 +936,15 @@ final class AdminUserControllerTest extends WebTestCase
         $subscriptionOne->setPosition(1);
         $subscriptionOne->addTag($tagReading, 1);
         $subscriptionOne->addTag($tagArchive, 0);
-        $em->persist($subscriptionOne);
+        $entityManager->persist($subscriptionOne);
 
         // Inserted SECOND but placed FIRST by position.
         $subscriptionTwo = new Subscription($user, $feedTwo, new \DateTimeImmutable('2026-07-06 12:00:00'));
         $subscriptionTwo->setPosition(0);
         $subscriptionTwo->addTag($tagArchive, 0);
-        $em->persist($subscriptionTwo);
+        $entityManager->persist($subscriptionTwo);
 
-        $em->flush();
+        $entityManager->flush();
 
         $this->call('GET', '/api/admin/users/' . $user->getId(), $token);
 
@@ -1060,20 +1060,20 @@ final class AdminUserControllerTest extends WebTestCase
      */
     private function detailReadCountsForFreshUser(string $token, int $count): array
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $user = $this->factory()->create(sprintf('detail-%d@example.com', $count));
 
         for ($i = 0; $i < $count; ++$i) {
             $feed = new Feed(sprintf('https://example.com/detail-%d-%d.xml', $user->requireId(), $i));
-            $em->persist($feed);
+            $entityManager->persist($feed);
             $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00'));
             $tag = new Tag($user, sprintf('detail-tag-%d-%d', $user->requireId(), $i));
-            $em->persist($tag);
+            $entityManager->persist($tag);
             $subscription->addTag($tag);
-            $em->persist($subscription);
+            $entityManager->persist($subscription);
         }
-        $em->flush();
+        $entityManager->flush();
 
         $this->call('GET', self::LIST . '/' . $user->requireId(), $token);
 

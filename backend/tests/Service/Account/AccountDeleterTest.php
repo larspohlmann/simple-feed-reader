@@ -28,7 +28,7 @@ final class AccountDeleterTest extends DbTestCase
 
         $this->deleter = self::getContainer()->get(AccountDeleter::class);
         $this->userFactory = new UserFactory(
-            $this->em,
+            $this->entityManager,
             self::getContainer()->get('security.user_password_hasher'),
         );
     }
@@ -41,8 +41,8 @@ final class AccountDeleterTest extends DbTestCase
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(User::class)->find($targetId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(User::class)->find($targetId));
     }
 
     public function testDeletionTakesTheAccountsSubscriptionsAndItsSoleFeed(): void
@@ -50,16 +50,16 @@ final class AccountDeleterTest extends DbTestCase
         $admin = $this->userFactory->create('admin-2@example.com', roles: ['ROLE_ADMIN']);
         $target = $this->userFactory->create('target-2@example.com');
         $feed = new Feed('https://only-theirs.example.com/rss');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
+        $this->entityManager->flush();
         $feedId = $feed->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(Feed::class)->find($feedId));
-        self::assertSame(0, (int) $this->em->createQuery(
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(Feed::class)->find($feedId));
+        self::assertSame(0, (int) $this->entityManager->createQuery(
             'SELECT COUNT(s.id) FROM App\Entity\Subscription s',
         )->getSingleScalarResult());
     }
@@ -70,16 +70,16 @@ final class AccountDeleterTest extends DbTestCase
         $target = $this->userFactory->create('target-3@example.com');
         $stayer = $this->userFactory->create('stayer@example.com');
         $feed = new Feed('https://shared-2.example.com/rss');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
-        $this->em->persist(new Subscription($stayer, $feed, new \DateTimeImmutable(self::NOW)));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($target, $feed, new \DateTimeImmutable(self::NOW)));
+        $this->entityManager->persist(new Subscription($stayer, $feed, new \DateTimeImmutable(self::NOW)));
+        $this->entityManager->flush();
         $feedId = $feed->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
-        $this->em->clear();
-        self::assertNotNull($this->em->getRepository(Feed::class)->find($feedId));
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($feedId));
     }
 
     /**
@@ -105,14 +105,14 @@ final class AccountDeleterTest extends DbTestCase
             '1234',
             new \DateTimeImmutable(self::NOW),
         );
-        $this->em->persist($configuration);
-        $this->em->flush();
+        $this->entityManager->persist($configuration);
+        $this->entityManager->flush();
         $configurationId = $configuration->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(AiProviderSettings::class)->find($configurationId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(AiProviderSettings::class)->find($configurationId));
     }
 
     /**
@@ -138,19 +138,19 @@ final class AccountDeleterTest extends DbTestCase
             '5678',
             new \DateTimeImmutable(self::NOW),
         );
-        $this->em->persist($configuration);
-        $this->em->flush();
+        $this->entityManager->persist($configuration);
+        $this->entityManager->flush();
         $target->setActiveAiProviderSettings($configuration);
-        $this->em->flush();
+        $this->entityManager->flush();
         $targetId = $target->requireId();
         $configurationId = $configuration->requireId();
 
         $this->deleter->deleteAsAdmin($target, $admin);
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(User::class)->find($targetId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(User::class)->find($targetId));
 
-        $count = $this->em->getConnection()->executeQuery(
+        $count = $this->entityManager->getConnection()->executeQuery(
             'SELECT COUNT(*) FROM user_ai_settings WHERE id = ?',
             [$configurationId],
         )->fetchOne();
@@ -170,9 +170,9 @@ final class AccountDeleterTest extends DbTestCase
         $soleAdmin = $this->userFactory->create('sole@example.com', roles: ['ROLE_ADMIN']);
         $other = $this->userFactory->create('other@example.com', roles: ['ROLE_ADMIN']);
         $this->deleter->deleteAsAdmin($other, $soleAdmin);
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(User::class)->find($soleAdmin->getId());
+        $reloaded = $this->entityManager->getRepository(User::class)->find($soleAdmin->getId());
         self::assertNotNull($reloaded);
 
         $this->expectException(LastAdminException::class);
@@ -195,7 +195,7 @@ final class AccountDeleterTest extends DbTestCase
 
         $this->deleter->deleteSelf($user);
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(User::class)->find($userId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(User::class)->find($userId));
     }
 }

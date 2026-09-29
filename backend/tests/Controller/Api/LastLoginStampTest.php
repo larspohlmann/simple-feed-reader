@@ -29,12 +29,12 @@ final class LastLoginStampTest extends WebTestCase
 
     private function factory(): UserFactory
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($em, $hasher);
+        return new UserFactory($entityManager, $hasher);
     }
 
     public function testAPasswordLoginStampsTheAccount(): void

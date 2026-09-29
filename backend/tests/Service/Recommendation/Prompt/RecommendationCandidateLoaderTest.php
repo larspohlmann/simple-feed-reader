@@ -25,20 +25,20 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('candidates@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
         $this->subscription = new Subscription(
             $this->user,
             $this->feed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($this->subscription);
+        $this->entityManager->persist($this->subscription);
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testAReadHiddenEntryStaysACandidate(): void
@@ -49,8 +49,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $readByFlag = $this->entry('read-by-flag', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $readByFlag);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -68,7 +68,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $beforeWatermark = $this->entry('before-watermark', '2026-07-11T00:00:00Z');
         $afterWatermark = $this->entry('after-watermark', '2026-07-13T00:00:00Z');
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -83,8 +83,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $favorited = $this->entry('favorited', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $favorited);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -96,8 +96,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $kept = $this->entry('kept-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $kept);
         $state->markKept();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -109,8 +109,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $viewed = $this->entry('viewed-entry', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $viewed);
         $state->markViewed(new \DateTimeImmutable('2026-07-10T01:00:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -132,8 +132,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $state = new EntryState($this->user, $untouched);
         $state->clearFavorite();
         $state->clearKept();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -303,7 +303,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testLinesForIdsCarriesTheSubscriptionsCustomTitle(): void
     {
         $this->subscription->setCustomTitle('My Custom Feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $entry = $this->entry('titled', '2026-07-10T00:00:00Z');
         $entryId = $entry->getId();
@@ -317,7 +317,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     public function testFeedNamePrefersTheSubscriptionsCustomTitle(): void
     {
         $this->subscription->setCustomTitle('My Custom Feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->entry('titled', '2026-07-10T00:00:00Z');
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
@@ -330,7 +330,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $entry = $this->entry('described', '2026-07-10T00:00:00Z');
         $entry->setSummary('Summary text');
         $entry->setContentHtml('<p>Content text</p>');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -385,7 +385,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
         $otherFeed = new Feed('https://example.com/other.xml');
         $otherFeed->setTitle('Other');
-        $this->em->persist($otherFeed);
+        $this->entityManager->persist($otherFeed);
         $foreignPublishedAt = new \DateTimeImmutable('2026-08-01T00:00:00Z');
         $foreign = new Entry(
             $otherFeed,
@@ -396,8 +396,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $foreignPublishedAt,
         );
         $foreign->setPublishedAt($foreignPublishedAt);
-        $this->em->persist($foreign);
-        $this->em->flush();
+        $this->entityManager->persist($foreign);
+        $this->entityManager->flush();
 
         $summary = $this->loader()->summarize(
             $this->userId(),
@@ -429,7 +429,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $excludedFeed = new Feed('https://example.com/excluded-feed.xml');
         $excludedFeed->setTitle('Excluded');
-        $this->em->persist($excludedFeed);
+        $this->entityManager->persist($excludedFeed);
 
         $excludedSubscription = new Subscription(
             $this->user,
@@ -437,8 +437,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $excludedSubscription->setIncludeInForYou(false);
-        $this->em->persist($excludedSubscription);
-        $this->em->flush();
+        $this->entityManager->persist($excludedSubscription);
+        $this->entityManager->flush();
 
         $included = $this->entry('included', '2026-07-10T00:00:00Z');
         $excludedEntry = $this->entryIn($excludedFeed, 'excluded', '2026-07-10T00:00:00Z');
@@ -493,14 +493,14 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $secondFeed = new Feed('https://example.com/second-feed.xml');
         $secondFeed->setTitle('Second');
-        $this->em->persist($secondFeed);
+        $this->entityManager->persist($secondFeed);
         $secondSubscription = new Subscription(
             $this->user,
             $secondFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($secondSubscription);
-        $this->em->flush();
+        $this->entityManager->persist($secondSubscription);
+        $this->entityManager->flush();
 
         $lower = $this->duplicateEntry($this->feed, 'lower-copy', 'urlhash-shared', '2026-07-10T09:00:00Z');
         $higher = $this->duplicateEntry($secondFeed, 'higher-copy', 'urlhash-shared', '2026-07-10T10:00:00Z');
@@ -517,14 +517,14 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     {
         $secondFeed = new Feed('https://example.com/second-feed.xml');
         $secondFeed->setTitle('Second');
-        $this->em->persist($secondFeed);
+        $this->entityManager->persist($secondFeed);
         $secondSubscription = new Subscription(
             $this->user,
             $secondFeed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($secondSubscription);
-        $this->em->flush();
+        $this->entityManager->persist($secondSubscription);
+        $this->entityManager->flush();
 
         $lower = $this->duplicateEntry($this->feed, 'lower-copy', 'urlhash-out-of-scope', '2026-07-10T09:00:00Z');
         $higher = $this->duplicateEntry($secondFeed, 'higher-copy', 'urlhash-out-of-scope', '2026-07-10T10:00:00Z');
@@ -535,8 +535,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         // an in-scope blocker and wrongly hide the higher copy -- a hole in the pool.
         $state = new EntryState($this->user, $lower);
         $state->markViewed(new \DateTimeImmutable('2026-07-10T09:30:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
@@ -589,8 +589,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $publishedAt,
         );
         $entry->setPublishedAt($publishedAt);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -608,8 +608,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
             $urlHash,
         );
         $entry->setPublishedAt($publishedAt);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }

@@ -72,7 +72,7 @@ final class MeResendVerificationTest extends ApiTestCase
         $client = static::createClient();
         $user = $this->factory()->create('verified@example.test');
         $user->markEmailVerified(new \DateTimeImmutable('2026-08-01 10:00:00'));
-        $this->em()->flush();
+        $this->entityManager()->flush();
         $this->authenticate($client, $user);
 
         $this->resendVerification($client);

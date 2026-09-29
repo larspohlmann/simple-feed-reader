@@ -56,7 +56,7 @@ final class AccountRestorerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->userFactory = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->entityManager, $hasher);
     }
 
     /**
@@ -112,9 +112,9 @@ final class AccountRestorerTest extends DbTestCase
     {
         $user = $this->userFactory->create('one-subscription@example.com');
         $feed = new Feed('https://kept.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -200,7 +200,7 @@ final class AccountRestorerTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new FullyPopulatedAccount($this->em, $hasher);
+        return new FullyPopulatedAccount($this->entityManager, $hasher);
     }
 
     private function restorer(): AccountRestorer
@@ -223,7 +223,7 @@ final class AccountRestorerTest extends DbTestCase
         // must come back virgin, so seeding these proves the file drops them.
         $feed->recordCacheValidators('W/"seeded-etag"', null);
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-08-10 07:00:00'), 60);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -243,7 +243,7 @@ final class AccountRestorerTest extends DbTestCase
         $entry->setContentHtml('<p>Body of ' . $title . '</p>');
         $entry->getImage()->storePending('https://example.test/' . $guid . '.png', 640, 480);
         $entry->setPublishedAt(new \DateTimeImmutable($day . ' 04:00:00'));
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
@@ -263,18 +263,18 @@ final class AccountRestorerTest extends DbTestCase
         $tech->setColor('#a1b2c3');
         $tech->setIcon('chip');
         $tech->setPosition(1);
-        $this->em->persist($tech);
+        $this->entityManager->persist($tech);
         $news = new Tag($user, 'News');
         $news->setColor('#c3b2a1');
         $news->setPosition(2);
-        $this->em->persist($news);
+        $this->entityManager->persist($news);
 
         // A phrase saved search (quoted query) — its `phrase` flag must survive
         // the round trip, which `assertFieldsRoundTripped` checks below (#702).
-        $this->em->persist(new SavedSearch($user, 'climate change', false, true));
+        $this->entityManager->persist(new SavedSearch($user, 'climate change', false, true));
         $whole = new SavedSearch($user, 'rust lang', true);
         $whole->setPosition(1);
-        $this->em->persist($whole);
+        $this->entityManager->persist($whole);
 
         $first = new Subscription($user, $one, new \DateTimeImmutable('2026-07-01 08:00:00'));
         $first->setCustomTitle('My One');
@@ -282,10 +282,10 @@ final class AccountRestorerTest extends DbTestCase
         $first->setMarkedReadUntil(new \DateTimeImmutable('2026-08-01 00:00:00'));
         $first->addTag($tech, 3);
         $first->addTag($news, 1);
-        $this->em->persist($first);
+        $this->entityManager->persist($first);
         $second = new Subscription($user, $two, new \DateTimeImmutable('2026-07-02 09:00:00'));
         $second->setPosition(7);
-        $this->em->persist($second);
+        $this->entityManager->persist($second);
 
         $entryA = $this->makeEntry($one, 'guid-a', 'Article A', '2026-08-02');
         $entryB = $this->makeEntry($one, 'guid-b', 'Article B', '2026-08-03');
@@ -294,16 +294,16 @@ final class AccountRestorerTest extends DbTestCase
         $read = new EntryState($user, $entryA);
         $read->hide(new \DateTimeImmutable('2026-08-05 10:00:00'));
         $read->markFavorite();
-        $this->em->persist($read);
+        $this->entityManager->persist($read);
         $viewed = new EntryState($user, $entryC);
         $viewed->markKept();
         $viewed->markViewed(new \DateTimeImmutable('2026-08-06 11:00:00'));
-        $this->em->persist($viewed);
+        $this->entityManager->persist($viewed);
 
         $user->setLocale('de');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
 
-        $this->em->flush();
+        $this->entityManager->flush();
         self::assertNotNull($entryB->getId());
     }
 
@@ -319,8 +319,8 @@ final class AccountRestorerTest extends DbTestCase
     {
         // feed cascades to subscription and entry, entry cascades to
         // entry_state — one statement empties the shared half of the schema.
-        $this->em->getConnection()->executeStatement('DELETE FROM feed');
-        $this->em->clear();
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM feed');
+        $this->entityManager->clear();
     }
 
     /**
@@ -328,7 +328,7 @@ final class AccountRestorerTest extends DbTestCase
      */
     private function scalarInt(string $sql, array $parameters = []): int
     {
-        return self::asInt($this->em->getConnection()->fetchOne($sql, $parameters));
+        return self::asInt($this->entityManager->getConnection()->fetchOne($sql, $parameters));
     }
 
     private static function asInt(mixed $value): int
@@ -391,7 +391,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame('de', $restored->getLocale());
         self::assertTrue($restored->getPreferences()->isScrapeFallbackEnabled());
 
-        $tags = $this->em->getRepository(Tag::class)->findBy(['user' => $userId], ['name' => 'ASC']);
+        $tags = $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId], ['name' => 'ASC']);
         self::assertCount(2, $tags);
         $tagShapes = array_map(
             static fn (Tag $tag): array => [$tag->getName(), $tag->getColor(), $tag->getIcon(), $tag->getPosition()],
@@ -421,8 +421,8 @@ final class AccountRestorerTest extends DbTestCase
 
         $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
-        $this->em->clear();
-        $restored = $this->em->getRepository(SavedSearch::class)
+        $this->entityManager->clear();
+        $restored = $this->entityManager->getRepository(SavedSearch::class)
             ->findOneBy(['user' => $userId, 'term' => 'rust lang']);
         self::assertInstanceOf(SavedSearch::class, $restored);
 
@@ -536,7 +536,7 @@ final class AccountRestorerTest extends DbTestCase
     {
         $userId = $user->requireId();
 
-        $subscription = $this->em->getRepository(Subscription::class)->findOneBy(['user' => $userId]);
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(Subscription::class, $subscription);
         $subscriptionTags = $subscription->getSubscriptionTags();
         self::assertCount(1, $subscriptionTags);
@@ -545,15 +545,15 @@ final class AccountRestorerTest extends DbTestCase
 
         $feed = $subscription->getFeed();
         // Load it now: the round-trip test deletes every feed row before it reads this one.
-        $this->em->initializeObject($feed);
+        $this->entityManager->initializeObject($feed);
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed]);
         self::assertInstanceOf(Entry::class, $entry);
-        $entryState = $this->em->getRepository(EntryState::class)->findOneBy(['user' => $userId]);
+        $entryState = $this->entityManager->getRepository(EntryState::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(EntryState::class, $entryState);
-        $tag = $this->em->getRepository(Tag::class)->findOneBy(['user' => $userId]);
+        $tag = $this->entityManager->getRepository(Tag::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(Tag::class, $tag);
-        $savedSearch = $this->em->getRepository(SavedSearch::class)->findOneBy(['user' => $userId]);
+        $savedSearch = $this->entityManager->getRepository(SavedSearch::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(SavedSearch::class, $savedSearch);
 
         return [
@@ -658,7 +658,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(2, $result->tags);
         self::assertSame(2, $result->savedSearches);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
         $one = $feeds->findOneBy(['url' => self::ONE_URL]);
@@ -682,19 +682,21 @@ final class AccountRestorerTest extends DbTestCase
         $user = $this->seededUser('shared-feed@example.com');
         $gzip = $this->backupOf($user);
         $feedId = $this->scalarInt('SELECT id FROM feed WHERE url = ?', [self::ONE_URL]);
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $stranger = $this->userFactory->create('feed-stranger@example.com');
-        $feed = $this->em->find(Feed::class, $feedId);
+        $feed = $this->entityManager->find(Feed::class, $feedId);
         self::assertInstanceOf(Feed::class, $feed);
         $feed->setTitle('Theirs');
-        $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-03 10:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-03 10:00:00')),
+        );
+        $this->entityManager->flush();
 
         $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
-        $this->em->clear();
-        $after = $this->em->find(Feed::class, $feedId);
+        $this->entityManager->clear();
+        $after = $this->entityManager->find(Feed::class, $feedId);
         self::assertInstanceOf(Feed::class, $after);
         self::assertSame('Theirs', $after->getTitle());
     }
@@ -705,8 +707,8 @@ final class AccountRestorerTest extends DbTestCase
         $userId = $user->requireId();
         $gzip = $this->backupOf($user);
         $before = $this->subscriptionShapes($userId);
-        $this->em->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
-        $this->em->clear();
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM feed WHERE url = ?', [self::TWO_URL]);
+        $this->entityManager->clear();
 
         $result = $this->restorer()->start($this->reload($user), $gzip, 'REPLACE');
 
@@ -714,8 +716,8 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(2, $result->subscriptions);
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM feed'));
         self::assertSame($before, $this->subscriptionShapes($userId));
-        $this->em->clear();
-        $one = $this->em->getRepository(Feed::class)->findOneBy(['url' => self::ONE_URL]);
+        $this->entityManager->clear();
+        $one = $this->entityManager->getRepository(Feed::class)->findOneBy(['url' => self::ONE_URL]);
         self::assertInstanceOf(Feed::class, $one);
         self::assertSame('W/"seeded-etag"', $one->getEtag());
     }
@@ -736,7 +738,7 @@ final class AccountRestorerTest extends DbTestCase
             // Expected — and nothing may have been deleted by now.
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(1, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$targetId]));
         self::assertSame(1, $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [$targetId]));
         self::assertSame(1, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$targetId]));
@@ -755,7 +757,7 @@ final class AccountRestorerTest extends DbTestCase
             self::assertArrayHasKey('confirm', $e->errors);
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$userId]));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [$userId]));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
@@ -807,7 +809,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(2, $second->savedSearches);
         self::assertSame(2, $second->subscriptions);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM feed'));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$userId]));
         self::assertSame($before, $this->subscriptionShapes($userId));
@@ -823,14 +825,14 @@ final class AccountRestorerTest extends DbTestCase
     private function seedFeedWiderThanOneBatch(User $user, int $entryCount): void
     {
         $feed = $this->makeFeed('https://wide.example/feed.xml', 'Wide', 'xml');
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
         for ($index = 0; $index < $entryCount; ++$index) {
             $entry = $this->makeEntry($feed, 'wide-guid-' . $index, 'Wide ' . $index, '2026-08-02');
             $state = new EntryState($user, $entry);
             $state->markFavorite();
-            $this->em->persist($state);
+            $this->entityManager->persist($state);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testAnEntryPartWiderThanOneInsertBatchLoadsEveryBatchAndItsStates(): void
@@ -853,7 +855,7 @@ final class AccountRestorerTest extends DbTestCase
 
         self::assertSame(502, $entriesCreated);
         self::assertSame(502, $entryStatesCreated);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(502, $this->scalarInt('SELECT COUNT(*) FROM entry'));
         self::assertSame(502, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
     }
@@ -899,7 +901,7 @@ final class AccountRestorerTest extends DbTestCase
 
     private function assertTheSeededAccountSurvived(int $userId): void
     {
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM tag WHERE user_id = ?', [$userId]));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM subscription WHERE user_id = ?', [$userId]));
         self::assertSame(2, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
@@ -950,14 +952,14 @@ final class AccountRestorerTest extends DbTestCase
     private function seedRichAccountForCappedTarget(User $user): void
     {
         $feed = new Feed('https://capped.example/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $tag = new Tag($user, 'Kept');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-04 08:00:00'));
         $subscription->addTag($tag, 0);
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $entry = $this->makeEntry($feed, 'guid-capped', 'Capped', '2026-08-07');
-        $this->em->persist(new EntryState($user, $entry));
-        $this->em->flush();
+        $this->entityManager->persist(new EntryState($user, $entry));
+        $this->entityManager->flush();
     }
 }

@@ -15,21 +15,12 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\MockClock;
 
 final class BulkSubscriberTest extends DbTestCase
 {
     use SeedsUsers;
-
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
 
     private function subscriber(): BulkSubscriber
     {
@@ -62,8 +53,8 @@ final class BulkSubscriberTest extends DbTestCase
     {
         $existing = new Feed('https://shared.example.com/rss.xml');
         $existing->setTitle('Publisher Title');
-        $this->em()->persist($existing);
-        $this->em()->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $user = $this->user('titles@example.com');
 
@@ -72,8 +63,12 @@ final class BulkSubscriberTest extends DbTestCase
             new BulkSubscribeItemModel('https://fresh.example.com/rss.xml', 'Catalog Title', null, null),
         ]);
 
-        $shared = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://shared.example.com/rss.xml']);
-        $fresh = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://fresh.example.com/rss.xml']);
+        $shared = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://shared.example.com/rss.xml']);
+        $fresh = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://fresh.example.com/rss.xml']);
 
         self::assertNotNull($shared);
         self::assertNotNull($fresh);
@@ -91,7 +86,9 @@ final class BulkSubscriberTest extends DbTestCase
             new BulkSubscribeItemModel('https://due.example.com/rss.xml', 'Due Feed', null, null),
         ]);
 
-        $feed = $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://due.example.com/rss.xml']);
+        $feed = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://due.example.com/rss.xml']);
         self::assertNotNull($feed);
         self::assertEquals($clock->now(), $feed->getNextFetchAt());
     }
@@ -103,8 +100,8 @@ final class BulkSubscriberTest extends DbTestCase
         $existing = new Tag($user, 'Technology');
         $existing->setColor('#123456');
         $existing->setIcon('star');
-        $this->em()->persist($existing);
-        $this->em()->flush();
+        $this->entityManager->persist($existing);
+        $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
             new BulkSubscribeItemModel(
@@ -118,8 +115,8 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame(1, $result->imported);
         self::assertCount(0, $result->tagsCreated, 'a reused tag was not created');
 
-        $this->em()->clear();
-        $reloaded = $this->em()->getRepository(Tag::class)->findOneBy(['name' => 'Technology']);
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->getRepository(Tag::class)->findOneBy(['name' => 'Technology']);
         self::assertNotNull($reloaded);
         self::assertSame('#123456', $reloaded->getColor());
         self::assertSame('star', $reloaded->getIcon());
@@ -136,7 +133,7 @@ final class BulkSubscriberTest extends DbTestCase
 
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->alreadySubscribed);
-        self::assertCount(1, $this->em()->getRepository(Subscription::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository(Subscription::class)->findAll());
     }
 
     public function testRejectsAnUnusableUrlWithoutAbortingTheBatch(): void
@@ -161,10 +158,10 @@ final class BulkSubscriberTest extends DbTestCase
         $existingTag = new Tag($user, 'Existing');
         $existingTag->setPosition(2);
         $existingSubscription->addTag($existingTag, 6);
-        $this->em()->persist($existingFeed);
-        $this->em()->persist($existingTag);
-        $this->em()->persist($existingSubscription);
-        $this->em()->flush();
+        $this->entityManager->persist($existingFeed);
+        $this->entityManager->persist($existingTag);
+        $this->entityManager->persist($existingSubscription);
+        $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
             new BulkSubscribeItemModel('https://one.example.com/rss.xml', 'One', 'Existing', null),
@@ -192,9 +189,11 @@ final class BulkSubscriberTest extends DbTestCase
         $user = $this->user('cap@example.com');
         $user->setMaxSubscriptions(2);
         $existingFeed = new Feed('https://existing.example.com/rss.xml');
-        $this->em()->persist($existingFeed);
-        $this->em()->persist(new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em()->flush();
+        $this->entityManager->persist($existingFeed);
+        $this->entityManager->persist(
+            new Subscription($user, $existingFeed, new \DateTimeImmutable('2026-07-01 00:00:00')),
+        );
+        $this->entityManager->flush();
 
         $result = $this->subscriber()->subscribeAll($user, [
             new BulkSubscribeItemModel('https://first.example.com/rss.xml', 'First', null, null),
@@ -204,7 +203,9 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->skippedOverLimit);
         self::assertNull(
-            $this->em()->getRepository(Feed::class)->findOneBy(['url' => 'https://second.example.com/rss.xml']),
+            $this->entityManager
+                ->getRepository(Feed::class)
+                ->findOneBy(['url' => 'https://second.example.com/rss.xml']),
         );
     }
 
@@ -266,9 +267,11 @@ final class BulkSubscriberTest extends DbTestCase
 
     private function subscriptionTo(User $user, string $feedUrl): Subscription
     {
-        $feed = $this->em()->getRepository(Feed::class)->findOneBy(['url' => $feedUrl]);
+        $feed = $this->entityManager->getRepository(Feed::class)->findOneBy(['url' => $feedUrl]);
         self::assertNotNull($feed);
-        $subscription = $this->em()->getRepository(Subscription::class)->findOneBy(['user' => $user, 'feed' => $feed]);
+        $subscription = $this->entityManager
+            ->getRepository(Subscription::class)
+            ->findOneBy(['user' => $user, 'feed' => $feed]);
         self::assertNotNull($subscription);
 
         return $subscription;

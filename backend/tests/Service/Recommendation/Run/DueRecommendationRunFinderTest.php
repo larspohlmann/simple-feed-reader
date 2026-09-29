@@ -34,7 +34,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         parent::setUp();
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     private function setCadence(User $user, int $hours): void
@@ -57,8 +57,8 @@ final class DueRecommendationRunFinderTest extends DbTestCase
     {
         $run = new RecommendationRun($user, new \DateTimeImmutable($ago));
         $run->fail('irrelevant', new \DateTimeImmutable($ago));
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
     }
 
     /** @return list<string> */
@@ -76,7 +76,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 3);
         $this->pastFailedRun($user, '-5 hours');
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertContains('finder-due@example.test', $this->dueEmails());
     }
@@ -87,7 +87,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 6);
         $this->pastFailedRun($user, '-1 hour');
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertNotContains('finder-fresh@example.test', $this->dueEmails());
     }
@@ -100,7 +100,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $starter = self::getContainer()->get(RecommendationRunStarter::class);
         self::assertInstanceOf(RecommendationRunStarter::class, $starter);
         $starter->start($user); // a PENDING (active) run
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertNotContains('finder-active@example.test', $this->dueEmails());
     }
@@ -109,7 +109,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
     {
         $user = $this->user('finder-no-ai@example.test');
         $this->setCadence($user, 1); // deliberately no seedReadyAiSettings
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertNotContains('finder-no-ai@example.test', $this->dueEmails());
     }
@@ -119,7 +119,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $user = $this->user('finder-never-ran@example.test');
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 24);
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertContains('finder-never-ran@example.test', $this->dueEmails());
     }
@@ -139,9 +139,9 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         // A PENDING run is active, and its creation time is well past one
         // interval, so the anchor alone would say "due".
         $run = new RecommendationRun($user, new \DateTimeImmutable('-10 hours'));
-        $this->em->persist($run);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         self::assertNotContains('finder-old-active@example.test', $this->dueEmails());
     }
@@ -157,7 +157,7 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         $this->fixtures->seedReadyAiSettings($user);
         $this->setCadence($user, 3);
         $this->pastFailedRun($user, '2026-08-09 09:00:00');
-        $this->em->clear();
+        $this->entityManager->clear();
 
         // "Now" is exactly three hours after the anchor: due under `>=`,
         // not-due under `>`.

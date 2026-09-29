@@ -54,7 +54,7 @@ final class SettingsResetBetweenMessagesTest extends DbTestCase
     /** Another process's write; the worker's clear() after each message leaves the memo holding the old row. */
     private function saveElsewhere(string $statement): void
     {
-        $this->em->getConnection()->executeStatement($statement);
-        $this->em->clear();
+        $this->entityManager->getConnection()->executeStatement($statement);
+        $this->entityManager->clear();
     }
 }

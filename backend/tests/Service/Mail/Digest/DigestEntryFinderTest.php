@@ -35,14 +35,16 @@ final class DigestEntryFinderTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
         $this->search = new SavedSearch($this->user, 'klima', false);
-        $this->em->persist($this->search);
-        $this->em->flush();
+        $this->entityManager->persist($this->search);
+        $this->entityManager->flush();
 
         $this->since = new \DateTimeImmutable('2026-07-15T00:00:00Z');
     }
@@ -75,12 +77,12 @@ final class DigestEntryFinderTest extends DbTestCase
 
     public function testTheDigestWindowHoldsWhenTheUserAndSearchIdsDiffer(): void
     {
-        $searches = new SavedSearchMatchFixture($this->em);
+        $searches = new SavedSearchMatchFixture($this->entityManager);
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($stranger);
+        $this->entityManager->persist($stranger);
         $reader = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($reader);
-        $this->em->flush();
+        $this->entityManager->persist($reader);
+        $this->entityManager->flush();
         $searches->search($stranger, 'throwaway-one');
         $searches->search($stranger, 'throwaway-two');
         $readersSearch = $searches->search($reader, 'klima');
@@ -103,9 +105,11 @@ final class DigestEntryFinderTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($entry);
-        $this->em->persist(new SavedSearchEntry($this->search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(
+            new SavedSearchEntry($this->search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -114,8 +118,8 @@ final class DigestEntryFinderTest extends DbTestCase
     {
         $state = new EntryState($this->user, $entry);
         $state->hide(new \DateTimeImmutable('2026-07-17T00:00:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
     }
 
     /**

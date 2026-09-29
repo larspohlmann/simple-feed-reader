@@ -17,12 +17,12 @@ final class CatalogFaviconControllerTest extends WebTestCase
     /** @return array<string, string> */
     private function authHeader(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -57,12 +57,12 @@ final class CatalogFaviconControllerTest extends WebTestCase
 
     private function persisted(CatalogFeed $feed): CatalogFeed
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
-        $em->persist($feed->getCategory());
-        $em->persist($feed);
-        $em->flush();
+        $entityManager->persist($feed->getCategory());
+        $entityManager->persist($feed);
+        $entityManager->flush();
 
         return $feed;
     }

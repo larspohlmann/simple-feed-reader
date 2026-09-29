@@ -18,12 +18,12 @@ final class TagControllerTest extends WebTestCase
 {
     private function userFactory(): UserFactory
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new UserFactory($em, $hasher);
+        return new UserFactory($entityManager, $hasher);
     }
 
     /** @return array<string, string> */
@@ -157,14 +157,14 @@ final class TagControllerTest extends WebTestCase
     public function testDeleteAnotherUsersTagIs404(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $factory = $this->userFactory();
         $owner = $factory->create('owner2@example.com');
         $tag = new Tag($owner, 'private');
-        $em->persist($tag);
-        $em->flush();
+        $entityManager->persist($tag);
+        $entityManager->flush();
 
         $headers = $this->authHeader('intruder@example.com');
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $headers);
@@ -184,21 +184,21 @@ final class TagControllerTest extends WebTestCase
     public function testDeleteActuallyRemovesTheTagRow(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('tag-row-gone@example.com');
         $tag = new Tag($user, 'Gone soon');
-        $em->persist($tag);
-        $em->flush();
+        $entityManager->persist($tag);
+        $entityManager->flush();
         $tagId = $tag->requireId();
 
         $client->request('DELETE', '/api/tags/' . $tagId, server: $this->headersFor($user));
 
         self::assertResponseStatusCodeSame(204);
-        $em->clear();
+        $entityManager->clear();
         self::assertNull(
-            $em->getRepository(Tag::class)->find($tagId),
+            $entityManager->getRepository(Tag::class)->find($tagId),
             'DELETE /api/tags/{id} must remove the tag row itself, not just its joins.',
         );
     }
@@ -213,25 +213,25 @@ final class TagControllerTest extends WebTestCase
     public function testDeleteDetachesTheTagFromEveryCarryingSubscription(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $user = $this->userFactory()->create('detacher@example.com');
         $tag = new Tag($user, 'Detach me');
-        $em->persist($tag);
+        $entityManager->persist($tag);
         $feed = new Feed('https://detach.example/feed.xml');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $subscription->addTag($tag, 0);
-        $em->persist($subscription);
-        $em->flush();
+        $entityManager->persist($subscription);
+        $entityManager->flush();
         $subscriptionId = $subscription->requireId();
 
         $client->request('DELETE', '/api/tags/' . $tag->getId(), server: $this->headersFor($user));
 
         self::assertResponseStatusCodeSame(204);
-        $em->clear();
-        $reloaded = $em->getRepository(Subscription::class)->find($subscriptionId);
+        $entityManager->clear();
+        $reloaded = $entityManager->getRepository(Subscription::class)->find($subscriptionId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertCount(
             0,

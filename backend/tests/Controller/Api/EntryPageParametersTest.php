@@ -172,8 +172,8 @@ final class EntryPageParametersTest extends ApiTestCase
     {
         $feed = new Feed('https://example.com/page-parameters-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-04-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-04-01T00:00:00Z')));
 
         return $feed;
     }
@@ -183,7 +183,7 @@ final class EntryPageParametersTest extends ApiTestCase
         $link = 'https://example.com/' . uniqid('', true);
         $entry = new Entry($feed, 'guid-' . uniqid('', true), $link, $title, $publishedAt, $publishedAt);
         $entry->setPublishedAt($publishedAt);
-        $this->em()->persist($entry);
+        $this->entityManager()->persist($entry);
 
         return $entry;
     }
@@ -191,11 +191,13 @@ final class EntryPageParametersTest extends ApiTestCase
     private function seedSavedSearch(User $user, Entry ...$members): SavedSearch
     {
         $search = new SavedSearch($user, 'climate', false);
-        $this->em()->persist($search);
+        $this->entityManager()->persist($search);
         foreach ($members as $member) {
-            $this->em()->persist(new SavedSearchEntry($search, $member, new \DateTimeImmutable('2026-09-22T10:00:00')));
+            $this->entityManager()->persist(
+                new SavedSearchEntry($search, $member, new \DateTimeImmutable('2026-09-22T10:00:00')),
+            );
         }
-        $this->em()->flush();
+        $this->entityManager()->flush();
 
         return $search;
     }

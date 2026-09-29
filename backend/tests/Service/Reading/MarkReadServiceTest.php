@@ -29,11 +29,11 @@ final class MarkReadServiceTest extends DbTestCase
     private function seed(): array
     {
         $user = new User('m@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/f.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($sub);
+        $this->entityManager->persist($sub);
 
         $oldPublishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
         $old = new Entry($feed, 'old', null, 'Old', new \DateTimeImmutable('2026-07-01T00:00:00Z'), $oldPublishedAt);
@@ -41,9 +41,9 @@ final class MarkReadServiceTest extends DbTestCase
         $newPublishedAt = new \DateTimeImmutable('2026-07-20T00:00:00Z');
         $new = new Entry($feed, 'new', null, 'New', new \DateTimeImmutable('2026-07-01T00:00:00Z'), $newPublishedAt);
         $new->setPublishedAt($newPublishedAt);
-        $this->em->persist($old);
-        $this->em->persist($new);
-        $this->em->flush();
+        $this->entityManager->persist($old);
+        $this->entityManager->persist($new);
+        $this->entityManager->flush();
 
         return [$user, $sub, $old, $new];
     }
@@ -54,20 +54,20 @@ final class MarkReadServiceTest extends DbTestCase
         // A pre-existing explicit "unread" below the mark point.
         $state = new EntryState($user, $old);
         $state->markUnread();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(Subscription::class)->find($sub->getId());
+        $reloaded = $this->entityManager->getRepository(Subscription::class)->find($sub->getId());
         self::assertNotNull($reloaded);
         self::assertSame(
             '2026-07-10T00:00:00+00:00',
             $reloaded->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
         );
 
-        $flipped = $this->em->getRepository(EntryState::class)
+        $flipped = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden());
@@ -78,12 +78,12 @@ final class MarkReadServiceTest extends DbTestCase
     {
         [$user, $sub] = $this->seed();
         $sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-15T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(Subscription::class)->find($sub->getId());
+        $reloaded = $this->entityManager->getRepository(Subscription::class)->find($sub->getId());
         self::assertNotNull($reloaded);
         self::assertSame(
             '2026-07-15T00:00:00+00:00',
@@ -102,18 +102,18 @@ final class MarkReadServiceTest extends DbTestCase
     {
         [$user, $sub] = $this->seed();
         $tag = new Tag($user, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $sub->addTag($tag);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->service()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-07-25T00:00:00Z'),
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(Subscription::class)->find($sub->getId());
+        $reloaded = $this->entityManager->getRepository(Subscription::class)->find($sub->getId());
         self::assertNotNull($reloaded);
         self::assertSame(
             '2026-07-25T00:00:00+00:00',
@@ -130,13 +130,13 @@ final class MarkReadServiceTest extends DbTestCase
         $state->markUnread();
         $state->markFavorite();
         $state->markKept();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(EntryState::class)
+        $reloaded = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isHidden());
@@ -150,13 +150,13 @@ final class MarkReadServiceTest extends DbTestCase
         $viewedAt = new \DateTimeImmutable('2026-07-05T12:00:00Z');
         $state = new EntryState($user, $old);
         $state->markViewed($viewedAt);
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(EntryState::class)
+        $reloaded = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isHidden());
@@ -171,10 +171,10 @@ final class MarkReadServiceTest extends DbTestCase
     {
         [$user] = $this->seed();
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($stranger);
+        $this->entityManager->persist($stranger);
         $strangerTag = new Tag($stranger, 'secret');
-        $this->em->persist($strangerTag);
-        $this->em->flush();
+        $this->entityManager->persist($strangerTag);
+        $this->entityManager->flush();
 
         $this->expectException(RecordNotFoundException::class);
         $this->service()->mark(
@@ -190,10 +190,10 @@ final class MarkReadServiceTest extends DbTestCase
     private function seedExcludedFeedSubscription(User $user): array
     {
         $feed = new Feed('https://example.com/excluded.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $sub->setIncludeInAllItems(false);
-        $this->em->persist($sub);
+        $this->entityManager->persist($sub);
 
         $publishedAt = new \DateTimeImmutable('2026-07-05T00:00:00Z');
         $entry = new Entry(
@@ -205,12 +205,12 @@ final class MarkReadServiceTest extends DbTestCase
             $publishedAt,
         );
         $entry->setPublishedAt($publishedAt);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         $state = new EntryState($user, $entry);
         $state->markUnread();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         return [$sub, $entry];
     }
@@ -221,34 +221,34 @@ final class MarkReadServiceTest extends DbTestCase
         // A pre-existing explicit "unread" on the included feed, below the mark point.
         $includedState = new EntryState($user, $old);
         $includedState->markUnread();
-        $this->em->persist($includedState);
-        $this->em->flush();
+        $this->entityManager->persist($includedState);
+        $this->entityManager->flush();
 
         [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
 
         $this->service()->mark($user, ReadScopeModel::all(), new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloadedIncludedSub = $this->em->getRepository(Subscription::class)->find($sub->getId());
+        $reloadedIncludedSub = $this->entityManager->getRepository(Subscription::class)->find($sub->getId());
         self::assertNotNull($reloadedIncludedSub);
         self::assertSame(
             '2026-07-10T00:00:00+00:00',
             $reloadedIncludedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
         );
 
-        $reloadedExcludedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        $reloadedExcludedSub = $this->entityManager->getRepository(Subscription::class)->find($excludedSub->getId());
         self::assertNotNull($reloadedExcludedSub);
         self::assertNull(
             $reloadedExcludedSub->getMarkedReadUntil(),
             'excluded feed must not have its watermark advanced by scope "all"',
         );
 
-        $flippedIncluded = $this->em->getRepository(EntryState::class)
+        $flippedIncluded = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $old->requireId());
         self::assertNotNull($flippedIncluded);
         self::assertTrue($flippedIncluded->isHidden(), 'included feed entry must be marked read');
 
-        $untouchedExcluded = $this->em->getRepository(EntryState::class)
+        $untouchedExcluded = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($untouchedExcluded);
         self::assertFalse($untouchedExcluded->isHidden(), 'excluded feed entry must stay unread');
@@ -264,16 +264,16 @@ final class MarkReadServiceTest extends DbTestCase
             ReadScopeModel::feed($excludedSub->requireId()),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloadedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        $reloadedSub = $this->entityManager->getRepository(Subscription::class)->find($excludedSub->getId());
         self::assertNotNull($reloadedSub);
         self::assertSame(
             '2026-07-10T00:00:00+00:00',
             $reloadedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
         );
 
-        $flipped = $this->em->getRepository(EntryState::class)
+        $flipped = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden(), 'scope "feed" must still mark an excluded feed');
@@ -284,25 +284,25 @@ final class MarkReadServiceTest extends DbTestCase
         [$user] = $this->seed();
         [$excludedSub, $excludedEntry] = $this->seedExcludedFeedSubscription($user);
         $tag = new Tag($user, 'excluded-tag');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $excludedSub->addTag($tag);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->service()->mark(
             $user,
             ReadScopeModel::tag($tag->requireId()),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloadedSub = $this->em->getRepository(Subscription::class)->find($excludedSub->getId());
+        $reloadedSub = $this->entityManager->getRepository(Subscription::class)->find($excludedSub->getId());
         self::assertNotNull($reloadedSub);
         self::assertSame(
             '2026-07-10T00:00:00+00:00',
             $reloadedSub->getMarkedReadUntil()?->format(\DateTimeInterface::ATOM),
         );
 
-        $flipped = $this->em->getRepository(EntryState::class)
+        $flipped = $this->entityManager->getRepository(EntryState::class)
             ->findOneForUserEntry($user->requireId(), $excludedEntry->requireId());
         self::assertNotNull($flipped);
         self::assertTrue($flipped->isHidden(), 'scope "tag" must still mark an excluded feed');

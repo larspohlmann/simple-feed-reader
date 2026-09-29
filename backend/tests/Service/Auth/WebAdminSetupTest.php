@@ -34,7 +34,7 @@ final class WebAdminSetupTest extends DbTestCase
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        (new UserFactory($this->em, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
+        (new UserFactory($this->entityManager, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
     }
 
     public function testCreatesAdminAndReturnsAToken(): void

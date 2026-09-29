@@ -37,7 +37,7 @@ final class RecommendationRunStarterTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('run-starter@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('run-starter@example.test');
     }
 
     public function testNotConfiguredThrows(): void
@@ -187,7 +187,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     {
         $this->seedReadyAiSettings($this->user);
         $previous = $this->seedCompletedRunWithLog('old request', 1);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->starter()->start($this->user);
 
@@ -206,7 +206,7 @@ final class RecommendationRunStarterTest extends DbTestCase
         foreach (range(1, 11) as $index) {
             $seeded[] = $this->seedCompletedRunWithLog('request ' . $index, $index);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->starter()->start($this->user);
 
@@ -225,8 +225,8 @@ final class RecommendationRunStarterTest extends DbTestCase
         $run = new RecommendationRun($this->user, $startedAt);
         $run->snapshot([]);
         $run->complete($startedAt->modify('+30 seconds'));
-        $this->em->persist($run);
-        $this->em->persist(new RecommendationRunLog(
+        $this->entityManager->persist($run);
+        $this->entityManager->persist(new RecommendationRunLog(
             $run,
             CallPhase::Batch,
             1,
@@ -244,8 +244,8 @@ final class RecommendationRunStarterTest extends DbTestCase
         $failed = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
         $failed->snapshot([[1], [2]]);
         $failed->fail('provider gone', new \DateTimeImmutable('2026-08-08T09:01:00Z'));
-        $this->em->persist($failed);
-        $this->em->persist(new RecommendationRunLog(
+        $this->entityManager->persist($failed);
+        $this->entityManager->persist(new RecommendationRunLog(
             $failed,
             CallPhase::Batch,
             1,
@@ -253,13 +253,13 @@ final class RecommendationRunStarterTest extends DbTestCase
             'kept request',
             new \DateTimeImmutable('2026-08-08T09:00:30Z'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $report = $this->starter()->resume($this->user);
 
         self::assertSame(RunStatus::Running->value, $report->status);
         // The wipe is bulk DQL when it runs, so clear before asserting survival.
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertCount(1, $this->logRowsOfLatestRun());
     }
 
@@ -273,7 +273,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     private function runIdsHoldingLogs(): array
     {
         /** @var list<array{runId: int|string}> $rows */
-        $rows = $this->em->createQuery(
+        $rows = $this->entityManager->createQuery(
             'SELECT IDENTITY(l.run) AS runId FROM App\\Entity\\RecommendationRunLog l '
                 . 'JOIN l.run r WHERE r.user = :user ORDER BY l.id ASC',
         )->setParameter('user', $this->user)->getArrayResult();
@@ -316,10 +316,10 @@ final class RecommendationRunStarterTest extends DbTestCase
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, $baseUrl, $sealed, '1234', $now);
-        $this->em->persist($settings);
+        $this->entityManager->persist($settings);
         $settings->chooseModel($model, $now, 32768);
         $user->setActiveAiProviderSettings($settings);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $settings;
     }
@@ -349,8 +349,8 @@ final class RecommendationRunStarterTest extends DbTestCase
         $failed->snapshot([[1, 2], [3]]);
         $failed->recordBatchWinners([['id' => 1, 'score' => 50, 'reason' => 'r']]);
         $failed->fail('provider unreachable', new \DateTimeImmutable('2026-08-07 09:05:00'));
-        $this->em->persist($failed);
-        $this->em->flush();
+        $this->entityManager->persist($failed);
+        $this->entityManager->flush();
 
         return $failed;
     }
@@ -358,7 +358,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     private function countRuns(): int
     {
         /** @var int $count */
-        $count = $this->em->createQueryBuilder()
+        $count = $this->entityManager->createQueryBuilder()
             ->select('COUNT(r.id)')
             ->from(RecommendationRun::class, 'r')
             ->getQuery()
@@ -370,7 +370,7 @@ final class RecommendationRunStarterTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }

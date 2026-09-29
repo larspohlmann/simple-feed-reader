@@ -28,17 +28,17 @@ final class EntryRowsByIdsTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid, string $effectiveDate, ?Feed $feed = null): Entry
@@ -51,8 +51,8 @@ final class EntryRowsByIdsTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -123,8 +123,8 @@ final class EntryRowsByIdsTest extends DbTestCase
     public function testDropsAnIdInAFeedTheUserDoesNotSubscribeTo(): void
     {
         $other = new Feed('https://other.example.com/feed.xml');
-        $this->em->persist($other);
-        $this->em->flush();
+        $this->entityManager->persist($other);
+        $this->entityManager->flush();
 
         $visible = $this->entry('visible', '2026-07-10T00:00:00Z');
         $foreign = $this->entry('foreign', '2026-07-11T00:00:00Z', $other);

@@ -22,16 +22,16 @@ final class SearchMarkReadServiceTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('searcher@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function service(): SearchMarkReadService
@@ -55,8 +55,8 @@ final class SearchMarkReadServiceTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -76,8 +76,8 @@ final class SearchMarkReadServiceTest extends DbTestCase
 
     private function persisted(EntryState $state): EntryState
     {
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         return $state;
     }
@@ -87,9 +87,9 @@ final class SearchMarkReadServiceTest extends DbTestCase
         // Bulk DQL writes bypass the identity map: clear it first so this read
         // does not serve a stale pre-mark instance (the project's "bulk DQL
         // fools tests" gotcha).
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        return $this->em->getRepository(EntryState::class)
+        return $this->entityManager->getRepository(EntryState::class)
             ->findOneBy(['user' => $this->user->getId(), 'entry' => $entry->getId()]);
     }
 

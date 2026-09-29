@@ -39,16 +39,16 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
     public function testTheIntervalPersistsAndResolves(): void
     {
         self::bootKernel();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
         self::assertInstanceOf(RecommendationSettingsResolver::class, $resolver);
 
         $user = new User('interval-roundtrip@example.com', new \DateTimeImmutable());
-        $em->persist($user);
-        $em->flush();
+        $entityManager->persist($user);
+        $entityManager->flush();
 
         self::assertNull($resolver->forUser($user)->autoGenerateIntervalHours);
 
@@ -60,16 +60,16 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
     public function testTheLookbackWindowPersistsAndResolves(): void
     {
         self::bootKernel();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $writer = self::getContainer()->get(RecommendationSettingsWriter::class);
         self::assertInstanceOf(RecommendationSettingsWriter::class, $writer);
         $resolver = self::getContainer()->get(RecommendationSettingsResolver::class);
         self::assertInstanceOf(RecommendationSettingsResolver::class, $resolver);
 
         $user = new User('lookback-roundtrip@example.com', new \DateTimeImmutable());
-        $em->persist($user);
-        $em->flush();
+        $entityManager->persist($user);
+        $entityManager->flush();
 
         // No row at all resolves to the default, not to zero.
         self::assertSame(2, $resolver->forUser($user)->poolLimits->lookbackDays);

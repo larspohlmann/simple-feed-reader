@@ -38,16 +38,16 @@ final class EntryListTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
         $this->sub = new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->sub);
+        $this->entityManager->persist($this->sub);
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function entry(string $guid, string $published): Entry
@@ -62,8 +62,8 @@ final class EntryListTest extends DbTestCase
             $publishedAt,
         );
         $e->setPublishedAt($publishedAt);
-        $this->em->persist($e);
-        $this->em->flush();
+        $this->entityManager->persist($e);
+        $this->entityManager->flush();
 
         return $e;
     }
@@ -83,8 +83,8 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable($createdAt),
             new \DateTimeImmutable($effectiveDate),
         );
-        $this->em->persist($e);
-        $this->em->flush();
+        $this->entityManager->persist($e);
+        $this->entityManager->flush();
 
         return $e;
     }
@@ -153,13 +153,13 @@ final class EntryListTest extends DbTestCase
     private function taggedFeedAndSubscription(): array
     {
         $feed = new Feed('https://tagged.example.com/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $sub = new Subscription($this->user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $sub->addTag($tag);
-        $this->em->persist($sub);
-        $this->em->flush();
+        $this->entityManager->persist($sub);
+        $this->entityManager->flush();
 
         return [$feed, $tag];
     }
@@ -177,8 +177,8 @@ final class EntryListTest extends DbTestCase
     private function fillerFeed(): Feed
     {
         $feed = new Feed('https://filler.example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -268,9 +268,9 @@ final class EntryListTest extends DbTestCase
         $earlyState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
         $lateState = new EntryState($this->user, $late);
         $lateState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
-        $this->em->persist($earlyState);
-        $this->em->persist($lateState);
-        $this->em->flush();
+        $this->entityManager->persist($earlyState);
+        $this->entityManager->persist($lateState);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(
             new EntryQuery($this->user->requireId(), view: EntryView::Viewed, order: ListOrder::OldestFirst),
@@ -366,7 +366,7 @@ final class EntryListTest extends DbTestCase
         $this->entry('old', '2026-07-05T00:00:00Z');
         $this->entry('new', '2026-07-20T00:00:00Z');
         $this->sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $all = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         $byGuid = [];
@@ -388,8 +388,8 @@ final class EntryListTest extends DbTestCase
         // Explicitly unread despite being under the watermark.
         $state = new EntryState($this->user, $e);
         $state->markUnread();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $unread = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
         self::assertCount(1, $unread);
@@ -406,9 +406,9 @@ final class EntryListTest extends DbTestCase
         $s1->markFavorite();
         $s2 = new EntryState($this->user, $kept);
         $s2->markKept();
-        $this->em->persist($s1);
-        $this->em->persist($s2);
-        $this->em->flush();
+        $this->entityManager->persist($s1);
+        $this->entityManager->persist($s2);
+        $this->entityManager->flush();
 
         $favs = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Favorites));
         self::assertCount(1, $favs);
@@ -434,9 +434,9 @@ final class EntryListTest extends DbTestCase
         $earlyState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
         $lateState = new EntryState($this->user, $late);
         $lateState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
-        $this->em->persist($earlyState);
-        $this->em->persist($lateState);
-        $this->em->flush();
+        $this->entityManager->persist($earlyState);
+        $this->entityManager->persist($lateState);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Viewed));
 
@@ -456,9 +456,9 @@ final class EntryListTest extends DbTestCase
         $firstState->markViewed(new \DateTimeImmutable('2026-08-05T09:00:00Z'));
         $secondState = new EntryState($this->user, $second);
         $secondState->markViewed(new \DateTimeImmutable('2026-08-01T09:00:00Z'));
-        $this->em->persist($firstState);
-        $this->em->persist($secondState);
-        $this->em->flush();
+        $this->entityManager->persist($firstState);
+        $this->entityManager->persist($secondState);
+        $this->entityManager->flush();
 
         $page1 = $this->repo()->listForUser(
             new EntryQuery($this->user->requireId(), view: EntryView::Viewed, limit: 1),
@@ -482,13 +482,13 @@ final class EntryListTest extends DbTestCase
     public function testTagFilter(): void
     {
         $otherFeed = new Feed('https://other.example.com/feed.xml');
-        $this->em->persist($otherFeed);
+        $this->entityManager->persist($otherFeed);
         $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $otherSub->addTag($tag);
-        $this->em->persist($otherSub);
-        $this->em->flush();
+        $this->entityManager->persist($otherSub);
+        $this->entityManager->flush();
 
         $this->entry('untagged', '2026-07-05T00:00:00Z');
         $tagged = new Entry(
@@ -500,8 +500,8 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $tagged->setPublishedAt(new \DateTimeImmutable('2026-07-06T00:00:00Z'));
-        $this->em->persist($tagged);
-        $this->em->flush();
+        $this->entityManager->persist($tagged);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
         self::assertCount(1, $rows);
@@ -535,9 +535,9 @@ final class EntryListTest extends DbTestCase
         $ownEntry = $this->entry('own', '2026-07-10T00:00:00Z');
 
         $otherFeed = new Feed('https://other.example.com/feed.xml');
-        $this->em->persist($otherFeed);
+        $this->entityManager->persist($otherFeed);
         $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($otherSub);
+        $this->entityManager->persist($otherSub);
         $otherEntry = new Entry(
             $otherFeed,
             'other',
@@ -546,8 +546,8 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-11T00:00:00Z'),
         );
-        $this->em->persist($otherEntry);
-        $this->em->flush();
+        $this->entityManager->persist($otherEntry);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(
             new EntryQuery($this->user->requireId(), subscriptionId: $this->sub->getId()),
@@ -559,12 +559,12 @@ final class EntryListTest extends DbTestCase
     public function testExcludesFeedsTheUserDoesNotSubscribeTo(): void
     {
         $strangerFeed = new Feed('https://stranger.example.com/feed.xml');
-        $this->em->persist($strangerFeed);
+        $this->entityManager->persist($strangerFeed);
         $orphanCreatedAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $orphan = new Entry($strangerFeed, 'orphan', null, 'Orphan', $orphanCreatedAt, $orphanCreatedAt);
         $orphan->setPublishedAt(new \DateTimeImmutable('2026-07-20T00:00:00Z'));
-        $this->em->persist($orphan);
-        $this->em->flush();
+        $this->entityManager->persist($orphan);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         foreach ($rows as $r) {
@@ -579,8 +579,8 @@ final class EntryListTest extends DbTestCase
 
         $state = new EntryState($this->user, $viewed);
         $state->markViewed(new \DateTimeImmutable('2026-08-07T10:00:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         $byGuid = [];
@@ -596,13 +596,13 @@ final class EntryListTest extends DbTestCase
         $entryA = $this->entry('a', '2026-07-10T00:00:00Z');
 
         $excludedFeed = new Feed('https://excluded.example.com/feed.xml');
-        $this->em->persist($excludedFeed);
+        $this->entityManager->persist($excludedFeed);
         $excludedSub = new Subscription($this->user, $excludedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $excludedSub->setIncludeInAllItems(false);
         $tag = new Tag($this->user, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $excludedSub->addTag($tag);
-        $this->em->persist($excludedSub);
+        $this->entityManager->persist($excludedSub);
         $entryB = new Entry(
             $excludedFeed,
             'b',
@@ -611,11 +611,11 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-11T00:00:00Z'),
         );
-        $this->em->persist($entryB);
+        $this->entityManager->persist($entryB);
         $favoriteState = new EntryState($this->user, $entryB);
         $favoriteState->markFavorite();
-        $this->em->persist($favoriteState);
-        $this->em->flush();
+        $this->entityManager->persist($favoriteState);
+        $this->entityManager->flush();
 
         $all = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertSame([$entryA->getId()], array_map(static fn ($row) => $row->entry->getId(), $all));
@@ -643,13 +643,15 @@ final class EntryListTest extends DbTestCase
         $entry = $this->entry('shared', '2026-07-05T00:00:00Z');
 
         $stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($stranger);
-        $this->em->persist(new Subscription($stranger, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($stranger);
+        $this->entityManager->persist(
+            new Subscription($stranger, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
         $strangerState = new EntryState($stranger, $entry);
         $strangerState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $strangerState->markFavorite();
-        $this->em->persist($strangerState);
-        $this->em->flush();
+        $this->entityManager->persist($strangerState);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
         self::assertCount(1, $rows);
@@ -669,7 +671,7 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-05T00:00:00Z'),
             'shared-url-hash',
         );
-        $this->em->persist($survivor);
+        $this->entityManager->persist($survivor);
         $hiddenCopy = new Entry(
             $this->feed,
             'hidden-copy',
@@ -679,8 +681,8 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-06T00:00:00Z'),
             'shared-url-hash',
         );
-        $this->em->persist($hiddenCopy);
-        $this->em->flush();
+        $this->entityManager->persist($hiddenCopy);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId()));
 
@@ -695,12 +697,12 @@ final class EntryListTest extends DbTestCase
     public function testACopyOutsideTheQueryScopeIsNotListedAsADuplicate(): void
     {
         $otherFeed = new Feed('https://other.example.com/feed.xml');
-        $this->em->persist($otherFeed);
+        $this->entityManager->persist($otherFeed);
         $otherSub = new Subscription($this->user, $otherFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $tag = new Tag($this->user, 'news');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $otherSub->addTag($tag);
-        $this->em->persist($otherSub);
+        $this->entityManager->persist($otherSub);
 
         $outOfScopeCopy = new Entry(
             $this->feed,
@@ -711,7 +713,7 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-05T00:00:00Z'),
             'shared-url-hash',
         );
-        $this->em->persist($outOfScopeCopy);
+        $this->entityManager->persist($outOfScopeCopy);
         $taggedEntry = new Entry(
             $otherFeed,
             'tagged',
@@ -721,8 +723,8 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-06T00:00:00Z'),
             'shared-url-hash',
         );
-        $this->em->persist($taggedEntry);
-        $this->em->flush();
+        $this->entityManager->persist($taggedEntry);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId()));
 
@@ -742,9 +744,9 @@ final class EntryListTest extends DbTestCase
             new \DateTimeImmutable('2026-07-05T00:00:00Z'),
             'shared-url-hash',
         );
-        $this->em->persist($survivor);
-        $this->em->persist($this->favorited($survivor));
-        $this->em->flush();
+        $this->entityManager->persist($survivor);
+        $this->entityManager->persist($this->favorited($survivor));
+        $this->entityManager->flush();
 
         // The favorites view drops the chronological-fan-in hint entirely
         // (testAScopedOrStateDrivenViewDropsTheJoinOrderHint), so a JOIN_PREFIX
@@ -1002,9 +1004,9 @@ final class EntryListTest extends DbTestCase
         $t2 = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
         $t3 = $this->entryIn($feed, 't3', '2026-07-08T00:00:00Z');
         $t4 = $this->entryIn($feed, 't4', '2026-07-07T00:00:00Z');
-        $this->em->persist($this->hidden($t1));
-        $this->em->persist($this->hidden($t2));
-        $this->em->flush();
+        $this->entityManager->persist($this->hidden($t1));
+        $this->entityManager->persist($this->hidden($t2));
+        $this->entityManager->flush();
 
         $repo = $this->repoWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), view: EntryView::Unread, tagId: $tag->getId(), limit: 2);
@@ -1074,7 +1076,7 @@ final class EntryListTest extends DbTestCase
     private function entryOfAnUnsubscribedFeed(string $guid): Entry
     {
         $feed = new Feed('https://example.com/' . $guid . '.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $this->entryAt($guid, '2026-07-01T00:00:00Z', '2026-07-01T00:00:00Z', $feed);
     }

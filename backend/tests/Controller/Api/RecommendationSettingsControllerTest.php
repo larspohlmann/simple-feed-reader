@@ -33,11 +33,11 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -79,8 +79,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
      */
     private function seedProviderContextWindow(User $user, int $contextWindow): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
@@ -90,10 +90,10 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $em->persist($settings);
+        $entityManager->persist($settings);
         $settings->chooseModel('m', $now, $contextWindow);
         $user->setActiveAiProviderSettings($settings);
-        $em->flush();
+        $entityManager->flush();
     }
 
     public function testAnUnconfiguredAccountReportsAllDefaults(): void

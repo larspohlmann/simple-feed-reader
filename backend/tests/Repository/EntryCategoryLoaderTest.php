@@ -30,17 +30,17 @@ final class EntryCategoryLoaderTest extends DbTestCase
     public function testLoadsCategoriesInDeclaredOrder(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $entry = new Entry($feed, 'g', 'https://x.test/g', 'T', $now, $now, null);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
         $politics = new Category('politics', '');
         $world = new Category('world', '');
-        $this->em->persist($politics);
-        $this->em->persist($world);
-        $this->em->persist(new EntryCategory($entry, $world, 1, 'World'));
-        $this->em->persist(new EntryCategory($entry, $politics, 0, 'Politics'));
-        $this->em->flush();
+        $this->entityManager->persist($politics);
+        $this->entityManager->persist($world);
+        $this->entityManager->persist(new EntryCategory($entry, $world, 1, 'World'));
+        $this->entityManager->persist(new EntryCategory($entry, $politics, 0, 'Politics'));
+        $this->entityManager->flush();
 
         $row = $this->row($entry, new EntryListRowSubscription(1, 'S'));
         $out = $this->loader->loadInto([$row]);
@@ -56,19 +56,19 @@ final class EntryCategoryLoaderTest extends DbTestCase
     public function testLabelsAreGroupedByTheirOwnEntryAcrossMultipleEntries(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $first = new Entry($feed, 'm1', 'https://x.test/m1', 'One', $now, $now, null);
         $second = new Entry($feed, 'm2', 'https://x.test/m2', 'Two', $now, $now, null);
-        $this->em->persist($first);
-        $this->em->persist($second);
+        $this->entityManager->persist($first);
+        $this->entityManager->persist($second);
         $categoryOne = new Category('one', '');
         $categoryTwo = new Category('two', '');
-        $this->em->persist($categoryOne);
-        $this->em->persist($categoryTwo);
-        $this->em->persist(new EntryCategory($first, $categoryOne, 0, 'One'));
-        $this->em->persist(new EntryCategory($second, $categoryTwo, 0, 'Two'));
-        $this->em->flush();
+        $this->entityManager->persist($categoryOne);
+        $this->entityManager->persist($categoryTwo);
+        $this->entityManager->persist(new EntryCategory($first, $categoryOne, 0, 'One'));
+        $this->entityManager->persist(new EntryCategory($second, $categoryTwo, 0, 'Two'));
+        $this->entityManager->flush();
 
         $rows = [
             $this->row($first, new EntryListRowSubscription(1, 'S')),
@@ -84,11 +84,11 @@ final class EntryCategoryLoaderTest extends DbTestCase
     public function testEntryWithoutCategoriesGetsEmptyList(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $entry = new Entry($feed, 'g2', 'https://x.test/g2', 'T', $now, $now, null);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         $row = $this->row($entry, new EntryListRowSubscription(1, 'S'));
         $out = $this->loader->loadInto([$row]);
@@ -99,16 +99,16 @@ final class EntryCategoryLoaderTest extends DbTestCase
     public function testDuplicateRowsAreEnrichedToo(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $survivor = new Entry($feed, 'g3', 'https://x.test/g3', 'Survivor', $now, $now, null);
         $duplicate = new Entry($feed, 'g4', 'https://x.test/g3', 'Duplicate', $now, $now, null);
-        $this->em->persist($survivor);
-        $this->em->persist($duplicate);
+        $this->entityManager->persist($survivor);
+        $this->entityManager->persist($duplicate);
         $category = new Category('tech', '');
-        $this->em->persist($category);
-        $this->em->persist(new EntryCategory($duplicate, $category, 0, 'Tech'));
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist(new EntryCategory($duplicate, $category, 0, 'Tech'));
+        $this->entityManager->flush();
 
         $duplicateRow = $this->row($duplicate, new EntryListRowSubscription(2, 'D'));
         $survivorRow = $this->row($survivor, new EntryListRowSubscription(1, 'S'), [$duplicateRow]);
@@ -122,17 +122,17 @@ final class EntryCategoryLoaderTest extends DbTestCase
     public function testEnrichingAPageOfMultipleEntriesCostsExactlyOneQuery(): void
     {
         $feed = new Feed('https://f.test/' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable('2026-01-01T00:00:00Z');
         $first = new Entry($feed, 'q1', 'https://x.test/q1', 'One', $now, $now, null);
         $second = new Entry($feed, 'q2', 'https://x.test/q2', 'Two', $now, $now, null);
-        $this->em->persist($first);
-        $this->em->persist($second);
+        $this->entityManager->persist($first);
+        $this->entityManager->persist($second);
         $category = new Category('tech', '');
-        $this->em->persist($category);
-        $this->em->persist(new EntryCategory($first, $category, 0, 'Tech'));
-        $this->em->persist(new EntryCategory($second, $category, 0, 'Tech'));
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist(new EntryCategory($first, $category, 0, 'Tech'));
+        $this->entityManager->persist(new EntryCategory($second, $category, 0, 'Tech'));
+        $this->entityManager->flush();
 
         $rows = [
             $this->row($first, new EntryListRowSubscription(1, 'S')),

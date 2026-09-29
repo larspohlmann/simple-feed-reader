@@ -21,16 +21,18 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
     public function testCountsOnlyEntriesInFeedsTheUserSubscribesTo(): void
     {
         $user = new User('ceiling-count@example.com', new \DateTimeImmutable('2026-07-01 00:00:00'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         $subscribed = $this->feed('https://subscribed.example/feed.xml');
         $unsubscribed = $this->feed('https://unsubscribed.example/feed.xml');
-        $this->em->persist(new Subscription($user, $subscribed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->persist(
+            new Subscription($user, $subscribed, new \DateTimeImmutable('2026-07-01 00:00:00')),
+        );
 
         $this->entry($subscribed, 'a');
         $this->entry($subscribed, 'b');
         $this->entry($unsubscribed, 'c');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(2, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
     }
@@ -38,8 +40,8 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
     public function testAUserWithNoSubscriptionsCountsZero(): void
     {
         $user = new User('ceiling-count-none@example.com', new \DateTimeImmutable('2026-07-01 00:00:00'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->repository()->countInFeedsSubscribedBy($user->requireId()));
     }
@@ -47,7 +49,7 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -62,14 +64,14 @@ final class CountInFeedsSubscribedByTest extends DbTestCase
             new \DateTimeImmutable('2026-08-02 06:00:00'),
             new \DateTimeImmutable('2026-08-02 05:00:00'),
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
 
     private function repository(): EntryRepository
     {
-        $repository = $this->em->getRepository(Entry::class);
+        $repository = $this->entityManager->getRepository(Entry::class);
         self::assertInstanceOf(EntryRepository::class, $repository);
 
         return $repository;

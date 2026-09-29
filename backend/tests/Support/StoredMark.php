@@ -14,9 +14,9 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final class StoredMark
 {
-    public static function of(EntityManagerInterface $em, SavedSearch $search): int
+    public static function of(EntityManagerInterface $entityManager, SavedSearch $search): int
     {
-        $mark = $em->getConnection()->fetchOne(
+        $mark = $entityManager->getConnection()->fetchOne(
             'SELECT matched_up_to_entry_id FROM saved_search WHERE id = ?',
             [$search->getId()],
         );

@@ -41,7 +41,7 @@ final class EntryPrunerTest extends DbTestCase
 
     private function retention(): RetentionRepository
     {
-        return new RetentionRepository($this->em, new RowIds($this->em));
+        return new RetentionRepository($this->entityManager, new RowIds($this->entityManager));
     }
 
     private function daysAgo(int $days): \DateTimeImmutable
@@ -57,14 +57,14 @@ final class EntryPrunerTest extends DbTestCase
     private function feedWithEntries(int $count, ?\DateTimeImmutable $createdAt = null): Feed
     {
         $feed = new Feed('https://example.com/feed-' . uniqid('', true));
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         $fetchedAt = $createdAt ?? $this->clock->now();
         for ($i = 0; $i < $count; ++$i) {
             $this->persistEntry($feed, sprintf('entry-%d', $i), $fetchedAt);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -80,7 +80,7 @@ final class EntryPrunerTest extends DbTestCase
         ?\DateTimeImmutable $effectiveDate = null,
     ): Entry {
         $entry = $this->persistEntry($feed, $guid, $createdAt, $effectiveDate);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -93,20 +93,20 @@ final class EntryPrunerTest extends DbTestCase
     ): Entry {
         $entry = new Entry($feed, $guid, null, 'Title ' . $guid, $createdAt, $effectiveDate ?? $createdAt);
         $entry->setPublishedAt($createdAt);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
 
     private function findByGuid(Feed $feed, string $guid): ?Entry
     {
-        return $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        return $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
     }
 
     /** @return list<Entry> */
     private function findAllEntries(Feed $feed): array
     {
-        return $this->em->getRepository(Entry::class)->findBy(['feed' => $feed]);
+        return $this->entityManager->getRepository(Entry::class)->findBy(['feed' => $feed]);
     }
 
     /** @return list<string> */
@@ -287,8 +287,8 @@ final class EntryPrunerTest extends DbTestCase
     public function testPrunesOldEntriesButKeepsProtectedAndRecent(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         // Twenty recent filler entries hold the feed above the floor, so the
         // four old entries below all fall beyond the newest-twenty boundary.
@@ -306,10 +306,10 @@ final class EntryPrunerTest extends DbTestCase
         $keptState->markKept();
         $readState = new EntryState($user, $oldButRead);
         $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($favoriteState);
-        $this->em->persist($keptState);
-        $this->em->persist($readState);
-        $this->em->flush();
+        $this->entityManager->persist($favoriteState);
+        $this->entityManager->persist($keptState);
+        $this->entityManager->persist($readState);
+        $this->entityManager->flush();
 
         $pruned = $this->pruner->prune();
 
@@ -329,8 +329,8 @@ final class EntryPrunerTest extends DbTestCase
     {
         $alice = new User('alice@example.com', $this->clock->now());
         $bob = new User('bob@example.com', $this->clock->now());
-        $this->em->persist($alice);
-        $this->em->persist($bob);
+        $this->entityManager->persist($alice);
+        $this->entityManager->persist($bob);
 
         // Twenty recent filler entries hold the feed above the floor, so the
         // shared entry below falls beyond the newest-twenty boundary.
@@ -341,9 +341,9 @@ final class EntryPrunerTest extends DbTestCase
         $aliceRead->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
         $bobKept = new EntryState($bob, $shared);
         $bobKept->markKept();
-        $this->em->persist($aliceRead);
-        $this->em->persist($bobKept);
-        $this->em->flush();
+        $this->entityManager->persist($aliceRead);
+        $this->entityManager->persist($bobKept);
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->pruner->prune());
         self::assertNotNull($this->findByGuid($feed, 'shared'));
@@ -352,7 +352,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testDeletingEntryRemovesItsStateRows(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // Twenty recent filler entries hold the feed above the floor, so the
         // doomed entry below falls beyond the newest-twenty boundary.
@@ -360,11 +360,11 @@ final class EntryPrunerTest extends DbTestCase
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
         $state = new EntryState($user, $doomed);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->pruner->prune());
-        self::assertCount(0, $this->em->getRepository(EntryState::class)->findAll());
+        self::assertCount(0, $this->entityManager->getRepository(EntryState::class)->findAll());
     }
 
     public function testEntryWithoutPublishedAtUsesCreatedAt(): void
@@ -372,8 +372,8 @@ final class EntryPrunerTest extends DbTestCase
         $feed = $this->feedWithEntries(20, $this->daysAgo(5));
         $undatedCreatedAt = $this->daysAgo(200);
         $undated = new Entry($feed, 'undated', null, 'No date', $undatedCreatedAt, $undatedCreatedAt);
-        $this->em->persist($undated);
-        $this->em->flush();
+        $this->entityManager->persist($undated);
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->pruner->prune());
     }
@@ -381,11 +381,11 @@ final class EntryPrunerTest extends DbTestCase
     public function testRecentUndatedEntrySurvives(): void
     {
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $freshCreatedAt = $this->daysAgo(2);
         $fresh = new Entry($feed, 'fresh-undated', null, 'No date', $freshCreatedAt, $freshCreatedAt);
-        $this->em->persist($fresh);
-        $this->em->flush();
+        $this->entityManager->persist($fresh);
+        $this->entityManager->flush();
 
         self::assertSame(0, $this->pruner->prune());
     }
@@ -403,7 +403,7 @@ final class EntryPrunerTest extends DbTestCase
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // `$cap` recent filler entries hold the feed at the cap, so the two
         // older entries below both fall beyond the boundary.
@@ -415,8 +415,8 @@ final class EntryPrunerTest extends DbTestCase
         // its unprotected sibling is the only entry this prune may delete.
         $keptState = new EntryState($user, $protected);
         $keptState->markKept();
-        $this->em->persist($keptState);
-        $this->em->flush();
+        $this->entityManager->persist($keptState);
+        $this->entityManager->flush();
 
         self::assertSame(1, $pruner->prune());
         self::assertNull($this->findByGuid($feed, 'old-unprotected'));
@@ -436,7 +436,7 @@ final class EntryPrunerTest extends DbTestCase
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // `$cap` recent filler entries hold the feed at the cap, so the
         // older entry below falls beyond the boundary.
@@ -445,8 +445,8 @@ final class EntryPrunerTest extends DbTestCase
 
         $readState = new EntryState($user, $oldest);
         $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($readState);
-        $this->em->flush();
+        $this->entityManager->persist($readState);
+        $this->entityManager->flush();
 
         self::assertSame(1, $pruner->prune());
         self::assertNull($this->findByGuid($feed, 'oldest'));
@@ -467,7 +467,7 @@ final class EntryPrunerTest extends DbTestCase
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // `$cap + 1` same-day entries (tie-broken by id, oldest-inserted
         // lowest) plus one favorite strictly newer than all of them: the
@@ -479,8 +479,8 @@ final class EntryPrunerTest extends DbTestCase
 
         $favoriteState = new EntryState($user, $favorite);
         $favoriteState->markFavorite();
-        $this->em->persist($favoriteState);
-        $this->em->flush();
+        $this->entityManager->persist($favoriteState);
+        $this->entityManager->flush();
 
         self::assertSame(2, $pruner->prune());
         $expected = array_merge(
@@ -495,11 +495,11 @@ final class EntryPrunerTest extends DbTestCase
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
 
         $feed = new Feed('https://example.com/feed');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         for ($i = 0; $i < 3; ++$i) {
             $this->persistEntry($feed, 'entry-' . $i, $this->daysAgo($i + 1));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $pruner->prune());
         self::assertCount(3, $this->findAllEntries($feed));
@@ -508,7 +508,7 @@ final class EntryPrunerTest extends DbTestCase
     public function testPruningTheLastEntryOfACompletedRunAlsoDropsTheRun(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // Twenty recent filler entries hold the feed above the floor, so the
         // doomed entry below falls beyond the newest-twenty boundary.
@@ -518,19 +518,19 @@ final class EntryPrunerTest extends DbTestCase
         $run = new RecommendationRun($user, $this->clock->now());
         $run->snapshot([[1]]);
         $run->complete($this->clock->now());
-        $this->em->persist($run);
-        $this->em->persist(new RecommendationItem($run, $doomed, 1, 'because'));
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->persist(new RecommendationItem($run, $doomed, 1, 'because'));
+        $this->entityManager->flush();
         $runId = $run->getId();
 
         // The run left empty by the doomed entry's deletion is bookkeeping,
         // not an entry: it must not inflate the count the refresh summary
         // shows the user. Only the entry counts toward the total.
         $pruned = $this->pruner->prune();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertSame(1, $pruned);
-        self::assertNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+        self::assertNull($this->entityManager->getRepository(RecommendationRun::class)->find($runId));
     }
 
     /**
@@ -541,15 +541,15 @@ final class EntryPrunerTest extends DbTestCase
     public function testEmptyRunsAloneReportZeroPruned(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         for ($i = 0; $i < 3; $i++) {
             $run = new RecommendationRun($user, $this->clock->now());
             $run->snapshot([[1]]);
             $run->complete($this->clock->now());
-            $this->em->persist($run);
+            $this->entityManager->persist($run);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $pruned = $this->pruner->prune();
 
@@ -559,18 +559,18 @@ final class EntryPrunerTest extends DbTestCase
     public function testARunningRunWithNoItemsSurvivesPruning(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $run = new RecommendationRun($user, $this->clock->now());
         $run->snapshot([[1]]);
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
         $runId = $run->getId();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $this->pruner->prune();
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        self::assertNotNull($this->em->getRepository(RecommendationRun::class)->find($runId));
+        self::assertNotNull($this->entityManager->getRepository(RecommendationRun::class)->find($runId));
     }
 
     /**
@@ -597,13 +597,13 @@ final class EntryPrunerTest extends DbTestCase
         // exceeds the cap, so a global cap would wrongly delete here.
         foreach (['https://a.example/feed', 'https://b.example/feed'] as $n => $url) {
             $feed = new Feed($url);
-            $this->em->persist($feed);
+            $this->entityManager->persist($feed);
             $this->persistEntry($feed, "feed{$n}-a", $this->daysAgo(2));
             $this->persistEntry($feed, "feed{$n}-b", $this->daysAgo(1));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(0, $pruner->prune());
-        self::assertCount(4, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(4, $this->entityManager->getRepository(Entry::class)->findAll());
     }
 }

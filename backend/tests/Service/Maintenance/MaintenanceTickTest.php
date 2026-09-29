@@ -60,13 +60,13 @@ final class MaintenanceTickTest extends DbTestCase
     {
         $clock = new MockClock('2026-08-10 12:00:00', 'UTC');
         $subscriber = new User('tick-abort-fixture@example.com', $clock->now());
-        $this->em->persist($subscriber);
+        $this->entityManager->persist($subscriber);
 
         $feed = new Feed('https://one.example.com/feed');
         $feed->scheduleNextFetchAt($clock->now()->modify('-1 hour'));
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($subscriber, $feed, $clock->now()));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($subscriber, $feed, $clock->now()));
+        $this->entityManager->flush();
 
         $fetcher = new StubFeedFetcher($clock);
         $fetcher->willReturn(
@@ -82,10 +82,13 @@ final class MaintenanceTickTest extends DbTestCase
             ),
         );
 
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
 
-        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->em, $clock)
-            ->flushingThrough($failingEm)
+        $refreshRunner = RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $clock)
+            ->flushingThrough($failingEntityManager)
             ->build($fetcher, $fetcher);
 
         $forYouSweep = self::getContainer()->get(ForYouSweep::class);
@@ -112,7 +115,7 @@ final class MaintenanceTickTest extends DbTestCase
             $digestMailer,
             $mailCapability,
             $clock,
-            $this->em,
+            $this->entityManager,
             new NullLogger(),
             new InMemoryMailFailureRecorder(),
         );
@@ -126,12 +129,12 @@ final class MaintenanceTickTest extends DbTestCase
         $imageVerificationSweep = new ImageVerificationSweep(
             $pendingImageVerificationRepository,
             new ImageVerifier(new StubFaviconFetcher(), new NaiveUtcClock($clock)),
-            $this->em,
+            $this->entityManager,
         );
 
         $membershipSweep = MembershipSweepFactory::fromContainer(
             self::getContainer(),
-            $this->em,
+            $this->entityManager,
             new RecordingSavedSearchMatcher(),
             $clock,
         );

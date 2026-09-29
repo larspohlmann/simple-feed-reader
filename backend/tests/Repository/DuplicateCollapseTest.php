@@ -26,19 +26,19 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         parent::setUp();
         $this->user = new User('dupe@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
         $this->feedA = $this->feed('https://a.example/feed.xml', 'Feed A');
         $this->feedB = $this->feed('https://b.example/feed.xml', 'Feed B');
         $this->subscribe($this->user, $this->feedA);
         $this->subscribe($this->user, $this->feedB);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testCrossFeedDuplicateCollapsesToTheLowerId(): void
     {
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
@@ -50,7 +50,7 @@ final class DuplicateCollapseTest extends DbTestCase
     public function testAUserOnOnlyOneSideSeesTheirOwnCopy(): void
     {
         $solo = new User('solo@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($solo);
+        $this->entityManager->persist($solo);
         $this->subscribe($solo, $this->feedB);
         $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $onlyCopy = $this->entry(
@@ -60,7 +60,7 @@ final class DuplicateCollapseTest extends DbTestCase
             'urlhash-x',
             '2026-07-05T10:00:00Z',
         );
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($solo->requireId(), view: EntryView::All));
 
@@ -74,8 +74,8 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $read = new EntryState($this->user, $lower);
         $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($read);
-        $this->em->flush();
+        $this->entityManager->persist($read);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
@@ -87,7 +87,7 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         $one = $this->entry($this->feedA, 'a-guid', null, null, '2026-07-05T09:00:00Z');
         $two = $this->entry($this->feedB, 'b-guid', null, null, '2026-07-05T10:00:00Z');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
@@ -104,7 +104,7 @@ final class DuplicateCollapseTest extends DbTestCase
             ->setTitle('Lübecker Hauptbahnhof gesperrt');
         $match = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $match->setTitle('Lübeck Zugausfälle am Wochenende');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
@@ -119,7 +119,7 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // Meilisearch matched only the higher-id copy; the lower-id copy is not in
         // the set, so it must not win and delete the article from the results.
@@ -137,7 +137,7 @@ final class DuplicateCollapseTest extends DbTestCase
         $lower->setTitle('Lübeck Zugausfälle heute Morgen');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $higher->setTitle('Lübeck Zugausfälle am Wochenende');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->searchForUser(new EntrySearchQuery(
             $this->user->requireId(),
@@ -154,7 +154,7 @@ final class DuplicateCollapseTest extends DbTestCase
         // collapse call can reduce this to one row.
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->rowsByIdsForUser(
             $this->user->requireId(),
@@ -169,7 +169,7 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         $lower = $this->entry($this->feedA, 'a-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T09:00:00Z');
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::All));
 
@@ -186,8 +186,8 @@ final class DuplicateCollapseTest extends DbTestCase
         $higher = $this->entry($this->feedB, 'b-guid', 'https://tagesschau.de/x', 'urlhash-x', '2026-07-05T10:00:00Z');
         $read = new EntryState($this->user, $higher);
         $read->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($read);
-        $this->em->flush();
+        $this->entityManager->persist($read);
+        $this->entityManager->flush();
 
         $rows = $this->repo()->listForUser(new EntryQuery($this->user->requireId(), view: EntryView::Unread));
 
@@ -208,7 +208,7 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         $feed = new Feed($url);
         $feed->setTitle($title);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -216,7 +216,7 @@ final class DuplicateCollapseTest extends DbTestCase
     private function subscribe(User $user, Feed $feed): Subscription
     {
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($sub);
+        $this->entityManager->persist($sub);
 
         return $sub;
     }
@@ -225,7 +225,7 @@ final class DuplicateCollapseTest extends DbTestCase
     {
         $at = new \DateTimeImmutable($effective);
         $entry = new Entry($feed, $guid, $url, 'Title ' . $guid, $at, $at, $urlHash);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

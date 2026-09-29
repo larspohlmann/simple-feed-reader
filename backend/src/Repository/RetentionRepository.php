@@ -16,7 +16,7 @@ use Doctrine\ORM\QueryBuilder;
 /** The retention passes' queries; EntryPruner picks the feeds and chunks the deletes. */
 final readonly class RetentionRepository
 {
-    public function __construct(private EntityManagerInterface $em, private RowIds $rowIds)
+    public function __construct(private EntityManagerInterface $entityManager, private RowIds $rowIds)
     {
     }
 
@@ -24,7 +24,7 @@ final readonly class RetentionRepository
     public function feedIdsFetchedBefore(\DateTimeImmutable $cutoff): array
     {
         /** @var list<int> $feedIds */
-        $feedIds = $this->em->createQuery(sprintf(
+        $feedIds = $this->entityManager->createQuery(sprintf(
             'SELECT DISTINCT IDENTITY(e.feed) FROM %s e WHERE e.createdAt < :cutoff',
             Entry::class,
         ))
@@ -38,7 +38,7 @@ final readonly class RetentionRepository
     public function feedIdsOverCap(int $cap): array
     {
         /** @var list<int> $feedIds */
-        $feedIds = $this->em->createQuery(sprintf(
+        $feedIds = $this->entityManager->createQuery(sprintf(
             'SELECT IDENTITY(e.feed) FROM %s e GROUP BY e.feed HAVING COUNT(e.id) > :cap',
             Entry::class,
         ))
@@ -72,7 +72,7 @@ final readonly class RetentionRepository
     /** A completed run whose items were all pruned; pending and running runs legitimately have none yet. */
     public function deleteEmptyCompletedRuns(): void
     {
-        $this->em->createQuery(sprintf(
+        $this->entityManager->createQuery(sprintf(
             'DELETE FROM %s r WHERE r.status = :completed AND NOT EXISTS (SELECT i.id FROM %s i WHERE i.run = r)',
             RecommendationRun::class,
             RecommendationItem::class,
@@ -89,7 +89,7 @@ final readonly class RetentionRepository
             return null;
         }
 
-        return $this->em->createQueryBuilder()
+        return $this->entityManager->createQueryBuilder()
             ->select('e.id')
             ->from(Entry::class, 'e')
             ->where('e.feed = :feed')
@@ -108,7 +108,7 @@ final readonly class RetentionRepository
     private function rankBoundaryBeyond(int $feedId, int $keep): ?EntryRankBoundary
     {
         /** @var list<array{createdAt: \DateTimeImmutable, id: int}> $rows */
-        $rows = $this->em->createQuery(sprintf(
+        $rows = $this->entityManager->createQuery(sprintf(
             'SELECT e.createdAt AS createdAt, e.id AS id FROM %s e
              WHERE e.feed = :feed
              ORDER BY e.createdAt DESC, e.id DESC',

@@ -22,11 +22,11 @@ final class EntryIngestorCategoriesTest extends DbTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->ingestor = EntryIngestors::build($this->em, new MockClock('2026-09-21 12:00:00'));
+        $this->ingestor = EntryIngestors::build($this->entityManager, new MockClock('2026-09-21 12:00:00'));
 
         $this->feed = new Feed('https://example.com/feed');
-        $this->em->persist($this->feed);
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->flush();
     }
 
     public function testIngestWritesCategoriesForNewEntriesAndDoesNotChurnOnReingest(): void
@@ -37,13 +37,13 @@ final class EntryIngestorCategoriesTest extends DbTestCase
         ]);
 
         $this->ingestor->ingest($this->feed, $parsed, $this->context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(2, $this->categoryCount());
         self::assertSame(2, $this->entryCategoryCount());
 
         $this->ingestor->ingest($this->feed, $parsed, $this->context());
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(2, $this->categoryCount());
         self::assertSame(2, $this->entryCategoryCount());
@@ -75,7 +75,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
 
     private function categoryCount(): int
     {
-        $count = $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM category');
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM category');
         self::assertIsNumeric($count);
 
         return (int) $count;
@@ -83,7 +83,7 @@ final class EntryIngestorCategoriesTest extends DbTestCase
 
     private function entryCategoryCount(): int
     {
-        $count = $this->em->getConnection()->fetchOne('SELECT COUNT(*) FROM entry_category');
+        $count = $this->entityManager->getConnection()->fetchOne('SELECT COUNT(*) FROM entry_category');
         self::assertIsNumeric($count);
 
         return (int) $count;

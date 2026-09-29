@@ -40,7 +40,7 @@ final class AdminGrafanaControllerTest extends ApiTestCase
      */
     private function resetGrafanaSettings(): void
     {
-        $this->em()->createQuery('DELETE FROM ' . GrafanaSettings::class . ' g')->execute();
+        $this->entityManager()->createQuery('DELETE FROM ' . GrafanaSettings::class . ' g')->execute();
 
         /** @var GrafanaSettingsCache $cache */
         $cache = self::getContainer()->get(GrafanaSettingsCache::class);

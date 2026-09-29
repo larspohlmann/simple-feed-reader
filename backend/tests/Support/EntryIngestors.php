@@ -24,27 +24,27 @@ use Psr\Clock\ClockInterface;
 /** An EntryIngestor over the EntityManager's real repositories: the one assembly the ingest and refresh tests share. */
 final class EntryIngestors
 {
-    public static function build(EntityManagerInterface $em, ClockInterface $clock): EntryIngestor
+    public static function build(EntityManagerInterface $entityManager, ClockInterface $clock): EntryIngestor
     {
-        return self::withPlatformRules($em, $clock, new PlatformEntryRules([]));
+        return self::withPlatformRules($entityManager, $clock, new PlatformEntryRules([]));
     }
 
     public static function withPlatformRules(
-        EntityManagerInterface $em,
+        EntityManagerInterface $entityManager,
         ClockInterface $clock,
         PlatformEntryRules $platformRules,
     ): EntryIngestor {
         /** @var EntryRepository $entryRepository */
-        $entryRepository = $em->getRepository(Entry::class);
+        $entryRepository = $entityManager->getRepository(Entry::class);
         /** @var CategoryRepository $categoryRepository */
-        $categoryRepository = $em->getRepository(Category::class);
+        $categoryRepository = $entityManager->getRepository(Category::class);
         $imageWriter = new EntryImageWriter(new NaiveUtcClock($clock));
 
         return new EntryIngestor(
-            $em,
+            $entityManager,
             $entryRepository,
             new UrlNormalizer(),
-            new EntryCategoryWriter($em, $categoryRepository, new CategoryNormalizer()),
+            new EntryCategoryWriter($entityManager, $categoryRepository, new CategoryNormalizer()),
             $platformRules,
             new IngestedEntryFactory(new EntrySanitizer(new TrailingBlankRemover()), $imageWriter),
             $imageWriter,

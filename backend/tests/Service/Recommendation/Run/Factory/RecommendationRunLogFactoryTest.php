@@ -34,8 +34,8 @@ final class RecommendationRunLogFactoryTest extends DbTestCase
     {
         $run = $this->newRun();
         $first = $this->factory()->create($run, CallSlotModel::batch(2), $this->request());
-        $this->em->persist($first);
-        $this->em->flush();
+        $this->entityManager->persist($first);
+        $this->entityManager->flush();
 
         $second = $this->factory()->create($run, CallSlotModel::batch(2), $this->request());
 
@@ -49,8 +49,8 @@ final class RecommendationRunLogFactoryTest extends DbTestCase
             $this->user('log-factory@example.test'),
             new \DateTimeImmutable('2026-08-08T09:00:00Z'),
         );
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }

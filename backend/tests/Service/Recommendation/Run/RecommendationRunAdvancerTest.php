@@ -86,16 +86,18 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('run-advancer@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('run-advancer@example.test');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
     }
 
     public function testTickWithoutAnyRunReportsNone(): void
@@ -127,8 +129,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // Proves the batch plan was actually flushed, not just set on the
         // in-memory entity the report happens to read from.
-        $this->em->clear();
-        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertCount(5, $persisted->getCandidateBatches()[0] ?? []);
@@ -150,8 +152,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // Proves complete() was actually flushed, not just set on the
         // in-memory entity the report happens to read from.
-        $this->em->clear();
-        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
         self::assertSame(RunStatus::Completed, $persisted?->getStatus());
     }
 
@@ -167,8 +169,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->advancer()->advance($this->user);
 
-        $this->em->clear();
-        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
         self::assertSame([[$inside->getId()]], $persisted->getCandidateBatches());
     }
@@ -210,8 +212,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
 
         $insideWiderWindow = $this->entry('inside-wider-window', 60 * 24 * 3);
         $this->entry('outside-both-windows', 60 * 24 * 10);
@@ -221,8 +223,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->advancer()->advance($this->user);
 
-        $this->em->clear();
-        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
         self::assertSame([[$insideWiderWindow->getId()]], $persisted->getCandidateBatches());
     }
@@ -297,12 +299,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $run = $this->startSnapshotAndDistill(); // run is RUNNING, ready for the batch phase
         $runId = $run->requireId();
 
-        $this->em->getConnection()->update(
+        $this->entityManager->getConnection()->update(
             'recommendation_run',
             ['retry_not_before' => '2099-01-01 00:00:00'],
             ['id' => $runId],
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $callsBefore = \count($this->stubChatClient()->calls());
         $report = $this->advancer()->advance($this->user, TickDriver::Worker);
@@ -354,8 +356,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // Expected: the caller still sees the error on this tick.
         }
 
-        $this->em->clear();
-        $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+        $this->entityManager->clear();
+        $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Failed, $persisted->getStatus());
         self::assertSame('The AI provider is no longer configured.', $persisted->getError());
@@ -549,7 +551,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testABeatArrivingAsTheLockIsReleasedRefreshesNothing(): void
     {
         $lockFactory = new BeatDuringReleaseLockFactory(
-            new DoctrineDbalStore($this->em->getConnection()),
+            new DoctrineDbalStore($this->entityManager->getConnection()),
             $this->streamHeartbeat(),
         );
         self::getContainer()->set(LockFactory::class, $lockFactory);
@@ -604,8 +606,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
             self::assertSame('running', $report->status);
 
-            $this->em->clear();
-            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            $this->entityManager->clear();
+            $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
             self::assertNotNull($persisted);
             self::assertSame(0, $persisted->getProgress()->batchesDone);
             self::assertSame([], $persisted->getWinners());
@@ -644,8 +646,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
             self::assertSame('running', $report->status);
 
-            $this->em->clear();
-            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            $this->entityManager->clear();
+            $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
             self::assertNotNull($persisted);
             self::assertSame(0, $this->persistedTransportFailures($persisted));
             self::assertSame(RunStatus::Running, $persisted->getStatus());
@@ -703,8 +705,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
             self::assertSame('running', $report->status);
 
-            $this->em->clear();
-            $persisted = $this->em->getRepository(RecommendationRun::class)->find($runId);
+            $this->entityManager->clear();
+            $persisted = $this->entityManager->getRepository(RecommendationRun::class)->find($runId);
             self::assertNotNull($persisted);
             self::assertSame(RunStatus::Running, $persisted->getStatus());
             self::assertSame([], $this->recommendationItems($persisted));
@@ -722,9 +724,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      */
     private function stealTheTickLock(): SharedLockInterface
     {
-        $this->em->getConnection()->executeStatement('DELETE FROM lock_keys');
+        $this->entityManager->getConnection()->executeStatement('DELETE FROM lock_keys');
 
-        $thief = (new LockFactory(new DoctrineDbalStore($this->em->getConnection())))
+        $thief = (new LockFactory(new DoctrineDbalStore($this->entityManager->getConnection())))
             ->createLock('ai-recommendations-' . $this->user->getId(), 60.0);
         self::assertTrue($thief->acquire(), 'The second process must be able to take the freed name.');
 
@@ -775,7 +777,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      */
     private function recordLocksOverTheRealStore(): TtlRecordingLockFactory
     {
-        $factory = new TtlRecordingLockFactory(new DoctrineDbalStore($this->em->getConnection()));
+        $factory = new TtlRecordingLockFactory(new DoctrineDbalStore($this->entityManager->getConnection()));
         self::getContainer()->set(LockFactory::class, $factory);
 
         return $factory;
@@ -786,7 +788,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = $this->user->getActiveAiProviderSettings();
         self::assertNotNull($settings);
         $settings->setSlowModel($slowModel);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testBatchTickRecordsWinnersAndAdvances(): void
@@ -840,7 +842,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $batchCall['maxAnswerTokens'],
         );
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(
             [
@@ -933,7 +935,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // The distill call, the warm-up call, then both fanned-out batch calls.
         self::assertCount(4, $this->stubChatClient()->calls());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertTrue($persisted->getProgress()->isConsolidationPhase);
         self::assertSame(
@@ -991,7 +993,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // retries stayed in-tick.
         self::assertCount(6, $this->stubChatClient()->calls());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(
@@ -1041,7 +1043,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected -- the caller still sees the error this tick
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         // Only the warm-up's batch banked; the failed wave advanced nothing.
@@ -1094,7 +1096,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected -- the caller still sees the error this tick
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(0, $persisted->getProgress()->batchesDone);
@@ -1377,7 +1379,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         } catch (RetryableProviderException) {
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(1, $persisted->getProgress()->batchesDone);
         self::assertSame(1, $persisted->getTransportFailures());
@@ -1454,10 +1456,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     public function testTheBatchCallCarriesTheAccountsReasoningPreference(): void
     {
         $this->seedReadyAiSettings($this->user);
-        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        $config = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($config);
         $config->setSuppressReasoning(false);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         for ($i = 0; $i < 3; $i++) {
             $this->entry('entry-' . $i, 60 - $i);
@@ -1532,7 +1534,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame(1, $report->batchesDone);
         self::assertCount(3, $this->stubChatClient()->calls()); // the distill call, then this batch's two attempts
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(0, $this->activeRun()->getTransportFailures());
     }
 
@@ -1599,7 +1601,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('completed', $report->status);
 
         // Only batch two's winner survives; the dropped batch contributes none.
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertSame(
             [$secondBatch[0]],
@@ -1631,7 +1633,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
                 // expected -- the tick re-throws so the caller sees the error
             }
         }
-        $this->em->clear();
+        $this->entityManager->clear();
         $failed = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
@@ -1665,7 +1667,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $run = $this->activeRun();
         self::assertSame(RunStatus::Running, $run->getStatus());
         self::assertSame(0, $run->getProgress()->batchesDone);
@@ -1697,7 +1699,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             }
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(RunStatus::Running, $this->activeRun()->getStatus());
 
         $this->stubChatClient()->queueFailure(new ProviderUnreachableException('still down'));
@@ -1708,7 +1710,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected -- still re-thrown even once the run is failed
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $run = $this->runs()->findLatestForUser($this->user);
         self::assertNotNull($run);
         self::assertSame(RunStatus::Failed, $run->getStatus());
@@ -1780,7 +1782,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $run = $this->activeRun();
         self::assertSame(1, $run->getProgress()->batchesDone);
 
@@ -1796,7 +1798,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             }
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(RunStatus::Running, $this->activeRun()->getStatus());
     }
 
@@ -1807,12 +1809,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $callsBeforeThisTick = \count($this->stubChatClient()->calls()); // the distill call
 
         foreach ($firstBatch as $entryId) {
-            $entry = $this->em->getRepository(Entry::class)->find($entryId);
+            $entry = $this->entityManager->getRepository(Entry::class)->find($entryId);
             self::assertNotNull($entry);
-            $this->em->remove($entry);
+            $this->entityManager->remove($entry);
         }
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $report = $this->advancer()->advance($this->user);
 
@@ -1821,7 +1823,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // Proves the empty winner set was actually flushed, not just set on
         // the in-memory entity the report happens to read from.
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(1, $persisted->getProgress()->batchesDone);
         self::assertSame([], $persisted->getWinners()[0]);
@@ -1850,12 +1852,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user); // distill tick
 
         foreach ($run->getCandidateBatches()[0] as $entryId) {
-            $entry = $this->em->getRepository(Entry::class)->find($entryId);
+            $entry = $this->entityManager->getRepository(Entry::class)->find($entryId);
             self::assertNotNull($entry);
-            $this->em->remove($entry);
+            $this->entityManager->remove($entry);
         }
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $afterPrunedBatch = $this->advancer()->advance($this->user); // batch tick: fully pruned, no call
 
@@ -1938,11 +1940,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $firstBatch = $this->startSnapshotAndDistill()->getCandidateBatches()[0];
         $droppedId = $firstBatch[1];
 
-        $entry = $this->em->getRepository(Entry::class)->find($droppedId);
+        $entry = $this->entityManager->getRepository(Entry::class)->find($droppedId);
         self::assertNotNull($entry);
-        $this->em->remove($entry);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($entry);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $firstBatch[0], 'score' => 90, 'reason' => 'r1']],
@@ -1985,12 +1987,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // Prune batch 2 entirely; it sits in the middle of the fan-out wave.
         foreach ($batches[2] as $entryId) {
-            $entry = $this->em->getRepository(Entry::class)->find($entryId);
+            $entry = $this->entityManager->getRepository(Entry::class)->find($entryId);
             self::assertNotNull($entry);
-            $this->em->remove($entry);
+            $this->entityManager->remove($entry);
         }
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
         $batches = $this->activeRun()->getCandidateBatches();
 
         $this->stubChatClient()->queueContent(json_encode([
@@ -2052,7 +2054,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('completed', $report->status);
         self::assertCount(3, $this->stubChatClient()->calls()); // distill, batch, consolidate
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertCount(2, $items);
         self::assertSame([1, 2], array_map(static fn (RecommendationItem $item): int => $item->getPosition(), $items));
@@ -2118,7 +2120,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             $consolidateUserMessage,
         );
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertCount(2, $items);
         self::assertSame([$secondBatch[0], $firstBatch[0]], array_map(
@@ -2166,7 +2168,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected -- the caller still sees the error this tick
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(1, $persisted->getTransportFailures());
@@ -2247,7 +2249,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $this->advancer()->advance($this->user);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertFalse($persisted->isDistilled());
@@ -2301,7 +2303,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             // expected -- the caller still sees the error this tick
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun();
         self::assertSame(RunStatus::Running, $persisted->getStatus());
         self::assertSame(1, $persisted->getTransportFailures());
@@ -2389,22 +2391,22 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
 
         foreach ([$firstBatch[0], $secondBatch[0]] as $winnerId) {
-            $entry = $this->em->getRepository(Entry::class)->find($winnerId);
+            $entry = $this->entityManager->getRepository(Entry::class)->find($winnerId);
             self::assertNotNull($entry);
-            $this->em->remove($entry);
+            $this->entityManager->remove($entry);
         }
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $report = $this->advancer()->advance($this->user);
 
         self::assertSame('completed', $report->status);
         self::assertCount(3, $this->stubChatClient()->calls()); // distill, batch one, batch two -- no consolidate call
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertCount(0, $this->recommendationItems($run));
     }
 
@@ -2430,7 +2432,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             static fn (int $id): array => ['id' => $id, 'score' => 90, 'reason' => 'high ' . $id],
             $secondBatch,
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
 
         $this->queueConsolidationReply(array_map(
@@ -2449,7 +2451,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // The consolidation call named no duplicates, so the cut to the picks
         // limit is the only thing that can bring those 8 survivors down to 4.
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertCount(4, $this->recommendationItems($run));
     }
 
@@ -2506,7 +2508,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('completed', $report->status);
         self::assertNull($report->error);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertSame([$secondBatch[0], $firstBatch[0]], array_map(
             fn (RecommendationItem $item): int => $this->entryIdOf($item),
@@ -2552,7 +2554,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('completed', $report->status);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertCount(2, $items);
         self::assertSame([$batch[2], $batch[1]], array_map(
@@ -2597,7 +2599,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         // A runaway is the model's failure, so it never touches the transport
         // ceiling — the endpoint answered, and at length.
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(0, $this->persistedTransportFailures($run));
     }
 
@@ -2636,7 +2638,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // retry counter would restart at zero on every poll, so the degrade
         // ending would never arrive and each poll would spend one more
         // provider call on the same run (the spend hazard of #302 and #308).
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(2, $this->persistedAttempts($run));
 
         $report = $this->advancer()->advance($this->user);
@@ -2646,7 +2648,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         self::assertSame('completed', $report->status);
         self::assertNull($report->error);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertSame([$secondBatch[0], $firstBatch[0]], array_map(
             fn (RecommendationItem $item): int => $this->entryIdOf($item),
@@ -2675,7 +2677,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
                 $batch,
             ));
         }
-        $this->em->flush();
+        $this->entityManager->flush();
         self::assertTrue($this->activeRun()->getProgress()->isConsolidationPhase);
 
         for ($attempt = 1; $attempt < RecommendationRun::MAX_ATTEMPTS; $attempt++) {
@@ -2688,7 +2690,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('completed', $report->status);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         // 2 × picksLimit(2) = 4 entries reached the consolidation call, so a
         // pool handed back whole would be twice the list the reader asked for.
         self::assertCount(2, $this->recommendationItems($run));
@@ -2720,11 +2722,11 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->advancer()->advance($this->user);
 
         $prunedId = $firstBatch[0];
-        $prunedEntry = $this->em->getRepository(Entry::class)->find($prunedId);
+        $prunedEntry = $this->entityManager->getRepository(Entry::class)->find($prunedId);
         self::assertNotNull($prunedEntry);
-        $this->em->remove($prunedEntry);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($prunedEntry);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $run = $this->activeRun();
         $this->queueConsolidationReply([
@@ -2739,7 +2741,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $consolidateUserMessage = $this->stubChatClient()->calls()[3]['messages'][1]['content'];
         self::assertStringNotContainsString('[' . $prunedId . ']', $consolidateUserMessage);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $items = $this->recommendationItems($run);
         self::assertCount(2, $items);
         self::assertSame([1, 2], array_map(static fn (RecommendationItem $item): int => $item->getPosition(), $items));
@@ -2849,7 +2851,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $this->seedMultiBatchFixture();
         $this->startSnapshotAndDistill();
 
-        $keyDonor = (new UserFactory($this->em, $this->passwordHasher()))->create('key-donor@example.test');
+        $keyDonor = (new UserFactory($this->entityManager, $this->passwordHasher()))->create('key-donor@example.test');
         $this->fixtures->seedReadyAiSettings($keyDonor);
         $this->deleteAiSettings();
         // The donor's key was sealed under the donor's own account id, so
@@ -2861,7 +2863,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // resolves through that property directly, and em->clear() (which
         // moveOwnership() calls) detaches $this->user rather than refreshing
         // it, so a database-only write would never become visible to it.
-        $moved = (new AiSettingsRowMover($this->em))->moveOwnership($keyDonor, $this->user);
+        $moved = (new AiSettingsRowMover($this->entityManager))->moveOwnership($keyDonor, $this->user);
         $this->user->setActiveAiProviderSettings($moved);
 
         try {
@@ -2883,7 +2885,9 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function recommendationItems(RecommendationRun $run): array
     {
         /** @var list<RecommendationItem> $items */
-        $items = $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $run], ['position' => 'ASC']);
+        $items = $this->entityManager
+            ->getRepository(RecommendationItem::class)
+            ->findBy(['run' => $run], ['position' => 'ASC']);
 
         return $items;
     }
@@ -2896,7 +2900,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      */
     private function persistedTransportFailures(RecommendationRun $run): int
     {
-        $failures = $this->em->getConnection()->fetchOne(
+        $failures = $this->entityManager->getConnection()->fetchOne(
             'SELECT transport_failures FROM recommendation_run WHERE id = ?',
             [$run->getId()],
         );
@@ -2907,7 +2911,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function persistedAttempts(RecommendationRun $run): int
     {
-        $attempts = $this->em->getConnection()->fetchOne(
+        $attempts = $this->entityManager->getConnection()->fetchOne(
             'SELECT attempts FROM recommendation_run WHERE id = ?',
             [$run->getId()],
         );
@@ -2956,7 +2960,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             );
             $entry->setSummary($summary);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->persistSettings(self::MULTI_BATCH_ENTRY_COUNT, $picksLimit);
     }
@@ -2973,7 +2977,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         for ($i = 0; $i < self::SINGLE_BATCH_ENTRY_COUNT; $i++) {
             $this->entry('entry-' . $i, 60 - $i);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->persistSettings(self::SINGLE_BATCH_ENTRY_COUNT, $picksLimit);
     }
@@ -2993,8 +2997,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
     }
 
     /**
@@ -3016,7 +3020,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
             );
             $entry->setSummary($summary);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->persistSettings($entryCount, RecommendationSettings::DEFAULT_PICKS_LIMIT);
     }
@@ -3027,10 +3031,10 @@ final class RecommendationRunAdvancerTest extends DbTestCase
      */
     private function setBatchConcurrency(int $concurrency): void
     {
-        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
+        $config = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     /**
@@ -3142,8 +3146,8 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function freshRunLog(int $id): RecommendationRunLog
     {
-        $this->em->clear();
-        $log = $this->em->getRepository(RecommendationRunLog::class)->find($id);
+        $this->entityManager->clear();
+        $log = $this->entityManager->getRepository(RecommendationRunLog::class)->find($id);
         self::assertNotNull($log);
 
         return $log;
@@ -3152,7 +3156,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }
@@ -3190,7 +3194,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         $runId = $run->requireId();
         $this->stubChatClient()->duringNextCall(function () use ($runId): void {
-            $this->em->getConnection()->update(
+            $this->entityManager->getConnection()->update(
                 'recommendation_run',
                 ['status' => 'cancelled', 'completed_at' => '2026-01-01 00:00:00'],
                 ['id' => $runId],
@@ -3204,7 +3208,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
         self::assertSame('cancelled', $report->status);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->runRepository()->findLatestForUser($this->user);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Cancelled, $persisted->getStatus());
@@ -3234,7 +3238,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
 
     private function persistedFirstBatchStarted(int $runId): bool
     {
-        $started = $this->em->getConnection()->fetchOne(
+        $started = $this->entityManager->getConnection()->fetchOne(
             'SELECT first_batch_started FROM recommendation_run WHERE id = ?',
             [$runId],
         );

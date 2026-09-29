@@ -14,14 +14,14 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 final class InstanceSettingsTest extends KernelTestCase
 {
     private InstanceSettings $settings;
-    private EntityManagerInterface $em;
+    private EntityManagerInterface $entityManager;
 
     protected function setUp(): void
     {
         self::bootKernel();
         $container = self::getContainer();
         $this->settings = $container->get(InstanceSettings::class);
-        $this->em = $container->get(EntityManagerInterface::class);
+        $this->entityManager = $container->get(EntityManagerInterface::class);
     }
 
     public function testDefaultsToBothGatesOnWhenNoRowExists(): void
@@ -101,7 +101,7 @@ final class InstanceSettingsTest extends KernelTestCase
             passkeyRpName: null,
             passkeySignInEnabled: true,
         ));
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertTrue($this->settings->passkeySignInEnabled());
     }
@@ -115,7 +115,7 @@ final class InstanceSettingsTest extends KernelTestCase
             passkeyRpId: null,
             passkeyRpName: null,
         ));
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertFalse($this->settings->requireEmailConfirmation());
         self::assertTrue($this->settings->requireApproval());
@@ -128,7 +128,7 @@ final class InstanceSettingsTest extends KernelTestCase
         $this->settings->update(
             new InstanceSettingsUpdate(true, true, 'https://reader.example.ts.net/reader', null, null),
         );
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertSame('https://reader.example.ts.net/reader', $this->settings->getPublicBaseUrl());
     }
@@ -139,7 +139,7 @@ final class InstanceSettingsTest extends KernelTestCase
         self::assertNull($this->settings->getPasskeyRpName());
 
         $this->settings->update(new InstanceSettingsUpdate(true, true, null, 'example.test', 'My Reader'));
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertSame('example.test', $this->settings->getPasskeyRpId());
         self::assertSame('My Reader', $this->settings->getPasskeyRpName());
@@ -191,9 +191,9 @@ final class InstanceSettingsTest extends KernelTestCase
     {
         $this->settings->update(new InstanceSettingsUpdate(false, false, null, null, null));
         $this->settings->update(new InstanceSettingsUpdate(true, false, null, null, null));
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $count = (int) $this->em
+        $count = (int) $this->entityManager
             ->createQuery('SELECT COUNT(s.id) FROM App\Entity\InstanceSetting s')
             ->getSingleScalarResult();
         self::assertSame(1, $count);

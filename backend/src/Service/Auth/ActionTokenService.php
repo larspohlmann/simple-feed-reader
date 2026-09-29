@@ -23,7 +23,7 @@ final readonly class ActionTokenService
     private const string LIFETIME = 'PT24H';
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private ActionTokenRepository $tokens,
     ) {
@@ -48,14 +48,14 @@ final readonly class ActionTokenService
             $existing->setConsumedAt($now);
         }
 
-        $this->em->persist(new ActionToken(
+        $this->entityManager->persist(new ActionToken(
             $user,
             $purpose,
             hash('sha256', $plain),
             $now->add(new \DateInterval(self::LIFETIME)),
             $now,
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $plain;
     }
@@ -71,7 +71,7 @@ final readonly class ActionTokenService
         }
 
         $token->setConsumedAt($now);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $token->getUser();
     }

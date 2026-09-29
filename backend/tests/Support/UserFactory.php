@@ -12,7 +12,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final readonly class UserFactory
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $hasher,
     ) {
     }
@@ -50,8 +50,8 @@ final readonly class UserFactory
         $user->setTrialEndsAt($trialEndsAt);
         $user->setMaxSubscriptions($maxSubscriptions);
 
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }

@@ -40,12 +40,12 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $this->user = $factory->create('recorder-owner@example.test');
 
         $this->run = new RecommendationRun($this->user, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
-        $this->em->persist($this->run);
-        $this->em->flush();
+        $this->entityManager->persist($this->run);
+        $this->entityManager->flush();
 
         $this->clock = new MockClock('2026-08-08T10:00:00Z');
 
@@ -54,8 +54,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
         $this->logs = $logs;
 
         $this->recorder = new RecommendationCallRecorder(
-            $this->em,
-            new RecommendationCallRepository($this->em->getConnection()),
+            $this->entityManager,
+            new RecommendationCallRepository($this->entityManager->getConnection()),
             $this->clock,
             new RecommendationRunLogFactory($this->logs, $this->clock),
         );
@@ -113,8 +113,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
         $runId = $this->run->getId();
         self::assertNotNull($runId);
-        $this->em->clear();
-        $freshRun = $this->em->find(RecommendationRun::class, $runId);
+        $this->entityManager->clear();
+        $freshRun = $this->entityManager->find(RecommendationRun::class, $runId);
         self::assertSame(1_234, $freshRun?->getStreamedChars());
     }
 
@@ -131,7 +131,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
         self::assertSame('{"recommendations": []}', $log->getResponseText());
         self::assertSame(CallVerdict::Usable, $log->getVerdict());
         self::assertEquals($this->clock->now(), $log->getFinishedAt());
-        $freshRun = $this->em->find(RecommendationRun::class, $this->run->getId());
+        $freshRun = $this->entityManager->find(RecommendationRun::class, $this->run->getId());
         self::assertSame(0, $freshRun?->getStreamedChars());
     }
 
@@ -216,10 +216,10 @@ final class RecommendationCallRecorderTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $otherUser = (new UserFactory($this->em, $hasher))->create('recorder-other@example.test');
+        $otherUser = (new UserFactory($this->entityManager, $hasher))->create('recorder-other@example.test');
 
         $otherRun = new RecommendationRun($otherUser, new \DateTimeImmutable('2026-08-08T09:00:00Z'));
-        $this->em->persist($otherRun);
+        $this->entityManager->persist($otherRun);
         $otherLog = new RecommendationRunLog(
             $otherRun,
             CallPhase::Batch,
@@ -228,15 +228,15 @@ final class RecommendationCallRecorderTest extends DbTestCase
             'other request',
             new \DateTimeImmutable('2026-08-08T09:00:00Z'),
         );
-        $this->em->persist($otherLog);
-        $this->em->flush();
+        $this->entityManager->persist($otherLog);
+        $this->entityManager->flush();
 
         $otherRunId = $otherRun->getId();
         $otherLogId = $otherLog->getId();
         self::assertNotNull($otherRunId);
         self::assertNotNull($otherLogId);
 
-        $connection = $this->em->getConnection();
+        $connection = $this->entityManager->getConnection();
         $connection->update('recommendation_run', ['streamed_chars' => 777], ['id' => $otherRunId]);
         $connection->update(
             'recommendation_run_log',
@@ -249,13 +249,13 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     private function assertOtherUsersRowsUntouched(int $otherRunId, int $otherLogId): void
     {
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $otherRun = $this->em->find(RecommendationRun::class, $otherRunId);
+        $otherRun = $this->entityManager->find(RecommendationRun::class, $otherRunId);
         self::assertNotNull($otherRun);
         self::assertSame(777, $otherRun->getStreamedChars());
 
-        $otherLog = $this->em->find(RecommendationRunLog::class, $otherLogId);
+        $otherLog = $this->entityManager->find(RecommendationRunLog::class, $otherLogId);
         self::assertNotNull($otherLog);
         self::assertSame('other original text', $otherLog->getResponseText());
         self::assertSame(CallVerdict::Usable, $otherLog->getVerdict());
@@ -291,10 +291,10 @@ final class RecommendationCallRecorderTest extends DbTestCase
 
     private function freshLog(int $id): RecommendationRunLog
     {
-        $this->em->clear();
+        $this->entityManager->clear();
 
         /** @var RecommendationRunLog $log */
-        $log = $this->em->find(RecommendationRunLog::class, $id);
+        $log = $this->entityManager->find(RecommendationRunLog::class, $id);
 
         return $log;
     }

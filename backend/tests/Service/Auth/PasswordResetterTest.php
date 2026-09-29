@@ -30,7 +30,7 @@ final class PasswordResetterTest extends DbTestCase
     public function testSetPasswordStampsPasswordChangedAtAndAuthenticates(): void
     {
         $hasher = $this->hasher();
-        $user = (new UserFactory($this->em, $hasher))->create('reset@example.com');
+        $user = (new UserFactory($this->entityManager, $hasher))->create('reset@example.com');
         $originalChangedAt = $user->getPasswordChangedAt();
 
         $this->resetter()->setPassword($user, 'a-strong-passphrase');
@@ -43,7 +43,7 @@ final class PasswordResetterTest extends DbTestCase
     public function testGenerateAndSetReturnsAUsablePlaintext(): void
     {
         $hasher = $this->hasher();
-        $user = (new UserFactory($this->em, $hasher))->create('reset-generated@example.com');
+        $user = (new UserFactory($this->entityManager, $hasher))->create('reset-generated@example.com');
 
         $plaintext = $this->resetter()->generateAndSet($user);
 
@@ -53,7 +53,7 @@ final class PasswordResetterTest extends DbTestCase
 
     public function testTheGeneratedPasswordIsThirtyTwoUrlSafeCharacters(): void
     {
-        $user = (new UserFactory($this->em, $this->hasher()))->create('reset-alphabet@example.com');
+        $user = (new UserFactory($this->entityManager, $this->hasher()))->create('reset-alphabet@example.com');
 
         self::assertMatchesRegularExpression('/^[A-Za-z0-9_-]{32}$/', $this->resetter()->generateAndSet($user));
     }

@@ -42,10 +42,10 @@ final class RecommendationProfileDistillerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('profile-distiller@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('profile-distiller@example.test');
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->fixtures->seedReadyAiSettings($this->user);
     }
 
@@ -101,7 +101,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $run = $this->runInRunningState();
         $this->stubChatClient()->duringNextCall(function () use ($run): void {
             $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
-            $this->em->flush();
+            $this->entityManager->flush();
         });
         $this->stubChatClient()->queueContent('{"profile":"Likes Rust and homelab."}');
 
@@ -114,7 +114,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
         $run = $this->runInRunningState();
         $this->stubChatClient()->duringNextCall(function () use ($run): void {
             $run->cancel(new \DateTimeImmutable('2026-08-21T10:00:00Z'));
-            $this->em->flush();
+            $this->entityManager->flush();
         });
         $this->stubChatClient()->queueContent('not json');
 
@@ -161,7 +161,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
 
         $this->distiller()->distill($this->tick($run));
 
-        $log = $this->em->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
+        $log = $this->entityManager->getRepository(RecommendationRunLog::class)->findOneBy(['run' => $run]);
         self::assertNotNull($log);
         $decoded = json_decode($log->getRequestBody(), true, 512, \JSON_THROW_ON_ERROR);
         self::assertIsArray($decoded);
@@ -183,7 +183,7 @@ final class RecommendationProfileDistillerTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->user);
         $run->snapshot([[1]]);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $run;
     }

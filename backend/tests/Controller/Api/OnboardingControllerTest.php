@@ -23,12 +23,12 @@ final class OnboardingControllerTest extends WebTestCase
     /** @return array<string, string> */
     private function authHeader(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -42,17 +42,17 @@ final class OnboardingControllerTest extends WebTestCase
     /** @return list<CatalogFeed> */
     private function catalog(): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $verge = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
         $ars = new CatalogFeed($category, 'Ars Technica', 'https://feeds.arstechnica.com/arstechnica/index');
 
         foreach ([$category, $verge, $ars] as $row) {
-            $em->persist($row);
+            $entityManager->persist($row);
         }
-        $em->flush();
+        $entityManager->flush();
 
         return [$verge, $ars];
     }
@@ -156,21 +156,21 @@ final class OnboardingControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('cap@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'cap@example.com']);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'cap@example.com']);
         self::assertNotNull($user);
 
         // One short of the cap, so a two-feed selection lands one and skips one.
         for ($i = 0; $i < SubscriptionService::MAX_SUBSCRIPTIONS_PER_USER - 1; ++$i) {
             $feed = new Feed(\sprintf('https://filler%d.example.com/rss.xml', $i));
-            $em->persist($feed);
-            $em->persist(new Subscription($user, $feed, $clock->now()));
+            $entityManager->persist($feed);
+            $entityManager->persist(new Subscription($user, $feed, $clock->now()));
         }
-        $em->flush();
+        $entityManager->flush();
 
         [$verge, $ars] = $this->catalog();
 

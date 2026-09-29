@@ -31,14 +31,14 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
 
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     private function aiReadyUserWithCadence(string $email, ?int $hours): User
     {
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($this->em, $hasher))->create($email);
+        $user = (new UserFactory($this->entityManager, $hasher))->create($email);
         $this->fixtures->seedReadyAiSettings($user);
 
         if (null !== $hours) {
@@ -61,7 +61,7 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }
@@ -79,7 +79,7 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
         $user = $this->aiReadyUserWithCadence('start-due-opted-in@example.test', 1);
 
         $this->handler()->__invoke(new StartDueRecommendationRuns());
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertNotNull($this->runs()->findActiveForUser($user));
     }
@@ -89,7 +89,7 @@ final class StartDueRecommendationRunsHandlerTest extends DbTestCase
         $user = $this->aiReadyUserWithCadence('start-due-no-cadence@example.test', null);
 
         $this->handler()->__invoke(new StartDueRecommendationRuns());
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertNull($this->runs()->findActiveForUser($user));
     }

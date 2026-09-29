@@ -30,7 +30,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $this->user = $factory->create('log-owner@example.test');
         $this->otherUser = $factory->create('log-other@example.test');
         /** @var RecommendationRunLogRepository $logs */
@@ -38,7 +38,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->logs = $logs;
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testListReturnsMetadataWithByteSizesButNoBodies(): void
@@ -63,7 +63,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             ),
         );
         $this->fixtures->log($run, CallPhase::Consolidate, null, 1, 'req-body-longer');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $rows = array_map(
             static fn (array $row): array => [
@@ -126,7 +126,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             ),
         );
         $streaming = $this->fixtures->log($run, CallPhase::Batch, 2, 1, 'r');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $streamingId = $streaming->getId();
         self::assertNotNull($streamingId);
@@ -142,7 +142,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($run, CallPhase::Consolidate, null, 1, 'r');
         $this->fixtures->log($run, CallPhase::Consolidate, null, 2, 'r');
         $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(2, $this->logs->countAttempts($run, CallPhase::Consolidate, null));
         self::assertSame(1, $this->logs->countAttempts($run, CallPhase::Batch, 1));
@@ -155,7 +155,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($earlierRun, CallPhase::Batch, 1, 1, 'r');
         $currentRun = $this->fixtures->createRun($this->user);
         $this->fixtures->log($currentRun, CallPhase::Batch, 1, 1, 'r');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->logs->countAttempts($currentRun, CallPhase::Batch, 1));
     }
@@ -169,7 +169,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             1,
             'r',
         );
-        $this->em->flush();
+        $this->entityManager->flush();
         $mineId = $mine->getId();
         self::assertNotNull($mineId);
 
@@ -185,7 +185,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
             1,
             'r',
         );
-        $this->em->flush();
+        $this->entityManager->flush();
         $theirsId = $theirs->getId();
         self::assertNotNull($theirsId);
 
@@ -201,7 +201,7 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
         $this->fixtures->log($run, CallPhase::Batch, 1, 1, 'r');
         $otherRun = $this->fixtures->createRun($this->otherUser);
         $kept = $this->fixtures->log($otherRun, CallPhase::Batch, 1, 1, 'r');
-        $this->em->flush();
+        $this->entityManager->flush();
         $keptId = $kept->getId();
         self::assertNotNull($keptId);
 
@@ -209,8 +209,8 @@ final class RecommendationRunLogRepositoryTest extends DbTestCase
 
         // Bulk DQL bypasses the identity map: clear before asserting survival,
         // or find() serves the stale in-memory row (see the #237 lesson).
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame([], $this->logs->listForRun($this->user, $run->requireId()));
-        self::assertNotNull($this->em->find(RecommendationRunLog::class, $keptId));
+        self::assertNotNull($this->entityManager->find(RecommendationRunLog::class, $keptId));
     }
 }

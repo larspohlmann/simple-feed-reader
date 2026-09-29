@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class SubscriptionCountsByUserId
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
@@ -32,7 +32,7 @@ final readonly class SubscriptionCountsByUserId
         }
 
         /** @var list<array{userId: int|string, total: int|string}> $rows */
-        $rows = $this->em->createQueryBuilder()
+        $rows = $this->entityManager->createQueryBuilder()
             ->select('IDENTITY(s.user) AS userId', 'COUNT(s.id) AS total')
             ->from(Subscription::class, 's')
             ->andWhere('s.user IN (:userIds)')->setParameter('userIds', $userIds)

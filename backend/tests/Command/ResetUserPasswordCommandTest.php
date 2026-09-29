@@ -40,7 +40,7 @@ final class ResetUserPasswordCommandTest extends DbTestCase
     public function testGenerateResetsAnExistingUserAndPrintsThePassword(): void
     {
         $hasher = $this->hasher();
-        (new UserFactory($this->em, $hasher))->create('member@example.com', password: 'the-old-password');
+        (new UserFactory($this->entityManager, $hasher))->create('member@example.com', password: 'the-old-password');
 
         $tester = $this->tester();
         $tester->execute(['email' => 'member@example.com', '--generate' => true]);
@@ -71,7 +71,7 @@ final class ResetUserPasswordCommandTest extends DbTestCase
     public function testAPromptedPasswordOfTwelveCharactersIsSet(): void
     {
         $hasher = $this->hasher();
-        (new UserFactory($this->em, $hasher))->create('prompted@example.com', password: 'the-old-password');
+        (new UserFactory($this->entityManager, $hasher))->create('prompted@example.com', password: 'the-old-password');
 
         $tester = $this->tester();
         $tester->setInputs(['twelve-chars']);
@@ -86,7 +86,7 @@ final class ResetUserPasswordCommandTest extends DbTestCase
     public function testAPromptedPasswordOfElevenCharactersIsRefused(): void
     {
         $hasher = $this->hasher();
-        (new UserFactory($this->em, $hasher))->create('too-short@example.com', password: 'the-old-password');
+        (new UserFactory($this->entityManager, $hasher))->create('too-short@example.com', password: 'the-old-password');
 
         $tester = $this->tester();
         $tester->setInputs(['eleven-char']);

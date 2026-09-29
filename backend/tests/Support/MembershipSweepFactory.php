@@ -25,7 +25,7 @@ final class MembershipSweepFactory
 {
     public static function fromContainer(
         ContainerInterface $container,
-        EntityManagerInterface $em,
+        EntityManagerInterface $entityManager,
         SavedSearchMatcherInterface $matcher,
         ClockInterface $clock,
         ?LoggerInterface $logger = null,
@@ -36,7 +36,7 @@ final class MembershipSweepFactory
             self::service($container, EntryMembershipSweepRepository::class),
             $memberships ?? self::service($container, SavedSearchEntryMembershipRepository::class),
             $matcher,
-            $em,
+            $entityManager,
             $clock,
             $logger ?? new NullLogger(),
         );

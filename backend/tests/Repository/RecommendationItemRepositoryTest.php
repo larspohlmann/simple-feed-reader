@@ -35,18 +35,20 @@ final class RecommendationItemRepositoryTest extends DbTestCase
 
         $this->user = new User('item-owner@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->otherUser = new User('item-other@example.test', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
-        $this->em->persist($this->otherUser);
+        $this->entityManager->persist($this->user);
+        $this->entityManager->persist($this->otherUser);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testDeleteForUserRemovesOnlyThatUsersItemsAndLeavesTheRunRow(): void
@@ -54,9 +56,9 @@ final class RecommendationItemRepositoryTest extends DbTestCase
         $run = $this->fixtures->createRun($this->user);
         $run->snapshot([[1]]);
         $item = new RecommendationItem($run, $this->entry('mine'), 1, 'reason');
-        $this->em->persist($item);
+        $this->entityManager->persist($item);
         $run->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $runId = $run->requireId();
         $itemId = $item->getId();
         self::assertNotNull($itemId);
@@ -64,9 +66,9 @@ final class RecommendationItemRepositoryTest extends DbTestCase
         $otherRun = $this->fixtures->createRun($this->otherUser);
         $otherRun->snapshot([[1]]);
         $otherItem = new RecommendationItem($otherRun, $this->entry('theirs'), 1, 'reason');
-        $this->em->persist($otherItem);
+        $this->entityManager->persist($otherItem);
         $otherRun->complete(new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
         $otherItemId = $otherItem->getId();
         self::assertNotNull($otherItemId);
 
@@ -74,10 +76,10 @@ final class RecommendationItemRepositoryTest extends DbTestCase
 
         // Bulk DQL bypasses the identity map: clear before asserting a row is
         // gone or still there, or find() serves the stale in-memory copy.
-        $this->em->clear();
-        self::assertNull($this->em->find(RecommendationItem::class, $itemId));
-        self::assertNotNull($this->em->find(RecommendationRun::class, $runId));
-        self::assertNotNull($this->em->find(RecommendationItem::class, $otherItemId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(RecommendationItem::class, $itemId));
+        self::assertNotNull($this->entityManager->find(RecommendationRun::class, $runId));
+        self::assertNotNull($this->entityManager->find(RecommendationItem::class, $otherItemId));
     }
 
     private function entry(string $guid): Entry
@@ -90,15 +92,15 @@ final class RecommendationItemRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
 
     private function items(): RecommendationItemRepository
     {
-        $items = $this->em->getRepository(RecommendationItem::class);
+        $items = $this->entityManager->getRepository(RecommendationItem::class);
         self::assertInstanceOf(RecommendationItemRepository::class, $items);
 
         return $items;

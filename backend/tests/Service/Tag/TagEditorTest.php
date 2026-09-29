@@ -86,9 +86,9 @@ final class TagEditorTest extends DbTestCase
 
         self::assertTrue($subscription->getTags()->isEmpty());
         $subscriptionId = $subscription->requireId();
-        $this->em->clear();
-        self::assertNull($this->em->find(Tag::class, $tagId));
-        $reloaded = $this->em->find(Subscription::class, $subscriptionId);
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(Tag::class, $tagId));
+        $reloaded = $this->entityManager->find(Subscription::class, $subscriptionId);
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertTrue($reloaded->getTags()->isEmpty());
     }
@@ -104,11 +104,11 @@ final class TagEditorTest extends DbTestCase
     private function taggedSubscription(User $user, Tag $tag): Subscription
     {
         $feed = new Feed('https://tag-editor.example.com/rss');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $subscription->addTag($tag);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $subscription;
     }

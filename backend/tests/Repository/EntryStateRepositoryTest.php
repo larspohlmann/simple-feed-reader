@@ -22,16 +22,16 @@ final class EntryStateRepositoryTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('state-repo@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
 
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
+        $this->entityManager->persist($this->feed);
 
-        $this->em->persist(
+        $this->entityManager->persist(
             new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function repo(): EntryStateRepository
@@ -52,8 +52,8 @@ final class EntryStateRepositoryTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -65,8 +65,8 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $state = new EntryState($this->user, $withState);
         $state->markFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $result = $this->repo()->entryIdsWithStateForUser(
             $this->user->requireId(),
@@ -89,8 +89,8 @@ final class EntryStateRepositoryTest extends DbTestCase
     public function testForUserByEntryIdsIsKeyedByEntryIdAndHoldsOnlyTheAskedUsersStates(): void
     {
         $otherUser = new User('state-repo-other@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($otherUser);
-        $this->em->persist(
+        $this->entityManager->persist($otherUser);
+        $this->entityManager->persist(
             new Subscription($otherUser, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
 
@@ -99,12 +99,12 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $mineState = new EntryState($this->user, $shared);
         $mineState->markFavorite();
-        $this->em->persist($mineState);
+        $this->entityManager->persist($mineState);
 
         $theirState = new EntryState($otherUser, $shared);
         $theirState->markKept();
-        $this->em->persist($theirState);
-        $this->em->flush();
+        $this->entityManager->persist($theirState);
+        $this->entityManager->flush();
 
         $result = $this->repo()->forUserByEntryIds(
             $this->user->requireId(),
@@ -139,11 +139,11 @@ final class EntryStateRepositoryTest extends DbTestCase
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         $state->markFavorite();
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->repo()->ensureRow($userId, $entryId, null);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $reloaded = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isFavorite());
@@ -158,7 +158,7 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $this->repo()->ensureRow($userId, $entryId, $watermark);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertTrue($state->isHidden());
@@ -173,7 +173,7 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $this->repo()->ensureRow($userId, $entryId, null);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertFalse($state->isFavorite());
@@ -190,7 +190,7 @@ final class EntryStateRepositoryTest extends DbTestCase
 
         $this->repo()->ensureRow($userId, $entryId, null);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $state = $this->repo()->findOneForUserEntry($userId, $entryId);
         self::assertNotNull($state);
         self::assertFalse($state->isHidden());

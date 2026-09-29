@@ -24,7 +24,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class RestoreLoader
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private BackupReader $reader,
         private FeedRepository $feeds,
         private SavedSearchSlug $savedSearchSlug,
@@ -34,7 +34,12 @@ final readonly class RestoreLoader
 
     public function load(User $user, string $gzipBytes): RestoreResultModel
     {
-        $pass = new RestoreLoadPass($this->em, $this->feeds, $this->savedSearchSlug, $this->foundationFactory);
+        $pass = new RestoreLoadPass(
+            $this->entityManager,
+            $this->feeds,
+            $this->savedSearchSlug,
+            $this->foundationFactory,
+        );
 
         return $pass->run($user, $this->reader->read($gzipBytes));
     }

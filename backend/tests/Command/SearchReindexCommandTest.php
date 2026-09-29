@@ -35,7 +35,7 @@ final class SearchReindexCommandTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/feed-' . uniqid('', true));
         $feed->setTitle($title);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -50,7 +50,7 @@ final class SearchReindexCommandTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
@@ -61,7 +61,7 @@ final class SearchReindexCommandTest extends DbTestCase
         for ($i = 0; $i < $count; ++$i) {
             $this->entry($feed, 'guid-' . $i);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function tester(
@@ -78,7 +78,7 @@ final class SearchReindexCommandTest extends DbTestCase
         $command = new SearchReindexCommand(
             $writer,
             $entryRepository,
-            $this->em,
+            $this->entityManager,
             $capability,
             $savedSearches,
             $batchSize,
@@ -93,16 +93,16 @@ final class SearchReindexCommandTest extends DbTestCase
         $user = new User('reindex@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $search = new SavedSearch($user, 'climate', false);
         $search->advanceMatchedUpTo(500);
-        $this->em->persist($user);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
 
         $tester = $this->tester(new RecordingSearchIndexWriter());
         $tester->execute([]);
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringContainsString('1 saved-search membership marks reset', $tester->getDisplay());
-        self::assertSame(0, StoredMark::of($this->em, $search));
+        self::assertSame(0, StoredMark::of($this->entityManager, $search));
     }
 
     public function testConfiguresAndClearsBeforeIndexing(): void
@@ -131,6 +131,16 @@ final class SearchReindexCommandTest extends DbTestCase
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertSame(['configure', 'clear', 'upsert', 'upsert', 'upsert'], $writer->calls);
         self::assertSame([2, 2, 1], array_map(count(...), $writer->upserts));
+    }
+
+    public function testLeavesNoIndexedEntryInTheIdentityMap(): void
+    {
+        $this->persistEntries(5);
+        $this->entityManager->clear();
+
+        $this->tester(new RecordingSearchIndexWriter(), batchSize: 2)->execute([]);
+
+        $this->assertNoneManaged(Entry::class);
     }
 
     public function testReportsTheIndexedCount(): void

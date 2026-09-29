@@ -18,17 +18,17 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $owner = $factory->create('owner@example.com');
         $stranger = $factory->create('stranger@example.com');
 
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $sub = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($sub);
-        $this->em->flush();
+        $this->entityManager->persist($sub);
+        $this->entityManager->flush();
 
-        $repo = $this->em->getRepository(Feed::class);
+        $repo = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repo);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');
@@ -55,18 +55,18 @@ final class FeedRepositoryUserFeedScopeTest extends DbTestCase
     {
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $factory = new UserFactory($this->em, $hasher);
+        $factory = new UserFactory($this->entityManager, $hasher);
         $owner = $factory->create('owner@example.com');
         $stranger = $factory->create('stranger@example.com');
 
         $feed = new Feed('https://example.com/gone.xml');
         $feed->markGone(new \DateTimeImmutable('2026-01-01T00:00:00Z'), 'HTTP 410 Gone');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $sub = new Subscription($owner, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
-        $this->em->persist($sub);
-        $this->em->flush();
+        $this->entityManager->persist($sub);
+        $this->entityManager->flush();
 
-        $repo = $this->em->getRepository(Feed::class);
+        $repo = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repo);
 
         $now = new \DateTimeImmutable('2026-06-01T00:00:00Z');

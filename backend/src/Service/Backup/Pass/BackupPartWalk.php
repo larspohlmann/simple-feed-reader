@@ -32,7 +32,7 @@ final class BackupPartWalk
     private int $totalEntryStates = 0;
 
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
         private readonly BackupLines $lines,
@@ -79,7 +79,7 @@ final class BackupPartWalk
             yield from $this->bufferBatch($batch, $feedUrl);
             $batchSize = \count($batch);
             $lastId = $this->lastIdOf($batch, $lastId);
-            $this->em->clear();
+            $this->entityManager->clear();
         } while (self::ENTRY_BATCH === $batchSize);
     }
 

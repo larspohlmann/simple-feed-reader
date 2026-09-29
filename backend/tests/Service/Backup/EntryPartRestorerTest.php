@@ -48,7 +48,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->userFactory = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->entityManager, $hasher);
         $this->indexWriter = new RecordingSearchIndexWriter();
     }
 
@@ -65,7 +65,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         self::assertSame(2, $result->entries);
         self::assertSame(1, $result->entryStates);
-        $this->em->clear();
+        $this->entityManager->clear();
         $entryA = $this->findEntry('a');
         $entryB = $this->findEntry('b');
         self::assertNotNull($entryA);
@@ -89,7 +89,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->restorer()->load($user, $gzip);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $dated = $this->restoredStateOf($user, 'a');
         self::assertTrue($dated->isHidden());
         self::assertEquals(new \DateTimeImmutable('2026-08-02 00:00:00'), $dated->getHiddenAt());
@@ -123,7 +123,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $this->restorer()->load($user, $gzip);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $entry = $this->findEntry('a');
         self::assertNotNull($entry);
         self::assertSame(
@@ -145,13 +145,13 @@ final class EntryPartRestorerTest extends DbTestCase
         ]);
         $restorer = $this->restorer();
         $restorer->load($user, $gzip);
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $second = $restorer->load($this->reload($user), $gzip);
 
         self::assertSame(0, $second->entries);
         self::assertSame(0, $second->entryStates);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(1, $this->scalarInt('SELECT COUNT(*) FROM entry'));
         self::assertSame(1, $this->scalarInt('SELECT COUNT(*) FROM entry_state'));
     }
@@ -161,7 +161,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $user = $this->subscribedUser(self::FEED_URL);
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'Scheduler Title');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([
             $this->entryLine('a', title: 'Backup Title'),
@@ -172,7 +172,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         self::assertSame(0, $result->entries);
         self::assertSame(1, $result->entryStates);
-        $this->em->clear();
+        $this->entityManager->clear();
         $entry = $this->findEntry('a');
         self::assertNotNull($entry);
         self::assertSame('Scheduler Title', $entry->getTitle());
@@ -188,15 +188,15 @@ final class EntryPartRestorerTest extends DbTestCase
         $entry = $this->makeEntry($feed, 'a', 'Title');
         $state = new EntryState($user, $entry);
         $state->clearFavorite();
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([$this->entryStateLine('a', isFavorite: true)]);
 
         $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entryStates);
-        $this->em->clear();
+        $this->entityManager->clear();
         $entry = $this->findEntry('a');
         self::assertNotNull($entry);
         $reloaded = $this->stateFor($this->reload($user), $entry);
@@ -209,15 +209,17 @@ final class EntryPartRestorerTest extends DbTestCase
         $user = $this->subscribedUser(self::FEED_URL);
         $feed = $this->feedByUrl(self::FEED_URL);
         $stranger = $this->userFactory->create($this->nextEmail());
-        $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-02 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-02 00:00:00')),
+        );
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([$this->entryLine('a')]);
 
         $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(0, $result->entries);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(0, $this->scalarInt('SELECT COUNT(*) FROM entry'));
     }
 
@@ -236,7 +238,7 @@ final class EntryPartRestorerTest extends DbTestCase
             // Expected.
         }
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertSame(0, $this->scalarInt('SELECT COUNT(*) FROM entry'));
     }
 
@@ -268,7 +270,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
         $this->makeEntry($feed, 'existing-b', 'B');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([$this->entryLine('new')]);
 
@@ -282,7 +284,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $user = $this->subscribedUser(self::FEED_URL);
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'existing-a', 'A');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([$this->entryLine('new')]);
 
@@ -297,7 +299,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([$this->entryLine('a'), $this->entryLine('b')]);
 
@@ -311,7 +313,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $user = $this->subscribedUser(self::FEED_URL);
         $feed = $this->feedByUrl(self::FEED_URL);
         $this->makeEntry($feed, 'a', 'A');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([
             $this->entryLine('a'),
@@ -354,7 +356,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(2, $result->entries);
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertNotNull($this->findEntry('a'));
         self::assertNotNull($this->findEntry('b'));
     }
@@ -365,11 +367,11 @@ final class EntryPartRestorerTest extends DbTestCase
         $feed = $this->feedByUrl(self::FEED_URL);
         $entryA = $this->makeEntry($feed, 'a', 'A');
         $this->makeEntry($feed, 'b', 'B');
-        $this->em->flush();
+        $this->entityManager->flush();
         $existingState = new EntryState($user, $entryA);
         $existingState->clearFavorite();
-        $this->em->persist($existingState);
-        $this->em->flush();
+        $this->entityManager->persist($existingState);
+        $this->entityManager->flush();
 
         $gzip = $this->entryPart([
             $this->entryStateLine('a', isFavorite: true),
@@ -379,7 +381,7 @@ final class EntryPartRestorerTest extends DbTestCase
         $result = $this->restorer()->load($this->reload($user), $gzip);
 
         self::assertSame(1, $result->entryStates);
-        $this->em->clear();
+        $this->entityManager->clear();
         $entryB = $this->findEntry('b');
         self::assertNotNull($entryB);
         $stateB = $this->stateFor($this->reload($user), $entryB);
@@ -402,7 +404,7 @@ final class EntryPartRestorerTest extends DbTestCase
         }
         sort($indexedIds);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $entryA = $this->findEntry('a');
         $entryB = $this->findEntry('b');
         self::assertNotNull($entryA);
@@ -411,6 +413,40 @@ final class EntryPartRestorerTest extends DbTestCase
         sort($createdIds);
 
         self::assertSame($createdIds, $indexedIds);
+    }
+
+    public function testEveryCreatedEntryReachesTheSearchIndexPastTheFirstBatch(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $tokens = array_map(strval(...), range(1, 501));
+        $gzip = $this->entryPart(array_map(fn (string $token): array => $this->entryLine($token), $tokens));
+
+        $this->restorer()->load($user, $gzip);
+
+        self::assertSame(501, array_sum(array_map(count(...), $this->indexWriter->upserts)));
+    }
+
+    public function testLeavesNoIndexedEntryInTheIdentityMap(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([$this->entryLine('a'), $this->entryLine('b')]);
+
+        $this->restorer()->load($user, $gzip);
+
+        $this->assertNoneManaged(Entry::class);
+    }
+
+    public function testLeavesNoWrittenStateInTheIdentityMap(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $this->makeEntry($this->feedByUrl(self::FEED_URL), 'a', 'Title');
+        $this->entityManager->flush();
+        $gzip = $this->entryPart([$this->entryStateLine('a', isFavorite: true)]);
+
+        $result = $this->restorer()->load($this->reload($user), $gzip);
+
+        self::assertSame(1, $result->entryStates);
+        $this->assertNoneManaged(EntryState::class);
     }
 
     private function restorer(int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES): EntryPartRestorer
@@ -428,7 +464,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         $inspector = new EntryPartInspector($reader, $feeds, $entries, $accountEntryCeiling);
         $loaderFactory = new RestoreEntryLoaderFactory(
-            $this->em,
+            $this->entityManager,
             $entries,
             $entryStates,
             $inserter,
@@ -444,9 +480,9 @@ final class EntryPartRestorerTest extends DbTestCase
     {
         $user = $this->userFactory->create($this->nextEmail());
         $feed = new Feed($feedUrl);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -454,9 +490,9 @@ final class EntryPartRestorerTest extends DbTestCase
     private function subscribeTo(User $user, string $feedUrl): void
     {
         $feed = new Feed($feedUrl);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->flush();
     }
 
     private function nextEmail(): string
@@ -466,7 +502,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
     private function feedByUrl(string $url): Feed
     {
-        $feed = $this->em->getRepository(Feed::class)->findOneBy(['url' => $url]);
+        $feed = $this->entityManager->getRepository(Feed::class)->findOneBy(['url' => $url]);
         self::assertInstanceOf(Feed::class, $feed);
 
         return $feed;
@@ -482,7 +518,7 @@ final class EntryPartRestorerTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01 00:00:00'),
             new \DateTimeImmutable('2026-08-01 00:00:00'),
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
@@ -490,7 +526,7 @@ final class EntryPartRestorerTest extends DbTestCase
     private function findEntry(string $token): ?Entry
     {
         /** @var Entry|null $entry */
-        $entry = $this->em->createQueryBuilder()
+        $entry = $this->entityManager->createQueryBuilder()
             ->select('e')
             ->from(Entry::class, 'e')
             ->andWhere('e.guidHash = :guidHash')
@@ -504,7 +540,7 @@ final class EntryPartRestorerTest extends DbTestCase
     private function stateFor(User $user, Entry $entry): ?EntryState
     {
         /** @var EntryState|null $state */
-        $state = $this->em->getRepository(EntryState::class)
+        $state = $this->entityManager->getRepository(EntryState::class)
             ->findOneBy(['user' => $user->getId(), 'entry' => $entry->getId()]);
 
         return $state;
@@ -525,7 +561,7 @@ final class EntryPartRestorerTest extends DbTestCase
      */
     private function scalarInt(string $sql, array $parameters = []): int
     {
-        $value = $this->em->getConnection()->fetchOne($sql, $parameters);
+        $value = $this->entityManager->getConnection()->fetchOne($sql, $parameters);
         self::assertIsNumeric($value);
 
         return (int) $value;

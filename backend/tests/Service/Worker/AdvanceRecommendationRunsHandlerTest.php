@@ -69,7 +69,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testFiringTouchesTheHeartbeatEvenWithNoRuns(): void
@@ -144,7 +144,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         // Consolidation firing: finalizes the run.
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->runs()->findLatestForUser($user);
         self::assertNotNull($persisted);
         self::assertSame(RunStatus::Completed, $persisted->getStatus());
@@ -188,7 +188,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         }
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $persisted = $this->activeRun($user);
         self::assertSame(4, $persisted->getProgress()->batchesDone);
         self::assertTrue($persisted->getProgress()->isConsolidationPhase);
@@ -217,7 +217,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $stillActive = $this->runs()->findActiveForUser($strugglingUser);
         self::assertNotNull($stillActive);
         self::assertSame(RunStatus::Running, $stillActive->getStatus());
@@ -263,7 +263,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $stillActive = $this->runs()->findActiveForUser($user);
         self::assertNotNull($stillActive);
         self::assertSame(RunStatus::Running, $stillActive->getStatus());
@@ -294,7 +294,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
@@ -311,7 +311,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     public function testFiringClearsTheIdentityMapAfterwards(): void
     {
-        $clearTracker = new ClearTrackingEntityManager($this->em);
+        $clearTracker = new ClearTrackingEntityManager($this->entityManager);
         $handler = new AdvanceRecommendationRunsHandler(
             new WorkerRunSweep(
                 $this->runs(),
@@ -346,7 +346,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $logSpy = new TestHandler();
         $this->handlerWithLogger(new Logger('test', [$logSpy]))->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
@@ -372,7 +372,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $failed = $this->runs()->findLatestForUser($user);
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
@@ -401,7 +401,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
 
         $this->handler()->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         $failed = $this->runs()->findLatestForUser($strugglingUser);
         self::assertNotNull($failed);
         self::assertSame(RunStatus::Failed, $failed->getStatus());
@@ -459,7 +459,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $this->handlerWithFlushFailingEntityManager(new Logger('test', [$logSpy]))
             ->__invoke(new AdvanceRecommendationRuns());
 
-        $this->em->clear();
+        $this->entityManager->clear();
         // fail() mutated the struggling run's in-memory object before its own
         // flush() threw, and that object stayed managed in the *same* shared
         // EntityManager the healthy run's advance() goes on to flush
@@ -537,7 +537,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->advancerWithFlushFailingEntityManager(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
-                $this->em,
+                $this->entityManager,
                 $logger,
             ),
         );
@@ -555,7 +555,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             self::getContainer()->get(AiProviderConfigurator::class),
             $this->connectionFactory(),
             self::getContainer()->get(ClockInterface::class),
-            new FlushFailingEntityManager($this->em),
+            new FlushFailingEntityManager($this->entityManager),
             self::getContainer()->get(RecommendationSettingsResolver::class),
             self::getContainer()->get(TickLockKeepalive::class),
             self::getContainer()->get(TickPhases::class),
@@ -575,7 +575,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->advancer(),
                 $this->presence(),
                 $this->streamHeartbeat($this->presence()),
-                $this->em,
+                $this->entityManager,
                 $logger,
             ),
         );
@@ -589,7 +589,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
                 $this->advancer(),
                 new WorkerPresence($this->heartbeats(), $presenceClock),
                 $this->streamHeartbeat(new WorkerPresence($this->heartbeats(), $presenceClock)),
-                $this->em,
+                $this->entityManager,
                 new NullLogger(),
             ),
         );
@@ -612,7 +612,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
      */
     private function moveAiSettingsRow(User $from, User $to): void
     {
-        $mover = new AiSettingsRowMover($this->em);
+        $mover = new AiSettingsRowMover($this->entityManager);
         $moved = $mover->moveOwnership($from, $to);
         $mover->pointActiveAt($to, $moved);
     }
@@ -703,7 +703,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         foreach ($this->fixtures->seedFeedWithEntries($user, $entryCount) as $entry) {
             $entry->setSummary($summary);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
@@ -718,16 +718,16 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
     }
 
     private function setBatchConcurrency(User $user, int $concurrency): void
     {
-        $config = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
+        $config = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user]);
         self::assertNotNull($config);
         $config->setBatchConcurrency($concurrency);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function activeRun(User $user): RecommendationRun
@@ -744,7 +744,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     private function recommendationItems(RecommendationRun $run): array
     {
         /** @var list<RecommendationItem> $items */
-        $items = $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $run]);
+        $items = $this->entityManager->getRepository(RecommendationItem::class)->findBy(['run' => $run]);
 
         return $items;
     }
@@ -752,7 +752,7 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
     private function runs(): RecommendationRunRepository
     {
         /** @var RecommendationRunRepository $repository */
-        $repository = $this->em->getRepository(RecommendationRun::class);
+        $repository = $this->entityManager->getRepository(RecommendationRun::class);
 
         return $repository;
     }

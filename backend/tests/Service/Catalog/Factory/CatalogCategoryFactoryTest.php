@@ -23,8 +23,8 @@ final class CatalogCategoryFactoryTest extends DbTestCase
     #[DataProvider('flags')]
     public function testANewCategoryTakesItsDetailsAndGoesLast(bool $enabled, bool $locked): void
     {
-        $this->em->persist(new CatalogCategory('existing', 'Existing', 'star', '#111111'));
-        $this->em->flush();
+        $this->entityManager->persist(new CatalogCategory('existing', 'Existing', 'star', '#111111'));
+        $this->entityManager->flush();
         $next = $this->categories()->nextPosition();
         self::assertGreaterThan(0, $next);
 

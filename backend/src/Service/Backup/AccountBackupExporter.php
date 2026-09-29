@@ -30,7 +30,7 @@ use Psr\Clock\ClockInterface;
 final readonly class AccountBackupExporter
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserRepository $users,
         private TagRepository $tags,
         private SavedSearchRepository $savedSearches,
@@ -50,7 +50,14 @@ final readonly class AccountBackupExporter
         $userId = $user->requireId();
         $provenance = $this->provenanceOf($user, $sourceUrl);
         $foundation = $this->foundationSnapshot($userId);
-        $walk = new BackupPartWalk($this->em, $this->entries, $this->entryStates, $this->lines, $provenance, $userId);
+        $walk = new BackupPartWalk(
+            $this->entityManager,
+            $this->entries,
+            $this->entryStates,
+            $this->lines,
+            $provenance,
+            $userId,
+        );
 
         yield from $walk->entryParts($foundation->feedUrlsByFeedId);
         yield $this->foundation($foundation, $provenance, $walk);

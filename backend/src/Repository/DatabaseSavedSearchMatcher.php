@@ -25,7 +25,7 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInt
     private const int SEARCHES_PER_STATEMENT = 20;
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private SearchTermsPredicateBuilder $predicates,
     ) {
     }
@@ -52,7 +52,7 @@ final readonly class DatabaseSavedSearchMatcher implements SavedSearchMatcherInt
      */
     private function matchesInOneStatement(array $searches, array $candidateEntryIds): array
     {
-        $qb = $this->em->createQueryBuilder()
+        $qb = $this->entityManager->createQueryBuilder()
             ->select('e.id')
             ->from(Entry::class, 'e')
             ->andWhere('e.id IN (:candidates)')

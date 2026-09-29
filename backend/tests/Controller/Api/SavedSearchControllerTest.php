@@ -42,11 +42,11 @@ final class SavedSearchControllerTest extends ApiTestCase
         $headers = $this->authHeaderFor($user);
 
         // Seed a subscribed feed with one unread matching entry.
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $feed = new Feed('https://example.com/f.xml');
         $feed->setTitle('Example');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $entry = new Entry(
             $feed,
             'g1',
@@ -55,8 +55,8 @@ final class SavedSearchControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
 
         // Create a whole-word saved search.
         $client->request(
@@ -193,12 +193,12 @@ final class SavedSearchControllerTest extends ApiTestCase
         $user = $this->factory()->create('counts-independent@example.com');
         $headers = $this->authHeaderFor($user);
 
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $feed = new Feed('https://example.com/counts.xml');
         $feed->setTitle('Example');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $em->persist(new Entry(
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist(new Entry(
             $feed,
             'whole-only',
             'https://example.com/whole-only',
@@ -206,7 +206,7 @@ final class SavedSearchControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         ));
-        $em->persist(new Entry(
+        $entityManager->persist(new Entry(
             $feed,
             'substring-only',
             'https://example.com/substring-only',
@@ -214,14 +214,14 @@ final class SavedSearchControllerTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         ));
-        $em->flush();
+        $entityManager->flush();
 
         // Whole-word "punk" matches only the exact-word entry; substring
         // "punk" matches both. Two saved searches on the same term but
         // different wholeWord must carry two distinct, non-zero counts.
-        $em->persist(new SavedSearch($user, 'punk', true));
-        $em->persist(new SavedSearch($user, 'punk', false));
-        $em->flush();
+        $entityManager->persist(new SavedSearch($user, 'punk', true));
+        $entityManager->persist(new SavedSearch($user, 'punk', false));
+        $entityManager->flush();
 
         // These searches are persisted directly rather than through the
         // create endpoint, so nothing has swept them into the membership
@@ -252,11 +252,11 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testUpdateSetsIncludeInDigestForTheOwner(): void
     {
         $client = self::createClient();
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $owner = $this->factory()->create('digest-owner@example.com');
         $saved = new SavedSearch($owner, 'digest-term', false);
-        $em->persist($saved);
-        $em->flush();
+        $entityManager->persist($saved);
+        $entityManager->flush();
         $savedId = $saved->getId();
         self::assertIsInt($savedId);
 
@@ -272,8 +272,8 @@ final class SavedSearchControllerTest extends ApiTestCase
         self::assertIsArray($updated['savedSearch']);
         self::assertTrue($updated['savedSearch']['includeInDigest']);
 
-        $em->clear();
-        $persisted = $em->find(SavedSearch::class, $savedId);
+        $entityManager->clear();
+        $persisted = $entityManager->find(SavedSearch::class, $savedId);
         self::assertInstanceOf(SavedSearch::class, $persisted);
         self::assertTrue($persisted->isIncludeInDigest());
     }
@@ -281,11 +281,11 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testUpdateAnotherUsersSavedSearchIs404(): void
     {
         $client = self::createClient();
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $owner = $this->factory()->create('digest-owner2@example.com');
         $saved = new SavedSearch($owner, 'private-digest', false);
-        $em->persist($saved);
-        $em->flush();
+        $entityManager->persist($saved);
+        $entityManager->flush();
 
         $headers = $this->authHeaderFor($this->factory()->create('digest-intruder@example.com'));
         $client->request(
@@ -313,11 +313,11 @@ final class SavedSearchControllerTest extends ApiTestCase
     public function testDeleteAnotherUsersSavedSearchIs404(): void
     {
         $client = self::createClient();
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $owner = $this->factory()->create('owner3@example.com');
         $saved = new SavedSearch($owner, 'private', false);
-        $em->persist($saved);
-        $em->flush();
+        $entityManager->persist($saved);
+        $entityManager->flush();
 
         $headers = $this->authHeaderFor($this->factory()->create('intruder3@example.com'));
         $client->request('DELETE', '/api/saved-searches/' . $saved->getId(), server: $headers);

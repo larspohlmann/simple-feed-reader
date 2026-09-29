@@ -20,7 +20,7 @@ final class ViewedAtSinceTest extends DbTestCase
 {
     private function repo(): EntryStateRepository
     {
-        $repo = $this->em->getRepository(EntryState::class);
+        $repo = $this->entityManager->getRepository(EntryState::class);
         self::assertInstanceOf(EntryStateRepository::class, $repo);
 
         return $repo;
@@ -30,7 +30,7 @@ final class ViewedAtSinceTest extends DbTestCase
     {
         $createdAt = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, $guid, null, $guid, $createdAt, $createdAt);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }
@@ -38,8 +38,8 @@ final class ViewedAtSinceTest extends DbTestCase
     private function subscribedFeed(User $user, string $url, \DateTimeImmutable $when): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, $when));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, $when));
 
         return $feed;
     }
@@ -48,20 +48,20 @@ final class ViewedAtSinceTest extends DbTestCase
     {
         $state = new EntryState($user, $this->entry($feed, $guid));
         $state->markViewed($when);
-        $this->em->persist($state);
+        $this->entityManager->persist($state);
     }
 
     public function testReturnsOpensAtOrAfterTheBoundAndDropsEarlierOnes(): void
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('reader@example.com', $when);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = $this->subscribedFeed($user, 'https://example.com/f.xml', $when);
 
         $this->openedAt($user, $feed, 'before', new \DateTimeImmutable('2026-08-31T23:59:59Z'));
         $this->openedAt($user, $feed, 'on', new \DateTimeImmutable('2026-09-01T00:00:00Z'));
         $this->openedAt($user, $feed, 'after', new \DateTimeImmutable('2026-09-04T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $opens = $this->repo()->viewedAtSince(
             $user->requireId(),
@@ -77,13 +77,13 @@ final class ViewedAtSinceTest extends DbTestCase
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('orphan@example.com', $when);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         // A feed with no subscription: the open is orphaned and must not count.
         $unsubscribed = new Feed('https://example.com/unsub.xml');
-        $this->em->persist($unsubscribed);
+        $this->entityManager->persist($unsubscribed);
         $this->openedAt($user, $unsubscribed, 'orphan', new \DateTimeImmutable('2026-09-03T10:00:00Z'));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(
             [],
@@ -96,17 +96,17 @@ final class ViewedAtSinceTest extends DbTestCase
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $mine = new User('mine@example.com', $when);
         $other = new User('other@example.com', $when);
-        $this->em->persist($mine);
-        $this->em->persist($other);
+        $this->entityManager->persist($mine);
+        $this->entityManager->persist($other);
         $feed = new Feed('https://example.com/shared.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($mine, $feed, $when));
-        $this->em->persist(new Subscription($other, $feed, $when));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($mine, $feed, $when));
+        $this->entityManager->persist(new Subscription($other, $feed, $when));
 
         $theirs = new EntryState($other, $this->entry($feed, 'shared'));
         $theirs->markViewed(new \DateTimeImmutable('2026-09-03T10:00:00Z'));
-        $this->em->persist($theirs);
-        $this->em->flush();
+        $this->entityManager->persist($theirs);
+        $this->entityManager->flush();
 
         self::assertSame(
             [],
@@ -118,7 +118,7 @@ final class ViewedAtSinceTest extends DbTestCase
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('ranker@example.com', $when);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $busy = $this->subscribedFeed($user, 'https://example.com/busy.xml', $when);
         $quiet = $this->subscribedFeed($user, 'https://example.com/quiet.xml', $when);
 
@@ -127,9 +127,9 @@ final class ViewedAtSinceTest extends DbTestCase
         $this->openedAt($user, $quiet, 'quiet-1', $when);
         // An unsubscribed feed's opens must not rank.
         $orphanFeed = new Feed('https://example.com/orphan.xml');
-        $this->em->persist($orphanFeed);
+        $this->entityManager->persist($orphanFeed);
         $this->openedAt($user, $orphanFeed, 'orphan-1', $when);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $ranking = $this->repo()->readCountsByFeed($user->requireId(), 5);
 
@@ -146,12 +146,12 @@ final class ViewedAtSinceTest extends DbTestCase
     {
         $when = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $user = new User('capped@example.com', $when);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         for ($feedIndex = 0; $feedIndex < 3; $feedIndex++) {
             $feed = $this->subscribedFeed($user, "https://example.com/f{$feedIndex}.xml", $when);
             $this->openedAt($user, $feed, "open-{$feedIndex}", $when);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertCount(2, $this->repo()->readCountsByFeed($user->requireId(), 2));
     }

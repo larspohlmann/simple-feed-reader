@@ -30,8 +30,8 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
     {
         $user = new User($email, new \DateTimeImmutable('-1 day'));
         $user->approve(new \DateTimeImmutable('-1 day'));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -50,7 +50,7 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
      */
     private function countRows(string $table): int
     {
-        $count = $this->em->getConnection()->executeQuery('SELECT COUNT(*) FROM ' . $table)->fetchOne();
+        $count = $this->entityManager->getConnection()->executeQuery('SELECT COUNT(*) FROM ' . $table)->fetchOne();
 
         return is_numeric($count) ? (int) $count : 0;
     }
@@ -59,7 +59,7 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
     private function survivingEmails(): array
     {
         /** @var list<string> $emails */
-        $emails = $this->em->createQuery('SELECT u.email FROM ' . User::class . ' u ORDER BY u.email ASC')
+        $emails = $this->entityManager->createQuery('SELECT u.email FROM ' . User::class . ' u ORDER BY u.email ASC')
             ->getSingleColumnResult();
 
         return $emails;
@@ -136,12 +136,12 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
         $feed = new Feed('https://example.com/feed.xml');
         $entryCreatedAt = new \DateTimeImmutable('-1 day');
         $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'First', $entryCreatedAt, $entryCreatedAt);
-        $this->em->persist($feed);
-        $this->em->persist($entry);
-        $this->em->persist(new Subscription($fixture, $feed, new \DateTimeImmutable('-1 day')));
-        $this->em->persist(new Tag($fixture, 'News'));
-        $this->em->persist(new EntryState($fixture, $entry));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new Subscription($fixture, $feed, new \DateTimeImmutable('-1 day')));
+        $this->entityManager->persist(new Tag($fixture, 'News'));
+        $this->entityManager->persist(new EntryState($fixture, $entry));
+        $this->entityManager->flush();
 
         self::assertSame(1, $this->countRows('subscription'));
         self::assertSame(1, $this->countRows('tag'));
@@ -169,7 +169,7 @@ final class E2ePurgeUsersCommandTest extends DbTestCase
 
         /** @var UserRepository $users */
         $users = self::getContainer()->get(UserRepository::class);
-        $command = new E2ePurgeUsersCommand($users, $this->em, 'prod');
+        $command = new E2ePurgeUsersCommand($users, $this->entityManager, 'prod');
 
         $tester = new CommandTester($command);
         self::assertSame(Command::FAILURE, $tester->execute([]));

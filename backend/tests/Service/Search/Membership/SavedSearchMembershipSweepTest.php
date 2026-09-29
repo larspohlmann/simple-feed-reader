@@ -35,10 +35,10 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('sweep@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
         $this->feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($this->feed);
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->flush();
     }
 
     public function testMatchesEverySettledEntryInsertsTheRowsAndAdvancesTheMark(): void
@@ -94,7 +94,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $second = $this->entry('b');
         $third = $this->entry('c');
         $ahead->advanceMatchedUpTo($second->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
         $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
@@ -238,7 +238,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $hit = $this->entry('a');
         $matcher = new RecordingSavedSearchMatcher([$search->requireId() => [$hit->requireId()]]);
         $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
-        $this->em->getConnection()->executeStatement('UPDATE saved_search SET matched_up_to_entry_id = 0');
+        $this->entityManager->getConnection()->executeStatement('UPDATE saved_search SET matched_up_to_entry_id = 0');
 
         $report = $this->sweep($matcher)->sweep(SweepBudgetModel::seconds(10));
 
@@ -266,7 +266,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         $search = $this->search('climate');
         $entry = $this->entry('a');
         $search->advanceMatchedUpTo($entry->requireId());
-        $this->em->flush();
+        $this->entityManager->flush();
         $matcher = new RecordingSavedSearchMatcher();
 
         $report = $this->sweep($matcher)->sweepOne($search, SweepBudgetModel::seconds(8));
@@ -295,7 +295,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     ): SavedSearchMembershipSweep {
         return MembershipSweepFactory::fromContainer(
             self::getContainer(),
-            $this->em,
+            $this->entityManager,
             $matcher,
             $clock ?? new MockClock(self::NOW),
             $logger,
@@ -306,8 +306,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     private function search(string $term): SavedSearch
     {
         $search = new SavedSearch($this->user, $term, false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
 
         return $search;
     }
@@ -322,22 +322,22 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
             new \DateTimeImmutable($createdAt),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
 
     private function markOf(SavedSearch $search): int
     {
-        return StoredMark::of($this->em, $search);
+        return StoredMark::of($this->entityManager, $search);
     }
 
     /** @return list<int> */
     private function memberEntryIds(SavedSearch $search): array
     {
         /** @var list<int|string> $ids */
-        $ids = $this->em->getConnection()->fetchFirstColumn(
+        $ids = $this->entityManager->getConnection()->fetchFirstColumn(
             'SELECT entry_id FROM saved_search_entry WHERE saved_search_id = ? ORDER BY entry_id',
             [$search->getId()],
         );

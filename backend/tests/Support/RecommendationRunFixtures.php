@@ -37,7 +37,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class RecommendationRunFixtures
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ApiKeyCipher $cipher,
     ) {
     }
@@ -49,10 +49,10 @@ final readonly class RecommendationRunFixtures
         $now = new \DateTimeImmutable('2026-08-07 09:00:00');
 
         $settings = new AiProviderSettings($user, null, 'https://api.example.test/v1', $sealed, '1234', $now);
-        $this->em->persist($settings);
+        $this->entityManager->persist($settings);
         $settings->chooseModel('m', $now, 32768);
         $user->setActiveAiProviderSettings($settings);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     /**
@@ -108,9 +108,9 @@ final readonly class RecommendationRunFixtures
     {
         $feed = new Feed('https://example.com/' . $user->getEmail() . '/feed.xml');
         $feed->setTitle('Example');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -129,11 +129,11 @@ final readonly class RecommendationRunFixtures
      */
     public function deleteAiSettings(User $user): void
     {
-        $settings = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user])
+        $settings = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $user])
             ?? throw new \LogicException('Expected AI settings to exist for this user.');
-        $this->em->remove($settings);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($settings);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
         $user->setActiveAiProviderSettings(null);
     }
 
@@ -141,7 +141,7 @@ final readonly class RecommendationRunFixtures
     public function createRun(User $user): RecommendationRun
     {
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-08T10:00:00Z'));
-        $this->em->persist($run);
+        $this->entityManager->persist($run);
 
         return $run;
     }
@@ -156,8 +156,8 @@ final readonly class RecommendationRunFixtures
     public function persistRunAt(User $user, \DateTimeImmutable $createdAt): RecommendationRun
     {
         $run = new RecommendationRun($user, $createdAt);
-        $this->em->persist($run);
-        $this->em->flush();
+        $this->entityManager->persist($run);
+        $this->entityManager->flush();
 
         return $run;
     }
@@ -177,11 +177,11 @@ final readonly class RecommendationRunFixtures
     {
         $id = $run->requireId();
 
-        $this->em->getConnection()->executeStatement(
+        $this->entityManager->getConnection()->executeStatement(
             'UPDATE recommendation_run SET cost_nano_credits = :cost WHERE id = :id',
             ['cost' => $costNanoCredits, 'id' => $id],
         );
-        $this->em->clear();
+        $this->entityManager->clear();
     }
 
     /**
@@ -205,7 +205,7 @@ final readonly class RecommendationRunFixtures
             $requestBody,
             $createdAt ?? new \DateTimeImmutable('2026-08-08T10:00:00Z'),
         );
-        $this->em->persist($log);
+        $this->entityManager->persist($log);
 
         return $log;
     }
@@ -213,12 +213,12 @@ final readonly class RecommendationRunFixtures
     /** Settles the row the way RecordedCall does, through the DBAL writer, then re-reads the managed entity. */
     public function settleLog(RecommendationRunLog $log, string $responseText, CallOutcome $outcome): void
     {
-        $this->em->flush();
-        (new RecommendationCallRepository($this->em->getConnection()))->settleAnswered(
+        $this->entityManager->flush();
+        (new RecommendationCallRepository($this->entityManager->getConnection()))->settleAnswered(
             new CallSettlement($log->requireId(), $outcome),
             $responseText,
         );
-        $this->em->refresh($log);
+        $this->entityManager->refresh($log);
     }
 
     /**
@@ -271,8 +271,8 @@ final readonly class RecommendationRunFixtures
             debugEnabled: $debugEnabled,
             showReasons: $showReasons,
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
 
         return $settings;
     }
@@ -295,8 +295,8 @@ final readonly class RecommendationRunFixtures
             $effectiveDate,
         );
         $entry->setPublishedAt($effectiveDate);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }

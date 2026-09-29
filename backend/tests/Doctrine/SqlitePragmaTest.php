@@ -18,7 +18,7 @@ final class SqlitePragmaTest extends DbTestCase
     {
         parent::setUp();
 
-        if (!$this->em->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+        if (!$this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
             self::markTestSkipped('The pragmas apply to SQLite; this leg runs on another platform.');
         }
     }
@@ -41,7 +41,7 @@ final class SqlitePragmaTest extends DbTestCase
     {
         // The pragma FUNCTION, because a bare `PRAGMA x` returns no result set
         // through the query path.
-        $value = $this->em->getConnection()->fetchOne(sprintf('SELECT * FROM pragma_%s()', $name));
+        $value = $this->entityManager->getConnection()->fetchOne(sprintf('SELECT * FROM pragma_%s()', $name));
         self::assertIsScalar($value);
 
         return (string) $value;

@@ -145,11 +145,11 @@ final class GrafanaSettingsTest extends TestCase
     {
         $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
         $settings = new GrafanaSettings(
             $repository,
-            $em,
+            $entityManager,
             GrafanaApiKeyCiphers::withTestSecret(),
             $this->effective(),
             new GrafanaEnvDefaults('', '', ''),
@@ -168,8 +168,8 @@ final class GrafanaSettingsTest extends TestCase
         EffectiveGrafanaSettings $effective,
         ProfileSamplerInterface $sampler = new NullProfileSampler(),
     ): GrafanaSettings {
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(function (object $entity): void {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
             if ($entity instanceof GrafanaSettingsEntity) {
                 $this->stored = $entity;
             }
@@ -177,7 +177,7 @@ final class GrafanaSettingsTest extends TestCase
 
         return new GrafanaSettings(
             $this->repository(),
-            $em,
+            $entityManager,
             GrafanaApiKeyCiphers::withTestSecret(),
             $effective,
             new GrafanaEnvDefaults('', '', ''),

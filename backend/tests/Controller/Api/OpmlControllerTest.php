@@ -18,11 +18,11 @@ final class OpmlControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
@@ -40,13 +40,13 @@ final class OpmlControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers, $user] = $this->auth('opml-export@example.com');
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/feed.xml');
         $feed->setTitle('Example');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $em->flush();
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->flush();
 
         $client->request('GET', '/api/opml/export', server: $headers);
         self::assertResponseIsSuccessful();

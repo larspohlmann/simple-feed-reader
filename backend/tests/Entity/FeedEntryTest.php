@@ -15,11 +15,13 @@ final class FeedEntryTest extends DbTestCase
     public function testFeedDefaults(): void
     {
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(Feed::class)->findOneBy(['url' => 'https://example.com/feed.xml']);
+        $reloaded = $this->entityManager
+            ->getRepository(Feed::class)
+            ->findOneBy(['url' => 'https://example.com/feed.xml']);
 
         self::assertNotNull($reloaded);
         self::assertSame(FeedStatus::Active, $reloaded->getStatus());
@@ -30,19 +32,19 @@ final class FeedEntryTest extends DbTestCase
 
     public function testFeedUrlIsUnique(): void
     {
-        $this->em->persist(new Feed('https://dup.example.com/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->persist(new Feed('https://dup.example.com/feed.xml'));
+        $this->entityManager->flush();
 
-        $this->em->persist(new Feed('https://dup.example.com/feed.xml'));
+        $this->entityManager->persist(new Feed('https://dup.example.com/feed.xml'));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testEntryGuidHashIsComputedAndUniquePerFeed(): void
     {
         $feed = new Feed('https://example.com/a.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         $firstCreatedAt = new \DateTimeImmutable();
         $entry = new Entry(
@@ -53,8 +55,8 @@ final class FeedEntryTest extends DbTestCase
             createdAt: $firstCreatedAt,
             effectiveDate: $firstCreatedAt,
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         self::assertSame(hash('sha256', 'urn:uuid:1234'), $entry->getGuidHash());
 
@@ -67,23 +69,23 @@ final class FeedEntryTest extends DbTestCase
             createdAt: $duplicateCreatedAt,
             effectiveDate: $duplicateCreatedAt,
         );
-        $this->em->persist($duplicate);
+        $this->entityManager->persist($duplicate);
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testSameGuidOnDifferentFeedsIsAllowed(): void
     {
         $feedA = new Feed('https://a.example.com/feed.xml');
         $feedB = new Feed('https://b.example.com/feed.xml');
-        $this->em->persist($feedA);
-        $this->em->persist($feedB);
+        $this->entityManager->persist($feedA);
+        $this->entityManager->persist($feedB);
         $now = new \DateTimeImmutable();
 
-        $this->em->persist(new Entry($feedA, 'shared-guid', 'https://a.example.com/1', 'A', $now, $now));
-        $this->em->persist(new Entry($feedB, 'shared-guid', 'https://b.example.com/1', 'B', $now, $now));
-        $this->em->flush();
+        $this->entityManager->persist(new Entry($feedA, 'shared-guid', 'https://a.example.com/1', 'A', $now, $now));
+        $this->entityManager->persist(new Entry($feedB, 'shared-guid', 'https://b.example.com/1', 'B', $now, $now));
+        $this->entityManager->flush();
 
         $this->addToAssertionCount(1);
     }
@@ -91,22 +93,22 @@ final class FeedEntryTest extends DbTestCase
     public function testDeletingFeedCascadesToEntries(): void
     {
         $feed = new Feed('https://cascade.example.com/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, 'guid-c', 'https://cascade.example.com/1', 'Post', $now, $now);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
         $entryId = $entry->getId();
         $feedId = $feed->getId();
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $reloadedFeed = $this->em->find(Feed::class, $feedId);
+        $reloadedFeed = $this->entityManager->find(Feed::class, $feedId);
         self::assertNotNull($reloadedFeed);
-        $this->em->remove($reloadedFeed);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($reloadedFeed);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        self::assertNull($this->em->find(Entry::class, $entryId));
+        self::assertNull($this->entityManager->find(Entry::class, $entryId));
     }
 
     public function testEntryKeepsTheEffectiveDateItWasGiven(): void

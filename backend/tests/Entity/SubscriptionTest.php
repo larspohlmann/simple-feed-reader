@@ -18,7 +18,7 @@ final class SubscriptionTest extends DbTestCase
     private function makeUser(string $email = 'reader@example.com'): User
     {
         $user = new User($email, new \DateTimeImmutable());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         return $user;
     }
@@ -26,7 +26,7 @@ final class SubscriptionTest extends DbTestCase
     private function makeFeed(string $url = 'https://example.com/feed.xml'): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -40,17 +40,17 @@ final class SubscriptionTest extends DbTestCase
         $tech->setColor('#3366ff');
         $tech->setIcon('memory');
         $linux = new Tag($user, 'Linux');
-        $this->em->persist($tech);
-        $this->em->persist($linux);
+        $this->entityManager->persist($tech);
+        $this->entityManager->persist($linux);
 
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable());
         $subscription->addTag($tech);
         $subscription->addTag($linux);
-        $this->em->persist($subscription);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->getRepository(Subscription::class)->findOneBy(['user' => $user->getId()]);
+        $reloaded = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $user->getId()]);
 
         self::assertNotNull($reloaded);
         self::assertCount(2, $reloaded->getTags());
@@ -63,13 +63,13 @@ final class SubscriptionTest extends DbTestCase
         $feed = $this->makeFeed();
         $now = new \DateTimeImmutable();
 
-        $this->em->persist(new Subscription($user, $feed, $now));
-        $this->em->flush();
+        $this->entityManager->persist(new Subscription($user, $feed, $now));
+        $this->entityManager->flush();
 
-        $this->em->persist(new Subscription($user, $feed, $now));
+        $this->entityManager->persist(new Subscription($user, $feed, $now));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testTagNameUniquePerUserButNotGlobally(): void
@@ -77,14 +77,14 @@ final class SubscriptionTest extends DbTestCase
         $userA = $this->makeUser('a@example.com');
         $userB = $this->makeUser('b@example.com');
 
-        $this->em->persist(new Tag($userA, 'News'));
-        $this->em->persist(new Tag($userB, 'News'));
-        $this->em->flush();
+        $this->entityManager->persist(new Tag($userA, 'News'));
+        $this->entityManager->persist(new Tag($userB, 'News'));
+        $this->entityManager->flush();
 
-        $this->em->persist(new Tag($userA, 'News'));
+        $this->entityManager->persist(new Tag($userA, 'News'));
 
         $this->expectException(UniqueConstraintViolationException::class);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     public function testEntryStateCompositeKey(): void
@@ -93,16 +93,19 @@ final class SubscriptionTest extends DbTestCase
         $feed = $this->makeFeed();
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, 'guid-1', 'https://example.com/1', 'Post', $now, $now);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         $state = new EntryState($user, $entry);
         $state->hide(new \DateTimeImmutable());
-        $this->em->persist($state);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->find(EntryState::class, ['user' => $user->getId(), 'entry' => $entry->getId()]);
+        $reloaded = $this->entityManager->find(
+            EntryState::class,
+            ['user' => $user->getId(), 'entry' => $entry->getId()],
+        );
 
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isHidden());
@@ -115,19 +118,19 @@ final class SubscriptionTest extends DbTestCase
         $user = $this->makeUser();
         $feed = $this->makeFeed();
         $tag = new Tag($user, 'Doomed');
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable());
         $subscription->addTag($tag);
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
         $subscriptionId = $subscription->getId();
 
-        $this->em->remove($tag);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($tag);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->find(Subscription::class, $subscriptionId);
+        $reloaded = $this->entityManager->find(Subscription::class, $subscriptionId);
 
         self::assertNotNull($reloaded);
         self::assertCount(0, $reloaded->getTags());
@@ -139,17 +142,20 @@ final class SubscriptionTest extends DbTestCase
         $feed = $this->makeFeed();
         $now = new \DateTimeImmutable();
         $entry = new Entry($feed, 'guid-2', 'https://example.com/2', 'Keeper', $now, $now);
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         $state = new EntryState($user, $entry);
         $state->markFavorite();
         $state->markKept();
-        $this->em->persist($state);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
-        $reloaded = $this->em->find(EntryState::class, ['user' => $user->getId(), 'entry' => $entry->getId()]);
+        $reloaded = $this->entityManager->find(
+            EntryState::class,
+            ['user' => $user->getId(), 'entry' => $entry->getId()],
+        );
 
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->isFavorite());

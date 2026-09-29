@@ -35,7 +35,7 @@ final readonly class BulkSubscriber
     private const int MAX_FEED_URL = 750;
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private FeedRepository $feeds,
         private SubscriptionRepository $subscriptions,
         private SubscriptionTagRepository $subscriptionTags,
@@ -57,7 +57,7 @@ final readonly class BulkSubscriber
             $this->subscribeOne($batch, $item);
         }
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $batch->result();
     }
@@ -117,7 +117,7 @@ final readonly class BulkSubscriber
         // Seeded for the sidebar before the first fetch; only on creation, since a shared row is not ours to retitle.
         $feed = $this->feedFactory->create($item->feedUrl, $item->sourceFormat, $item->feedTitle);
         $feed->scheduleNextFetchAt($this->clock->now());
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -126,7 +126,7 @@ final readonly class BulkSubscriber
     {
         $subscription = new Subscription($batch->user, $feed, $this->clock->now());
         $subscription->setPosition($batch->positions->takeSubscriptionPosition());
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
 
         return $subscription;
     }
@@ -159,7 +159,7 @@ final readonly class BulkSubscriber
             new TagDetailsModel($name, $style?->color, $style?->icon),
             $batch->positions->takeTagPosition(),
         );
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         return $tag;
     }

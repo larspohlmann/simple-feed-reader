@@ -19,7 +19,7 @@ final class SweepSavedSearchMembershipsHandlerTest extends DbTestCase
         $logger = new RecordingLogger();
         $sweep = MembershipSweepFactory::fromContainer(
             self::getContainer(),
-            $this->em,
+            $this->entityManager,
             new RecordingSavedSearchMatcher(),
             new MockClock('2026-09-22T10:00:00'),
             $logger,

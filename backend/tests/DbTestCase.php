@@ -9,13 +9,19 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 abstract class DbTestCase extends KernelTestCase
 {
-    protected EntityManagerInterface $em;
+    protected EntityManagerInterface $entityManager;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $this->em = $em;
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $this->entityManager = $entityManager;
+    }
+
+    /** @param class-string $entityClass */
+    protected function assertNoneManaged(string $entityClass): void
+    {
+        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[$entityClass] ?? []);
     }
 }

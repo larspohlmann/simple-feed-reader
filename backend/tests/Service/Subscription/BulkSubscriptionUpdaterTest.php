@@ -19,15 +19,15 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
 {
     use SeedsUsers;
 
-    private EntityManagerInterface $em;
+    private EntityManagerInterface $entityManager;
     private BulkSubscriptionUpdater $updater;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $this->em = $em;
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $this->entityManager = $entityManager;
         $updater = self::getContainer()->get(BulkSubscriptionUpdater::class);
         self::assertInstanceOf(BulkSubscriptionUpdater::class, $updater);
         $this->updater = $updater;
@@ -37,7 +37,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
     {
         $tag = new Tag($user, $name);
         $tag->setPosition($position);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         return $tag;
     }
@@ -45,12 +45,12 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
     private function subscription(User $user, string $url, ?Tag $tag = null, int $tagPosition = 0): Subscription
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         if (null !== $tag) {
             $subscription->addTag($tag, $tagPosition);
         }
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
 
         return $subscription;
     }
@@ -70,7 +70,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $tech = $this->tag($user, 'Tech', 0);
         $first = $this->subscription($user, 'https://a.example/feed.xml');
         $second = $this->subscription($user, 'https://b.example/feed.xml');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $changed = $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -91,7 +91,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $news = $this->tag($user, 'News', 0);
         $tech = $this->tag($user, 'Tech', 1);
         $subscription = $this->subscription($user, 'https://a.example/feed.xml', $news, 0);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -101,7 +101,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
             $user->requireId(),
         );
 
-        $this->em->refresh($subscription);
+        $this->entityManager->refresh($subscription);
         $names = $this->tagNames($subscription);
         sort($names);
         self::assertSame(['News', 'Tech'], $names, 'A tag not named in the request must survive the bulk update.');
@@ -113,7 +113,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $tech = $this->tag($user, 'Tech', 0);
         $first = $this->subscription($user, 'https://a.example/feed.xml', $tech, 0);
         $second = $this->subscription($user, 'https://b.example/feed.xml', $tech, 1);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -123,8 +123,8 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
             $user->requireId(),
         );
 
-        $this->em->refresh($first);
-        $this->em->refresh($second);
+        $this->entityManager->refresh($first);
+        $this->entityManager->refresh($second);
         self::assertSame(['Tech'], $this->tagNames($first));
         self::assertSame(['Tech'], $this->tagNames($second));
     }
@@ -137,7 +137,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $untagged->setPosition(0);
         $tagged = $this->subscription($user, 'https://tagged.example/feed.xml', $tech, 0);
         $tagged->setPosition(0);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -160,7 +160,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $user = $this->user('bulk-flags@example.com');
         $subscription = $this->subscription($user, 'https://flags.example/feed.xml');
         $subscription->setIncludeInForYou(false);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -189,7 +189,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $subscription = $this->subscription($user, 'https://flags-own-field.example/feed.xml');
         $subscription->setIncludeInAllItems(false);
         $subscription->setIncludeInForYou(true);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->updater->apply(
             new BulkSubscriptionChangeModel(
@@ -215,7 +215,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $user = $this->user('bulk-contradiction@example.com');
         $tech = $this->tag($user, 'Tech', 0);
         $subscription = $this->subscription($user, 'https://c.example/feed.xml');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
@@ -233,7 +233,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $user = $this->user('bulk-duplicate-tag@example.com');
         $tech = $this->tag($user, 'Tech', 0);
         $subscription = $this->subscription($user, 'https://f.example/feed.xml');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
@@ -251,7 +251,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $theirs = $this->user('bulk-theirs@example.com');
         $foreignTag = $this->tag($theirs, 'Theirs', 0);
         $subscription = $this->subscription($mine, 'https://d.example/feed.xml');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(
@@ -268,7 +268,7 @@ final class BulkSubscriptionUpdaterTest extends KernelTestCase
         $mine = $this->user('bulk-sub-mine@example.com');
         $theirs = $this->user('bulk-sub-theirs@example.com');
         $foreign = $this->subscription($theirs, 'https://e.example/feed.xml');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->expectException(InvalidSelectionException::class);
         $this->updater->apply(

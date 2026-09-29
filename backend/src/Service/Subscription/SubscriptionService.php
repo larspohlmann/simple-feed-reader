@@ -35,7 +35,7 @@ final readonly class SubscriptionService
         private ScrapeFallbackPolicy $scrapeFallbackPolicy,
         private FirstFetchRecorder $firstFetch,
         private OrphanedFeedReclaimer $orphanedFeeds,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -49,8 +49,8 @@ final readonly class SubscriptionService
     {
         $feedId = $subscription->getFeed()->requireId();
 
-        $this->em->remove($subscription);
-        $this->em->flush();
+        $this->entityManager->remove($subscription);
+        $this->entityManager->flush();
 
         $this->orphanedFeeds->reclaim($feedId);
     }
@@ -78,9 +78,9 @@ final readonly class SubscriptionService
         $feedIds = [];
         foreach ($subscriptions as $subscription) {
             $feedIds[$subscription->getFeed()->requireId()] = true;
-            $this->em->remove($subscription);
+            $this->entityManager->remove($subscription);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         foreach (array_keys($feedIds) as $feedId) {
             $this->orphanedFeeds->reclaim($feedId);

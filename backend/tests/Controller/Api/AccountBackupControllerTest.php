@@ -25,11 +25,11 @@ final class AccountBackupControllerTest extends WebTestCase
     /** @return array{0: array<string, string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
 
@@ -43,13 +43,13 @@ final class AccountBackupControllerTest extends WebTestCase
      */
     private function seedSourceAccount(User $user): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://restore-fixture.example/feed.xml');
-        $em->persist($feed);
-        $em->persist(new Tag($user, 'Restore Tag'));
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Tag($user, 'Restore Tag'));
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $now = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry(
             $feed,
@@ -59,11 +59,11 @@ final class AccountBackupControllerTest extends WebTestCase
             $now,
             $now,
         );
-        $em->persist($entry);
+        $entityManager->persist($entry);
         $state = new EntryState($user, $entry);
         $state->markFavorite();
-        $em->persist($state);
-        $em->flush();
+        $entityManager->persist($state);
+        $entityManager->flush();
     }
 
     /**
@@ -169,9 +169,9 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame('restore-preview@example.com', $body['backup']['sourceEmail']);
 
         // A preview must be read-only: it inspects and counts, it never wipes.
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->clear();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->clear();
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         self::assertSame(1, $subscriptions->countForUser($userId));
@@ -196,9 +196,9 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertSame('validation_error', $body['type']);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->clear();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->clear();
         $subscriptions = self::getContainer()->get(SubscriptionRepository::class);
         self::assertInstanceOf(SubscriptionRepository::class, $subscriptions);
         self::assertSame(1, $subscriptions->countForUser($userId));
@@ -500,11 +500,11 @@ final class AccountBackupControllerTest extends WebTestCase
      */
     private function assertAccountRowsSurvived(int $userId): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->clear();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->clear();
         foreach (['tag', 'subscription', 'entry_state'] as $table) {
-            $counted = $em->getConnection()->fetchOne(
+            $counted = $entityManager->getConnection()->fetchOne(
                 sprintf('SELECT COUNT(*) FROM %s WHERE user_id = ?', $table),
                 [$userId],
             );

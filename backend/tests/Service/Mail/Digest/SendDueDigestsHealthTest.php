@@ -138,7 +138,7 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     private function givenOneMatch(User $user): void
     {
-        $search = (new SavedSearchMatchFixture($this->em))
+        $search = (new SavedSearchMatchFixture($this->entityManager))
             ->oneMatch($user, 'rust', new \DateTimeImmutable('2026-08-28T08:30:00Z'));
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
     }

@@ -15,11 +15,11 @@ final class MailServerSettingsRepositoryTest extends KernelTestCase
 {
     public function testTheSingletonIsTheOldestRowWhenMoreThanOneExists(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $em->persist($this->rowFor('first.test'));
-        $em->flush();
-        $em->persist($this->rowFor('second.test'));
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager->persist($this->rowFor('first.test'));
+        $entityManager->flush();
+        $entityManager->persist($this->rowFor('second.test'));
+        $entityManager->flush();
 
         $singleton = self::getContainer()->get(MailServerSettingsRepository::class)->findSingleton();
 

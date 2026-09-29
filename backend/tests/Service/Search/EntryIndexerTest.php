@@ -28,8 +28,8 @@ final class EntryIndexerTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/feed-' . uniqid('', true));
         $feed->setTitle($title);
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -44,8 +44,8 @@ final class EntryIndexerTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -109,7 +109,7 @@ final class EntryIndexerTest extends DbTestCase
         $entry = $this->entry($feed);
         $entry->setSummary('A plain summary');
         $entry->setContentHtml('<p>Body <strong>text</strong> &amp; more.</p>');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $indexer->index([$entry]);
 
@@ -142,7 +142,7 @@ final class EntryIndexerTest extends DbTestCase
 
         $entry = $this->entry($this->feed());
         $entry->setContentHtml('<p>Deployed to the cloud</p><p>Computing costs fell</p>');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $indexer->index([$entry]);
 

@@ -32,8 +32,8 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     {
         $user = new User($email, new \DateTimeImmutable($createdAt));
         NewUserStatus::apply($user, $status, new \DateTimeImmutable($createdAt));
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         return $user;
     }
@@ -48,7 +48,9 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     private function userCount(): int
     {
         /** @var int $count */
-        $count = $this->em->createQuery('SELECT COUNT(u.id) FROM ' . User::class . ' u')->getSingleScalarResult();
+        $count = $this->entityManager
+            ->createQuery('SELECT COUNT(u.id) FROM ' . User::class . ' u')
+            ->getSingleScalarResult();
 
         return (int) $count;
     }
@@ -57,7 +59,7 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     private function tokenCount(): int
     {
         /** @var int $count */
-        $count = $this->em->createQuery('SELECT COUNT(t.id) FROM ' . ActionToken::class . ' t')
+        $count = $this->entityManager->createQuery('SELECT COUNT(t.id) FROM ' . ActionToken::class . ' t')
             ->getSingleScalarResult();
 
         return (int) $count;
@@ -110,14 +112,14 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     public function testAssociatedTokensGoAwayWithTheUser(): void
     {
         $user = $this->seed('stale@example.com', UserStatus::PendingVerification, '-3 days');
-        $this->em->persist(new ActionToken(
+        $this->entityManager->persist(new ActionToken(
             $user,
             TokenPurpose::VerifyEmail,
             str_repeat('a', 64),
             new \DateTimeImmutable('-2 days'),
             new \DateTimeImmutable('-3 days'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
         self::assertSame(1, $this->tokenCount());
 
         $this->tester()->execute([]);
@@ -163,14 +165,14 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
     public function testItNeverDeletesAnOAuthAccountAwaitingApproval(): void
     {
         $user = $this->seed('oauth@example.com', UserStatus::PendingApproval, '-30 days');
-        $this->em->persist(new UserIdentity($user, 'google', 'sub-1', new \DateTimeImmutable('-30 days')));
-        $this->em->flush();
+        $this->entityManager->persist(new UserIdentity($user, 'google', 'sub-1', new \DateTimeImmutable('-30 days')));
+        $this->entityManager->flush();
 
         $this->tester()->execute([]);
 
-        $this->em->clear();
+        $this->entityManager->clear();
         self::assertNotNull(
-            $this->em->getRepository(User::class)->findOneBy(['email' => 'oauth@example.com']),
+            $this->entityManager->getRepository(User::class)->findOneBy(['email' => 'oauth@example.com']),
             'an oauth account waiting for approval is not litter',
         );
     }
@@ -187,11 +189,13 @@ final class PurgeUnverifiedUsersCommandTest extends DbTestCase
 
         /** @var UserRepository $users */
         $users = self::getContainer()->get(UserRepository::class);
-        $command = new PurgeUnverifiedUsersCommand($users, $this->em, new MockClock($now));
+        $command = new PurgeUnverifiedUsersCommand($users, $this->entityManager, new MockClock($now));
 
         (new CommandTester($command))->execute([]);
 
-        $survivors = $this->em->createQuery('SELECT u.email FROM ' . User::class . ' u')->getSingleColumnResult();
+        $survivors = $this->entityManager
+            ->createQuery('SELECT u.email FROM ' . User::class . ' u')
+            ->getSingleColumnResult();
         self::assertSame(['just-under@example.com'], $survivors);
     }
 }

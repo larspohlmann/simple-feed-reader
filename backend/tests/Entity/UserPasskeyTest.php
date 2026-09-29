@@ -30,9 +30,9 @@ final class UserPasskeyTest extends DbTestCase
                 registeredAt: new \DateTimeImmutable('2026-08-29 10:00:00'),
             ),
         );
-        $this->em->persist($passkey);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($passkey);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $found = $this->repository()->findOneByCredentialId('Y3JlZC1hYmM');
 
@@ -56,12 +56,12 @@ final class UserPasskeyTest extends DbTestCase
     public function testACredentialIdIsComparedCaseSensitively(): void
     {
         $user = $this->user('case-owner@example.test');
-        $this->em->persist(new UserPasskey(
+        $this->entityManager->persist(new UserPasskey(
             $user,
             PasskeyRegistrations::any(credentialId: 'Sub-ABC'),
         ));
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $repository = $this->repository();
 
@@ -76,13 +76,13 @@ final class UserPasskeyTest extends DbTestCase
             $user,
             PasskeyRegistrations::any(credentialId: 'Y3JlZC1yZWM'),
         );
-        $this->em->persist($passkey);
-        $this->em->flush();
+        $this->entityManager->persist($passkey);
+        $this->entityManager->flush();
 
         $usedAt = new \DateTimeImmutable('2026-08-29 12:00:00');
         $passkey->recordUse($usedAt, 7);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $found = $this->repository()->findOneByCredentialId('Y3JlZC1yZWM');
 
@@ -99,11 +99,11 @@ final class UserPasskeyTest extends DbTestCase
             $owner,
             PasskeyRegistrations::any(credentialId: 'Y3JlZC1vd24'),
         );
-        $this->em->persist($passkey);
-        $this->em->flush();
+        $this->entityManager->persist($passkey);
+        $this->entityManager->flush();
         $id = $passkey->getId();
         self::assertNotNull($id);
-        $this->em->clear();
+        $this->entityManager->clear();
 
         $repository = $this->repository();
 
@@ -130,10 +130,10 @@ final class UserPasskeyTest extends DbTestCase
                 registeredAt: new \DateTimeImmutable('2026-08-15 00:00:00'),
             ),
         );
-        $this->em->persist($newer);
-        $this->em->persist($older);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->persist($newer);
+        $this->entityManager->persist($older);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $found = $this->repository()->findForUser($user);
 
@@ -146,16 +146,16 @@ final class UserPasskeyTest extends DbTestCase
     {
         $user = $this->user('counter@example.test');
         $other = $this->user('other@example.test');
-        $this->em->persist(new UserPasskey(
+        $this->entityManager->persist(new UserPasskey(
             $user,
             PasskeyRegistrations::any(credentialId: 'Y3JlZC1jbnQx', label: 'One'),
         ));
-        $this->em->persist(new UserPasskey(
+        $this->entityManager->persist(new UserPasskey(
             $other,
             PasskeyRegistrations::any(credentialId: 'Y3JlZC1jbnQy', label: 'Two'),
         ));
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $repository = $this->repository();
 
@@ -166,14 +166,14 @@ final class UserPasskeyTest extends DbTestCase
     public function testDeleteAllRemovesEveryCredential(): void
     {
         $user = $this->user('wiper@example.test');
-        $this->em->persist(new UserPasskey(
+        $this->entityManager->persist(new UserPasskey(
             $user,
             PasskeyRegistrations::any(credentialId: 'Y3JlZC13aXBl'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->repository()->deleteAll();
-        $this->em->clear();
+        $this->entityManager->clear();
 
         self::assertSame(0, $this->repository()->countAll());
     }
@@ -181,7 +181,7 @@ final class UserPasskeyTest extends DbTestCase
     private function repository(): UserPasskeyRepository
     {
         /** @var UserPasskeyRepository $repository */
-        $repository = $this->em->getRepository(UserPasskey::class);
+        $repository = $this->entityManager->getRepository(UserPasskey::class);
 
         return $repository;
     }

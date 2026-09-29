@@ -51,15 +51,15 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         // orphan sweep (wired into every allDue() request) never deletes a
         // feed this test is trying to fetch.
         $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
-        $this->em->persist($this->subscriber);
+        $this->entityManager->persist($this->subscriber);
     }
 
     private function dueFeed(string $url): Feed
     {
         $feed = new Feed($url);
         $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
         $origin = 'https://' . parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
@@ -72,7 +72,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
     private function runner(ConcurrentFeedFetcher $fetcher): RefreshRunner
     {
-        return RefreshRunners::fromContainer(self::getContainer(), $this->em, $this->clock)
+        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
             ->build($fetcher, $this->faviconFetcher);
     }
 
@@ -126,7 +126,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     public function testANotModifiedToAnUnconditionalRequestIsRecordedAsAFailure(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
         $report = $this->runner($fetcher)->run(RefreshRequestModel::allDue(300));
@@ -140,7 +140,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
         $feed->recordCacheValidators('"v1"', null);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $fetcher = $this->concurrentFetcher(new MockHttpClient(new MockResponse('', ['http_code' => 304])));
         $report = $this->runner($fetcher)->run(RefreshRequestModel::allDue(300));
@@ -168,7 +168,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
         $third = $this->dueFeed('https://three.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $requests = 0;
         $httpClient = new MockHttpClient(

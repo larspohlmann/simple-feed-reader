@@ -22,14 +22,14 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $feed = $this->feed('https://example.com/f.xml');
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $sub->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->persist($sub);
+        $this->entityManager->persist($sub);
         $read = $this->entry($feed, 'a', '2026-07-20');
         $this->entry($feed, 'b', '2026-07-05');
         $this->entry($feed, 'c', '2026-07-21');
         $state = new EntryState($user, $read);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $counts = $this->repo()->entryCountsForUser($user->requireId());
 
@@ -42,10 +42,12 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $stranger = $this->user('stranger@example.com');
         $empty = $this->feed('https://example.com/empty.xml');
         $theirs = $this->feed('https://example.com/theirs.xml');
-        $this->em->persist(new Subscription($user, $empty, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->persist(new Subscription($stranger, $theirs, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new Subscription($user, $empty, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(
+            new Subscription($stranger, $theirs, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
         $this->entry($theirs, 'x', '2026-07-20');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame([], $this->repo()->entryCountsForUser($user->requireId()));
     }
@@ -61,12 +63,12 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $second = $this->feed('https://example.com/second.xml');
         $firstSub = new Subscription($user, $first, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $secondSub = new Subscription($user, $second, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($firstSub);
-        $this->em->persist($secondSub);
+        $this->entityManager->persist($firstSub);
+        $this->entityManager->persist($secondSub);
         $this->entry($first, 'a', '2026-07-01');
         $this->entry($second, 'b', '2026-07-02');
         $this->entry($second, 'c', '2026-07-03');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $counts = $this->repo()->entryCountsForUser($user->requireId());
 
@@ -75,7 +77,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
 
     private function repo(): SubscriptionRepository
     {
-        $repo = $this->em->getRepository(Subscription::class);
+        $repo = $this->entityManager->getRepository(Subscription::class);
         self::assertInstanceOf(SubscriptionRepository::class, $repo);
 
         return $repo;
@@ -84,7 +86,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
     private function feed(string $url): Feed
     {
         $feed = new Feed($url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
 
         return $feed;
     }
@@ -94,7 +96,7 @@ final class SubscriptionEntryCountsTest extends DbTestCase
         $publishedAt = new \DateTimeImmutable($day . 'T00:00:00Z');
         $entry = new Entry($feed, $guid, null, $guid, new \DateTimeImmutable('2026-07-01T00:00:00Z'), $publishedAt);
         $entry->setPublishedAt($publishedAt);
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

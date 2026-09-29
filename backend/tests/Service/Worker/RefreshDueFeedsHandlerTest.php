@@ -41,10 +41,10 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
     {
         $feed = new Feed('https://example.com/due/feed.xml');
         $feed->scheduleNextFetchAt(new \DateTimeImmutable('-1 hour'));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscriber = $this->user('sweeper@example.com');
-        $this->em->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable('-1 day')));
-        $this->em->flush();
+        $this->entityManager->persist(new Subscription($subscriber, $feed, new \DateTimeImmutable('-1 day')));
+        $this->entityManager->flush();
         self::assertNull($feed->getLastFetchedAt());
 
         $fetcher = new StubFeedFetcher();
@@ -63,8 +63,8 @@ final class RefreshDueFeedsHandlerTest extends DbTestCase
 
         $this->handler()->__invoke(new RefreshDueFeeds());
 
-        $this->em->clear();
-        $refreshed = $this->em->getRepository(Feed::class)->find($feed->getId());
+        $this->entityManager->clear();
+        $refreshed = $this->entityManager->getRepository(Feed::class)->find($feed->getId());
         self::assertNotNull($refreshed);
         self::assertNotNull($refreshed->getLastFetchedAt());
     }

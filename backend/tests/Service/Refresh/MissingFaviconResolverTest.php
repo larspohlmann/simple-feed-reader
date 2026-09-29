@@ -38,7 +38,7 @@ final class MissingFaviconResolverTest extends DbTestCase
         $this->homepageAdvertises('https://blog.example.com', '/blog.png');
         $this->homepageAdvertises('https://plain.example.com', '/plain.png');
 
-        $this->resolver($this->em)->resolveFor([$blog, $plain, $known]);
+        $this->resolver($this->entityManager)->resolveFor([$blog, $plain, $known]);
 
         self::assertSame(['https://blog.example.com', 'https://plain.example.com'], $this->homepages->fetchedUrls);
         self::assertSame('https://blog.example.com/blog.png', $this->reload($blog)->getFaviconUrl());
@@ -52,22 +52,22 @@ final class MissingFaviconResolverTest extends DbTestCase
         $known->setFaviconUrl('https://known.example.com/known.png');
         $this->persistAll($known);
 
-        $this->resolver(new FlushFailingEntityManager($this->em))->resolveFor([$known]);
+        $this->resolver(new FlushFailingEntityManager($this->entityManager))->resolveFor([$known]);
 
         self::assertSame([], $this->homepages->fetchedUrls);
     }
 
-    private function resolver(EntityManagerInterface $em): MissingFaviconResolver
+    private function resolver(EntityManagerInterface $entityManager): MissingFaviconResolver
     {
-        return new MissingFaviconResolver(new FaviconResolver($this->homepages, new NullLogger()), $em);
+        return new MissingFaviconResolver(new FaviconResolver($this->homepages, new NullLogger()), $entityManager);
     }
 
     private function persistAll(Feed ...$feeds): void
     {
         foreach ($feeds as $feed) {
-            $this->em->persist($feed);
+            $this->entityManager->persist($feed);
         }
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function homepageAdvertises(string $origin, string $iconPath): void

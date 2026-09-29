@@ -577,7 +577,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
      */
     private function persistedNames(string $entityClass): array
     {
-        $metadata = $this->em->getClassMetadata($entityClass);
+        $metadata = $this->entityManager->getClassMetadata($entityClass);
         $names = array_merge($metadata->getFieldNames(), $metadata->getAssociationNames());
 
         return array_values(array_diff($names, self::UNIVERSALLY_SKIPPED));
@@ -605,7 +605,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
     private function mappedEntityClasses(): array
     {
         $classes = [];
-        foreach ($this->em->getMetadataFactory()->getAllMetadata() as $metadata) {
+        foreach ($this->entityManager->getMetadataFactory()->getAllMetadata() as $metadata) {
             if ($metadata->isEmbeddedClass || $metadata->isMappedSuperclass) {
                 continue;
             }
@@ -776,7 +776,7 @@ final class BackupSchemaCoverageTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return new FullyPopulatedAccount($this->em, $hasher);
+        return new FullyPopulatedAccount($this->entityManager, $hasher);
     }
 
     private function exporter(): AccountBackupExporter

@@ -27,12 +27,12 @@ final class CatalogControllerTest extends WebTestCase
     /** @return array<string, string> */
     private function authHeader(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -55,8 +55,8 @@ final class CatalogControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('catalog@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $technology = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $technology->setPosition(0);
@@ -71,14 +71,14 @@ final class CatalogControllerTest extends WebTestCase
         $quanta = new CatalogFeed($science, 'Quanta Magazine', 'https://api.quantamagazine.org/feed/');
 
         foreach ([$technology, $science, $verge, $retired, $quanta] as $row) {
-            $em->persist($row);
+            $entityManager->persist($row);
         }
-        $em->flush();
+        $entityManager->flush();
         // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
         // querying $technology back in this same EntityManager without a clear()
         // would return the managed object with its original (pre-join) empty
         // feeds collection instead of hydrating it from the query below.
-        $em->clear();
+        $entityManager->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
 
@@ -105,29 +105,29 @@ final class CatalogControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('subscribed@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $clock = self::getContainer()->get(ClockInterface::class);
         self::assertInstanceOf(ClockInterface::class, $clock);
 
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $catalogFeed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $user = $em->getRepository(User::class)->findOneBy(['email' => 'subscribed@example.com']);
+        $user = $entityManager->getRepository(User::class)->findOneBy(['email' => 'subscribed@example.com']);
         self::assertNotNull($user);
 
         $feed = new Feed('https://www.theverge.com/rss/index.xml');
         $subscription = new Subscription($user, $feed, $clock->now());
 
         foreach ([$category, $catalogFeed, $feed, $subscription] as $row) {
-            $em->persist($row);
+            $entityManager->persist($row);
         }
-        $em->flush();
+        $entityManager->flush();
         // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
         // querying $category back in this same EntityManager without a clear()
         // would return the managed object with its original (pre-join) empty
         // feeds collection instead of hydrating it from the query below.
-        $em->clear();
+        $entityManager->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
 
@@ -152,8 +152,8 @@ final class CatalogControllerTest extends WebTestCase
         $client = self::createClient();
         $headers = $this->authHeader('newcomer@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
         $clock = self::getContainer()->get(ClockInterface::class);
@@ -162,15 +162,15 @@ final class CatalogControllerTest extends WebTestCase
         $category = new CatalogCategory('technology', 'Technology', 'memory', '#3b82f6');
         $catalogFeed = new CatalogFeed($category, 'The Verge', 'https://www.theverge.com/rss/index.xml');
 
-        $stranger = (new UserFactory($em, $hasher))->create('stranger@example.com');
+        $stranger = (new UserFactory($entityManager, $hasher))->create('stranger@example.com');
         $feed = new Feed('https://www.theverge.com/rss/index.xml');
         $subscription = new Subscription($stranger, $feed, $clock->now());
 
         foreach ([$category, $catalogFeed, $feed, $subscription] as $row) {
-            $em->persist($row);
+            $entityManager->persist($row);
         }
-        $em->flush();
-        $em->clear();
+        $entityManager->flush();
+        $entityManager->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
 

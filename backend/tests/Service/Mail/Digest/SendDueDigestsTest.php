@@ -56,7 +56,7 @@ final class SendDueDigestsTest extends DbTestCase
     private DigestSavedSearchesInterface&Stub $savedSearches;
     private DigestRecipientsInterface&Stub $preferencesRepository;
     private DigestMailerInterface&MockObject $mailer;
-    private EntityManagerInterface&Stub $emStub;
+    private EntityManagerInterface&Stub $entityManagerStub;
 
     protected function setUp(): void
     {
@@ -64,7 +64,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
         $this->preferencesRepository = $this->createStub(DigestRecipientsInterface::class);
         $this->mailer = $this->createMock(DigestMailerInterface::class);
-        $this->emStub = $this->createStub(EntityManagerInterface::class);
+        $this->entityManagerStub = $this->createStub(EntityManagerInterface::class);
     }
 
     public function testADueUserWithMatchesIsSentAndTheMarkerAdvancesToTheOccurrence(): void
@@ -78,10 +78,10 @@ final class SendDueDigestsTest extends DbTestCase
         $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
 
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
 
-        $report = $this->sweep(em: $em)->run();
+        $report = $this->sweep(entityManager: $entityManager)->run();
 
         self::assertSame(1, $report->considered);
         self::assertSame(1, $report->sent);
@@ -236,7 +236,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     private function sweep(
         bool $mailEnabled = true,
-        ?EntityManagerInterface $em = null,
+        ?EntityManagerInterface $entityManager = null,
         ?DigestRecipientsInterface $preferencesRepository = null,
     ): SendDueDigests {
         return new SendDueDigests(
@@ -250,7 +250,7 @@ final class SendDueDigestsTest extends DbTestCase
             $this->mailer,
             $this->mailCapability($mailEnabled),
             new MockClock(self::NOW),
-            $em ?? $this->emStub,
+            $entityManager ?? $this->entityManagerStub,
             new NullLogger(),
             new InMemoryMailFailureRecorder(),
         );
@@ -278,7 +278,7 @@ final class SendDueDigestsTest extends DbTestCase
 
     private function givenOneMatch(User $user, \DateTimeImmutable $effectiveDate): SavedSearch
     {
-        return (new SavedSearchMatchFixture($this->em))->oneMatch($user, 'rust', $effectiveDate);
+        return (new SavedSearchMatchFixture($this->entityManager))->oneMatch($user, 'rust', $effectiveDate);
     }
 
     private function members(): SavedSearchEntryRepository

@@ -31,10 +31,10 @@ final class LikeEntrySearchTest extends DbTestCase
     public function testFindsASubscribedEntryByTerm(): void
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $entry = new Entry(
             $feed,
             'guid',
@@ -43,8 +43,8 @@ final class LikeEntrySearchTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         $repository = self::getContainer()->get(EntryListRepository::class);
         self::assertInstanceOf(EntryListRepository::class, $repository);
@@ -68,16 +68,16 @@ final class LikeEntrySearchTest extends DbTestCase
     public function testUnreadSearchReturnsOnlyEffectivelyUnreadMatches(): void
     {
         $user = new User('unread-search@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = new Feed('https://example.com/unread-search.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $subscription = new Subscription(
             $user,
             $feed,
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
         );
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
 
         $belowWatermark = $this->matchingEntry($feed, 'below-watermark', '2026-07-05T00:00:00Z');
         $aboveWatermark = $this->matchingEntry($feed, 'above-watermark', '2026-07-15T00:00:00Z');
@@ -88,9 +88,9 @@ final class LikeEntrySearchTest extends DbTestCase
         $unreadState->markUnread();
         $readState = new EntryState($user, $explicitRead);
         $readState->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
-        $this->em->persist($unreadState);
-        $this->em->persist($readState);
-        $this->em->flush();
+        $this->entityManager->persist($unreadState);
+        $this->entityManager->persist($readState);
+        $this->entityManager->flush();
 
         $repository = self::getContainer()->get(EntryListRepository::class);
         self::assertInstanceOf(EntryListRepository::class, $repository);
@@ -125,7 +125,7 @@ final class LikeEntrySearchTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             $date,
         );
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
 
         return $entry;
     }

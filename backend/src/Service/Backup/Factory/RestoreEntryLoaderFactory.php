@@ -22,7 +22,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class RestoreEntryLoaderFactory
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private EntryRepository $entries,
         private EntryStateRepository $entryStates,
         private EntryBatchInserter $inserter,
@@ -38,7 +38,7 @@ final readonly class RestoreEntryLoaderFactory
     public function create(User $user, array $feedIdsByUrl): RestoreEntryLoader
     {
         return new RestoreEntryLoader(
-            $this->em,
+            $this->entityManager,
             $this->entries,
             $this->entryStates,
             $this->inserter,

@@ -33,7 +33,7 @@ final class RestorePreviewerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->userFactory = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->entityManager, $hasher);
     }
 
     /** @param list<array<string, mixed>> $lines */
@@ -246,11 +246,11 @@ final class RestorePreviewerTest extends DbTestCase
     {
         $user = $this->makeUser('current-owner@example.com');
         $feed = new Feed('https://existing.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Tag($user, 'Existing'));
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->persist(new RecommendationRun($user, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Tag($user, 'Existing'));
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->persist(new RecommendationRun($user, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->flush();
 
         $gzip = self::gzipOf([
             self::header(), self::account(),
@@ -274,12 +274,12 @@ final class RestorePreviewerTest extends DbTestCase
     {
         $user = $this->makeUser('claimed-totals@example.com');
         $feed = new Feed('https://counted.example/feed.xml');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $when = new \DateTimeImmutable('2026-08-01 00:00:00');
         $entry = new Entry($feed, 'counted-a', 'https://counted.example/counted-a', 'counted-a', $when, $when);
-        $this->em->persist($entry);
-        $this->em->persist(new EntryState($user, $entry));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new EntryState($user, $entry));
+        $this->entityManager->flush();
 
         $gzip = self::gzipOf([
             self::header(totals: ['entries' => 3, 'entryStates' => 2]), self::account(),

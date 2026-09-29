@@ -32,11 +32,11 @@ final class EntryControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -46,15 +46,15 @@ final class EntryControllerTest extends WebTestCase
 
     private function seedFeedWithEntries(User $user, int $count): Subscription
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/feed-' . uniqid('', true) . '.xml');
         $feed->setTitle('Seeded');
         $feed->setFaviconUrl('https://icon.example.com/f.png');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $em->persist($sub);
+        $entityManager->persist($sub);
 
         for ($i = 1; $i <= $count; $i++) {
             $publishedAt = new \DateTimeImmutable(sprintf('2026-07-%02dT00:00:00Z', $i));
@@ -67,9 +67,9 @@ final class EntryControllerTest extends WebTestCase
                 $publishedAt,
             );
             $e->setPublishedAt($publishedAt);
-            $em->persist($e);
+            $entityManager->persist($e);
         }
-        $em->flush();
+        $entityManager->flush();
 
         return $sub;
     }
@@ -84,13 +84,13 @@ final class EntryControllerTest extends WebTestCase
         string $urlHash,
         \DateTimeImmutable $effectiveDate,
     ): Entry {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $feed = new Feed('https://example.com/dup-feed-' . uniqid('', true) . '.xml');
         $feed->setTitle($feedTitle);
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $entry = new Entry(
             $feed,
@@ -101,25 +101,25 @@ final class EntryControllerTest extends WebTestCase
             $effectiveDate,
             $urlHash,
         );
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
 
         return $entry;
     }
 
     private function seedEntryWithDiscussion(User $user, Discussion $discussion): int
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/discussion-feed.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'discussion-1', 'https://example.com/1', 'Post', $july1, $july1);
         $entry->setDiscussion($discussion);
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
         $entryId = $entry->getId();
         self::assertNotNull($entryId);
 
@@ -128,35 +128,35 @@ final class EntryControllerTest extends WebTestCase
 
     private function seedDebugEnabledSettings(User $user): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        (new RecommendationRunFixtures($em, $cipher))->debugEnabledSettings($user);
+        (new RecommendationRunFixtures($entityManager, $cipher))->debugEnabledSettings($user);
     }
 
     private function seedShowReasonsSettings(User $user): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
         self::assertInstanceOf(ApiKeyCipher::class, $cipher);
 
-        (new RecommendationRunFixtures($em, $cipher))->showReasonsEnabledSettings($user);
+        (new RecommendationRunFixtures($entityManager, $cipher))->showReasonsEnabledSettings($user);
     }
 
     private function seedSavedSearchMembership(User $user, string $term, Entry $entry): SavedSearch
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $search = new SavedSearch($user, $term, false);
-        $em->persist($search);
-        $em->flush();
+        $entityManager->persist($search);
+        $entityManager->flush();
         $search->setSlug($search->getId() . '-' . $term);
-        $em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
-        $em->flush();
+        $entityManager->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00Z')));
+        $entityManager->flush();
 
         return $search;
     }
@@ -196,9 +196,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-list-saved-search@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
         $search = $this->seedSavedSearchMembership($user, 'post', $entry);
 
@@ -220,17 +220,17 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-excerpt-list@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/excerpt-feed.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'excerpt-1', 'https://example.com/1', 'Post', $july1, $july1);
         $entry->setContentHtml('<p>The full body of the article.</p>');
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries', server: $headers);
         self::assertResponseIsSuccessful();
@@ -248,19 +248,19 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-image@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/img-feed.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $july2 = new \DateTimeImmutable('2026-07-02T00:00:00Z');
         $withImage = new Entry($feed, 'img-1', 'https://example.com/1', 'Post', $july1, $july1);
         $withImage->getImage()->storePending('https://i.example.com/big.jpg', 948, 474);
-        $em->persist($withImage);
-        $em->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2, $july2));
-        $em->flush();
+        $entityManager->persist($withImage);
+        $entityManager->persist(new Entry($feed, 'img-2', 'https://example.com/2', 'Post 2', $july2, $july2));
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries', server: $headers);
         self::assertResponseIsSuccessful();
@@ -342,18 +342,20 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-tied-cursor@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/tied-feed.xml');
         $feed->setTitle('Tied');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
 
         $tied = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         for ($i = 1; $i <= 3; $i++) {
-            $em->persist(new Entry($feed, "tied-$i", "https://example.com/tied-$i", "Tied $i", $tied, $tied));
+            $entityManager->persist(
+                new Entry($feed, "tied-$i", "https://example.com/tied-$i", "Tied $i", $tied, $tied),
+            );
         }
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries?limit=2', server: $headers);
         $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -474,9 +476,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-unview@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $id = $entry->getId();
 
@@ -514,18 +516,18 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou@example.com');
         $sub = $this->seedFeedWithEntries($user, 2);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
         $entry->setContentHtml('<p>For-you body text.</p>');
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 77));
-        $em->flush();
+        $entityManager->persist($run);
+        $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 77));
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
         self::assertResponseIsSuccessful();
@@ -555,18 +557,18 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-unread@example.com');
         $sub = $this->seedFeedWithEntries($user, 2);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entries = $entityManager->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
+        $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
-            $em->persist(new RecommendationItem($run, $entry, $position + 1, 'reason', 50));
+            $entityManager->persist(new RecommendationItem($run, $entry, $position + 1, 'reason', 50));
         }
-        $em->flush();
+        $entityManager->flush();
 
         $client->request(
             'PATCH',
@@ -592,18 +594,18 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-mark@example.com');
         $sub = $this->seedFeedWithEntries($user, 2);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entries = $entityManager->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
 
         // Only the first entry is recommended: the second proves the action
         // stays inside the for-you list instead of clearing the whole feed.
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entries[0], 1, 'reason', 50));
-        $em->flush();
+        $entityManager->persist($run);
+        $entityManager->persist(new RecommendationItem($run, $entries[0], 1, 'reason', 50));
+        $entityManager->flush();
 
         $client->request(
             'POST',
@@ -622,8 +624,8 @@ final class EntryControllerTest extends WebTestCase
 
         // The watermark is what emptied the candidate pool in #665; a for-you
         // mark-read must never touch it.
-        $em->clear();
-        $reloaded = $em->getRepository(Subscription::class)->find($sub->getId());
+        $entityManager->clear();
+        $reloaded = $entityManager->getRepository(Subscription::class)->find($sub->getId());
         self::assertInstanceOf(Subscription::class, $reloaded);
         self::assertNull($reloaded->getMarkedReadUntil());
     }
@@ -644,18 +646,18 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-debug@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
+        $entityManager->persist($run);
+        $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
         $this->seedDebugEnabledSettings($user);
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
         self::assertResponseIsSuccessful();
@@ -676,18 +678,18 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-reasons@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed(), 'guid' => 'g1']);
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
+        $entityManager->persist($run);
+        $entityManager->persist(new RecommendationItem($run, $entry, 1, 'Matches your interest in g1', 42));
         $this->seedShowReasonsSettings($user);
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you', server: $headers);
         self::assertResponseIsSuccessful();
@@ -707,19 +709,19 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-page@example.com');
         $sub = $this->seedFeedWithEntries($user, 3);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entries = $entityManager->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
         self::assertCount(3, $entries);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
+        $entityManager->persist($run);
         foreach ($entries as $position => $entry) {
-            $em->persist(new RecommendationItem($run, $entry, $position + 1, "reason $position"));
+            $entityManager->persist(new RecommendationItem($run, $entry, $position + 1, "reason $position"));
         }
-        $em->flush();
+        $entityManager->flush();
 
         $client->request('GET', '/api/entries?view=for-you&limit=2', server: $headers);
         $page1 = json_decode((string) $client->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
@@ -745,17 +747,17 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-foryou-badcursor@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
 
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-07T09:00:00Z'));
         $run->snapshot([[1]]);
         $run->complete(new \DateTimeImmutable('2026-08-07T09:05:00Z'));
-        $em->persist($run);
-        $em->persist(new RecommendationItem($run, $entry, 1, 'reason'));
-        $em->flush();
+        $entityManager->persist($run);
+        $entityManager->persist(new RecommendationItem($run, $entry, 1, 'reason'));
+        $entityManager->flush();
 
         // A stale/garbled cursor from an old session must degrade to the
         // first page — the for-you view never validates its cursor the way
@@ -787,9 +789,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-patch@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -813,9 +815,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-unread@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -842,9 +844,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-viewed@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -869,9 +871,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-unview@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         // Viewing reads the entry (the subset invariant).
@@ -900,9 +902,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-viewed-watermark@example.com');
         $sub = $this->seedFeedWithEntries($user, 3);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -972,9 +974,9 @@ final class EntryControllerTest extends WebTestCase
 
     private function entryIdOf(Subscription $subscription, string $guid): int
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy([
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy([
             'feed' => $subscription->getFeed(),
             'guid' => $guid,
         ]);
@@ -1036,9 +1038,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-viewed-keep@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -1081,11 +1083,11 @@ final class EntryControllerTest extends WebTestCase
         $survivor = $this->seedFeedWithMatchingEntry($user, 'Feed A', 'urlhash-mirror-x', $earlier);
         $sibling = $this->seedFeedWithMatchingEntry($user, 'Feed B', 'urlhash-mirror-x', $later);
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $survivorSubscription = $em->getRepository(Subscription::class)
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $survivorSubscription = $entityManager->getRepository(Subscription::class)
             ->findOneBy(['user' => $user, 'feed' => $survivor->getFeed()]);
-        $siblingSubscription = $em->getRepository(Subscription::class)
+        $siblingSubscription = $entityManager->getRepository(Subscription::class)
             ->findOneBy(['user' => $user, 'feed' => $sibling->getFeed()]);
         self::assertInstanceOf(Subscription::class, $survivorSubscription);
         self::assertInstanceOf(Subscription::class, $siblingSubscription);
@@ -1115,9 +1117,12 @@ final class EntryControllerTest extends WebTestCase
         [$headers] = $this->auth('e-idor@example.com');
         [, $stranger] = $this->auth('e-owner@example.com');
         $strangerSub = $this->seedFeedWithEntries($stranger, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $strangerSub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager
+            ->getRepository(Entry::class)
+            ->findOneBy(['feed' => $strangerSub->getFeed()])
+            ?->getId();
         self::assertNotNull($entryId);
 
         $client->request(
@@ -1134,9 +1139,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()])?->getId();
         self::assertNotNull($entryId);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -1156,9 +1161,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-saved-search@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
         $search = $this->seedSavedSearchMembership($user, 'post', $entry);
 
@@ -1179,17 +1184,17 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-get-detail@example.com');
 
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $feed = new Feed('https://example.com/detail-feed.xml');
         $feed->setTitle('Seeded');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $july1 = new \DateTimeImmutable('2026-07-01T00:00:00Z');
         $entry = new Entry($feed, 'detail-1', 'https://example.com/1', 'Post', $july1, $july1);
         $entry->setContentHtml('<p>The full body of the article.</p>');
-        $em->persist($entry);
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
         $entryId = $entry->getId();
         self::assertNotNull($entryId);
 
@@ -1246,9 +1251,12 @@ final class EntryControllerTest extends WebTestCase
         [$headers] = $this->auth('e-get-idor@example.com');
         [, $stranger] = $this->auth('e-get-owner@example.com');
         $strangerSub = $this->seedFeedWithEntries($stranger, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entryId = $em->getRepository(Entry::class)->findOneBy(['feed' => $strangerSub->getFeed()])?->getId();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entryId = $entityManager
+            ->getRepository(Entry::class)
+            ->findOneBy(['feed' => $strangerSub->getFeed()])
+            ?->getId();
         self::assertNotNull($entryId);
 
         $client->request('GET', "/api/entries/$entryId", server: $headers);
@@ -1346,9 +1354,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-markbatch@example.com');
         $sub = $this->seedFeedWithEntries($user, 3);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entries = $em->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entries = $entityManager->getRepository(Entry::class)->findBy(['feed' => $sub->getFeed()], ['guid' => 'ASC']);
         $markIds = [$entries[0]->requireId(), $entries[1]->requireId()];
 
         $this->postMarkReadBatch($client, $headers, $markIds);
@@ -1363,9 +1371,9 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-markbatch-dup@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
         $id = $entry->requireId();
 
@@ -1381,13 +1389,13 @@ final class EntryControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('e-markbatch-missing@example.com');
         $sub = $this->seedFeedWithEntries($user, 1);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $entry = $em->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entry = $entityManager->getRepository(Entry::class)->findOneBy(['feed' => $sub->getFeed()]);
         self::assertInstanceOf(Entry::class, $entry);
         $id = $entry->requireId();
         $missingId = 99999999;
-        self::assertNull($em->getRepository(Entry::class)->find($missingId));
+        self::assertNull($entityManager->getRepository(Entry::class)->find($missingId));
 
         $this->postMarkReadBatch($client, $headers, [$id, $missingId]);
         self::assertResponseStatusCodeSame(204);

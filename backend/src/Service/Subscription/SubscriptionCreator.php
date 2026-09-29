@@ -32,7 +32,7 @@ final readonly class SubscriptionCreator
         private SubscriptionRepository $subscriptions,
         private FeedRepository $feeds,
         private SubscriptionTagRepository $subscriptionTags,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private SubscriptionLimitResolver $subscriptionLimits,
         private FeedFactory $feedFactory,
@@ -64,8 +64,8 @@ final readonly class SubscriptionCreator
             // New shared feed: nextFetchAt null => due immediately. XML and
             // scraped metadata still wait for the refresh pipeline.
             $feed = $this->feedFactory->create($feedUrl, $sourceFormat, $initialTitle);
-            $this->em->persist($feed);
-            $this->em->flush(); // assign an id so the duplicate check is meaningful
+            $this->entityManager->persist($feed);
+            $this->entityManager->flush(); // assign an id so the duplicate check is meaningful
         } elseif (SourceFormat::XML === $sourceFormat && SourceFormat::SCRAPED === $feed->getSourceFormat()) {
             // One-way heal for a poisoned shared row: an 'xml' arrival comes from
             // discovery PARSING the URL as a real feed document -- a stronger fact
@@ -78,7 +78,7 @@ final readonly class SubscriptionCreator
             // throw. An existing victim re-adding the feed to fix its format is
             // the natural repair path; without this flush that check aborts the
             // unit of work and the heal is rolled back, so the fix does nothing.
-            $this->em->flush();
+            $this->entityManager->flush();
         }
 
         if ($this->subscriptions->existsForUserAndFeed($userId, $feed->requireId())) {
@@ -88,8 +88,8 @@ final readonly class SubscriptionCreator
         $subscription = new Subscription($user, $feed, $this->clock->now());
         $subscription->setPosition($this->subscriptions->nextPositionForUser($userId));
         $this->attachTags($subscription, $tags);
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }

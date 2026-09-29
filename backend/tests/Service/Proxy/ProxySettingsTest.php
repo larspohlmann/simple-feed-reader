@@ -133,10 +133,10 @@ final class ProxySettingsTest extends TestCase
         $repository = $this->createStub(StoredProxySettingsInterface::class);
         $repository->method('findSingleton')->willReturn(new ProxyServerSettings());
 
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->once())->method('flush');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->once())->method('flush');
 
-        (new ProxySettings($repository, $em, ProxyPasswordCiphers::withTestSecret()))
+        (new ProxySettings($repository, $entityManager, ProxyPasswordCiphers::withTestSecret()))
             ->update(SettingsRequests::proxy(host: 'proxy.example', password: 'pw123456')->toUpdate());
     }
 
@@ -145,13 +145,13 @@ final class ProxySettingsTest extends TestCase
         $repository = $this->createStub(StoredProxySettingsInterface::class);
         $repository->method('findSingleton')->willReturnCallback(fn (): ?ProxyServerSettings => $this->stored);
 
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(function (object $entity): void {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
             if ($entity instanceof ProxyServerSettings) {
                 $this->stored = $entity;
             }
         });
 
-        return new ProxySettings($repository, $em, ProxyPasswordCiphers::withTestSecret());
+        return new ProxySettings($repository, $entityManager, ProxyPasswordCiphers::withTestSecret());
     }
 }

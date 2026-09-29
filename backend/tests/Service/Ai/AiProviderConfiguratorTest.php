@@ -69,7 +69,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         // clear() first: the assertion has to read the stamped column back out
         // of the database, not off the entity this test already holds.
-        $this->em->clear();
+        $this->entityManager->clear();
         $stored = $configurator->listConfigurations($this->reload('cfg-verified@example.test'));
         $verifiedAt = $stored[0]->getVerifiedAt();
         self::assertNotNull($verifiedAt);
@@ -86,7 +86,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
             $configurator->addConfiguration($user, null, 'https://api.example.test/v1', 'sk-abcdef1234');
             self::fail('Expected CredentialsRejectedException.');
         } catch (CredentialsRejectedException) {
-            $this->em->clear();
+            $this->entityManager->clear();
             $reloaded = $this->users()->findOneByEmail('cfg-refused@example.test');
             self::assertInstanceOf(User::class, $reloaded);
             self::assertSame([], $configurator->listConfigurations($reloaded));
@@ -104,7 +104,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         // clear() first: without it the identity map serves the entity this
         // test already holds, and the assertion would pass even if nothing was
         // ever written to the database.
-        $this->em->clear();
+        $this->entityManager->clear();
         $stored = $configurator->settingsFor($this->reload('cfg-model@example.test'));
         self::assertSame('gpt-4o-mini', $stored?->getModel());
     }
@@ -422,7 +422,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         // clear() first: otherwise the identity map serves the entities this test
         // already holds and the count/name would pass without any real write.
-        $this->em->clear();
+        $this->entityManager->clear();
         $stored = $configurator->listConfigurations($this->reload('cfg-duplicate-persist@example.test'));
 
         self::assertCount(2, $stored);
@@ -465,7 +465,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
      */
     private function moveSettingsRow(User $from, User $to): void
     {
-        $mover = new AiSettingsRowMover($this->em);
+        $mover = new AiSettingsRowMover($this->entityManager);
         $moved = $mover->moveOwnership($from, $to);
         $mover->pointActiveAt($to, $moved);
     }

@@ -37,7 +37,7 @@ final class CatalogImportPass
      * @param array<CatalogFeed>     $feeds
      */
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         array $categories,
         array $feeds,
     ) {
@@ -106,7 +106,7 @@ final class CatalogImportPass
             $documentCategory->color,
         );
         $category->setPosition($position);
-        $this->em->persist($category);
+        $this->entityManager->persist($category);
         $this->result = $this->result->with(categoriesCreated: 1);
 
         return $category;
@@ -134,7 +134,7 @@ final class CatalogImportPass
     private function createFeed(CatalogDocumentFeedModel $documentFeed, CatalogCategory $category): CatalogFeed
     {
         $feed = new CatalogFeed($category, $documentFeed->title, $documentFeed->url);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $this->result = $this->result->with(feedsCreated: 1);
 
         return $feed;
@@ -170,7 +170,7 @@ final class CatalogImportPass
             return;
         }
 
-        $this->em->remove($feed);
+        $this->entityManager->remove($feed);
         $this->result = $this->result->with(feedsRemoved: 1);
     }
 
@@ -187,7 +187,7 @@ final class CatalogImportPass
                 continue;
             }
             // Its remaining feeds go with it through ON DELETE CASCADE; every locked feed kept its category above.
-            $this->em->remove($category);
+            $this->entityManager->remove($category);
             $this->result = $this->result->with(categoriesRemoved: 1);
         }
     }

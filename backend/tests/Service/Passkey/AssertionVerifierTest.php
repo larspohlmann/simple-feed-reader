@@ -61,7 +61,7 @@ final class AssertionVerifierTest extends KernelTestCase
      * repository lookup afterwards can only be satisfied by a real row,
      * never by Doctrine handing back the in-memory mutated object. Confirmed
      * this actually catches a missing flush: temporarily removed the
-     * `$this->em->flush()` call from AssertionVerifier::verify() and re-ran
+     * `$this->entityManager->flush()` call from AssertionVerifier::verify() and re-ran
      * this test — it failed (the re-fetched row still had counter 3, not
      * 7) — before restoring it. See task-10-report.md's "Fix round 1"
      * section for the removal experiment's real output.
@@ -193,12 +193,12 @@ final class AssertionVerifierTest extends KernelTestCase
         self::fail(\sprintf('No warning log record contains "%s".', $needle));
     }
 
-    private function em(): EntityManagerInterface
+    private function entityManager(): EntityManagerInterface
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
-        return $em;
+        return $entityManager;
     }
 
     /**
@@ -208,7 +208,7 @@ final class AssertionVerifierTest extends KernelTestCase
      */
     private function rereadFromDatabase(User $user): UserPasskey
     {
-        $this->em()->clear();
+        $this->entityManager()->clear();
 
         /** @var UserPasskeyRepository $repository */
         $repository = self::getContainer()->get(UserPasskeyRepository::class);
@@ -293,7 +293,7 @@ final class AssertionVerifierTest extends KernelTestCase
             $ceremony,
             $optionsFactory,
             $passkeys,
-            $this->em(),
+            $this->entityManager(),
             new NaiveUtcClock($clock ?? new MockClock()),
             $logger ?? new NullLogger(),
             $availability,

@@ -107,8 +107,8 @@ final class CatalogFeedEditorTest extends DbTestCase
 
         $this->editor()->delete($feed);
 
-        $this->em->clear();
-        self::assertNull($this->em->find(CatalogFeed::class, $id));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->find(CatalogFeed::class, $id));
     }
 
     public function testReorderGivesEachFeedItsIndex(): void
@@ -140,8 +140,8 @@ final class CatalogFeedEditorTest extends DbTestCase
     private function category(string $key): CatalogCategory
     {
         $category = new CatalogCategory($key, $key, 'star', '#000000');
-        $this->em->persist($category);
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->flush();
 
         return $category;
     }

@@ -33,13 +33,15 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
 
         $this->user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->stranger = new User('stranger@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
-        $this->em->persist($this->stranger);
+        $this->entityManager->persist($this->user);
+        $this->entityManager->persist($this->stranger);
         $this->feed = new Feed('https://example.com/feed.xml');
         $this->feed->setTitle('Example');
-        $this->em->persist($this->feed);
-        $this->em->persist(new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->persist(
+            new Subscription($this->user, $this->feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
+        );
+        $this->entityManager->flush();
     }
 
     public function testTheListShowsMembersNewestFirstAndAnEntryInTwoSearchesOnce(): void
@@ -100,8 +102,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     {
         $climate = $this->search('climate');
         $otherFeed = new Feed('https://elsewhere.example.com/feed.xml');
-        $this->em->persist($otherFeed);
-        $this->em->flush();
+        $this->entityManager->persist($otherFeed);
+        $this->entityManager->flush();
         $foreign = $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed);
         $this->member($climate, $foreign);
 
@@ -111,8 +113,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     public function testAForeignSearchIdYieldsNothing(): void
     {
         $theirs = new SavedSearch($this->stranger, 'climate', false);
-        $this->em->persist($theirs);
-        $this->em->flush();
+        $this->entityManager->persist($theirs);
+        $this->entityManager->flush();
         $entry = $this->entry('a', '2026-07-10T00:00:00Z');
         $this->member($theirs, $entry);
 
@@ -210,8 +212,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     public function testMemberCountsIgnoreAnotherUsersSearches(): void
     {
         $theirs = new SavedSearch($this->stranger, 'climate', false);
-        $this->em->persist($theirs);
-        $this->em->flush();
+        $this->entityManager->persist($theirs);
+        $this->entityManager->flush();
         $this->member($theirs, $this->entry('a', '2026-07-10T00:00:00Z'));
 
         $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$theirs->requireId()]);
@@ -223,8 +225,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     {
         $climate = $this->search('climate');
         $otherFeed = new Feed('https://elsewhere.example.com/feed.xml');
-        $this->em->persist($otherFeed);
-        $this->em->flush();
+        $this->entityManager->persist($otherFeed);
+        $this->entityManager->flush();
         $this->member($climate, $this->entry('a', '2026-07-10T00:00:00Z', $otherFeed));
 
         $counts = $this->repo()->memberCountsBySavedSearch($this->user->requireId(), [$climate->requireId()]);
@@ -306,8 +308,8 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
     private function search(string $term): SavedSearch
     {
         $search = new SavedSearch($this->user, $term, false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
 
         return $search;
     }
@@ -323,24 +325,26 @@ final class SavedSearchMembershipReadsTest extends DbTestCase
             new \DateTimeImmutable($effectiveDate),
             $urlHash,
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
 
     private function member(SavedSearch $search, Entry $entry): void
     {
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager->flush();
     }
 
     private function hide(Entry $entry): void
     {
         $state = new EntryState($this->user, $entry);
         $state->hide(new \DateTimeImmutable('2026-07-11T00:00:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
     }
 
     /**

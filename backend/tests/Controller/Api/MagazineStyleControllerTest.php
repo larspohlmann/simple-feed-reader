@@ -69,7 +69,7 @@ final class MagazineStyleControllerTest extends ApiTestCase
         self::assertResponseIsSuccessful();
         self::assertSame('airy', $this->magazineStyle($client));
 
-        $this->em()->clear();
+        $this->entityManager()->clear();
         $reloaded = $this->users()->findOneBy(['email' => 'airy-reader@example.test']);
         self::assertNotNull($reloaded);
         self::assertSame(MagazineStyle::Airy, $reloaded->getPreferences()->getMagazineStyle());

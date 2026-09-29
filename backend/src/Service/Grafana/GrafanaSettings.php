@@ -16,7 +16,7 @@ final readonly class GrafanaSettings
 {
     public function __construct(
         private StoredGrafanaSettingsInterface $repository,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private GrafanaApiKeyCipher $cipher,
         private EffectiveGrafanaSettings $effective,
         private GrafanaEnvDefaults $defaults,
@@ -38,11 +38,11 @@ final readonly class GrafanaSettings
         $settings = $this->repository->findSingleton();
         if (null === $settings) {
             $settings = new GrafanaSettingsEntity();
-            $this->em->persist($settings);
+            $this->entityManager->persist($settings);
         }
 
         $this->apply($update, $settings);
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->effective->forgetStored();
     }
 

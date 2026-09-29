@@ -105,8 +105,8 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
     private function feed(): Feed
     {
         $feed = new Feed('https://example.com/membership-loader-feed.xml');
-        $this->em->persist($feed);
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -121,8 +121,8 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -130,11 +130,13 @@ final class SavedSearchMembershipLoaderTest extends DbTestCase
     private function savedSearchWithMember(User $user, string $term, Entry $entry): SavedSearch
     {
         $search = new SavedSearch($user, $term, false);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
         $search->setSlug($search->getId() . '-' . $term);
-        $this->em->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager->flush();
 
         return $search;
     }

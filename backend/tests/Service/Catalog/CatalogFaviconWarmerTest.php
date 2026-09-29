@@ -13,20 +13,11 @@ use App\Service\Fetch\FaviconResolver\FaviconResolverInterface;
 use App\Service\Image\FaviconFetcher\FaviconFetcherInterface;
 use App\Service\Image\Model\FetchedFaviconModel;
 use App\Tests\DbTestCase;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\MockObject\Stub;
 use Psr\Clock\ClockInterface;
 
 final class CatalogFaviconWarmerTest extends DbTestCase
 {
-    private function em(): EntityManagerInterface
-    {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-
-        return $em;
-    }
-
     private function feeds(): CatalogFeedRepository
     {
         $feeds = self::getContainer()->get(CatalogFeedRepository::class);
@@ -47,7 +38,7 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         FaviconResolverInterface $resolver,
         FaviconFetcherInterface $fetcher,
     ): CatalogFaviconWarmer {
-        return new CatalogFaviconWarmer($this->feeds(), $resolver, $fetcher, $this->em(), $this->clock());
+        return new CatalogFaviconWarmer($this->feeds(), $resolver, $fetcher, $this->entityManager, $this->clock());
     }
 
     private function persistFeed(string $title): CatalogFeed
@@ -55,9 +46,9 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         $category = new CatalogCategory('technology' . $title, 'Technology', 'memory', '#3b82f6');
         $feed = new CatalogFeed($category, $title, 'https://' . strtolower($title) . '.example.com/rss.xml');
         $feed->setSiteUrl('https://example.com');
-        $this->em()->persist($category);
-        $this->em()->persist($feed);
-        $this->em()->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush();
 
         return $feed;
     }
@@ -101,8 +92,8 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         self::assertSame(0, $report->failed);
         self::assertSame(0, $report->remaining);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(CatalogFeed::class, $feed->getId());
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
         self::assertNotNull($reloaded);
         self::assertSame('PNGBYTES', $reloaded->getFaviconBytes());
     }
@@ -120,8 +111,8 @@ final class CatalogFaviconWarmerTest extends DbTestCase
         self::assertSame(0, $report->warmed);
         self::assertSame(1, $report->failed);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(CatalogFeed::class, $feed->getId());
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
         self::assertNotNull($reloaded);
         self::assertNotNull($reloaded->getFaviconFailedAt());
     }
@@ -137,8 +128,8 @@ final class CatalogFaviconWarmerTest extends DbTestCase
 
         $this->warmer($resolver, $fetcher)->refresh($feed);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(CatalogFeed::class, $feed->getId());
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
         self::assertNotNull($reloaded);
         self::assertSame('ICOBYTES', $reloaded->getFaviconBytes());
     }
@@ -153,8 +144,8 @@ final class CatalogFaviconWarmerTest extends DbTestCase
 
         $this->warmer($resolver, $fetcher)->refresh($feed);
 
-        $this->em()->clear();
-        $reloaded = $this->em()->find(CatalogFeed::class, $feed->getId());
+        $this->entityManager->clear();
+        $reloaded = $this->entityManager->find(CatalogFeed::class, $feed->getId());
         self::assertNotNull($reloaded);
         self::assertNotNull($reloaded->getFaviconFailedAt());
     }

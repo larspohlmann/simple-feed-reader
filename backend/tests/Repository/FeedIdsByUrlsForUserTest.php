@@ -20,17 +20,19 @@ final class FeedIdsByUrlsForUserTest extends DbTestCase
     public function testReturnsOnlyTheUrlsThisUserSubscribesTo(): void
     {
         $user = new User('feed-ids-by-url@example.com', new \DateTimeImmutable('2026-07-01 00:00:00'));
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $stranger = new User('feed-ids-by-url-stranger@example.com', new \DateTimeImmutable('2026-07-01 00:00:00'));
-        $this->em->persist($stranger);
+        $this->entityManager->persist($stranger);
 
         $mine = new Feed('https://mine.example/feed.xml');
         $theirs = new Feed('https://theirs.example/feed.xml');
-        $this->em->persist($mine);
-        $this->em->persist($theirs);
-        $this->em->persist(new Subscription($user, $mine, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->persist(new Subscription($stranger, $theirs, new \DateTimeImmutable('2026-07-01 00:00:00')));
-        $this->em->flush();
+        $this->entityManager->persist($mine);
+        $this->entityManager->persist($theirs);
+        $this->entityManager->persist(new Subscription($user, $mine, new \DateTimeImmutable('2026-07-01 00:00:00')));
+        $this->entityManager->persist(
+            new Subscription($stranger, $theirs, new \DateTimeImmutable('2026-07-01 00:00:00')),
+        );
+        $this->entityManager->flush();
 
         $result = $this->repository()->idsByUrlsForUser(
             $user->requireId(),
@@ -47,7 +49,7 @@ final class FeedIdsByUrlsForUserTest extends DbTestCase
 
     private function repository(): FeedRepository
     {
-        $repository = $this->em->getRepository(Feed::class);
+        $repository = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repository);
 
         return $repository;

@@ -42,14 +42,14 @@ final class SavedSearchUnreadListMatchesBadgeTest extends ApiTestCase
         $user = $this->factory()->create('badge-parity@example.com');
         $headers = $this->authHeaderFor($user);
 
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $feed = new Feed('https://example.com/climate.xml');
         $feed->setTitle('Climate Feed');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $search = new SavedSearch($user, 'climate', false);
-        $em->persist($search);
-        $em->flush();
+        $entityManager->persist($search);
+        $entityManager->flush();
 
         $now = new \DateTimeImmutable('2026-09-22T10:00:00Z');
         $createdAt = $now->modify('-1 day');
@@ -57,9 +57,9 @@ final class SavedSearchUnreadListMatchesBadgeTest extends ApiTestCase
         $middle = $this->member($search, $feed, 'middle', $now->modify('-2 hours'), $createdAt);
         $oldest = $this->member($search, $feed, 'oldest', $now->modify('-3 hours'), $createdAt);
 
-        $em->persist($this->hidden($user, $newest, $now));
-        $em->persist($this->hidden($user, $middle, $now));
-        $em->flush();
+        $entityManager->persist($this->hidden($user, $newest, $now));
+        $entityManager->persist($this->hidden($user, $middle, $now));
+        $entityManager->flush();
 
         $client->request('GET', '/api/saved-searches', server: $headers);
         self::assertResponseIsSuccessful();
@@ -87,7 +87,7 @@ final class SavedSearchUnreadListMatchesBadgeTest extends ApiTestCase
         \DateTimeImmutable $effectiveDate,
         \DateTimeImmutable $createdAt,
     ): Entry {
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $entry = new Entry(
             $feed,
             $guid,
@@ -96,10 +96,10 @@ final class SavedSearchUnreadListMatchesBadgeTest extends ApiTestCase
             $createdAt,
             $effectiveDate,
         );
-        $em->persist($entry);
-        $em->flush();
-        $em->persist(new SavedSearchEntry($search, $entry, $effectiveDate));
-        $em->flush();
+        $entityManager->persist($entry);
+        $entityManager->flush();
+        $entityManager->persist(new SavedSearchEntry($search, $entry, $effectiveDate));
+        $entityManager->flush();
 
         return $entry;
     }

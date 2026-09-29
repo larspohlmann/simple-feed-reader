@@ -15,7 +15,7 @@ final readonly class ProxySettings
 {
     public function __construct(
         private StoredProxySettingsInterface $repository,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ProxyPasswordCipher $cipher,
     ) {
     }
@@ -31,11 +31,11 @@ final readonly class ProxySettings
 
         if (null === $settings) {
             $settings = new ProxyServerSettings();
-            $this->em->persist($settings);
+            $this->entityManager->persist($settings);
         }
 
         $this->apply($update, $settings);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function apply(ProxySettingsUpdateModel $update, ProxyServerSettings $settings): void

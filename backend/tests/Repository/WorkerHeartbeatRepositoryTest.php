@@ -44,7 +44,7 @@ final class WorkerHeartbeatRepositoryTest extends DbTestCase
 
     public function testTouchLeavesSomeoneElsesPendingChangesUnflushed(): void
     {
-        $this->em->persist(new WorkerHeartbeat('pending', new \DateTimeImmutable(self::AT)));
+        $this->entityManager->persist(new WorkerHeartbeat('pending', new \DateTimeImmutable(self::AT)));
 
         $this->heartbeats()->touch('touched', new \DateTimeImmutable(self::AT));
 
@@ -54,7 +54,7 @@ final class WorkerHeartbeatRepositoryTest extends DbTestCase
     public function testForgetLeavesSomeoneElsesPendingChangesUnflushed(): void
     {
         $this->heartbeats()->touch('forgotten', new \DateTimeImmutable(self::AT));
-        $this->em->persist(new WorkerHeartbeat('pending', new \DateTimeImmutable(self::AT)));
+        $this->entityManager->persist(new WorkerHeartbeat('pending', new \DateTimeImmutable(self::AT)));
 
         $this->heartbeats()->forget('forgotten');
 
@@ -84,14 +84,16 @@ final class WorkerHeartbeatRepositoryTest extends DbTestCase
     private function storedNames(): array
     {
         /** @var list<string> $names */
-        $names = $this->em->getConnection()->fetchFirstColumn('SELECT name FROM worker_heartbeat ORDER BY name');
+        $names = $this->entityManager
+            ->getConnection()
+            ->fetchFirstColumn('SELECT name FROM worker_heartbeat ORDER BY name');
 
         return $names;
     }
 
     private function storedTouchedAt(string $name): string
     {
-        $touchedAt = $this->em->getConnection()->fetchOne(
+        $touchedAt = $this->entityManager->getConnection()->fetchOne(
             'SELECT touched_at FROM worker_heartbeat WHERE name = :name',
             ['name' => $name],
         );

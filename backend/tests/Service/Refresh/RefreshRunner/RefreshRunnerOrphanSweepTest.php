@@ -37,21 +37,21 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
 
     private function runner(): RefreshRunner
     {
-        return RefreshRunners::fromContainer(self::getContainer(), $this->em, $this->clock)
+        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
             ->build($this->fetcher, $this->faviconFetcher);
     }
 
     public function testAPruningRefreshDeletesAnOrphanedFeed(): void
     {
         $orphan = new Feed('https://orphan.example.com/rss');
-        $this->em->persist($orphan);
-        $this->em->flush();
+        $this->entityManager->persist($orphan);
+        $this->entityManager->flush();
         $orphanId = $orphan->requireId();
 
         $this->runner()->run(RefreshRequestModel::allDue(budgetSeconds: 30));
 
-        $this->em->clear();
-        self::assertNull($this->em->getRepository(Feed::class)->find($orphanId));
+        $this->entityManager->clear();
+        self::assertNull($this->entityManager->getRepository(Feed::class)->find($orphanId));
     }
 
     public function testAPruningRefreshSpendsNoRequestOnAnOrphanedFeed(): void
@@ -60,11 +60,11 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
         $subscribed = new Feed('https://subscribed.example.com/rss');
         $subscribed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
         $subscriber = new User('sweep-subscriber@example.com', $this->clock->now());
-        $this->em->persist($orphan);
-        $this->em->persist($subscribed);
-        $this->em->persist($subscriber);
-        $this->em->persist(new Subscription($subscriber, $subscribed, $this->clock->now()));
-        $this->em->flush();
+        $this->entityManager->persist($orphan);
+        $this->entityManager->persist($subscribed);
+        $this->entityManager->persist($subscriber);
+        $this->entityManager->persist(new Subscription($subscriber, $subscribed, $this->clock->now()));
+        $this->entityManager->flush();
         $this->fetcher->willThrow($orphan->getUrl(), new FeedUnreachableException('never asked'));
         $this->fetcher->willReturn(
             $subscribed->getUrl(),
@@ -79,13 +79,13 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
     public function testAUserRefreshLeavesAnOrphanedFeedAlone(): void
     {
         $orphan = new Feed('https://orphan-2.example.com/rss');
-        $this->em->persist($orphan);
-        $this->em->flush();
+        $this->entityManager->persist($orphan);
+        $this->entityManager->flush();
         $orphanId = $orphan->requireId();
 
         $this->runner()->run(RefreshRequestModel::forUser(userId: 1, budgetSeconds: 30));
 
-        $this->em->clear();
-        self::assertNotNull($this->em->getRepository(Feed::class)->find($orphanId));
+        $this->entityManager->clear();
+        self::assertNotNull($this->entityManager->getRepository(Feed::class)->find($orphanId));
     }
 }

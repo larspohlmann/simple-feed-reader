@@ -20,9 +20,9 @@ final class SavedSearchRematchCommandTest extends DbTestCase
         $user = new User('rematch@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $search = new SavedSearch($user, 'climate', false);
         $search->advanceMatchedUpTo(500);
-        $this->em->persist($user);
-        $this->em->persist($search);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($search);
+        $this->entityManager->flush();
         $repository = self::getContainer()->get(SavedSearchRepository::class);
         self::assertInstanceOf(SavedSearchRepository::class, $repository);
 
@@ -31,6 +31,6 @@ final class SavedSearchRematchCommandTest extends DbTestCase
 
         self::assertSame(Command::SUCCESS, $tester->getStatusCode());
         self::assertStringContainsString('1 saved-search membership marks reset', $tester->getDisplay());
-        self::assertSame(0, StoredMark::of($this->em, $search));
+        self::assertSame(0, StoredMark::of($this->entityManager, $search));
     }
 }

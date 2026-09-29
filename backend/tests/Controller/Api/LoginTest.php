@@ -39,12 +39,12 @@ final class LoginTest extends WebTestCase
 
     private function factory(): UserFactory
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
 
-        return new UserFactory($em, $hasher);
+        return new UserFactory($entityManager, $hasher);
     }
 
     private function login(KernelBrowser $client, string $email, string $password): void
@@ -370,14 +370,14 @@ final class LoginTest extends WebTestCase
     public function testAPasswordLoginAgainstAnOAuthOnlyAccountIsIndistinguishableFromAnUnknownAddress(): void
     {
         $client = self::createClient();
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
 
         $user = new User('oauth-only@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
         $user->approve(new \DateTimeImmutable('2026-07-01 10:00:00'));
         // No password hash: this account exists only through a provider.
-        $em->persist($user);
-        $em->flush();
+        $entityManager->persist($user);
+        $entityManager->flush();
 
         $bodies = [];
         foreach (['oauth-only@example.com', 'ghost@example.com'] as $email) {
@@ -413,12 +413,12 @@ final class LoginTest extends WebTestCase
 
         $this->factory()->create('has-password@example.com');
 
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $oauthOnly = new User('no-password@example.com', new \DateTimeImmutable('2026-07-01 10:00:00'));
         $oauthOnly->approve(new \DateTimeImmutable('2026-07-01 10:00:00'));
-        $em->persist($oauthOnly);
-        $em->flush();
+        $entityManager->persist($oauthOnly);
+        $entityManager->flush();
 
         $spent = [];
         foreach (['unknown@example.com', 'no-password@example.com', 'has-password@example.com'] as $email) {

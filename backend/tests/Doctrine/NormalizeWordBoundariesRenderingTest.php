@@ -16,12 +16,12 @@ final class NormalizeWordBoundariesRenderingTest extends DbTestCase
 {
     public function testSqliteCallsTheNativeFunctionAndMysqlUnrollsTheReplaceChain(): void
     {
-        $sql = $this->em
+        $sql = $this->entityManager
             ->createQuery(\sprintf('SELECT NORMALIZE_WORD_BOUNDARIES(e.title) FROM %s e', Entry::class))
             ->getSQL();
         self::assertIsString($sql);
 
-        if ($this->em->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
+        if ($this->entityManager->getConnection()->getDatabasePlatform() instanceof SQLitePlatform) {
             self::assertStringContainsString('NORMALIZE_WORD_BOUNDARIES(', $sql);
             self::assertStringNotContainsString('REPLACE(', $sql);
 

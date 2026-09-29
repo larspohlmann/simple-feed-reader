@@ -25,7 +25,7 @@ final readonly class AccountRestorer
     private const string CONFIRMATION = 'REPLACE';
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private BackupInspector $inspector,
         private BackupFitCheck $fitCheck,
         private AccountReset $accountReset,
@@ -54,7 +54,7 @@ final readonly class AccountRestorer
      */
     private function refreshed(int $userId): User
     {
-        return $this->em->find(User::class, $userId)
+        return $this->entityManager->find(User::class, $userId)
             ?? throw new \LogicException('The account disappeared during its own restore.');
     }
 }

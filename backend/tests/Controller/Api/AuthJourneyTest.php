@@ -300,15 +300,15 @@ final class AuthJourneyTest extends WebTestCase
      */
     private function adminToken(): string
     {
-        /** @var EntityManagerInterface $em */
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        /** @var EntityManagerInterface $entityManager */
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         /** @var UserRepository $users */
         $users = self::getContainer()->get(UserRepository::class);
 
         $admin = $users->findOneByEmail('journey-admin@example.com')
-            ?? (new UserFactory($em, $hasher))->create('journey-admin@example.com', roles: ['ROLE_ADMIN']);
+            ?? (new UserFactory($entityManager, $hasher))->create('journey-admin@example.com', roles: ['ROLE_ADMIN']);
 
         /** @var JWTTokenManagerInterface $jwt */
         $jwt = self::getContainer()->get(JWTTokenManagerInterface::class);

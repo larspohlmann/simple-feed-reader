@@ -18,12 +18,12 @@ final class CatalogImportPassTest extends TestCase
     public function testANewDocumentPersistsEveryRowAndCountsIt(): void
     {
         $persisted = [];
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->method('persist')->willReturnCallback(static function (object $row) use (&$persisted): void {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('persist')->willReturnCallback(static function (object $row) use (&$persisted): void {
             $persisted[] = $row;
         });
-        $em->expects($this->never())->method('remove');
-        $pass = new CatalogImportPass($em, [], []);
+        $entityManager->expects($this->never())->method('remove');
+        $pass = new CatalogImportPass($entityManager, [], []);
 
         $pass->apply(new ParsedCatalogModel([
             new CatalogDocumentCategoryModel('tech', 'Tech', 'memory', '#3b82f6', [
@@ -51,11 +51,11 @@ final class CatalogImportPassTest extends TestCase
         $lockedFeed->setLocked(true);
         $staleFeed = new CatalogFeed($kept, 'Stale', 'https://stale.example.com/rss.xml');
         $removed = [];
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('remove')->willReturnCallback(static function (object $row) use (&$removed): void {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('remove')->willReturnCallback(static function (object $row) use (&$removed): void {
             $removed[] = $row;
         });
-        $pass = new CatalogImportPass($em, [$kept, $holding, $dropped], [$lockedFeed, $staleFeed]);
+        $pass = new CatalogImportPass($entityManager, [$kept, $holding, $dropped], [$lockedFeed, $staleFeed]);
         $pass->apply(
             new ParsedCatalogModel([new CatalogDocumentCategoryModel('kept', 'Kept', 'memory', '#3b82f6', [])]),
         );
@@ -78,11 +78,11 @@ final class CatalogImportPassTest extends TestCase
         $secondLocked = new CatalogFeed($second, 'Second locked', 'https://second.example.com/rss.xml');
         $secondLocked->setLocked(true);
         $removed = [];
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('remove')->willReturnCallback(static function (object $row) use (&$removed): void {
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('remove')->willReturnCallback(static function (object $row) use (&$removed): void {
             $removed[] = $row;
         });
-        $pass = new CatalogImportPass($em, [$first, $second], [$firstLocked, $secondLocked]);
+        $pass = new CatalogImportPass($entityManager, [$first, $second], [$firstLocked, $secondLocked]);
         $pass->apply(new ParsedCatalogModel([]));
 
         $pass->removeUnmentioned();

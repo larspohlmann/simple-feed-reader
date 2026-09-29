@@ -36,7 +36,7 @@ final class AccountBackupExporterTest extends DbTestCase
 
     private function makeUser(string $email): User
     {
-        return (new UserFactory($this->em, $this->hasher()))->create($email, locale: 'de');
+        return (new UserFactory($this->entityManager, $this->hasher()))->create($email, locale: 'de');
     }
 
     private function exporter(): AccountBackupExporter
@@ -104,20 +104,20 @@ final class AccountBackupExporterTest extends DbTestCase
         $feed = new Feed('https://one.example/feed.xml');
         $feed->setTitle('One');
         $feed->setSiteUrl('https://one.example');
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $tag = new Tag($user, 'Tech');
         $tag->setColor('#a1b2c3');
         $tag->setPosition(1);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $savedSearch = new SavedSearch($user, 'climate policy', true);
         $savedSearch->setPosition(3);
-        $this->em->persist($savedSearch);
+        $this->entityManager->persist($savedSearch);
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $subscription->setCustomTitle('My One');
         $subscription->setPosition(4);
         $subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-08-01T00:00:00Z'));
         $subscription->addTag($tag, 3);
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $entry = new Entry(
             $feed,
             'guid-1',
@@ -127,12 +127,12 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-02T00:00:00Z'),
         );
         $entry->setContentHtml('<p>body</p>');
-        $this->em->persist($entry);
+        $this->entityManager->persist($entry);
         $state = new EntryState($user, $entry);
         $state->markFavorite();
         $state->markViewed(new \DateTimeImmutable('2026-08-03T00:00:00Z'));
-        $this->em->persist($state);
-        $this->em->flush();
+        $this->entityManager->persist($state);
+        $this->entityManager->flush();
 
         $parts = $this->decodedParts($user);
         self::assertCount(2, $parts);
@@ -181,11 +181,11 @@ final class AccountBackupExporterTest extends DbTestCase
         $user = $this->makeUser('export-mine@example.com');
         $other = $this->makeUser('export-other@example.com');
         $feed = new Feed('https://shared.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->persist(new Subscription($other, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new Subscription($other, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $otherTag = new Tag($other, 'Not yours');
-        $this->em->persist($otherTag);
+        $this->entityManager->persist($otherTag);
         $entry = new Entry(
             $feed,
             'g',
@@ -194,9 +194,9 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->persist(new EntryState($other, $entry));
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new EntryState($other, $entry));
+        $this->entityManager->flush();
 
         $allLines = array_merge(...$this->decodedParts($user));
 
@@ -214,8 +214,8 @@ final class AccountBackupExporterTest extends DbTestCase
         $user = $this->makeUser('export-orphan@example.com');
 
         $subscribedFeed = new Feed('https://subscribed.example/feed.xml');
-        $this->em->persist($subscribedFeed);
-        $this->em->persist(
+        $this->entityManager->persist($subscribedFeed);
+        $this->entityManager->persist(
             new Subscription($user, $subscribedFeed, new \DateTimeImmutable('2026-07-01T00:00:00Z')),
         );
         $subscribedEntry = new Entry(
@@ -226,17 +226,17 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($subscribedEntry);
+        $this->entityManager->persist($subscribedEntry);
         $subscribedState = new EntryState($user, $subscribedEntry);
         $subscribedState->markFavorite();
-        $this->em->persist($subscribedState);
+        $this->entityManager->persist($subscribedState);
 
         // No Subscription row exists for this feed — exactly the state
         // SubscriptionService::unsubscribe leaves behind, since it removes the
         // subscription without touching entry_state (see
         // EntryStateRepository::stateCountsForUser's own docblock).
         $orphanFeed = new Feed('https://unsubscribed.example/feed.xml');
-        $this->em->persist($orphanFeed);
+        $this->entityManager->persist($orphanFeed);
         $orphanEntry = new Entry(
             $orphanFeed,
             'orphan-guid',
@@ -245,12 +245,12 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($orphanEntry);
+        $this->entityManager->persist($orphanEntry);
         $orphanState = new EntryState($user, $orphanEntry);
         $orphanState->markFavorite();
-        $this->em->persist($orphanState);
+        $this->entityManager->persist($orphanState);
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $parts = $this->decodedParts($user);
         $allLines = array_merge(...$parts);
@@ -286,8 +286,8 @@ final class AccountBackupExporterTest extends DbTestCase
             debugEnabled: false,
             profileText: 'Reads long-form essays about urban planning.',
         ));
-        $this->em->persist($settings);
-        $this->em->flush();
+        $this->entityManager->persist($settings);
+        $this->entityManager->flush();
 
         [$foundationPart] = $this->decodedParts($user);
         $accountLine = $foundationPart[0];
@@ -297,7 +297,7 @@ final class AccountBackupExporterTest extends DbTestCase
 
     public function testASmallAccountYieldsEntryPartsThenTheFoundationLast(): void
     {
-        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('small-account@example.com');
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create('small-account@example.com');
 
         $memberNames = [];
         $headers = [];
@@ -319,7 +319,7 @@ final class AccountBackupExporterTest extends DbTestCase
 
     public function testEveryEntryStateTravelsInTheSamePartAsItsEntry(): void
     {
-        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('states-travel@example.com');
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create('states-travel@example.com');
 
         foreach ($this->decodedParts($user) as $part) {
             $entryKeys = [];
@@ -341,8 +341,8 @@ final class AccountBackupExporterTest extends DbTestCase
     {
         $user = $this->makeUser('export-budget@example.com');
         $feed = new Feed('https://budget.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         for ($i = 0; $i < 2001; ++$i) {
             $entry = new Entry(
                 $feed,
@@ -352,20 +352,20 @@ final class AccountBackupExporterTest extends DbTestCase
                 new \DateTimeImmutable('2026-08-01T00:00:00Z'),
                 new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             );
-            $this->em->persist($entry);
+            $this->entityManager->persist($entry);
             if (0 === $i % 500) {
-                $this->em->flush();
+                $this->entityManager->flush();
             }
         }
-        $this->em->flush();
-        $this->em->clear();
-        $user = $this->em->find(User::class, $user->getId());
+        $this->entityManager->flush();
+        $this->entityManager->clear();
+        $user = $this->entityManager->find(User::class, $user->getId());
         self::assertInstanceOf(User::class, $user);
 
         $entryCountsPerPart = [];
         $headers = [];
         foreach ($this->exporter()->parts($user, null) as $part) {
-            $identityMap = $this->em->getUnitOfWork()->getIdentityMap();
+            $identityMap = $this->entityManager->getUnitOfWork()->getIdentityMap();
             $held = \count($identityMap[Entry::class] ?? []);
             self::assertLessThanOrEqual(500, $held, 'entry hydration is not batched');
 
@@ -389,9 +389,9 @@ final class AccountBackupExporterTest extends DbTestCase
     {
         $user = $this->makeUser('export-no-entries@example.com');
         $feed = new Feed('https://empty.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->flush();
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->flush();
 
         $parts = $this->decodedParts($user);
 
@@ -406,9 +406,9 @@ final class AccountBackupExporterTest extends DbTestCase
     {
         $user = $this->makeUser('mid-export-rewrite@example.com');
         $feed = new Feed('https://original.example/feed.xml');
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
-        $this->em->persist(new Entry(
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist(new Entry(
             $feed,
             'g-1',
             'https://original.example/a',
@@ -416,7 +416,7 @@ final class AccountBackupExporterTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
         $feedId = $feed->requireId();
 
         $parts = [];
@@ -438,10 +438,10 @@ final class AccountBackupExporterTest extends DbTestCase
 
     private function rewriteFeedUrl(int $feedId, string $url): void
     {
-        $feed = $this->em->find(Feed::class, $feedId);
+        $feed = $this->entityManager->find(Feed::class, $feedId);
         self::assertInstanceOf(Feed::class, $feed);
         $feed->setUrl($url);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     /**
@@ -484,7 +484,9 @@ final class AccountBackupExporterTest extends DbTestCase
 
     public function testEveryYieldedPartIsAValidDocumentThatTheReaderAccepts(): void
     {
-        $user = (new FullyPopulatedAccount($this->em, $this->hasher()))->create('reader-round-trip@example.com');
+        $user = (new FullyPopulatedAccount($this->entityManager, $this->hasher()))->create(
+            'reader-round-trip@example.com',
+        );
 
         foreach ($this->exporter()->parts($user, 'https://source.example') as $part) {
             $lineCount = 0;

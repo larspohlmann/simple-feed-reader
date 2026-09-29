@@ -20,13 +20,13 @@ final class SavedSearchEntriesTest extends DbTestCase
     {
         $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($user);
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager->persist($user);
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $climate = new SavedSearch($user, 'climate', false);
         $rocket = new SavedSearch($user, 'rocket', false);
-        $this->em->persist($climate);
-        $this->em->persist($rocket);
+        $this->entityManager->persist($climate);
+        $this->entityManager->persist($rocket);
         $entry = new Entry(
             $feed,
             'a',
@@ -35,12 +35,12 @@ final class SavedSearchEntriesTest extends DbTestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
         $matchedAt = new \DateTimeImmutable('2026-09-22T10:00:00');
-        $this->em->persist(new SavedSearchEntry($climate, $entry, $matchedAt));
-        $this->em->persist(new SavedSearchEntry($rocket, $entry, $matchedAt));
-        $this->em->flush();
+        $this->entityManager->persist(new SavedSearchEntry($climate, $entry, $matchedAt));
+        $this->entityManager->persist(new SavedSearchEntry($rocket, $entry, $matchedAt));
+        $this->entityManager->flush();
 
         $service = self::getContainer()->get(SavedSearchEntries::class);
         self::assertInstanceOf(SavedSearchEntries::class, $service);

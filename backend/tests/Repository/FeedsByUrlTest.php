@@ -16,9 +16,9 @@ final class FeedsByUrlTest extends DbTestCase
     public function testReturnsOnlyTheAskedUrlsIndexedByUrl(): void
     {
         $one = new Feed('https://one.example/feed.xml');
-        $this->em->persist($one);
-        $this->em->persist(new Feed('https://two.example/feed.xml'));
-        $this->em->flush();
+        $this->entityManager->persist($one);
+        $this->entityManager->persist(new Feed('https://two.example/feed.xml'));
+        $this->entityManager->flush();
 
         $byUrl = $this->repository()->findByUrlsIndexedByUrl([
             'https://one.example/feed.xml',
@@ -35,7 +35,7 @@ final class FeedsByUrlTest extends DbTestCase
 
     private function repository(): FeedRepository
     {
-        $repository = $this->em->getRepository(Feed::class);
+        $repository = $this->entityManager->getRepository(Feed::class);
         self::assertInstanceOf(FeedRepository::class, $repository);
 
         return $repository;

@@ -59,14 +59,14 @@ final class RegistrationServiceTest extends DbTestCase
         $work = $container->get(PasswordWorkEqualizer::class);
 
         return new RegistrationService(
-            $this->em,
+            $this->entityManager,
             $blindRepository,
             $tokens,
             $mailer,
             $work,
             new EventDispatcher(),
             new SignupUserFactory($hasher, $clock, $this->registrationPolicy(confirm: true, approve: true)),
-            new PasswordResetter($this->em, $hasher, $clock),
+            new PasswordResetter($this->entityManager, $hasher, $clock),
         );
     }
 
@@ -94,14 +94,14 @@ final class RegistrationServiceTest extends DbTestCase
         $work = $container->get(PasswordWorkEqualizer::class);
 
         return new RegistrationService(
-            $this->em,
+            $this->entityManager,
             $users,
             $tokens,
             $mailer ?? $this->createMock(AccountMailerInterface::class),
             $work,
             $events ?? new EventDispatcher(),
             new SignupUserFactory($hasher, $clock, $policy),
-            new PasswordResetter($this->em, $hasher, $clock),
+            new PasswordResetter($this->entityManager, $hasher, $clock),
         );
     }
 
@@ -226,7 +226,7 @@ final class RegistrationServiceTest extends DbTestCase
 
     private function countUsersWithEmail(string $email): int
     {
-        $count = $this->em->getConnection()->fetchOne(
+        $count = $this->entityManager->getConnection()->fetchOne(
             'SELECT COUNT(*) FROM app_user WHERE email = ?',
             [$email],
         );

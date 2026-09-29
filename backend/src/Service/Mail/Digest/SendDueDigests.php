@@ -38,7 +38,7 @@ final readonly class SendDueDigests
         private DigestMailerInterface $mailer,
         private MailCapability $mail,
         private ClockInterface $clock,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private LoggerInterface $logger,
         private MailFailureRecorderInterface $health,
     ) {
@@ -110,7 +110,7 @@ final readonly class SendDueDigests
 
         $this->health->recordSuccess();
         $prefs->setDigestLastSentAt($occurrence);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return DigestAttempt::Sent;
     }

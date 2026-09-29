@@ -61,7 +61,7 @@ final readonly class AssertionVerifier
         private PasskeyCeremony $ceremony,
         private AssertionOptionsFactory $optionsFactory,
         private UserPasskeyRepository $passkeys,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private NaiveUtcClock $clock,
         private LoggerInterface $logger,
         private PasskeySignInAvailability $availability,
@@ -87,7 +87,7 @@ final readonly class AssertionVerifier
 
         $newCounter = $this->checkAssertion($storedPasskey, $response, $challenge->challenge);
         $storedPasskey->recordUse($this->clock->now(), $newCounter);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $storedPasskey;
     }

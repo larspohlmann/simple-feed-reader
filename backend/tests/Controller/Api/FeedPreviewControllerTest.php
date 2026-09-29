@@ -39,11 +39,11 @@ final class FeedPreviewControllerTest extends WebTestCase
     /** @return array{0: array<string,string>, 1: User} */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        $user = (new UserFactory($em, $hasher))->create($email);
+        $user = (new UserFactory($entityManager, $hasher))->create($email);
 
         $tokens = self::getContainer()->get(JWTTokenManagerInterface::class);
         self::assertInstanceOf(JWTTokenManagerInterface::class, $tokens);
@@ -156,9 +156,9 @@ final class FeedPreviewControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('preview-scraped@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(
@@ -233,9 +233,9 @@ final class FeedPreviewControllerTest extends WebTestCase
         $client = self::createClient();
         [$headers, $user] = $this->auth('preview-navonly@example.com');
         $user->getPreferences()->setScrapeFallbackEnabled(true);
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $em->flush();
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(

@@ -61,13 +61,13 @@ final class RefreshRunnerTest extends DbTestCase
         // by RefreshRunnerOrphanSweepTest, which persists feeds with no
         // subscriber on purpose.
         $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
-        $this->em->persist($this->subscriber);
+        $this->entityManager->persist($this->subscriber);
     }
 
-    private function runner(?EntityManagerInterface $runnerEm = null): RefreshRunner
+    private function runner(?EntityManagerInterface $runnerEntityManager = null): RefreshRunner
     {
-        return RefreshRunners::fromContainer(self::getContainer(), $this->em, $this->clock)
-            ->flushingThrough($runnerEm ?? $this->em)
+        return RefreshRunners::fromContainer(self::getContainer(), $this->entityManager, $this->clock)
+            ->flushingThrough($runnerEntityManager ?? $this->entityManager)
             ->lockingWith($this->lockFactory)
             ->markingChangesOn($this->changeMarker)
             ->indexingInto($this->indexWriter)
@@ -86,8 +86,8 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feed = new Feed($url);
         $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
-        $this->em->persist($feed);
-        $this->em->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
+        $this->entityManager->persist($feed);
+        $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
         // Every due feed starts without a favicon, so a successful refresh
         // always triggers phase two's homepage fetch for it. Stub a bland
@@ -105,7 +105,7 @@ final class RefreshRunnerTest extends DbTestCase
 
     private function effectiveDateOf(Feed $feed, string $guid): string
     {
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['feed' => $feed, 'guid' => $guid]);
         self::assertNotNull($entry);
 
         return $entry->getEffectiveDate()->format('Y-m-d H:i:s');
@@ -128,7 +128,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feedA = $this->dueFeed('https://a.example.com/feed');
         $feedB = $this->dueFeed('https://b.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feedA->getUrl(),
@@ -152,7 +152,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame('A', $feedA->getTitle());
         self::assertNotNull($feedA->getNextFetchAt());
         self::assertGreaterThan($this->clock->now(), $feedA->getNextFetchAt());
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
     }
 
     /**
@@ -170,7 +170,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testMovesTheChangeMarkerWhenAnImportStoredNewEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
@@ -188,7 +188,7 @@ final class RefreshRunnerTest extends DbTestCase
         // only remembered the last feed would leave the marker unmoved here.
         $feedA = $this->dueFeed('https://a.example.com/feed');
         $feedB = $this->dueFeed('https://b.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feedA->getUrl(),
             FetchResponseModel::fetched($feedA->getUrl(), false, $this->rss('A', 'a-1'), '"etag-a"', null),
@@ -206,7 +206,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testLeavesTheChangeMarkerWhenTheSweepStoredNoNewEntries(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::notModified($feed->getUrl(), false, null, null),
@@ -228,7 +228,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testIndexesFetchedEntriesWithTheirRealIdsAfterFlush(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -237,7 +237,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $this->runner()->run(RefreshRequestModel::allDue(300));
 
-        $entry = $this->em->getRepository(Entry::class)->findOneBy(['guid' => 'a-1']);
+        $entry = $this->entityManager->getRepository(Entry::class)->findOneBy(['guid' => 'a-1']);
         self::assertNotNull($entry);
         self::assertNotNull($entry->getId());
 
@@ -253,7 +253,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feedA = $this->dueFeed('https://a.example.com/feed');
         $feedB = $this->dueFeed('https://b.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feedA->getUrl(),
@@ -267,7 +267,7 @@ final class RefreshRunnerTest extends DbTestCase
         $runStart = $this->clock->now();
         $this->runner()->run(RefreshRequestModel::allDue(300));
 
-        $entries = $this->em->getRepository(Entry::class)->findAll();
+        $entries = $this->entityManager->getRepository(Entry::class)->findAll();
         self::assertCount(2, $entries);
         foreach ($entries as $entry) {
             self::assertSame($runStart->getTimestamp(), $entry->getCreatedAt()->getTimestamp());
@@ -284,7 +284,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feed = $this->dueFeed('https://old-news.example.com/feed');
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 06:00:00'), 60);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
         // starts with whitespace and it wrongly flags the declaration. The
@@ -329,7 +329,7 @@ final class RefreshRunnerTest extends DbTestCase
         $feed = $this->dueFeed('https://recovered.example.com/feed');
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-12 06:00:00'), 60);
         $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 'HTTP 503', 30);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
         // starts with whitespace and it wrongly flags the declaration. The
@@ -368,8 +368,8 @@ final class RefreshRunnerTest extends DbTestCase
             $this->clock->now(),
             $this->clock->now(),
         );
-        $this->em->persist($stored);
-        $this->em->flush();
+        $this->entityManager->persist($stored);
+        $this->entityManager->flush();
         self::assertNull($stored->getImageUrl());
 
         // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
@@ -391,7 +391,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         self::assertSame(1, $report->fetched);
         // No NEW entry — the guid already existed, so this is pure backfill.
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
         self::assertSame('https://img.example.com/big.jpg', $stored->getImageUrl());
         self::assertSame(800, $stored->getImageWidth());
         self::assertSame(450, $stored->getImageHeight());
@@ -401,7 +401,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $bad = $this->dueFeed('https://bad.example.com/feed');
         $good = $this->dueFeed('https://good.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willThrow($bad->getUrl(), new FeedUnreachableException('connection refused'));
         $this->fetcher->willReturn(
@@ -433,7 +433,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $feed = $this->dueFeed('https://www.reddit.com/r/Bitwig/.rss');
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 30);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willThrow(
             $feed->getUrl(),
@@ -463,7 +463,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testUnparseableBodyIsRecordedAsFailure(): void
     {
         $feed = $this->dueFeed('https://junk.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -486,7 +486,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $empty = $this->dueFeed('https://empty.example.com/feed');
         $good = $this->dueFeed('https://good.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $empty->getUrl(),
@@ -504,13 +504,13 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->failed);
         self::assertSame(FeedStatus::Erroring, $empty->getStatus());
         // The good feed queued after the empty one still ingested its entry.
-        self::assertCount(1, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(1, $this->entityManager->getRepository(Entry::class)->findAll());
     }
 
     public function testRefreshResolvesAndStoresTheFeedFavicon(): void
     {
         $feed = $this->dueFeed('https://blog.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -538,7 +538,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testNotModifiedRefreshStillResolvesAMissingFavicon(): void
     {
         $feed = $this->dueFeed('https://blog.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // The feed answers 304 (its entries are unchanged) but has no favicon
         // yet — resolution must not be gated on a full-body fetch.
@@ -565,7 +565,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testFaviconsAreResolvedForFeedsThatLackOne(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
@@ -591,15 +591,18 @@ final class RefreshRunnerTest extends DbTestCase
     public function testAnAbortedRunResolvesNoFavicons(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         // The EntityManager is closed; phase two never ran.
@@ -609,7 +612,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testGoneFeedIsMarkedGone(): void
     {
         $feed = $this->dueFeed('https://dead.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willThrow($feed->getUrl(), new FeedGoneException('HTTP 410 Gone'));
 
@@ -630,7 +633,7 @@ final class RefreshRunnerTest extends DbTestCase
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
         $third = $this->dueFeed('https://three.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second, $third] as $index => $feed) {
@@ -682,7 +685,7 @@ final class RefreshRunnerTest extends DbTestCase
                 ),
             );
         }
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->secondsPerFetch = 100;
 
         $report = $this->runner()->run(RefreshRequestModel::allDue(205));
@@ -702,7 +705,7 @@ final class RefreshRunnerTest extends DbTestCase
     {
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
         foreach ([$first, $second] as $feed) {
@@ -746,7 +749,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testLockIsReleasedAfterRun(): void
     {
         $feed = $this->dueFeed('https://a.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::notModified($feed->getUrl(), false, null, null),
@@ -762,7 +765,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testPermanentRedirectUpdatesFeedUrl(): void
     {
         $feed = $this->dueFeed('https://old.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -783,7 +786,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testOversizedRemoteHeadersAreTruncatedToColumnLimits(): void
     {
         $feed = $this->dueFeed('https://verbose.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn($feed->getUrl(), FetchResponseModel::fetched(
             $feed->getUrl(),
@@ -806,7 +809,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testOverlongRedirectTargetIsNotAdopted(): void
     {
         $feed = $this->dueFeed('https://old.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $tooLong = 'https://new.example.com/' . str_repeat('p', 800);
         $this->fetcher->willReturn(
@@ -823,7 +826,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testPermanentRedirectIsAdoptedOnNotModifiedResponses(): void
     {
         $feed = $this->dueFeed('https://old.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -847,7 +850,7 @@ final class RefreshRunnerTest extends DbTestCase
         $existing = $this->dueFeed('https://new.example.com/feed');
         $existing->scheduleNextFetchAt($this->clock->now()->modify('+1 day'));
         $moving = $this->dueFeed('https://old.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $moving->getUrl(),
@@ -862,11 +865,11 @@ final class RefreshRunnerTest extends DbTestCase
     public function testUserScopedRunOnlyTouchesThatUsersFeeds(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $mine = $this->dueFeed('https://mine.example.com/feed');
         $this->dueFeed('https://other.example.com/feed');
-        $this->em->persist(new Subscription($user, $mine, $this->clock->now()));
-        $this->em->flush();
+        $this->entityManager->persist(new Subscription($user, $mine, $this->clock->now()));
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $mine->getUrl(),
@@ -889,7 +892,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testSingleFeedRunReportsNothingRemaining(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -917,7 +920,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testThrottledFeedIsNotCountedAsRemaining(): void
     {
         $feed = $this->dueFeed('https://rationing.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willThrow($feed->getUrl(), new FeedThrottledException('429 Too Many Requests', 60));
 
@@ -941,14 +944,14 @@ final class RefreshRunnerTest extends DbTestCase
         for ($i = 0; $i < 20; ++$i) {
             $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
             $filler->setPublishedAt($recentDate);
-            $this->em->persist($filler);
+            $this->entityManager->persist($filler);
         }
 
         $ancientDate = $this->clock->now()->modify('-200 days');
         $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
         $ancient->setPublishedAt($ancientDate);
-        $this->em->persist($ancient);
-        $this->em->flush();
+        $this->entityManager->persist($ancient);
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -963,7 +966,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testUserScopedRunDoesNotPrune(): void
     {
         $user = new User('reader@example.com', $this->clock->now());
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
         $feed = $this->dueFeed('https://a.example.com/feed');
 
         // Twenty recent filler entries hold the feed above EntryPruner's
@@ -976,15 +979,15 @@ final class RefreshRunnerTest extends DbTestCase
         for ($i = 0; $i < 20; ++$i) {
             $filler = new Entry($feed, 'filler-' . $i, null, 'Filler ' . $i, $recentDate, $recentDate);
             $filler->setPublishedAt($recentDate);
-            $this->em->persist($filler);
+            $this->entityManager->persist($filler);
         }
 
         $ancientDate = $this->clock->now()->modify('-200 days');
         $ancient = new Entry($feed, 'ancient', null, 'Ancient', $ancientDate, $ancientDate);
         $ancient->setPublishedAt($ancientDate);
-        $this->em->persist($ancient);
-        $this->em->persist(new Subscription($user, $feed, $this->clock->now()));
-        $this->em->flush();
+        $this->entityManager->persist($ancient);
+        $this->entityManager->persist(new Subscription($user, $feed, $this->clock->now()));
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -996,13 +999,13 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner()->run(RefreshRequestModel::forUser($userId, 60));
 
         self::assertSame(0, $report->pruned);
-        self::assertCount(21, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount(21, $this->entityManager->getRepository(Entry::class)->findAll());
     }
 
     public function testScrapedFeedSynthesizesEntriesFromTheListingPage(): void
     {
         $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -1020,7 +1023,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->fetched);
         self::assertSame(0, $report->failed);
         /** @var list<Entry> $entries */
-        $entries = $this->em->getRepository(Entry::class)->findAll();
+        $entries = $this->entityManager->getRepository(Entry::class)->findAll();
         self::assertGreaterThanOrEqual(20, \count($entries));
         foreach ($entries as $entry) {
             // A scraped page has no publisher guids: the article URL is the
@@ -1039,7 +1042,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testSecondScrapedRefreshOfTheSameBodyCreatesNoDuplicates(): void
     {
         $feed = $this->scrapedDueFeed('https://www.tagesschau.de/');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $body = $this->scrapedFixture('tagesschau-2026-07-23.html');
         $this->fetcher->willReturn(
@@ -1048,20 +1051,20 @@ final class RefreshRunnerTest extends DbTestCase
         );
 
         $this->runner()->run(RefreshRequestModel::allDue(300));
-        $countAfterFirst = \count($this->em->getRepository(Entry::class)->findAll());
+        $countAfterFirst = \count($this->entityManager->getRepository(Entry::class)->findAll());
 
         $feed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour')); // due again
-        $this->em->flush();
+        $this->entityManager->flush();
         $report = $this->runner()->run(RefreshRequestModel::allDue(300));
 
         self::assertSame(1, $report->fetched);
-        self::assertCount($countAfterFirst, $this->em->getRepository(Entry::class)->findAll());
+        self::assertCount($countAfterFirst, $this->entityManager->getRepository(Entry::class)->findAll());
     }
 
     public function testScrapedFeedWithAnArticleFreePageIsRecordedAsFailure(): void
     {
         $feed = $this->scrapedDueFeed('https://nav.example.com/');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->fetcher->willReturn(
             $feed->getUrl(),
@@ -1088,7 +1091,7 @@ final class RefreshRunnerTest extends DbTestCase
         $first = $this->dueFeed('https://one.example.com/feed');
         $second = $this->dueFeed('https://two.example.com/feed');
         $third = $this->dueFeed('https://three.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // Concurrency 1 makes "the third feed is never started" deterministic
         // rather than a race against however many feeds a wave happens to fit.
@@ -1106,13 +1109,13 @@ final class RefreshRunnerTest extends DbTestCase
             );
         }
 
-        $failingEm = new FlushFailingEntityManager(
-            $this->em,
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
             failingFlush: 2,
             thrown: DuplicateKeyViolation::exception(),
         );
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         // The run stopped: the third feed's outcome was never processed.
@@ -1139,7 +1142,7 @@ final class RefreshRunnerTest extends DbTestCase
     public function testFaviconFlushFailureIsReportedAsAbortedNotThrown(\Throwable $thrown): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
@@ -1147,9 +1150,9 @@ final class RefreshRunnerTest extends DbTestCase
 
         // Flush 1 is the feed's own fetch outcome; flush 2 is the favicon
         // phase's — the one this test targets.
-        $failingEm = new FlushFailingEntityManager($this->em, failingFlush: 2, thrown: $thrown);
+        $failingEntityManager = new FlushFailingEntityManager($this->entityManager, failingFlush: 2, thrown: $thrown);
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         self::assertSame(1, $report->total);
@@ -1173,19 +1176,22 @@ final class RefreshRunnerTest extends DbTestCase
     public function testForeignKeyViolationFromAVanishedFeedAbortsTheRunWithoutThrowing(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: new ForeignKeyConstraintViolationException(
-            new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
-            },
-            null,
-        ));
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: new ForeignKeyConstraintViolationException(
+                new class ('a foreign key constraint fails', '23000', 1452) extends DriverAbstractException {
+                },
+                null,
+            ),
+        );
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         self::assertSame(1, $report->total);
@@ -1197,7 +1203,7 @@ final class RefreshRunnerTest extends DbTestCase
         $rationed = $this->dueFeed('https://two.example.com/feed');
         $failing = $this->dueFeed('https://three.example.com/feed');
         $untouched = $this->dueFeed('https://four.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         // Concurrency 1 fixes the order, so the third flush is the fetched feed's.
         $this->fetcher = new StubFeedFetcher($this->clock, concurrency: 1);
@@ -1215,13 +1221,13 @@ final class RefreshRunnerTest extends DbTestCase
             FetchResponseModel::notModified($untouched->getUrl(), false, null, null),
         );
 
-        $failingEm = new FlushFailingEntityManager(
-            $this->em,
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
             failingFlush: 3,
             thrown: DuplicateKeyViolation::exception(),
         );
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         self::assertSame(4, $report->total);
@@ -1241,7 +1247,7 @@ final class RefreshRunnerTest extends DbTestCase
         $recent->recordSuccessfulFetch($this->clock->now()->modify('-4 minutes'), 60);
         $stale = $this->dueFeed('https://stale.example.com/feed');
         $stale->recordSuccessfulFetch($this->clock->now()->modify('-6 minutes'), 60);
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $stale->getUrl(),
             FetchResponseModel::notModified($stale->getUrl(), false, null, null),
@@ -1257,15 +1263,18 @@ final class RefreshRunnerTest extends DbTestCase
     public function testLockIsReleasedAfterAnAbortedRun(): void
     {
         $feed = $this->dueFeed('https://one.example.com/feed');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->fetcher->willReturn(
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
 
-        $failingEm = new FlushFailingEntityManager($this->em, thrown: DuplicateKeyViolation::exception());
+        $failingEntityManager = new FlushFailingEntityManager(
+            $this->entityManager,
+            thrown: DuplicateKeyViolation::exception(),
+        );
 
-        $report = $this->runner($failingEm)->run(RefreshRequestModel::allDue(300));
+        $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
         $lock = $this->lockFactory->createLock('feed-refresh');

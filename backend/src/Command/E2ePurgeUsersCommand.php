@@ -39,7 +39,7 @@ final class E2ePurgeUsersCommand extends Command
 
     public function __construct(
         private readonly UserRepository $users,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         #[Autowire('%kernel.environment%')]
         private readonly string $appEnv,
     ) {
@@ -66,10 +66,10 @@ final class E2ePurgeUsersCommand extends Command
             // of work aware of what left, and each account's subscriptions, tags and
             // read state follow via FK ON DELETE CASCADE. Same reasoning as
             // PurgeUnverifiedUsersCommand.
-            $this->em->remove($user);
+            $this->entityManager->remove($user);
         }
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $io->success(sprintf('Purged %d e2e fixture account(s).', \count($fixtures)));
 

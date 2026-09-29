@@ -47,7 +47,7 @@ final class RestoreEntryLoader
     private int $entryStatesCreated = 0;
 
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly RestoreEntriesInterface $entries,
         private readonly RestoreEntryStatesInterface $entryStates,
         private readonly EntryBatchInserter $inserter,
@@ -110,7 +110,7 @@ final class RestoreEntryLoader
 
     private function stateFor(EntryStateLine $line, int $entryId): EntryState
     {
-        $entry = $this->em->getReference(Entry::class, $entryId)
+        $entry = $this->entityManager->getReference(Entry::class, $entryId)
             ?? throw new \LogicException('An entry this restore just wrote has no reference.');
 
         return $this->stateFactory->create($this->user, $entry, $line);
@@ -218,7 +218,7 @@ final class RestoreEntryLoader
                 continue;
             }
 
-            $this->em->persist($this->stateFor($line, $entryId));
+            $this->entityManager->persist($this->stateFor($line, $entryId));
             ++$this->entryStatesCreated;
         }
 
@@ -228,14 +228,14 @@ final class RestoreEntryLoader
     private function flushStates(): void
     {
         try {
-            $this->em->flush();
+            $this->entityManager->flush();
         } catch (DbalException $e) {
             throw BackupLoadFailedException::duringEntries($e);
         }
 
         $userId = $this->user->requireId();
-        $this->em->clear();
-        $this->user = $this->em->getReference(User::class, $userId)
+        $this->entityManager->clear();
+        $this->user = $this->entityManager->getReference(User::class, $userId)
             ?? throw new \LogicException('A user just referenced by id cannot be re-acquired after clear().');
     }
 
@@ -262,7 +262,7 @@ final class RestoreEntryLoader
             }
             $this->indexer->index($created);
             $batchSize = \count($batch);
-            $this->em->clear();
+            $this->entityManager->clear();
         } while (self::BATCH === $batchSize);
     }
 }

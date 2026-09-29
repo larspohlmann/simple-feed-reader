@@ -38,7 +38,7 @@ final readonly class EntryIngestor
     private const int FEED_DESCRIPTION_MAX = 4000;
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private EntryRepository $entryRepository,
         private UrlNormalizer $urlNormalizer,
         private EntryCategoryWriter $categoryWriter,
@@ -80,7 +80,7 @@ final readonly class EntryIngestor
             $deduplicator->remember($candidate->guidHash, $candidate->urlHash);
 
             $entry = $this->entryFactory->create($feed, $candidate, $context);
-            $this->em->persist($entry);
+            $this->entityManager->persist($entry);
             $created[] = $entry;
             $newPairs[] = [$entry, $candidate->parsed];
         }

@@ -39,8 +39,8 @@ final class RefreshControllerTest extends WebTestCase
     /** @return array<string, string> */
     private function auth(string $email): array
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($factory->create($email));
 
         return ['HTTP_AUTHORIZATION' => 'Bearer ' . $token];
@@ -72,10 +72,10 @@ final class RefreshControllerTest extends WebTestCase
     public function testPerFeedRefreshOfANonSubscribedFeedIs404(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
         $feed = new Feed('https://example.com/notmine.xml');
-        $em->persist($feed);
-        $em->flush();
+        $entityManager->persist($feed);
+        $entityManager->flush();
 
         $headers = $this->auth('nosub@example.com');
         $client->request('POST', '/api/refresh?feedId=' . $feed->getId(), server: $headers);
@@ -89,13 +89,13 @@ final class RefreshControllerTest extends WebTestCase
     public function testPerFeedRefreshOfOwnFeedIsAccepted(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
         $user = $factory->create('owner3@example.com');
         $feed = new Feed('https://example.com/mine.xml');
-        $em->persist($feed);
-        $em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
-        $em->flush();
+        $entityManager->persist($feed);
+        $entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z')));
+        $entityManager->flush();
 
         $token = self::getContainer()->get(JWTTokenManagerInterface::class)->create($user);
         // Swap in a stub fetcher so no real network I/O happens.
@@ -126,13 +126,13 @@ final class RefreshControllerTest extends WebTestCase
     public function testTagRefreshOfAForeignTagIs404(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
         $owner = $factory->create('tagowner@example.com');
         $stranger = $factory->create('tagstranger@example.com');
         $tag = new Tag($owner, 'news');
-        $em->persist($tag);
-        $em->flush();
+        $entityManager->persist($tag);
+        $entityManager->flush();
 
         // The stranger asking to refresh a tag they do not own must get a 404,
         // mirroring the per-feed IDOR guard (not 403 — do not confirm it exists).
@@ -157,17 +157,17 @@ final class RefreshControllerTest extends WebTestCase
     public function testTagRefreshOfOwnTagIsAccepted(): void
     {
         $client = self::createClient();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        $factory = new UserFactory($em, self::getContainer()->get('security.user_password_hasher'));
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        $factory = new UserFactory($entityManager, self::getContainer()->get('security.user_password_hasher'));
         $user = $factory->create('tagowner2@example.com');
         $tag = new Tag($user, 'news');
-        $em->persist($tag);
+        $entityManager->persist($tag);
         $feed = new Feed('https://example.com/tagged.xml');
-        $em->persist($feed);
+        $entityManager->persist($feed);
         $sub = new Subscription($user, $feed, new \DateTimeImmutable('2026-01-01T00:00:00Z'));
         $sub->addTag($tag);
-        $em->persist($sub);
-        $em->flush();
+        $entityManager->persist($sub);
+        $entityManager->flush();
 
         $fetcher = new StubFeedFetcher();
         $fetcher->willReturn(

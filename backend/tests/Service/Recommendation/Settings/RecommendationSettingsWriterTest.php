@@ -33,7 +33,9 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('recommendation-settings-writer@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create(
+            'recommendation-settings-writer@example.test',
+        );
 
         /** @var RecommendationSettingsWriter $writer */
         $writer = self::getContainer()->get(RecommendationSettingsWriter::class);

@@ -26,7 +26,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class AiSettingsRowMover
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
@@ -38,12 +38,12 @@ final readonly class AiSettingsRowMover
      */
     public function moveOwnership(User $from, User $to): AiProviderSettings
     {
-        $this->em->createQuery(
+        $this->entityManager->createQuery(
             sprintf('UPDATE %s s SET s.user = :to WHERE s.user = :from', AiProviderSettings::class),
         )->execute(['to' => $to, 'from' => $from]);
-        $this->em->clear();
+        $this->entityManager->clear();
 
-        $moved = $this->em->getRepository(AiProviderSettings::class)->findOneBy(['user' => $to]);
+        $moved = $this->entityManager->getRepository(AiProviderSettings::class)->findOneBy(['user' => $to]);
 
         if (!$moved instanceof AiProviderSettings) {
             throw new \LogicException('Expected a moved AiProviderSettings row after the ownership move.');
@@ -58,9 +58,9 @@ final readonly class AiSettingsRowMover
      */
     public function pointActiveAt(User $to, AiProviderSettings $settings): void
     {
-        $this->em->createQuery(
+        $this->entityManager->createQuery(
             sprintf('UPDATE %s u SET u.activeAiProviderSettings = :settings WHERE u = :to', User::class),
         )->execute(['settings' => $settings, 'to' => $to]);
-        $this->em->clear();
+        $this->entityManager->clear();
     }
 }

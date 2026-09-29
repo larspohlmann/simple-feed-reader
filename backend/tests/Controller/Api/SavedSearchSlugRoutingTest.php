@@ -55,7 +55,7 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
     public function testCreatePersistsTheIdPrefixedSlugToTheDatabase(): void
     {
         $client = self::createClient();
-        $em = $this->em();
+        $entityManager = $this->entityManager();
         $headers = $this->authHeaderFor($this->factory()->create('slug-persist@example.com'));
 
         $client->request(
@@ -75,8 +75,8 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $savedId = $created['savedSearch']['id'];
         self::assertIsInt($savedId);
 
-        $em->clear();
-        $persisted = $em->find(SavedSearch::class, $savedId);
+        $entityManager->clear();
+        $persisted = $entityManager->find(SavedSearch::class, $savedId);
         self::assertInstanceOf(SavedSearch::class, $persisted);
         self::assertSame($savedId . '-climate-news', $persisted->getSlug());
     }
@@ -87,8 +87,8 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $user = $this->factory()->create('single-search-members@example.com');
         $headers = $this->authHeaderFor($user);
         $feed = new Feed('https://example.com/single-search-feed.xml');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $entry = new Entry(
             $feed,
             'single-search-guid',
@@ -97,12 +97,14 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
         );
-        $this->em()->persist($entry);
+        $this->entityManager()->persist($entry);
         $search = new SavedSearch($user, 'climate', false);
-        $this->em()->persist($search);
-        $this->em()->flush();
-        $this->em()->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em()->flush();
+        $this->entityManager()->persist($search);
+        $this->entityManager()->flush();
+        $this->entityManager()->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/entries/saved-searches/' . $search->getId(), server: $headers);
 
@@ -119,8 +121,8 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $user = $this->factory()->create('single-search-membership@example.com');
         $headers = $this->authHeaderFor($user);
         $feed = new Feed('https://example.com/single-search-membership-feed.xml');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $entry = new Entry(
             $feed,
             'single-search-membership-guid',
@@ -129,13 +131,15 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
         );
-        $this->em()->persist($entry);
+        $this->entityManager()->persist($entry);
         $search = new SavedSearch($user, 'climate', false);
-        $this->em()->persist($search);
-        $this->em()->flush();
+        $this->entityManager()->persist($search);
+        $this->entityManager()->flush();
         $search->setSlug($search->getId() . '-climate');
-        $this->em()->persist(new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em()->flush();
+        $this->entityManager()->persist(
+            new SavedSearchEntry($search, $entry, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/entries/saved-searches/' . $search->getId(), server: $headers);
 
@@ -184,8 +188,8 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $user = $this->factory()->create($email);
         $headers = $this->authHeaderFor($user);
         $feed = new Feed('https://example.com/' . $email . '-feed.xml');
-        $this->em()->persist($feed);
-        $this->em()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
+        $this->entityManager()->persist($feed);
+        $this->entityManager()->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z')));
         $read = new Entry(
             $feed,
             $email . '-read-guid',
@@ -202,14 +206,18 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
             new \DateTimeImmutable('2026-07-02T00:00:00Z'),
         );
-        $this->em()->persist($read);
-        $this->em()->persist($unread);
+        $this->entityManager()->persist($read);
+        $this->entityManager()->persist($unread);
         $search = new SavedSearch($user, 'climate', false);
-        $this->em()->persist($search);
-        $this->em()->flush();
-        $this->em()->persist(new SavedSearchEntry($search, $read, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em()->persist(new SavedSearchEntry($search, $unread, new \DateTimeImmutable('2026-09-22T10:00:00')));
-        $this->em()->flush();
+        $this->entityManager()->persist($search);
+        $this->entityManager()->flush();
+        $this->entityManager()->persist(
+            new SavedSearchEntry($search, $read, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager()->persist(
+            new SavedSearchEntry($search, $unread, new \DateTimeImmutable('2026-09-22T10:00:00')),
+        );
+        $this->entityManager()->flush();
 
         return [$user, $headers, $search, $read, $unread];
     }
@@ -233,8 +241,8 @@ final class SavedSearchSlugRoutingTest extends ApiTestCase
         $stranger = $this->factory()->create('single-search-stranger@example.com');
         $headers = $this->authHeaderFor($user);
         $strangerSearch = new SavedSearch($stranger, 'sports', false);
-        $this->em()->persist($strangerSearch);
-        $this->em()->flush();
+        $this->entityManager()->persist($strangerSearch);
+        $this->entityManager()->flush();
 
         $client->request('GET', '/api/entries/saved-searches/' . $strangerSearch->getId(), server: $headers);
 

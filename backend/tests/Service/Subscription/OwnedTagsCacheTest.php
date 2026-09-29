@@ -16,15 +16,15 @@ final class OwnedTagsCacheTest extends KernelTestCase
 {
     use SeedsUsers;
 
-    private EntityManagerInterface $em;
+    private EntityManagerInterface $entityManager;
     private OwnedTagsCache $cache;
 
     protected function setUp(): void
     {
         self::bootKernel();
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
-        $this->em = $em;
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
+        $this->entityManager = $entityManager;
         $cache = self::getContainer()->get(OwnedTagsCache::class);
         self::assertInstanceOf(OwnedTagsCache::class, $cache);
         $this->cache = $cache;
@@ -33,7 +33,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     private function tag(User $user, string $name): Tag
     {
         $tag = new Tag($user, $name);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
 
         return $tag;
     }
@@ -43,7 +43,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-owner@example.com');
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->cache->findAllByIdsForUser(
             $user->requireId(),
@@ -58,7 +58,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $mine = $this->user('cache-mine@example.com');
         $theirs = $this->user('cache-theirs@example.com');
         $foreignTag = $this->tag($theirs, 'Theirs');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->cache->findAllByIdsForUser($mine->requireId(), [$foreignTag->requireId()]);
 
@@ -68,7 +68,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     public function testDropsAnIdThatDoesNotExist(): void
     {
         $user = $this->user('cache-missing@example.com');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->cache->findAllByIdsForUser($user->requireId(), [999_999]);
 
@@ -84,7 +84,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     {
         $user = $this->user('cache-repeat@example.com');
         $news = $this->tag($user, 'News');
-        $this->em->flush();
+        $this->entityManager->flush();
         $newsId = $news->requireId();
         $userId = $user->requireId();
 
@@ -113,7 +113,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-partial@example.com');
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
-        $this->em->flush();
+        $this->entityManager->flush();
         $userId = $user->requireId();
 
         $this->cache->findAllByIdsForUser($userId, [$news->requireId()]);
@@ -147,7 +147,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     {
         $user = $this->user('cache-reset@example.com');
         $news = $this->tag($user, 'News');
-        $this->em->flush();
+        $this->entityManager->flush();
         $newsId = $news->requireId();
         $userId = $user->requireId();
 
@@ -181,7 +181,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $user = $this->user('cache-gap@example.com');
         $news = $this->tag($user, 'News');
         $tech = $this->tag($user, 'Tech');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $resolved = $this->cache->findAllByIdsForUser(
             $user->requireId(),
@@ -205,7 +205,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
     {
         $user = $this->user('cache-dedup@example.com');
         $news = $this->tag($user, 'News');
-        $this->em->flush();
+        $this->entityManager->flush();
         $newsId = $news->requireId();
 
         /** @var QueryRecorder $recorder */
@@ -232,7 +232,7 @@ final class OwnedTagsCacheTest extends KernelTestCase
         $mine = $this->user('cache-isolate-mine@example.com');
         $theirs = $this->user('cache-isolate-theirs@example.com');
         $sameId = $this->tag($mine, 'Mine');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->cache->findAllByIdsForUser($mine->requireId(), [$sameId->requireId()]);
         $resolvedForStranger = $this->cache->findAllByIdsForUser(

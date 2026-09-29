@@ -32,11 +32,11 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->user = (new UserFactory($this->em, $hasher))->create('eta-owner@example.test');
+        $this->user = (new UserFactory($this->entityManager, $hasher))->create('eta-owner@example.test');
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
     }
 
     public function testWeightsTheTailPhasesFromHistoryAndSubtractsElapsed(): void
@@ -123,7 +123,7 @@ final class RecommendationEtaEstimatorTest extends DbTestCase
             $this->finishedLog($run, CallPhase::Batch, $batch, 0, $batchWall);
         }
         $this->finishedLog($run, CallPhase::Consolidate, null, 0, $consolidate);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function finishedLog(

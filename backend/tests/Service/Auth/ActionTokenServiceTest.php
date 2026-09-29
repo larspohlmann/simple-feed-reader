@@ -27,13 +27,13 @@ final class ActionTokenServiceTest extends DbTestCase
         parent::setUp();
 
         $this->clock = new MockClock('2026-07-21 12:00:00');
-        $repository = $this->em->getRepository(ActionToken::class);
+        $repository = $this->entityManager->getRepository(ActionToken::class);
         self::assertInstanceOf(ActionTokenRepository::class, $repository);
-        $this->service = new ActionTokenService($this->em, $this->clock, $repository);
+        $this->service = new ActionTokenService($this->entityManager, $this->clock, $repository);
 
         $this->user = new User('token@example.com', $this->clock->now());
-        $this->em->persist($this->user);
-        $this->em->flush();
+        $this->entityManager->persist($this->user);
+        $this->entityManager->flush();
     }
 
     public function testIssueReturnsAPlaintextTokenAndStoresOnlyItsHash(): void
@@ -42,7 +42,7 @@ final class ActionTokenServiceTest extends DbTestCase
 
         self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $plain);
 
-        $stored = $this->em->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
+        $stored = $this->entityManager->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($stored);
         self::assertSame(hash('sha256', $plain), $stored->getTokenHash());
         self::assertNotSame($plain, $stored->getTokenHash());
@@ -52,7 +52,7 @@ final class ActionTokenServiceTest extends DbTestCase
     {
         $this->service->issue($this->user, TokenPurpose::VerifyEmail);
 
-        $stored = $this->em->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
+        $stored = $this->entityManager->getRepository(ActionToken::class)->findOneBy(['user' => $this->user]);
         self::assertNotNull($stored);
         self::assertSame('2026-07-22 12:00:00', $stored->getExpiresAt()->format('Y-m-d H:i:s'));
     }
@@ -70,6 +70,19 @@ final class ActionTokenServiceTest extends DbTestCase
     {
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
         $this->service->consume($plain, TokenPurpose::VerifyEmail);
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
+    public function testConsumeStaysSingleUseForTheNextRequest(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+        $this->service->consume($plain, TokenPurpose::VerifyEmail);
+        $this->entityManager->clear();
 
         $this->assertRefused(
             fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
@@ -135,9 +148,9 @@ final class ActionTokenServiceTest extends DbTestCase
     {
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
 
-        $this->em->remove($this->user);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->remove($this->user);
+        $this->entityManager->flush();
+        $this->entityManager->clear();
 
         $this->assertRefused(
             fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),

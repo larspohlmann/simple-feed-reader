@@ -30,7 +30,7 @@ final class GoldenBackupRestoreTest extends DbTestCase
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
 
-        return (new UserFactory($this->em, $hasher))->create($email, locale: 'de');
+        return (new UserFactory($this->entityManager, $hasher))->create($email, locale: 'de');
     }
 
     private function restorer(): AccountRestorer

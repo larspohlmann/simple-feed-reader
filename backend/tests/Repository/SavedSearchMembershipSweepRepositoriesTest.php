@@ -24,10 +24,10 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         parent::setUp();
 
         $this->user = new User('sweep@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        $this->em->persist($this->user);
+        $this->entityManager->persist($this->user);
         $this->feed = new Feed('https://example.com/feed.xml');
-        $this->em->persist($this->feed);
-        $this->em->flush();
+        $this->entityManager->persist($this->feed);
+        $this->entityManager->flush();
     }
 
     public function testTheCeilingIsTheHighestIdCreatedNoLaterThanTheInstant(): void
@@ -68,7 +68,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $behind = $this->search('behind');
         $behind->advanceMatchedUpTo(40);
         $fresh = $this->search('fresh');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $due = $this->searches()->findBelowMark(100);
 
@@ -82,7 +82,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
     {
         $moved = $this->search('climate');
         $untouched = $this->search('rocket');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $this->searches()->advanceMarks([$moved->requireId()], 500);
         $this->searches()->advanceMarks([$moved->requireId()], 120);
@@ -95,7 +95,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
     {
         $one = $this->search('climate');
         $two = $this->search('rocket');
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->searches()->advanceMarks([$one->requireId(), $two->requireId()], 500);
 
         self::assertSame(2, $this->searches()->resetAllMarks());
@@ -108,7 +108,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $search = $this->search('climate');
         $one = $this->entry('a');
         $two = $this->entry('b');
-        $this->em->flush();
+        $this->entityManager->flush();
         $matchedAt = new \DateTimeImmutable('2026-09-22T10:00:00');
 
         $first = $this->memberships()->insertMissing([$search->requireId() => [$one->requireId()]], $matchedAt);
@@ -127,7 +127,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
         $climate = $this->search('climate');
         $rocket = $this->search('rocket');
         $entry = $this->entry('a');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $inserted = $this->memberships()->insertMissing(
             [
@@ -145,7 +145,7 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
     public function testInsertMissingWithNoIdsInsertsNothing(): void
     {
         $search = $this->search('climate');
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $now = new \DateTimeImmutable();
 
@@ -163,8 +163,8 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
             new \DateTimeImmutable($createdAt),
             new \DateTimeImmutable('2026-07-10T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -172,14 +172,14 @@ final class SavedSearchMembershipSweepRepositoriesTest extends DbTestCase
     private function search(string $term): SavedSearch
     {
         $search = new SavedSearch($this->user, $term, false);
-        $this->em->persist($search);
+        $this->entityManager->persist($search);
 
         return $search;
     }
 
     private function markOf(SavedSearch $search): int
     {
-        return StoredMark::of($this->em, $search);
+        return StoredMark::of($this->entityManager, $search);
     }
 
     private function sweepEntries(): EntryMembershipSweepRepository

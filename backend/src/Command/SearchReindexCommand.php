@@ -57,7 +57,7 @@ final class SearchReindexCommand extends Command
     public function __construct(
         private readonly SearchIndexWriterInterface $writer,
         private readonly EntryRepository $entries,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly SearchEngineCapability $capability,
         private readonly SavedSearchRepository $savedSearches,
         private readonly int $batchSize = self::BATCH_SIZE,
@@ -136,7 +136,7 @@ final class SearchReindexCommand extends Command
             // Keeps the run's memory bounded over a full table: without this,
             // every batch's entities (and their joined feeds) stay in the
             // identity map for the rest of the process.
-            $this->em->clear();
+            $this->entityManager->clear();
         }
     }
 }

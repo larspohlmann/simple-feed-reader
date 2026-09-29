@@ -14,8 +14,8 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
 {
     public function testEnabledCategoriesComeBackInPositionOrderWithEnabledFeedsOnly(): void
     {
-        $em = self::getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = self::getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
 
         $second = new CatalogCategory('science', 'Science', 'science', '#14b8a6');
         $second->setPosition(1);
@@ -37,16 +37,16 @@ final class CatalogCategoryRepositoryTest extends DbTestCase
         $earlyRiser->setPosition(2);
 
         foreach ([$second, $first, $hidden, $live, $retired, $earlyRiser] as $row) {
-            $em->persist($row);
+            $entityManager->persist($row);
         }
-        $em->flush();
+        $entityManager->flush();
         // Doctrine returns already-managed entities from the identity map without
         // touching their to-many collections (UnitOfWork::createEntity() short-
         // circuits unless Query::HINT_REFRESH is set), so a fetch-joined query run
         // in the same process as the persist would leave $feeds looking empty. A
         // real request never hits this — each one gets a fresh EntityManager —
         // but the test must clear() to see what the repository actually returns.
-        $em->clear();
+        $entityManager->clear();
 
         $repository = self::getContainer()->get(CatalogCategoryRepository::class);
         self::assertInstanceOf(CatalogCategoryRepository::class, $repository);

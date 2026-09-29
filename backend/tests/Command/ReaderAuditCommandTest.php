@@ -221,9 +221,9 @@ final class ReaderAuditCommandTest extends DbTestCase
     private function subscribedEntries(string $email, int $count): array
     {
         $feed = new Feed('https://cli.example.com/feed-' . uniqid('', true));
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $user = $this->user($email);
-        $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
+        $this->entityManager->persist(new Subscription($user, $feed, new \DateTimeImmutable()));
 
         $entries = [];
         for ($i = 0; $i < $count; ++$i) {
@@ -235,10 +235,10 @@ final class ReaderAuditCommandTest extends DbTestCase
                 new \DateTimeImmutable('-1 hour'),
                 new \DateTimeImmutable('-1 hour'),
             );
-            $this->em->persist($entry);
+            $this->entityManager->persist($entry);
             $entries[] = $entry;
         }
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $entries;
     }

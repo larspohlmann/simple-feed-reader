@@ -24,7 +24,7 @@ final class NextPositionTest extends DbTestCase
         $news = $this->category('next_position_highest');
         $this->feed($news, 'https://a.next-position.example/feed.xml', 3);
         $this->feed($news, 'https://b.next-position.example/feed.xml', 7);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(8, $this->nextPosition()->in($this->feedsOf($news)));
     }
@@ -35,7 +35,7 @@ final class NextPositionTest extends DbTestCase
         $tech = $this->category('next_position_other');
         $this->feed($tech, 'https://t.next-position.example/feed.xml', 40);
         $this->feed($news, 'https://n.next-position.example/feed.xml', 2);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         self::assertSame(3, $this->nextPosition()->in($this->feedsOf($news)));
     }
@@ -50,7 +50,7 @@ final class NextPositionTest extends DbTestCase
 
     private function feedsOf(CatalogCategory $category): QueryBuilder
     {
-        return $this->em->createQueryBuilder()
+        return $this->entityManager->createQueryBuilder()
             ->from(CatalogFeed::class, 'f')
             ->andWhere('f.category = :category')
             ->setParameter('category', $category);
@@ -59,8 +59,8 @@ final class NextPositionTest extends DbTestCase
     private function category(string $key): CatalogCategory
     {
         $category = new CatalogCategory($key, $key, 'star', '#000000');
-        $this->em->persist($category);
-        $this->em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->flush();
 
         return $category;
     }
@@ -69,6 +69,6 @@ final class NextPositionTest extends DbTestCase
     {
         $feed = new CatalogFeed($category, 'Title', $url);
         $feed->setPosition($position);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
     }
 }

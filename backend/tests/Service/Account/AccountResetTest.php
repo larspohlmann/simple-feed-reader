@@ -47,13 +47,13 @@ final class AccountResetTest extends DbTestCase
     {
         $user = $this->user($email);
         $feed = new Feed('https://reset.example/' . $email);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         $tag = new Tag($user, 'Mine');
-        $this->em->persist($tag);
-        $this->em->persist(new SavedSearch($user, 'mine', false));
+        $this->entityManager->persist($tag);
+        $this->entityManager->persist(new SavedSearch($user, 'mine', false));
         $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $subscription->addTag($tag);
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         $entry = new Entry(
             $feed,
             'g-' . $email,
@@ -62,8 +62,8 @@ final class AccountResetTest extends DbTestCase
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
             new \DateTimeImmutable('2026-08-01T00:00:00Z'),
         );
-        $this->em->persist($entry);
-        $this->em->persist(new EntryState($user, $entry));
+        $this->entityManager->persist($entry);
+        $this->entityManager->persist(new EntryState($user, $entry));
         $user->getPreferences()->setScrapeFallbackEnabled(true);
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
@@ -74,11 +74,11 @@ final class AccountResetTest extends DbTestCase
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
         ));
-        $this->em->persist($settings);
+        $this->entityManager->persist($settings);
         $run = new RecommendationRun($user, new \DateTimeImmutable('2026-08-05T00:00:00Z'));
-        $this->em->persist($run);
-        $this->em->persist(new RecommendationItem($run, $entry, 0, 'because'));
-        $this->em->persist(new RecommendationRunLog(
+        $this->entityManager->persist($run);
+        $this->entityManager->persist(new RecommendationItem($run, $entry, 0, 'because'));
+        $this->entityManager->persist(new RecommendationRunLog(
             $run,
             CallPhase::Batch,
             0,
@@ -86,7 +86,7 @@ final class AccountResetTest extends DbTestCase
             '{}',
             new \DateTimeImmutable('2026-08-05T00:00:00Z'),
         ));
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return [$user, $feed, $entry, $run];
     }
@@ -101,20 +101,41 @@ final class AccountResetTest extends DbTestCase
 
         // Bulk DQL bypasses the identity map — clear before every "is gone"
         // assertion, or find() serves the stale in-memory row (#412 spec).
-        $this->em->clear();
-        self::assertSame([], $this->em->getRepository(Subscription::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(Tag::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $runId]));
-        self::assertSame([], $this->em->getRepository(RecommendationRunLog::class)->findBy(['run' => $runId]));
-        $subscriptionTags = $this->em->getRepository(SubscriptionTag::class)->findAll();
+        $this->entityManager->clear();
+        self::assertSame([], $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $userId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationRun::class)->findBy(['user' => $userId]),
+        );
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]),
+        );
+        self::assertSame([], $this->entityManager->getRepository(RecommendationItem::class)->findBy(['run' => $runId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationRunLog::class)->findBy(['run' => $runId]),
+        );
+        $subscriptionTags = $this->entityManager->getRepository(SubscriptionTag::class)->findAll();
         self::assertSame([], $subscriptionTags);
-        $preferences = $this->em->getRepository(Preferences::class)->findOneBy(['user' => $userId]);
+        $preferences = $this->entityManager->getRepository(Preferences::class)->findOneBy(['user' => $userId]);
         self::assertInstanceOf(Preferences::class, $preferences);
         self::assertFalse($preferences->isScrapeFallbackEnabled());
+    }
+
+    public function testAWipedSubscriptionIsGoneWhenLookedUpByIdStraightAfterTheReset(): void
+    {
+        [$user] = $this->seedAccount('reset-identity-map@example.com');
+        $subscription = $this->entityManager->getRepository(Subscription::class)->findOneBy(['user' => $user]);
+        self::assertInstanceOf(Subscription::class, $subscription);
+        $subscriptionId = $subscription->requireId();
+
+        $this->reset()->reset($user);
+
+        self::assertNull($this->entityManager->find(Subscription::class, $subscriptionId));
     }
 
     public function testLeavesTheAccountRowAndSharedRowsAlone(): void
@@ -126,12 +147,12 @@ final class AccountResetTest extends DbTestCase
 
         $this->reset()->reset($user);
 
-        $this->em->clear();
-        $kept = $this->em->find(User::class, $userId);
+        $this->entityManager->clear();
+        $kept = $this->entityManager->find(User::class, $userId);
         self::assertInstanceOf(User::class, $kept);
         self::assertSame('reset-keeps@example.com', $kept->getEmail());
-        self::assertInstanceOf(Feed::class, $this->em->find(Feed::class, $feedId));
-        self::assertInstanceOf(Entry::class, $this->em->find(Entry::class, $entryId));
+        self::assertInstanceOf(Feed::class, $this->entityManager->find(Feed::class, $feedId));
+        self::assertInstanceOf(Entry::class, $this->entityManager->find(Entry::class, $entryId));
     }
 
     public function testDoesNotTouchAnotherUsersRows(): void
@@ -144,26 +165,33 @@ final class AccountResetTest extends DbTestCase
 
         $this->reset()->reset($victim);
 
-        $this->em->clear();
-        $bystanderSubscriptions = $this->em->getRepository(Subscription::class)->findBy(['user' => $bystanderId]);
+        $this->entityManager->clear();
+        $bystanderSubscriptions = $this->entityManager
+            ->getRepository(Subscription::class)
+            ->findBy(['user' => $bystanderId]);
         self::assertCount(1, $bystanderSubscriptions);
-        self::assertCount(1, $this->em->getRepository(Tag::class)->findBy(['user' => $bystanderId]));
-        self::assertCount(1, $this->em->getRepository(SavedSearch::class)->findBy(['user' => $bystanderId]));
-        self::assertCount(1, $this->em->getRepository(EntryState::class)->findBy(['user' => $bystanderId]));
+        self::assertCount(1, $this->entityManager->getRepository(Tag::class)->findBy(['user' => $bystanderId]));
+        self::assertCount(1, $this->entityManager->getRepository(SavedSearch::class)->findBy(['user' => $bystanderId]));
+        self::assertCount(1, $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $bystanderId]));
         // The one place an over-broad cascade from the victim's wipe would
         // surface: the bystander's own subscription/tag join row.
         self::assertCount(
             1,
-            $this->em->getRepository(SubscriptionTag::class)->findBy(['subscription' => $bystanderSubscriptions[0]]),
+            $this->entityManager
+                ->getRepository(SubscriptionTag::class)
+                ->findBy(['subscription' => $bystanderSubscriptions[0]]),
         );
         // Proves the recommendation-child subquery correlates by the RIGHT
         // user: the bystander's run is untouched, so nothing here is masked
         // by the victim's own run-delete cascade — unlike the "gone" side of
         // this statement, this assertion cannot pass by accident.
-        self::assertCount(1, $this->em->getRepository(RecommendationItem::class)->findBy(['run' => $bystanderRunId]));
         self::assertCount(
             1,
-            $this->em->getRepository(RecommendationRunLog::class)->findBy(['run' => $bystanderRunId]),
+            $this->entityManager->getRepository(RecommendationItem::class)->findBy(['run' => $bystanderRunId]),
+        );
+        self::assertCount(
+            1,
+            $this->entityManager->getRepository(RecommendationRunLog::class)->findBy(['run' => $bystanderRunId]),
         );
     }
 
@@ -173,17 +201,23 @@ final class AccountResetTest extends DbTestCase
         $userId = $user->requireId();
 
         $this->reset()->reset($user);
-        $freshUser = $this->em->find(User::class, $userId);
+        $freshUser = $this->entityManager->find(User::class, $userId);
         self::assertInstanceOf(User::class, $freshUser);
         $this->reset()->reset($freshUser);
 
-        $this->em->clear();
-        self::assertInstanceOf(User::class, $this->em->find(User::class, $userId));
-        self::assertSame([], $this->em->getRepository(Subscription::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(Tag::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(EntryState::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(RecommendationRun::class)->findBy(['user' => $userId]));
-        self::assertSame([], $this->em->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]));
+        $this->entityManager->clear();
+        self::assertInstanceOf(User::class, $this->entityManager->find(User::class, $userId));
+        self::assertSame([], $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(Tag::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(SavedSearch::class)->findBy(['user' => $userId]));
+        self::assertSame([], $this->entityManager->getRepository(EntryState::class)->findBy(['user' => $userId]));
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationRun::class)->findBy(['user' => $userId]),
+        );
+        self::assertSame(
+            [],
+            $this->entityManager->getRepository(RecommendationSettings::class)->findBy(['user' => $userId]),
+        );
     }
 }

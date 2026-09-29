@@ -31,7 +31,7 @@ final class WaveContextLoaderTest extends DbTestCase
 
         /** @var ApiKeyCipher $cipher */
         $cipher = self::getContainer()->get(ApiKeyCipher::class);
-        $this->fixtures = new RecommendationRunFixtures($this->em, $cipher);
+        $this->fixtures = new RecommendationRunFixtures($this->entityManager, $cipher);
         $this->owner = $this->user('wave-context@example.test');
         $this->fixtures->seedReadyAiSettings($this->owner);
     }
@@ -42,7 +42,7 @@ final class WaveContextLoaderTest extends DbTestCase
         $run = $this->runWithPlan([[$ids[0], $ids[1]], [$ids[2], $ids[3]], [$ids[4], $ids[5]]]);
         $run->recordProfile('Likes Rust.');
         $run->recordBatchWinners([]);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $wave = $this->loader()->load($this->tick($run), 2);
 
@@ -58,10 +58,10 @@ final class WaveContextLoaderTest extends DbTestCase
     {
         $ids = $this->entryIds(2);
         $run = $this->runWithPlan([[$ids[0], $ids[1]]]);
-        $pruned = $this->em->getRepository(Entry::class)->find($ids[1]);
+        $pruned = $this->entityManager->getRepository(Entry::class)->find($ids[1]);
         self::assertNotNull($pruned);
-        $this->em->remove($pruned);
-        $this->em->flush();
+        $this->entityManager->remove($pruned);
+        $this->entityManager->flush();
 
         $wave = $this->loader()->load($this->tick($run), 1);
 
@@ -84,7 +84,7 @@ final class WaveContextLoaderTest extends DbTestCase
     {
         $run = $this->fixtures->createRun($this->owner);
         $run->snapshot($plan);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $run;
     }

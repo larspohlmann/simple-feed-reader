@@ -73,11 +73,11 @@ final class SetupControllerTest extends WebTestCase
 
     private function seedAdmin(KernelBrowser $client): void
     {
-        $em = $client->getContainer()->get(EntityManagerInterface::class);
-        self::assertInstanceOf(EntityManagerInterface::class, $em);
+        $entityManager = $client->getContainer()->get(EntityManagerInterface::class);
+        self::assertInstanceOf(EntityManagerInterface::class, $entityManager);
         $hasher = $client->getContainer()->get(UserPasswordHasherInterface::class);
         self::assertInstanceOf(UserPasswordHasherInterface::class, $hasher);
-        (new UserFactory($em, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
+        (new UserFactory($entityManager, $hasher))->create('existing@example.com', roles: ['ROLE_ADMIN']);
     }
 
     /** @return array<string, mixed> */
