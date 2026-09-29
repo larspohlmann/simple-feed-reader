@@ -43,13 +43,17 @@ final class SubscriptionRepositoryTest extends DbTestCase
         $included = $this->subscriptionToFeed($owner, 'https://example.com/included.xml');
         $hidden = $this->subscriptionToFeed($owner, 'https://example.com/hidden.xml');
         $hidden->setIncludeInAllItems(false);
+        $alsoIncluded = $this->subscriptionToFeed($owner, 'https://example.com/also-included.xml');
         $this->subscriptionToFeed(
             $this->userFactory()->create('all-items-other@example.com'),
             'https://example.com/foreign.xml',
         );
         $this->em->flush();
 
-        self::assertSame([$included], $this->repo()->findIncludedInAllItemsForUser($owner->requireId()));
+        self::assertSame(
+            [$included, $alsoIncluded],
+            $this->repo()->findIncludedInAllItemsForUser($owner->requireId()),
+        );
     }
 
     private function repo(): SubscriptionRepository

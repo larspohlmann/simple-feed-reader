@@ -57,9 +57,7 @@ final class SubscriptionRepository extends ServiceEntityRepository
         return $rows;
     }
 
-    /**
-     * @return list<Subscription>
-     */
+    /** @return list<Subscription> */
     public function findIncludedInAllItemsForUser(int $userId): array
     {
         /** @var list<Subscription> $rows */
