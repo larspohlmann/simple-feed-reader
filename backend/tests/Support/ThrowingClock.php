@@ -7,13 +7,8 @@ namespace App\Tests\Support;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Hands out a fixed number of good readings and then fails for good. Reading
- * the clock is the cheapest seam a test has for making a body of work throw
- * at a chosen point, which is what proves a `finally` really is one: a
- * cleanup written as a trailing statement passes every happy-path test and
- * still leaks on the failure path (#371 final review, Finding 9). The healthy
- * readings exist so a test can let the work start -- and put the collaborator
- * under test into the state whose cleanup matters -- before the failure.
+ * A fixed number of good readings, then a failure for good: the cheapest way to make work throw at a chosen point and
+ * prove its cleanup sits in a `finally`. The good readings let the work reach the state whose cleanup matters.
  */
 final class ThrowingClock implements ClockInterface
 {

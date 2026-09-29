@@ -6,12 +6,7 @@ namespace App\Tests\Support;
 
 use Doctrine\ORM\Decorator\EntityManagerDecorator;
 
-/**
- * Records whether clear() was called, so a test can prove a handler's
- * per-firing cleanup actually ran instead of only inferring it from
- * unrelated side effects. Everything else delegates straight through
- * Doctrine's own EntityManagerDecorator base class.
- */
+/** Records whether clear() was called, so a test proves a handler's per-firing cleanup ran instead of inferring it. */
 final class ClearTrackingEntityManager extends EntityManagerDecorator
 {
     private bool $wasCleared = false;

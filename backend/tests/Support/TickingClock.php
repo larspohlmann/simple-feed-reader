@@ -7,10 +7,8 @@ namespace App\Tests\Support;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * A clock that moves on by a fixed step at every reading. MockClock freezes
- * time, which cannot tell one call apart from three; this one makes the
- * number of readings observable in what was written, so a test can prove
- * that something happened once per unit of work rather than once per firing.
+ * Advances a fixed step at every reading, so the number of readings shows in what was written; MockClock's frozen time
+ * cannot tell one call from three.
  */
 final class TickingClock implements ClockInterface
 {

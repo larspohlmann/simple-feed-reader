@@ -8,19 +8,9 @@ use App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbea
 use Symfony\Component\Lock\SharedLockInterface;
 
 /**
- * A real lock that beats the transport's heartbeat in the instant it is
- * released, and remembers its own remaining lifetime either side of that
- * beat.
- *
- * RecommendationRunAdvancer::advance() disarms its keepalive before it
- * releases the lock, and the comment there says why: a beat landing between
- * the two would refresh a lock that is on its way out. A test cannot
- * ordinarily insert itself between two adjacent statements — but it can make
- * the second statement itself deliver the beat, which puts the beat exactly
- * in the window the ordering defends. With the ordering right the keepalive
- * is already disarmed and the beat changes nothing; reversed, the keepalive
- * still holds this lock and refreshes it, and the lifetime jumps back to a
- * full TTL.
+ * A real lock that beats the heartbeat as it is released and records its remaining lifetime either side of the beat.
+ * RecommendationRunAdvancer::advance() disarms its keepalive before releasing, so the beat must change nothing; with
+ * the order reversed the keepalive refreshes the lock back to a full TTL.
  */
 final class BeatDuringReleaseLock implements SharedLockInterface
 {
