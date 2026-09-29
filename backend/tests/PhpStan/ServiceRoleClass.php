@@ -216,6 +216,12 @@ final readonly class ServiceRoleClass
         return $types;
     }
 
+    /** The interface itself, or a class or interface that implements or extends it. */
+    public function isOfFamily(string $interface): bool
+    {
+        return $this->name() === $interface || $this->reflection->implementsInterface($interface);
+    }
+
     /** @return list<string> every interface the class implements, through its parents too */
     public function interfaceNames(): array
     {

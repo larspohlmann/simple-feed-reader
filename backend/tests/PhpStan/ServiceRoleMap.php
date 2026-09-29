@@ -193,7 +193,7 @@ final readonly class ServiceRoleMap
     private function holdsOnlyTheFamilyOf(string $interface): bool
     {
         foreach ($this->classesIn(ServiceRoleNames::namespaceOf($interface)) as $member) {
-            if ($member->name() !== $interface && !\in_array($interface, $member->interfaceNames(), true)) {
+            if (!$member->isOfFamily($interface)) {
                 return false;
             }
         }

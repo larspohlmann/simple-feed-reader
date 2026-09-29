@@ -26,7 +26,7 @@ final readonly class RoleFolderTree
         }
         $folders = [];
         foreach ($this->interfaces as $interface) {
-            if ($interface === $member || \in_array($interface->name(), $member->interfaceNames(), true)) {
+            if ($member->isOfFamily($interface->name())) {
                 $folders[] = $this->folderOf($interface);
             }
         }
@@ -40,7 +40,7 @@ final readonly class RoleFolderTree
             return false;
         }
         foreach ($this->members as $member) {
-            if (!$member->isInterface() && !\in_array($this->interfaces[0]->name(), $member->interfaceNames(), true)) {
+            if (!$member->isInterface() && !$member->isOfFamily($this->interfaces[0]->name())) {
                 return false;
             }
         }
