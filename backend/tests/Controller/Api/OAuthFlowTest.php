@@ -24,52 +24,8 @@ use Symfony\Component\HttpFoundation\Cookie;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The OAuth flow driven over HTTP, end to end: redirect out, callback in,
- * one-time code traded for a JWT.
- *
- * Structured after AuthJourneyTest — same KernelBrowser-per-test shape, same
- * rate-limiter clear in setUp, same UserFactory for the fixtures that have no
- * HTTP path, and the same rule that nothing is nudged into place between steps.
- * Each step's precondition is whatever the previous HTTP request left behind.
- *
- * ## Two mechanics that this file cannot work without
- *
- * **`disableReboot()`.** KernelBrowser rebuilds the container after every
- * request by default, which would discard the fake provider registry installed
- * below and silently restore the real one — so a swapped fake would apply to
- * request one and nothing after it. Every flow here spans two or three
- * requests, and the later ones are the interesting ones. This is the same trap
- * a functional test in an earlier task walked into.
- *
- * **Replacing the REGISTRY, not the provider.** `self::getContainer()->set()`
- * accepts either, but the two fail differently and both were tried:
- *
- *  - Setting `GoogleOAuthProvider::class` works only while that service is
- *    still uninstantiated. The registry pulls its providers out of a tagged
- *    iterator lazily, so a swap performed before anything touches the registry
- *    IS picked up — but once a request has built it, the same call throws
- *    `InvalidArgumentException: The "App\Service\OAuth\OAuthProvider\GoogleOAuthProvider"
- *    service is already initialized, you cannot replace it.` That makes the
- *    seam order-dependent in a way nothing in the test reads.
- *  - Setting `OAuthProviderRegistry::class` replaces the one object the
- *    controller actually asks for, in one hop, with no dependence on whether
- *    the container's tagged iterator collected anything at all.
- *
- * The second is used. The independence is the point: "does the container
- * collect the providers" is OAuthProviderWiringTest's question, and a flow test
- * that answered it too would fail in two files for one cause. Both variants
- * must still run before the first request, because a service the container has
- * already built cannot be replaced either way.
- *
- * **Every request here is made over `https://`,** which is not cosmetic. The
- * flow-binding cookie is `Secure`, and BrowserKit's CookieJar enforces that
- * attribute exactly as a browser does — it will not return a `Secure` cookie to
- * an `http://` URI. Driven over `http://` this suite would still pass its error
- * cases while every happy path lost its cookie, so the binding would look
- * enforced and be untested. Real browsers make `http://localhost` the one
- * exception (verified in Chromium against the exact attribute string this
- * controller sends); BrowserKit does not model that exception, and asking it to
- * would be testing the harness rather than the app.
+ * The OAuth flow over HTTP. The client never reboots, or the fake registry would last one request; the registry, not
+ * a provider, is replaced; and every request is `https`, because the jar withholds the `Secure` flow cookie otherwise.
  */
 final class OAuthFlowTest extends WebTestCase
 {
@@ -92,15 +48,10 @@ final class OAuthFlowTest extends WebTestCase
         // docblock.
         $this->client->disableReboot();
 
-        // The oauth_start limiter counts in the same FILESYSTEM pool as
-        // registration and login_throttling, which outlives both the kernel and
-        // the run itself. Without this clear the suite passes on a fresh
-        // checkout and 429s on the second `composer test`. Same precedent as
-        // AuthJourneyTest, RegistrationTest and LoginTest.
+        // The oauth_start limiter's filesystem pool outlives the kernel and the run: without this clear, the second
+        // `composer test` answers 429.
         $this->rateLimiterCache()->clear();
     }
-
-    // -- The whole flow ---------------------------------------------------
 
     /**
      * Redirect to JWT, with the property the whole design exists for asserted
@@ -119,10 +70,7 @@ final class OAuthFlowTest extends WebTestCase
         $state = $provider->lastState;
         self::assertIsString($state);
 
-        // The browser binding rode out with the redirect. Asserted here because
-        // "the cookie is never actually stored" is the way this fix breaks
-        // silently — every negative test above would still pass, and only the
-        // happy path would stop working.
+        // The binding rode out with the redirect: only this happy path notices if the cookie is never stored.
         self::assertNotSame('', $this->flowCookieValue());
 
         // 2. Callback: we redirect to the SPA with a code, never a token.
@@ -180,19 +128,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * The other first sign-in: an identity that arrives with no address at all.
-     *
-     * Apple returns a user's address only on the FIRST authorisation, so
-     * somebody who revokes access and comes back has a subject identifier and
-     * nothing else — while User::$email is non-nullable and unique. The linker
-     * mints a deterministic `<provider>-<hash>@oauth.invalid` placeholder.
-     *
-     * Asserted through the endpoint on purpose. RegisterRequest refuses the
-     * whole reserved `.invalid` TLD, and putting that constraint on the ENTITY
-     * instead of on the registration DTO would break exactly this path — every
-     * addressless Apple signup — while every unit test of the linker kept
-     * passing, because the linker never validates. This is the case that goes
-     * red if somebody "tidies" the constraint onto User.
+     * Through the endpoint on purpose: the `.invalid` refusal belongs on the registration DTO, and on User it would
+     * break every addressless Apple signup while every linker unit test stayed green.
      */
     public function testAnAddresslessIdentityStillGetsAnAccountWithAPlaceholderAddress(): void
     {
@@ -207,14 +144,9 @@ final class OAuthFlowTest extends WebTestCase
         self::assertNull($user->getPasswordHash());
     }
 
-    // -- The status gate --------------------------------------------------
-
     /**
-     * The reason the status gate lives at exchange and not at callback: a
-     * redirect could only say "something went wrong", while this says what the
-     * user is actually waiting for — in the same problem+json shape, with the
-     * same `type` and the same `accountStatus` key, as POST /api/auth/login
-     * returns for the same account (see AuthJourneyTest step 4).
+     * The status gate sits at the exchange so the answer can say why: the password login's problem+json, with the same
+     * `type` and `accountStatus`.
      */
     public function testAPendingApprovalUserGetsAProperExplanationNotAGenericFailure(): void
     {
@@ -228,15 +160,7 @@ final class OAuthFlowTest extends WebTestCase
         self::assertSame('pending_approval', $this->payload()['accountStatus']);
     }
 
-    /**
-     * The single most important assertion in this file.
-     *
-     * OAuthAccountLinker::resolve() deliberately returns a suspended user
-     * unchanged — linking proves an address, it does not overrule an admin — so
-     * the callback happily issues this account a login code. The status gate in
-     * exchange() is the ONLY thing between that code and a working JWT. Delete
-     * it and this test is how you find out.
-     */
+    /** The linker returns a suspended user unchanged; the exchange's status gate is all that stops the JWT. */
     public function testASuspendedUserCannotExchangeACode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Suspended);
@@ -265,8 +189,6 @@ final class OAuthFlowTest extends WebTestCase
         self::assertSame('rejected', $this->payload()['accountStatus']);
     }
 
-    // -- The login code ---------------------------------------------------
-
     public function testALoginCodeCannotBeUsedTwice(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -286,12 +208,7 @@ final class OAuthFlowTest extends WebTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
-    /**
-     * A state value is a credential for a different flow with a different
-     * store, and presenting one here must buy nothing. The two stores key on
-     * distinct prefixes, so this is really a test that they have not been
-     * collapsed into one pool by a later refactor.
-     */
+    /** The state and login-code stores key on distinct prefixes; a state must buy nothing at the exchange. */
     public function testAStateValueIsNotAcceptedAsALoginCode(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -305,12 +222,7 @@ final class OAuthFlowTest extends WebTestCase
         self::assertResponseStatusCodeSame(400);
     }
 
-    /**
-     * The account was deleted between the callback and the exchange. The code
-     * is still live and still names a user id; there is simply nobody to sign
-     * in as, and the answer must be the one a bad code gets rather than a 500
-     * from a null user.
-     */
+    /** A deleted account's live code gets the bad-code answer, not a 500. */
     public function testACodeForAnAccountDeletedBeforeTheExchangeIsRejected(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -328,38 +240,9 @@ final class OAuthFlowTest extends WebTestCase
         self::assertArrayNotHasKey('token', $this->payload());
     }
 
-    // Expiry is NOT driven in this file, and deliberately so. The 30-second
-    // window is enforced against the injected ClockInterface, which here is the
-    // real clock — nothing in the test container swaps a MockClock in, and
-    // introducing one for a single case would change the clock every other
-    // functional test runs on. The window is pinned instead in
-    // LoginCodeStoreTest, which drives a MockClock across the boundary from
-    // both sides (+29 s accepted, +31 s refused) and additionally pins the
-    // deadline to issue time rather than to the store's last activity. There is
-    // no code path between that store and this endpoint that could honour the
-    // TTL differently: exchange() does nothing but call consume().
-
-    // -- The flow is bound to the browser that started it ------------------
-
     /**
-     * THE LOGIN-CSRF REGRESSION TEST. This is the one that was missing.
-     *
-     * `state` alone proves "this server started some flow". It does not prove
-     * "this browser started this flow", and without the second property the
-     * callback accepts a state and code from anyone holding them.
-     *
-     * The attack that exploits the gap: an attacker with a real account scripts
-     * the start endpoint, keeps `state`, completes the consent screen at the
-     * provider, and captures `code` from the provider's final 302 WITHOUT
-     * following it — so the state is never burned. They then get a victim to
-     * open the callback URL. Per the SPA contract the exchange fires with no
-     * user gesture, and the victim's browser is now signed in AS THE ATTACKER:
-     * every feed they add and every article they read lands in the attacker's
-     * account.
-     *
-     * Clearing the cookie jar is exactly that attacker — the state and code are
-     * genuine and unspent, and the only thing missing is the browser that
-     * started the flow.
+     * Login CSRF: an attacker's genuine, unspent state and code, opened in a victim's browser (the cleared jar), must
+     * mint no code and spend nothing at the provider.
      */
     public function testACallbackFromABrowserThatDidNotStartTheFlowIsRefused(): void
     {
@@ -377,10 +260,7 @@ final class OAuthFlowTest extends WebTestCase
         self::assertResponseStatusCodeSame(302);
         self::assertStringContainsString('error=invalid_state', $this->location());
 
-        // The two assertions that make this a security test rather than a
-        // string comparison: no login code was minted, and the provider was
-        // never spoken to — so the attacker's authorization code was not spent
-        // against the victim's browser.
+        // No login code was minted, and the provider never saw the attacker's authorization code.
         self::assertStringNotContainsString('code=', $this->location());
         self::assertSame([], $provider->exchanges);
     }
@@ -407,16 +287,7 @@ final class OAuthFlowTest extends WebTestCase
         self::assertSame([], $provider->exchanges);
     }
 
-    /**
-     * A wrong cookie must not merely fail — it must BURN the state, so the
-     * comparison cannot be brute-forced by retrying the same live state with a
-     * different guess each time. The store deletes before it validates, and
-     * this is the endpoint-level proof of that ordering.
-     *
-     * Without it, a 64-hex-character binding would still be unguessable, but
-     * the property would rest on the search space alone rather than on the flow
-     * being single-use.
-     */
+    /** A wrong cookie burns the state, so the binding cannot be brute-forced against one live state. */
     public function testAFailedBindingCheckBurnsTheStateSoItCannotBeRetried(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -439,17 +310,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * The attributes, asserted on the wire rather than read off the source.
-     *
-     * `SameSite=None` is the one that looks wrong and is not. Apple returns its
-     * callback as a CROSS-SITE POST (`response_mode=form_post`), and a `Lax`
-     * cookie is not sent on a cross-site POST — so `Lax` would leave Google
-     * working perfectly and Apple failing every sign-in with `invalid_state`,
-     * which is the worst kind of bug to diagnose. `None` requires `Secure`.
-     *
-     * `__Host-` is what stops the binding being pinned: the prefix forbids a
-     * `Domain` attribute, so a sibling or parent host cannot write this cookie
-     * into the backend's origin even if one of them is compromised.
+     * `SameSite=None` because Apple's callback is a cross-site POST, which a `Lax` cookie misses; `__Host-` so no
+     * sibling host can write the binding.
      */
     public function testTheFlowCookieCarriesTheAttributesTheCrossSitePostNeeds(): void
     {
@@ -468,22 +330,12 @@ final class OAuthFlowTest extends WebTestCase
         self::assertSame('/', $cookie->getPath());
         self::assertNull($cookie->getDomain());
 
-        // Bound to the flow's ten minutes PLUS the login code's thirty seconds,
-        // not to a browser session. The extra half-minute is what lets a
-        // callback arriving in the final second of the state's life still hand
-        // the SPA a code the browser can actually exchange.
+        // The state's ten minutes plus the login code's thirty seconds, so a callback in the state's final second
+        // still hands over a code the browser can exchange.
         self::assertEqualsWithDelta(630, $cookie->getExpiresTime() - time(), 5);
     }
 
-    /**
-     * The binding carries nothing about the user, because it is set before
-     * anyone is authenticated and on an endpoint a stranger can hit.
-     *
-     * A value derived from an address, an id or an IP would turn an
-     * unauthenticated endpoint into a tracking beacon that outlives the flow.
-     * This one is opaque random bytes and means nothing without the server-side
-     * entry it is hashed against.
-     */
+    /** The binding is opaque random bytes: set before sign-in on a public endpoint, it must not identify anyone. */
     public function testTheFlowCookieRevealsNothingAndIsClearedWhenTheFlowFails(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -499,10 +351,8 @@ final class OAuthFlowTest extends WebTestCase
         $this->startFlow();
         self::assertNotSame($value, $this->flowCookieValue());
 
-        // A failing callback ends the flow then and there, so the binding goes
-        // with it. The SUCCESS exit deliberately does not clear — the code it
-        // just minted is bound to this same cookie, and the exchange needs it
-        // back. See testTheBindingOutlivesTheCallbackAndDiesAtTheExchange.
+        // A failed callback clears the binding; the success exit keeps it for the exchange
+        // (testTheBindingOutlivesTheCallbackAndDiesAtTheExchange).
         $this->requestCallback(['state' => 'not-a-state', 'code' => 'c']);
         self::assertNull(
             $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost'),
@@ -510,24 +360,9 @@ final class OAuthFlowTest extends WebTestCase
         );
     }
 
-    // -- The login code is bound to the same browser -----------------------
-
     /**
-     * THE SECOND HALF OF THE LOGIN CSRF, and the reason binding the callback
-     * was not on its own enough.
-     *
-     * Binding the flow forces the attacker to complete it in their OWN browser.
-     * That is not a dead end for them, because the login code that falls out of
-     * it was, until this fix, a pure bearer value: whoever POSTs it to
-     * `/exchange` gets the JWT. So the attacker runs a genuine sign-in end to
-     * end, does NOT redeem the code, and inside its 30-second life points a
-     * victim at `<frontend>/auth/callback?code=X`. Per section 7.3 the SPA
-     * exchanges on landing with no gesture, and the victim holds the attacker's
-     * token — the same outcome as before, narrowed to 30 seconds and fully
-     * scriptable.
-     *
-     * Clearing the jar is that victim: the code is genuine, unspent and inside
-     * its window, and the only thing missing is the browser that earned it.
+     * The second half of login CSRF: a code from the attacker's own genuine sign-in, opened in a victim's browser (the
+     * cleared jar), must not be exchanged.
      */
     public function testALoginCodeCannotBeExchangedByADifferentBrowser(): void
     {
@@ -542,13 +377,7 @@ final class OAuthFlowTest extends WebTestCase
         $this->assertIndistinguishableFromABadCode();
     }
 
-    /**
-     * The other way to arrive without the binding, and the one that decides
-     * whether the fix is real: a cookie that is present and well formed but
-     * belongs to a different flow. This reaches the hash_equals comparison
-     * rather than short-circuiting on an absent cookie, so it proves the check
-     * is a comparison and not merely an isset().
-     */
+    /** A well-formed binding from another flow reaches the hash_equals comparison, not just the absent-cookie check. */
     public function testALoginCodeCannotBeExchangedWithSomebodyElsesBinding(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -584,14 +413,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * The lifetime, from both ends: the binding must survive the callback —
-     * which is where it used to be cleared — and must not survive the exchange.
-     *
-     * Both halves break silently in opposite directions. Clear too early and
-     * every sign-in fails with what looks like a bad code; clear never, and an
-     * unauthenticated endpoint has left a durable value in the browser for no
-     * reason, which is the shape of a tracking cookie even when the contents
-     * are meaningless.
+     * Cleared too early, every sign-in fails like a bad code; never cleared, a public endpoint leaves a durable value
+     * in the browser.
      */
     public function testTheBindingOutlivesTheCallbackAndDiesAtTheExchange(): void
     {
@@ -610,8 +433,6 @@ final class OAuthFlowTest extends WebTestCase
         );
     }
 
-    // -- The callback -----------------------------------------------------
-
     public function testAStateValueCannotBeReplayed(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -629,15 +450,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * A state issued for Google, replayed at Apple's callback.
-     *
-     * Without the provider comparison this would spend a Google authorization
-     * code, carrying a Google nonce, against Apple's token endpoint — and would
-     * let whoever chose the URL decide which provider's answer is trusted for a
-     * flow they did not start. `apple` is used precisely because it is NOT
-     * configured in this environment: the check must fire before the registry
-     * is consulted, so a mismatch cannot be masked by a 404 that would look
-     * like a pass.
+     * A Google state at Apple's callback must be refused before anything else: `apple` is unconfigured here, so a
+     * check after the registry would hide behind its 404.
      */
     public function testAStateIssuedForOneProviderIsRefusedAtAnothersCallback(): void
     {
@@ -668,23 +482,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * A stolen authorization code arriving with no state at all. This is the
-     * attack the state value exists to stop, and the refusal must happen before
-     * the provider is spoken to — otherwise the attacker's code has already
-     * been redeemed against somebody's browser.
-     *
-     * The reason code is `invalid_request`, not `invalid_state`: the
-     * missing-parameter check runs before the store is consulted, so a callback
-     * with no state never reaches the state comparison. (The plan asserted
-     * `invalid_state` here while specifying a controller that cannot produce
-     * it — the two halves contradicted each other. The controller's ordering is
-     * the correct half: there is no state to call invalid.)
-     *
-     * Nothing is disclosed by telling these apart. Whether the caller sent a
-     * `state` parameter is something the caller already knows; the codes that
-     * would matter — "expired" versus "already used" versus "never issued" —
-     * are the ones OAuthStateStore::consume() deliberately collapses into one
-     * null, and all three still arrive here as `invalid_state`.
+     * A stolen code with no state is refused before the provider hears of it. `invalid_request`, not `invalid_state`:
+     * the parameter check runs first, and saying so discloses only what the caller sent.
      */
     public function testACallbackWithNoStateIsRefusedWithoutContactingTheProvider(): void
     {
@@ -732,17 +531,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * The callback is the one endpoint that sets a Location header from inside
-     * a flow a stranger can trigger, and the success path attaches a fresh
-     * login code to it. An open redirect here would therefore not merely send
-     * a browser somewhere — it would hand the attacker's page a live
-     * credential.
-     *
-     * So: nothing the caller supplied may reach that header. The host comes
-     * from APP_FRONTEND_URL, a deployment-time value; the reason is one of four
-     * literals in the controller. This drives the whole caller-controlled
-     * surface — the provider's own `error` value, plus `state` and `code` — at
-     * a redirect and pins the result to the configured origin.
+     * The success redirect carries a live login code, so nothing the caller sends may reach the Location host: an open
+     * redirect here would hand the attacker's page a credential.
      */
     public function testNothingTheCallerSuppliesCanReachTheLocationHeader(): void
     {
@@ -760,13 +550,7 @@ final class OAuthFlowTest extends WebTestCase
         }
     }
 
-    /**
-     * Apple returns its callback as a cross-site form POST, so the parameters
-     * arrive in a body rather than a query string. Driven through Google's
-     * callback because the fake is the only provider this suite can complete a
-     * flow with; what is under test is the controller's parameter reading, not
-     * anything Apple-specific.
-     */
+    /** Apple posts its callback as a form body; only Google's completes here, and it reads parameters the same way. */
     public function testACallbackPostedAsAFormBodyCompletesTheSameWay(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
@@ -805,8 +589,6 @@ final class OAuthFlowTest extends WebTestCase
         self::assertStringNotContainsString('fake provider was told to fail', $this->location());
     }
 
-    // -- The public surface -----------------------------------------------
-
     public function testAnUnconfiguredProviderIs404(): void
     {
         $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/facebook');
@@ -830,18 +612,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * The oauth_start limiter, actually fired.
-     *
-     * Worth a real test rather than a reading of the config: this is the one
-     * limiter whose factory is injected by name, and a renamed or missing
-     * `oauth_start` block would autowire a DIFFERENT limiter's factory without
-     * any error — the endpoint would still work, and would simply be capped by
-     * somebody else's budget or not at all.
-     *
-     * 20 requests are accepted and the 21st is not, so both edges of the
-     * configured limit are pinned. The count also proves setUp()'s clear
-     * actually empties the pool: on a dirty pool the first request here would
-     * already be over budget.
+     * Fired for real: the limiter factory is injected by name, and a renamed `oauth_start` block would silently bind
+     * another budget. Twenty pass and the twenty-first does not, which also proves setUp()'s clear.
      */
     public function testTheStartLimiterRefusesTheTwentyFirstAttempt(): void
     {
@@ -883,15 +655,7 @@ final class OAuthFlowTest extends WebTestCase
         return $provider;
     }
 
-    // -- The flow cookie --------------------------------------------------
-
-    /**
-     * The binding value the browser is currently holding.
-     *
-     * Read from the JAR, not from the response, so it asserts what a browser
-     * would actually send back — a cookie the jar rejected (wrong scheme, wrong
-     * path) would be invisible here, which is the failure worth catching.
-     */
+    /** The binding the browser holds, read from the jar so a cookie the jar rejected (scheme, path) reads as absent. */
     private function flowCookieValue(): string
     {
         $cookie = $this->client->getCookieJar()->get(OAuthController::FLOW_COOKIE, '/', 'localhost');
@@ -901,13 +665,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * Puts a binding of our choosing in the jar.
-     *
-     * The attributes are restated rather than copied off whatever is currently
-     * stored, because the callback CLEARS the cookie — so after one failed
-     * attempt there is nothing left to copy from. They must match what the
-     * controller sends, or the jar withholds the cookie for an unrelated reason
-     * and the test would pass without ever reaching the comparison.
+     * Restates the controller's attributes instead of copying the stored cookie, which a failed callback clears; a
+     * mismatch would make the jar withhold it and the test pass without reaching the comparison.
      */
     private function replaceFlowCookie(string $value): void
     {
@@ -970,8 +729,6 @@ final class OAuthFlowTest extends WebTestCase
         );
     }
 
-    // -- Reading the response ---------------------------------------------
-
     private function location(): string
     {
         return (string) $this->client->getResponse()->headers->get('Location');
@@ -986,12 +743,7 @@ final class OAuthFlowTest extends WebTestCase
         return $code;
     }
 
-    /**
-     * The one-time code exists solely to keep the JWT out of URLs, so every
-     * path that sets a Location — success and failure alike — is checked for
-     * one. `token` catches a query parameter added by name; the three-part
-     * pattern catches a bare JWT smuggled in under any other name.
-     */
+    /** The code keeps the JWT out of URLs: no `token` parameter, and no three-part JWT under any other name. */
     private function assertNoTokenInLocation(): void
     {
         $location = $this->location();
@@ -1005,17 +757,8 @@ final class OAuthFlowTest extends WebTestCase
     }
 
     /**
-     * Asserts the response just received is not merely a 400, but the SAME 400
-     * an unknown code gets — status, content type and body alike.
-     *
-     * "Indistinguishable" is the actual requirement, so it is compared against
-     * a real unknown-code response rather than against a hard-coded shape. A
-     * distinct error type, a different `detail`, even a different casing would
-     * let a prober tell "this code is live but not yours" from "no such code",
-     * and that distinction is exactly what confirms a captured code is worth
-     * replaying.
-     *
-     * Fires a second request, so it must be the last thing a test does.
+     * Compares against a real unknown-code response, not a fixed shape: any difference would tell a prober the code is
+     * live. Fires a request, so it must be the last thing a test does.
      */
     private function assertIndistinguishableFromABadCode(): void
     {

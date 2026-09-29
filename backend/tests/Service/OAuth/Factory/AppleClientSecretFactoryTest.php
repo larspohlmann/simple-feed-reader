@@ -34,11 +34,8 @@ final class AppleClientSecretFactoryTest extends TestCase
         // to check this signature against.
         self::assertSame(self::KEY_ID, $header['kid'] ?? null);
 
-        // The two places Apple inverts the shape you would expect: the issuer is
-        // the TEAM, and the subject is the client (the Services ID). Verified
-        // against Apple's "Creating a client secret" documentation, not inferred
-        // from the generic OIDC private_key_jwt profile, where `iss` and `sub`
-        // would both be the client id.
+        // Apple inverts the private_key_jwt shape: `iss` is the team, `sub` the Services ID (Apple's "Creating a
+        // client secret" documentation).
         self::assertSame(self::TEAM_ID, $payload['iss'] ?? null);
         self::assertSame(self::SERVICES_ID, $payload['sub'] ?? null);
         self::assertSame('https://appleid.apple.com', $payload['aud'] ?? null);
@@ -79,18 +76,8 @@ final class AppleClientSecretFactoryTest extends TestCase
     }
 
     /**
-     * Guards a defect that a fixed-second clock cannot see.
-     *
-     * `ChainedFormatter::default()` renders date claims through
-     * MicrosecondBasedDateConversion, which emits a JSON *float*
-     * (1784030400.123456) whenever the instant carries microseconds — and
-     * returns a plain int only when they happen to be zero. Every clock in the
-     * tests is a MockClock on a whole second; the clock in production is
-     * NativeClock, which never is. So the naive spelling passes the suite and
-     * signs a token whose `iat` and `exp` are floats against Apple, which wants
-     * NumericDate integers. Asserting on a microsecond-bearing instant is what
-     * keeps `withUnixTimestampDates()` in the factory from being "simplified"
-     * back to the default.
+     * ChainedFormatter::default() emits float dates once the instant carries microseconds, which NativeClock always
+     * does and MockClock never; this keeps withUnixTimestampDates() from being "simplified" back.
      */
     public function testTimestampsAreIntegersEvenWhenTheClockCarriesMicroseconds(): void
     {
@@ -112,10 +99,7 @@ final class AppleClientSecretFactoryTest extends TestCase
     }
 
     /**
-     * A half-filled env block is a likelier deployment mistake than an empty
-     * one — somebody pastes the key and forgets the team id. Each field is
-     * load-bearing, so any one of them missing means "this deployment does not
-     * offer Apple", never "offer it and fail at the token endpoint".
+     * Any one of the four missing means Apple is not offered at all, rather than offered and failing at the exchange.
      *
      * @return iterable<string, array{string, string, string, string}>
      */
@@ -148,10 +132,7 @@ final class AppleClientSecretFactoryTest extends TestCase
     }
 
     /**
-     * The three ways a private key reaches us broken: not a key at all, the
-     * right shape but the wrong algorithm, and a PEM whose newlines a dotenv
-     * file or a secrets UI ate. All are operator mistakes, and none may reach
-     * the user as anything more specific than "sign-in failed".
+     * Not a key, the wrong curve, and a PEM whose newlines were eaten: each must reach the user as "sign-in failed".
      *
      * @return iterable<string, array{string}>
      */
@@ -168,10 +149,7 @@ final class AppleClientSecretFactoryTest extends TestCase
     {
         $factory = $this->factoryWith($privateKey, self::KEY_ID);
 
-        // isConfigured() is a presence check, not a validity check: we cannot
-        // parse the key without doing the work, and a deployment that pasted
-        // garbage HAS configured Apple — badly. It stays visible and fails at
-        // the exchange, which is the only place the failure is knowable.
+        // Presence, not validity: a garbage key counts as configured and fails at the exchange.
         self::assertTrue($factory->isConfigured());
 
         try {

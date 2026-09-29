@@ -25,33 +25,8 @@ use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * The three-legged sign-in: redirect out, callback in, code for token.
- *
- * The callback NEVER hands the SPA a JWT. It redirects with a one-time
- * 30-second login code that the SPA POSTs to `/exchange` for the token: a JWT
- * in a redirect URL would leak via history, Referer and proxy logs, while the
- * code is worthless after 30 seconds or one use.
- *
- * What the code is bound to, which failures are indistinguishable, and where
- * the account-status gate sits is one rule set spanning both legs; it lives in
- * {@see OAuthSignIn}. Left here is the HTTP around it — reading, setting and
- * clearing the binding cookie, and choosing redirect vs problem+json.
- *
- * ROUTE ORDER IS LOAD-BEARING. `/{provider}` would match `providers` and
- * `exchange` too, so the literal routes are declared FIRST (Symfony matches in
- * declaration order). Verified with `php bin/console router:match`:
- *
- *   /api/auth/oauth/providers        GET      -> api_auth_oauth_providers
- *   /api/auth/oauth/exchange         POST     -> api_auth_oauth_exchange
- *   /api/auth/oauth/google           GET      -> api_auth_oauth_start
- *   /api/auth/oauth/google/callback  GET|POST -> api_auth_oauth_callback
- *
- * `GET /api/auth/oauth/exchange` falls through to start() with
- * `provider=exchange` (the literal route is POST-only); the registry has no
- * such provider and answers 404 problem+json, correct and disclosing nothing.
- * The `{provider}` requirement is a second belt bounding the segment to a
- * plausible name, but it does NOT resolve the `providers` collision alone — so
- * do not reorder these methods.
+ * The three-legged sign-in's HTTP: redirect out, callback in, code for token. Route order is load-bearing: the
+ * literal routes come before `/{provider}`, which would otherwise match `providers` and `exchange`.
  */
 #[Route('/api/auth/oauth')]
 final readonly class OAuthController
@@ -63,10 +38,7 @@ final readonly class OAuthController
      */
     public const string FLOW_COOKIE = FlowCookie::NAME;
 
-    /**
-     * Bounds the `{provider}` segment to a plausible provider name. See the class
-     * docblock for what this does and does not fix.
-     */
+    /** Bounds the `{provider}` segment; it does not settle the `providers` collision, route order does. */
     private const string PROVIDER_PATTERN = '[a-z][a-z0-9_-]{1,31}';
 
     public function __construct(
@@ -81,12 +53,7 @@ final readonly class OAuthController
     ) {
     }
 
-    /**
-     * Which providers this deployment can complete a sign-in with, so the SPA
-     * does not render an Apple button on an instance with no Apple credentials.
-     * Unauthenticated by necessity (read before login) and reveals only the
-     * sign-in options the login page would show anyway.
-     */
+    /** Unauthenticated: it reveals only the sign-in buttons the login page shows anyway. */
     #[Route('/providers', name: 'api_auth_oauth_providers', methods: ['GET'])]
     public function providers(): JsonResponse
     {
@@ -94,20 +61,8 @@ final readonly class OAuthController
     }
 
     /**
-     * Step 3: the SPA trades the one-time code for the JWT. A POST so the
-     * credential travels in a body, not a URL leaked via history, Referer and
-     * proxy logs — the whole reason this exists instead of the callback
-     * redirecting with a token.
-     *
-     * Declared above start() for route ordering (see class docblock). The methods
-     * differ (POST vs GET) so a misordering would not mis-resolve today, but
-     * relying on that ties this URL's correctness to start() never gaining a POST.
-     *
-     * THIS IS A CREDENTIALED CROSS-ORIGIN REQUEST: the SPA must send it with
-     * `credentials: 'include'`, because the flow cookie is the other half of the
-     * login code. A caller that forgets gets a 400 identical to a bad code — the
-     * most confusing failure this design has (docs/oauth-sign-in.md §7.3).
-     * CorsListener lets the cookie ride along.
+     * Step 3: the SPA trades the code for the JWT in a POST body. It must send credentials: without the flow cookie
+     * the answer is the same 400 as a bad code.
      */
     #[Route('/exchange', name: 'api_auth_oauth_exchange', methods: ['POST'])]
     public function exchange(
@@ -177,10 +132,8 @@ final readonly class OAuthController
     )]
     public function start(string $provider, Request $request): RedirectResponse
     {
-        // Only start() is capped: the callback's state is single-use and the
-        // exchange's 32-byte code lives 30 seconds, so a limiter on either defends
-        // something already closed, while start() is where a scripted loop could
-        // fill the state pool for free.
+        // Only start() is capped: states and login codes are single-use and short-lived, while a scripted start loop
+        // could fill the state pool for free.
         $this->rateLimitGuard->enforceForClient($this->oauthStartLimiter, $request->getClientIp());
 
         // Throws UnknownProviderException (404 problem+json) for a name this
@@ -196,10 +149,8 @@ final readonly class OAuthController
             $state->codeChallenge,
         ));
 
-        // The browser binding rides out with the redirect. Without it state would
-        // prove only that THIS SERVER started some flow, letting anyone holding a
-        // state and code spend them in another browser. See OAuthStateStore's
-        // docblock for the full attack.
+        // The browser binding rides out with the redirect; without it `state` proves only that this server started
+        // some flow.
         \assert(null !== $state->browserToken);
         $response->headers->setCookie($this->flowCookie->issue($state->browserToken));
 

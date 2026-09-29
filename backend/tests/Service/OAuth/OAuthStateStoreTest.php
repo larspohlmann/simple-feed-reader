@@ -20,10 +20,8 @@ final class OAuthStateStoreTest extends TestCase
     private OAuthStateStore $store;
 
     /**
-     * `storeSerialized: false` so getValues() below returns the payload as the
-     * store wrote it. With serialisation on, the assertion that the plaintext
-     * state is absent from stored values would be searching a serialised blob
-     * and could pass for the wrong reason.
+     * `storeSerialized: false`, so getValues() returns the payload as written, not a serialised blob that could hide
+     * the plaintext state.
      */
     protected function setUp(): void
     {
@@ -71,16 +69,7 @@ final class OAuthStateStoreTest extends TestCase
         );
     }
 
-    /**
-     * The property this store gained when login CSRF was found: a genuine,
-     * unspent state redeemed by a browser that did not start the flow buys
-     * nothing.
-     *
-     * `null` is the case that matters most — it is what the controller passes
-     * when the callback arrived with no cookie at all, which is exactly what an
-     * attacker replaying a captured state from a victim's browser produces. A
-     * missing binding must be a failure, never a reason to skip the check.
-     */
+    /** A genuine, unspent state redeemed without its browser token buys nothing; null is the no-cookie callback. */
     public function testAFlowCannotBeConsumedWithoutItsBrowserToken(): void
     {
         $started = $this->store->start('google');
@@ -103,12 +92,7 @@ final class OAuthStateStoreTest extends TestCase
         );
     }
 
-    /**
-     * A binding from a DIFFERENT live flow is not a skeleton key. Two flows
-     * started in the same process must not be interchangeable, which is what a
-     * single shared secret — or a digest computed over something constant —
-     * would quietly produce.
-     */
+    /** Another live flow's browser token is not a skeleton key. */
     public function testOneFlowsBrowserTokenDoesNotRedeemAnother(): void
     {
         $firstFlow = $this->store->start('google');
@@ -121,14 +105,7 @@ final class OAuthStateStoreTest extends TestCase
         );
     }
 
-    /**
-     * A wrong token BURNS the state rather than leaving it live.
-     *
-     * Without this the binding would rest on the 64-hex search space alone: an
-     * attacker holding a genuine state could retry it against the same flow
-     * indefinitely. consume() deletes before it validates, and this is what
-     * pins that ordering.
-     */
+    /** A wrong token burns the state, so a genuine state cannot be retried against the binding indefinitely. */
     public function testAWrongBrowserTokenBurnsTheState(): void
     {
         $started = $this->store->start('google');
@@ -157,12 +134,7 @@ final class OAuthStateStoreTest extends TestCase
         self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $firstFlow->browserToken);
     }
 
-    /**
-     * The binding is stored as a digest, never in the clear — the same rule the
-     * state itself follows, and for the same reason: for the ten minutes a flow
-     * is live the token is a bearer credential, and the pool is a directory of
-     * files on hosting we do not own exclusively.
-     */
+    /** The binding is stored only as a digest, like the state: the pool is a directory of files. */
     public function testTheBrowserTokenIsStoredOnlyAsADigest(): void
     {
         $started = $this->store->start('google');
@@ -220,13 +192,7 @@ final class OAuthStateStoreTest extends TestCase
         self::assertNotSame($firstFlow->codeVerifier, $secondFlow->codeVerifier);
     }
 
-    /**
-     * The raw state is a bearer value for the ten minutes a flow is live.
-     * Anyone who can read the cache directory should not be handed a working
-     * one — which means it may appear neither in the key nor in the payload.
-     * Hashing the key would be pointless theatre if the plaintext sat in the
-     * value beside it.
-     */
+    /** The raw state appears neither as the key nor in the value: either would leave a usable state on disk. */
     public function testTheRawStateIsStoredNeitherAsKeyNorInTheValue(): void
     {
         $started = $this->store->start('google');

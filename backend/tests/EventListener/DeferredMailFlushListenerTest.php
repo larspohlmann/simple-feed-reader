@@ -21,14 +21,8 @@ use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\RawMessage;
 
 /**
- * The deferral is only safe if terminate genuinely runs. A listener that
- * silently never fired would be worse than the timing leak it closes, because
- * it would fail closed on *delivery* — users would simply never get their
- * verification link, and nothing would say so.
- *
- * So this asserts the ordering directly against the kernel rather than trusting
- * the framework: after handle() the mail must still be queued and unsent, and
- * only terminate() may release it.
+ * Against the real kernel: after handle() the mail is still queued, and only terminate() sends it. A listener that
+ * never fired would silently drop every verification mail.
  */
 final class DeferredMailFlushListenerTest extends KernelTestCase
 {

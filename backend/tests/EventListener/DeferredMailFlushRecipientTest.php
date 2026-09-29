@@ -17,9 +17,8 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\RawMessage;
 
 /**
- * AccountMailer::send() calls $this->mailer->send($email) with no explicit
- * Envelope, so every real account mail queues with a null envelope. The
- * recipient must still come from the message itself (#882).
+ * AccountMailer::send() passes no Envelope, so every real account mail queues with a null envelope; the recipient
+ * must still come from the message itself.
  */
 final class DeferredMailFlushRecipientTest extends TestCase
 {

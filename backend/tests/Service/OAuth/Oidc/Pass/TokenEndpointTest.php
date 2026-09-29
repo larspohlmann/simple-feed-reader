@@ -10,15 +10,7 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
-/**
- * The transport half, and the three preconditions the signature-verification
- * exemption stands on.
- *
- * Those preconditions are the reason this class exists as its own unit rather
- * than as a method: an ID token is trusted here because of WHERE it came from,
- * so the code that decides where it came from is worth isolating and testing on
- * its own.
- */
+/** The transport half: the three preconditions the signature exemption stands on. */
 final class TokenEndpointTest extends TestCase
 {
     private const URL = 'https://issuer.test/token';
@@ -57,10 +49,7 @@ final class TokenEndpointTest extends TestCase
 
     public function testTheRequestPinsTlsAndRefusesRedirects(): void
     {
-        // The three options the class docblock's security argument rests on.
-        // They are restated at the call site rather than left to global
-        // defaults so a `framework.http_client.default_options` edit in another
-        // file cannot quietly withdraw the premise.
+        // Restated at the call site, so a global `default_options` edit cannot withdraw the premise.
         $seen = null;
         $endpoint = $this->endpoint(function (string $method, string $url, array $options) use (&$seen) {
             $seen = $options;

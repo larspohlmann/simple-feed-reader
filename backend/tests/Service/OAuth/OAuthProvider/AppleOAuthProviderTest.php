@@ -48,12 +48,7 @@ final class AppleOAuthProviderTest extends TestCase
         self::assertSame('apple', $provider->getName());
     }
 
-    /**
-     * The likely half-configured deployment: somebody pasted the key and never
-     * filled in the team id. Apple must be invisible, not half-working — the
-     * check has to happen here, before anyone is redirected to a consent screen
-     * whose callback cannot possibly be completed.
-     */
+    /** Key pasted, team id missing: Apple must be invisible rather than fail on the way back. */
     public function testAPartiallyConfiguredDeploymentIsUnconfigured(): void
     {
         $provider = $this->providerWith(
@@ -69,20 +64,8 @@ final class AppleOAuthProviderTest extends TestCase
     }
 
     /**
-     * A structural guard, not a behavioural one, and the Apple-specific half of
-     * the one OidcBoundaryTest makes in general.
-     *
-     * Apple's `form_post` callback carries an `id_token` in the request body.
-     * That token did NOT arrive by direct communication with the token
-     * endpoint, so the OIDC Core §3.1.3.7 carve-out that lets this codebase
-     * skip signature verification does not cover it — trusting it would need
-     * full JWKS verification that nothing here does.
-     *
-     * The general defence is that IdTokenVerifier accepts only an IdTokenModel and
-     * only TokenEndpoint mints one; OidcBoundaryTest pins that. What is left to
-     * check here is that THIS provider — the one whose callback actually carries
-     * such a token — has not grown a door of its own: no override of the
-     * exchange, and no claim reading in the subclass.
+     * Apple's callback carries an `id_token` the signature exemption does not cover; this provider must not grow its
+     * own exchange or claim reading to trust it. OidcBoundaryTest pins the general rule.
      */
     public function testAppleCannotRouteItsCallbackTokenIntoTheVerifier(): void
     {

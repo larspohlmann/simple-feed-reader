@@ -80,13 +80,7 @@ final class OAuthProviderRegistryTest extends TestCase
         self::assertSame(['google'], $registry->getConfiguredNames());
     }
 
-    /**
-     * The list is a `list<string>`, not a map, and it comes out in the order
-     * the providers were collected — NOT sorted. Pinned here because the
-     * frontend renders sign-in buttons straight from this array, and a list
-     * whose order drifts between deployments or between container rebuilds
-     * would shuffle the buttons under people's fingers.
-     */
+    /** Collection order, unsorted: the SPA renders these as buttons, which must not move between builds. */
     public function testTheOrderFollowsCollectionOrderAndIsNotSorted(): void
     {
         $registry = new OAuthProviderRegistry([

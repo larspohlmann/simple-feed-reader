@@ -9,20 +9,8 @@ use App\Service\OAuth\OAuthProvider\OAuthProviderInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Resolves the `{provider}` path segment to an implementation.
- *
- * Providers are collected by tagged-iterator autowiring, so a new one is a
- * new class implementing OAuthProviderInterface and nothing else — no
- * registration list to update and forget. The tag comes from the
- * `_instanceof` block in `config/services.yaml`, and it is load-bearing:
- * `autoconfigure: true` does NOT register a tag named after a plain
- * application interface, so `#[AutowireIterator(OAuthProviderInterface::class)]`
- * instead yields an empty iterator — verified by booting the kernel and
- * reading this property back as `[]`. That fails silently: the registry
- * builds, every lookup throws UnknownProviderException, and the deployment
- * looks correctly wired but with no credentials. Unit tests can't catch it
- * either, since they build the registry by hand — OAuthProviderWiringTest
- * exists for that.
+ * Resolves the `{provider}` path segment. Providers arrive through the `app.oauth_provider` tag from services.yaml's
+ * `_instanceof`: an `#[AutowireIterator]` on the interface collects nothing, silently (OAuthProviderWiringTest).
  */
 final readonly class OAuthProviderRegistry
 {
@@ -44,16 +32,8 @@ final readonly class OAuthProviderRegistry
     }
 
     /**
-     * An unconfigured provider is treated exactly like a nonexistent one. The
-     * distinction is real to an operator and meaningless to a visitor, and
-     * reporting it would tell an unauthenticated stranger which integrations
-     * this deployment has credentials for.
-     *
-     * Both cases throw the same exception with the same message, indistinguishable
-     * in the response, a log line, and a debug handler — not merely the status
-     * code. No timing difference to close either: both paths are an array
-     * lookup, and isConfigured() is an in-memory string comparison, never
-     * touching the network or disk.
+     * An unconfigured provider throws exactly like an unknown one, so a stranger cannot learn which integrations this
+     * deployment holds credentials for.
      */
     public function get(string $name): OAuthProviderInterface
     {
@@ -67,13 +47,7 @@ final readonly class OAuthProviderRegistry
     }
 
     /**
-     * Feeds the SPA's list of sign-in buttons, so the frontend never renders a
-     * provider this deployment cannot complete.
-     *
-     * Order is collection order, deliberately not sorted: these become
-     * buttons, and a list that reordered itself between container rebuilds
-     * would move them under the user's fingers. Collection order is fixed by
-     * the order the container finds the classes in, stable for a given build.
+     * Collection order, deliberately unsorted: the SPA renders these as buttons, which must not move between builds.
      *
      * @return list<string>
      */

@@ -61,15 +61,8 @@ final class AbstractOidcProviderTest extends TestCase
     }
 
     /**
-     * Everything that is not a JSON `true` or the string `"true"` must read as
-     * unverified. Neither Google nor Apple sends any of these, which is exactly
-     * why they are here: if a provider ever starts to, the safe reading is "not
-     * verified" — that downgrades an account link to a fresh signup, whereas
-     * the opposite mistake hands a stranger an existing account.
-     *
-     * `"TRUE"` is deliberately NOT accepted. Case-folding the claim would be a
-     * guess about a provider that does not exist, and the guess only ever
-     * errs towards trusting more.
+     * Anything but JSON `true` or "true" reads as unverified, `"TRUE"` included: that errs toward a new signup, never
+     * toward handing over an account.
      *
      * @return iterable<string, array{mixed}>
      */
@@ -112,12 +105,7 @@ final class AbstractOidcProviderTest extends TestCase
 
     public function testAnEmptyExpectedNonceCannotSatisfyTheNonceCheck(): void
     {
-        // The nonce check is `hash_equals($expected, $claim)`, which is true
-        // when both sides are ''. If a caller ever passed an empty expected
-        // nonce — a bug in the state store, a truncated cache read — a token
-        // carrying `"nonce": ""` would sail through the one check that ties it
-        // to this browser. Rejected before the comparison, so the equality is
-        // never asked to defend itself.
+        // hash_equals('', '') is true, so an empty expected nonce is refused before the comparison.
         $provider = $this->provider($this->tokenResponse($this->claims([
             'nonce' => '',
         ])));
@@ -182,10 +170,7 @@ final class AbstractOidcProviderTest extends TestCase
 
     public function testAnAuthorizedPartyNamingAnotherClientIsRejected(): void
     {
-        // OpenID Connect Core §3.1.3.7 item 5. A token whose `aud` lists us but
-        // whose `azp` names somebody else was issued TO that somebody else. It
-        // cannot reach us through our own token endpoint call, but the check
-        // costs one comparison and removes the need to reason about that.
+        // OIDC Core §3.1.3.7 item 5: `aud` lists us, but `azp` says the token was issued to somebody else.
         $provider = $this->provider($this->tokenResponse($this->claims([
             'aud' => ['test-client-id', 'another-client-id'],
             'azp' => 'another-client-id',
@@ -258,10 +243,7 @@ final class AbstractOidcProviderTest extends TestCase
     }
 
     /**
-     * Every one of these collapses two provider accounts onto one
-     * `user_identity` row, or one provider account onto two — which is the same
-     * defect the empty-subject check above exists to prevent, wearing a hat.
-     * The whitespace-only case in particular passed a bare `'' === $subject` check.
+     * Each of these collapses two provider accounts onto one `user_identity` row, or one onto two.
      *
      * @return iterable<string, array{string}>
      */
@@ -379,10 +361,7 @@ final class AbstractOidcProviderTest extends TestCase
 
     public function testANonHttpsTokenEndpointIsRefused(): void
     {
-        // The signature-verification exemption this class relies on is only
-        // available over a validated TLS connection. Without TLS there is
-        // nothing left checking who minted the token, so the request is not
-        // made at all.
+        // The signature exemption needs validated TLS, so a non-https endpoint is never called.
         $provider = new StubOidcProvider(
             new MockHttpClient($this->tokenResponse($this->claims())),
             $this->clock,
@@ -421,12 +400,7 @@ final class AbstractOidcProviderTest extends TestCase
 
     public function testTheTokenRequestPinsTlsAndRefusesRedirects(): void
     {
-        // Both options are Symfony's defaults for verification and are NOT the
-        // default for redirects. They are restated at the call site because the
-        // signature exemption stands on them: a global `default_options` change
-        // three files away must not be able to quietly withdraw it, and a
-        // followed redirect would mean the token no longer came "directly from
-        // the token endpoint" the way the spec's carve-out requires.
+        // Restated at the call site, so a global `default_options` change cannot withdraw the signature exemption.
         $seen = null;
         $client = new MockHttpClient(function (string $method, string $url, array $options) use (&$seen) {
             $seen = $options;

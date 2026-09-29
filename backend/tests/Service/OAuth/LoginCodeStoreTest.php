@@ -80,22 +80,8 @@ final class LoginCodeStoreTest extends TestCase
     }
 
     /**
-     * The deadline is anchored to issue time, not to the store's last activity.
-     *
-     * The clock is advanced in two steps with unrelated traffic in between, so
-     * a store that reset the window whenever it was touched at all — rather
-     * than only when the code itself was read — would keep this code alive past
-     * T+30 and fail here.
-     *
-     * WHAT THIS DOES NOT PROVE, because the API cannot express it: that reading
-     * THIS code does not extend it. `consume()` is the only read, and it
-     * destroys what it reads, so there is no second look to take. That property
-     * is structural instead of tested — `expires_at` is written once, in
-     * `issue()`, and `expiresAfter()` is called nowhere else — and a rename of
-     * this method to claim otherwise would be claiming an assertion that cannot
-     * fail. The exposure being bounded is real either way: a store that
-     * refreshed on read would let a code captured from a proxy log live
-     * indefinitely so long as something kept touching it.
+     * Unrelated traffic between two clock steps must not extend the window. Reading this code cannot be tested:
+     * consume() destroys what it reads, and `expires_at` is written only by issue().
      */
     public function testTheWindowIsAnchoredToIssueTimeNotToTheLastStoreActivity(): void
     {
@@ -123,14 +109,7 @@ final class LoginCodeStoreTest extends TestCase
         self::assertNotSame($this->store->issue(1, self::TOKEN), $this->store->issue(1, self::TOKEN));
     }
 
-    /**
-     * The code is not a bearer value, and this is the assertion that says so.
-     *
-     * Without it an attacker who completes a real sign-in in their own browser
-     * can hand the resulting code to a victim inside its 30 seconds and have
-     * the victim's SPA exchange it — signing the victim in AS THE ATTACKER. See
-     * the class docblock; OAuthFlowTest drives the same attack over HTTP.
-     */
+    /** Not a bearer value: another browser presenting the code is refused (OAuthFlowTest drives the attack). */
     public function testACodeIsRefusedToADifferentBrowser(): void
     {
         $code = $this->store->issue(42, self::TOKEN);

@@ -61,12 +61,8 @@ final class GoogleOAuthProviderTest extends TestCase
     }
 
     /**
-     * The endpoint and the accepted issuers are `protected`, so the only honest
-     * way to pin them is to run an exchange and look at what went over the
-     * wire. Both are part of this class's security contract — the token
-     * endpoint is the host whose TLS certificate stands in for the ID token's
-     * signature — so leaving them untested would leave the interesting half of
-     * this class untested.
+     * The endpoint and issuers are protected, so an exchange pins them on the wire: the token endpoint's TLS stands in
+     * for the ID token's signature.
      */
     public function testAnExchangeHitsGooglesTokenEndpointAndAcceptsBothIssuerSpellings(): void
     {

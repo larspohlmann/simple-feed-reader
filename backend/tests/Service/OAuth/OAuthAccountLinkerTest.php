@@ -67,11 +67,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
     public function testAnUnverifiedAddressIsNotEvenTakenAsTheNewAccountsIdentifier(): void
     {
-        // Refusing to LINK is only half the rule. If the unproven address
-        // became the new account's login identifier, an attacker could park
-        // `admin@company.example` in the approval queue, be approved on the
-        // strength of how the address reads, and end up sharing one account
-        // with the real owner once that owner recovered a password to it.
+        // An unlinkable address must not become the login identifier either, or an attacker could squat
+        // `admin@company.example` in the approval queue.
         $resolved = $this->linker()->resolve(new OAuthIdentityModel('google', 'sub-1', 'admin@company.example', false));
 
         self::assertNotSame('admin@company.example', $resolved->getEmail());
@@ -79,8 +76,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // The claim is not thrown away, it is just filed where it cannot be
         // mistaken for something we verified.
         self::assertSame('admin@company.example', $this->onlyIdentity()->getEmail());
-        // Unlinkable means unproven: nothing here earns the verification stamp
-        // (#636).
+        // Unlinkable means unproven: nothing here earns the verification stamp.
         self::assertFalse($resolved->isEmailVerified());
     }
 
@@ -94,7 +90,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
         self::assertNotSame($existing->getId(), $resolved->getId());
         // A private relay address is real and provider-verified, but it names
-        // an (app, user) pair, not the person — never treated as proven (#636).
+        // an (app, user) pair, not the person — never treated as proven.
         self::assertFalse($resolved->isEmailVerified());
     }
 
@@ -116,7 +112,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // issued before this instant.
         self::assertEquals($this->now(), $resolved->getPasswordChangedAt());
         // The provider proved this address, which is exactly what claimed the
-        // row away from the planted, unverified registration (#636).
+        // row away from the planted, unverified registration.
         self::assertTrue($resolved->isEmailVerified());
     }
 
@@ -165,25 +161,13 @@ final class OAuthAccountLinkerTest extends DbTestCase
         self::assertSame(UserStatus::PendingApproval, $resolved->getStatus());
         self::assertNull($resolved->getPasswordHash());
         self::assertSame(1, $this->countIdentities());
-        // A linkable, provider-verified address proves the account (#636).
+        // A linkable, provider-verified address proves the account.
         self::assertTrue($resolved->isEmailVerified());
     }
 
     /**
-     * Apple can decline to send an address on repeat authorisations, so the
-     * linker mints a placeholder — and every property of that placeholder is
-     * load-bearing, which is why the address is pinned exactly rather than
-     * merely checked for an `@`.
-     *
-     * `.invalid` is reserved by RFC 2606 and can never resolve, so the
-     * account's notional address can never be delivered to a stranger. The
-     * provider prefix tells the admin reviewing the queue what they are looking
-     * at. The digest is of the SUBJECT, so the same identity reconstructs the
-     * same address instead of accumulating an account per sign-in — and the
-     * subject itself stays out of a column the admin UI displays.
-     *
-     * Recomputed here from the documented rule rather than copied from a run,
-     * so a change to the derivation has to be made deliberately in both places.
+     * The placeholder is pinned exactly, recomputed from the rule rather than copied from a run: `.invalid` never
+     * resolves, the prefix names the provider, and a digest of the subject keeps it stable and out of the admin UI.
      */
     public function testAnIdentityWithNoAddressGetsADeterministicNonRoutablePlaceholder(): void
     {
@@ -256,12 +240,8 @@ final class OAuthAccountLinkerTest extends DbTestCase
     }
 
     /**
-     * The takeover this ordering exists to stop. An attacker signs in once to
-     * establish an identity, then changes the address on their provider account
-     * to a victim's — verified, because they had to prove it to the provider to
-     * change it... or because the provider is lax. Either way the linking rule
-     * must never run for an identity we have already seen: rule 1 wins, and the
-     * victim's account is not reachable from a provider profile edit.
+     * A known identity whose provider address changes to a victim's must stay on its own account: rule 1 wins, so a
+     * provider profile edit cannot reach another account.
      */
     public function testAChangedProviderAddressDoesNotMigrateAKnownIdentityOntoAnotherAccount(): void
     {

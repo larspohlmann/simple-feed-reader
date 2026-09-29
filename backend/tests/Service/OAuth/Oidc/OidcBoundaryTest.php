@@ -11,32 +11,12 @@ use App\Service\OAuth\Oidc\Pass\TokenEndpoint;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Structural guards, not behavioural ones.
- *
- * {@see IdTokenVerifier} does not check the ID token's signature. It is only
- * entitled to skip that because of where the token came from — straight off the
- * token endpoint, over validated TLS, with no redirect — so "where the token
- * came from" is a security control and needs to be enforced, not just described.
- *
- * Apple's `form_post` callback is the concrete danger: it carries an `id_token`
- * in the request body, which did NOT arrive by direct communication with the
- * token endpoint and would need full JWKS verification that nothing here does.
- * The defence is that there is no way to hand such a token to the verifier —
- * it accepts an {@see IdTokenModel}, and only {@see TokenEndpoint} makes one.
- *
- * Every assertion below fails the build the moment that stops being true. They
- * replace the reflection guard that used to assert readIdentity() was private on
- * the provider, which was the same property expressed against the old shape.
+ * Structural guards for the ID-token trust boundary: the verifier skips the signature, so only a token TokenEndpoint
+ * fetched may reach it. docs/oauth-sign-in.md#the-id-token-trust-boundary
  */
 final class OidcBoundaryTest extends TestCase
 {
-    /**
-     * The type wall itself.
-     *
-     * A `string` parameter here would let any caller holding a raw JWT — from a
-     * callback body, a cookie, a database row — into a verifier that skips
-     * signature checking.
-     */
+    /** A `string` parameter would admit a raw JWT from any channel into a verifier that skips signatures. */
     public function testTheVerifierAcceptsOnlyAFetchedIdTokenNeverARawString(): void
     {
         $parameters = (new \ReflectionMethod(IdTokenVerifier::class, 'verify'))->getParameters();
@@ -50,13 +30,7 @@ final class OidcBoundaryTest extends TestCase
         );
     }
 
-    /**
-     * The other half of the wall. The type only means "fetched over pinned TLS"
-     * for as long as the fetching class is the one place that mints it.
-     *
-     * Production code only — the unit tests construct IdTokens deliberately, to
-     * exercise the verifier without a network.
-     */
+    /** Production code only: the tests construct IdTokenModels on purpose, to exercise the verifier offline. */
     public function testOnlyTheTokenEndpointConstructsAnIdToken(): void
     {
         $sites = [];
@@ -78,15 +52,7 @@ final class OidcBoundaryTest extends TestCase
         );
     }
 
-    /**
-     * Whether the source contains a real `new IdTokenModel(...)` expression.
-     *
-     * Tokenised rather than matched with a regex so that neither a docblock
-     * discussing the rule nor a string containing it can trip the guard — and,
-     * more importantly, so that nobody can slip a construction past it by
-     * writing it unusually. Only T_NEW followed by a name resolving to IdTokenModel
-     * counts, whether written short or fully qualified.
-     */
+    /** Tokenised, not matched: a comment cannot trip it, and no spelling of `new IdTokenModel` slips past. */
     private function constructsIdToken(string $source): bool
     {
         $tokens = token_get_all($source);

@@ -113,12 +113,7 @@ final class InsecureProductionConfigGuardListenerTest extends TestCase
         );
     }
 
-    /**
-     * The value this guards against must be the one actually committed to
-     * .env. If someone edits .env without editing the guard, the guard silently
-     * stops matching and prod fails open again — the exact bug, reintroduced
-     * invisibly. This is the only assertion here that reads the real file.
-     */
+    /** The only test that reads the real .env: an edited placeholder would silently make prod fail open again. */
     public function testTheGuardedLiteralsStillMatchDotEnv(): void
     {
         $dotEnv = file_get_contents(\dirname(__DIR__, 2) . '/.env');

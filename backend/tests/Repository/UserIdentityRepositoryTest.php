@@ -23,12 +23,7 @@ final class UserIdentityRepositoryTest extends DbTestCase
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
 
-    /**
-     * Built inline rather than through Support\UserFactory: that factory always
-     * hashes a password, and an OAuth-only account is precisely one that has
-     * none. Paying for a bcrypt hash per fixture would also be a needless cost
-     * in a test that never authenticates.
-     */
+    /** Built inline: UserFactory always hashes a password, and an OAuth-only account has none. */
     private function identity(string $email, string $provider, string $providerUserId): UserIdentity
     {
         $user = new User($email, $this->now);
@@ -62,12 +57,7 @@ final class UserIdentityRepositoryTest extends DbTestCase
         self::assertNull($this->identities->findOneByProviderAndSubject('apple', 'sub-123'));
     }
 
-    /**
-     * The converse of the test above, and the one that actually proves the
-     * provider column is part of the predicate: with two rows sharing a
-     * subject, a query that ignored the provider could still return "a" row and
-     * pass the null-check above by accident. This one pins which row.
-     */
+    /** Two rows share a subject, so this pins that the provider column is part of the predicate. */
     public function testACollidingSubjectResolvesToTheRightProvidersUser(): void
     {
         $google = $this->identity('bob@example.com', 'google', 'sub-123');
@@ -84,19 +74,8 @@ final class UserIdentityRepositoryTest extends DbTestCase
     }
 
     /**
-     * This assertion is only meaningful on MySQL, and it is the whole reason
-     * `provider_user_id` carries an explicit `utf8mb4_bin` collation. SQLite
-     * has always compared it case-sensitively; MySQL inherited the table
-     * default (`utf8mb4_0900_ai_ci`) and did not, so before
-     * Version20260721181500 this test passed on the SQLite leg and failed on
-     * the MySQL one. Both legs now agree, on MySQL's behaviour being corrected
-     * to match SQLite's rather than the other way round.
-     *
-     * A subject identifier is an opaque token, not a name. The two providers
-     * shipping today issue digits, so this never fires for them — but a
-     * provider issuing base64url subjects would have `sub-abc` and `Sub-ABC` as
-     * two different people, and matching them would sign the second one in as
-     * the first.
+     * Meaningful on MySQL only, whose default collation is case-insensitive: `provider_user_id` is pinned to
+     * `utf8mb4_bin` (Version20260721181500) because `sub-abc` and `Sub-ABC` are two people.
      */
     public function testSubjectLookupIsCaseSensitive(): void
     {

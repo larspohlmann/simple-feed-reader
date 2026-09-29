@@ -12,26 +12,8 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 
 /**
- * Moves the on-demand drainer's spawn (#371) off the response path and onto
- * the exit hook (#393): a fork after the response is already on the wire costs
- * the request nothing, where forking inline used to add a full Symfony boot to
- * every request that started or resumed a run.
- *
- * A listener fires once per request — exactly the scope the old inline call
- * sites needed a `$launched` flag to fake. With the spawn moved here, "at most
- * once per process" is structural, and RecommendationDrainSpawner itself
- * remembers nothing (#393).
- *
- * HTTP only, on purpose. Every way a run needs driving arrives over HTTP — a
- * reader starts or resumes one, or the cron sweep does through
- * /maintenance/tick — and the two console commands that touch runs need no
- * fork of their own: the drain command IS the drainer (and surrenders its
- * liveness key before terminating, so it would fork its own successor every
- * exit), and the worker's `messenger:consume` is the driver for as long as it
- * lives. Listening on console.terminate too made every unrelated command a
- * spawn trigger: with the worker stopped — which docs/local-docker.md says to
- * do before the e2e suites — `app:e2e:purge-users` forked a drainer that then
- * drove runs against the dev database for the whole run.
+ * Spawns the recommendation drainer after the response is sent, at most once per request. HTTP only: on
+ * console.terminate every command, the drain command included, would fork a drainer.
  */
 #[AsEventListener(event: TerminateEvent::class, method: 'onKernelTerminate')]
 final readonly class RecommendationDrainOnTerminateListener

@@ -8,23 +8,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 /**
- * The CORS policy asserted on the wire, because it is a browser contract and
- * every part of it fails silently when read off the source instead.
- *
- * What makes this worth a file of its own: the OAuth exchange is a CREDENTIALED
- * cross-origin request — it needs the `__Host-oauth_flow` cookie to prove the
- * browser redeeming a login code is the one that earned it — and a browser
- * attaches cookies to such a request only when the response says
- * `Access-Control-Allow-Credentials: true` AND names a specific origin. It
- * rejects `*` outright in that combination. So a policy that looked permissive
- * enough while returning `*` would break every OAuth sign-in with a 400 that is
- * indistinguishable from a bad code.
- *
- * The frontend origin below is `http://localhost:4200`, which is what
- * APP_FRONTEND_URL resolves to in the test environment. Different PORT from the
- * backend, which makes it a different ORIGIN (so CORS applies) but the same
- * SITE (so cookies are unaffected by SameSite). Both axes matter and they are
- * not the same axis.
+ * The CORS policy on the wire. The test frontend (`http://localhost:4200`) is another origin than the backend but the
+ * same site, so CORS applies and SameSite does not.
  */
 final class CorsListenerTest extends WebTestCase
 {
@@ -41,14 +26,7 @@ final class CorsListenerTest extends WebTestCase
         $this->client = self::createClient();
     }
 
-    /**
-     * The preflight the browser sends before the exchange can happen at all.
-     *
-     * It must be answered without routing or the firewall intervening: a
-     * preflight carries no cookie and no `Authorization` header by
-     * specification, so a 401 or a 405 here would stop the real request from
-     * ever being sent.
-     */
+    /** A preflight carries no credentials, so routing or the firewall answering it would block the exchange. */
     public function testThePreflightForTheExchangeIsAnsweredWithCredentialedHeaders(): void
     {
         $this->preflight(self::EXCHANGE, 'POST');
@@ -60,14 +38,7 @@ final class CorsListenerTest extends WebTestCase
         self::assertStringContainsString('Content-Type', $this->header('Access-Control-Allow-Headers'));
     }
 
-    /**
-     * The single most important assertion in this file.
-     *
-     * `*` is not merely loose here — it is inoperative. A browser refuses a
-     * credentialed request answered with a wildcard origin, so this would break
-     * OAuth outright rather than only weakening it. It would also be wrong
-     * regardless of that.
-     */
+    /** A credentialed request answered with `*` is refused by the browser: it would break OAuth outright. */
     public function testTheAllowedOriginIsNeverAWildcard(): void
     {
         $this->preflight(self::EXCHANGE, 'POST');
@@ -78,15 +49,8 @@ final class CorsListenerTest extends WebTestCase
     }
 
     /**
-     * The headers must be on the ACTUAL response too, not only the preflight.
-     * A browser re-checks them on the real response and discards the body if
-     * they are missing — with the preflight cached, that failure would appear
-     * long after the change that caused it.
-     *
-     * A 400 is the expected status: the code is nonsense and there is no flow
-     * cookie. The point is the headers, which must be present on an error
-     * response exactly as on a success — otherwise the SPA cannot read WHY it
-     * failed, and every failure becomes an opaque network error.
+     * The real response needs the headers too, errors included (this 400 is a nonsense code): without them the SPA
+     * cannot read why a call failed.
      */
     public function testTheActualResponseCarriesTheHeadersEvenWhenItIsAnError(): void
     {
@@ -97,12 +61,7 @@ final class CorsListenerTest extends WebTestCase
         self::assertResponseHeaderSame('Access-Control-Allow-Credentials', 'true');
     }
 
-    /**
-     * Any other origin gets nothing — not a reflected origin, not a wildcard,
-     * not a partial match. `http://localhost:4201` is the interesting case: it
-     * differs from the allowed origin only in the port, which a comparison
-     * written against the host would wave through.
-     */
+    /** Any other origin gets nothing; `:4201` differs only in the port, which a host-only comparison would pass. */
     public function testAnOriginThatIsNotTheConfiguredOneGetsNoHeaders(): void
     {
         foreach (['https://evil.test', 'http://localhost:4201', 'http://localhost:4200.evil.test'] as $origin) {
@@ -116,12 +75,7 @@ final class CorsListenerTest extends WebTestCase
         }
     }
 
-    /**
-     * A preflight from a disallowed origin is NOT short-circuited into a 204.
-     * It falls through to the router, so this listener can never turn an
-     * unknown URL into a success — and the browser blocks the real request
-     * anyway, on the absent headers.
-     */
+    /** A disallowed preflight falls through to the router, never a 204. */
     public function testAPreflightFromADisallowedOriginIsNotAnsweredWithSuccess(): void
     {
         $this->preflight(self::EXCHANGE, 'POST', 'https://evil.test');
@@ -130,12 +84,7 @@ final class CorsListenerTest extends WebTestCase
         self::assertNull($this->client->getResponse()->headers->get('Access-Control-Allow-Origin'));
     }
 
-    /**
-     * `Vary: Origin` whether or not anything else is added, because the answer
-     * depends on the origin. A shared cache that missed this could serve an
-     * allowed origin a copy stored for a disallowed one, breaking every
-     * credentialed call for as long as the entry lived.
-     */
+    /** `Vary: Origin` always, or a shared cache could serve one origin's answer to another. */
     public function testTheResponseVariesByOriginEvenForARequestWithNoOrigin(): void
     {
         $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/providers');
@@ -144,14 +93,7 @@ final class CorsListenerTest extends WebTestCase
         self::assertStringContainsString('Origin', $this->header('Vary'));
     }
 
-    /**
-     * The same-origin deployment, which is the likely production shape and the
-     * one a cross-origin-only config would break.
-     *
-     * A browser applies no CORS at all here, so what is being asserted is that
-     * the listener stays out of the way: an ordinary request with no `Origin`
-     * header is answered normally, headers or no headers.
-     */
+    /** Same-origin requests send no `Origin`, and the listener must stay out of their way. */
     public function testARequestWithNoOriginIsUnaffected(): void
     {
         $this->client->request('GET', self::ORIGIN . '/api/auth/oauth/providers');
