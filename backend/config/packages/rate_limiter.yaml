@@ -1,30 +1,8 @@
 framework:
     rate_limiter:
-        # Both endpoints are anonymous and both send email, so the only key
-        # available is the client IP and the only budget worth capping is
-        # "messages we hand to the SMTP relay". ALTCHA already sizes the *cost*
-        # of abuse — measured at ~40-60 ms per accepted solution for an
-        # optimised native attacker — but a proof-of-work never caps a total.
-        # At 60 ms a solve, an unlimited endpoint is roughly 60k mails a day
-        # from one host, which is how a shared-hosting SMTP reputation dies.
-        #
-        # Policy: sliding_window, not fixed_window. A fixed window lets an
-        # attacker send `limit` requests just before the boundary and `limit`
-        # again just after, so the real short-term ceiling is 2x the configured
-        # one. For a burst of outbound mail that doubling is precisely the
-        # behaviour being defended against, and the sliding window's extra cost
-        # is one additional cache key.
-        #
-        # 5 per 15 minutes matches the firewall's login_throttling, so the
-        # operational story is uniform ("five tries a quarter hour, per IP")
-        # and there is one number to tune rather than three. It is generous for
-        # a human — nobody registers twice, let alone five times — while
-        # leaving a NATed office or household enough room not to notice.
-        #
-        # Storage is cache.rate_limiter, a FilesystemAdapter. Strato shared
-        # hosting has no Redis, and an in-memory pool would reset every request
-        # under PHP-FPM, silently disabling the limit. Following the pool
-        # login_throttling already uses keeps that decision in one place.
+        # All limiters: sliding window (a fixed one lets a boundary burst spend twice the limit) on the filesystem
+        # pool login_throttling uses. registration is anonymous and sends mail: ALTCHA prices each abuse at ~60 ms but
+        # caps no total, and unlimited that is ~60k mails a day from one host. Five a quarter hour, per IP.
         registration:
             policy: 'sliding_window'
             limit: 5
@@ -40,46 +18,23 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Starting an OAuth login sends no mail and writes no row — it costs us
-        # one cache entry and a 302 — so the budget guards against a redirect
-        # loop or a scripted probe rather than against outbound abuse.
-        #
-        # Deliberately looser than registration's 5: abandoning a provider's
-        # consent screen and coming back is ordinary human behaviour, not a
-        # signal of attack, and a NATed household sharing one IP would hit a
-        # tighter cap on a perfectly honest afternoon. Sliding window for the
-        # same reason as its neighbours — a fixed window's boundary lets an
-        # attacker spend 2x the configured limit in a short burst.
-        #
-        # Same cache_pool as the others, stated explicitly rather than relying
-        # on the framework default, so all three limiters name the one pool the
-        # test suite clears between cases.
+        # Sends no mail and writes no row, so looser than registration: abandoning a consent screen and coming back
+        # is ordinary, and a NATed household shares one IP.
         oauth_start:
             policy: 'sliding_window'
             limit: 20
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per-user cap on the progress-loop refresh endpoint. A full loop makes
-        # several POSTs (the client re-polls while `remaining` > 0), so this is
-        # keyed on the user id, not the IP, and sized generously: 90 in 5 minutes
-        # covers a long loop without ever gating an honest client. The real
-        # throttle is elsewhere — the shared refresh lock serialises runs and the
-        # 5-minute per-feed cooldown bounds actual outbound fetches — so this
-        # limiter only guards against a scripted user hammering the endpoint.
-        # Sliding window and the same pool as its neighbours, for the reasons
-        # documented above.
+        # Per user: one progress loop makes many POSTs. The refresh lock and the per-feed cooldown are the real
+        # throttles; this only stops a script hammering the endpoint.
         refresh:
             policy: 'sliding_window'
             limit: 90
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per-user cap on reader-mode extraction. Each open triggers at most one
-        # outbound page fetch, and the frontend caches successes, so honest usage
-        # is low; this only guards against a scripted user driving outbound
-        # fetches. Keyed on the user id. Sliding window and the same pool as its
-        # neighbours, for the reasons documented above.
+        # Per user: each open fetches at most one page, and the frontend caches successes.
         reader:
             policy: 'sliding_window'
             limit: 60
@@ -103,85 +58,41 @@ framework:
             interval: '5 minutes'
             cache_pool: cache.rate_limiter
 
-        # The web first-admin bootstrap. Anonymous, so keyed on client IP like
-        # registration. Brute-forcing a 32-byte secret is infeasible anyway;
-        # this bounds scripted probing and matches the login/registration story
-        # of "five tries a quarter hour, per IP". Same sliding window and pool
-        # as its neighbours, for the reasons documented above.
+        # The anonymous first-admin bootstrap, per IP: guessing a 32-byte secret is infeasible, so this only bounds
+        # scripted probing.
         setup:
             policy: 'sliding_window'
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Conditional mediation calls POST /api/auth/passkey/login/options on
-        # every login-page view, from every anonymous visitor — there is no
-        # user to authenticate yet, so the key can only be the client IP.
-        # Each call writes a cache entry (PasskeyChallengeStore::issue()), and
-        # without its own budget that is an unbounded cache-write surface a
-        # stranger controls: nothing about the flow, honest or not, caps how
-        # many times a browser reloads the login page. Compare
-        # OAuthStateStore's docblock, which records the identical concern for
-        # its own anonymous, cache-writing endpoint.
-        #
-        # Deliberately its OWN budget, separate from the login throttling
-        # firewall listener enforces on /api/auth/login: sharing one would
-        # mean loading the login page spent tokens from the same allowance a
-        # real sign-in attempt needs, so a handful of page views could lock an
-        # honest user out of their own login attempts before they ever typed
-        # a password. 30 in 15 minutes is generous for a human — a login page
-        # left open re-arms conditional mediation at most a few times in that
-        # window — while still bounding a scripted caller. Sliding window and
-        # the same pool as its neighbours, for the reasons documented above.
+        # Every login-page view calls the anonymous passkey login options endpoint, which writes a cache entry, so it
+        # is capped per IP. Its own budget: sharing login_throttling's would let page views spend a real sign-in's
+        # tokens. 30 a quarter hour covers a login page re-arming conditional mediation.
         passkey_challenge:
             policy: 'sliding_window'
             limit: 30
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Both AI writes call the account's own provider before they store
-        # anything, so an uncapped pair is an outbound request generator keyed
-        # to whatever address the account last entered. The budget is per user
-        # id, not per IP: the endpoints are authenticated, so the trustworthy
-        # key is available.
-        #
-        # 30 in 15 minutes is generous for the flow it serves -- save, look at
-        # the list, pick, maybe correct a typo -- and low enough that a script
-        # cannot make the server a useful probe.
+        # Both AI writes call the account's own provider first, so uncapped they generate outbound requests to any
+        # address. Per user: the endpoints are authenticated.
         ai_provider:
             policy: 'sliding_window'
             limit: 30
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Starting a recommendation run is the act that spends money: the run's
-        # snapshot fixes how many provider calls it can ever make, so capping
-        # how often an account may start one caps outbound spend outright.
-        # Per-user, sliding window, same pool — see ai_provider above for the
-        # reasoning shared by every limiter in this file.
-        #
-        # 10 in 15 minutes is far beyond honest use (a run takes minutes and
-        # supersedes the last one) and low enough that a script cannot turn the
-        # account's provider key into a request generator.
+        # Starting a run is what spends money: its snapshot fixes how many provider calls it can make. Ten a quarter
+        # hour is far beyond honest use (a run takes minutes and supersedes the last).
         ai_recommendation_starts:
             policy: 'sliding_window'
             limit: 10
             interval: '15 minutes'
             cache_pool: 'cache.rate_limiter'
 
-        # Per-user cap on the recommendation progress loop, sized like refresh
-        # above and for the same reason: the client re-polls for as long as the
-        # run has batches left, so this counts polls, not provider calls.
-        #
-        # Sizing it to the provider calls a run makes was the original mistake
-        # (#308): a tick only calls the provider when it has a batch to advance,
-        # while the loop also spends ticks on snapshot, merge, busy backoff and
-        # re-polls, so the two counts diverge badly — a 26-batch run exhausted a
-        # 45-call budget and stranded itself mid-run with a 429. The real
-        # throttle is elsewhere: ai_recommendation_starts bounds how many runs
-        # exist, each run's frozen batch plan bounds its own provider calls, and
-        # the per-user lock serialises ticks. This limiter only stops a scripted
-        # client hammering the endpoint.
+        # Counts polls, not provider calls: the loop also spends ticks on snapshot, merge and backoff, and a budget
+        # sized to provider calls stranded a 26-batch run mid-run with a 429 (#308). Sized like refresh.
         ai_recommendations:
             policy: 'sliding_window'
             limit: 90
@@ -197,24 +108,15 @@ framework:
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Per-user cap on re-sending the address-verification mail (#636). The
-        # endpoint is authenticated but the address is not yet proved, so an
-        # unverified account could otherwise spam its own inbox on every call.
-        # Keyed on the user id; sliding window, same pool, same shape as
-        # digest_test above.
+        # Per user: the address is not yet proved, so an unverified account could otherwise spam its own inbox.
         resend_verification:
             policy: 'sliding_window'
             limit: 5
             interval: '15 minutes'
             cache_pool: cache.rate_limiter
 
-        # Anonymous frontend error ingest (#984), so the only key is the client
-        # IP — same trusted-proxy caveat as setup/registration above. Sized for a
-        # genuinely broken client that fires a burst while it flails, but capped
-        # so one wedged tab cannot flood the endpoint: 30 in 1 minute per IP. The
-        # reporter also dedupes and throttles client-side, so this is the outer
-        # backstop, not the primary throttle. Sliding window and the same pool as
-        # its neighbours, for the reasons documented above.
+        # Anonymous, so per IP: sized for a broken client's burst, not a wedged tab's flood. The reporter dedupes and
+        # throttles too; this is the backstop.
         client_errors:
             policy: 'sliding_window'
             limit: 30

@@ -1,9 +1,7 @@
 framework:
     default_locale: en
-    # The app is a bearer API with no request locale of its own; only the
-    # transactional emails vary by language (per recipient, User::$locale).
-    # Sourced from App\Enum\SupportedLocale so this list, UpdateLocaleRequest's
-    # validation and SignupUserFactory's fallback can't drift apart again.
+    # A bearer API has no request locale; only the account emails vary by language (User::$locale). The list comes
+    # from SupportedLocale, so validation and this config cannot drift apart.
     enabled_locales: !php/const App\Enum\SupportedLocale::ALL
     translator:
         default_path: '%kernel.project_dir%/translations'

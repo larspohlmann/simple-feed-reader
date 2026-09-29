@@ -6,11 +6,8 @@ monolog:
 when@dev:
     monolog:
         handlers:
-            # rotating_file, not stream: a plain stream grew dev.log without a
-            # bound (1.4 GiB, #596). Daily rotation with a 3-file cap keeps three
-            # days and prunes the rest. The level stays debug on purpose — the
-            # dev.log scan rule needs the full output; only the *retention* is
-            # bounded here. The active file is dev-YYYY-MM-DD.log, not dev.log.
+            # rotating_file, not stream: a stream grew dev.log to 1.4 GiB (#596). Three daily files; the level stays
+            # debug because the dev-log scan needs it. The active file is dev-YYYY-MM-DD.log.
             main:
                 type: rotating_file
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
@@ -45,11 +42,8 @@ when@test:
                 path: "%kernel.logs_dir%/%kernel.environment%.log"
                 max_files: 3
                 level: debug
-            # Scoped to client_errors only (unlike dev/prod's "!event"): this
-            # makes the channel-logger-to-LokiPushHandler wiring provable in a
-            # test, without every backend channel's routine noise (e.g.
-            # doctrine's connect log) landing in the shared buffer and
-            # breaking unrelated assertions like LokiFlushListenerTest's.
+            # client_errors only, unlike dev and prod: the test proves the channel reaches LokiPushHandler without
+            # every channel's noise (doctrine's connect log) landing in the shared buffer.
             loki:
                 type: service
                 id: App\Service\Logging\Loki\LokiPushHandler
