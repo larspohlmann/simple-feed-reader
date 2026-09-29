@@ -110,8 +110,10 @@ final readonly class ServiceRoleMap
     {
         return array_values(array_filter(
             $this->classes,
-            static fn (ServiceRoleClass $class): bool => $class->namespace() === $namespace
-                || str_starts_with($class->namespace(), $namespace . '\\'),
+            static fn (ServiceRoleClass $class): bool => ClassNameReferences::isInAnyOf(
+                $class->namespace(),
+                [$namespace . '\\'],
+            ),
         ));
     }
 
@@ -132,7 +134,7 @@ final readonly class ServiceRoleMap
         if ($reflection->isEnum() || self::isValue($reflection)) {
             return false;
         }
-        if (!str_starts_with($type, 'App\\')) {
+        if (!ClassNameReferences::isInAnyOf($type, ['App\\'])) {
             return true;
         }
         if ($reflection->isInterface()) {
@@ -201,10 +203,8 @@ final readonly class ServiceRoleMap
 
     private static function isValue(ClassReflection $reflection): bool
     {
-        foreach (self::VALUE_NAMESPACES as $namespace) {
-            if (str_starts_with($reflection->getName(), $namespace)) {
-                return true;
-            }
+        if (ClassNameReferences::isInAnyOf($reflection->getName(), self::VALUE_NAMESPACES)) {
+            return true;
         }
         foreach (self::VALUE_CLASSES as $value) {
             if ($reflection->getName() === $value || $reflection->isSubclassOf($value)) {

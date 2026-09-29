@@ -26,22 +26,23 @@ final class ServiceRoleNames
 
     public static function isServiceOrHttp(string $name): bool
     {
-        return self::isService($name) || str_starts_with($name, 'App\\Http\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\Service\\', 'App\\Http\\']);
     }
 
     public static function isService(string $name): bool
     {
-        return str_starts_with($name, 'App\\Service\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\Service\\']);
     }
 
     public static function isListener(string $name): bool
     {
-        return str_starts_with($name, 'App\\EventListener\\');
+        return ClassNameReferences::isInAnyOf($name, ['App\\EventListener\\']);
     }
 
     public static function isProductionNamespace(string $namespace): bool
     {
-        return str_starts_with($namespace . '\\', 'App\\') && !str_starts_with($namespace . '\\', 'App\\Tests\\');
+        return ClassNameReferences::isInAnyOf($namespace, ['App\\'])
+            && !ClassNameReferences::isInAnyOf($namespace, ['App\\Tests\\']);
     }
 
     public static function namespaceOf(string $name): string

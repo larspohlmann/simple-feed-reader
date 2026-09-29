@@ -252,7 +252,7 @@ final readonly class ServiceRoleClass
     private static function isConfiguredByAttribute(\ReflectionParameter $parameter): bool
     {
         foreach ($parameter->getAttributes() as $attribute) {
-            if (str_starts_with($attribute->getName(), self::DEPENDENCY_INJECTION_ATTRIBUTES)) {
+            if (ClassNameReferences::isInAnyOf($attribute->getName(), [self::DEPENDENCY_INJECTION_ATTRIBUTES])) {
                 return true;
             }
         }
