@@ -415,6 +415,40 @@ final class EntryPartRestorerTest extends DbTestCase
         self::assertSame($createdIds, $indexedIds);
     }
 
+    public function testEveryCreatedEntryReachesTheSearchIndexPastTheFirstBatch(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $tokens = array_map(strval(...), range(1, 501));
+        $gzip = $this->entryPart(array_map(fn (string $token): array => $this->entryLine($token), $tokens));
+
+        $this->restorer()->load($user, $gzip);
+
+        self::assertSame(501, array_sum(array_map(count(...), $this->indexWriter->upserts)));
+    }
+
+    public function testLeavesNoIndexedEntryInTheIdentityMap(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $gzip = $this->entryPart([$this->entryLine('a'), $this->entryLine('b')]);
+
+        $this->restorer()->load($user, $gzip);
+
+        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[Entry::class] ?? []);
+    }
+
+    public function testLeavesNoWrittenStateInTheIdentityMap(): void
+    {
+        $user = $this->subscribedUser(self::FEED_URL);
+        $this->makeEntry($this->feedByUrl(self::FEED_URL), 'a', 'Title');
+        $this->entityManager->flush();
+        $gzip = $this->entryPart([$this->entryStateLine('a', isFavorite: true)]);
+
+        $result = $this->restorer()->load($this->reload($user), $gzip);
+
+        self::assertSame(1, $result->entryStates);
+        self::assertSame([], $this->entityManager->getUnitOfWork()->getIdentityMap()[EntryState::class] ?? []);
+    }
+
     private function restorer(int $accountEntryCeiling = BackupFitCheck::MAX_ENTRIES): EntryPartRestorer
     {
         /** @var BackupReader $reader */
