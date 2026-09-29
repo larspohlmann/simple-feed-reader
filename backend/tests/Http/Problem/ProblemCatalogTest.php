@@ -37,7 +37,7 @@ final class ProblemCatalogTest extends TestCase
     {
         $exception = new \LogicException('DB password is hunter2');
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('error')->with(
+        $logger->expects($this->once())->method('error')->with(
             'Unhandled API exception',
             ['exception' => $exception, 'path' => '/api/entries'],
         );

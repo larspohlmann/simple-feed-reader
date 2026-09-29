@@ -7,10 +7,15 @@ namespace App\Tests\Service\Reader\PageRepair;
 use App\Service\Html\DesktopViewport;
 use App\Service\Html\PictureSources;
 use App\Service\Reader\PageRepair\LazyImageSources;
+use App\Tests\Support\ParsesHtml;
+use Dom\Element;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class LazyImageSourcesTest extends TestCase
 {
+    use ParsesHtml;
+
     private LazyImageSources $lazyImages;
 
     protected function setUp(): void
@@ -221,7 +226,7 @@ final class LazyImageSourcesTest extends TestCase
             . '</picture>'
         )->getElementsByTagName('img')->item(0);
 
-        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertInstanceOf(Element::class, $image);
         self::assertSame('https://images.example.com/photo-1300.jpg', $image->getAttribute('src'));
         self::assertNull($image->getAttribute('width'));
         self::assertNull($image->getAttribute('height'));
@@ -236,7 +241,7 @@ final class LazyImageSourcesTest extends TestCase
             . '</picture>'
         )->getElementsByTagName('img')->item(0);
 
-        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertInstanceOf(Element::class, $image);
         self::assertSame('1300', $image->getAttribute('width'));
         self::assertSame('742', $image->getAttribute('height'));
     }
@@ -481,7 +486,7 @@ final class LazyImageSourcesTest extends TestCase
             . ' srcset="https://images.example.com/photo.jpg?width=1008 1008w">'
         )->getElementsByTagName('img')->item(0);
 
-        self::assertInstanceOf(\Dom\Element::class, $image);
+        self::assertInstanceOf(Element::class, $image);
         self::assertSame('https://images.example.com/photo.jpg?width=1008', $image->getAttribute('src'));
         self::assertNull($image->getAttribute('width'));
         self::assertNull($image->getAttribute('height'));
@@ -491,7 +496,7 @@ final class LazyImageSourcesTest extends TestCase
     {
         $image = $this->resolvedDocument($bodyHtml)->getElementsByTagName('img')->item(0);
 
-        return $image instanceof \Dom\Element ? $image->getAttribute('src') : null;
+        return $image instanceof Element ? $image->getAttribute('src') : null;
     }
 
     private function resolvedHtml(string $bodyHtml): string
@@ -499,11 +504,10 @@ final class LazyImageSourcesTest extends TestCase
         return $this->resolvedDocument($bodyHtml)->saveHtml();
     }
 
-    private function resolvedDocument(string $bodyHtml): \Dom\HTMLDocument
+    private function resolvedDocument(string $bodyHtml): HTMLDocument
     {
-        $document = \Dom\HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
 
         $this->lazyImages->repairIn($document);

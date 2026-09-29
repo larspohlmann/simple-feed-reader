@@ -5,17 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\ScrapeLayer\JsonLdLayer;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdLayerTest extends TestCase
 {
+    use ParsesHtml;
+
     use ScrapedFixtures;
 
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture): array
     {
-        $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
+        $doc = $this->document($this->scrapedFixture($fixture));
 
         return new JsonLdLayer()->extract($doc, 'https://news.test/section/');
     }
@@ -32,10 +34,9 @@ final class JsonLdLayerTest extends TestCase
 
     public function testIgnoresPagesWithoutArticleStructures(): void
     {
-        $doc = HTMLDocument::createFromString(
+        $doc = $this->document(
             '<html lang="en"><body><script type="application/ld+json">{"@type":"Organization","name":"X"}</script>'
-            . '</body></html>',
-            \LIBXML_NOERROR
+            . '</body></html>'
         );
         self::assertSame([], new JsonLdLayer()->extract($doc, 'https://news.test/'));
     }
@@ -71,9 +72,8 @@ final class JsonLdLayerTest extends TestCase
                 ],
             ],
         ], \JSON_THROW_ON_ERROR);
-        $doc = HTMLDocument::createFromString(
-            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>',
-            \LIBXML_NOERROR
+        $doc = $this->document(
+            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
         );
 
         $items = new JsonLdLayer()->extract($doc, 'https://news.test/');
@@ -105,9 +105,8 @@ final class JsonLdLayerTest extends TestCase
             '@context' => 'https://schema.org',
             '@graph' => $nodes,
         ], \JSON_THROW_ON_ERROR);
-        $doc = HTMLDocument::createFromString(
-            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>',
-            \LIBXML_NOERROR
+        $doc = $this->document(
+            '<html lang="en"><body><script type="application/ld+json">' . $json . '</script></body></html>'
         );
 
         $items = new JsonLdLayer()->extract($doc, 'https://x.test/');

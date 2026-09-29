@@ -31,9 +31,9 @@ final class PasskeyRemovalPolicyTest extends TestCase
     public function testAnotherPasskeyRemainsSoRemovalIsAllowed(): void
     {
         $passkeys = $this->createMock(PasskeyCountInterface::class);
-        $passkeys->expects(self::once())->method('countForUser')->willReturn(2);
+        $passkeys->expects($this->once())->method('countForUser')->willReturn(2);
         $identities = $this->createMock(SignInIdentitiesInterface::class);
-        $identities->expects(self::never())->method('existsForUser');
+        $identities->expects($this->never())->method('existsForUser');
 
         (new PasskeyRemovalPolicy($passkeys, $identities))->guardRemoval($this->user(null), $this->passkey());
 
@@ -43,9 +43,9 @@ final class PasskeyRemovalPolicyTest extends TestCase
     public function testTheLastPasskeyIsAllowedWhenAPasswordExists(): void
     {
         $passkeys = $this->createMock(PasskeyCountInterface::class);
-        $passkeys->expects(self::once())->method('countForUser')->willReturn(1);
+        $passkeys->expects($this->once())->method('countForUser')->willReturn(1);
         $identities = $this->createMock(SignInIdentitiesInterface::class);
-        $identities->expects(self::never())->method('existsForUser');
+        $identities->expects($this->never())->method('existsForUser');
 
         (new PasskeyRemovalPolicy($passkeys, $identities))
             ->guardRemoval($this->user('hashed-password'), $this->passkey());
@@ -56,9 +56,9 @@ final class PasskeyRemovalPolicyTest extends TestCase
     public function testTheLastPasskeyIsAllowedWhenAnOAuthIdentityExists(): void
     {
         $passkeys = $this->createMock(PasskeyCountInterface::class);
-        $passkeys->expects(self::once())->method('countForUser')->willReturn(1);
+        $passkeys->expects($this->once())->method('countForUser')->willReturn(1);
         $identities = $this->createMock(SignInIdentitiesInterface::class);
-        $identities->expects(self::once())->method('existsForUser')->willReturn(true);
+        $identities->expects($this->once())->method('existsForUser')->willReturn(true);
 
         (new PasskeyRemovalPolicy($passkeys, $identities))->guardRemoval($this->user(null), $this->passkey());
 
@@ -74,9 +74,9 @@ final class PasskeyRemovalPolicyTest extends TestCase
     public function testTheLastPasskeyOnAPasswordLessIdentityLessAccountIsRefused(): void
     {
         $passkeys = $this->createMock(PasskeyCountInterface::class);
-        $passkeys->expects(self::once())->method('countForUser')->willReturn(1);
+        $passkeys->expects($this->once())->method('countForUser')->willReturn(1);
         $identities = $this->createMock(SignInIdentitiesInterface::class);
-        $identities->expects(self::once())->method('existsForUser')->willReturn(false);
+        $identities->expects($this->once())->method('existsForUser')->willReturn(false);
 
         $this->expectException(LastSignInMethodException::class);
 

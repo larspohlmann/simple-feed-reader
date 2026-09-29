@@ -23,7 +23,7 @@ final class ProfilingPolicyTest extends TestCase
     public function testDisabledWhenTheSamplerIsUnavailableAndTheConfigIsNeverRead(): void
     {
         $config = $this->createMock(ProfilingConfigSourceInterface::class);
-        $config->expects(self::never())->method('profilingEnabled');
+        $config->expects($this->never())->method('profilingEnabled');
         $policy = new ProfilingPolicy($config, $this->sampler(false), $this->endpoint('http://pyroscope:4040'));
 
         self::assertFalse($policy->isEnabled());

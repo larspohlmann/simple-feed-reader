@@ -11,10 +11,13 @@ use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Reader\Model\PageImageInventoryModel;
 use App\Service\Reader\PageRepair\LazyImageSources;
 use App\Service\Reader\ReaderLeadImage;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderLeadImageTest extends TestCase
 {
+    use ParsesHtml;
+
     private ReaderLeadImage $leadImage;
 
     protected function setUp(): void
@@ -30,7 +33,7 @@ final class ReaderLeadImageTest extends TestCase
             $images .= '<img src="' . $url . '">';
         }
 
-        return PageImageInventoryModel::fromDocument(HtmlDocumentParser::parse('<body>' . $images . '</body>'));
+        return PageImageInventoryModel::fromDocument($this->document('<body>' . $images . '</body>'));
     }
 
     private function pageDrawingNothing(): PageImageInventoryModel
@@ -41,8 +44,7 @@ final class ReaderLeadImageTest extends TestCase
     /** The inventory of a raw page after LazyImageSources has resolved it. */
     private function inventoryOfResolvedPage(string $pageHtml): PageImageInventoryModel
     {
-        $document = HtmlDocumentParser::parseOrNull($pageHtml);
-        self::assertNotNull($document);
+        $document = $this->document($pageHtml);
         (new LazyImageSources(new PictureSources(new DesktopViewport())))->repairIn($document);
 
         return PageImageInventoryModel::fromDocument($document);
@@ -50,8 +52,7 @@ final class ReaderLeadImageTest extends TestCase
 
     private function restoredBody(string $bodyHtml, PageImageInventoryModel $pageImages, ?string $leadUrl): string
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        self::assertNotNull($document);
+        $document = $this->document($bodyHtml);
         $this->leadImage->restore($document, new LeadImageCandidateModel($leadUrl, $pageImages));
 
         return (string) $document->body?->innerHTML;
@@ -261,8 +262,7 @@ final class ReaderLeadImageTest extends TestCase
     public function testRestoresTheLeadWithItsCaptionAsAFigcaption(): void
     {
         $lead = 'https://cdn.test/hero-photo.jpg';
-        $document = HtmlDocumentParser::parseOrNull('<p>Just words.</p>');
-        self::assertNotNull($document);
+        $document = $this->document('<p>Just words.</p>');
         $candidate = new LeadImageCandidateModel($lead, $this->pageDrawingNothing(), 'Bild: Berti Kolbow-Lehradt');
 
         $this->leadImage->restore($document, $candidate);

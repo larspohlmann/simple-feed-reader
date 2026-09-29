@@ -7,12 +7,14 @@ namespace App\Tests\Service\Scraper\Pass;
 use App\Service\Fetch\Pass\PageUrls;
 use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\Pass\CardFields;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class CardFieldsTest extends TestCase
 {
+    use ParsesHtml;
+
     private function cardFields(): CardFields
     {
         return new CardFields(new PageUrls('https://site.test/'), new CardTitle());
@@ -21,7 +23,7 @@ final class CardFieldsTest extends TestCase
     /** @return array{Element, Element} container + anchor from a snippet */
     private function card(string $html): array
     {
-        $doc = HTMLDocument::createFromString("<html lang=\"en\"><body>{$html}</body></html>", \LIBXML_NOERROR);
+        $doc = $this->document("<html lang=\"en\"><body>{$html}</body></html>");
         $container = $doc->querySelector('[data-card]');
         \assert($container instanceof Element);
         $anchor = $container->tagName === 'A' ? $container : $container->querySelector('a');

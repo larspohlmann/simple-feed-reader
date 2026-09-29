@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Tests\Service\Html\Support;
 
 use App\Service\Html\Support\ClassTokenMatcher;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class ClassTokenMatcherTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testMatchesAWholeToken(): void
     {
         self::assertTrue(
@@ -42,9 +44,8 @@ final class ClassTokenMatcherTest extends TestCase
     private function elementWithClass(?string $class): Element
     {
         $attribute = $class !== null ? ' class="' . $class . '"' : '';
-        $document = HTMLDocument::createFromString(
-            '<!doctype html><html lang="en"><body><div' . $attribute . '></div></body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<!doctype html><html lang="en"><body><div' . $attribute . '></div></body></html>'
         );
         $element = $document->querySelector('div');
         self::assertInstanceOf(Element::class, $element);

@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
+use App\Tests\Support\ParsesHtml;
+use Dom\Element;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackGatedVideoPlaceholderTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string PLAYER =
         '<div class="shows-video-player-container container-abc">'
         . '<div class="settingsControlsContainer-x">'
@@ -200,16 +204,15 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         return '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
     }
 
-    private function repairIn(string $html): \Dom\HTMLDocument
+    private function repairIn(string $html): HTMLDocument
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $this->placeholder->repairIn($document);
 
         return $document;
     }
 
-    private function teaser(\Dom\HTMLDocument $document): \Dom\Element
+    private function teaser(HTMLDocument $document): Element
     {
         foreach ($document->querySelectorAll('article p') as $paragraph) {
             if (str_contains((string) $paragraph->textContent, 'An ancient intuition')) {

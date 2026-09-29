@@ -165,7 +165,7 @@ final class PasskeyChallengeStoreTest extends TestCase
     {
         $item = $this->createMock(CacheItemInterface::class);
         $item->method('set')->willReturnSelf();
-        $item->expects(self::once())->method('expiresAfter')->with(300);
+        $item->expects($this->once())->method('expiresAfter')->with(300);
 
         $pool = $this->createStub(CacheItemPoolInterface::class);
         $pool->method('getItem')->willReturn($item);

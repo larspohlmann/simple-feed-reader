@@ -10,14 +10,12 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\PageEmbedSource;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class PageEmbedSourceTest extends TestCase
 {
     use FindsMediaInRawPage;
-
-    private const string PROSE =
-        'The paragraph the player followed on the source page, long enough to be prose.';
 
     private function source(): PageEmbedSource
     {
@@ -102,17 +100,17 @@ final class PageEmbedSourceTest extends TestCase
 
     public function testNamesTheProseBlockTheEmbedFollows(): void
     {
-        $html = '<body><p>' . self::PROSE . '</p>'
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></body>';
 
         $found = $this->find($html, 'https://example.test/x');
 
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testAnchorsARepeatedEmbedWhereItFirstAppears(): void
     {
-        $html = '<body><p>' . self::PROSE . '</p>'
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe>'
             . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
             . '<iframe src="https://www.youtube-nocookie.com/embed/aaaaaaaaaaa"></iframe></body>';
@@ -120,7 +118,7 @@ final class PageEmbedSourceTest extends TestCase
         $found = $this->find($html, 'https://example.test/x');
 
         self::assertCount(1, $found);
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testSkipsAnEmbedInsideAnAside(): void

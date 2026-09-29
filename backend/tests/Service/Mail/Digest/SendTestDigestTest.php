@@ -88,7 +88,7 @@ final class SendTestDigestTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
         /** @var DigestMailerInterface&MockObject $mailer */
         $mailer = $this->createMock(DigestMailerInterface::class);
-        $mailer->expects(self::never())->method('send');
+        $mailer->expects($this->never())->method('send');
 
         $result = $this->sendTestDigest(new MockClock('2026-08-28T12:00:00Z'), $mailer)
             ->send($this->user, 7);
@@ -102,7 +102,7 @@ final class SendTestDigestTest extends DbTestCase
 
         /** @var DigestMailerInterface&MockObject $mailer */
         $mailer = $this->createMock(DigestMailerInterface::class);
-        $mailer->expects(self::once())
+        $mailer->expects($this->once())
             ->method('send')
             ->with($this->user, self::isInstanceOf(DigestModel::class));
 

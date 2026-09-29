@@ -22,14 +22,33 @@ final readonly class ClassNameReferences
     {
     }
 
+    /**
+     * Every forbidden name the file's namespaces under $scope mention, each with the namespace that mentions it.
+     *
+     * @param list<string> $scope
+     *
+     * @return list<ForbiddenReference>
+     */
+    public function forbiddenInFile(FileNode $file, array $scope): array
+    {
+        $forbidden = [];
+        foreach ($this->namespacesIn($file) as $namespace) {
+            if (self::isInAnyOf($namespace->name?->toString() ?? '', $scope)) {
+                $forbidden = [...$forbidden, ...$this->forbiddenIn($namespace)];
+            }
+        }
+
+        return $forbidden;
+    }
+
     /** @return list<Namespace_> */
-    public function namespacesIn(FileNode $file): array
+    private function namespacesIn(FileNode $file): array
     {
         return array_values($this->finder->findInstanceOf($file->getNodes(), Namespace_::class));
     }
 
     /** @return list<ForbiddenReference> */
-    public function forbiddenIn(Namespace_ $namespace): array
+    private function forbiddenIn(Namespace_ $namespace): array
     {
         $forbidden = [];
         foreach ($this->namesIn($namespace) as [$name, $line]) {
@@ -38,7 +57,12 @@ final readonly class ClassNameReferences
                 static fn (string $forbiddenName): bool => self::matches($name, $forbiddenName),
             );
             if (null !== $matchedRule) {
-                $forbidden[] = new ForbiddenReference($name, $line, $matchedRule);
+                $forbidden[] = new ForbiddenReference(
+                    $name,
+                    $line,
+                    $matchedRule,
+                    $namespace->name?->toString() ?? '',
+                );
             }
         }
 

@@ -5,15 +5,17 @@ declare(strict_types=1);
 namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\CardTitle;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
-use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class CardTitleTest extends TestCase
 {
+    use ParsesHtml;
+
     private function anchor(string $html): Element
     {
-        $doc = HTMLDocument::createFromString("<html lang=\"en\"><body>{$html}</body></html>", \LIBXML_NOERROR);
+        $doc = $this->document("<html lang=\"en\"><body>{$html}</body></html>");
         $anchor = $doc->querySelector('a');
         \assert($anchor instanceof Element);
 

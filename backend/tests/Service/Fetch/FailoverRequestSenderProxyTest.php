@@ -141,7 +141,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $failedResponse = $this->createMock(ResponseInterface::class);
         $failedResponse->method('getStatusCode')
             ->willThrowException(new TransportException('proxy down'));
-        $failedResponse->expects(self::once())->method('cancel');
+        $failedResponse->expects($this->once())->method('cancel');
 
         $okResponse = $this->createStub(ResponseInterface::class);
         $okResponse->method('getStatusCode')->willReturn(200);
@@ -165,7 +165,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
     {
         $refusedResponse = $this->createMock(ResponseInterface::class);
         $refusedResponse->method('getStatusCode')->willReturn(403);
-        $refusedResponse->expects(self::once())->method('cancel');
+        $refusedResponse->expects($this->once())->method('cancel');
 
         $okResponse = $this->createStub(ResponseInterface::class);
         $okResponse->method('getStatusCode')->willReturn(200);

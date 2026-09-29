@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\ShareWidgetRemover;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ShareWidgetRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private ShareWidgetRemover $remover;
 
     protected function setUp(): void
@@ -69,9 +71,8 @@ final class ShareWidgetRemoverTest extends TestCase
 
     private function htmlAfterRemoval(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<!doctype html><html lang="de"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<!doctype html><html lang="de"><body>' . $bodyHtml . '</body></html>'
         );
         $this->remover->repairIn($document);
 

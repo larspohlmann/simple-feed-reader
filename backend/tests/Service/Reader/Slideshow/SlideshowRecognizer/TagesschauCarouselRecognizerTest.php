@@ -4,20 +4,21 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\PageTextBlocksModel;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\TagesschauCarouselRecognizer;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class TagesschauCarouselRecognizerTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testDecodesTheDataVGallery(): void
     {
         $html = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($html);
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         $shows = (new TagesschauCarouselRecognizer())
             ->recognize($document, PageTextBlocksModel::fromDocument($document));
@@ -32,7 +33,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
 
     public function testReadsEachSlideCaptionFromTheDescriptionAndCredit(): void
     {
-        $document = HtmlDocumentParser::parseOrNull($this->carousel([
+        $document = $this->document($this->carousel([
             [
                 'alttext' => 'König Harald V.',
                 'title' => 'König Harald V. | via REUTERS',
@@ -46,7 +47,6 @@ final class TagesschauCarouselRecognizerTest extends TestCase
                 'imageUrls' => ['l' => 'https://img/2-l.webp'],
             ],
         ]));
-        self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
             ->recognize($document, PageTextBlocksModel::fromDocument($document));
@@ -60,11 +60,10 @@ final class TagesschauCarouselRecognizerTest extends TestCase
 
     public function testACreditWithoutADescriptionHasNoLeadingSpace(): void
     {
-        $document = HtmlDocumentParser::parseOrNull($this->carousel([
+        $document = $this->document($this->carousel([
             ['title' => 'König Harald V. | via REUTERS', 'imageUrls' => ['l' => 'https://img/1-l.webp']],
             ['title' => 'Kronprinz Harald | EPA', 'imageUrls' => ['l' => 'https://img/2-l.webp']],
         ]));
-        self::assertNotNull($document);
 
         $shows = (new TagesschauCarouselRecognizer())
             ->recognize($document, PageTextBlocksModel::fromDocument($document));
@@ -86,8 +85,7 @@ final class TagesschauCarouselRecognizerTest extends TestCase
     #[DataProvider('malformedCarouselMarkup')]
     public function testAbstainsWithoutThrowingOnMalformedCarouselData(string $html): void
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         $shows = (new TagesschauCarouselRecognizer())
             ->recognize($document, PageTextBlocksModel::fromDocument($document));

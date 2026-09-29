@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Paywall;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Paywall\MembershipCheckout;
 use App\Service\Reader\Paywall\OutsideFurniture;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class MembershipCheckoutTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testFindsAMemberfulCheckoutLinkInTheBody(): void
     {
         // psychedelicalpha.com: the intro cuts to a Memberful subscribe block whose
@@ -50,8 +52,7 @@ final class MembershipCheckoutTest extends TestCase
 
     private function hasCheckout(string $body): bool
     {
-        $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
-        self::assertNotNull($document);
+        $document = $this->document('<html><body>' . $body . '</body></html>');
 
         return (new MembershipCheckout(new OutsideFurniture(new PageFurniture())))->foundOutsideFurnitureIn($document);
     }

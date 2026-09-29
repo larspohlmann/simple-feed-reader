@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\SlideshowScanner;
+use App\Tests\Support\ParsesHtml;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
@@ -17,14 +17,15 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class SlideshowScannerWiringTest extends KernelTestCase
 {
+    use ParsesHtml;
+
     public function testScanCollectsFromBothTaggedRecognizers(): void
     {
         self::bootKernel();
         $scanner = self::getContainer()->get(SlideshowScanner::class);
         self::assertInstanceOf(SlideshowScanner::class, $scanner);
 
-        $document = HtmlDocumentParser::parseOrNull($this->pageWithBothGalleries());
-        self::assertNotNull($document);
+        $document = $this->document($this->pageWithBothGalleries());
 
         $shows = $scanner->scan($document);
 

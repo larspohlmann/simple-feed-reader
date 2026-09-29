@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\PhpStan;
 
+use PHPStan\Reflection\ClassReflection;
+
 /** An event listener's name ends in Listener; a message handler is its message's name plus Handler (#1202). */
 final readonly class MessagingNames implements ServiceRoleChecker
 {
@@ -23,7 +25,7 @@ final readonly class MessagingNames implements ServiceRoleChecker
     private static function listenerViolation(ServiceRoleClass $class): ?ServiceRoleViolation
     {
         if (
-            !$class->isPlainClass() || !ServiceRoleClass::isEventListener($class->reflection)
+            !$class->isPlainClass() || !EventListenerDeclarations::isEventListener($class->reflection)
             || str_ends_with($class->shortName(), 'Listener')
         ) {
             return null;
@@ -39,7 +41,7 @@ final readonly class MessagingNames implements ServiceRoleChecker
 
     private static function handlerViolation(ServiceRoleClass $class): ?ServiceRoleViolation
     {
-        $message = ServiceRoleNames::HANDLER === $class->role() ? $class->invokedMessage() : null;
+        $message = ServiceRoleNames::HANDLER === $class->role() ? self::invokedMessageOf($class->reflection) : null;
         if (null === $message) {
             return null;
         }
@@ -54,5 +56,16 @@ final readonly class MessagingNames implements ServiceRoleChecker
             sprintf('handles %s, so its name is %s', $message, $expected),
             $class->namespace() . '\\' . $expected,
         );
+    }
+
+    private static function invokedMessageOf(ClassReflection $reflection): ?string
+    {
+        if (!$reflection->hasNativeMethod('__invoke')) {
+            return null;
+        }
+        $parameters = $reflection->getNativeMethod('__invoke')->getOnlyVariant()->getParameters();
+        $classes = [] === $parameters ? [] : $parameters[0]->getType()->getObjectClassNames();
+
+        return $classes[0] ?? null;
     }
 }

@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\AuthorBio\AuthorProfileLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\AuthorBioSeparator;
 use App\Service\Reader\LinkListDetector;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class AuthorBioSeparatorTest extends TestCase
 {
-    private const string PROSE =
-        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
-        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
-        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
+    use ParsesHtml;
 
     private const string BIO =
         'Tim Fernholz is a journalist who writes about technology, finance and '
@@ -34,7 +32,8 @@ final class AuthorBioSeparatorTest extends TestCase
     public function testWrapsTheTrailingBioContainerThatFollowsTheArticleBody(): void
     {
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p></div>'
             . '<p><em>When you purchase through links we may earn a commission.</em></p>'
             . '<div><div><p>' . self::BIO . '</p></div>'
             . '<p><a href="https://techcrunch.com/author/tim-fernholz/">View Bio</a></p></div>'
@@ -52,7 +51,7 @@ final class AuthorBioSeparatorTest extends TestCase
     public function testKeepsTheArticleBodyOutsideTheBioFigure(): void
     {
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>'
             . '<div><p>' . self::BIO . '</p>'
             . '<p><a href="https://example.com/Author/jane-doe/">More by Jane</a></p></div>'
             . '</div>';
@@ -60,14 +59,14 @@ final class AuthorBioSeparatorTest extends TestCase
         $result = $this->separate($body);
 
         $beforeFigure = substr($result, 0, (int) strpos($result, '<figure'));
-        self::assertStringContainsString(self::PROSE, $beforeFigure);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $beforeFigure);
         self::assertStringNotContainsString(self::BIO, $beforeFigure);
     }
 
     public function testLeavesTheBodyUntouchedWhenNoTrailingProfileLinkIsPresent(): void
     {
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>'
             . '<p><a href="https://example.com/2024/related-story/">Related story</a></p>'
             . '</div>';
 
@@ -78,7 +77,8 @@ final class AuthorBioSeparatorTest extends TestCase
     {
         $body = '<div>'
             . '<p><a href="https://example.com/author/jane-doe/">By Jane Doe</a></p>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p></div>'
             . '</div>';
 
         self::assertStringNotContainsString('reader-author-bio', $this->separate($body));
@@ -90,8 +90,9 @@ final class AuthorBioSeparatorTest extends TestCase
         // block still holds two, so it is a second section, not a bio, and the
         // profile link inside it does not make it one.
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<p><a href="https://example.com/author/jane-doe/">By Jane</a></p></div>'
             . '</div>';
 
@@ -101,7 +102,7 @@ final class AuthorBioSeparatorTest extends TestCase
     public function testSeparatesABioThatFollowsAShortTwoParagraphArticle(): void
     {
         $body = '<div>'
-            . '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>'
             . '<p><a href="https://example.com/author/jane-doe/">View Bio</a></p>'
             . '</div>';
 
@@ -112,7 +113,7 @@ final class AuthorBioSeparatorTest extends TestCase
     {
         // One substantial paragraph in the whole document: there is no article
         // body to set a bio apart from, so a trailing profile link stays put.
-        $body = '<div><p>' . self::PROSE . '</p>'
+        $body = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<p><a href="https://example.com/author/jane-doe/">View Bio</a></p></div>';
 
         self::assertStringNotContainsString('reader-author-bio', $this->separate($body));
@@ -120,8 +121,7 @@ final class AuthorBioSeparatorTest extends TestCase
 
     private function separate(string $bodyHtml): string
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        self::assertNotNull($document);
+        $document = $this->document($bodyHtml);
         $this->separator->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();

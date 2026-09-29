@@ -45,7 +45,7 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         $preferences = $this->createStub(DigestRecipientsInterface::class);
         $preferences->method('findWithDigestEnabled')->willReturn([]);
         $mailer = $this->createMock(DigestMailerInterface::class);
-        $mailer->expects(self::never())->method('send');
+        $mailer->expects($this->never())->method('send');
 
         $this->handler($preferences, $mailer)->__invoke(new SendDueDigests());
 
@@ -63,7 +63,7 @@ final class SendDueDigestsHandlerTest extends DbTestCase
         $preferences = $this->createStub(DigestRecipientsInterface::class);
         $preferences->method('findWithDigestEnabled')->willReturn([$prefs]);
         $mailer = $this->createMock(DigestMailerInterface::class);
-        $mailer->expects(self::once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
+        $mailer->expects($this->once())->method('send')->with($user, self::isInstanceOf(DigestModel::class));
 
         $this->handler($preferences, $mailer, $savedSearches)->__invoke(new SendDueDigests());
     }

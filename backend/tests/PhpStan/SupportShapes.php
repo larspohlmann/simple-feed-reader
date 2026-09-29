@@ -22,7 +22,7 @@ final readonly class SupportShapes implements ServiceRoleChecker
     private static function isSupportHelper(ServiceRoleClass $class): bool
     {
         return ServiceRoleNames::SUPPORT === $class->role()
-            && $class->isStaticOnly();
+            && $class->shape->isStaticOnly();
     }
 
     /** @return list<ServiceRoleViolation> */
@@ -42,16 +42,16 @@ final readonly class SupportShapes implements ServiceRoleChecker
     private static function problemsOf(ServiceRoleClass $helper): array
     {
         $problems = [];
-        if (!$helper->isFinal()) {
+        if (!$helper->shape->isFinal()) {
             $problems[] = 'is a helper, so it is final';
         }
-        if (!$helper->hasPrivateConstructor()) {
+        if (!$helper->shape->hasPrivateConstructor()) {
             $problems[] = 'is a helper, so it is never instantiated; declare a private constructor';
         }
-        if ([] !== $helper->staticProperties()) {
+        if ([] !== $helper->shape->staticProperties()) {
             $problems[] = sprintf(
                 'keeps state in static $%s; a helper holds none, so the state goes to a service',
-                implode(', $', $helper->staticProperties()),
+                implode(', $', $helper->shape->staticProperties()),
             );
         }
 

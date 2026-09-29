@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\Model\SlideCaptionModel;
 use App\Service\Reader\Slideshow\Model\SlideModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowMarkupTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testBuildsFigureWithCaptionAndLazyImages(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body></body>');
         $show = SlideshowModel::fromSlides(
             [new SlideModel('https://img/1.jpg', 'first chart'), new SlideModel('https://img/2.jpg', 'second chart')],
             'Poll gallery',
@@ -38,8 +39,7 @@ final class SlideshowMarkupTest extends TestCase
 
     public function testOmitsCaptionWhenNoTitle(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body></body>');
         $show = SlideshowModel::fromSlides(
             [new SlideModel('https://img/1.jpg', 'a'), new SlideModel('https://img/2.jpg', 'b')],
             null,
@@ -56,8 +56,7 @@ final class SlideshowMarkupTest extends TestCase
 
     public function testRendersALinkedCaptionAsAnAnchorAndAPlainOneAsAParagraph(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body></body>');
         $show = SlideshowModel::fromSlides(
             [
                 new SlideModel(
@@ -83,8 +82,7 @@ final class SlideshowMarkupTest extends TestCase
 
     public function testOmitsAnEmptyCaption(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body></body>');
         $show = SlideshowModel::fromSlides(
             [new SlideModel('https://img/1.jpg', 'a'), new SlideModel('https://img/2.jpg', 'b')],
             null,
@@ -103,8 +101,7 @@ final class SlideshowMarkupTest extends TestCase
 
     public function testOnlyTheFirstOfThreeSlidesLoadsEagerly(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body></body>');
         $show = SlideshowModel::fromSlides(
             [
                 new SlideModel('https://img/1.jpg', 'a'),

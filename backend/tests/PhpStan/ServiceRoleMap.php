@@ -133,7 +133,7 @@ final readonly class ServiceRoleMap
     public function isPerCall(ServiceRoleClass $class): bool
     {
         return isset($this->builtPerCall[$class->name()])
-            || (isset($this->builtInConstructor[$class->name()]) && $class->isStateful());
+            || (isset($this->builtInConstructor[$class->name()]) && $class->shape->isStateful());
     }
 
     /** Whether a constructor argument of this type is a service rather than a value. */

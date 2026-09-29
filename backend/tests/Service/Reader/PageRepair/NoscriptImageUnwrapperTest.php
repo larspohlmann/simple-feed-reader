@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\NoscriptImageUnwrapper;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class NoscriptImageUnwrapperTest extends TestCase
 {
+    use ParsesHtml;
+
     private NoscriptImageUnwrapper $unwrapper;
 
     protected function setUp(): void
@@ -90,9 +92,8 @@ final class NoscriptImageUnwrapperTest extends TestCase
 
     private function unwrapped(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
         $this->unwrapper->repairIn($document);
 

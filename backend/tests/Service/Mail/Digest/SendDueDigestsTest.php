@@ -75,11 +75,11 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
 
-        $this->mailer->expects(self::once())->method('send')
+        $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::once())->method('flush');
+        $em->expects($this->once())->method('flush');
 
         $report = $this->sweep(em: $em)->run();
 
@@ -103,7 +103,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
 
-        $this->mailer->expects(self::once())->method('send')
+        $this->mailer->expects($this->once())->method('send')
             ->with($user, self::isInstanceOf(DigestModel::class));
 
         $report = $this->sweep()->run();
@@ -120,7 +120,7 @@ final class SendDueDigestsTest extends DbTestCase
         $prefs = $this->duePreferences($user, lastSentAt: new \DateTimeImmutable(self::OCCURRENCE));
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
 
-        $this->mailer->expects(self::never())->method('send');
+        $this->mailer->expects($this->never())->method('send');
 
         $report = $this->sweep()->run();
 
@@ -138,7 +138,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([]);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
 
-        $this->mailer->expects(self::never())->method('send');
+        $this->mailer->expects($this->never())->method('send');
 
         $report = $this->sweep()->run();
 
@@ -156,7 +156,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$prefs]);
 
-        $this->mailer->expects(self::never())->method('send');
+        $this->mailer->expects($this->never())->method('send');
 
         $report = $this->sweep()->run();
 
@@ -169,8 +169,8 @@ final class SendDueDigestsTest extends DbTestCase
     public function testMailDisabledGloballyShortCircuitsWithoutTouchingAnyPreferences(): void
     {
         $preferencesRepository = $this->createMock(DigestRecipientsInterface::class);
-        $preferencesRepository->expects(self::never())->method('findWithDigestEnabled');
-        $this->mailer->expects(self::never())->method('send');
+        $preferencesRepository->expects($this->never())->method('findWithDigestEnabled');
+        $this->mailer->expects($this->never())->method('send');
 
         $report = $this->sweep(mailEnabled: false, preferencesRepository: $preferencesRepository)->run();
 
@@ -191,7 +191,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->savedSearches->method('findIncludedInDigestForUser')->willReturn([$search]);
         $this->preferencesRepository->method('findWithDigestEnabled')->willReturn([$duePrefs, $notDuePrefs]);
 
-        $this->mailer->expects(self::once())->method('send')
+        $this->mailer->expects($this->once())->method('send')
             ->with($dueUser, self::isInstanceOf(DigestModel::class));
 
         $report = $this->sweep()->run();
@@ -219,7 +219,7 @@ final class SendDueDigestsTest extends DbTestCase
         $this->preferencesRepository->method('findWithDigestEnabled')
             ->willReturn([$failingPrefs, $healthyPrefs]);
 
-        $this->mailer->expects(self::exactly(2))->method('send')
+        $this->mailer->expects($this->exactly(2))->method('send')
             ->willReturnCallback(static function (User $user) use ($failingUser): void {
                 if ($user === $failingUser) {
                     throw new TransportException('relay rejected the recipient');

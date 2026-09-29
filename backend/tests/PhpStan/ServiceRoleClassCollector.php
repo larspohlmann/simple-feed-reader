@@ -45,7 +45,7 @@ final readonly class ServiceRoleClassCollector implements Collector
     private static function isProductionListener(ClassReflection $reflection): bool
     {
         return ServiceRoleNames::isProductionNamespace(ServiceRoleNames::namespaceOf($reflection->getName()))
-            && ServiceRoleClass::isEventListener($reflection);
+            && EventListenerDeclarations::isEventListener($reflection);
     }
 
     /** @return list<string> */

@@ -103,7 +103,7 @@ final class OnboardingControllerTest extends WebTestCase
         [$verge] = $this->catalog();
 
         $discovery = $this->createMock(FeedDiscoveryInterface::class);
-        $discovery->expects(self::never())->method('discover');
+        $discovery->expects($this->never())->method('discover');
         self::getContainer()->set(FeedDiscoveryInterface::class, $discovery);
 
         $client->request(

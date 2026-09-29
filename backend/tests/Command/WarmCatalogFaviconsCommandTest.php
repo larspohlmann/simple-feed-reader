@@ -69,7 +69,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $feed = $this->persistFeed('The Verge', 'https://www.theverge.com/rss/index.xml');
 
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::once())
+        $fetcher->expects($this->once())
             ->method('download')
             ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
@@ -115,7 +115,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         $this->persistFeed('Two', 'https://two.example.com/rss.xml');
 
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::once())
+        $fetcher->expects($this->once())
             ->method('download')
             ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 
@@ -134,7 +134,7 @@ final class WarmCatalogFaviconsCommandTest extends DbTestCase
         // then --force re-warms the same two. atLeast(4) proves force actually
         // re-downloaded rather than skipping the already-fresh rows.
         $fetcher = $this->createMock(FaviconFetcherInterface::class);
-        $fetcher->expects(self::atLeast(4))
+        $fetcher->expects($this->atLeast(4))
             ->method('download')
             ->willReturn(new FetchedFaviconModel('https://example.com/favicon.ico', 'PNGBYTES', 'image/png'));
 

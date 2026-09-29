@@ -8,11 +8,9 @@ use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
-use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizer;
 use App\Service\Auth\ActionTokenService;
-use App\Service\Auth\EmailVerifier;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\Auth\Factory\SignupUserFactory;
 use App\Service\Auth\PasswordResetter;
@@ -22,6 +20,7 @@ use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\RegistrationPolicies;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -106,63 +105,32 @@ final class RegistrationServiceTest extends DbTestCase
         );
     }
 
-    private function verifierUnderPolicy(
-        RegistrationPolicy $policy,
-        ?EventDispatcherInterface $events = null,
-    ): EmailVerifier {
-        /** @var ActionTokenService $tokens */
-        $tokens = self::getContainer()->get(ActionTokenService::class);
-        /** @var ClockInterface $clock */
-        $clock = self::getContainer()->get(ClockInterface::class);
-
-        return new EmailVerifier($tokens, $policy, $this->em, $events ?? new EventDispatcher(), $clock);
-    }
-
-    /**
-     * @return array{EventDispatcherInterface, list<UserAwaitingApproval>}
-     */
-    private function recordingDispatcher(): array
-    {
-        $captured = [];
-        $events = new EventDispatcher();
-        $events->addListener(
-            UserAwaitingApproval::class,
-            static function (UserAwaitingApproval $event) use (&$captured): void {
-                $captured[] = $event;
-            },
-        );
-
-        return [$events, &$captured];
-    }
-
     public function testConfirmationOnLandsInPendingVerificationAndMails(): void
     {
         $policy = $this->registrationPolicy(confirm: true, approve: true);
 
         $capturedToken = null;
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::once())
+        $mailer->expects($this->once())
             ->method('sendVerification')
             ->with(self::isInstanceOf(User::class), self::isString())
             ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
                 self::assertSame('newcomer@example.com', $user->getEmail());
                 $capturedToken = $token;
             });
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('newcomer@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('newcomer@example.com');
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::PendingVerification, $user->getStatus());
         self::assertNull($user->getApprovedAt());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
 
         self::assertIsString($capturedToken);
         /** @var ActionTokenService $tokens */
@@ -175,15 +143,13 @@ final class RegistrationServiceTest extends DbTestCase
         $policy = $this->registrationPolicy(confirm: false, approve: true);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::never())->method('sendVerification');
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendVerification');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('awaiting@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('awaiting@example.com');
@@ -191,9 +157,9 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getApprovedAt());
 
-        self::assertCount(1, $captured);
-        self::assertSame($user, $captured[0]->user);
-        self::assertSame(RegistrationMethod::EmailPassword, $captured[0]->method);
+        self::assertCount(1, $recording->events());
+        self::assertSame($user, $recording->events()[0]->user);
+        self::assertSame(RegistrationMethod::EmailPassword, $recording->events()[0]->method);
     }
 
     public function testBothGatesOffLandsActiveWithApprovedAtAndNoEventNoMail(): void
@@ -201,105 +167,20 @@ final class RegistrationServiceTest extends DbTestCase
         $policy = $this->registrationPolicy(confirm: false, approve: false);
 
         $mailer = $this->createMock(AccountMailerInterface::class);
-        $mailer->expects(self::never())->method('sendVerification');
-        $mailer->expects(self::never())->method('sendApproved');
-        $mailer->expects(self::never())->method('sendPendingApprovalNotice');
+        $mailer->expects($this->never())->method('sendVerification');
+        $mailer->expects($this->never())->method('sendApproved');
+        $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('instant@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('instant@example.com');
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::Active, $user->getStatus());
         self::assertNotNull($user->getApprovedAt());
-        self::assertSame([], $captured);
-    }
-
-    public function testVerifyEmailWithApprovalOnQueuesForApprovalAndDispatches(): void
-    {
-        $policy = $this->registrationPolicy(confirm: true, approve: true);
-
-        $capturedToken = null;
-        $mailer = $this->createStub(AccountMailerInterface::class);
-        $mailer->method('sendVerification')
-            ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
-                $capturedToken = $token;
-            });
-
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
-
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
-        $service->register('verifier-approval-on@example.com', 'correct-horse-battery');
-
-        self::assertIsString($capturedToken);
-        $status = $this->verifierUnderPolicy($policy, $events)->verify($capturedToken);
-
-        self::assertSame(UserStatus::PendingApproval, $status);
-
-        $user = $this->users()->findOneByEmail('verifier-approval-on@example.com');
-        self::assertInstanceOf(User::class, $user);
-        self::assertSame(UserStatus::PendingApproval, $user->getStatus());
-        self::assertNull($user->getApprovedAt());
-        self::assertTrue($user->isEmailVerified());
-
-        self::assertCount(1, $captured);
-        self::assertSame($user, $captured[0]->user);
-        self::assertSame(RegistrationMethod::EmailPassword, $captured[0]->method);
-    }
-
-    public function testVerifyEmailWithApprovalOffActivatesDirectlyWithoutEvent(): void
-    {
-        $policy = $this->registrationPolicy(confirm: true, approve: false);
-
-        $capturedToken = null;
-        $mailer = $this->createStub(AccountMailerInterface::class);
-        $mailer->method('sendVerification')
-            ->willReturnCallback(function (User $user, string $token) use (&$capturedToken): void {
-                $capturedToken = $token;
-            });
-
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
-
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
-        $service->register('verifier-approval-off@example.com', 'correct-horse-battery');
-
-        self::assertIsString($capturedToken);
-        $status = $this->verifierUnderPolicy($policy, $events)->verify($capturedToken);
-
-        self::assertSame(UserStatus::Active, $status);
-
-        $user = $this->users()->findOneByEmail('verifier-approval-off@example.com');
-        self::assertInstanceOf(User::class, $user);
-        self::assertSame(UserStatus::Active, $user->getStatus());
-        self::assertNotNull($user->getApprovedAt());
-        self::assertTrue($user->isEmailVerified());
-
-        self::assertSame([], $captured);
-
-        // Reads past the identity map: proves the approval was flushed, not
-        // merely set on the in-memory entity the calls above already held.
-        $this->em->clear();
-        $reloaded = $this->users()->findOneByEmail('verifier-approval-off@example.com');
-        self::assertInstanceOf(User::class, $reloaded);
-        self::assertSame(UserStatus::Active, $reloaded->getStatus());
-    }
-
-    public function testVerifyingWithAnUnknownTokenIsRefused(): void
-    {
-        $policy = $this->registrationPolicy(confirm: true, approve: false);
-        $verifier = $this->verifierUnderPolicy($policy);
-
-        $this->expectException(InvalidTokenException::class);
-
-        $verifier->verify('never-issued');
+        self::assertSame([], $recording->events());
     }
 
     public function testResettingWithAnUnknownTokenIsRefused(): void

@@ -6,17 +6,19 @@ namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\ScrapeLayer\ClusterLayer;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ClusterLayerTest extends TestCase
 {
+    use ParsesHtml;
+
     use ScrapedFixtures;
 
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
-        $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
+        $doc = $this->document($this->scrapedFixture($fixture));
 
         return new ClusterLayer(new CardTitle())->extract($doc, $baseUrl);
     }
@@ -57,9 +59,8 @@ final class ClusterLayerTest extends TestCase
         for ($i = 0; $i < 2000; $i++) {
             $links .= sprintf('<a href="/p/%d">Story number %d headline</a>', $i, $i);
         }
-        $doc = HTMLDocument::createFromString(
-            '<html lang="en"><body><main>' . $links . '</main></body></html>',
-            \LIBXML_NOERROR
+        $doc = $this->document(
+            '<html lang="en"><body><main>' . $links . '</main></body></html>'
         );
 
         $items = new ClusterLayer(new CardTitle())->extract($doc, 'https://flat.test/');

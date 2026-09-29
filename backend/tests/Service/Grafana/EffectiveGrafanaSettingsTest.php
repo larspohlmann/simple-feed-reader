@@ -80,7 +80,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     public function testResolvingPushUrlUsernameAndTokenTogetherQueriesTheRepositoryOnce(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
-        $repository->expects(self::once())->method('findSingleton')->willReturn($this->rowWithToken('glc_secret'));
+        $repository->expects($this->once())->method('findSingleton')->willReturn($this->rowWithToken('glc_secret'));
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
         self::assertSame('https://cloud.example/loki/push', $settings->effectiveLokiPushUrl());
@@ -92,7 +92,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
-        $repository->expects(self::once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
+        $repository->expects($this->once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
         $settings->profilingEnabled();
@@ -103,7 +103,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     public function testForgetStoredSendsTheNextReadBackToTheDatabase(): void
     {
         $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
-        $repository->expects(self::exactly(2))->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
+        $repository->expects($this->exactly(2))->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
         $settings->profilingEnabled();

@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingTitleRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private LeadingTitleRemover $remover;
 
     protected function setUp(): void
@@ -146,8 +148,7 @@ final class LeadingTitleRemoverTest extends TestCase
      */
     private function removeFrom(string $contentHtml, array $titleCandidates): string
     {
-        $document = HtmlDocumentParser::parseOrNull($contentHtml);
-        self::assertNotNull($document);
+        $document = $this->document($contentHtml);
 
         $this->remover->cleanIn(new BodyCleaningPass($document, BodyCleaningInputs::withTitles($titleCandidates)));
 

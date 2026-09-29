@@ -32,7 +32,7 @@ final class TrialExpiryGuardTest extends TestCase
     public function testNoTrialIsANoOp(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::never())->method('flush');
+        $em->expects($this->never())->method('flush');
 
         $this->guard($em)->enforce($this->user(null));
     }
@@ -40,7 +40,7 @@ final class TrialExpiryGuardTest extends TestCase
     public function testActiveTrialInTheFutureIsANoOp(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::never())->method('flush');
+        $em->expects($this->never())->method('flush');
 
         $this->guard($em)->enforce($this->user(new \DateTimeImmutable('2026-07-20T00:00:00Z')));
     }
@@ -48,7 +48,7 @@ final class TrialExpiryGuardTest extends TestCase
     public function testExpiredTrialFlipsActiveUserToSuspendedThenThrows(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::once())->method('flush');
+        $em->expects($this->once())->method('flush');
         $user = $this->user(new \DateTimeImmutable('2026-07-10T00:00:00Z'));
 
         try {
@@ -64,7 +64,7 @@ final class TrialExpiryGuardTest extends TestCase
     public function testExpiredTrialOnAlreadySuspendedUserThrowsWithoutFlushing(): void
     {
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects(self::never())->method('flush');
+        $em->expects($this->never())->method('flush');
         $user = $this->user(new \DateTimeImmutable('2026-07-10T00:00:00Z'), UserStatus::Suspended);
 
         $this->expectException(AccountStatusException::class);

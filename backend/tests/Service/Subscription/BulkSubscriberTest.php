@@ -12,6 +12,7 @@ use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 use App\Service\Subscription\Model\TagStyleModel;
 use App\Tests\DbTestCase;
+use App\Tests\Support\QueryRecorder;
 use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\TagJoins;
 use Doctrine\ORM\EntityManagerInterface;
@@ -229,6 +230,38 @@ final class BulkSubscriberTest extends DbTestCase
         self::assertSame(2, $result->imported);
         self::assertCount(1, $result->tagsCreated);
         self::assertSame('L' . str_repeat('t', 99), $result->tagsCreated[0]->getName());
+    }
+
+    public function testATagTheBatchAlreadyKnowsIsNotLookedUpAgain(): void
+    {
+        $user = $this->user('lookup@example.com');
+        $subscriber = $this->subscriber();
+        $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
+        self::assertInstanceOf(QueryRecorder::class, $recorder);
+        $recorder->reset();
+
+        $result = $subscriber->subscribeAll($user, [
+            new BulkSubscribeItemModel('https://a.example.com/rss.xml', 'A Feed', 'Technology', null),
+            new BulkSubscribeItemModel('https://b.example.com/rss.xml', 'B Feed', 'TECHNOLOGY', null),
+            new BulkSubscribeItemModel('https://c.example.com/rss.xml', 'C Feed', 'technology', null),
+        ]);
+
+        self::assertSame(3, $result->imported);
+        self::assertCount(1, $result->tagsCreated);
+        $tag = $result->tagsCreated[0];
+        foreach (['a', 'b', 'c'] as $letter) {
+            $subscription = $this->subscriptionTo($user, sprintf('https://%s.example.com/rss.xml', $letter));
+            self::assertTrue(
+                $subscription->getTags()->contains($tag),
+                sprintf('subscription "%s" carries the tag', $letter),
+            );
+        }
+
+        self::assertCount(
+            1,
+            $recorder->queriesMatching('lower('),
+            'one tag lookup for three items naming one tag: the batch answers the other two',
+        );
     }
 
     private function subscriptionTo(User $user, string $feedUrl): Subscription

@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\RecipeFacts;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\RecipeFacts\Model\RecipeCardModel;
 use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class RecipeFactsRecognizerTest extends TestCase
 {
+    use ParsesHtml;
+
     /** @return list<RecipeCardModel> */
     private function recognize(string $html): array
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         return (new RecipeFactsRecognizer())->recognize($document);
     }

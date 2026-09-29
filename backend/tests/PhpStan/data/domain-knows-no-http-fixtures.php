@@ -166,3 +166,15 @@ namespace App\Service\Fixtures\Gaps {
         }
     }
 }
+
+namespace App\Doctrine\Fixtures {
+    use Symfony\Component\HttpFoundation\Request;
+
+    final class ReadsTheRequest
+    {
+        public function locale(Request $request): string
+        {
+            return $request->getLocale();
+        }
+    }
+}

@@ -13,6 +13,7 @@ use PHPStan\Testing\RuleTestCase;
 final class ServiceRoleRuleTest extends RuleTestCase
 {
     private const string FIXTURES = __DIR__ . '/data/service-role-fixtures.php';
+    private const string INSTANCE_PROPERTY_FIXTURE = __DIR__ . '/data/service-role-instance-property-fixture.php';
     private const string SHOP = 'App\Service\Shop\\';
     private const string TILL = 'App\Service\Till\Support\\';
     private const string PROBE = 'App\Service\Probe\\';
@@ -347,6 +348,13 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [self::doctrineListener('FlushWatcher'), 820],
             [self::doctrineListener('FeedTouch'), 828],
         ]);
+    }
+
+    public function testAnInstancePropertyKeepsAClassOffTheStaticOnlyPath(): void
+    {
+        require_once self::INSTANCE_PROPERTY_FIXTURE;
+
+        $this->analyse([self::INSTANCE_PROPERTY_FIXTURE], []);
     }
 
     public function testAClassReflectionCannotResolveIsReportedNotDropped(): void
