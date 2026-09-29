@@ -58,7 +58,7 @@ These are **load-bearing invariants: do not regress them.**
 | **No CSRF token** is required on the JSON API | `framework.csrf_protection` is not set; `json_login` leaves `enable_csrf` off | Nothing expects a browser-supplied CSRF token. |
 | **ALTCHA is algorithmic** sha256 proof-of-work over JSON — no browser widget is required server-side | `App\Service\Auth\AltchaService`; required only on `POST /api/auth/register` and `POST /api/auth/password-reset-request` | A native client computes the proof with CryptoKit; the widget is a web convenience, not a protocol requirement. |
 | Errors are **`application/problem+json` regardless of `Accept`**; no `text/html` fallback | `App\Http\Problem\ProblemCatalog` (one mapping for every error path), used by `App\EventListener\ApiExceptionListener`, `JwtFailureResponseListener` and `App\Security\LoginFailureHandler` | A native client parses one content type for every outcome. |
-| **No `Origin` / `Referer` / `Sec-Fetch-*` gating** on the API | none present (only doc-comments) | Requests are not rejected for lacking browser-set headers. |
+| **No `Origin` / `Referer` / `Sec-Fetch-*` gating** on the API | none present: `App\EventListener\CorsListener` reads `Origin` only to choose the CORS response headers, and rejects no request | Requests are not rejected for lacking browser-set headers. |
 
 **The one-line rule for reviewers:** if a change moves the access token into a
 cookie, adds a session dependency, adds a CSRF-token requirement, or makes an
@@ -93,22 +93,28 @@ additive.
 
 ### 4.2 Email links point at the web frontend
 
-Verify-email, password-reset, and approval links are all `APP_FRONTEND_URL`-based
-web URLs (`App\Service\Mail\AccountMailer\AccountMailer`). The **tokens themselves
+Verify-email, password-reset, and approval links are all web URLs on the public
+base URL — the admin's setting, else `APP_FRONTEND_URL`
+(`App\Service\Mail\AccountMailer\AccountMailer`, through
+`App\Service\Settings\PublicBaseUrl\PublicBaseUrlInterface`). The **tokens themselves
 are generic**; only the URL base is web. Native reuse means universal links /
 associated domains, or a configurable deep-link base — again additive, and it does
 not change how the tokens are minted or verified.
 
 ## 5. Watch item at scale (not native-specific)
 
-`register`, `password-reset-request`, and `oauth-start` rate limiters are keyed
-**purely on client IP** (`config/packages/rate_limiter.yaml`), and
-`framework.trusted_proxies` is unset, so `getClientIp()` returns `REMOTE_ADDR`.
-Behind carrier-grade NAT, many mobile users collapse into one bucket and share a
-single 5-per-15-minute (or 20-per-15-minute) allowance. This hurts web users
+The anonymous endpoints' rate limiters — `registration`, `password_reset_request`,
+`oauth_start`, `passkey_challenge`, `setup` and `client_errors` — are keyed
+**purely on client IP** (`config/packages/rate_limiter.yaml`,
+`RateLimitGuard::enforceForClient()`), and `framework.trusted_proxies` keeps its
+default, the `SYMFONY_TRUSTED_PROXIES` env var, which no committed env file sets,
+so `getClientIp()` returns `REMOTE_ADDR`. Behind carrier-grade NAT, many mobile
+users collapse into one bucket and share a single allowance: 5 per 15 minutes
+for registration, password reset and setup, 20 for an OAuth start, 30 for a
+passkey challenge, and 30 per minute for client error reports. This hurts web users
 behind a corporate NAT too; native mobile populations just make it more visible.
-The fix — account-keying where feasible, plus setting `trusted_proxies` behind a
-known CDN/proxy — is independent of client type and can happen any time. Worth
+The fix — account-keying where feasible, plus setting `SYMFONY_TRUSTED_PROXIES`
+behind a known CDN/proxy — is independent of client type and can happen any time. Worth
 revisiting before a mobile launch or a CDN-fronted deployment.
 
 ## 6. Design-time checklist for new endpoints
@@ -156,15 +162,16 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
   work flushes, as `MailDeliveryHealth::recordFailure()` does for the mail-failure log.
 - **The owner comes first.** A user-scoped repository method takes the user, or its id, first; a lookup of owned
   rows by their ids is named `…ForUser` (`getOneForUser(int $userId, int $tagId)`, `findAllByIdsForUser(int $userId,
-  array $tagIds)`). Where the reorder swaps two adjacent ints, the method is renamed too. The subject a method
-  works on otherwise stays in front (`EntryListRowEnricher::enrich($rows, $userId)`). Decided in #1167.
+  array $tagIds)`). The subject a method works on otherwise stays in front
+  (`EntryListRowEnricher::enrich($rows, $userId)`). Decided in #1167.
 - **`src/Doctrine/`** (DQL functions, SQL walkers, schema listeners, driver middleware) extends the ORM itself and may
   touch the connection.
 - **Controllers** follow the same rule and go further: they hold no unit of work either. `ThinControllerRule` and
   `ControllerMutatesNoEntityRule` keep `persist`, `flush`, `remove` and entity mutation in services (#1157).
 
 Enforced by `QueriesLiveInRepositoriesRule` (`backend/tests/PhpStan/`, run by `composer stan`). Outside `src/Repository`
-and `src/Doctrine`, no class may call `createQuery`, `createQueryBuilder`, `createNativeQuery` or `getConnection`. It
+and `src/Doctrine`, no class may call `createQuery`, `createQueryBuilder`, `createNativeQuery`, `getConnection` or
+`getRepository`. It
 also may not reference the DBAL `Connection`, an ORM or DBAL `QueryBuilder`, `Query` or `NativeQuery`.
 
 ## 8. Where shared values live
@@ -206,15 +213,9 @@ cycle, so each one can be read, tested and moved without the others. Decided in 
 - **What both sides need lives on the lower side.** When a module needs something from a module that depends on it, the
   class moves to the module that owns the concept, or the lower module owns an interface the higher one implements
   (`Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface`, implemented in `Recommendation\Run`).
-- **The cycles #1161 broke.** The favicon fetcher moved from `Catalog` to `Image` (now `FaviconFetcher`), ending a
-  nine-module cycle through `Category`, `Discovery`, `Ingest`, `Opml`, `Parser`, `Scraper` and `Subscription`.
-  The recommendation driver liveness (`WorkerPresence`, `SweepStreamHeartbeat`, `RecommendationDriverKind`) moved
-  from `Worker` to `Recommendation\Run`. A URL's origin moved from `Fetch\UrlResolver` to `Url\UrlOrigin` (now `Url\Support\UrlOrigin`).
-  `FeedScheduler` and `OrphanedFeedReclaimer` left the `Service` root for `Service/Feed`. #1159 had already removed
-  `Fetch ↔ Proxy` and `Grafana ↔ Profiling`.
-- **Removed on purpose.** `Reader → Search` and `Recommendation → Reader` (#1163), and `Reading → Recommendation`
-  (#1169: the viewer time zone moved to `Service/Clock`), closed no cycle, so the cycle rule would not stop them
-  coming back; `ServiceModuleBoundaryRule` names them.
+- **Kept out on purpose.** `Reader → Search`, `Recommendation → Reader` and `Reading → Recommendation` close no
+  cycle, so the cycle rule would not stop them; `ServiceModuleBoundaryRule` forbids them. Reading state, the search
+  it needs and mark-read live in `Service/Reading`, and the viewer time zone lives in `Service/Clock`.
 
 Enforced by `ServiceModuleCycleRule` and `ServiceModuleBoundaryRule`, both in `backend/tests/PhpStan/` and run by
 `composer stan`. A collector records every `App\Service` name a module's code mentions (imports, class names and
@@ -235,7 +236,7 @@ Decided in #1202.
 | `Factory/` | factories (class names end in `Factory`) | stateless services that build and return an object and never persist it |
 | `Pass/` | per-call objects: one run, one import, one page, one tick | built with `new` by a service or a factory, never by the container; may hold collaborators its creator passes in; may be mutable |
 | `Support/` | static-only helpers | `final`, a private constructor, static methods only, no state (no static property) |
-| `Exception/` | typed exceptions and their marker interfaces (`…ExceptionInterface`) | as before; a marker interface stays flat |
+| `Exception/` | typed exceptions and their marker interfaces (`…ExceptionInterface`) | next to the service that throws them; never a service; a marker interface stays flat |
 | a folder named after an interface | the `…Interface` and its implementations in the same module | an implementation in another module stays in its own module (§9 relies on that inversion) |
 
 - **Model is not DTO.** A model holds invariants and behaviour; a DTO carries a shape something else dictates and is
@@ -243,8 +244,9 @@ Decided in #1202.
   method.
 - **Interfaces in a role folder** carry the role before `Interface`: `…FactoryInterface`, `…ModelInterface`,
   `…ExceptionInterface`. In `Factory/` and `Model/` they sit flat when every class in the folder implements that one
-  interface; otherwise each gets a subfolder named without that suffix (`Factory/EntryBuilder/` for
-  `EntryBuilderFactoryInterface`), and the classes that implement none sit flat.
+  interface (`Reader/Factory/DateFormatterFactoryInterface`); otherwise each gets a subfolder named without that
+  suffix (an `EntryBuilderFactoryInterface` would get `Factory/EntryBuilder/`), and the classes that implement none
+  sit flat.
 - **Build and save.** A service that builds an entity with real construction logic — it derives or normalises a
   value, calls three or more setters, or builds related entities together — hands the construction to a `…Factory`
   and keeps the unit of work. A `new` from ready values plus at most two setters stays in the service, and so does an

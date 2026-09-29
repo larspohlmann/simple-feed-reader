@@ -239,12 +239,9 @@ services:
     ports:
       - "127.0.0.1:4040:4040"
 
-  # Default dev frontend: the Angular CLI dev server with live reload. The
-  # browser (on the host) fetches the bundle from here on :4200 and calls the
-  # API at https://localhost:8443 directly — cross-origin, which the backend
-  # CORS already allows (APP_FRONTEND_URL). So this container never talks to the
-  # backend containers; it only serves the app. http://localhost is a secure
-  # context, so crypto.subtle (ALTCHA) works without TLS here.
+  # Default dev frontend: the Angular CLI dev server with live reload, proxying
+  # /api and /state to nginx (frontend/proxy.conf.json), so the app is same-origin.
+  # http://localhost is a secure context, so crypto.subtle (ALTCHA) works without TLS here.
   frontend:
     image: node:22-slim
     working_dir: /app

@@ -5,7 +5,7 @@
 A web-based RSS/Atom feed reader you run yourself — for you alone or for
 several users. Free and open source (MIT).
 
-![The magazine-style card grid](docs/screenshots/screen_01.png)
+![The magazine layout: varied cards in one reading column](docs/screenshots/screen_01.png)
 
 <p>
   <img src="docs/screenshots/screen_02.png" alt="Two-pane view with the reader pane" width="66%">
@@ -23,8 +23,9 @@ More in the [screenshot gallery](docs/screenshots.md).
 
 **Reading**
 
-- Three layouts: a magazine-style card grid, a compact list, and a two-pane
-  view — with a draggable split — that shows the article next to the entry list.
+- Three layouts: a magazine of varied cards in one reading column, a compact
+  list, and a two-pane view — with a draggable split — that shows the article
+  next to the entry list.
 - Reader view shows the extracted full article text, with images, audio, and
   video (including streaming video) played inline; you can switch to the feed's
   own version at any time, or open the original page. If the text is only the
@@ -93,8 +94,8 @@ More in the [screenshot gallery](docs/screenshots.md).
 - Optional trial periods and per-user feed limits.
 - Configure outgoing mail (SMTP) from the admin settings, with a built-in
   connection test.
-- Route the server's outbound fetches through an HTTP proxy, set and tested
-  from the admin settings.
+- Route the server's outbound fetches through a SOCKS5 or HTTP proxy, set and
+  tested from the admin settings.
 - A feed catalog suggests feeds to new users; edit it or import the bundled
   one.
 
@@ -157,17 +158,18 @@ Two more keys decide how much you are asked, rather than what runs:
   (host, port, user, password) or the MTA on this machine, which the app needs
   before it can send verification, password-reset and approval mail. Without
   one it sends none, which is the default and a complete answer for a private
-  instance. C adds the database and the search-engine questions to those,
-  which makes it the only way to reach a combination the three packages do not
-  cover, such as SQLite with a search engine.
+  instance. C adds the database and the search-engine questions to those, so
+  it installs a combination the three packages do not cover, such as SQLite
+  with a search engine.
 
 The figures are measured on an idle, healthy stack holding a real account of
 107 feeds and 17,427 articles. S and M do not grow with the number of
 articles; L adds roughly 45 MB per 1,000 articles on top of its base.
 
 Every path but Quick also asks a separate question about an optional Grafana
-log dashboard — off by default, not part of any package, viewing only (no
-tracing yet); `./scripts/prod-configure.sh` can turn it on or off later.
+dashboard — off by default, not part of any package, viewing only. It runs Loki
+for logs, Tempo for traces and Pyroscope for profiles beside Grafana;
+`./scripts/prod-configure.sh` can turn it on or off later.
 
 Both installers take a target directory and `--ref <branch-or-tag>`, which
 installs something other than the latest release — how a change is tried on a
@@ -188,7 +190,7 @@ Run these from inside the `simple-feed-reader` directory:
 | Update to the latest release (prod and/or dev) | `./scripts/update.sh` |
 | Update to a branch or tag instead | `./scripts/update.sh --ref <branch-or-tag>` |
 | Start / stop the production stack | `./scripts/prod-start.sh` / `./scripts/prod-stop.sh` |
-| Change the public origin / mail settings | `./scripts/prod-configure.sh` |
+| Change the public origin, search engine, mail or Grafana settings | `./scripts/prod-configure.sh` |
 | Start / stop the dev frontend (:4200) | `./scripts/frontend-start.sh` / `./scripts/frontend-stop.sh` |
 | Stop the dev stack (keeps your data) | `docker compose down` |
 
@@ -222,7 +224,7 @@ The manual walkthrough lives in [docs/local-docker.md](docs/local-docker.md).
 - [Local Docker environment](docs/local-docker.md) — run the whole stack
   (MySQL, PHP, nginx with TLS, Mailpit) in Docker.
 - [How a "For you" run works](docs/recommendations-runs.md) — what happens
-  after "Get recommendations", closing the browser, stopping, resuming.
+  after pressing Refresh, closing the browser, stopping, resuming.
 - [Account backup and restore](docs/backup.md) — what a backup file carries,
   what it deliberately drops, and what a restore does to the account.
 - [Running in production (Docker)](docs/docker-production.md) — the prod

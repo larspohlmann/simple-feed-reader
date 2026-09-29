@@ -1,7 +1,7 @@
 # Cutting a release
 
 A **release is a plain version tag `vX.Y.Z` on `main`** — that tag push is
-still the single release action; nothing else needs preparing by hand. Pushing
+the single release action; nothing else needs preparing by hand. Pushing
 it also triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml),
 which:
 
@@ -28,7 +28,7 @@ The `scripts/install.sh` and `scripts/update.sh` helpers do not depend on the
 GitHub Release object or on `CHANGELOG.md`. They resolve "the latest release"
 straight from git: the highest `vX.Y.Z` tag reachable from `main`.
 
-This is deliberately separate from the two tag families the project already has:
+The project has two tag families, deliberately kept apart:
 
 | Tag shape | Lives on | Purpose |
 |---|---|---|
@@ -97,17 +97,12 @@ and merge it to `develop` like any other change:
 
 At tag time `scripts/changelog-insert-release.sh` lifts that block out of
 `[Unreleased]` and places it at the top of the new version section, above the
-generated notes. No block means the section is just the generated notes, exactly
-as before. This is why v0.6.0's highlights needed a separate manual docs PR
-([#491](https://github.com/larspohlmann/simple-feed-reader/pull/491)) and later
-releases do not ([#632](https://github.com/larspohlmann/simple-feed-reader/issues/632)).
+generated notes, and `scripts/changelog-highlights.sh` leads the GitHub Release
+body with the same block. No block means both are just the generated notes.
 
 ## Choosing the version number
 
-The deploy tags so far are `v0.5.0-dev.N`, so the natural first public release is
-`v0.5.0`. If you would rather signal "first stable public version", start at
-`v1.0.0` instead. This is a one-time decision; afterwards follow
-[semantic versioning](https://semver.org/):
+Follow [semantic versioning](https://semver.org/):
 
 - **patch** (`v0.5.1`) — bug fixes only,
 - **minor** (`v0.6.0`) — new features, backward compatible,
@@ -117,10 +112,8 @@ The deploy tags so far are `v0.5.0-dev.N`, so the natural first public release i
 
 The install one-liner is fetched from `main`
 (`raw.githubusercontent.com/.../main/scripts/install.sh`) but then checks out the
-**latest release tag**. So the very first release must already contain the
-`scripts/` directory and this document — otherwise the one-liner would fetch a
-script that immediately fails to find a release to install. After that first
-release the chicken-and-egg is gone.
+**latest release tag** and runs that tag's `scripts/lib.sh`, so every release
+tag must contain the `scripts/` directory.
 
 The same applies to the Docker production path: every release tag must
 include `docker-compose.prod.yml`, `.env.prod.example`, and the `scripts/prod-*.sh`

@@ -21,12 +21,12 @@ natively. It is strictly additive: the native SQLite workflow (plain
 
 ## 1. What you get
 
-Nine services, started with one command from the repository root:
+Eleven services, started with one command from the repository root:
 
 | Service | Where |
 |---|---|
 | Frontend (Angular dev server, live reload) | http://localhost:4200 |
-| API (nginx → PHP-FPM 8.3) | https://localhost:8443 (http://localhost:8080 redirects there) |
+| API (nginx → PHP-FPM 8.4) | https://localhost:8443 (http://localhost:8080 redirects there) |
 | Mailpit web inbox | http://localhost:8025 |
 | MySQL 8.4 | 127.0.0.1:33306 (user/password `feedreader`/`feedreader`, root `root`) |
 | Meilisearch — full-content entry search, dashboard and API | http://127.0.0.1:7700 (key `dev-master-key-not-a-secret`) |
@@ -34,7 +34,7 @@ Nine services, started with one command from the repository root:
 | Loki — log storage behind Grafana, fed by the app | 127.0.0.1:3100 |
 | Tempo — trace storage behind Grafana, fed by the app's OTel exporter | 127.0.0.1:4318 (OTLP) |
 | Pyroscope — continuous + per-request profiles, off until the admin toggle is on | http://localhost:4040 |
-| Worker — recommendation runs in the background, 5-minute feed refresh sweep | `docker compose logs -f worker` |
+| Worker — the scheduled background jobs: recommendation runs, due scheduled runs, 5-minute feed refresh sweep, digest mails, saved-search memberships, failure-transport purge | `docker compose logs -f worker` |
 
 The app answers searches from the database whenever Meilisearch is absent or
 unreachable, so stopping this container degrades search rather than breaking
@@ -53,8 +53,11 @@ time, the index is empty until you run it once:
 >   fail for reasons that have nothing to do with your change.
 > - It makes **unattended outbound HTTP requests** to every feed you subscribe
 >   to, for as long as the stack is up.
-> - Every **10 seconds** it advances any active recommendation run, which spends
->   real AI provider credit if an account has a key configured.
+> - Every **10 seconds** it advances any active recommendation run, and every
+>   **5 minutes** it starts any scheduled run that is due; both spend real AI
+>   provider credit if an account has a key configured.
+> - Every **hour** it sends due digest mails, which land in Mailpit unless an
+>   admin has configured a mail transport.
 >
 > **Stop it before you run `composer e2e` or the Playwright smokes:**
 >
@@ -62,13 +65,15 @@ time, the index is empty until you run it once:
 > docker compose stop worker     # …and `docker compose start worker` after
 > ```
 >
-> The recommendation feature degrades to #308's poll-driven behaviour while the
-> worker is stopped (what that looks like for the user:
+> The recommendation feature falls back to its poll-driven path while the
+> worker is stopped: once the worker's heartbeat is 16 minutes old
+> (`WorkerPresence::FRESH_SECONDS`), a run advances only while a tab polls it
+> (what that looks like for the user:
 > [recommendations-runs.md](recommendations-runs.md)), so the app stays fully
 > usable without it. That graceful
 > degradation is also why a stopped worker is easy to miss: the app keeps
-> working, it just tells you "Keep the app open while this runs" instead of
-> running the work in the background.
+> working, and only a note in Settings → AI → Recommendations says that no
+> background worker is running.
 >
 > **Check that it is actually sweeping**, not merely up:
 >
@@ -81,11 +86,14 @@ time, the index is empty until you run it once:
 > stops. `unhealthy` means the sweep has been silent for longer than
 > `WorkerPresence::FRESH_SECONDS`; restart it with `docker compose restart worker`.
 
-Every host port is bound to loopback only — nothing on your LAN can reach the
-stack. MySQL sits on 33306 so a natively installed MySQL never collides.
+Every host port but the frontend's 4200 is bound to loopback only. 4200
+listens on every interface so a phone or another machine on your network can
+open the dev app, and because the dev server proxies the API (§9), whatever
+reaches 4200 reaches the API too. MySQL sits on 33306 so a natively installed
+MySQL never collides.
 
-**The additive guarantee.** The compose file injects `DATABASE_URL` and
-`MAILER_DSN` as *real environment variables* into the PHP container. Symfony's
+**The additive guarantee.** The compose file injects `DATABASE_URL`,
+`MAILER_DSN` and `MAILER_FALLBACK_DSN` as *real environment variables* into the PHP container. Symfony's
 env precedence puts real env vars above `.env`/`.env.test` file values, so the
 containers use MySQL and Mailpit while the committed `.env` files stay
 untouched — run the suite natively and you still get SQLite, exactly as before.
@@ -98,7 +106,8 @@ host are live immediately; no rebuild, no sync step.
 
 - **Docker Desktop** (or a compatible Docker Engine with the compose plugin),
   running before you start the First run steps.
-- Free host ports **4200**, **8080**, **8443**, and **8025** (MySQL's 33306 is
+- Free host ports **4200**, **8080**, **8443**, **8025**, **7700**, **3000**,
+  **3100**, **4318** and **4040** (MySQL's 33306 is
   non-standard precisely to avoid collisions).
 - **mkcert**, for a locally trusted TLS certificate:
 
@@ -159,7 +168,7 @@ it).
 
 | Task | Command |
 |---|---|
-| Full test suite | `docker compose exec php vendor/bin/phpunit` |
+| Full test suite | `docker compose exec php composer test` |
 | Coding standard | `docker compose exec php composer cs` |
 | Static analysis | `docker compose exec php composer stan` |
 | Any console command | `docker compose exec php bin/console …` |
@@ -175,10 +184,10 @@ against SQLite natively runs here against MySQL — in seconds, not minutes. It
 uses
 `feedreader_test`, not `feedreader` — Doctrine's `when@test` `dbname_suffix`
 appends `_test` to whatever `DATABASE_URL` points at — so a test run never
-touches your dev data. Double-opt-in mails sent during the run appear in the
-Mailpit inbox, because the injected `MAILER_DSN` also wins in `APP_ENV=test`.
-That is a feature, not a leak: you can watch exactly what the registration
-flow mails out.
+touches your dev data. `backend/phpunit.dist.xml` forces `MAILER_FALLBACK_DSN`
+back to `null://null`, so a test run sends nothing to Mailpit. Run it through
+`composer test`: it turns the stack's OpenTelemetry instrumentation off, which
+a bare `vendor/bin/phpunit` inherits and pays for on every query.
 
 **`docker compose down` is safe; `docker compose down -v` DELETES the MySQL
 data volume.** Plain `down` stops and removes the containers but keeps your
@@ -194,8 +203,8 @@ level, rotating daily and keeping **3 files** (`config/packages/monolog.yaml`).
 So `backend/var/log/` holds at most three days each of `dev-YYYY-MM-DD.log` and
 `test-YYYY-MM-DD.log`; older days prune on the next rotation. The `php` and
 `worker` containers and a native run share the bind-mounted `backend/`, so they
-append to the same daily file and the same cap covers all three. `prod` is
-unchanged — its handler still keeps 7 daily files (`when@prod`).
+append to the same daily file and the same cap covers all three. `prod`'s
+handler keeps 7 daily files (`when@prod`).
 
 ---
 
@@ -248,12 +257,12 @@ work in one browser and silently fail in another, which is exactly the kind of
 - **The test suite always runs with no search engine, even in here.** `php`
   and `worker` carry a real `MEILISEARCH_URL` (§1) for every `APP_ENV`, but
   `backend/phpunit.dist.xml` forces it back to empty for `APP_ENV=test`
-  specifically, so `docker compose exec php vendor/bin/phpunit` exercises the
+  specifically, so `docker compose exec php composer test` exercises the
   same database-fallback path the native SQLite run does. Without that
   override, the suite would silently talk to — and write into — this
   container's live index instead. If you ever need a test that genuinely
   exercises the engine, use `composer e2e` (against the real running stack),
-  not `vendor/bin/phpunit`.
+  not `composer test`.
 - **The containers keep their own kernel cache.** `php` and `worker` set
   `APP_CACHE_DIR`, so their compiled container and cache pools (rate limiters
   included) live in `backend/var/cache-docker`, apart from a native run's
@@ -269,7 +278,7 @@ work in one browser and silently fail in another, which is exactly the kind of
   e2e` and `npm run e2e` reach the same `:8443` and the same `docker compose
   exec` and silently test the *other* checkout's code. Edit-and-e2e must happen
   in the checkout that ran `docker compose up`. A preflight guard
-  (`backend/bin/e2e-preflight.sh`, wired into both suites) now fails fast and
+  (`backend/bin/e2e-preflight.sh`, wired into both suites) fails fast and
   names the owning path when the running stack mounts a different checkout, so
   this is a loud error rather than a silent wrong result (#615).
 - **Root-owned `vendor/` on Linux hosts.** `docker compose exec php composer
@@ -289,22 +298,21 @@ it:
   target (no dev deps, baked-in source, tuned opcache) driven by
   `docker-compose.prod.yml`. See [docker-production.md](docker-production.md).
 - **Angular frontend.** Delivered — see [§9](#9-frontend-in-docker). The dev
-  service runs cross-origin on `:4200` (bearer JWT, so no auth cookie to keep
-  same-site); the production stack serves the built SPA same-origin, the
-  topology this stack was designed to allow ([docs/oauth-sign-in.md](oauth-sign-in.md)).
-- **Worker / cron container.** Delivered in #311 — see the `worker` service; it
+  server on `:4200` proxies the API to nginx, and the production stack serves
+  the built SPA; both are same-origin, and bearer JWT auth needs no auth
+  cookie in either ([docs/oauth-sign-in.md](oauth-sign-in.md)).
+- **Worker / cron container.** Delivered — see the `worker` service; it
   reuses the php image and the same env injection. See [for-you-scheduling.md](for-you-scheduling.md) for how the worker (or an external cron) auto-generates "For You".
 
 ---
 
 ## 9. Frontend in Docker
 
-`docker compose up -d` now also starts the **Angular dev server** at
+`docker compose up -d` also starts the **Angular dev server** at
 http://localhost:4200 with live reload — the whole system comes up with one
-command. The browser (on your host) loads the app from `:4200` and calls the API
-at `https://localhost:8443` directly; that is cross-origin, which the backend
-CORS already allows (`APP_FRONTEND_URL`). So the frontend container only serves
-the bundle — it never talks to the backend containers. `http://localhost` is a
+command. The browser loads the app from `:4200` and calls the API on the same
+origin: the dev server proxies `/api` and `/state` to the `nginx` container
+(`frontend/proxy.conf.json`), so no CORS is involved. `http://localhost` is a
 secure context, so the ALTCHA `crypto.subtle` solver works without TLS here.
 
 **First run is slower.** The container installs the app's Linux dependencies into
@@ -328,15 +336,13 @@ docker compose down && docker volume rm simple-feed-reader_frontend-node-modules
 
 ### Previewing the production topology
 
-The old `prod` profile (a production bundle served over the dev backend)
-is gone. To preview the real thing, run the actual production stack
+To preview the production topology, run the actual production stack
 locally — [docker-production.md](docker-production.md) — with mkcert
 certificates: `mkcert -cert-file docker/certs-prod/fullchain.pem
 -key-file docker/certs-prod/privkey.pem localhost 127.0.0.1 ::1`, a
 `.env.prod` with test values (ports moved off 80/443 to avoid clashing
-with the dev stack), then `./scripts/prod-start.sh`. Unlike the old
-preview, this exercises the production PHP runtime too — `APP_ENV=prod`,
-no Mailpit, no xdebug.
+with the dev stack), then `./scripts/prod-start.sh`. This exercises the
+production PHP runtime too — `APP_ENV=prod`, no Mailpit, no xdebug.
 
 Design and rationale: [docs/superpowers/specs/2026-07-22-frontend-docker-services-design.md](superpowers/specs/2026-07-22-frontend-docker-services-design.md).
 
@@ -390,7 +396,8 @@ See the profiles two ways:
   request's hotspots.
 
 `ext-excimer` is only in the Docker image, so profiling is inert on hosts
-without it (the toggle then shows "profiler not available on this host").
+without it (the toggle then says "The profiler extension is not installed on
+this host, so profiling cannot run here.").
 
 ## Application performance dashboard
 

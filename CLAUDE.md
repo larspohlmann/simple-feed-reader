@@ -26,7 +26,7 @@ Frontend (from `frontend/`):
 
 ```bash
 npm ci
-npm start            # dev server on :4200, talks to https://localhost:8443
+npm start            # dev server on :4200; calls /api same-origin (only the Docker frontend service proxies it)
 npm run check        # ESLint + Prettier + Stylelint + Jest — the CI gate
 npm run build
 npm run e2e          # Playwright smokes; needs the Docker stack up
@@ -206,7 +206,8 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out
-  the two dependencies #1163 removed (`Reader → Search`, `Recommendation → Reader`).
+  three dependencies decided against (`Reader → Search`, `Recommendation → Reader`,
+  `Reading → Recommendation`); each message names its issue.
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
   `composer stan`) — fails on every class in `src/Service`, `src/Http` and
@@ -248,9 +249,9 @@ Enforced mechanically by `composer check` and `composer md`:
   patch would leave behind. Let the user choose; don't silently default to the
   band-aid. (Case in point: #128 — three successive patches to the shared
   header state lost to one layer-isolation redesign.)
-- **Hex colours are forbidden in `.scss` outside `src/app/theme/`** (Stylelint
-  `color-no-hex`), and so are ad-hoc `px` spacing values and media-query
-  literals — both fail `npm run check`.
+- **Hex colours are forbidden in `.scss` outside `src/app/theme/`, `src/styles/`
+  and `src/styles.scss`** (Stylelint `color-no-hex`), and so are ad-hoc `px`
+  spacing values and media-query literals — both fail `npm run check`.
 - **Component styles live in a sibling `.scss` file** (`styleUrl`), never inline
   in the `.ts`: Stylelint has no TS syntax installed, so inline styles are
   silently unlinted.

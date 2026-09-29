@@ -3,9 +3,10 @@
 This page explains what happens when the reader generates your "For you"
 recommendations, from the moment you press the button to the finished list.
 
-## Pressing "Get recommendations"
+## Pressing "Refresh"
 
-Pressing **Get recommendations** starts a *run* on the server. A run reads
+Pressing **Refresh** in the "For you" list header, and confirming, starts a *run*
+on the server. A run reads
 your recent articles, sends them to the AI model you configured in
 **Settings → AI**, and turns the model's answers into your "For you" list.
 The run belongs to the server, not to your browser tab: the tab only watches
@@ -41,18 +42,19 @@ there is nothing to configure in the UI.
 ## Stopping a run
 
 **Stop** ends the active run. Stopping is not instant: a request to the AI
-provider that is already in flight finishes first, which is why the status
-shows *stopping* before it becomes *stopped*. A stopped run keeps the
+provider that is already in flight finishes first, which is why the button
+reads *Stopping…* until the run has ended. A stopped run keeps the
 recommendations it had already banked from completed batches.
 
 ## When a run fails
 
 A run fails when the AI provider stays unreachable, rejects your
 credentials, or the account's AI configuration is removed mid-run. A failed
-run shows the reason in the "For you" view, and you can either:
+run shows the reason in the "For you" view, and the next **Refresh** asks whether
+to:
 
-- **Resume** — continue the failed run at the exact batch where it failed,
-  keeping the work that already succeeded; or
+- **Resume unfinished run** — continue the failed run at the exact batch where
+  it failed, keeping the work that already succeeded; or
 - **Start a new run** — begin fresh with the newest articles.
 
 Resume reuses the article snapshot from when the run first started, so if a
@@ -90,9 +92,10 @@ every 30 seconds, so the TTL only has to outlast the longest stretch in which a 
 The TTL is therefore the connection's first-byte timeout plus `RecommendationRunAdvancer::LOCK_TTL_MARGIN_SECONDS`
 (300 s): 8 minutes on a standard connection, 20 on a slow one. Only a slow connection pays the longer TTL. Do not size
 it from the keepalive's 30-second interval: that interval is a ceiling on refreshes, not a promise of one, and a live
-slow-profile holder's lock would lapse mid-call for a second tick to take. Do not size it for the longest call either
-(about three hours on the slow profile): a worker that dies mid-tick would strand the run for that long, while a dead
-holder that stops refreshing now releases the run within one TTL.
+slow-profile holder's lock would lapse mid-call for a second tick to take. Do not size it for the longest tick either
+(`RecommendationRun::MAX_ATTEMPTS` rounds of a one-hour call, about three hours on the slow profile): a worker that
+dies mid-tick would strand the run for that long, while a dead holder that stops refreshing now releases the run
+within one TTL.
 
 A request the gateway kills (Strato caps a web request at 240 s) never reaches the advancer's `finally`, so a shutdown
 hook releases the lock as well. The keepalive is disarmed before the release, so no beat refreshes a lock on its way
