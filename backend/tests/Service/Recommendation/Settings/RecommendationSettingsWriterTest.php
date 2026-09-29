@@ -6,7 +6,6 @@ namespace App\Tests\Service\Recommendation\Settings;
 
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
-use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
@@ -69,8 +68,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
-            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -101,8 +100,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
-            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
@@ -128,8 +127,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
-            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
+            historyCaps: $this->nonDefaultHistoryCaps(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -145,6 +144,11 @@ final class RecommendationSettingsWriterTest extends DbTestCase
      * A fresh user out of setUp() never had a settings row created for it;
      * this name exists to make that precondition explicit at the call site.
      */
+    private function nonDefaultHistoryCaps(): RecommendationHistoryCaps
+    {
+        return new RecommendationHistoryCaps(10, 20, 30);
+    }
+
     private function userWithoutSettingsRow(): User
     {
         return $this->user;

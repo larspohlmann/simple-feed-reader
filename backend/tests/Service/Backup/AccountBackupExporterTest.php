@@ -279,7 +279,7 @@ final class AccountBackupExporterTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'Only long reads.',
-            historyCaps: new RecommendationHistoryCaps(40, 40, 80),
+            historyCaps: RecommendationHistoryCaps::defaults(),
             poolLimits: new RecommendationPoolLimits(1000, 2, 50),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Large,

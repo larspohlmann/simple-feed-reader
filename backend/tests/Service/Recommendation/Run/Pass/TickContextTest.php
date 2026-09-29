@@ -43,8 +43,8 @@ final class TickContextTest extends TestCase
             $connection,
             new EffectiveRecommendationSettingsModel(
                 guidancePrompt: null,
-                historyCaps: new RecommendationHistoryCaps(40, 40, 80),
-                poolLimits: new RecommendationPoolLimits(500, 2, 50),
+                historyCaps: RecommendationHistoryCaps::defaults(),
+                poolLimits: RecommendationPoolLimits::defaults(),
                 packing: new RecommendationPackingSettingsModel(
                     contextWindow: 32768,
                     contextWindowSource: 'fallback',

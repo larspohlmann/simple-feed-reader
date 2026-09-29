@@ -1069,7 +1069,7 @@ final class RecommendationPromptBuilderTest extends TestCase
     ): EffectiveRecommendationSettingsModel {
         return new EffectiveRecommendationSettingsModel(
             guidancePrompt: $guidancePrompt,
-            historyCaps: new RecommendationHistoryCaps(40, 40, 80),
+            historyCaps: RecommendationHistoryCaps::defaults(),
             poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, $picksLimit),
             packing: new RecommendationPackingSettingsModel(
                 contextWindow: $contextWindow,

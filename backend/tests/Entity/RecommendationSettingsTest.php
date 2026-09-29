@@ -27,8 +27,8 @@ final class RecommendationSettingsTest extends TestCase
 
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: 'stay on topic',
-            historyCaps: new RecommendationHistoryCaps(40, 40, 80),
-            poolLimits: new RecommendationPoolLimits(500, 2, 50),
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: 32768,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
