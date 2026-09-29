@@ -25,7 +25,7 @@ use App\Service\ReaderAudit\Model\PhraseScope;
 final readonly class SuspiciousPhrases
 {
     /** @return list<PhraseFamilyModel> */
-    public static function families(): array
+    public function families(): array
     {
         return [...self::walls(), ...self::chrome()];
     }
@@ -97,9 +97,5 @@ final readonly class SuspiciousPhrases
                 'anzeige', 'werbung', 'advertisement', 'sponsored', 'gesponsert',
             ]),
         ];
-    }
-
-    private function __construct()
-    {
     }
 }

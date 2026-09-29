@@ -10,6 +10,13 @@ use PHPUnit\Framework\TestCase;
 
 final class RecommendationAnswerBudgetTest extends TestCase
 {
+    private RecommendationAnswerBudget $answerBudget;
+
+    protected function setUp(): void
+    {
+        $this->answerBudget = new RecommendationAnswerBudget();
+    }
+
     /**
      * A score-only batch reply is `{"id":123,"score":843}` — no `reason` — so
      * it is charged a fifth of the reason-bearing pick rate. Distillation
@@ -21,15 +28,15 @@ final class RecommendationAnswerBudgetTest extends TestCase
     {
         self::assertSame(
             intdiv(max(1024, 100 * 15) * 150, 100),
-            RecommendationAnswerBudget::answerBoundTokens(100, RecommendationResponseSchema::BatchScore),
+            $this->answerBudget->answerBoundTokens(100, RecommendationResponseSchema::BatchScore),
         );
         self::assertSame(
             intdiv(max(1024, 100 * 70) * 150, 100),
-            RecommendationAnswerBudget::answerBoundTokens(100, RecommendationResponseSchema::Consolidation),
+            $this->answerBudget->answerBoundTokens(100, RecommendationResponseSchema::Consolidation),
         );
         self::assertSame(
             intdiv(max(1024, 1200) * 150, 100),
-            RecommendationAnswerBudget::answerBoundTokens(1, RecommendationResponseSchema::Distillation),
+            $this->answerBudget->answerBoundTokens(1, RecommendationResponseSchema::Distillation),
         );
     }
 }

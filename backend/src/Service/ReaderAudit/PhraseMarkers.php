@@ -22,15 +22,17 @@ use App\Service\ReaderAudit\Model\PhraseScope;
  */
 final readonly class PhraseMarkers
 {
-    public function __construct(private LeadingRegion $leadingRegion)
-    {
+    public function __construct(
+        private LeadingRegion $leadingRegion,
+        private SuspiciousPhrases $phrases,
+    ) {
     }
 
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body): array
     {
         $markers = [];
-        foreach (SuspiciousPhrases::families() as $family) {
+        foreach ($this->phrases->families() as $family) {
             $marker = $this->firstMatch($family, $this->scopeFor($family, $body));
             if ($marker !== null) {
                 $markers[] = $marker;

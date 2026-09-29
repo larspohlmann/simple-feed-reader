@@ -23,6 +23,7 @@ final readonly class RecommendationConsolidationParser
     public function __construct(
         private ModelReplyJsonDecoder $decoder,
         private RecommendationPickSalvager $salvager,
+        private PlausibleDuplicateShare $duplicateShare,
     ) {
     }
 
@@ -49,7 +50,7 @@ final readonly class RecommendationConsolidationParser
 
         $duplicateIds = $this->salvageDuplicateIds($decoded['duplicates'] ?? [], $shownIds);
 
-        if (PlausibleDuplicateShare::exceededBy(\count($duplicateIds), \count($shownIds))) {
+        if ($this->duplicateShare->exceededBy(\count($duplicateIds), \count($shownIds))) {
             return ConsolidationParseResultModel::unusable();
         }
 

@@ -17,10 +17,12 @@ use PHPUnit\Framework\TestCase;
 final class RecommendationCompletionRequestFactoryTest extends TestCase
 {
     private RecommendationCompletionRequestFactory $factory;
+    private RecommendationAnswerBudget $answerBudget;
 
     protected function setUp(): void
     {
-        $this->factory = new RecommendationCompletionRequestFactory();
+        $this->answerBudget = new RecommendationAnswerBudget();
+        $this->factory = new RecommendationCompletionRequestFactory($this->answerBudget);
     }
 
     /**
@@ -39,7 +41,7 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
         );
 
         self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(
+            $this->answerBudget->outputBoundTokens(
                 45,
                 RecommendationResponseSchema::Consolidation,
                 reasoning: Reasoning::Suppressed,
@@ -60,14 +62,14 @@ final class RecommendationCompletionRequestFactoryTest extends TestCase
             $this->prompt(),
         );
 
-        $full = RecommendationAnswerBudget::outputBoundTokens(
+        $full = $this->answerBudget->outputBoundTokens(
             45,
             RecommendationResponseSchema::Consolidation,
             reasoning: Reasoning::Allowed,
         );
         self::assertSame($full, $request->maxAnswerTokens);
         self::assertGreaterThan(
-            RecommendationAnswerBudget::outputBoundTokens(
+            $this->answerBudget->outputBoundTokens(
                 45,
                 RecommendationResponseSchema::Consolidation,
                 reasoning: Reasoning::Suppressed,

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Recommendation\Prompt;
 
 use App\Service\Recommendation\Prompt\ModelReplyJsonDecoder;
+use App\Service\Recommendation\Prompt\PlausibleDuplicateShare;
 use App\Service\Recommendation\Prompt\RecommendationConsolidationParser;
 use App\Service\Recommendation\Prompt\RecommendationPickSalvager;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +19,7 @@ final class RecommendationConsolidationParserTest extends TestCase
         $this->parser = new RecommendationConsolidationParser(
             new ModelReplyJsonDecoder(),
             new RecommendationPickSalvager(),
+            new PlausibleDuplicateShare(),
         );
     }
 

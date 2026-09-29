@@ -20,7 +20,7 @@ final readonly class PlausibleDuplicateShare
 {
     private const int PERCENT = 50;
 
-    public static function exceededBy(int $namedCount, int $shownCount): bool
+    public function exceededBy(int $namedCount, int $shownCount): bool
     {
         return $namedCount > self::maximumFor($shownCount);
     }
@@ -28,9 +28,5 @@ final readonly class PlausibleDuplicateShare
     private static function maximumFor(int $shownCount): int
     {
         return intdiv($shownCount * self::PERCENT, 100);
-    }
-
-    private function __construct()
-    {
     }
 }

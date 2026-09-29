@@ -830,7 +830,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         // holds both halves.
         self::assertTrue($batchCall['suppressReasoning']);
         self::assertSame(
-            RecommendationAnswerBudget::outputBoundTokens(
+            (new RecommendationAnswerBudget())->outputBoundTokens(
                 \count($firstBatch),
                 RecommendationResponseSchema::BatchScore,
                 reasoning: Reasoning::Suppressed,

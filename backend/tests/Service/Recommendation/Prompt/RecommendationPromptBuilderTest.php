@@ -11,6 +11,7 @@ use App\Service\Recommendation\Prompt\Model\CandidatePoolSummaryModel;
 use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 use App\Service\Recommendation\Prompt\Model\RecommendationHistoryModel;
 use App\Service\Recommendation\Prompt\Pass\PromptContext;
+use App\Service\Recommendation\Prompt\RecommendationAnswerBudget;
 use App\Service\Recommendation\Prompt\RecommendationPromptBuilder;
 use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
@@ -24,7 +25,7 @@ final class RecommendationPromptBuilderTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->builder = new RecommendationPromptBuilder();
+        $this->builder = new RecommendationPromptBuilder(new RecommendationAnswerBudget());
     }
 
     public function testDescriptionLengthScalesAndClamps(): void
