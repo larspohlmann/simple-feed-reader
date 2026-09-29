@@ -7,14 +7,8 @@ namespace App\Repository;
 use App\Enum\EntryView;
 
 /**
- * Which instant a keyset-paginated list orders by. Every list but "viewed"
- * ranks by publish instant (effectiveDate); "viewed" is a reading history
- * ranked by when the caller opened it (EntryState.viewedAt).
- *
- * Kept in one place because it drives three things that must stay in
- * lockstep or pagination desyncs from its cursor: the ORDER BY column, the
- * keyset predicate, and the next cursor's instant. Splitting these across
- * the repository and serializer is how a cursor and its list drift apart.
+ * Which instant a keyset list orders by: effectiveDate, except "viewed", a reading history ordered by viewedAt. The
+ * ORDER BY column, the keyset predicate and the next cursor's instant all come from here, or cursor and list drift.
  */
 enum EntryListSort
 {
@@ -44,11 +38,8 @@ enum EntryListSort
     }
 
     /**
-     * The instant of a row for this sort — the value that becomes the next
-     * cursor. For ViewedAt it is EntryState.viewedAt, guaranteed set by the
-     * "viewed" view's `es.isViewed = true` filter and by markViewed() always
-     * stamping it. A null here means the projection and filter disagree — a
-     * fault, not a case to paper over.
+     * The row's instant for this sort, which becomes the next cursor. A null viewedAt means the projection and the
+     * "viewed" filter disagree: a fault, never a case to paper over.
      */
     public function instantOf(EntryListRow $row): \DateTimeImmutable
     {

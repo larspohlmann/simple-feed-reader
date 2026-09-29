@@ -15,15 +15,8 @@ use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * The reader's per-caller entry access: the "entry list row" projection
- * (entry + caller's subscription, feed, folded per-entry state) shared by
- * the entry list, search and "hydrate these ids" endpoints, plus the plain
- * per-entry subscription gate the reader-extraction endpoint uses.
- *
- * Split out of EntryRepository so that class's existence/lookup/keyset-walk
- * surface (ingestion, dedup, search reindex/backup batch walks) stays
- * readable — EntryController and the search services depend on this one
- * instead.
+ * The caller's entry list rows (entry, subscription, feed, folded state) for the list, search and id-hydration reads,
+ * plus the per-entry subscription gate. Ingestion lookups and batch walks stay on EntryRepository.
  *
  * @extends ServiceEntityRepository<Entry>
  */
@@ -42,12 +35,8 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Entries in feeds the caller subscribes to, in the query's order and
-     * keyset-paginated on (sortInstant, id) — the sort instant is the entry's
-     * effectiveDate for every view but "viewed", which is a reading history and
-     * orders by EntryState.viewedAt instead (see EntryListSort). LEFT JOINs the
-     * caller's EntryState and folds Subscription.markedReadUntil into an
-     * effective isHidden. `view` narrows to unread/favorites/kept/viewed.
+     * Entries in the caller's feeds, keyset-paged on (sort instant, id) as EntryListSort defines it, with the
+     * subscription's watermark folded into isHidden. `view` narrows the list.
      *
      * @return list<EntryListRow>
      */
@@ -84,11 +73,8 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * Entries whose title or summary contains EVERY search term, in the
-     * query's order, keyset-paginated exactly like the entry list. The
-     * predicate is an AND of unindexable LIKEs, so the database reads every
-     * entry the caller subscribes to; that cost is accepted for now and
-     * measured in #408.
+     * Entries whose title or summary holds every term, paged like the entry list. The LIKEs use no index, so this
+     * reads every subscribed entry; that cost is accepted and measured in #408.
      *
      * @return list<EntryListRow>
      */
@@ -112,10 +98,8 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * The ids of every unread entry that matches this search and is no newer
-     * than $until, for the user's subscribed feeds. The set a search-scoped
-     * mark-read must flip; reuses the search's own term matching so it marks
-     * exactly what the search lists.
+     * The unread entries, no newer than $until, that a search-scoped mark-read flips. It uses the search's own term
+     * predicate, so it marks exactly what the search lists.
      *
      * @return list<int>
      */
@@ -131,19 +115,9 @@ final class EntryListRepository extends ServiceEntityRepository
     }
 
     /**
-     * The given entry ids hydrated through the same list-row projection every
-     * other list uses. Ordered like the entry list, never in the id order
-     * asked for — a search engine's own ordering owes nothing to it.
-     *
-     * The subscription join is the real access gate: an id for a feed the
-     * caller does not subscribe to is dropped here, even one from a search
-     * index whose filter was wrong or stale.
-     *
-     * $limit caps the hydration in SQL for a caller that unions several id sets
-     * but only shows the newest $limit of them (the digest and the
-     * recommender): the rows already come back newest-first, so the tail past
-     * $limit need never be fetched or hydrated. Null hydrates every given id,
-     * as the single-search and digest callers need.
+     * The given ids as list rows, ordered like the entry list and never in the order asked for; $limit keeps the
+     * newest. The subscription join is the access gate: an id from a feed the caller does not follow is dropped,
+     * even when a search index returned it.
      *
      * @param list<int> $entryIds
      *

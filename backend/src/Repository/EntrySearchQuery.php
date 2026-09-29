@@ -17,7 +17,6 @@ final readonly class EntrySearchQuery
     /** The effective page size — already clamped, never the raw request value. */
     public int $limit;
 
-    /** @param int $limit the size the client asked for */
     public function __construct(
         public int $userId,
         public SearchTermsModel $terms,
