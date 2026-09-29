@@ -54,10 +54,8 @@ final readonly class RefreshReportModel
     }
 
     /**
-     * The run stopped early because persistence failed and the EntityManager
-     * can no longer be trusted. $remaining is a lower bound derived from the
-     * batch (the failing feed plus the ones never attempted) — it cannot be
-     * queried, because querying needs the same broken EntityManager.
+     * Persistence failed and the EntityManager can no longer be trusted. $remaining is a lower bound from the batch
+     * (the failing feed plus the ones never attempted), since querying would need that same EntityManager.
      */
     public static function aborted(
         int $total,
@@ -71,10 +69,8 @@ final readonly class RefreshReportModel
     }
 
     /**
-     * Whether persistence failed and the shared EntityManager is closed.
-     * A caller that shares the EntityManager with other work this same
-     * request — MaintenanceTick does, with the recommendation sweep — must
-     * check this before touching it again.
+     * Whether persistence failed and the shared EntityManager is closed. A caller sharing it with other work in the
+     * same request (MaintenanceTick, with the recommendation sweep) checks this before touching it again.
      */
     public function isAborted(): bool
     {

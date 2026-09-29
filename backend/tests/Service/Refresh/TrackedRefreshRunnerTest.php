@@ -23,10 +23,8 @@ final class TrackedRefreshRunnerTest extends TestCase
     }
 
     /**
-     * The issue itself. A 200-feed sweep's first slice takes on the server's batch
-     * of 50, finishes 20 of them inside its time budget and leaves 180 due. The old
-     * client computed (50 - 180) / 50 and clamped the bar to zero; the run is 20 of
-     * 200 (#721).
+     * A 200-feed sweep's first slice takes a batch of 50, finishes 20 and leaves 180 due: the run is 20 of 200, not
+     * (50 - 180) / 50.
      */
     public function testTheFirstSliceOfALargeSweepReportsRunWideProgress(): void
     {
@@ -110,10 +108,8 @@ final class TrackedRefreshRunnerTest extends TestCase
     }
 
     /**
-     * Neither run above ever saved a denominator first, so a forget() that did
-     * nothing would pass them too. Here the first slice is partial and DOES save
-     * (20, 200); if the completing slice failed to clear it, the next press would
-     * resume that stale run instead of starting its own.
+     * Unlike the runs above, the first slice here saves (20, 200), so a forget() that did nothing would leave the next
+     * press resuming a stale run.
      */
     public function testCompletingARunClearsTheDenominatorASavedEarlierSliceLeftBehind(): void
     {

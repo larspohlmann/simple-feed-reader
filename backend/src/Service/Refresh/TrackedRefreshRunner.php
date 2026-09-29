@@ -12,23 +12,9 @@ use App\Service\Refresh\RefreshRunner\RefreshRunnerInterface;
 use Psr\Cache\InvalidArgumentException;
 
 /**
- * Runs one slice and folds it into the run it belongs to.
- *
- * The ONLY place run-wide accounting happens. RefreshRunner is left alone: the CLI and
- * maintenance sweeps — which nothing polls — must not pay for a feature that exists for
- * the polling client.
- *
- * Two quirks on the abort path, neither reachable by anything a user sees:
- *
- * - When {@see RefreshReportModel::aborted()} reports `remaining = 0` (every feed had
- *   started before persistence failed), `advancedBy()` takes {@see RefreshRunProgressModel}'s
- *   completion branch and the run reads as full though it stopped early — invisible,
- *   since the failure alert replaces the counted banner either way.
- * - `aborted()`'s `remaining` is a lower bound from the current batch, at most
- *   `RefreshRunner::BATCH_LIMIT`, not run-wide: a 200-feed sweep aborting on its first
- *   slice folds in `3 / 50`, not `3 / 200`. Later slices are protected by
- *   `advancedBy()`'s `max()` once the denominator is established — only a
- *   first-slice abort can understate it.
+ * Runs one slice and folds it into its run: the only run-wide accounting, so the unpolled CLI and maintenance sweeps
+ * never pay for it. An aborted slice's progress is approximate (its `remaining` is bounded by the batch), which no
+ * user sees: the failure alert replaces the counted banner.
  */
 final readonly class TrackedRefreshRunner
 {
@@ -65,10 +51,8 @@ final readonly class TrackedRefreshRunner
     }
 
     /**
-     * Every outcome that ends a feed's turn, not only a successful fetch. A 304, a
-     * failure and a 429 all take their feed out of `remaining`, so leaving them out
-     * here would strand the bar short of full. Feeds the time budget deferred are
-     * absent on purpose: they never started, and `remaining` still counts them.
+     * Every outcome that ends a feed's turn: a 304, a failure and a 429 leave `remaining` too. Feeds the budget
+     * deferred are absent on purpose, since `remaining` still counts them.
      */
     private function handledIn(RefreshReportModel $report): int
     {
