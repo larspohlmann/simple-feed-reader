@@ -184,8 +184,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotMatchTwoUnrelatedRendersOfTheSamePhoto(): void
     {
-        // beat.de: the opengraph share-render and the article's own upload are
-        // genuinely different files. Identity cannot — and must not — link them.
+        // The opengraph share-render and the article's own upload are genuinely different files. Identity cannot,
+        // and must not, link them.
         self::assertFalse($this->sameImage(
             'https://www.beat.de/media/tec_frontend_opengraph/2026/08/24/image-77437--34514.jpg?itok=RCRJb73k',
             'https://www.beat.de/media/tec_frontend_large/2026/08/24/elysia_channex_studio.jpg?itok=4Xr4wcbZ',
@@ -194,10 +194,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotMatchTwoCropsThatShareOnlyAGenericCropName(): void
     {
-        // zeit: every image in an article sits under one image-group directory and
-        // differs only by a generic crop name. Two crops carry no shared distinct
-        // token, so the basename cannot tell them apart — the blind spot is
-        // deliberate: a miss leaves today's behaviour, it never fabricates a match.
+        // zeit: every crop of an article sits under one image-group directory with a generic crop name, so the
+        // basename cannot tell two apart. The blind spot is deliberate: a miss never fabricates a match.
         self::assertFalse($this->sameImage(
             'https://img.zeit.de/news/2026-08/28/a-image-group/wide__1300x731',
             'https://img.zeit.de/news/2026-08/28/a-image-group/wide__1280x720',
@@ -237,9 +235,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesThroughAnImgproxyBase64Wrapper(): void
     {
-        // inthesetimes (#686): the og:image is the direct S3 file; the body serves
-        // the same photo through imgproxy, which base64-encodes the source URL in
-        // the path. Without unwrapping, the fingerprint reads the opaque blob.
+        // inthesetimes: the og:image is the direct S3 file; the body serves the same photo through imgproxy,
+        // which base64-encodes the source URL in the path. Without unwrapping, the fingerprint reads the blob.
         $direct = 'https://s3.us-east-1.amazonaws.com/in-these-times/GettyImages-2272241474_1.jpg';
         self::assertTrue($this->sameImage(
             $direct . '?mtime=1787252863',
@@ -249,8 +246,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesThroughAUrlQueryParamProxy(): void
     {
-        // politico (#686): both the lead and the body image are the same static
-        // file, wrapped by the dims4 proxy at different sizes, source in `?url=`.
+        // politico: both the lead and the body image are the same static file, wrapped by the dims4 proxy at
+        // different sizes, source in `?url=`.
         $source = 'https://static.politico.com/b4/a9/4e9bfb8144bca5e8/election-2-26-michigan-9499.jpg';
         $proxy = static fn (int $width, string $format): string =>
             "https://www.politico.com/dims4/default/resize/{$width}/format/{$format}?url=" . rawurlencode($source);
@@ -297,9 +294,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotMatchTwoDifferentGettyPhotosOnTheLibraryName(): void
     {
-        // inthesetimes (#686): two unrelated photos are both `GettyImages-<id>`.
-        // The only identity is the numeric id; the word `gettyimages` is noise and
-        // must not, on its own, tie the lead to a different in-body picture.
+        // inthesetimes: two unrelated photos are both `GettyImages-<id>`. The only identity is the numeric id;
+        // the word `gettyimages` is noise and must not, on its own, tie the lead to a different picture.
         self::assertFalse($this->sameImage(
             'https://s3.us-east-1.amazonaws.com/in-these-times/GettyImages-2272241474_1.jpg',
             'https://s3.us-east-2.amazonaws.com/itt-images/GettyImages-2251914887.jpeg',
@@ -316,8 +312,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testIsSameAssetAcceptsTheSamePathUuidAcrossRenditions(): void
     {
-        // tagesschau 491512: the video poster and the body img share a path UUID
-        // but differ in every other respect (rendition folder, filename).
+        // tagesschau: the video poster and the body img share a path UUID but differ in every other respect
+        // (rendition folder, filename).
         $poster = ImageIdentityModel::fromUrl(
             'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/poster.jpg',
         );
@@ -330,8 +326,7 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesAlsoAcceptsTheSamePathUuidAcrossRenditions(): void
     {
-        // matches() is strengthened the same way: this is what lets
-        // ReaderLeadImage::restore() correctly skip the tagesschau hero.
+        // matches() follows the same rule, which lets ReaderLeadImage::restore() skip the tagesschau hero.
         $poster = ImageIdentityModel::fromUrl(
             'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/poster.jpg',
         );
@@ -344,12 +339,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesRejectsTheSameStemUnderDifferentPathUuids(): void
     {
-        // Intended, not a bug: the pathUuid branch pre-empts the stem check,
-        // so a same-named "sendungsbild.jpg" under two different CMS asset
-        // UUIDs no longer matches even though the stems agree. The only
-        // consequence flows through PageImageInventoryModel::draws() into
-        // ReaderLeadImage::restore(): the lead is SKIPPED (an omitted image),
-        // never duplicated — a different UUID genuinely is a different asset.
+        // Intended: a path UUID on both sides decides before the stem, so one stem under two asset UUIDs is two
+        // assets. ReaderLeadImage then skips the lead, never duplicates it.
         $first = ImageIdentityModel::fromUrl(
             'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/sendungsbild.jpg',
         );
@@ -362,10 +353,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testIsSameAssetRejectsDifferentUuidsCarriedInTheFilenameStem(): void
     {
-        // BBC c74edv9887eo: the CMS asset UUID is the filename stem, not a
-        // path segment (`/live/<uuid>.jpg.webp`). Two different photos share
-        // the UUID's node field, so token matching wrongly tied them and the
-        // second figure lost its image, leaving an orphan caption.
+        // BBC: the asset UUID is the filename stem (`/live/<uuid>.jpg.webp`). Two photos share the UUID's node
+        // field, so token matching tied them and the second figure lost its image.
         $hassabis = ImageIdentityModel::fromUrl(
             'https://ichef.bbci.co.uk/ace/standard/976/cpsprodpb/d3a8/live/'
             . '3b927d50-ac60-11f1-a540-61c3f7fc4e6c.jpg.webp',
@@ -395,10 +384,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testIsSameAssetFallsBackToStemWhenOnlyOneSideHasAPathUuid(): void
     {
-        // #681 regression pin (54 articles): the UUID branch only fires when
-        // BOTH sides have a path UUID. One-sided UUID presence must fall
-        // through to the stem check, not treat the UUID-less side as having
-        // no identity at all.
+        // The UUID branch fires only when both sides carry a path UUID; one-sided presence falls through to the
+        // stem check (#681: a regression pin over 54 articles).
         $withPathUuid = ImageIdentityModel::fromUrl(
             'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/photo-story.jpg',
         );
@@ -409,7 +396,7 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testIsSameAssetRejectsDifferentPathUuids(): void
     {
-        // tagesschau 491912: video2's UUID has no matching body img.
+        // tagesschau: video2's UUID has no matching body img.
         $video1 = ImageIdentityModel::fromUrl(
             'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/poster.jpg',
         );
@@ -437,9 +424,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotTreatATransformHashSegmentAsAUuid(): void
     {
-        // A per-rendition transform hash is not 8-4-4-4-12 hex shaped; it must
-        // not be mistaken for an asset id and must fall back to stem/token
-        // matching, exactly like today.
+        // A per-rendition transform hash is not 8-4-4-4-12 hex shaped, so it is no asset id: matching falls back
+        // to the stem and tokens.
         $first = ImageIdentityModel::fromUrl(
             'https://cdn.test/a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4/vegane-burrata-photo.jpg',
         );
@@ -452,8 +438,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testLeavesANonDecodableSegmentAlone(): void
     {
-        // A long path segment that is not base64-of-an-http-url is not a proxy
-        // wrapper; it must fall back to today's behaviour, not a spurious match.
+        // A long path segment that is not base64 of an http URL is no proxy wrapper; it must not yield a spurious
+        // match.
         self::assertFalse($this->sameImage(
             'https://cdn.test/aGVsbG8gd29ybGQ.jpg',
             'https://s3.amazonaws.com/bucket/real-photograph-name.jpg',
@@ -462,8 +448,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesTheSamePhotoThroughAPercentEncodedPathProxy(): void
     {
-        // Substack (#786): every rendition is `substackcdn.com/image/fetch/<transforms>/<source>`
-        // with the source URL percent-encoded as the final path segment.
+        // Substack: every rendition is `substackcdn.com/image/fetch/<transforms>/<source>`, with the source URL
+        // percent-encoded as the final path segment.
         $source = 'https://substack-post-media.s3.amazonaws.com/public/images/'
             . 'f900b552-ad73-4892-a3b7-d300ad0de90e_1280x1280.png';
         self::assertTrue($this->sameImage(
@@ -474,9 +460,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotMatchTwoDifferentPhotosBehindAPercentEncodedPathProxy(): void
     {
-        // Without the unwrap both stems are the whole encoded source, and the
-        // generic words "https"/"substack" in every one of them tie the
-        // publication's subscribe card to any avatar on the page (#786).
+        // Without the unwrap both stems are the whole encoded source, and the generic words "https"/"substack"
+        // in every one of them tie the publication's subscribe card to any avatar on the page.
         $card = $this->substackFetch(
             '$s_!9Uw9!,f_auto,q_auto:best,fl_progressive:steep',
             'https://charleseisenstein.substack.com/twitter/subscribe-card.jpg?v=538695404&version=9',
@@ -493,8 +478,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testNamesAShareRenderByItsCardFilename(): void
     {
-        // Substack's og:image on a post without pictures is the publication's
-        // subscribe card, wrapped by the fetch proxy (#786).
+        // Substack's og:image on a post without pictures is the publication's subscribe card, wrapped by the
+        // fetch proxy.
         $card = $this->substackFetch(
             '$s_!9Uw9!,f_auto,q_auto:best,fl_progressive:steep',
             'https://charleseisenstein.substack.com/twitter/subscribe-card.jpg?v=538695404&version=9',
@@ -505,7 +490,7 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testNamesAShareRenderByItsPreviewDirectory(): void
     {
-        // trance-nexus and stitcher.io: a generated preview under /og/ or /meta/.
+        // A generated preview under /og/ or /meta/.
         self::assertTrue($this->isShareRender('https://trance-nexus.test/og/blog/best-tracks-2026.png'));
         self::assertTrue($this->isShareRender('https://stitcher.test/meta/meta_lg.png'));
         self::assertTrue($this->isShareRender('https://pub.test/images/og-image.png'));
@@ -520,8 +505,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testDoesNotMatchTwoImagesThatShareOnlyARenditionSize(): void
     {
-        // thevale (#786): two square 1080x1080 uploads are different pictures; a
-        // dimension word names a rendition size, never a photo.
+        // Two square 1080x1080 uploads are different pictures; a dimension word names a rendition size, never a
+        // photo.
         $uploads = 'https://substack-post-media.s3.amazonaws.com/public/images/';
         self::assertFalse($this->sameImage(
             $uploads . 'fb82b0a8-1392-454b-b4b2-ae77a04c9fab_1080x1080.png',
@@ -531,9 +516,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testMatchesZdfRenditionsThatDifferOnlyInTheirTildeSize(): void
     {
-        // ZDF (#1055): `<stem>~WxH` is a rendition; a short stem with no
-        // photo-specific word (`ki-162`) would otherwise reach the body as a
-        // duplicate still beside the player that replaced its sibling rendition.
+        // ZDF: `<stem>~WxH` is a rendition; a short stem with no photo-specific word (`ki-162`) would otherwise
+        // reach the body as a duplicate still beside the player that replaced its sibling rendition.
         self::assertTrue($this->sameImage(
             'https://www.zdfheute.de/assets/ki-162~1920x1080?cb=1',
             'https://www.zdfheute.de/assets/ki-162~384x216?cb=2',
@@ -550,8 +534,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testSameAssetRejectsHeiseHexHashFilenamesThatShareDescriptiveWords(): void
     {
-        // heise (#894): two different IFA photos share every descriptive word and
-        // differ only in a trailing per-photo hex hash, not a decimal id.
+        // heise: two different IFA photos share every descriptive word and differ only in a trailing per-photo
+        // hex hash, not a decimal id.
         $first = ImageIdentityModel::fromUrl(
             'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg',
         );
@@ -572,10 +556,8 @@ final class ImageIdentityModelTest extends TestCase
 
     public function testSameAssetAcceptsDifferentRenderHashesOfTheSamePhoto(): void
     {
-        // heise (#894): the SAME photo (#2) is served under two different
-        // trailing hashes — one per rendition — in the header figure and in
-        // og:image. The hash is per-render, not per-photo, so stripping it
-        // must unify these two filenames.
+        // heise: the same photo carries a different trailing hash per rendition, in the header figure and in
+        // og:image; the hash is per-render, so stripping it unifies the two filenames.
         $header = ImageIdentityModel::fromUrl(
             'https://heise.test/Ugreen-Home-Agent-Master-Agent-IFA-26-2-0b28ee11659fa5be.jpeg?width=696',
         );

@@ -60,9 +60,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testNeverRestoresAShareRenderIntoAnImagelessBody(): void
     {
-        // Substack (#786): a post without pictures reports the subscribe card as
-        // its og:image; an imageless body takes any lead, so the card must be
-        // refused by what it is, not by where it is drawn.
+        // A post without pictures reports the subscribe card as its og:image; an imageless body takes any lead,
+        // so the card must be refused by what it is, not by where it is drawn.
         $card = 'https://substackcdn.com/image/fetch/$s_!9Uw9!,f_auto/'
             . rawurlencode('https://pub.test/twitter/subscribe-card.jpg?v=1');
 
@@ -79,8 +78,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testPrependsTheLeadWhenTheBodyBuriesADifferentImage(): void
     {
-        // mopo: readability dropped the header photo and kept a different photo
-        // deep in the body. The lead belongs back at the top.
+        // Readability dropped the header photo and kept a different photo deep in the body. The lead belongs
+        // back at the top.
         $lead = 'https://cdn.test/hero-photo.jpg';
         $body = '<p>Anzeige</p><p>Story.</p><figure><img src="https://cdn.test/gallery-shot.jpg" alt=""></figure>';
 
@@ -124,8 +123,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testRestoresAMetaOnlyLeadIntoAnImagelessBody(): void
     {
-        // A text-only article whose lead lives only in the og:meta: the body has
-        // no picture to duplicate, so the lead still leads (the old hero behaviour).
+        // A text-only article whose lead lives only in the og:meta: the body has no picture to duplicate, so the
+        // lead still leads.
         $lead = 'https://cdn.test/hero-photo.jpg';
 
         $result = $this->restoredBody('<p>Just words.</p>', $this->pageDrawingNothing(), $lead);
@@ -160,9 +159,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testRestoresTheHeroAboveALeadingDecorativeIcon(): void
     {
-        // semafor #1081: the body opens with a 20x16 "Title icon" before the
-        // first heading. A leading icon is not a lead visual, so the drawn hero
-        // still belongs above it.
+        // The body opens with a 20x16 "Title icon" before the first heading. A leading icon is not a lead visual,
+        // so the drawn hero still belongs above it.
         $lead = 'https://img.semafor.com/cb54167-3280x2192.jpg';
         $body = '<div><p><span><img src="https://img.semafor.com/reporterstake@2x.png"'
             . ' alt="Title icon" width="20" height="16"></span></p><h3>Reed\'s view</h3>'
@@ -234,8 +232,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testLeavesTheBodyWhenTheLeadIsNotDrawnOnThePage(): void
     {
-        // beat.de: the og:image is a meta-only share-render, never drawn in the
-        // article. It must not be injected — the body already shows the real photo.
+        // The og:image is a meta-only share-render, never drawn in the article. It must not be injected: the
+        // body already shows the real photo.
         $lead = 'https://cdn.test/share-render.jpg';
         $body = '<p>Intro.</p><figure><img src="https://cdn.test/real-upload.jpg" alt=""></figure>';
 
@@ -287,10 +285,8 @@ final class ReaderLeadImageTest extends TestCase
 
     public function testDrawsALazyLoadedLeadOnceLazyImageSourcesResolvedIt(): void
     {
-        // The page ships the real URL on data-src behind a data: placeholder.
-        // Digging it out is LazyImageSources' job now; the inventory then reads
-        // the resolved src, so the drawn-on-page gate opens for the lead against
-        // a body that carries a different picture.
+        // The real URL waits on data-src behind a data: placeholder. Once LazyImageSources resolves it, the
+        // inventory draws the lead, and a body with a different picture takes it.
         $lead = 'https://cdn.test/hero-photo.jpg';
         $page = '<html><body><img src="data:image/gif;base64,AAAA" data-src="' . $lead . '">'
             . '<p>Body.</p></body></html>';
