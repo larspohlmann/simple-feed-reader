@@ -8,12 +8,7 @@ use App\Service\Settings\InstanceSettings;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\Service\ResetInterface;
 
-/**
- * Resolves the public base URL from the admin-editable instance setting,
- * falling back to the APP_FRONTEND_URL deploy env when the admin has set none.
- * The result is memoised: one email may build many links, and the setting does
- * not change within a single send.
- */
+/** The admin's setting, else APP_FRONTEND_URL. Memoised until reset(): one send builds many links. */
 final class ConfiguredPublicBaseUrl implements PublicBaseUrlInterface, ResetInterface
 {
     private ?string $resolved = null;
