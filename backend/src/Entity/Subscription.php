@@ -151,7 +151,7 @@ final class Subscription implements PositionedInterface
     {
         return new ArrayCollection(
             array_map(
-                static fn (SubscriptionTag $st): Tag => $st->getTag(),
+                static fn (SubscriptionTag $subscriptionTag): Tag => $subscriptionTag->getTag(),
                 $this->orderedSubscriptionTags(),
             ),
         );
@@ -190,11 +190,11 @@ final class Subscription implements PositionedInterface
 
     private function findJoin(Tag $tag): ?SubscriptionTag
     {
-        foreach ($this->subscriptionTags as $st) {
+        foreach ($this->subscriptionTags as $subscriptionTag) {
             // Identity, not id: unpersisted tags share a null id, and within one
             // unit of work the same tag is always the same instance.
-            if ($st->getTag() === $tag) {
-                return $st;
+            if ($subscriptionTag->getTag() === $tag) {
+                return $subscriptionTag;
             }
         }
 
@@ -209,7 +209,8 @@ final class Subscription implements PositionedInterface
         $rows = array_values($this->subscriptionTags->toArray());
         usort(
             $rows,
-            static fn (SubscriptionTag $a, SubscriptionTag $b): int => $a->getPosition() <=> $b->getPosition(),
+            static fn (SubscriptionTag $left, SubscriptionTag $right): int
+                => $left->getPosition() <=> $right->getPosition(),
         );
 
         return $rows;

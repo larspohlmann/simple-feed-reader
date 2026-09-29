@@ -76,29 +76,29 @@ final class EntryJson
      */
     private static function commonFields(EntryListRow $row): array
     {
-        $e = $row->entry;
-        $discussion = $e->getDiscussion();
+        $entry = $row->entry;
+        $discussion = $entry->getDiscussion();
 
         return [
-            'id' => $e->getId(),
-            'title' => $e->getTitle(),
-            'url' => $e->getUrl(),
+            'id' => $entry->getId(),
+            'title' => $entry->getTitle(),
+            'url' => $entry->getUrl(),
             'discussionUrl' => $discussion->url,
             'comments' => $discussion->commentsLoad?->value,
-            'author' => $e->getAuthor(),
-            'summary' => $e->getSummary(),
-            'imageUrl' => $e->getImageUrl(),
-            'imageWidth' => $e->getImageWidth(),
-            'imageHeight' => $e->getImageHeight(),
-            'media' => EntryMedia::toJsonList($e->getMedia()),
-            'attachments' => EntryMedia::toJsonList($e->getAttachments()),
+            'author' => $entry->getAuthor(),
+            'summary' => $entry->getSummary(),
+            'imageUrl' => $entry->getImageUrl(),
+            'imageWidth' => $entry->getImageWidth(),
+            'imageHeight' => $entry->getImageHeight(),
+            'media' => EntryMedia::toJsonList($entry->getMedia()),
+            'attachments' => EntryMedia::toJsonList($entry->getAttachments()),
             'categories' => $row->categories,
-            'publishedAt' => $e->getPublishedAt()?->format(\DateTimeInterface::ATOM),
-            'createdAt' => $e->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'publishedAt' => $entry->getPublishedAt()?->format(\DateTimeInterface::ATOM),
+            'createdAt' => $entry->getCreatedAt()->format(\DateTimeInterface::ATOM),
             'subscriptionId' => $row->subscriptionId,
             'source' => $row->subscriptionTitle,
             // The feed is fetch-joined in the row query, so this adds no N+1.
-            'faviconUrl' => $e->getFeed()->getFaviconUrl(),
+            'faviconUrl' => $entry->getFeed()->getFaviconUrl(),
             'isHidden' => $row->isHidden,
             'isFavorite' => $row->isFavorite,
             'isKept' => $row->isKept,

@@ -77,8 +77,8 @@ final class SearchReindexCommand extends Command
 
         try {
             return $this->rebuild($io);
-        } catch (SearchEngineUnavailableException $e) {
-            $io->error(\sprintf('The search engine did not answer during the rebuild: %s', $e->getMessage()));
+        } catch (SearchEngineUnavailableException $exception) {
+            $io->error(\sprintf('The search engine did not answer during the rebuild: %s', $exception->getMessage()));
 
             return Command::FAILURE;
         }

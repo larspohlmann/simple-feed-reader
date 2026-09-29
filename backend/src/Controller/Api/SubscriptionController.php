@@ -32,8 +32,8 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 final readonly class SubscriptionController
 {
     public function __construct(
-        private SubscriptionService $subscriptions,
-        private SubscriptionRepository $subscriptionRepo,
+        private SubscriptionService $subscriber,
+        private SubscriptionRepository $subscriptions,
         private TagRepository $tags,
         private SubscriptionTallyReader $tallies,
         private OwnedSubscriptions $ownedSubscriptions,
@@ -46,7 +46,7 @@ final readonly class SubscriptionController
     public function list(#[CurrentUser] User $user): JsonResponse
     {
         return new JsonResponse(SubscriptionJson::list(
-            $this->subscriptionRepo->findForUserWithTags($user->requireId()),
+            $this->subscriptions->findForUserWithTags($user->requireId()),
             $this->tallies->forUser($user->requireId()),
         ));
     }
@@ -66,7 +66,7 @@ final readonly class SubscriptionController
     public function create(#[CurrentUser] User $user, #[MapRequestPayload] SubscribeRequest $request): JsonResponse
     {
         $tags = $this->tags->findAllByIdsForUser($user->requireId(), $request->tagIds);
-        $outcome = $this->subscriptions->subscribe($user, $request->url, $request->format, $tags, $request->title);
+        $outcome = $this->subscriber->subscribe($user, $request->url, $request->format, $tags, $request->title);
 
         if (null === $outcome->subscription) {
             return new JsonResponse(SubscribeOutcomeJson::candidates($outcome));
@@ -86,11 +86,11 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] UpdateSubscriptionRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
+        $subscription = $this->subscriptions->getOneForUser($user->requireId(), $id);
 
-        $this->editor->update($sub, $request->toChange());
+        $this->editor->update($subscription, $request->toChange());
 
-        return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
+        return new JsonResponse(['subscription' => SubscriptionJson::one($subscription)]);
     }
 
     /**
@@ -104,11 +104,11 @@ final readonly class SubscriptionController
         #[CurrentUser] User $user,
         #[MapRequestPayload] MoveFeedToTagRequest $request,
     ): JsonResponse {
-        $sub = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
+        $subscription = $this->subscriptions->getOneForUser($user->requireId(), $id);
 
-        $this->editor->moveToTag($sub, $request->toMove());
+        $this->editor->moveToTag($subscription, $request->toMove());
 
-        return new JsonResponse(['subscription' => SubscriptionJson::one($sub)]);
+        return new JsonResponse(['subscription' => SubscriptionJson::one($subscription)]);
     }
 
     /**
@@ -156,15 +156,15 @@ final readonly class SubscriptionController
     ): JsonResponse {
         $byId = $this->ownedSubscriptions->resolve($user->requireId(), $request->subscriptionIds);
 
-        return new JsonResponse(['removed' => $this->subscriptions->unsubscribeAll(array_values($byId))]);
+        return new JsonResponse(['removed' => $this->subscriber->unsubscribeAll(array_values($byId))]);
     }
 
     #[Route('/{id}', name: 'api_subscriptions_delete', methods: ['DELETE'], requirements: ['id' => '\d+'])]
     public function delete(int $id, #[CurrentUser] User $user): JsonResponse
     {
-        $subscription = $this->subscriptionRepo->getOneForUser($user->requireId(), $id);
+        $subscription = $this->subscriptions->getOneForUser($user->requireId(), $id);
 
-        $this->subscriptions->unsubscribe($subscription);
+        $this->subscriber->unsubscribe($subscription);
 
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }

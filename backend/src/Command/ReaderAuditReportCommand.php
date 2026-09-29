@@ -78,8 +78,8 @@ final class ReaderAuditReportCommand extends Command
             \count($findings->ranked()),
         ));
 
-        $bySuspect = $findings->tally(static fn (CleanupMarkerModel $m): string => $m->suspect);
-        $byCode = $findings->tally(static fn (CleanupMarkerModel $m): string => $m->code);
+        $bySuspect = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->suspect);
+        $byCode = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->code);
         $io->table(['stage to look at', 'articles'], $this->rowsOf($bySuspect));
         $io->table(['marker', 'articles'], $this->rowsOf($byCode));
 

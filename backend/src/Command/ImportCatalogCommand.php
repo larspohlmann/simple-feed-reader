@@ -68,8 +68,8 @@ final class ImportCatalogCommand extends Command
 
         try {
             $document = $this->document($input);
-        } catch (InvalidCatalogDocumentException $e) {
-            $io->error($e->getMessage());
+        } catch (InvalidCatalogDocumentException $exception) {
+            $io->error($exception->getMessage());
 
             return Command::FAILURE;
         }

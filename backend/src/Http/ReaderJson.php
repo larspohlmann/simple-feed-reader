@@ -23,29 +23,29 @@ final class ReaderJson
      *   originalHero: array{url: string, width: int|null, height: int|null}|null}
      */
     public static function one(
-        ExtractionResultModel $r,
+        ExtractionResultModel $result,
         ?DeclaredImageModel $originalHero,
         \DateTimeImmutable $now,
     ): array {
-        if ($r->reason !== null) {
+        if ($result->reason !== null) {
             return [
                 'status' => 'failed',
-                'url' => $r->url,
-                'reason' => $r->reason->value,
-                'detail' => $r->detail,
+                'url' => $result->url,
+                'reason' => $result->reason->value,
+                'detail' => $result->detail,
                 'originalHero' => self::hero($originalHero),
             ];
         }
 
         return [
             'status' => 'ok',
-            'url' => (string) $r->url,
-            'title' => (string) $r->title,
-            'byline' => $r->byline,
-            'siteName' => $r->siteName,
-            'contentHtml' => (string) $r->contentHtml,
-            'excerpt' => $r->excerpt,
-            'paywalled' => $r->paywalled,
+            'url' => (string) $result->url,
+            'title' => (string) $result->title,
+            'byline' => $result->byline,
+            'siteName' => $result->siteName,
+            'contentHtml' => (string) $result->contentHtml,
+            'excerpt' => $result->excerpt,
+            'paywalled' => $result->paywalled,
             'originalHero' => self::hero($originalHero),
             'extractedAt' => $now->format(\DateTimeInterface::ATOM),
         ];

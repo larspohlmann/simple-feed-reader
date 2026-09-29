@@ -36,7 +36,7 @@ final readonly class TagController
         $rows = $this->tags->findForUser($user->requireId());
 
         return new JsonResponse([
-            'tags' => array_map(static fn (Tag $t) => TagJson::one($t), $rows),
+            'tags' => array_map(static fn (Tag $tag) => TagJson::one($tag), $rows),
         ]);
     }
 
