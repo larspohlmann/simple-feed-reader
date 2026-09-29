@@ -42,8 +42,8 @@ behind, and why.
 ## 2. How to make a backup
 
 1. Open **Settings**.
-2. Go to **Account backup**.
-3. Click **Download backup**.
+2. Go to **Import & export**.
+3. Under **Account backup**, click **Download backup**.
 
 The browser downloads a file with a name such as
 `simplefeedreader-0_7_0-ada-at-example-20260823.zip`. The name holds the
@@ -89,8 +89,8 @@ request per part. The browser does these steps, in this order:
 To start a restore:
 
 1. Open **Settings**.
-2. Go to **Account backup**.
-3. Choose the backup file.
+2. Go to **Import & export**.
+3. Under **Account backup**, choose the backup file.
 4. Download the OPML safety net if you want a copy of the current
    subscriptions.
 5. Type `REPLACE` in the confirmation field.
@@ -172,8 +172,8 @@ file.
 | `tag` | Each tag: `name`, `color`, `icon` and `position`. |
 | `savedSearch` | Each saved search: `term`, `wholeWord`, `phrase` and `position`. |
 | `feed` | Each feed you subscribe to: `url`, `siteUrl`, `title`, `description`, `faviconUrl`, `imageUrl` and `sourceFormat`. |
-| `subscription` | Each subscription: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), and the tags on the subscription with their order. |
-| `entry` | Each article, with the address of the feed it came from: `guid`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`, `bodyIsOpeningPost`). |
+| `subscription` | Each subscription, with the address of its feed: `customTitle`, `position`, `markedReadUntil`, `createdAt` (the date the subscription started), whether its articles show in All items (`includeInAllItems`) and in "For you" (`includeInForYou`), and the tags on the subscription with their order. |
+| `entry` | Each article, with the address of the feed it came from: `guid`, `guidHash`, `url`, `title`, `author`, `summary`, `contentHtml`, the image (`imageUrl`, `imageWidth`, `imageHeight`), its embedded media and attachments (`media`, `attachments`), `publishedAt`, `createdAt` (the date this instance first saw the article), `effectiveDate`, and its discussion (`discussionUrl`, `commentsFeedUrl`, `commentsLoad`, `bodyIsOpeningPost`). |
 | `entryState` | Each article mark: `isHidden`, `isViewed`, `isFavorite`, `isKept`, `hiddenAt` and `viewedAt`. Each mark names its article by feed and by article identifier. |
 | `footer` | The number of lines of each kind, counting the lines of that part only. The restore uses these numbers to show you what the part holds. |
 
@@ -205,7 +205,7 @@ writes none of them.
 | `CatalogFeed` | The shared discovery catalog. Each instance holds its own copy. |
 | `Category` | A category a feed declared on an article. The same category is the same row for every account that sees it. |
 | `EntryCategory` | The link between an article and a category it was published under. It names no account. |
-| `WorkerHeartbeat` | The liveness record of the refresh worker. It is a machine record, not your data. |
+| `WorkerHeartbeat` | The liveness record of the processes that drive "For you" runs: the worker, a drainer and the cron sweep. It is a machine record, not your data. |
 | `MailSendFailure` | The record of automated e-mails the instance failed to send. It is a machine record, not your data. |
 
 ### 6.2 Account data that the file drops in full
@@ -222,7 +222,7 @@ These rows belong to your account. A backup drops each of them completely.
 | `RecommendationRunLog` | The diagnostic log of one run. It has no meaning without the run, and the run is not restored. |
 | `RecommendationItem` | The picks of one run. They have no meaning without the run, and the run is not restored. |
 | `UserPasskey` | Your passkeys. A passkey is tied to one device and to this instance's identity. A credential restored onto another account, or onto another device, could never sign you in. Carrying credential ids and keys in the file would only make a stolen backup more dangerous. |
-| `SavedSearchEntry` | Which articles match one of your saved searches (#1116). A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
+| `SavedSearchEntry` | Which articles match one of your saved searches. A derived row: the sweep that matches searches against articles rebuilds it, so a restore leaves it to be rebuilt rather than carrying it. |
 
 Your "For you" **settings** and **results** are both dropped. A restore leaves
 the settings at their defaults; set them again once, and run the engine.
@@ -237,15 +237,15 @@ the settings at their defaults; set them again once, and run the engine.
 | `createdAt` | The date this instance opened the account. A restore fills an account that already exists. It does not make one. Therefore the age of the account is not the file's to set. |
 | `approvedAt` | The date an administrator approved the account on this instance. It is a decision of the instance, not your reading data. |
 | `lastLoginAt` | The date of your last sign-in. The next sign-in writes it again, so a restored value is old before you see it. |
-| `emailVerifiedAt` | The date this instance proved you control your address (#636). Written by the verify-email and sign-in-with-provider flows, never by you. A restore runs against an account this instance already verified or did not. |
+| `emailVerifiedAt` | The date this instance proved you control your address. Written by the verify-email and sign-in-with-provider flows, never by you. A restore runs against an account this instance already verified or did not. |
 | `accountLimits.trialEndsAt` | The end of the trial period this instance gave the account. The instance decides its own terms. |
 | `accountLimits.maxSubscriptions` | The subscription limit an administrator gave the account. If the file carried it, you could write your own limit. |
 | `preferences` | Not a value, but the pointer from the account to its preferences row. The `account` line writes the preference itself, so the pointer becomes no key in the file. |
 | `activeAiProviderSettings` | The pointer to the AI connection in use. It points at data that section 6.2 drops in full. |
 | `recommendationSettings` | The pointer to your "For you" settings row. It points at data that section 6.2 drops in full. |
-| `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday`, `digestFormat` | The email digest settings (#636, #726). Added ahead of the backup format's support for them; a later task carries them. |
+| `digestEnabled`, `digestCadence`, `digestSendHour`, `digestWeekday`, `digestFormat` | The email digest settings. The backup format does not carry them yet. |
 | `digestLastSentAt` | The date the digest last sent. The next send writes it again, so a restored value would only delay that send. |
-| `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey (#624). This is the state of the app on this device, not a setting of your account. A restore into a fresh account should let that account see the offer. |
+| `passkeyOfferAnsweredAt` | Whether you have already been offered a passkey. It records that the app showed you the offer, not a setting you chose. A restore into a fresh account should let that account see the offer. |
 
 **On each row you own.** The preferences, each tag, each subscription and each
 article mark all hold one pointer to their owner.
@@ -253,9 +253,9 @@ article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `user` | The pointer to the account that owns the row. A restore writes into the account you are signed in to, so no line names an owner. It could not: an owner read from the file would be an owner you chose for yourself. |
-| `includeInDigest` | Whether a saved search feeds the email digest (#636). Added ahead of the backup format's support for it; a later task carries it. |
-| `matchedUpToEntryId` | The membership sweep's high-water mark for a saved search (#1116): the id of the last article checked against its terms. A restored search starts at 0 and is checked against every article again. |
-| `slug` | The web address of a saved search: its id, then a short form of its search term. A restore gives the search a new id, so a carried-over slug would be stale; the restore pass regenerates it, the same way `SavedSearchController::create` does, once the flush that assigns the id has run. |
+| `includeInDigest` | Whether a saved search feeds the email digest. The backup format does not carry it yet. |
+| `matchedUpToEntryId` | The membership sweep's high-water mark for a saved search: the id of the last article checked against its terms. A restored search starts at 0 and is checked against every article again. |
+| `slug` | The web address of a saved search: its id, then a short form of its search term. A restore gives the search a new id, so a carried-over slug would be stale; the restore pass regenerates it with `SavedSearchSlug`, as `SavedSearchEditor` does for a new search, once the flush that assigns the id has run. |
 
 **On a feed.**
 
@@ -283,7 +283,7 @@ article mark all hold one pointer to their owner.
 | Field | Why the file leaves it out |
 |---|---|
 | `location.urlHash` | A value the application calculates from the article address, which the file already carries. The restore calculates it again for each article. Therefore it is never old, and the format never has to drop it later. |
-| `image.checkedAt` | The time at which this instance judged the image (#1109). A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
+| `image.checkedAt` | The time at which this instance judged the image. A restored image was not judged here, so the field stays empty. An empty field does not put the image into the check queue. |
 | `image.verifyAttempts` | The queue marker and failure count of this instance's check. A restored image is not put into the queue. The instance shows it as the old instance did. |
 
 ## 7. Fields a restore must never write
@@ -353,8 +353,7 @@ answer JSON, with `application/problem+json` on failure.
 
 There is no restore session on the server and no finish call: each request
 carries everything the server needs, and the server keeps nothing between
-requests. The version 2 single-file format's `POST /restore` route is gone
-(section 3).
+requests.
 
 `POST /restore/entries` runs two passes over its part, and every rule below is
 a guard test:
@@ -363,7 +362,8 @@ a guard test:
   its header must name a part number of 1 or higher (a part 0 is refused);
   every `feedUrl` it names must be a feed the account subscribes to, checked
   against the database; and the account's current entry count across its
-  subscribed feeds, plus this part's entries, must not pass 500,000.
+  subscribed feeds, plus the entries this part would add (an entry the feed
+  already holds does not count), must not pass 500,000.
 - **Load:** an entry whose `(feed, guidHash)` already exists is skipped —
   this is what makes a retried part safe, and it also covers the refresh
   worker fetching the same feed while the restore is still running. A feed
