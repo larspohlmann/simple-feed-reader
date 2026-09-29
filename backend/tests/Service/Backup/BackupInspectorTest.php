@@ -167,10 +167,8 @@ final class BackupInspectorTest extends TestCase
     }
 
     /**
-     * Every cross-reference a foundation makes must resolve inside the same
-     * file, and pass 1 is the only place that verdict is worth anything —
-     * pass 2 runs after the wipe, where the same refusal costs the account
-     * everything it held.
+     * Every foundation reference must resolve inside the file, and pass 1 is where refusing costs nothing: pass 2 runs
+     * after the wipe.
      *
      * @return iterable<string, array{list<array<string, mixed>>, array<string, int>}>
      */

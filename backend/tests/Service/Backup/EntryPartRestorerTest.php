@@ -572,12 +572,7 @@ final class EntryPartRestorerTest extends DbTestCase
         return 'guid-' . $token;
     }
 
-    /**
-     * The value RestoreFeedTarget's map is actually keyed by: the same
-     * sha256(guid) an Entry computes for itself in its constructor. A file's
-     * "guidHash" field and a pre-inserted row's real column must agree on
-     * this for the dedupe/attach lookups under test to mean anything.
-     */
+    /** sha256(guid), as Entry computes it: a file's guidHash and a pre-inserted row must agree for the lookups. */
     private function guidHash(string $token): string
     {
         return hash('sha256', $this->guid($token));

@@ -161,7 +161,7 @@ final class BackupReaderTest extends TestCase
         self::assertSame('2026-07-01 00:00:00', $subscription->createdAt->format('Y-m-d H:i:s'));
         self::assertSame('Tech', $subscription->tags[0]->name);
         // The fixture line above carries no includeInAllItems/includeInForYou key,
-        // so both must default to true (an older backup predates #688).
+        // so both must default to true, as in a backup older than those fields.
         self::assertTrue($subscription->includeInAllItems);
         self::assertTrue($subscription->includeInForYou);
     }
@@ -460,11 +460,7 @@ final class BackupReaderTest extends TestCase
         self::drain(self::gzipOf($lines), self::SMALL_CEILING);
     }
 
-    /**
-     * A header plus a gzip of nothing but newlines used to slip past the byte
-     * ceiling: the blank-line skip ran before the byte count, so the bomb
-     * inflated uncounted. Every line's bytes now count before the skip.
-     */
+    /** A gzip of nothing but newlines must count toward the byte ceiling: blank lines are counted before the skip. */
     public function testBlankLinesCountTowardTheByteCeiling(): void
     {
         $contents = json_encode(self::header(1), \JSON_THROW_ON_ERROR) . "\n"

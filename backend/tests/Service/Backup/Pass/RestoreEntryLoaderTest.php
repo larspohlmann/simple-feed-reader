@@ -24,10 +24,8 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * The read-back contract of #456, pinned directly: after a batch insert the
- * loader asks for the ids of exactly the hashes it wrote. AccountRestorerTest
- * proves the same path end to end; this test is the one that fails when a
- * refactor quietly goes back to re-reading the whole feed.
+ * Pins the read-back directly: after a batch insert the loader asks for the ids of exactly the hashes it wrote, never
+ * the whole feed. AccountRestorerTest covers the same path end to end.
  */
 final class RestoreEntryLoaderTest extends TestCase
 {

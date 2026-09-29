@@ -30,15 +30,8 @@ use App\Tests\Support\UserFactory;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The round trip the spec demands, driven through the real service graph: the
- * fixture files are produced by the real exporter, so a change that breaks the
- * pair breaks these tests rather than a hand-written NDJSON string that agrees
- * with neither half.
- *
- * Every assertion that a row is gone (or unchanged) runs after an explicit
- * `clear()` — AccountReset deletes with bulk DQL, so `find()` would otherwise
- * serve the stale identity map and the assertion would pass when it should
- * fail.
+ * The round trip through the real service graph, on files the real exporter produced. Every "row is gone" assertion
+ * runs after clear(): AccountReset deletes with bulk DQL, so find() would serve the stale identity map.
  */
 final class AccountRestorerTest extends DbTestCase
 {
@@ -59,12 +52,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->userFactory = new UserFactory($this->entityManager, $hasher);
     }
 
-    /**
-     * The foundation part of a real export — the only part `start()` reads.
-     * Built through the real exporter rather than hand-written NDJSON, so a
-     * change that breaks the pair breaks this test rather than a fixture that
-     * agrees with neither half.
-     */
+    /** The foundation part of a real export, the only part `start()` reads. */
     private function backupOf(User $user): string
     {
         $exporter = self::getContainer()->get(AccountBackupExporter::class);
@@ -248,12 +236,6 @@ final class AccountRestorerTest extends DbTestCase
         return $entry;
     }
 
-    /**
-     * Two feeds, two tags with colours and per-subscription tag positions, two
-     * saved searches (one whole-word), two subscriptions with a custom title
-     * and a watermark, three entries with bodies and images, two entry
-     * states, preferences on and a non-default locale.
-     */
     private function seedRichAccount(User $user): void
     {
         $one = $this->makeFeed(self::ONE_URL, 'Original', 'xml');
@@ -270,7 +252,7 @@ final class AccountRestorerTest extends DbTestCase
         $this->entityManager->persist($news);
 
         // A phrase saved search (quoted query) — its `phrase` flag must survive
-        // the round trip, which `assertFieldsRoundTripped` checks below (#702).
+        // the round trip, which `assertFieldsRoundTripped` checks below.
         $this->entityManager->persist(new SavedSearch($user, 'climate change', false, true));
         $whole = new SavedSearch($user, 'rust lang', true);
         $whole->setPosition(1);
@@ -406,12 +388,8 @@ final class AccountRestorerTest extends DbTestCase
     }
 
     /**
-     * `slug` is deliberately NOT_BACKED_UP (restore reassigns ids, so a
-     * carried-over slug would be stale) — but that makes it the restore
-     * path's own job to set it. A restored search with a null slug breaks
-     * every saved-search sidebar link and reader route, silently, so this
-     * proves the regeneration directly rather than trusting the schema
-     * declaration to imply it (#1118).
+     * `slug` is NOT_BACKED_UP because ids change, so the restore must regenerate it; a null slug silently breaks every
+     * sidebar link and reader route to the search.
      */
     public function testRestoreRegeneratesTheSavedSearchSlug(): void
     {
@@ -435,19 +413,8 @@ final class AccountRestorerTest extends DbTestCase
     }
 
     /**
-     * Closes the gap the write-direction guard leaves open: a field declared
-     * `BACKED_UP` and written by the exporter can still be lost if the Line
-     * DTO that reads the file back never claims it. `BackupSchemaCoverageTest`
-     * proves the write half; this proves the read half, off the identical
-     * `BackupFieldDeclarations::BACKED_UP` list, so it grows the moment that
-     * one does rather than needing a matching edit here (#556).
-     *
-     * The account restored onto is a fresh one, not the account that made the
-     * file: `RestoreLoadPass::loadFeed()` leaves a Feed row untouched when one
-     * with the same URL already exists, and the source account's own feed
-     * would be exactly such a row. Comparing against a row this restore
-     * merely referenced, rather than one it wrote from the file's fields,
-     * would let the bug this test exists to catch pass unnoticed.
+     * The read half of BackupSchemaCoverageTest's write proof, off the same BackupFieldDeclarations::BACKED_UP list.
+     * Restores onto a fresh account: the source's own Feed row would only be referenced, never written from the file.
      */
     public function testEveryBackedUpFieldSurvivesTheRestoreRoundTrip(): void
     {
@@ -570,16 +537,8 @@ final class AccountRestorerTest extends DbTestCase
     }
 
     /**
-     * Every field `BackupFieldDeclarations::BACKED_UP` declares for
-     * $entityClass, minus $handledSeparately, read through the entity's own
-     * getter and compared before vs after the restore.
-     *
-     * Generic on purpose: a newly `BACKED_UP` scalar field needs no new case
-     * here, only a getter — which is exactly what BackupSchemaCoverageTest's
-     * write-only proof could not force (#556). $handledSeparately exists for
-     * the small, fixed set of association fields (`feed`, `subscriptionTags`,
-     * `tag`, `entry`) whose comparison is a relationship, not a getter call —
-     * the caller asserts those itself.
+     * Compares every BACKED_UP field of $entityClass through its getter, before and after the restore, so a new scalar
+     * field needs only a getter. $handledSeparately names the associations the caller compares itself.
      *
      * @param list<string> $handledSeparately
      */
@@ -605,11 +564,8 @@ final class AccountRestorerTest extends DbTestCase
     }
 
     /**
-     * Reads a declared field off an entity through its own getter, deriving
-     * the method name from the field's own path so an embedded field such as
-     * `image.url` finds `getImageUrl()` the same way a plain field finds
-     * `getUrl()`. Tried bare first, because a boolean field already named
-     * `isHidden` or `isKept` has a getter of that exact name, not `isIsRead()`.
+     * Derives the getter from the field's path (`image.url` -> getImageUrl()), trying the bare name first so `isHidden`
+     * finds isHidden(), not isIsHidden().
      */
     private function getterValue(object $entity, string $field): mixed
     {
@@ -817,10 +773,8 @@ final class AccountRestorerTest extends DbTestCase
     }
 
     /**
-     * One feed with more entries than a single insert batch, every entry
-     * favourited, so the entry part crosses both RestoreEntryLoader boundaries
-     * at once: the 500-row insert batch (ids read back per batch) and the
-     * 500-row held-state flush. Every batch's ids and every state must survive.
+     * One feed, every entry favourited, wider than RestoreEntryLoader's 500-row insert batch and 500-row state flush,
+     * so every batch's read-back ids and every state must survive.
      */
     private function seedFeedWiderThanOneBatch(User $user, int $entryCount): void
     {
@@ -860,9 +814,7 @@ final class AccountRestorerTest extends DbTestCase
         self::assertSame(502, $this->scalarInt('SELECT COUNT(*) FROM entry_state WHERE user_id = ?', [$userId]));
     }
 
-    // No content can reach RestoreLoadPass's flush()-catch(DbalException) branch
-    // any more (#412: pass 1 refuses duplicates), so the wrap is proven directly
-    // in RestoreLoadPassTest::testADatabaseFailureDuringTheAccountShapeFlushIsAWrappedBackupError.
+    // Pass 1 refuses every content-driven flush failure, so RestoreLoadPassTest proves the flush wrap directly.
 
     /** @return array<string, int> */
     private function withCountShiftedBy(string $kind, int $delta, mixed $counts): array
@@ -878,11 +830,7 @@ final class AccountRestorerTest extends DbTestCase
         return $corrected;
     }
 
-    /**
-     * The headline property of the whole feature: a file that cannot be fully
-     * accepted costs the account nothing. A dangling reference used to be
-     * found only during the load, with the wipe already behind it.
-     */
+    /** The headline property: a file that cannot be fully accepted costs the account nothing. */
     public function testAReferentialRefusalLeavesEveryRowInPlace(): void
     {
         $user = $this->seededUser('dangling@example.com');

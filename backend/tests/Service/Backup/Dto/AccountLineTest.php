@@ -39,11 +39,7 @@ final class AccountLineTest extends TestCase
         self::assertSame(MagazineStyle::Boxed, $line->magazineStyle);
     }
 
-    /**
-     * A backup written before #935 carries a `recommendationSettings` object.
-     * The format no longer reads it (#935 dropped "For you" settings from the
-     * backup), so the extra key must be ignored, not rejected.
-     */
+    /** An older backup's `recommendationSettings` object is ignored, not rejected: the format does not carry it. */
     public function testALegacyRecommendationSettingsBlockIsIgnored(): void
     {
         $line = AccountLine::fromLine([

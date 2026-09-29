@@ -86,13 +86,7 @@ final class BackupFilenameModelTest extends TestCase
         self::assertStringContainsString('-l', $filename->value());
     }
 
-    /**
-     * No upstream validator enforces email *format* (only non-emptiness:
-     * CreateAdminCommand, E2eSeedAdminCommand, BootstrapAdminProvisioner and
-     * OAuthAccountLinker all accept a raw string), so a value with no "@" is
-     * reachable, not just theoretical. It must not leave a trailing "-at-"
-     * on the account field.
-     */
+    /** Nothing validates an address's format, so one without "@" is reachable and must not leave a trailing "-at-". */
     public function testHandlesAnAddressWithNoAtSignWithoutADoubledOrTrailingSeparator(): void
     {
         $filename = new BackupFilenameModel('notanemail', 'v0.6.2', $this->exportedAt());
