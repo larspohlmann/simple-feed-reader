@@ -19,7 +19,6 @@ final readonly class ReaderLeadImage
     /** Both declared edges at or below this mark an icon or a beacon, never a lead. */
     private const int ICON_EDGE_CEILING = 100;
 
-    /** @return ?Element the restored hero figure, so a top-placed player can be seated below it (#907) */
     public function restore(HTMLDocument $document, LeadImageCandidateModel $lead): ?Element
     {
         $body = $document->body;

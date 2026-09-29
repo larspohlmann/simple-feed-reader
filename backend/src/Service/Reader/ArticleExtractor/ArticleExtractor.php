@@ -28,8 +28,8 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
  * Fetch, normalise, read the page, run readability, clean the body, sanitise (EntrySanitizer is the XSS barrier).
- * Every page read happens before readability consumes the normalised document (#684, #748). An ordinary failure is
- * a `failed` result, never a throw, so the endpoint stays 200 and the client falls back to the feed body.
+ * Every page read happens before readability consumes the normalised document. An ordinary failure is a `failed`
+ * result, never a throw, so the endpoint stays 200 and the client falls back to the feed body.
  */
 final readonly class ArticleExtractor implements ArticleExtractorInterface
 {

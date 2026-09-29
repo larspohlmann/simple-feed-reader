@@ -18,11 +18,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Retrieves an article's source HTML for reader-mode extraction: the guarded
- * redirect chain lives in RedirectFollower; this class negotiates HTML, caps the
- * body, and returns the body as UTF-8 plus the final URL (readability needs it
- * to resolve relative image URLs). A charset declared only by the Content-Type
- * header is transcoded here, where the header is still in hand (#904).
+ * Fetches an article's HTML for extraction over RedirectFollower's guarded chain: negotiates HTML, caps the body and
+ * returns it as UTF-8 with the final URL. A charset only the Content-Type header declares is transcoded here.
  */
 final readonly class HtmlPageFetcher
 {
@@ -117,10 +114,8 @@ final readonly class HtmlPageFetcher
         return [
             'headers' => [
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                // Refuse transparent compression: otherwise curl counts the
-                // COMPRESSED bytes against MAX_BYTES in on_progress but buffers
-                // the DECOMPRESSED body whole before the post-read size check —
-                // a small gzip bomb could inflate to GB and OOM the worker.
+                // No transparent compression: on_progress would cap the compressed bytes while curl buffers the
+                // inflated body whole, so a small gzip bomb could exhaust the worker's memory.
                 'Accept-Encoding' => 'identity',
                 'User-Agent' => $this->userAgent,
             ],
@@ -134,8 +129,6 @@ final readonly class HtmlPageFetcher
         ];
     }
 
-    /** The status line as a reader would read it — the code with its standard
-     *  reason phrase ("HTTP 403 Forbidden"), or the bare code for an unknown one. */
     private function describeStatus(int $status): string
     {
         $phrase = $this->reasonPhrases->of($status);

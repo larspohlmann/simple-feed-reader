@@ -15,9 +15,9 @@ use fivefilters\Readability\Readability;
 use OpenTelemetry\API\Instrumentation\WithSpan;
 
 /**
- * Runs readability over the normalised page and over its wrapper-collapsed variant (#235) and keeps the richer
- * extraction, since the collapse rescues block-component pages but breaks some well-structured ones (#476). The
- * frame keep-list comes from the embed providers, so every host the reader renders survives extraction (#1053).
+ * Runs readability over the normalised page and over its wrapper-collapsed variant and keeps the richer extraction,
+ * since the collapse rescues block-component pages but breaks some well-structured ones (#476). The frame keep-list
+ * comes from the embed providers, so every host the reader renders survives extraction.
  */
 final readonly class ArticleReadability
 {
@@ -30,8 +30,7 @@ final readonly class ArticleReadability
     }
 
     /**
-     * The conservative document arrives already normalised: the caller reads it before readability consumes
-     * it (#684).
+     * The conservative document arrives already normalised: the caller reads it before readability consumes it.
      *
      * @param list<ContainerSignatureModel> $slideshowContainers
      */
@@ -51,9 +50,7 @@ final readonly class ArticleReadability
     private function parse(HTMLDocument $document, string $finalUrl): ?Article
     {
         $readability = new Readability(new Configuration(
-            // EdgeBoilerplateTrimmer reads class/id fingerprints on this output
-            // (#582); readability strips classes by default, which would make
-            // that signal a permanent no-op.
+            // EdgeBoilerplateTrimmer's verdict reads class fingerprints here; readability strips classes by default.
             keepClasses: true,
             allowedVideoRegex: $this->embedProviders->videoEmbedRegex(),
             fixRelativeURLs: true,
