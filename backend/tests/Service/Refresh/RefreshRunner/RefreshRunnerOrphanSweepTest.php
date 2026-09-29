@@ -5,6 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Service\Refresh\RefreshRunner;
 
 use App\Entity\Feed;
+use App\Entity\Subscription;
+use App\Entity\User;
+use App\Service\Fetch\Exception\FeedUnreachableException;
+use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Refresh\Model\RefreshRequestModel;
 use App\Service\Refresh\RefreshRunner\RefreshRunner;
 use App\Tests\DbTestCase;
@@ -48,6 +52,28 @@ final class RefreshRunnerOrphanSweepTest extends DbTestCase
 
         $this->em->clear();
         self::assertNull($this->em->getRepository(Feed::class)->find($orphanId));
+    }
+
+    public function testAPruningRefreshSpendsNoRequestOnAnOrphanedFeed(): void
+    {
+        $orphan = new Feed('https://orphan-3.example.com/rss');
+        $subscribed = new Feed('https://subscribed.example.com/rss');
+        $subscribed->scheduleNextFetchAt($this->clock->now()->modify('-1 hour'));
+        $subscriber = new User('sweep-subscriber@example.com', $this->clock->now());
+        $this->em->persist($orphan);
+        $this->em->persist($subscribed);
+        $this->em->persist($subscriber);
+        $this->em->persist(new Subscription($subscriber, $subscribed, $this->clock->now()));
+        $this->em->flush();
+        $this->fetcher->willThrow($orphan->getUrl(), new FeedUnreachableException('never asked'));
+        $this->fetcher->willReturn(
+            $subscribed->getUrl(),
+            FetchResponseModel::notModified($subscribed->getUrl(), false, null, null),
+        );
+
+        $this->runner()->run(RefreshRequestModel::allDue(budgetSeconds: 30));
+
+        self::assertSame([$subscribed->getUrl()], $this->fetcher->fetchedUrls);
     }
 
     public function testAUserRefreshLeavesAnOrphanedFeedAlone(): void

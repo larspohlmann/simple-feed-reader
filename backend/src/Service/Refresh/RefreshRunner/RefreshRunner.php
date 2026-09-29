@@ -62,7 +62,6 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     /** @throws \DateMalformedStringException */
     private function refresh(RefreshRequestModel $request): RefreshReportModel
     {
-        // Before the due query: a feed nobody subscribes to must not cost the run an HTTP request.
         $this->housekeeping->reclaimOrphanedFeeds($request);
 
         $now = $this->clock->now();
