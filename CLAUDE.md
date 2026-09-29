@@ -73,8 +73,8 @@ Non-negotiables:
 
 - **Names reveal intent.** No abbreviations, no `$data`/`$info`/`$tmp`, no
   encodings — except the sanctioned role suffixes that always go with their
-  folder: `…Model` in `Model/`, `…Factory` in `Factory/`, `…Listener` in
-  `src/EventListener`, and a worker handler is its message's name plus
+  folder: `…Model` in `Model/`, `…Factory` in `Factory/`, `…Listener` on
+  every event listener in `src`, and a worker handler is its message's name plus
   `Handler` (#1202). An interface ends in `Interface`, with the role before it
   in a role folder (`…FactoryInterface`, `…ModelInterface`,
   `…ExceptionInterface`). If a name needs a comment to be understood, rename it.
@@ -185,7 +185,7 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`ServiceRoleRule`** (`tests/PhpStan/ServiceRoleRule.php`, with
   `ServiceRoleClassCollector` and `ServiceRoleInstantiationCollector`, run by
   `composer stan`) — reports every class in `src/Service`, `src/Http` and
-  `src/EventListener` that sits outside its role, and names its home. While #1202 lands, it enforces
+  every event listener anywhere in `src` that sits outside its role, and names its home. While #1202 lands, it enforces
   only the checks in `phpstan.dist.neon`'s `serviceRoleChecks`; `composer
   roles` reports all of them.
 - **PHPMD codesize** — cyclomatic/NPath complexity, method and class length,
