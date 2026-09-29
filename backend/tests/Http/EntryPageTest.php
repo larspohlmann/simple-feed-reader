@@ -240,8 +240,6 @@ final class EntryPageTest extends TestCase
         ?\DateTimeImmutable $viewedAt = null,
     ): EntryListRow {
         $row = $this->rowForEntryWithoutId($effectiveDate, $viewedAt);
-        // Entry has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
         self::assignId($row->entry, $id);
 
         return $row;

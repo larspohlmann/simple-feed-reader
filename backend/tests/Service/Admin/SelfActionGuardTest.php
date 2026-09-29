@@ -39,8 +39,7 @@ final class SelfActionGuardTest extends TestCase
     private function userWithId(int $id): User
     {
         $user = new User(sprintf('user-%d@example.com', $id), new \DateTimeImmutable('2026-07-01 10:00:00'));
-        self::assignId($user, $id);
 
-        return $user;
+        return self::withId($user, $id);
     }
 }

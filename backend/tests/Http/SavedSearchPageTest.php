@@ -57,8 +57,6 @@ final class SavedSearchPageTest extends TestCase
             new \DateTimeImmutable('2026-07-01T00:00:00Z'),
             new \DateTimeImmutable('2026-07-12T00:00:00Z'),
         );
-        // Entry has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
         self::assignId($entry, $id);
 
         return new EntryListRow(

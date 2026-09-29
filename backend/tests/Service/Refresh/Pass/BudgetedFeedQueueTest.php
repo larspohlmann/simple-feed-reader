@@ -26,15 +26,6 @@ final class BudgetedFeedQueueTest extends TestCase
         );
     }
 
-    // Feed has no id setter: the id only exists once Doctrine assigns it,
-    // and these tests build the row by hand without booting the kernel.
-    private static function withId(Feed $feed, int $id): Feed
-    {
-        self::assignId($feed, $id);
-
-        return $feed;
-    }
-
     public function testYieldsEveryFeedWhenTheBudgetIsAmple(): void
     {
         $clock = new MockClock('2026-07-26 12:00:00', 'UTC');

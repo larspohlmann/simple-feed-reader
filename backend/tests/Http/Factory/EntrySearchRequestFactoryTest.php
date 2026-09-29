@@ -210,11 +210,6 @@ final class EntrySearchRequestFactoryTest extends TestCase
 
     private function buildUser(): User
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        // User has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
-        self::assignId($user, 1);
-
-        return $user;
+        return self::withId(new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')), 1);
     }
 }
