@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Security;
 
-use App\Repository\UserRepository;
+use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
@@ -39,7 +39,7 @@ final readonly class LoginTimingEqualizer
 {
     public function __construct(
         private PasswordWorkEqualizerInterface $work,
-        private UserRepository $users,
+        private UserByEmailInterface $users,
     ) {
     }
 

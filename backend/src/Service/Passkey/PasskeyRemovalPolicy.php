@@ -6,9 +6,9 @@ namespace App\Service\Passkey;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
-use App\Repository\UserIdentityRepository;
-use App\Repository\UserPasskeyRepository;
 use App\Service\Passkey\Exception\LastSignInMethodException;
+use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
+use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
 
 /**
  * Refuses the one passkey removal that would lock an account out: deleting
@@ -25,8 +25,8 @@ use App\Service\Passkey\Exception\LastSignInMethodException;
 final readonly class PasskeyRemovalPolicy
 {
     public function __construct(
-        private UserPasskeyRepository $passkeys,
-        private UserIdentityRepository $identities,
+        private PasskeyCountInterface $passkeys,
+        private SignInIdentitiesInterface $identities,
     ) {
     }
 

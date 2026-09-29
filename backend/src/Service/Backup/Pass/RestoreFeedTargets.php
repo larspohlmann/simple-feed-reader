@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Pass;
 
-use App\Repository\EntryRepository;
-use App\Repository\FeedRepository;
+use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 
 /**
  * One RestoreFeedTarget per feed url the entry part names, built on first use
@@ -20,8 +20,8 @@ final class RestoreFeedTargets
         private readonly int $userId,
         /** @var array<string, int> */
         private readonly array $feedIdsByUrl,
-        private readonly FeedRepository $feeds,
-        private readonly EntryRepository $entries,
+        private readonly RestoreFeedsInterface $feeds,
+        private readonly RestoreEntriesInterface $entries,
     ) {
     }
 

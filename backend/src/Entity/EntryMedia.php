@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
  * accessors and no serialization logic.
  */
 #[ORM\Embeddable]
-class EntryMedia
+final class EntryMedia
 {
     /** @var list<array<string, mixed>>|null */
     #[ORM\Column(name: 'media', type: Types::JSON, nullable: true)]

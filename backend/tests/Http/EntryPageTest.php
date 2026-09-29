@@ -14,10 +14,13 @@ use App\Repository\EntryListRowSubscription;
 use App\Repository\EntryListRowViewState;
 use App\Repository\EntryListSort;
 use App\Repository\EntryQuery;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class EntryPageTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testAShortPageOffersNoNextCursor(): void
     {
         $page = EntryPage::of([], 50, EntryListSort::PublishedDate);
@@ -237,10 +240,7 @@ final class EntryPageTest extends TestCase
         ?\DateTimeImmutable $viewedAt = null,
     ): EntryListRow {
         $row = $this->rowForEntryWithoutId($effectiveDate, $viewedAt);
-        // Entry has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
-        $reflection = new \ReflectionProperty(Entry::class, 'id');
-        $reflection->setValue($row->entry, $id);
+        self::assignId($row->entry, $id);
 
         return $row;
     }

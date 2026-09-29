@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: UserIdentityRepository::class)]
 #[ORM\Table(name: 'user_identity')]
 #[ORM\UniqueConstraint(name: 'uniq_identity_provider_uid', columns: ['provider', 'provider_user_id'])]
-class UserIdentity
+final class UserIdentity
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

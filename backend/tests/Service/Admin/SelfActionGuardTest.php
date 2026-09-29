@@ -7,10 +7,13 @@ namespace App\Tests\Service\Admin;
 use App\Entity\User;
 use App\Exception\ValidationException;
 use App\Service\Admin\SelfActionGuard;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class SelfActionGuardTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testItRejectsAnAdminActingOnTheirOwnAccount(): void
     {
         $admin = $this->userWithId(7);
@@ -35,9 +38,8 @@ final class SelfActionGuardTest extends TestCase
 
     private function userWithId(int $id): User
     {
-        $user = $this->createStub(User::class);
-        $user->method('getId')->willReturn($id);
+        $user = new User(sprintf('user-%d@example.com', $id), new \DateTimeImmutable('2026-07-01 10:00:00'));
 
-        return $user;
+        return self::withId($user, $id);
     }
 }

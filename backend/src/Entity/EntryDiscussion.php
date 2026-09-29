@@ -8,7 +8,7 @@ use App\Enum\CommentsLoad;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]
-class EntryDiscussion
+final class EntryDiscussion
 {
     #[ORM\Column(name: 'discussion_url', length: 2048, nullable: true)]
     private ?string $url = null;

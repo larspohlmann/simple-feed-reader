@@ -12,7 +12,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<SubscriptionTag>
  */
-class SubscriptionTagRepository extends ServiceEntityRepository
+final class SubscriptionTagRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry, private readonly NextPosition $nextPosition)
     {

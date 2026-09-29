@@ -6,8 +6,8 @@ namespace App\Tests\Service\Proxy;
 
 use App\Entity\ProxyServerSettings;
 use App\Http\Admin\ProxySettingsJson;
-use App\Repository\ProxyServerSettingsRepository;
 use App\Service\Proxy\ProxySettings;
+use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 use App\Tests\Support\ProxyPasswordCiphers;
 use App\Tests\Support\SettingsRequests;
 use Doctrine\ORM\EntityManagerInterface;
@@ -130,7 +130,7 @@ final class ProxySettingsTest extends TestCase
 
     public function testUpdateFlushesTheEntityManager(): void
     {
-        $repository = $this->createStub(ProxyServerSettingsRepository::class);
+        $repository = $this->createStub(StoredProxySettingsInterface::class);
         $repository->method('findSingleton')->willReturn(new ProxyServerSettings());
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -142,7 +142,7 @@ final class ProxySettingsTest extends TestCase
 
     private function settings(): ProxySettings
     {
-        $repository = $this->createStub(ProxyServerSettingsRepository::class);
+        $repository = $this->createStub(StoredProxySettingsInterface::class);
         $repository->method('findSingleton')->willReturnCallback(fn (): ?ProxyServerSettings => $this->stored);
 
         $em = $this->createStub(EntityManagerInterface::class);

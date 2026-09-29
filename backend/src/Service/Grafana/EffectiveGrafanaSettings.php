@@ -6,9 +6,9 @@ namespace App\Service\Grafana;
 
 use App\DependencyInjection\ProcessLifetimeState;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\Model\GrafanaSettingsSnapshotModel;
+use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use App\Service\Profiling\ProfilingConfigSource\ProfilingConfigSourceInterface;
 
 #[ProcessLifetimeState('A per-process memo over the shared cache; refresh() and forgetStored() renew it (#1159)')]
@@ -17,7 +17,7 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
     private ?GrafanaSettingsSnapshotModel $memoised = null;
 
     public function __construct(
-        private readonly GrafanaSettingsRepository $repository,
+        private readonly StoredGrafanaSettingsInterface $repository,
         private readonly GrafanaApiKeyCipher $cipher,
         private readonly GrafanaEnvDefaults $defaults,
         private readonly GrafanaSettingsCache $cache,

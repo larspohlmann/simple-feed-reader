@@ -177,6 +177,9 @@ Enforced mechanically by `composer check` and `composer md`:
 - **`EntityIdCoercionRule`** (`tests/PhpStan/EntityIdCoercionRule.php`) — read a
   persisted entity's id with `requireId()`, never `(int) $entity->getId()` or
   `$entity->getId() ?? …`.
+- **`PersistenceClassesAreFinalRule`** (`tests/PhpStan/PersistenceClassesAreFinalRule.php`) — every class
+  in `src/Entity` and `src/Repository` is `final`. A test that needs a repository double doubles the
+  interface its consumer owns (`SavedSearchMembershipWriterInterface`, `UserByEmailInterface`, #1169).
 - **`ServiceModuleCycleRule`** (`tests/PhpStan/ServiceModuleCycleRule.php`, fed by
   `ServiceModuleDependencyCollector`) — no dependency cycle between `Service/*`
   modules; the message names the cycle. **`ServiceModuleBoundaryRule`** keeps out

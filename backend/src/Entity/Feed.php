@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: FeedRepository::class)]
 #[ORM\Table(name: 'feed')]
 #[ORM\UniqueConstraint(name: 'uniq_feed_url', columns: ['url'])]
-class Feed
+final class Feed
 {
     use PersistedId;
 

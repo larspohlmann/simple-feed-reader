@@ -12,7 +12,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ActionTokenRepository::class)]
 #[ORM\Table(name: 'action_token')]
 #[ORM\UniqueConstraint(name: 'uniq_action_token_hash', columns: ['token_hash'])]
-class ActionToken
+final class ActionToken
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]

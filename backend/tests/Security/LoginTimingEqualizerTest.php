@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Entity\User;
-use App\Repository\UserRepository;
 use App\Security\AccountStatusException;
 use App\Security\LoginTimingEqualizer;
+use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use App\Tests\Support\HashCountingWork;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
@@ -113,7 +113,7 @@ final class LoginTimingEqualizerTest extends TestCase
     {
         foreach ([null, $this->userWithoutPassword(), $this->userWithPassword()] as $found) {
             $work = new HashCountingWork();
-            $users = $this->createMock(UserRepository::class);
+            $users = $this->createMock(UserByEmailInterface::class);
             $users->expects(self::once())->method('findOneByEmail')->willReturn($found);
 
             (new LoginTimingEqualizer($work, $users))
@@ -131,7 +131,7 @@ final class LoginTimingEqualizerTest extends TestCase
     public function testDoesNotHashOnAThrottledRequest(): void
     {
         $work = new HashCountingWork();
-        $users = $this->createMock(UserRepository::class);
+        $users = $this->createMock(UserByEmailInterface::class);
         $users->expects(self::never())->method('findOneByEmail');
 
         (new LoginTimingEqualizer($work, $users))->equalize(
@@ -155,9 +155,9 @@ final class LoginTimingEqualizerTest extends TestCase
         return new User('oauth@example.com', new \DateTimeImmutable());
     }
 
-    private function users(?User $user): UserRepository
+    private function users(?User $user): UserByEmailInterface
     {
-        $repository = $this->createStub(UserRepository::class);
+        $repository = $this->createStub(UserByEmailInterface::class);
         $repository->method('findOneByEmail')->willReturn($user);
 
         return $repository;

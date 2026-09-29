@@ -7,8 +7,8 @@ namespace App\Service\Mail\Digest;
 use App\Entity\Preferences;
 use App\Entity\User;
 use App\Enum\MailKind;
-use App\Repository\PreferencesRepository;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use App\Service\Mail\Digest\Model\DigestAttempt;
 use App\Service\Mail\Digest\Model\DigestModel;
 use App\Service\Mail\Digest\Model\DigestSweepReportModel;
@@ -32,7 +32,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 final readonly class SendDueDigests
 {
     public function __construct(
-        private PreferencesRepository $preferences,
+        private DigestRecipientsInterface $preferences,
         private DigestSchedule $schedule,
         private DigestComposer $composer,
         private DigestMailerInterface $mailer,

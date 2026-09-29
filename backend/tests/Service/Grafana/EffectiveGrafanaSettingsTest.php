@@ -6,9 +6,9 @@ namespace App\Tests\Service\Grafana;
 
 use App\Entity\GrafanaConnection;
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettingsCache;
+use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
 use App\Tests\Support\GrafanaApiKeyCiphers;
 use PHPUnit\Framework\TestCase;
@@ -79,7 +79,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     /** A Loki flush reads push URL, username and token in a row (#983): that must cost one lookup, not three. */
     public function testResolvingPushUrlUsernameAndTokenTogetherQueriesTheRepositoryOnce(): void
     {
-        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
         $repository->expects(self::once())->method('findSingleton')->willReturn($this->rowWithToken('glc_secret'));
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
@@ -91,7 +91,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     /** The worker calls refresh() every 30 s (#1012); a warm shared pool must keep that off the database. */
     public function testRefreshAloneKeepsServingTheCachedRowWithoutQueryingAgain(): void
     {
-        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
         $repository->expects(self::once())->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
@@ -102,7 +102,7 @@ final class EffectiveGrafanaSettingsTest extends TestCase
 
     public function testForgetStoredSendsTheNextReadBackToTheDatabase(): void
     {
-        $repository = $this->createMock(GrafanaSettingsRepository::class);
+        $repository = $this->createMock(StoredGrafanaSettingsInterface::class);
         $repository->expects(self::exactly(2))->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $settings = $this->effectiveGrafanaSettingsOverRepository($repository);
 
@@ -114,13 +114,13 @@ final class EffectiveGrafanaSettingsTest extends TestCase
     public function testTheMemoKeepsServingTheOldValueUntilRefreshRereadsTheInvalidatedCache(): void
     {
         $cache = new GrafanaSettingsCache(new ArrayAdapter());
-        $repositoryBeforeSave = $this->createStub(GrafanaSettingsRepository::class);
+        $repositoryBeforeSave = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repositoryBeforeSave->method('findSingleton')->willReturn(null);
         $worker = $this->effectiveGrafanaSettingsOverRepository($repositoryBeforeSave, cache: $cache);
 
         self::assertFalse($worker->profilingEnabled());
 
-        $repositoryAfterSave = $this->createStub(GrafanaSettingsRepository::class);
+        $repositoryAfterSave = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repositoryAfterSave->method('findSingleton')
             ->willReturn($this->row(new GrafanaConnection(null, null, null, null, true)));
         $adminSideAfterSave = $this->effectiveGrafanaSettingsOverRepository($repositoryAfterSave, cache: $cache);

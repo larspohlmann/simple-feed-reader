@@ -7,7 +7,7 @@ namespace App\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]
-class EntryLocation
+final class EntryLocation
 {
     #[ORM\Column(name: 'url', length: 2048, nullable: true)]
     private ?string $url = null;

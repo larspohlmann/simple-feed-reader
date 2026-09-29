@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: AiProviderSettingsRepository::class)]
 #[ORM\Table(name: 'user_ai_settings')]
-class AiProviderSettings
+final class AiProviderSettings
 {
     use PersistedId;
 

@@ -6,11 +6,11 @@ namespace App\Tests\Service\Grafana;
 
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
 use App\Http\Admin\GrafanaSettingsJson;
-use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\EffectiveGrafanaSettings;
 use App\Service\Grafana\GrafanaEnvDefaults;
 use App\Service\Grafana\GrafanaSettings;
 use App\Service\Grafana\GrafanaSettingsCache;
+use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use App\Service\Profiling\ProfileSampler\NullProfileSampler;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use App\Tests\Support\BuildsEffectiveGrafanaSettings;
@@ -143,7 +143,7 @@ final class GrafanaSettingsTest extends TestCase
 
     public function testUpdateFlushesTheEntityManager(): void
     {
-        $repository = $this->createStub(GrafanaSettingsRepository::class);
+        $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturn(new GrafanaSettingsEntity());
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects(self::once())->method('flush');
@@ -185,9 +185,9 @@ final class GrafanaSettingsTest extends TestCase
         );
     }
 
-    private function repository(): GrafanaSettingsRepository
+    private function repository(): StoredGrafanaSettingsInterface
     {
-        $repository = $this->createStub(GrafanaSettingsRepository::class);
+        $repository = $this->createStub(StoredGrafanaSettingsInterface::class);
         $repository->method('findSingleton')->willReturnCallback(fn (): ?GrafanaSettingsEntity => $this->stored);
 
         return $repository;

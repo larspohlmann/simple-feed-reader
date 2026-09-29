@@ -8,7 +8,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Embeddable]
-class FetchSchedule
+final class FetchSchedule
 {
     private const int ERROR_MESSAGE_MAX = 1000;
 

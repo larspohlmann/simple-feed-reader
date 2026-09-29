@@ -14,7 +14,7 @@ use Doctrine\ORM\Mapping as ORM;
  * RecommendationRun's field count down.
  */
 #[ORM\Embeddable]
-class RunThrottle
+final class RunThrottle
 {
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $retryNotBefore = null;

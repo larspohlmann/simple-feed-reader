@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
  * unprefixed so the table itself is unchanged.
  */
 #[ORM\Embeddable]
-class AccountLimits
+final class AccountLimits
 {
     /**
      * When this account's trial period ends. Null means the account has no

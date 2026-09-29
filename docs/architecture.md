@@ -149,9 +149,8 @@ alike. Services orchestrate. They call repository methods and own the unit of wo
 - **`*Query` names are taken.** `EntryQuery`, `ForYouFeedQuery` and `SavedSearchListQuery` are request value objects.
   A class that runs queries is a `*Repository`, and there is no `Repository/Query/` subdirectory.
 - **Composition, not inheritance.** Shared query construction is an injected collaborator (`EntryScopePredicates`,
-  `DuplicateCollapseDql`, `NextPosition`, `RowIds`) that builds or runs a query a repository hands it, never an
-  abstract base repository. `AbstractEntryProjectionRepository` is the last one left; #1169 replaces it with a
-  collaborator.
+  `DuplicateCollapseDql`, `NextPosition`, `RowIds`, `EntryProjection`) that builds or runs a query a repository
+  hands it, never an abstract base repository. Every repository is `final` (`PersistenceClassesAreFinalRule`).
 - **No hidden side effects.** A write method does what its name says. `add()` persists: it neither prunes nor runs a
   whole-EntityManager `flush()` that would commit someone else's pending changes. The service that owns the unit of
   work flushes, as `MailDeliveryHealth::recordFailure()` does for the mail-failure log.

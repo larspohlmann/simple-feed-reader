@@ -7,10 +7,13 @@ namespace App\Tests\Service\Search\Support;
 use App\Entity\SavedSearch;
 use App\Entity\User;
 use App\Service\Search\Support\SavedSearchTerms;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class SavedSearchTermsTest extends TestCase
 {
+    use AssignsEntityIds;
+
     public function testAPlainSearchReadsAsEachWordMatchedAnywhere(): void
     {
         $terms = SavedSearchTerms::of($this->search('climate change', wholeWord: false, phrase: false));
@@ -50,7 +53,7 @@ final class SavedSearchTermsTest extends TestCase
     public function testTheTermPairsTheSearchIdWithItsTerms(): void
     {
         $search = $this->search('climate', wholeWord: true, phrase: false);
-        (new \ReflectionProperty(SavedSearch::class, 'id'))->setValue($search, 42);
+        self::assignId($search, 42);
 
         $term = SavedSearchTerms::termOf($search);
 

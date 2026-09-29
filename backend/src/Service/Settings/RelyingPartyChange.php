@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Settings;
 
 use App\Exception\ValidationException;
-use App\Repository\UserPasskeyRepository;
+use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
 use App\Service\Settings\Exception\RelyingPartyChangeRequiresConfirmationException;
 use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
@@ -20,7 +20,7 @@ final readonly class RelyingPartyChange
     public function __construct(
         private PasskeyRelyingPartyInterface $relyingParty,
         private EffectivePasskeyRelyingPartyId $effectiveId,
-        private UserPasskeyRepository $passkeys,
+        private EnrolledPasskeysInterface $passkeys,
         private RelyingPartyIdRule $relyingPartyIdRule,
         private ServingHostInterface $servingHost,
     ) {

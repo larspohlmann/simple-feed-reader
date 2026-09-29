@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\Preferences;
+use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Preferences>
  */
-class PreferencesRepository extends ServiceEntityRepository
+final class PreferencesRepository extends ServiceEntityRepository implements DigestRecipientsInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

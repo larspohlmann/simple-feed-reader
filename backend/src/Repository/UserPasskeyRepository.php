@@ -6,13 +6,17 @@ namespace App\Repository;
 
 use App\Entity\User;
 use App\Entity\UserPasskey;
+use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
+use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<UserPasskey>
  */
-class UserPasskeyRepository extends ServiceEntityRepository
+final class UserPasskeyRepository extends ServiceEntityRepository implements
+    PasskeyCountInterface,
+    EnrolledPasskeysInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

@@ -9,10 +9,13 @@ use App\Entity\SealedSecret;
 use App\Entity\User;
 use App\Http\AiSettingsJson;
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 
 final class AiSettingsJsonTest extends TestCase
 {
+    use AssignsEntityIds;
+
     private function settings(?string $model, ?string $name = null): AiProviderSettings
     {
         $settings = new AiProviderSettings(
@@ -31,23 +34,9 @@ final class AiSettingsJsonTest extends TestCase
         return $settings;
     }
 
-    /**
-     * The mapper reports `active` by comparing ids, so proving both branches
-     * needs two rows with genuinely different ids — something an unpersisted
-     * entity never has (getId() is null until Doctrine assigns one). Stamping
-     * it through reflection is the only way to get that here without pulling
-     * the database into what is otherwise a plain unit test.
-     */
-    private function withId(AiProviderSettings $settings, int $id): AiProviderSettings
-    {
-        (new \ReflectionProperty(AiProviderSettings::class, 'id'))->setValue($settings, $id);
-
-        return $settings;
-    }
-
     public function testConfigurationCarriesTheRowsOwnShape(): void
     {
-        $settings = $this->withId($this->settings('gpt-4o', 'Work OpenAI'), 1);
+        $settings = self::withId($this->settings('gpt-4o', 'Work OpenAI'), 1);
 
         $shape = AiSettingsJson::configuration($settings, null);
 
@@ -61,7 +50,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testConfigurationIsActiveWhenItsIdMatchesTheActiveId(): void
     {
-        $settings = $this->withId($this->settings(null), 7);
+        $settings = self::withId($this->settings(null), 7);
 
         $shape = AiSettingsJson::configuration($settings, 7);
 
@@ -70,7 +59,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testConfigurationIsNotActiveWhenTheActiveIdDiffers(): void
     {
-        $settings = $this->withId($this->settings(null), 7);
+        $settings = self::withId($this->settings(null), 7);
 
         $shape = AiSettingsJson::configuration($settings, 42);
 
@@ -79,7 +68,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testConfigurationIsNotActiveWhenNothingIsActive(): void
     {
-        $settings = $this->withId($this->settings(null), 7);
+        $settings = self::withId($this->settings(null), 7);
 
         $shape = AiSettingsJson::configuration($settings, null);
 
@@ -117,8 +106,9 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testListShapesEveryConfigurationAndCarriesTheActiveId(): void
     {
-        $first = $this->withId($this->settings('gpt-4o', 'First'), 1);
-        $second = $this->withId($this->settings(null, 'Second'), 2);
+        // `active` compares ids, so the two rows need different ids.
+        $first = self::withId($this->settings('gpt-4o', 'First'), 1);
+        $second = self::withId($this->settings(null, 'Second'), 2);
 
         $shape = AiSettingsJson::list([$first, $second], 1);
 
@@ -139,7 +129,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testListReportsANullActiveIdWhenNothingIsActive(): void
     {
-        $shape = AiSettingsJson::list([$this->withId($this->settings(null), 1)], null);
+        $shape = AiSettingsJson::list([self::withId($this->settings(null), 1)], null);
 
         self::assertNull($shape['activeId']);
         self::assertIsArray($shape['configs']);
@@ -158,7 +148,7 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testConfigurationForIsActiveWhenItIsTheOwnersActiveConfiguration(): void
     {
-        $settings = $this->withId($this->settings(null), 7);
+        $settings = self::withId($this->settings(null), 7);
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
         $owner->setActiveAiProviderSettings($settings);
 
@@ -167,16 +157,16 @@ final class AiSettingsJsonTest extends TestCase
 
     public function testConfigurationForIsNotActiveWhenTheOwnerHasAnotherOneActive(): void
     {
-        $settings = $this->withId($this->settings(null), 7);
+        $settings = self::withId($this->settings(null), 7);
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
-        $owner->setActiveAiProviderSettings($this->withId($this->settings(null), 42));
+        $owner->setActiveAiProviderSettings(self::withId($this->settings(null), 42));
 
         self::assertFalse(AiSettingsJson::configurationFor($settings, $owner)['active']);
     }
 
     public function testConfigurationForIsNotActiveWhenTheOwnerHasNoneActive(): void
     {
-        $settings = $this->withId($this->settings('gpt-4o', 'Work OpenAI'), 7);
+        $settings = self::withId($this->settings('gpt-4o', 'Work OpenAI'), 7);
         $owner = new User('owner@example.test', new \DateTimeImmutable('2026-08-06 09:00:00'));
 
         self::assertSame(

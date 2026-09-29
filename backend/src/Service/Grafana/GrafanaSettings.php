@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Service\Grafana;
 
 use App\Entity\GrafanaSettings as GrafanaSettingsEntity;
-use App\Repository\GrafanaSettingsRepository;
 use App\Service\Grafana\Crypto\GrafanaApiKeyCipher;
 use App\Service\Grafana\Model\GrafanaSettingsOverviewModel;
 use App\Service\Grafana\Model\GrafanaSettingsUpdateModel;
+use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use App\Service\Profiling\ProfileSampler\ProfileSamplerInterface;
 use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class GrafanaSettings
 {
     public function __construct(
-        private GrafanaSettingsRepository $repository,
+        private StoredGrafanaSettingsInterface $repository,
         private EntityManagerInterface $em,
         private GrafanaApiKeyCipher $cipher,
         private EffectiveGrafanaSettings $effective,

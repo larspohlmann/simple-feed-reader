@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\SavedSearchEntry;
 use App\Entity\Subscription;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -14,13 +15,16 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * The combined saved-search list (#769) and every other saved-search read,
  * over the membership table (#1116).
+ *
+ * @extends ServiceEntityRepository<Entry>
  */
-final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
+final class SavedSearchEntryRepository extends ServiceEntityRepository
 {
     public function __construct(
         ManagerRegistry $registry,
         private readonly EntryListRowHydrator $rowHydrator,
         private readonly DuplicateCollapseDql $collapse,
+        private readonly EntryProjection $projection,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -40,7 +44,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
         }
 
         $ordering = $query->ordering();
-        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
+        $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $this->restrictToMembers($qb, $query->savedSearchIds, $query->userId);
 
@@ -48,7 +52,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             $qb->andWhere(UnreadDql::predicate())->setParameter('notHidden', false, Types::BOOLEAN);
         }
 
-        $this->applyCursor($qb, $query->cursor, $ordering);
+        $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
@@ -73,7 +77,7 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
 
         // A join, not restrictToMembers(): this read projects the search id per
         // row, so only the collapse subquery takes the EXISTS scope.
-        $qb = $this->unreadEntriesQueryBuilder($userId)
+        $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id AS id', 'ss.id AS searchId')
             ->join(SavedSearchEntry::class, 'sse', 'ON', 'sse.entry = e')
             ->join('sse.savedSearch', 'ss')
@@ -142,13 +146,13 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
             return [];
         }
 
-        $qb = $this->unreadEntriesQueryBuilder($userId)
+        $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
             ->andWhere('e.effectiveDate <= :until')
             ->setParameter('until', $until);
         $this->restrictToMembers($qb, $savedSearchIds, $userId);
 
-        return $this->scalarIds($qb);
+        return $this->projection->scalarIds($qb);
     }
 
     /**
@@ -159,13 +163,13 @@ final class SavedSearchEntryRepository extends AbstractEntryProjectionRepository
      */
     public function unreadMemberIdsForUserSince(int $userId, int $savedSearchId, \DateTimeImmutable $since): array
     {
-        $qb = $this->unreadEntriesQueryBuilder($userId)
+        $qb = $this->projection->unreadEntriesQueryBuilder($userId)
             ->select('e.id')
             ->andWhere('e.effectiveDate > :since')
             ->setParameter('since', $since);
         $this->restrictToMembers($qb, [$savedSearchId], $userId);
 
-        return $this->scalarIds($this->newestFirst($qb));
+        return $this->projection->scalarIds($this->projection->newestFirst($qb));
     }
 
     /**

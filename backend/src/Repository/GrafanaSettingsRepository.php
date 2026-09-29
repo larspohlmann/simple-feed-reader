@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\GrafanaSettings;
+use App\Service\Grafana\StoredGrafanaSettings\StoredGrafanaSettingsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -13,7 +14,7 @@ use Doctrine\Persistence\ManagerRegistry;
  *
  * @extends ServiceEntityRepository<GrafanaSettings>
  */
-class GrafanaSettingsRepository extends ServiceEntityRepository
+final class GrafanaSettingsRepository extends ServiceEntityRepository implements StoredGrafanaSettingsInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

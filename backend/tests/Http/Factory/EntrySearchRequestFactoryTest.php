@@ -10,11 +10,14 @@ use App\Exception\ValidationException;
 use App\Http\Factory\EntrySearchRequestFactory;
 use App\Pagination\EntryCursor;
 use App\Repository\EntryQuery;
+use App\Tests\Support\AssignsEntityIds;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 
 final class EntrySearchRequestFactoryTest extends TestCase
 {
+    use AssignsEntityIds;
+
     private EntrySearchRequestFactory $factory;
 
     protected function setUp(): void
@@ -58,8 +61,7 @@ final class EntrySearchRequestFactoryTest extends TestCase
     {
         $request = Request::create('/api/entries/search?q=angular');
         $user = $this->buildUser();
-        $reflection = new \ReflectionProperty(User::class, 'id');
-        $reflection->setValue($user, 42);
+        self::assignId($user, 42);
 
         $query = $this->factory->fromRequest($request, $user);
 
@@ -208,12 +210,6 @@ final class EntrySearchRequestFactoryTest extends TestCase
 
     private function buildUser(): User
     {
-        $user = new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
-        // User has no id setter: the id only exists once Doctrine assigns it,
-        // and this test builds the row by hand without booting the kernel.
-        $reflection = new \ReflectionProperty(User::class, 'id');
-        $reflection->setValue($user, 1);
-
-        return $user;
+        return self::withId(new User('reader@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z')), 1);
     }
 }

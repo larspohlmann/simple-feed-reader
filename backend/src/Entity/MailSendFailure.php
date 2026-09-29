@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: MailSendFailureRepository::class)]
 #[ORM\Table(name: 'mail_send_failure')]
-class MailSendFailure
+final class MailSendFailure
 {
     use PersistedId;
 

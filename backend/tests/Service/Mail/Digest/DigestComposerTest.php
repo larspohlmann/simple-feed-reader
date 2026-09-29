@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Mail\Digest;
 
-use App\Tests\Support\FixedPublicBaseUrl;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\SavedSearch;
@@ -13,11 +12,12 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Repository\EntryListRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Tests\DbTestCase;
+use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\MockObject\Stub;
 
 /**
@@ -33,14 +33,14 @@ use PHPUnit\Framework\MockObject\Stub;
  */
 final class DigestComposerTest extends DbTestCase
 {
-    private SavedSearchRepository&Stub $savedSearches;
+    private DigestSavedSearchesInterface&Stub $savedSearches;
     private User $user;
     private \DateTimeImmutable $since;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->savedSearches = $this->createStub(SavedSearchRepository::class);
+        $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
 
         $this->user = new User('digest@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
         $this->em->persist($this->user);

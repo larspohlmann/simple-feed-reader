@@ -10,13 +10,13 @@ use App\Enum\DigestCadence;
 use App\Enum\MailKind;
 use App\Repository\EntryListRepository;
 use App\Repository\MailSendFailureRepository;
-use App\Repository\PreferencesRepository;
 use App\Repository\SavedSearchEntryRepository;
-use App\Repository\SavedSearchRepository;
 use App\Service\Mail\Digest\DigestComposer;
 use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Service\Mail\Digest\DigestLinkBuilder;
 use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
+use App\Service\Mail\Digest\DigestRecipients\DigestRecipientsInterface;
+use App\Service\Mail\Digest\DigestSavedSearches\DigestSavedSearchesInterface;
 use App\Service\Mail\Digest\DigestSchedule;
 use App\Service\Mail\Digest\SendDueDigests;
 use App\Service\Mail\MailCapability;
@@ -44,16 +44,16 @@ final class SendDueDigestsHealthTest extends DbTestCase
 
     private const string NOW = '2026-08-28T09:30:00Z';
 
-    private SavedSearchRepository&Stub $savedSearches;
-    private PreferencesRepository&Stub $preferencesRepository;
+    private DigestSavedSearchesInterface&Stub $savedSearches;
+    private DigestRecipientsInterface&Stub $preferencesRepository;
     private MailSendFailureRepository $failures;
     private MailDeliveryHealth $health;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $this->savedSearches = $this->createStub(SavedSearchRepository::class);
-        $this->preferencesRepository = $this->createStub(PreferencesRepository::class);
+        $this->savedSearches = $this->createStub(DigestSavedSearchesInterface::class);
+        $this->preferencesRepository = $this->createStub(DigestRecipientsInterface::class);
 
         /** @var MailSendFailureRepository $failures */
         $failures = self::getContainer()->get(MailSendFailureRepository::class);

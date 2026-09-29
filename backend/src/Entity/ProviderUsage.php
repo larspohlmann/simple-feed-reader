@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
  * itself is unchanged (see FetchSchedule for the same move on Feed).
  */
 #[ORM\Embeddable]
-class ProviderUsage
+final class ProviderUsage
 {
     /**
      * The provider this run actually called, copied onto the run at start

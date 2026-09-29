@@ -13,7 +13,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'entry_category')]
-class EntryCategory
+final class EntryCategory
 {
     #[ORM\Id]
     #[ORM\ManyToOne(targetEntity: Entry::class)]

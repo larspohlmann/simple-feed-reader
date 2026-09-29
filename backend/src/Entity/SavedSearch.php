@@ -17,7 +17,7 @@ use Doctrine\ORM\Mapping as ORM;
     name: 'uniq_saved_search_user_slug',
     columns: ['user_id', 'slug'],
 )]
-class SavedSearch
+final class SavedSearch
 {
     use PersistedId;
 

@@ -9,6 +9,7 @@ use App\Doctrine\EntryPlanHintWalker;
 use App\Entity\Entry;
 use App\Entity\Subscription;
 use App\Repository\Exception\RecordNotFoundException;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 use OpenTelemetry\API\Instrumentation\WithSpan;
@@ -23,8 +24,10 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
  * surface (ingestion, dedup, search reindex/backup batch walks) stays
  * readable — EntryController and the search services depend on this one
  * instead.
+ *
+ * @extends ServiceEntityRepository<Entry>
  */
-class EntryListRepository extends AbstractEntryProjectionRepository
+final class EntryListRepository extends ServiceEntityRepository
 {
     public function __construct(
         ManagerRegistry $registry,
@@ -33,6 +36,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         private readonly EntryScopePredicates $scope,
         private readonly DuplicateCollapseDql $collapse,
         private readonly DateOrderedPage $dateOrderedPage,
+        private readonly EntryProjection $projection,
     ) {
         parent::__construct($registry, Entry::class);
     }
@@ -56,19 +60,19 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         };
 
         $pageQuery = function () use ($query, $ordering, $applyScope): QueryBuilder {
-            $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
+            $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
                 ->setMaxResults($query->limit);
             $applyScope($qb, EntryAliases::primary());
             $this->collapse->apply($qb, $applyScope, $query->userId);
-            $this->applyCursor($qb, $query->cursor, $ordering);
+            $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
             return $qb;
         };
         $windowProbe = function () use ($query): QueryBuilder {
             $probe = $this->createQueryBuilder('e')->select('e.effectiveDate');
             $probeOrdering = EntryListOrdering::byPublishedDate($query->order);
-            $qb = $this->orderedBy($probe, $probeOrdering);
-            $this->applyCursor($qb, $query->cursor, $probeOrdering);
+            $qb = $this->projection->orderedBy($probe, $probeOrdering);
+            $this->projection->applyCursor($qb, $query->cursor, $probeOrdering);
 
             return $qb;
         };
@@ -94,11 +98,11 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             $this->scope->applySearch($qb, $aliases, $query);
         };
         $ordering = $query->ordering();
-        $qb = $this->orderedBy($this->rowQueryBuilder($query->userId), $ordering)
+        $qb = $this->projection->orderedBy($this->projection->rowQueryBuilder($query->userId), $ordering)
             ->setMaxResults($query->limit);
         $applyScope($qb, EntryAliases::primary());
         $this->collapse->apply($qb, $applyScope, $query->userId);
-        $this->applyCursor($qb, $query->cursor, $ordering);
+        $this->projection->applyCursor($qb, $query->cursor, $ordering);
 
         /** @var list<array<array-key, mixed>> $rows */
         $rows = $qb->getQuery()->getResult();
@@ -117,7 +121,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
      */
     public function unreadMatchingEntryIdsForUser(EntrySearchQuery $query, \DateTimeImmutable $until): array
     {
-        return $this->scalarIds(
+        return $this->projection->scalarIds(
             $this->unreadMatchQueryBuilder($query)
                 ->select('e.id')
                 ->distinct()
@@ -154,7 +158,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
         $applyScope = function (QueryBuilder $qb, EntryAliases $aliases) use ($entryIds): void {
             $this->scope->applyIds($qb, $aliases, $entryIds);
         };
-        $rowQuery = $this->newestFirst($this->rowQueryBuilder($userId));
+        $rowQuery = $this->projection->newestFirst($this->projection->rowQueryBuilder($userId));
         $applyScope($rowQuery, EntryAliases::primary());
         $this->collapse->apply($rowQuery, $applyScope, $userId);
         if ($limit !== null) {
@@ -176,7 +180,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     public function getRowForUser(int $userId, int $entryId): EntryListRow
     {
         /** @var array<array-key, mixed>|null $row */
-        $row = $this->rowQueryBuilder($userId)
+        $row = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.id = :id')
             ->setParameter('id', $entryId)
             ->getQuery()
@@ -199,7 +203,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
     public function siblingRowsForUser(int $userId, string $urlHash, int $excludeEntryId): array
     {
         /** @var list<array<array-key, mixed>> $rows */
-        $rows = $this->rowQueryBuilder($userId)
+        $rows = $this->projection->rowQueryBuilder($userId)
             ->andWhere('e.location.urlHash = :hash')
             ->andWhere('e.id <> :self')
             ->setParameter('hash', $urlHash)
@@ -237,7 +241,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
 
     private function unreadMatchQueryBuilder(EntrySearchQuery $query): QueryBuilder
     {
-        $qb = $this->unreadEntriesQueryBuilder($query->userId);
+        $qb = $this->projection->unreadEntriesQueryBuilder($query->userId);
         $qb->andWhere($this->termsPredicateBuilder->build($qb, $query->terms, 'term'));
 
         return $qb;
@@ -268,7 +272,7 @@ class EntryListRepository extends AbstractEntryProjectionRepository
             return $survivors;
         }
 
-        $qb = $this->rowQueryBuilder($userId);
+        $qb = $this->projection->rowQueryBuilder($userId);
         $applyScope($qb, EntryAliases::primary());
         $qb->andWhere('e.location.urlHash IN (:dupHashes)')
             ->andWhere('e.id NOT IN (:survivorIds)')

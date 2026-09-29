@@ -15,7 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SavedSearchEntryMembershipRepository::class)]
 #[ORM\Table(name: 'saved_search_entry')]
 #[ORM\Index(name: 'idx_saved_search_entry_entry', columns: ['entry_id'])]
-class SavedSearchEntry
+final class SavedSearchEntry
 {
     // No `nullable: false` on the identifier join columns — Doctrine forces
     // identifier columns NOT NULL and deprecates stating it (see EntryState).

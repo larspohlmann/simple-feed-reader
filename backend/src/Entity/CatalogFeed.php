@@ -20,7 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: CatalogFeedRepository::class)]
 #[ORM\Table(name: 'catalog_feed')]
 #[ORM\UniqueConstraint(name: 'uniq_catalog_feed_url', columns: ['url'])]
-class CatalogFeed implements PositionedInterface
+final class CatalogFeed implements PositionedInterface
 {
     use PersistedId;
 
