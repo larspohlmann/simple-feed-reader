@@ -6,8 +6,8 @@ namespace App\Tests\Service\Settings;
 
 use App\Exception\ValidationException;
 use App\Http\RequestServingHost;
-use App\Repository\UserPasskeyRepository;
 use App\Service\Settings\EffectivePasskeyRelyingPartyId;
+use App\Service\Settings\EnrolledPasskeys\EnrolledPasskeysInterface;
 use App\Service\Settings\Model\RelyingPartyIdChoiceModel;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyChange;
@@ -97,7 +97,7 @@ final class RelyingPartyChangeTest extends TestCase
         return new RelyingPartyChange(
             $this->relyingPartyOf($currentRelyingPartyId),
             new EffectivePasskeyRelyingPartyId(),
-            $this->createStub(UserPasskeyRepository::class),
+            $this->createStub(EnrolledPasskeysInterface::class),
             new RelyingPartyIdRule(),
             new RequestServingHost(new RequestStack(), new FixedPublicBaseUrl($publicBaseUrl)),
         );

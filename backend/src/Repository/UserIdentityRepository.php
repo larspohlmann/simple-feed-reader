@@ -6,13 +6,14 @@ namespace App\Repository;
 
 use App\Entity\User;
 use App\Entity\UserIdentity;
+use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<UserIdentity>
  */
-class UserIdentityRepository extends ServiceEntityRepository
+final class UserIdentityRepository extends ServiceEntityRepository implements SignInIdentitiesInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
