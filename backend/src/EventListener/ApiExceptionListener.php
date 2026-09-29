@@ -10,7 +10,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 
 /** Renders every exception under /api or /maintenance as problem+json; controllers never build an error by hand. */
-#[AsEventListener(event: ExceptionEvent::class)]
+#[AsEventListener(event: ExceptionEvent::class, priority: -64)]
 final readonly class ApiExceptionListener
 {
     public function __construct(
