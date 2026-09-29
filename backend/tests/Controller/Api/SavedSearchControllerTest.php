@@ -119,11 +119,8 @@ final class SavedSearchControllerTest extends ApiTestCase
             content: json_encode(['term' => 'ab', 'wholeWord' => false], \JSON_THROW_ON_ERROR),
         );
         self::assertResponseStatusCodeSame(422);
-        // The violation must come from the DTO's own Length constraint
-        // (property path "term"), not from the redundant length check
-        // SavedSearchTallies's SearchTermsModel::fromInput() would apply
-        // downstream (property path "q") — that only fires once the entity
-        // is already persisted, which a request this short must never reach.
+        // The DTO's own Length constraint ("term") must reject it, not SearchTermsModel::fromInput()'s downstream
+        // check ("q"), which runs only after the entity is persisted.
         $body = $this->payload($client);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('term', $body['errors']);

@@ -101,12 +101,7 @@ final class TagControllerTest extends WebTestCase
         self::assertCount(1, $list['tags']);
     }
 
-    /**
-     * A newly created tag must append to the END of the user's tag list, not
-     * a fixed 0 — the same "seed from the current maximum" positioning as
-     * SubscriptionTagPositions. Creating a second tag right after the first
-     * must not collide with it at the same position.
-     */
+    /** A new tag appends after the current maximum position, as SubscriptionTagPositions does, never at a fixed 0. */
     public function testCreatingASecondTagAppendsAfterTheFirst(): void
     {
         $client = self::createClient();
@@ -172,15 +167,7 @@ final class TagControllerTest extends WebTestCase
         self::assertStringContainsString('"detail":"No such tag."', (string) $client->getResponse()->getContent());
     }
 
-    /**
-     * The delete endpoint's own job, not merely the join-table side effect:
-     * the tag row itself must be gone. Only asserting the DETACH (as the test
-     * below does) cannot tell "the tag was removed" apart from "flush() ran
-     * with nothing to remove, but the join rows cascaded away regardless" —
-     * the tag_id foreign key on subscription_tag is ON DELETE CASCADE, so a
-     * tag that survives a skipped em->remove() would still leave its
-     * subscriptions untagged.
-     */
+    /** The tag row itself must be gone: the detach the next test asserts happens whether or not em->remove() ran. */
     public function testDeleteActuallyRemovesTheTagRow(): void
     {
         $client = self::createClient();
@@ -203,13 +190,7 @@ final class TagControllerTest extends WebTestCase
         );
     }
 
-    /**
-     * Deleting a tag must detach it from every subscription that carried it
-     * first (portable across SQLite/MySQL — no FK cascade relied on). This
-     * pins the substitution of findForUserByTagId(userId, tagId) for the
-     * former findByTag(Tag): same set of subscriptions, resolved by the
-     * tag's owner instead of the tag entity itself.
-     */
+    /** Deleting a tag detaches it from every subscription itself, relying on no FK cascade. */
     public function testDeleteDetachesTheTagFromEveryCarryingSubscription(): void
     {
         $client = self::createClient();

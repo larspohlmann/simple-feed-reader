@@ -10,10 +10,6 @@ use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The account's own view of, and write path onto, the magazine's entry design
- * (#723). Tokens come straight from the JWT manager, as in MeControllerTest.
- */
 final class MagazineStyleControllerTest extends ApiTestCase
 {
     /** Attaches a bearer token to every subsequent request this client makes. */

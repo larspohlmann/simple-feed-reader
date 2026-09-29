@@ -120,14 +120,8 @@ final class ReorderTest extends WebTestCase
     }
 
     /**
-     * testReorderTagsPersistsNewOrder re-reads through a second HTTP request
-     * on the SAME client, which this suite's own KernelBrowser does not
-     * reboot between requests within one test — so that assertion is
-     * satisfied by Doctrine's identity map serving the still-attached, merely
-     * in-memory-mutated Tag entities, whether or not flush() actually ran.
-     * Only a read that goes around the identity map — em->clear() first, like
-     * the unsubscribe tests elsewhere in this suite — can tell "persisted"
-     * apart from "changed in memory, never written".
+     * The client does not reboot between requests, so a second request's read is served by the identity map whether
+     * or not flush() ran; only a read after em->clear() tells persisted from changed in memory.
      */
     public function testReorderTagsPersistsNewOrderToTheDatabaseNotJustTheEntityManager(): void
     {
@@ -278,13 +272,7 @@ final class ReorderTest extends WebTestCase
         self::assertSame(2, $perTag[$secondSubscription->requireId()]);
     }
 
-    /**
-     * Same identity-map trap as
-     * testReorderTagsPersistsNewOrderToTheDatabaseNotJustTheEntityManager:
-     * re-reading through a second request on the same client would be
-     * satisfied by the still-attached, merely in-memory-mutated join rows
-     * even if feedOrder() never flushed. em->clear() forces a real read.
-     */
+    /** The identity-map trap of the tag reorder test above: em->clear() forces a real read of the join rows. */
     public function testFeedOrderPersistsToTheDatabaseNotJustTheEntityManager(): void
     {
         $client = self::createClient();
