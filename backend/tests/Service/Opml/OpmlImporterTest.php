@@ -41,7 +41,7 @@ final class OpmlImporterTest extends DbTestCase
     }
 
     /** @return list<Subscription> */
-    private function subsOf(User $user): array
+    private function subscriptionsOf(User $user): array
     {
         return $this->entityManager->getRepository(Subscription::class)->findBy(['user' => $user]);
     }
@@ -134,7 +134,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->alreadySubscribed); // the second listing
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertCount(1, $this->feedsWithUrl($url));
     }
 
@@ -154,7 +154,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->imported);
         self::assertSame(1, $result->alreadySubscribed);
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertCount(1, $this->feedsWithUrl($url));
     }
 
@@ -172,7 +172,7 @@ final class OpmlImporterTest extends DbTestCase
 
         self::assertSame(1, $result->invalid);
         self::assertSame(1, $result->imported);
-        self::assertCount(1, $this->subsOf($user));
+        self::assertCount(1, $this->subscriptionsOf($user));
         self::assertSame([], $this->feedsWithUrl($longUrl)); // no oversized Feed persisted
     }
 
@@ -195,7 +195,7 @@ final class OpmlImporterTest extends DbTestCase
         self::assertCount(1, $tags); // reused, not duplicated
         self::assertSame('news', $tags[0]->getName()); // original casing preserved
 
-        $subscriptions = $this->subsOf($user);
+        $subscriptions = $this->subscriptionsOf($user);
         self::assertCount(1, $subscriptions);
         self::assertCount(1, $subscriptions[0]->getTags());
     }

@@ -25,7 +25,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 {
     private User $user;
     private RecommendationSettingsWriter $writer;
-    private RecommendationSettingsRepository $settingsRepository;
+    private RecommendationSettingsRepository $recommendationSettings;
 
     protected function setUp(): void
     {
@@ -43,14 +43,14 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         /** @var RecommendationSettingsRepository $repository */
         $repository = self::getContainer()->get(RecommendationSettingsRepository::class);
-        $this->settingsRepository = $repository;
+        $this->recommendationSettings = $repository;
     }
 
     public function testStoreProfilePersistsOnlyTheProfileText(): void
     {
         $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
 
-        $reloaded = $this->settingsRepository->findForUser($this->user);
+        $reloaded = $this->recommendationSettings->findForUser($this->user);
         self::assertNotNull($reloaded);
         self::assertSame('Likes long-form essays on typography.', $reloaded->values()->profileText);
     }
@@ -59,7 +59,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->storeProfile($this->userWithoutSettingsRow(), 'Likes maps and cartography.');
 
-        self::assertNotNull($this->settingsRepository->findForUser($this->userWithoutSettingsRow()));
+        self::assertNotNull($this->recommendationSettings->findForUser($this->userWithoutSettingsRow()));
     }
 
     /**
@@ -79,7 +79,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         $this->writer->storeProfile($this->user, 'Likes long-form essays on typography.');
 
-        $reloaded = $this->settingsRepository->findForUser($this->user);
+        $reloaded = $this->recommendationSettings->findForUser($this->user);
         self::assertNotNull($reloaded);
         $values = $reloaded->values();
         self::assertSame('Only cats.', $values->guidancePrompt);
@@ -110,7 +110,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             showReasons: true,
         ));
 
-        $reloaded = $this->settingsRepository->findForUser($this->user);
+        $reloaded = $this->recommendationSettings->findForUser($this->user);
         self::assertNotNull($reloaded);
         self::assertTrue($reloaded->values()->showReasons);
     }
@@ -136,7 +136,7 @@ final class RecommendationSettingsWriterTest extends DbTestCase
             debugEnabled: true,
         ));
 
-        $reloaded = $this->settingsRepository->findForUser($this->user);
+        $reloaded = $this->recommendationSettings->findForUser($this->user);
         self::assertNotNull($reloaded);
         self::assertSame('Likes long-form essays on typography.', $reloaded->values()->profileText);
         self::assertSame('Only cats.', $reloaded->values()->guidancePrompt);
