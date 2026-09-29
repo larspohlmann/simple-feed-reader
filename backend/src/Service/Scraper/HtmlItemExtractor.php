@@ -67,8 +67,8 @@ final readonly class HtmlItemExtractor
 
         try {
             return HTMLDocument::createFromString($html, \LIBXML_NOERROR);
-        } catch (\Throwable $e) {
-            throw new HtmlExtractionException('The page could not be parsed as HTML.', 0, $e);
+        } catch (\Throwable $exception) {
+            throw new HtmlExtractionException('The page could not be parsed as HTML.', 0, $exception);
         }
     }
 

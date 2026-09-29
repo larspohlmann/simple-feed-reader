@@ -120,10 +120,10 @@ final readonly class RefreshRunner implements RefreshRunnerInterface
     ): RefreshReportModel {
         try {
             $this->missingFavicons->resolveFor($pass->tally->faviconEligibleFeeds());
-        } catch (UniqueConstraintViolationException | ORMException $e) {
+        } catch (UniqueConstraintViolationException | ORMException $exception) {
             $this->logger->error(
                 'Refresh aborted: persistence failed while resolving favicons',
-                ['exception' => $e],
+                ['exception' => $exception],
             );
 
             return $pass->abortedAfterOutcomes();

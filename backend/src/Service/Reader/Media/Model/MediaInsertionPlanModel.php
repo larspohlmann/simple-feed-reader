@@ -31,6 +31,9 @@ final readonly class MediaInsertionPlanModel
      */
     public function topPlacesLeadVisual(): bool
     {
-        return array_any($this->topPlaced, static fn (MediaCandidateModel $c): bool => $c->kind->readsAsLeadVisual());
+        return array_any(
+            $this->topPlaced,
+            static fn (MediaCandidateModel $candidate): bool => $candidate->kind->readsAsLeadVisual(),
+        );
     }
 }

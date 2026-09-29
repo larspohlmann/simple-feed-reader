@@ -106,11 +106,11 @@ final readonly class TokenEndpoint
             $payload = $response->toArray();
 
             return $payload;
-        } catch (HttpClientExceptionInterface $e) {
+        } catch (HttpClientExceptionInterface $exception) {
             // Covers transport failures, every non-2xx and an undecodable body,
             // since toArray() throws on all three. The provider's own error
             // code is useful in a log and useless — or worse — in a response.
-            throw new OAuthFailedException('token endpoint call failed', $e);
+            throw new OAuthFailedException('token endpoint call failed', $exception);
         }
     }
 

@@ -64,6 +64,9 @@ final readonly class ContainerSignatureModel
     /** @return list<string> */
     private static function tokenize(string $classAttribute): array
     {
-        return array_values(array_filter(explode(' ', $classAttribute), static fn (string $t): bool => $t !== ''));
+        return array_values(array_filter(
+            explode(' ', $classAttribute),
+            static fn (string $token): bool => $token !== '',
+        ));
     }
 }

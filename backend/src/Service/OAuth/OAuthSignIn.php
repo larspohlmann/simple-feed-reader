@@ -123,8 +123,8 @@ final readonly class OAuthSignIn
     {
         try {
             $this->loginUserChecker->checkPostAuth($user);
-        } catch (AccountStatusException $e) {
-            throw new AccountNotActiveException($e->accountStatus);
+        } catch (AccountStatusException $exception) {
+            throw new AccountNotActiveException($exception->accountStatus);
         }
     }
 }

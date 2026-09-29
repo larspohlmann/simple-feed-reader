@@ -177,12 +177,12 @@ final readonly class RecommendationBatchWave
                 $calls,
                 $tick->retryPlan(),
             );
-        } catch (\Throwable $e) {
+        } catch (\Throwable $exception) {
             foreach ($recordedCalls as $recordedCall) {
-                $recordedCall->abortAfterTransportFailure($e->getMessage());
+                $recordedCall->abortAfterTransportFailure($exception->getMessage());
             }
 
-            throw $e;
+            throw $exception;
         }
     }
 

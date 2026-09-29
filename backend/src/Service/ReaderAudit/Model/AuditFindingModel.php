@@ -58,7 +58,7 @@ final readonly class AuditFindingModel
             'readerLink' => $this->readerLink,
             'extracted' => $this->extracted,
             'markers' => array_map(
-                static fn (CleanupMarkerModel $m): array => $m->toFindingsFileRecord(),
+                static fn (CleanupMarkerModel $marker): array => $marker->toFindingsFileRecord(),
                 $this->markers,
             ),
             'metrics' => $this->metrics,

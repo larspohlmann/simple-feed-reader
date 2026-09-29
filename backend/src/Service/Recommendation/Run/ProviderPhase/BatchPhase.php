@@ -47,10 +47,10 @@ final readonly class BatchPhase implements ProviderPhaseInterface
     {
         try {
             $result = $this->batchWave->resolve($this->waves->load($tick, $this->waveSize($tick)));
-        } catch (ProviderRateLimitedException | RetryableProviderException $e) {
+        } catch (ProviderRateLimitedException | RetryableProviderException $exception) {
             $this->waveConcurrency->halve($tick->run, $tick->connection);
 
-            throw $e;
+            throw $exception;
         }
 
         if ($result->rateLimitObserved) {

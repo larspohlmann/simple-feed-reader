@@ -112,23 +112,23 @@ final readonly class WorkerRunSweep
             $this->advancer->advance($run->getUser(), TickDriver::Worker);
         } catch (AiNotConfiguredException | AiKeyUnreadableException) {
             // Already failed and flushed by the shared tick; nothing to do.
-        } catch (ProviderUnreachableException | CredentialsRejectedException $e) {
+        } catch (ProviderUnreachableException | CredentialsRejectedException $exception) {
             // The advancer already counted this against the run's own
             // transport-failure ceiling; the sweep just moves on and the next
             // firing retries. One user's dead provider must not fail the
             // message and starve every other user's run.
             $this->logger->warning('Recommendation sweep: provider call failed.', [
                 'runId' => $run->getId(),
-                'exception' => $e,
+                'exception' => $exception,
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Throwable $exception) {
             // The floor beneath every case above: nothing that goes wrong advancing
             // one run may abort the sweep for the runs sorted after it. Logged at
             // error level because, unlike the typed cases above, nothing here has
             // recorded the failure anywhere else.
             $this->logger->error('Recommendation sweep: unexpected failure advancing a run.', [
                 'runId' => $run->getId(),
-                'exception' => $e,
+                'exception' => $exception,
             ]);
         }
     }

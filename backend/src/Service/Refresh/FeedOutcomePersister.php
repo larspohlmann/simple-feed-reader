@@ -49,12 +49,16 @@ final readonly class FeedOutcomePersister
 
         try {
             return $this->record($feed, $outcome, $context);
-        } catch (UniqueConstraintViolationException | ForeignKeyConstraintViolationException | ORMException $e) {
+        } catch (
+            UniqueConstraintViolationException |
+            ForeignKeyConstraintViolationException |
+            ORMException $exception
+        ) {
             // A failed flush closes the EntityManager, so the run must stop here. The FK case is a feed whose
             // last subscriber left mid-run and whose row was reclaimed under the fetch (#246).
             $this->logger->error(
                 'Refresh aborted: persistence failed for {url}',
-                ['url' => $feed->getUrl(), 'exception' => $e],
+                ['url' => $feed->getUrl(), 'exception' => $exception],
             );
 
             return FeedRefreshResultModel::of(FeedOutcome::Aborted);
@@ -75,12 +79,12 @@ final readonly class FeedOutcomePersister
             $this->ingestor->fillMissingImages($feed, $parsed);
 
             return $this->storeFetched($feed, $response, $createdEntries);
-        } catch (FeedThrottledException $e) {
-            return $this->recordThrottled($feed, $e);
-        } catch (FeedGoneException $e) {
-            return $this->recordGone($feed, $e);
-        } catch (FetchException | FeedParseException $e) {
-            return $this->recordFailure($feed, $e);
+        } catch (FeedThrottledException $exception) {
+            return $this->recordThrottled($feed, $exception);
+        } catch (FeedGoneException $exception) {
+            return $this->recordGone($feed, $exception);
+        } catch (FetchException | FeedParseException $exception) {
+            return $this->recordFailure($feed, $exception);
         }
     }
 

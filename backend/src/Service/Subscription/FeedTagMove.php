@@ -99,7 +99,8 @@ final readonly class FeedTagMove
         $ordered = array_values($joins);
         usort(
             $ordered,
-            static fn (SubscriptionTag $a, SubscriptionTag $b): int => $a->getPosition() <=> $b->getPosition(),
+            static fn (SubscriptionTag $left, SubscriptionTag $right): int
+                => $left->getPosition() <=> $right->getPosition(),
         );
 
         return $ordered;
@@ -119,7 +120,11 @@ final readonly class FeedTagMove
             static fn (Subscription $feed): bool => $feed->getTags()->isEmpty()
                 && $feed->requireId() !== $subscriptionId,
         ));
-        usort($untagged, static fn (Subscription $a, Subscription $b): int => $a->getPosition() <=> $b->getPosition());
+        usort(
+            $untagged,
+            static fn (Subscription $left, Subscription $right): int
+                => $left->getPosition() <=> $right->getPosition(),
+        );
 
         return $untagged;
     }

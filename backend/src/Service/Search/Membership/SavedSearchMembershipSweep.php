@@ -146,15 +146,15 @@ final readonly class SavedSearchMembershipSweep
         try {
             $matches = $this->matcher->matchingIds(array_map(SavedSearchTerms::termOf(...), $group), $chunk);
             $tally->matchesInserted += $this->store($group, $chunk, $matches);
-        } catch (SearchEngineUnavailableException $e) {
+        } catch (SearchEngineUnavailableException $exception) {
             $this->logger->warning('Search engine unavailable; the membership sweep stops here and retries next run.', [
-                'exception' => $e,
+                'exception' => $exception,
             ]);
 
             return false;
-        } catch (\Throwable $e) {
+        } catch (\Throwable $exception) {
             $this->logger->error('The membership sweep failed on a chunk; it stops here and retries next run.', [
-                'exception' => $e,
+                'exception' => $exception,
             ]);
 
             return false;
