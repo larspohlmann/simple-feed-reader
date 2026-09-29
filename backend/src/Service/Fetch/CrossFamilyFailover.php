@@ -18,9 +18,9 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
  * 403/503 can be tied to the source address (taz.de blocks IPv6 from Strato,
  * IPv4 works), so the other family is worth a try.
  */
-final class CrossFamilyFailover
+final readonly class CrossFamilyFailover
 {
-    public static function isWarranted(?\Throwable $transportError): bool
+    public function isWarranted(?\Throwable $transportError): bool
     {
         return $transportError instanceof TransportExceptionInterface
             && !$transportError instanceof TimeoutExceptionInterface;
@@ -31,28 +31,8 @@ final class CrossFamilyFailover
      * 304 are successes and 3xx is a redirect the caller follows, so none of those
      * is a status to route around.
      */
-    public static function isRetryableStatus(int $statusCode): bool
+    public function isRetryableStatus(int $statusCode): bool
     {
         return $statusCode >= 400;
-    }
-
-    /**
-     * The `extra.curl` option that forces a failover retry onto its own
-     * connection, empty on the first attempt. curl pools connections by
-     * host:port, so without this a retry pinned to a new family would reuse the
-     * previous family's still-open connection (taz's IPv6 answers 403 and stays
-     * keep-alive) and ignore the new pin, defeating the failover.
-     *
-     * @return array{extra?: array{curl: array<int, bool>}}
-     */
-    public static function freshConnectionAfter(int $attemptIndex): array
-    {
-        return $attemptIndex > 0
-            ? ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]]
-            : [];
-    }
-
-    private function __construct()
-    {
     }
 }

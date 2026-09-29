@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Fetch\FeedFetcher;
 
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\FeedGoneException;
 use App\Service\Fetch\Exception\FeedUnreachableException;
@@ -55,7 +56,7 @@ final class HttpFeedFetcherTest extends TestCase
             100,
             'TestAgent/1.0',
             $this->noEgressProxy(),
-            new FetchRetryPolicy($urlGuard),
+            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
         ));
     }
 

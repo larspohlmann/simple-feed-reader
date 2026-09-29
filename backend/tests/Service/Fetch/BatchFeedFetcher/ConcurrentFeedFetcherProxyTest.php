@@ -7,6 +7,7 @@ namespace App\Tests\Service\Fetch\BatchFeedFetcher;
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FetchRetryPolicy;
@@ -46,7 +47,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             100,
             'TestAgent/1.0',
             $egressProxySource,
-            new FetchRetryPolicy($urlGuard),
+            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
         );
     }
 
@@ -107,7 +108,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
             100,
             'TestAgent/1.0',
             $egressProxySource,
-            new FetchRetryPolicy($urlGuard),
+            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
         );
 
         $outcomes = $this->collect($fetcher->fetchAll([

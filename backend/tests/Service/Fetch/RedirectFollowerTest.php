@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\RedirectChainException;
 use App\Service\Fetch\FailoverRequestSender;
@@ -30,7 +31,11 @@ final class RedirectFollowerTest extends TestCase
         };
 
         return new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
+            new FailoverRequestSender(
+                new MockHttpClient($responses),
+                $this->noEgressProxy(),
+                new CrossFamilyFailover(),
+            ),
             new UrlGuard($dns, new IpValidator()),
         );
     }

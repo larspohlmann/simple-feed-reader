@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Fetch;
 
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Tests\Support\NoEgressProxy;
@@ -20,7 +21,7 @@ final class FailoverRequestSenderTest extends TestCase
 
     private function sender(MockHttpClient $client): FailoverRequestSender
     {
-        return new FailoverRequestSender($client, $this->noEgressProxy());
+        return new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover());
     }
 
     public function testFailsOverToTheNextFamilyWhenTheFirstConnectsButDiesBeforeHeaders(): void

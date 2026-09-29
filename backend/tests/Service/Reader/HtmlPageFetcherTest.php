@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Http\SymfonyStatusReasonPhrases;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -45,7 +46,11 @@ final class HtmlPageFetcherTest extends TestCase
 
         return new HtmlPageFetcher(
             new RedirectFollower(
-                new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
+                new FailoverRequestSender(
+                    new MockHttpClient($responses),
+                    $this->noEgressProxy(),
+                    new CrossFamilyFailover(),
+                ),
                 new UrlGuard($resolver, new IpValidator()),
             ),
             new MetaRefreshTarget(),

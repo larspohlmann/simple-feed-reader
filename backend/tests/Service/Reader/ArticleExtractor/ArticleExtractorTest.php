@@ -8,6 +8,7 @@ use App\Entity\Entry;
 use App\Entity\EntryMedium;
 use App\Entity\Feed;
 use App\Http\SymfonyStatusReasonPhrases;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -99,7 +100,11 @@ final class ArticleExtractorTest extends TestCase
         };
 
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient($responses), $this->noEgressProxy()),
+            new FailoverRequestSender(
+                new MockHttpClient($responses),
+                $this->noEgressProxy(),
+                new CrossFamilyFailover(),
+            ),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');
@@ -501,7 +506,7 @@ final class ArticleExtractorTest extends TestCase
             }
         };
         $redirects = new RedirectFollower(
-            new FailoverRequestSender(new MockHttpClient(), $this->noEgressProxy()),
+            new FailoverRequestSender(new MockHttpClient(), $this->noEgressProxy(), new CrossFamilyFailover()),
             new UrlGuard($resolver, new IpValidator()),
         );
         $landing = new MediaLanding($redirects, 'TestAgent/1.0');

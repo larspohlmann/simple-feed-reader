@@ -9,6 +9,7 @@ use App\Entity\Subscription;
 use App\Entity\User;
 use App\Enum\FeedStatus;
 use App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\FetchRetryPolicy;
 use App\Service\Fetch\IpValidator;
@@ -102,7 +103,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
             $hostConcurrency,
             'TestAgent/1.0',
             $this->noEgressProxy(),
-            new FetchRetryPolicy($urlGuard),
+            new FetchRetryPolicy($urlGuard, new CrossFamilyFailover()),
         );
     }
 

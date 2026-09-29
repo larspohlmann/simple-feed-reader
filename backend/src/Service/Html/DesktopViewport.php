@@ -23,7 +23,7 @@ final readonly class DesktopViewport
     private const string MIN_WIDTH = '/\(\s*min-width\s*:\s*(\d+)px\s*\)/i';
     private const string MAX_WIDTH = '/\(\s*max-width\s*:\s*(\d+)px\s*\)/i';
 
-    public static function admits(?string $media): bool
+    public function admits(?string $media): bool
     {
         return self::narrowestMaxWidth($media) >= self::WIDTH && self::widestMinWidth($media) <= self::WIDTH;
     }
@@ -48,9 +48,5 @@ final readonly class DesktopViewport
         preg_match_all($pattern, $media ?? '', $matches);
 
         return array_map(intval(...), $matches[1]);
-    }
-
-    private function __construct()
-    {
     }
 }

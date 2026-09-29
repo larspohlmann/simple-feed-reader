@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\Fetch\Support;
 
-use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 
@@ -50,8 +49,24 @@ final class EgressOptions
 
         return [
             'resolve' => [$guarded->host => $pinnedAddresses],
-            ...CrossFamilyFailover::freshConnectionAfter($pinAttempt),
+            ...self::freshConnectionAfter($pinAttempt),
         ];
+    }
+
+    /**
+     * The `extra.curl` option that forces a failover retry onto its own
+     * connection, empty on the first attempt. curl pools connections by
+     * host:port, so without this a retry pinned to a new family would reuse the
+     * previous family's still-open connection (taz's IPv6 answers 403 and stays
+     * keep-alive) and ignore the new pin, defeating the failover.
+     *
+     * @return array{extra?: array{curl: array<int, bool>}}
+     */
+    private static function freshConnectionAfter(int $attemptIndex): array
+    {
+        return $attemptIndex > 0
+            ? ['extra' => ['curl' => [\CURLOPT_FRESH_CONNECT => true]]]
+            : [];
     }
 
     private function __construct()

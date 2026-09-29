@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\IpValidator;
@@ -60,7 +61,7 @@ final class StreamLocationResolverTest extends TestCase
         return new StreamLocationResolver(
             new MediaLanding(
                 new RedirectFollower(
-                    new FailoverRequestSender($client, $this->noEgressProxy()),
+                    new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover()),
                     new UrlGuard($dns, new IpValidator()),
                 ),
                 'TestAgent/1.0',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\DesktopViewport;
 use App\Service\Html\PictureSources;
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Model\LeadImageCandidateModel;
@@ -42,7 +43,7 @@ final class ReaderLeadImageTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($pageHtml);
         self::assertNotNull($document);
-        (new LazyImageSources(new PictureSources()))->repairIn($document);
+        (new LazyImageSources(new PictureSources(new DesktopViewport())))->repairIn($document);
 
         return PageImageInventoryModel::fromDocument($document);
     }

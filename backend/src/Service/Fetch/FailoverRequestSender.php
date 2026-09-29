@@ -25,6 +25,7 @@ final readonly class FailoverRequestSender
     public function __construct(
         private HttpClientInterface $httpClient,
         private EgressProxySourceInterface $egressProxySource,
+        private CrossFamilyFailover $failover,
     ) {
     }
 
@@ -92,7 +93,7 @@ final readonly class FailoverRequestSender
         } catch (TransportExceptionInterface $transportError) {
             $response->cancel();
             // With fallback off, going direct would leak the real server IP the proxy hides.
-            if (!$proxy->directFallback || !CrossFamilyFailover::isWarranted($transportError)) {
+            if (!$proxy->directFallback || !$this->failover->isWarranted($transportError)) {
                 throw $transportError;
             }
 
@@ -100,7 +101,7 @@ final readonly class FailoverRequestSender
         }
 
         // A CDN/WAF refusal of the proxy's egress IP may still be served directly, but only with fallback on.
-        if ($proxy->directFallback && CrossFamilyFailover::isRetryableStatus($status)) {
+        if ($proxy->directFallback && $this->failover->isRetryableStatus($status)) {
             $response->cancel();
 
             throw new ProxiedAttemptFailedException();
@@ -137,14 +138,14 @@ final readonly class FailoverRequestSender
                 $status = $response->getStatusCode();
             } catch (TransportExceptionInterface $transportError) {
                 $response->cancel();
-                if ($canFailOver && CrossFamilyFailover::isWarranted($transportError)) {
+                if ($canFailOver && $this->failover->isWarranted($transportError)) {
                     continue;
                 }
 
                 throw $transportError;
             }
 
-            if ($canFailOver && CrossFamilyFailover::isRetryableStatus($status)) {
+            if ($canFailOver && $this->failover->isRetryableStatus($status)) {
                 $response->cancel();
 
                 continue;

@@ -7,6 +7,7 @@ namespace App\Tests\Service\Image\FaviconFetcher;
 use App\Service\Image\FaviconFetcher\FaviconFetcher;
 use App\Service\Image\Exception\FaviconRejectedException;
 use App\Service\Image\Exception\FaviconUnavailableException;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\DnsResolver\DnsResolverInterface;
 use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\FailoverRequestSender;
@@ -49,7 +50,7 @@ final class FaviconFetcherTest extends TestCase
         };
 
         return new FaviconFetcher(
-            new FailoverRequestSender($client, $this->noEgressProxy()),
+            new FailoverRequestSender($client, $this->noEgressProxy(), new CrossFamilyFailover()),
             new UrlGuard($resolver, new IpValidator()),
         );
     }

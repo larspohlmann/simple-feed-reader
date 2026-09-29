@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
+use App\Service\Html\DesktopViewport;
 use App\Service\Html\Exception\UnparseableHtmlException;
 use App\Service\Html\PictureSources;
 use App\Service\Reader\FetchedPageNormalizer;
@@ -39,7 +40,7 @@ final class FetchedPageNormalizerTest extends TestCase
         return [
             new CustomElementUnwrapper(),
             new NoscriptImageUnwrapper(),
-            new LazyImageSources(new PictureSources()),
+            new LazyImageSources(new PictureSources(new DesktopViewport())),
             new ImageButtonUnwrapper(),
             new ShareWidgetRemover(),
             new ShareIntentLinkRemover(),

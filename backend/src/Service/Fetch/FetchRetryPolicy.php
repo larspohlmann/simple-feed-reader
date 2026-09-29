@@ -19,7 +19,7 @@ use App\Service\Fetch\Model\FetchAttemptModel;
  */
 final readonly class FetchRetryPolicy
 {
-    public function __construct(private UrlGuard $urlGuard)
+    public function __construct(private UrlGuard $urlGuard, private CrossFamilyFailover $failover)
     {
     }
 
@@ -85,7 +85,7 @@ final readonly class FetchRetryPolicy
         }
 
         if ($failure instanceof FeedUnreachableException && null === $failure->statusCode) {
-            return CrossFamilyFailover::isWarranted($failure->getPrevious());
+            return $this->failover->isWarranted($failure->getPrevious());
         }
 
         return true;

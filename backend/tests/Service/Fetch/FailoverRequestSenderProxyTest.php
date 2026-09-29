@@ -6,6 +6,7 @@ namespace App\Tests\Service\Fetch;
 
 use App\Enum\ProxyType;
 use App\Service\Crypto\Exception\SecretUnreadableException;
+use App\Service\Fetch\CrossFamilyFailover;
 use App\Service\Fetch\EgressProxySource\EgressProxySourceInterface;
 use App\Service\Fetch\FailoverRequestSender;
 use App\Service\Fetch\Model\GuardedUrlModel;
@@ -28,7 +29,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $sender
             ->send('GET', 'https://page.example', $this->guarded(), ['timeout' => 7.0])
@@ -51,7 +52,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -78,7 +79,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -100,7 +101,11 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('blocked', ['http_code' => 403]);
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy(directFallback: false)));
+        $sender = new FailoverRequestSender(
+            $client,
+            $this->egressProxy($this->proxy(directFallback: false)),
+            new CrossFamilyFailover(),
+        );
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -121,7 +126,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('', ['http_code' => 302, 'response_headers' => ['location' => '/moved']]);
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -149,7 +154,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturnOnConsecutiveCalls($failedResponse, $okResponse);
 
-        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -173,7 +178,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $httpClient = $this->createStub(HttpClientInterface::class);
         $httpClient->method('request')->willReturnOnConsecutiveCalls($refusedResponse, $okResponse);
 
-        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()));
+        $sender = new FailoverRequestSender($httpClient, $this->egressProxy($this->proxy()), new CrossFamilyFailover());
 
         $status = $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -188,7 +193,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('ok');
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy(null));
+        $sender = new FailoverRequestSender($client, $this->egressProxy(null), new CrossFamilyFailover());
 
         $sender->send('GET', 'https://page.example', $this->guarded(), [])->getStatusCode();
 
@@ -204,7 +209,11 @@ final class FailoverRequestSenderProxyTest extends TestCase
 
             return new MockResponse('', ['error' => 'proxy down']);
         });
-        $sender = new FailoverRequestSender($client, $this->egressProxy($this->proxy(directFallback: false)));
+        $sender = new FailoverRequestSender(
+            $client,
+            $this->egressProxy($this->proxy(directFallback: false)),
+            new CrossFamilyFailover(),
+        );
 
         $this->expectException(TransportExceptionInterface::class);
 
@@ -235,7 +244,7 @@ final class FailoverRequestSenderProxyTest extends TestCase
         $egressProxySource->method('egressProxy')->willThrowException(
             new SecretUnreadableException('The stored secret failed its integrity check.'),
         );
-        $sender = new FailoverRequestSender($client, $egressProxySource);
+        $sender = new FailoverRequestSender($client, $egressProxySource, new CrossFamilyFailover());
 
         $this->expectException(TransportExceptionInterface::class);
 

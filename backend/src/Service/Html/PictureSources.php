@@ -24,6 +24,10 @@ final readonly class PictureSources
     /** Attributes holding a candidate list, in the order publishers prefer them. */
     private const array SRCSET_ATTRIBUTES = ['data-lazy-srcset', 'data-srcset', 'srcset'];
 
+    public function __construct(private DesktopViewport $viewport)
+    {
+    }
+
     /**
      * The widest usable rendition the <source> set offers. When no source
      * declares a width the first usable one stands in, so a src-less picture
@@ -60,7 +64,7 @@ final readonly class PictureSources
      *  the reader does not stand in for, or carries nothing loadable. */
     private function renditionOf(Element $source): ?ImageRenditionModel
     {
-        if (!DesktopViewport::admits($source->getAttribute('media'))) {
+        if (!$this->viewport->admits($source->getAttribute('media'))) {
             return null;
         }
 
