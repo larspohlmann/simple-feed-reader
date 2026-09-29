@@ -12,11 +12,6 @@ use Webauthn\CeremonyStep\CeremonyStepManager;
 use Webauthn\CeremonyStep\CeremonyStepManagerFactory;
 use Webauthn\Denormalizer\WebauthnSerializerFactory;
 
-/**
- * Builds the WebAuthn library's ceremony machinery. `final class`, not
- * `final readonly`: the managers are built lazily and memoised, which a
- * readonly property cannot do.
- */
 #[ProcessLifetimeState('Library machinery built from no setting; host() reads the relying party each call')]
 final class PasskeyCeremony
 {
@@ -47,13 +42,8 @@ final class PasskeyCeremony
     }
 
     /**
-     * The wire shape of a set of ceremony options, as the client receives it.
-     *
-     * Lives here rather than in each options factory because both already
-     * depend on this class for the serializer and need the identical
-     * serialize-then-decode pair. One copy means a change to the encoding —
-     * a JSON flag, say — can't be applied to registration and forgotten for
-     * login.
+     * The ceremony options as the client receives them, in one place so a change to the encoding reaches both
+     * ceremonies.
      *
      * @return array<string, mixed>
      */
@@ -68,12 +58,8 @@ final class PasskeyCeremony
     }
 
     /**
-     * The registrable domain credentials are bound to. Delegates to
-     * PasskeyRelyingPartyInterface rather than re-parsing PublicBaseUrlInterface: the relying
-     * party id already applies the "stored override, else derive from the
-     * public base URL's host" rule (EffectivePasskeyRelyingPartyId); a
-     * second, independent derivation here could disagree whenever an admin
-     * has configured an override.
+     * The registrable domain credentials bind to, from PasskeyRelyingPartyInterface: deriving it again from the public
+     * base URL would ignore an admin's override.
      */
     public function host(): string
     {
@@ -81,13 +67,8 @@ final class PasskeyCeremony
     }
 
     /**
-     * No allowed-origin list on purpose: given none, the library compares the
-     * browser's origin against the relying-party id itself (CheckOrigin) —
-     * the spec rule, and the only one that works when a proxy rewrites Host
-     * so the server can't see the browser's real origin.
-     *
-     * `localhost` is exempted from the HTTPS requirement so development over
-     * http keeps working, matching `settings.instance.passkeyHelp.rule4`.
+     * No allowed-origin list: the library then checks the origin against the relying-party id, the spec rule and the
+     * only one that works behind a proxy that rewrites Host. `localhost` may use http, for development.
      */
     private function factory(): CeremonyStepManagerFactory
     {

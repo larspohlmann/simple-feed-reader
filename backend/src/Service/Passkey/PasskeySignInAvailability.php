@@ -10,20 +10,8 @@ use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use App\Service\Settings\RelyingPartyIdRule;
 
 /**
- * Whether passkey sign-in may be offered at all — the question
- * `GET /api/setup/status` answers for an anonymous visitor as
- * `passkeySignInAvailable`, and what every passkey endpoint enforces
- * server-side rather than trusting the frontend to hide its own buttons.
- *
- * Available when BOTH hold: the admin toggle (`InstanceSetting::
- * passkeySignInEnabled`) is on, AND the configured relying-party id could work
- * at all — never whether it matches a host this server guessed at, which hid
- * passkey sign-in on every proxied deployment.
- *
- * Both checks read only instance-wide configuration, so the answer — and its
- * cost — cannot vary with how many accounts exist or how many passkeys are
- * enrolled, the same no-enumeration property AssertionOptionsFactory's
- * docblock describes for the login-options endpoint.
+ * Whether passkey sign-in may be offered: the admin toggle is on and the relying-party id could work at all (never
+ * matched against a host this server guesses). Reads instance configuration only, so it enumerates nothing.
  */
 final readonly class PasskeySignInAvailability
 {

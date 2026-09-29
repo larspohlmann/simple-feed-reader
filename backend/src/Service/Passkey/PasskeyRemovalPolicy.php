@@ -11,16 +11,8 @@ use App\Service\Passkey\PasskeyCount\PasskeyCountInterface;
 use App\Service\Passkey\SignInIdentities\SignInIdentitiesInterface;
 
 /**
- * Refuses the one passkey removal that would lock an account out: deleting
- * the LAST passkey on an account that has neither a password hash nor a
- * linked OAuth identity to sign in with afterwards.
- *
- * `$passkey` is not inspected by the check — removing any one credential
- * always reduces the count by exactly one, so the only question is whether
- * more than one exists BEFORE the delete, not which one. It stays a
- * parameter because the guard is about removing this specific credential,
- * so PasskeyController's call site reads that way, not as "check whether
- * this user may keep signing in" in the abstract.
+ * Refuses to remove the last passkey of an account with neither a password hash nor a linked OAuth identity. Which
+ * passkey does not matter, only whether another exists; the parameter keeps the call site about this removal.
  */
 final readonly class PasskeyRemovalPolicy
 {

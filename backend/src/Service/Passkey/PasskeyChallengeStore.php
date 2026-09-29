@@ -13,28 +13,8 @@ use Psr\Clock\ClockInterface;
 use Random\RandomException;
 
 /**
- * Holds a WebAuthn ceremony's challenge between the moment the options are
- * handed to the browser and the moment its response comes back. Server-side,
- * because the challenge must not be guessable and the API keeps no session.
- *
- * Modelled on OAuthStateStore: the handle issue() returns is a bearer credential
- * for its five-minute lifetime, so only its digest is used as the cache key — a
- * readable cache directory on shared hosting must not double as a list of usable
- * handles — and consume() deletes the entry before validating it, so a handle that
- * fails the expiry check is burned, not left to retry.
- *
- * $userHandle rides along with a registration challenge because
- * PasskeyCredentials::userHandleFor() mints a fresh random value for an account's
- * first credential on every call — the browser is shown the value at options time,
- * an authenticator remembers and returns it at login, so verification must reuse it
- * exactly. Null for a login ceremony, same as $userId.
- *
- * Single use is best-effort under concurrency: PSR-6 has no compare-and-swap, so two
- * simultaneous redemptions of the same handle can both observe isHit() before either
- * deletes. Deleting before validating narrows that window but doesn't close it —
- * closing it fully would need a lock on every ceremony completion. See
- * OAuthStateStore's docblock for why the remaining race isn't a security hole: both
- * racers present the same challenge, and only one can pass the signature check.
+ * Holds a ceremony's challenge between options and response. The handle is a bearer credential: kept out of key and
+ * payload, burned by consume() before validation. Single use is best-effort: docs/security.md#passkey-ceremonies
  */
 final readonly class PasskeyChallengeStore
 {
@@ -93,10 +73,7 @@ final readonly class PasskeyChallengeStore
             throw new UnknownChallengeException();
         }
 
-        // The pool's own TTL should have removed this already; this check
-        // exists because that TTL is enforced by the cache backend's clock,
-        // while the rest of the application — and every test — runs on the
-        // injected one.
+        // The pool's TTL runs on the backend's clock; the rest of the app, and every test, on the injected one.
         if ($stored['expires_at'] < $this->clock->now()->getTimestamp()) {
             throw new UnknownChallengeException();
         }
@@ -131,12 +108,7 @@ final readonly class PasskeyChallengeStore
         return null === $value || \is_string($value);
     }
 
-    /**
-     * The cache key is a digest, not the handle itself, for the reason given
-     * in the class docblock. Unsalted SHA-256 is sufficient: the input is 32
-     * bytes from random_bytes(), so there's no guessable preimage to protect
-     * and no reason to pay a work factor per ceremony completion.
-     */
+    /** Unsalted SHA-256 suffices: the handle is 32 random bytes, so there is no guessable preimage to protect. */
     private static function keyFor(string $handle): string
     {
         return self::KEY_PREFIX . hash('sha256', $handle);

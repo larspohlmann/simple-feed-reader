@@ -12,17 +12,8 @@ use Random\RandomException;
 use Webauthn\PublicKeyCredentialDescriptor;
 
 /**
- * Reads and mints the WebAuthn identifiers a registration ceremony needs from
- * this account's existing credentials (#624).
- *
- * `UserPasskey::$credentialId` and `$userHandle` are stored base64url-encoded
- * — MySQL-safe text, not raw binary, same reason `PasskeyChallengeStore`
- * mints its handles that way. Every value this class hands to the WebAuthn
- * library is decoded back to raw bytes first; the library's own serializer
- * re-encodes it for the wire, the identical round trip
- * {@see \Webauthn\Denormalizer\PublicKeyCredentialDescriptorNormalizer} and
- * {@see \Webauthn\Denormalizer\PublicKeyCredentialUserEntityDenormalizer}
- * already perform for every other WebAuthn byte field.
+ * Reads and mints the WebAuthn identifiers a registration needs. Stored ids and handles are base64url text; every
+ * value handed to the library is decoded to raw bytes first, and the library's serializer re-encodes it.
  */
 final readonly class PasskeyCredentials
 {
@@ -45,8 +36,8 @@ final readonly class PasskeyCredentials
     }
 
     /**
-     * The one handle every row of an account carries, or null with no rows —
-     * never minted: the browser ignores a handle that matches nothing (#727).
+     * The one handle every row of an account carries, or null with no rows — never minted: the browser ignores a
+     * handle that matches nothing.
      *
      * @param list<UserPasskey> $credentials
      */
