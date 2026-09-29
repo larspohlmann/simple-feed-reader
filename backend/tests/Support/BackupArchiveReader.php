@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 /**
- * Reads a downloaded backup zip back apart in tests: the foundation member's
- * gzip bytes, and every entry part's gzip bytes in member-name order. The zip
- * stores its members uncompressed (BackupDownloadResponseFactory uses STORE),
- * so a member's raw bytes are exactly the gzip bytes the exporter produced.
+ * Reads a downloaded backup zip apart: the foundation's and every entry part's gzip bytes, parts in member-name order.
+ * BackupDownloadResponseFactory stores members uncompressed, so their raw bytes are the exporter's gzip bytes.
  */
 final readonly class BackupArchiveReader
 {

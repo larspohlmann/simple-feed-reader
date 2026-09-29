@@ -22,15 +22,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * One account with every field a backup carries set to a non-null, non-default
- * value.
- *
- * BackupSchemaCoverageTest proves each declared field reaches the exporter's
- * output, and a null field would prove nothing. When that test fails because a
- * new field was added, populating it here is part of the fix (#556).
- *
- * The feed URL is derived from the email because feed.url is unique across the
- * instance: two accounts seeded in one test run would otherwise collide.
+ * One account with every backed-up field set to a non-null, non-default value: a field BackupSchemaCoverageTest reports
+ * as new gets populated here. The feed URL derives from the email because feed.url is unique across the instance.
  */
 final readonly class FullyPopulatedAccount
 {

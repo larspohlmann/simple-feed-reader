@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 /**
- * A real gzip whose deflate payload has one byte inverted. The two magic
- * bytes still match, so nothing before the inflate itself can refuse it —
- * which is exactly what a partially downloaded backup looks like, and the
- * shape both GzipLineReader and the restore endpoint have to answer for.
+ * A real gzip with one deflate byte inverted: the magic bytes still match, so only the inflate can refuse it, just as
+ * with a partially downloaded backup.
  */
 final class CorruptGzip
 {
