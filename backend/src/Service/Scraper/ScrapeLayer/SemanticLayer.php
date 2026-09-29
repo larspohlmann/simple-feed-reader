@@ -24,9 +24,9 @@ final readonly class SemanticLayer implements ScrapeLayerInterface
     {
     }
 
-    public function extract(HTMLDocument $doc, string $baseUrl): array
+    public function extract(HTMLDocument $document, string $baseUrl): array
     {
-        $articles = $doc->querySelectorAll('article');
+        $articles = $document->querySelectorAll('article');
         if (\count($articles) < self::MIN_ARTICLES) {
             return [];
         }

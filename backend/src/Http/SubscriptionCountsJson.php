@@ -39,9 +39,9 @@ final class SubscriptionCountsJson
     public static function surfaceTotals(SubscriptionTalliesModel $tallies): array
     {
         return [
-            'favoritesCount' => $tallies->flags['favorites'],
-            'keptCount' => $tallies->flags['kept'],
-            'viewedCount' => $tallies->flags['viewed'],
+            'favoritesCount' => $tallies->flagCounts['favorites'],
+            'keptCount' => $tallies->flagCounts['kept'],
+            'viewedCount' => $tallies->flagCounts['viewed'],
         ];
     }
 }

@@ -94,7 +94,7 @@ final readonly class AppleOAuthProvider extends AbstractOidcProvider
      * both methods, and why the flow-binding cookie cannot be `SameSite=Lax`
      * — a cross-site POST does not carry one.
      */
-    protected function extraAuthorizationParams(): array
+    protected function extraAuthorizationParameters(): array
     {
         return ['response_mode' => 'form_post'];
     }

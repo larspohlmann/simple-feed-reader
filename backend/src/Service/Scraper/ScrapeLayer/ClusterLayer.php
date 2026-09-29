@@ -32,7 +32,7 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
     {
     }
 
-    public function extract(HTMLDocument $doc, string $baseUrl): array
+    public function extract(HTMLDocument $document, string $baseUrl): array
     {
         // Eligible-anchor counts memoized per element, scoped to this pass (never
         // static -- documents differ between calls). Without it, N anchors sharing
@@ -49,7 +49,7 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
         $built = new \SplObjectStorage();
 
         $groups = [];
-        foreach ($doc->querySelectorAll('a[href]') as $anchor) {
+        foreach ($document->querySelectorAll('a[href]') as $anchor) {
             if (!$this->isEligible($anchor)) {
                 continue;
             }

@@ -25,58 +25,58 @@ final readonly class OpmlExporter
      */
     public function export(User $user): string
     {
-        $subs = $this->subscriptions->findForUserWithTags($user->requireId());
+        $subscriptions = $this->subscriptions->findForUserWithTags($user->requireId());
 
-        $doc = new \DOMDocument('1.0', 'UTF-8');
-        $doc->formatOutput = true;
+        $document = new \DOMDocument('1.0', 'UTF-8');
+        $document->formatOutput = true;
 
-        $opml = $doc->createElement('opml');
+        $opml = $document->createElement('opml');
         $opml->setAttribute('version', '2.0');
-        $doc->appendChild($opml);
+        $document->appendChild($opml);
 
-        $head = $doc->createElement('head');
-        $head->appendChild($doc->createElement('title', 'Simple Feed Reader subscriptions'));
+        $head = $document->createElement('head');
+        $head->appendChild($document->createElement('title', 'Simple Feed Reader subscriptions'));
         $opml->appendChild($head);
 
-        $body = $doc->createElement('body');
+        $body = $document->createElement('body');
         $opml->appendChild($body);
 
-        [$byTag, $untagged] = $this->group($subs);
+        [$byTag, $untagged] = $this->group($subscriptions);
 
         foreach ($byTag as $tagName => $group) {
-            $outline = $doc->createElement('outline');
+            $outline = $document->createElement('outline');
             $outline->setAttribute('text', $tagName);
             $outline->setAttribute('title', $tagName);
-            foreach ($group as $sub) {
-                $outline->appendChild($this->feedOutline($doc, $sub));
+            foreach ($group as $subscription) {
+                $outline->appendChild($this->feedOutline($document, $subscription));
             }
             $body->appendChild($outline);
         }
 
-        foreach ($untagged as $sub) {
-            $body->appendChild($this->feedOutline($doc, $sub));
+        foreach ($untagged as $subscription) {
+            $body->appendChild($this->feedOutline($document, $subscription));
         }
 
-        return (string) $doc->saveXML();
+        return (string) $document->saveXML();
     }
 
     /**
-     * @param list<Subscription> $subs
+     * @param list<Subscription> $subscriptions
      *
      * @return array{0: array<string, list<Subscription>>, 1: list<Subscription>}
      */
-    private function group(array $subs): array
+    private function group(array $subscriptions): array
     {
         $byTag = [];
         $untagged = [];
-        foreach ($subs as $sub) {
-            $tags = $sub->getTags();
+        foreach ($subscriptions as $subscription) {
+            $tags = $subscription->getTags();
             if ($tags->isEmpty()) {
-                $untagged[] = $sub;
+                $untagged[] = $subscription;
                 continue;
             }
             foreach ($tags as $tag) {
-                $byTag[$tag->getName()][] = $sub;
+                $byTag[$tag->getName()][] = $subscription;
             }
         }
 
@@ -86,12 +86,12 @@ final readonly class OpmlExporter
     /**
      * @throws \DOMException
      */
-    private function feedOutline(\DOMDocument $doc, Subscription $sub): \DOMElement
+    private function feedOutline(\DOMDocument $document, Subscription $subscription): \DOMElement
     {
-        $feed = $sub->getFeed();
-        $title = $sub->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
+        $feed = $subscription->getFeed();
+        $title = $subscription->getCustomTitle() ?? $feed->getTitle() ?? $feed->getUrl();
 
-        $outline = $doc->createElement('outline');
+        $outline = $document->createElement('outline');
         $outline->setAttribute('type', 'rss');
         $outline->setAttribute('text', $title);
         $outline->setAttribute('title', $title);

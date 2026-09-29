@@ -17,5 +17,5 @@ use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 interface ScrapeLayerInterface
 {
     /** @return list<ScrapedItemModel> */
-    public function extract(HTMLDocument $doc, string $baseUrl): array;
+    public function extract(HTMLDocument $document, string $baseUrl): array;
 }

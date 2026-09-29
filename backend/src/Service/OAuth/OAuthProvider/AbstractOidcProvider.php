@@ -17,7 +17,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * - **Outbound.** getAuthorizationUrl() assembles the consent request from the
  *   four things providers differ by — endpoint, client id, scope, and whatever
- *   extraAuthorizationParams() adds.
+ *   extraAuthorizationParameters() adds.
  * - **Inbound.** exchangeCode() POSTs the authorization code to the token
  *   endpoint and reads the identity from the ID token that comes back.
  *
@@ -98,7 +98,7 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
      *
      * @return array<string, string>
      */
-    protected function extraAuthorizationParams(): array
+    protected function extraAuthorizationParameters(): array
     {
         return [];
     }
@@ -114,7 +114,7 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
      */
     final public function getAuthorizationUrl(string $state, string $nonce, string $codeChallenge): string
     {
-        $params = [
+        $queryParameters = [
             'client_id' => $this->getClientId(),
             'redirect_uri' => $this->getRedirectUri(),
             'response_type' => 'code',
@@ -126,7 +126,7 @@ abstract readonly class AbstractOidcProvider implements OAuthProviderInterface
         ];
 
         return $this->getAuthorizationEndpoint() . '?' . http_build_query(
-            array_merge($params, $this->extraAuthorizationParams()),
+            array_merge($queryParameters, $this->extraAuthorizationParameters()),
             '',
             '&',
             \PHP_QUERY_RFC3986,

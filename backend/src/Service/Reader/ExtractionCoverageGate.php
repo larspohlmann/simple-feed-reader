@@ -73,7 +73,7 @@ final readonly class ExtractionCoverageGate
     private function coverage(array $feedShingles, array $extractionShingles): float
     {
         $present = 0;
-        foreach ($feedShingles as $shingle => $_) {
+        foreach (array_keys($feedShingles) as $shingle) {
             if (isset($extractionShingles[$shingle])) {
                 ++$present;
             }

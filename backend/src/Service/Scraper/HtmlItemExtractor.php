@@ -42,18 +42,18 @@ final readonly class HtmlItemExtractor
 
     public function extract(string $html, string $baseUrl): ParsedFeedModel
     {
-        $doc = $this->parse($html);
+        $document = $this->parse($html);
         $entries = array_map(
             fn (ScrapedItemModel $item): ParsedEntryModel => $this->toEntry($item),
-            \array_slice($this->firstSuccessfulLayer($doc, $baseUrl), 0, self::MAX_ITEMS),
+            \array_slice($this->firstSuccessfulLayer($document, $baseUrl), 0, self::MAX_ITEMS),
         );
 
         // No feed image: og:image is the page's picture, not the site's mark,
         // so guessing with it would put an article photo in the feed header.
         return new ParsedFeedModel(
-            $this->feedTitle($doc),
+            $this->feedTitle($document),
             $baseUrl,
-            $this->metaDescription($doc),
+            $this->metaDescription($document),
             null,
             $entries,
         );
@@ -73,10 +73,10 @@ final readonly class HtmlItemExtractor
     }
 
     /** @return list<ScrapedItemModel> */
-    private function firstSuccessfulLayer(HTMLDocument $doc, string $baseUrl): array
+    private function firstSuccessfulLayer(HTMLDocument $document, string $baseUrl): array
     {
         foreach ($this->layers as $layer) {
-            $items = $this->guarded($layer->extract($doc, $baseUrl), $baseUrl);
+            $items = $this->guarded($layer->extract($document, $baseUrl), $baseUrl);
             if (\count($items) >= self::MIN_ITEMS) {
                 return $items;
             }
@@ -106,11 +106,11 @@ final readonly class HtmlItemExtractor
         return array_values($unique);
     }
 
-    private function feedTitle(HTMLDocument $doc): ?string
+    private function feedTitle(HTMLDocument $document): ?string
     {
         $candidates = [
-            $doc->querySelector('meta[property="og:site_name"]')?->getAttribute('content'),
-            $doc->querySelector('title')?->textContent,
+            $document->querySelector('meta[property="og:site_name"]')?->getAttribute('content'),
+            $document->querySelector('title')?->textContent,
         ];
         foreach ($candidates as $candidate) {
             $candidate = TextNormalizer::normalize($candidate ?? '');
@@ -122,9 +122,9 @@ final readonly class HtmlItemExtractor
         return null;
     }
 
-    private function metaDescription(HTMLDocument $doc): ?string
+    private function metaDescription(HTMLDocument $document): ?string
     {
-        $description = $doc->querySelector('meta[name="description"]')?->getAttribute('content');
+        $description = $document->querySelector('meta[name="description"]')?->getAttribute('content');
         $description = TextNormalizer::normalize($description ?? '');
 
         return $description === '' ? null : $description;

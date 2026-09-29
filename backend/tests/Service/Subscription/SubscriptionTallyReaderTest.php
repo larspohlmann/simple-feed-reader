@@ -40,7 +40,7 @@ final class SubscriptionTallyReaderTest extends DbTestCase
 
         self::assertSame($entryStates->unreadCountsForUser($user->requireId()), $tallies->unreadCounts);
         self::assertSame([$subscription->requireId() => 2], $tallies->entryCounts);
-        self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 0], $tallies->flags);
+        self::assertSame(['favorites' => 1, 'kept' => 0, 'viewed' => 0], $tallies->flagCounts);
         self::assertNotSame($tallies->entryCounts, $tallies->unreadCounts);
     }
 

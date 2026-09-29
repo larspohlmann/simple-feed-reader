@@ -59,8 +59,8 @@ final readonly class SoundCloudEmbedProvider implements EmbedProviderInterface
             return null;
         }
 
-        parse_str($parts['query'], $params);
-        $track = $params['url'] ?? null;
+        parse_str($parts['query'], $queryParameters);
+        $track = $queryParameters['url'] ?? null;
 
         return \is_string($track) && preg_match(self::TRACK_PATTERN, $track, $matches) === 1 ? $matches[1] : null;
     }

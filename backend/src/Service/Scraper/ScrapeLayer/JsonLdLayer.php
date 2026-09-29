@@ -21,10 +21,10 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 #[AsTaggedItem(priority: 30)]
 final readonly class JsonLdLayer implements ScrapeLayerInterface
 {
-    public function extract(HTMLDocument $doc, string $baseUrl): array
+    public function extract(HTMLDocument $document, string $baseUrl): array
     {
         $articles = new JsonLdArticles(new PageUrls($baseUrl));
-        foreach (JsonLd::scriptsIn($doc) as $script) {
+        foreach (JsonLd::scriptsIn($document) as $script) {
             $articles->collect(JsonLd::decode($script));
             if ($articles->isFull()) {
                 break;

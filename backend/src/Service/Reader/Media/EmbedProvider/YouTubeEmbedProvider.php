@@ -70,8 +70,8 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
     private function idFromQuery(string $query): ?string
     {
-        parse_str($query, $params);
-        $id = $params['v'] ?? null;
+        parse_str($query, $queryParameters);
+        $id = $queryParameters['v'] ?? null;
 
         return \is_string($id) && preg_match('#^' . self::ID . '$#', $id) === 1 ? $id : null;
     }

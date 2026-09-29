@@ -24,13 +24,13 @@ final readonly class AuditShardModel
             return $sample;
         }
 
-        $mine = [];
+        $shardEntries = [];
         foreach ($sample as $position => $entry) {
             if ($position % $this->count === $this->index) {
-                $mine[] = $entry;
+                $shardEntries[] = $entry;
             }
         }
 
-        return $mine;
+        return $shardEntries;
     }
 }

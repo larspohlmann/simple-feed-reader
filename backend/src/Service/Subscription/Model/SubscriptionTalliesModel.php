@@ -9,12 +9,12 @@ final readonly class SubscriptionTalliesModel
     /**
      * @param array<int, int>                               $unreadCounts subscription id => unread count, 0 absent
      * @param array<int, int>                               $entryCounts  subscription id => entries, read or not
-     * @param array{favorites: int, kept: int, viewed: int} $flags
+     * @param array{favorites: int, kept: int, viewed: int} $flagCounts
      */
     public function __construct(
         public array $unreadCounts,
         public array $entryCounts,
-        public array $flags,
+        public array $flagCounts,
     ) {
     }
 }
