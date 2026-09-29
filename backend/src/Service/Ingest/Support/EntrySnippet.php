@@ -7,11 +7,8 @@ namespace App\Service\Ingest\Support;
 use App\Service\Text\Support\EntryPlainText;
 
 /**
- * Produces PLAIN TEXT, not HTML, cut to MAX_LENGTH, from an entry body —
- * see EntryPlainText for the image-strip and junk-token rules this builds on.
- *
- * The result may contain <, > and & as literal characters and has NOT been
- * through EntrySanitizer. Render as text only, never with |raw or innerHTML.
+ * An entry body as PLAIN TEXT (EntryPlainText's rules) cut to MAX_LENGTH. Never sanitized: it may hold literal <, >
+ * and &, so render it as text only, never with |raw or innerHTML.
  */
 final class EntrySnippet
 {

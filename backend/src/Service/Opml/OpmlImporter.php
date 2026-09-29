@@ -10,12 +10,7 @@ use App\Service\Opml\Model\OpmlImportResultModel;
 use App\Service\Subscription\BulkSubscriber;
 use App\Service\Subscription\Model\BulkSubscribeItemModel;
 
-/**
- * Imports an OPML file into a user's subscriptions WITHOUT fetching anything.
- * Parsing is delegated to OpmlBodyReader (the single hardened OPML parser) and
- * the subscribe/tag/cap logic to BulkSubscriber, shared with the onboarding
- * catalog. This class only maps the OPML outline tree onto batch items.
- */
+/** Imports OPML into subscriptions WITHOUT fetching anything, mapping its outline tree onto BulkSubscriber items. */
 final readonly class OpmlImporter
 {
     private const int MAX_BYTES = 1_048_576;

@@ -20,23 +20,13 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Downloads the bytes of one already-resolved icon URL, under the same guards
- * as the feed fetch path (see ConcurrentFeedFetcher::send()): UrlGuard SSRF
- * checks re-run on every redirect hop (never the HTTP client's own follower),
- * a connection pinned to the guard-validated IP, a bounded redirect chain, a
- * timeout, wire/buffered size caps, compression disabled, and an image
- * content-type allow-list.
- *
- * Resolution — homepage to best icon URL — is NOT this class's job; the
- * warmer resolves a whole slice at once via `FaviconResolver::resolveAll()`
- * (#116) and hands each URL here. Also called by DigestImageEmbedder for
- * digest thumbnails/favicons — neither caller is a live HTTP request path,
- * both run in the worker/CLI.
+ * Downloads one resolved icon URL under the feed fetch path's guards: UrlGuard on every redirect hop, a connection
+ * pinned to the validated IP, a timeout, size caps, no compression and an image content-type allow-list. Resolving
+ * a homepage to its icon URL is FaviconResolver's job.
  */
 final readonly class FaviconFetcher implements FaviconFetcherInterface
 {
-    /** Also bounds digest article thumbnails (#726), not only favicons — the
-     *  pixel cap in GdImageResizer is the real memory guard. */
+    /** Also bounds digest article thumbnails; GdImageResizer's pixel cap is the real memory guard. */
     public const int MAX_BYTES = 3_145_728;
 
     private const int TIMEOUT_SECONDS = 8;
@@ -106,12 +96,8 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     }
 
     /**
-     * Re-guards every hop through UrlGuard::assertSafe() before following it —
-     * the HTTP client's own redirect handling is disabled ('max_redirects' => 0)
-     * because it would resolve DNS itself and never consult the guard, letting a
-     * redirect to a private address slip the SSRF boundary entirely.
-     *
-     * @param string $url
+     * Re-guards every hop with UrlGuard::assertSafe(). The client's own redirect following stays off: it resolves DNS
+     * itself, so a redirect to a private address would slip the SSRF boundary.
      *
      * @return array{0: string, 1: string} the body bytes and their content type
      * @throws ClientExceptionInterface
@@ -142,10 +128,8 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     {
         $guarded = $this->urlGuard->assertSafe($url);
 
-        // The sender pins the connection to the IPs the guard just validated —
-        // closing the DNS-rebinding window between assertSafe() and the request —
-        // and fails over across address families when one connects but then dies
-        // before the response headers arrive.
+        // The sender pins the connection to the IPs the guard just validated (no DNS-rebinding window) and fails over
+        // across address families when one dies before the headers.
         return $this->requestSender->send('GET', $url, $guarded, [
             'timeout' => self::TIMEOUT_SECONDS,
             'max_duration' => self::TIMEOUT_SECONDS,
@@ -169,9 +153,6 @@ final readonly class FaviconFetcher implements FaviconFetcherInterface
     }
 
     /**
-     * @param ResponseInterface $response
-     * @param int               $status
-     *
      * @return array{0: string, 1: string}
      * @throws TransportExceptionInterface
      * @throws ClientExceptionInterface

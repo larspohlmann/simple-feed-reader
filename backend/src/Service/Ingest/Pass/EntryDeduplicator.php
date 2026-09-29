@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Ingest\Pass;
 
 /**
- * Decides whether an incoming feed item is one the feed already gave us, on
- * either of two independent identities: the stable URL (which survives BBC's
- * volatile revision-counter GUID) or the raw GUID (the fallback for items with
- * no URL). Seeded from the rows a feed already holds, then updated as a batch
- * is walked so a duplicate that appears twice within one fetch is caught too.
+ * Whether an incoming item is one the feed already gave us, by GUID or by stable URL (which survives BBC's revision
+ * counter in the GUID). Remembers each item it accepts, so a repeat within one fetch is caught too.
  */
 final class EntryDeduplicator
 {

@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Image\Model;
 
 /**
- * A picture plus the dimensions its source declared: the URL, and the width and
- * height the origin stated for it.
- *
- * A feed usually declares the dimensions for its own item image; a scraped
- * og:image arrives with none. Roughly 60% of feeds declare neither, and the
- * Guardian declares width without height, so both are independently nullable.
- * Null means unknown, not square: a caller must treat "unknown" as a first-class
- * case and reserve no space rather than defaulting to a guess.
+ * An image URL with the width and height its source declared, each independently nullable (most feeds declare
+ * neither; the Guardian declares width only). Null means unknown: reserve no space rather than guess.
  */
 final readonly class DeclaredImageModel
 {

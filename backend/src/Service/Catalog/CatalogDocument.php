@@ -14,17 +14,8 @@ use App\Service\Opml\OpmlBodyReader;
 use App\Service\Url\Support\AbsoluteHttpUrl;
 
 /**
- * Parses and fully validates a catalog OPML document.
- *
- * Shape: one level of group outlines, each a category, each containing only feed
- * outlines. A group outline carries the standard `text` plus three extra
- * attributes OPML has no equivalent for — `key`, `icon`, `color` — which OPML
- * 2.0 permits. A feed outline uses the standard `xmlUrl`, `htmlUrl` and
- * `description`.
- *
- * Validation happens here, at the boundary, so the importer can assume every
- * field is sound and an invalid document is rejected before a single row is
- * touched. There is no partial import.
+ * Parses and fully validates a catalog OPML: one level of category outlines (`text` plus the extra `key`, `icon`,
+ * `color`) holding only feed outlines. An invalid document is rejected before any row is touched; no partial import.
  */
 final readonly class CatalogDocument
 {

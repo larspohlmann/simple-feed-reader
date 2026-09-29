@@ -5,19 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Sanitize;
 
 /**
- * Removes the blank tail a feed leaves on an article: trailing whitespace and
- * newlines, non-breaking spaces, a final line break, and blocks holding nothing
- * but those.
- *
- * Feeds really do close their bodies this way, and none of it is invisible: an
- * empty paragraph still carries the article's paragraph margin, so a body
- * ending `<p>&nbsp;</p><p></p><br>` renders 88px of blank space under the last
- * sentence (#296). A bare `&nbsp;` survives `trim()` besides — it is U+00A0,
- * which PHP does not count as whitespace.
- *
- * Deliberately textual and anchored to the very end of the string rather than a
- * DOM round-trip: re-serialising every article to delete its last empty tag
- * would rewrite markup this class has no business touching.
+ * Strips an article's blank tail: whitespace, non-breaking spaces (U+00A0 survives trim()), a final <br> and empty
+ * blocks, which still draw their margin. Textual and anchored to the end, so no other markup is re-serialised.
  */
 final readonly class TrailingBlankRemover
 {
@@ -28,12 +17,7 @@ final readonly class TrailingBlankRemover
     private const string EMPTY_BLOCK =
         '<(p|div|span|section|article|figcaption|li)\b[^>]*>' . self::BLANK . '*<\/\1\s*>';
 
-    /**
-     * Nothing but blanks and closing tags between here and the end of the
-     * string. An empty block nested at the end — `…<div><p></p></div>` — is as
-     * much the tail as one at the top level, and stripping it leaves its parent
-     * empty for the next pass to take.
-     */
+    /** Only blanks and closing tags follow: a nested empty block is tail too, and its emptied parent goes next pass. */
     private const string ONLY_TAIL_AFTER = '(?=(?:' . self::BLANK . '|<\/[a-z]+\s*>)*$)';
 
     /**

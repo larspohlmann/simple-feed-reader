@@ -10,12 +10,8 @@ use Symfony\Component\HtmlSanitizer\HtmlSanitizerConfig;
 use Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface;
 
 /**
- * Sanitizes third-party article HTML before storage. Config lives in code
- * (not framework yaml) so the service is constructible in any test without a
- * container.
- *
- * SECURITY: this is the only barrier between feed-supplied HTML and the SPA,
- * which holds a JWT in localStorage — a stored XSS here is account takeover.
+ * Sanitizes third-party article HTML before storage, configured in code so tests need no container. SECURITY: the
+ * only barrier between feed HTML and an SPA holding its JWT in localStorage; a stored XSS here is account takeover.
  */
 final readonly class EntrySanitizer
 {
@@ -25,14 +21,11 @@ final readonly class EntrySanitizer
 
     public function __construct(private TrailingBlankRemover $blankTail)
     {
-        // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse the
-        // PHP 8.4 "new without parentheses" chain yet — keep the parens. See #183.
         $config = (new HtmlSanitizerConfig())
             ->allowSafeElements()
             ->allowElement('img', ['src', 'alt', 'title', 'width', 'height', 'loading'])
-            // The narration mark on <audio> and the slideshow mark on <figure>
-            // must cross this barrier; class carries no script, so no styling or
-            // XSS hole opens (#903, #926).
+            // The narration mark on <audio> and the slideshow mark on <figure> must cross this barrier; class
+            // carries no script, so no styling or XSS hole opens.
             ->allowAttribute('class', ['audio', 'figure'])
             ->forceAttribute('a', 'rel', 'noopener noreferrer')
             ->forceAttribute('a', 'target', '_blank')
