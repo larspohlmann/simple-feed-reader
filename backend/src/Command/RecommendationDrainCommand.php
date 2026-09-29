@@ -46,7 +46,7 @@ final class RecommendationDrainCommand extends Command
      * It does NOT bound one sweep's worst case (ten runs x MAX_ATTEMPTS x provider
      * timeout -- five hours standard, more on the slow profile), even though the
      * key only refreshes between sweeps; since #433 a single call can outlast the
-     * TTL alone. That's the same lapse, not a new failure: keepsHoldingTheLock()
+     * TTL alone. That's the same lapse, not a new failure: refreshOrReacquireLock()
      * re-bids for the key mid-sweep and carries on when it wins, so a longer TTL
      * would only multiply the post-SIGKILL blackout for no benefit here.
      *
@@ -178,7 +178,7 @@ final class RecommendationDrainCommand extends Command
                 return;
             }
 
-            if (!$this->keepsHoldingTheLock($lock)) {
+            if (!$this->refreshOrReacquireLock($lock)) {
                 return;
             }
 
@@ -194,7 +194,7 @@ final class RecommendationDrainCommand extends Command
      * as never winning acquire() in the first place -- not a failure worth a
      * non-SUCCESS exit.
      */
-    private function keepsHoldingTheLock(LockInterface $lock): bool
+    private function refreshOrReacquireLock(LockInterface $lock): bool
     {
         try {
             $lock->refresh();
