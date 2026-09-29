@@ -7,9 +7,8 @@ namespace App\Service\Reader\Media;
 use Dom\Element;
 
 /**
- * The still a player keeps beside itself: the first picture inside the element
- * holding the media URL or a near ancestor — a broadcast page has no og:image,
- * but its player wrapper draws the poster next to the player (#796).
+ * The still a player keeps beside itself: the first picture inside the element holding the media URL or a near
+ * ancestor. A broadcast page may have no og:image, but its player wrapper draws the poster next to the player.
  */
 final readonly class PlayerPoster
 {

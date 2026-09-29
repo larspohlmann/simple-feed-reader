@@ -8,10 +8,7 @@ use App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface;
 use App\Service\Reader\Media\Model\EmbedTargetModel;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-/**
- * The embed allow-list. A URL no provider claims resolves to null, and the
- * caller then leaves the markup alone — the sanitizer drops it as it does today.
- */
+/** The embed allow-list: a URL no provider claims resolves to null, and the sanitizer then drops its markup. */
 final readonly class EmbedProviders
 {
     /** @param iterable<EmbedProviderInterface> $providers */
@@ -34,7 +31,7 @@ final readonly class EmbedProviders
     }
 
     /**
-     * Every provider's frame pattern, sorted for a stable dump (#1048).
+     * Every provider's frame pattern, sorted for a stable dump.
      *
      * @return list<string>
      */
@@ -55,12 +52,7 @@ final readonly class EmbedProviders
         return json_encode($this->framePatterns(), \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES) . "\n";
     }
 
-    /**
-     * The delimited, case-insensitive regex that tells readability to keep an
-     * in-body frame whose source host any provider claims — assembled from every
-     * provider's `sourceHosts()` so the keep-list never drifts from the hosts the
-     * reader actually renders (#1053).
-     */
+    /** The case-insensitive regex readability keeps an in-body frame by, built from every provider's sourceHosts(). */
     public function videoEmbedRegex(): string
     {
         $hosts = [];

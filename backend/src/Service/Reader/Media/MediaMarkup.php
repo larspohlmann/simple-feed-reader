@@ -9,12 +9,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Builds the one markup shape every recovered embed uses: a link to the durable
- * embed URL, with a poster inside it when the provider has one.
- *
- * A link, not an iframe. EntrySanitizer is shared with feed ingest, so allowing
- * iframes there would let any feed inject one; the reader upgrades this link to
- * a real player at render instead.
+ * Every recovered embed as a link to its durable embed URL, with the provider's poster inside; the reader upgrades it
+ * to a player at render. Never an iframe: EntrySanitizer is shared with feed ingest, so any feed could inject one.
  */
 final readonly class MediaMarkup
 {

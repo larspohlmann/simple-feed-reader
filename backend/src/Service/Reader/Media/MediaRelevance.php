@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media;
 
 /**
- * Orders media candidates by how much their URL looks like this article's.
- *
- * Publishers name a file after the piece it belongs to, so a token shared with
- * the page slug is evidence — this is the check #748 used by hand to confirm its
- * host rules were picking the right file, promoted to being the rule.
- *
- * Deliberately soft: it reorders and never drops, so a publisher whose filenames
- * do not echo the slug still gets its media. Dropping is DurableMediaUrl's job.
+ * Orders media candidates by the tokens their URL shares with the page slug. It reorders and never drops, so a
+ * publisher whose filenames do not echo the slug still gets its media; dropping is DurableMediaUrl's job.
  */
 final readonly class MediaRelevance
 {

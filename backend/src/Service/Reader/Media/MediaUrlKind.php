@@ -8,15 +8,8 @@ use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\ResolvedMediaUrlModel;
 
 /**
- * What a URL is, and the durable form a layer must emit for it.
- *
- * Every layer asks this instead of carrying its own idea of a media URL, which
- * is what keeps a player page or a poster image from being emitted as a file,
- * and an HLS playlist from being emitted as anything but a Stream (#782). The
- * cache has no TTL, so a signed or analytics-bearing query string can never
- * survive into an emitted candidate: resolve() judges the bare form and hands
- * that same bare form back, so no caller can emit the raw, query-bearing url
- * by mistake.
+ * What a URL is and the durable form to emit for it; every source asks this rather than judging media URLs itself.
+ * resolve() returns the form it judged, so no signed or tracking query reaches the TTL-less cache.
  */
 final readonly class MediaUrlKind
 {
