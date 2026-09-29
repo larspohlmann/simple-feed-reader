@@ -14,17 +14,18 @@ use App\Service\Recommendation\Prompt\Model\RecommendationResponseSchema;
 final readonly class RecommendationAnswerBudget
 {
     /**
-     * What one scored consolidation pick costs in the reply: id, score, and the dominant prose
-     * `reason`, ~70 tokens measured (#437). consolidationInputSize() subtracts it when sizing the
-     * shortlist against the context window, so too high shrinks the shortlist and too low crowds out the answer.
+     * One scored consolidation pick with its prose `reason`, ~70 tokens measured. consolidationInputSize() subtracts
+     * it, so too high shrinks the shortlist and too low crowds out the answer.
      */
     private const int TOKENS_PER_PICK = 70;
 
-    /** A score-only batch pick, `{"id":123,"score":843}`: about a fifth of a reasoned one (#493). */
+    /** A score-only batch pick, `{"id":123,"score":843}`: about a fifth of a reasoned one. */
     private const int TOKENS_PER_SCORE_PICK = 15;
 
-    /** The answer reserve for the distillation reply. One `{"profile": "..."}` string of at most
-     *  ~300 words; sized generously so a reasoning model still finishes the JSON (#493). */
+    /**
+     * The distillation reply: one `{"profile": "..."}` string of at most ~300 words, sized generously so a reasoning
+     * model still finishes the JSON.
+     */
     private const int PROFILE_ANSWER_TOKENS = 1200;
 
     /**
@@ -36,33 +37,20 @@ final readonly class RecommendationAnswerBudget
     private const int MINIMUM_ANSWER_TOKENS = 1024;
 
     /**
-     * A reasoning model's thinking is billed against the same `max_tokens` as
-     * its answer and can run tens of thousands of tokens before the JSON. This
-     * rides on top of the answer reserve so `max_tokens` bounds reasoning plus
-     * answer — without it a 45-item batch capped at 1800 tokens spent the
-     * budget thinking and truncated its answer (deepseek-flash, #327). Still
-     * finite: a runaway is cut off, with the wall clock and wire cap behind it.
+     * Reasoning is billed against the same `max_tokens` as the answer, so this rides on top of the answer reserve: a
+     * 45-item batch capped at 1800 tokens spent it thinking and truncated its answer (#327). Finite: a runaway stops.
      */
     private const int REASONING_HEADROOM_TOKENS = 32000;
 
     /**
-     * The reasoning headroom kept even when a connection suppresses reasoning.
-     * The `reasoning: {effort: none}` hint does not stop a local model
-     * thinking — qwen3.7-flash spent ~1900 tokens on hidden reasoning_content
-     * (#493). Zero headroom guillotined the answer at finish_reason: length
-     * once batches grew, and the full 32000 made suppress meaningless; this
-     * quarter-size middle leaves room for the thinking that slips through
-     * while suppress still bounds the spend.
+     * Suppression does not stop a local model thinking (qwen3.7-flash spent ~1900 tokens), so zero headroom cut the
+     * answer at finish_reason: length, and the full 32000 made suppression meaningless; a quarter bounds the spend.
      */
     private const int SUPPRESSED_REASONING_HEADROOM_TOKENS = 8000;
 
     /**
-     * What the provider may spend answering — expected size plus slack, for
-     * the phase whose reply shape `$schema` describes. Schema-aware because
-     * each phase answers in a different currency: a batch-score entry is an
-     * id-score pair, a consolidation pick carries prose, distillation answers
-     * one profile string regardless of item count. Pricing a batch at the
-     * reason-bearing rate would multiply its budget for nothing (#437).
+     * Expected reply size plus slack, priced per phase: a batch entry is an id-score pair, a consolidation pick carries
+     * prose, and distillation answers one profile string whatever the item count.
      */
     public function answerBoundTokens(int $replyItemCount, RecommendationResponseSchema $schema): int
     {
@@ -78,8 +66,8 @@ final readonly class RecommendationAnswerBudget
     }
 
     /**
-     * The answer bound plus a reasoning headroom. Suppression only shrinks the headroom: the hint does not stop a
-     * local model thinking (#493), and the headroom is a ceiling, not a reservation (#327).
+     * The answer bound plus a reasoning headroom, smaller when the connection suppresses reasoning. The headroom is a
+     * ceiling, not a reservation.
      */
     public function outputBoundTokens(
         int $replyItemCount,
