@@ -31,7 +31,7 @@ final readonly class NoCollaboratorDefaultRule implements Rule
         'App\\Service\\',
     ];
 
-    private const array VALUE_SEGMENTS = ['\\Dto\\', '\\Model\\', '\\Pass\\'];
+    private const array VALUE_ROLES = [ServiceRoleNames::DTO, ServiceRoleNames::MODEL, ServiceRoleNames::PASS];
 
     public function getNodeType(): string
     {
@@ -60,10 +60,7 @@ final readonly class NoCollaboratorDefaultRule implements Rule
     private static function isService(string $className): bool
     {
         return ClassNameReferences::isInAnyOf($className, self::SERVICE_NAMESPACES)
-            && !array_any(
-                self::VALUE_SEGMENTS,
-                static fn (string $segment): bool => str_contains($className, $segment),
-            );
+            && !\in_array(ServiceRoleNames::roleOfClass($className), self::VALUE_ROLES, true);
     }
 
     private static function error(string $className, Param $parameter): IdentifierRuleError

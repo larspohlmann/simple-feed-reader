@@ -146,7 +146,7 @@ final class EntrySanitizerTest extends TestCase
             . '<img src="https://img/1.jpg" alt="a" loading="eager"></li>'
             . '<li><img src="https://img/2.jpg" alt="b" loading="lazy"></li></ol></figure>';
 
-        $clean = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($html);
+        $clean = $this->sanitizer->sanitize($html);
 
         self::assertNotNull($clean);
         self::assertStringContainsString('class="reader-slideshow"', $clean);
@@ -159,7 +159,7 @@ final class EntrySanitizerTest extends TestCase
             . '<li><img src="https://img/1.jpg" alt="a"></li>'
             . '<li><img src="https://img/2.jpg" alt="b"></li></ol></figure>';
 
-        $clean = (new EntrySanitizer(new TrailingBlankRemover()))->sanitize($html);
+        $clean = $this->sanitizer->sanitize($html);
 
         self::assertNotNull($clean);
         self::assertStringNotContainsString('onclick', $clean);
