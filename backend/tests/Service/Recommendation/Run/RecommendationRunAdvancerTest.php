@@ -1144,9 +1144,7 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         ], \JSON_THROW_ON_ERROR));
         $this->advancer()->advance($this->user, TickDriver::Worker); // warm-up
 
-        // Fan-out over batches 1..3: the call for batch 1 is limited once,
-        // then recovers on the re-fire; batches 2 and 3 answer on the first
-        // pass.
+        // Fan-out over batches 1..3: batch 1 is limited once, then recovers on the re-fire; 2 and 3 answer first time.
         $this->stubChatClient()->queueFailure(new RetryableProviderException(429, 0));
         $this->stubChatClient()->queueContent(json_encode([
             'recommendations' => [['id' => $batches[2][0], 'score' => 92, 'reason' => 'two']],
