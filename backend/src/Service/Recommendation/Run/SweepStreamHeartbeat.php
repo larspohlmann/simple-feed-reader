@@ -10,26 +10,9 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Keeps a sweeping worker's liveness fresh while it sits inside a provider
- * call (#433).
- *
- * The sweep used to mark liveness once before each run, fine while a single
- * call could not outlast WorkerPresence::FRESH_SECONDS. A connection on the
- * slow profile can hold one call for an hour, and a worker only marked at the
- * start would read as dead for most of it — the poll driver stops deferring
- * and the settings card reports no worker, both while it is doing exactly
- * what it was asked to do.
- *
- * So the transport pings this as each chunk arrives, throttled to a write
- * every MINIMUM_INTERVAL_SECONDS — a streamed answer delivers deltas many
- * times a second, and each one is a row update.
- *
- * It answers only while a sweep is running, and only a sweep arms it. A
- * browser poll tick's provider call therefore pings a no-op: it advances the
- * watching account's own run and must never claim to be a worker — the whole
- * distinction the poll driver reads. The cron sweep does arm it (#439): it
- * runs in a web request too, but drives every account's run on the install's
- * behalf, which is what a driver kind means here.
+ * Keeps a sweeping driver's liveness fresh during a provider call, which can outlast FRESH_SECONDS: the transport pings
+ * it per chunk, one write per MINIMUM_INTERVAL_SECONDS at most. Only a sweep arms it, the cron's included; a browser
+ * poll tick's call pings a no-op, because a poll tick must never claim to be a driver.
  */
 final class SweepStreamHeartbeat implements CompletionStreamHeartbeatInterface, ResetInterface
 {

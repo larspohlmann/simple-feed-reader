@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Run;
 
 /**
- * Ranks the pooled batch winners for the global cut: comparing entries
- * across batches, which the merge model used to do implicitly, done in code
- * on the scores the batches produced against a shared rubric. Pure
- * computation, no collaborators. PHP's sort has been stable since 8.0, so
- * tied scores keep flattening order — batch order, which is snapshot order,
- * which is the candidate loader's recency order.
+ * Ranks the pooled batch winners by score for the global cut. The sort is stable, so ties keep batch order, which is
+ * the candidate loader's recency order.
  */
 final readonly class RecommendationWinnerRanker
 {
@@ -29,12 +25,8 @@ final readonly class RecommendationWinnerRanker
     }
 
     /**
-     * The best-ranked entries the consolidation call will re-score, reason, and
-     * dedup. How many is not a fixed multiple of the final list: it is what the
-     * connection's context window can hold (RecommendationPromptBuilder::
-     * consolidationInputSize), so a large-context model recovers more of the
-     * good candidates the noisy batch filter under-scored while a small one is
-     * not handed a call it cannot answer.
+     * The best entries the consolidation call re-scores and dedupes. How many is what the connection's context window
+     * holds (RecommendationPromptBuilder::consolidationInputSize()), not a multiple of the final list.
      *
      * @param list<array{id: int, score: int, reason: string}> $ranked
      *

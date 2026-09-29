@@ -11,17 +11,9 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One provider-call attempt of a recommendation run (#309): the request body
- * the moment it was sent, the response text as it streams in (checkpointed
- * every ~2 s by RecordedCall via direct DBAL updates), and the parser's
- * verdict once the call ended. Rows are written for every run and kept for the
- * newest {@see RunLogRetention::RUNS} — the debug view reads them, and since
- * #638 the phase timestamps here are the history the ETA averages, so the
- * debug switch governs only whether the panel shows the rows, not whether
- * they exist.
- *
- * LONGTEXT length: a #308 batch request over a large context window is
- * hundreds of KB, past MySQL TEXT's 64 KB.
+ * One provider-call attempt: the request as sent, the response as it streams (RecordedCall writes it straight to the
+ * database) and the verdict. Kept for the newest RunLogRetention::RUNS runs, debug on or off: the ETA averages these
+ * rows. LONGTEXT, because one batch request over a large context window passes MySQL TEXT's 64 KB.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunLogRepository::class)]
 #[ORM\Table(name: 'recommendation_run_log')]
@@ -60,12 +52,7 @@ final class RecommendationRunLog
     #[ORM\Column(length: 24, nullable: true, enumType: CallVerdict::class)]
     private ?CallVerdict $verdict = null;
 
-    /**
-     * Every byte the provider sent, not just the ones that decoded into the
-     * answer. A reasoning model spends megabytes here while $responseText
-     * stays empty, and without this the panel cannot tell that call apart
-     * from a provider that never spoke (#320).
-     */
+    /** Every byte the provider sent: a reasoning model can send megabytes while $responseText stays empty. */
     #[ORM\Column(options: ['default' => 0])]
     private int $wireBytes = 0;
 
@@ -81,13 +68,7 @@ final class RecommendationRunLog
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $errorDetail = null;
 
-    /**
-     * The provider's own account of why generation stopped — `length` when
-     * `max_tokens` truncated the answer, `stop` on a natural end. Null until
-     * the provider stamps it. It is what tells a truncated answer apart from a
-     * model that merely rambled, the diagnosis the log could not make before
-     * #327.
-     */
+    /** Why the provider stopped: `length` when max_tokens truncated the answer, `stop` at a natural end. */
     #[ORM\Column(length: 32, nullable: true)]
     private ?string $finishReason = null;
 

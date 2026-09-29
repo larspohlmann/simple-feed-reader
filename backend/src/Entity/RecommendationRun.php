@@ -10,13 +10,8 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * A poll-driven tick advances this run one provider call at a time and
- * checkpoints its progress here, so a crashed or restarted worker can resume
- * exactly where it left off instead of re-running the whole selection.
- *
- * The candidate pool is frozen at snapshot time so that a resumed run retries
- * the exact failed batch (#308); history is deliberately NOT frozen — it only
- * shades the prompt.
+ * One "For you" run, checkpointed after every tick so any driver resumes it where the last tick stopped. The candidate
+ * batches freeze at snapshot(), so a resume retries the exact failed batch; the reading history is read fresh.
  */
 #[ORM\Entity(repositoryClass: RecommendationRunRepository::class)]
 #[ORM\Table(name: 'recommendation_run')]
@@ -29,11 +24,8 @@ final class RecommendationRun
     public const int MAX_ATTEMPTS = 3;
 
     /**
-     * Ceiling on consecutive provider *transport* failures -- separate from
-     * MAX_ATTEMPTS, which counts unusable replies. A provider that is simply
-     * unreachable never produces a reply to be unusable, so without this a
-     * run wedged behind a broken provider would tick forever (#308 final
-     * review, Important 2).
+     * Transport failures in a row before the run fails. MAX_ATTEMPTS counts only unusable replies, which an
+     * unreachable provider never sends, so without this ceiling such a run would tick forever.
      */
     public const int MAX_TRANSPORT_FAILURES = 3;
 
@@ -64,16 +56,10 @@ final class RecommendationRun
     #[ORM\Column(type: Types::JSON, nullable: true)]
     private ?array $candidateBatches = null;
 
-    /**
-     * @var list<list<array{id: int, score?: int, reason: string}>>
-     *     `score` is optional only for rows written before scores existed
-     *     (a run in flight across the deploy); the ranker reads those as 0
-     */
+    /** @var list<list<array{id: int, score?: int, reason: string}>> */
     #[ORM\Column(type: Types::JSON)]
     private array $batchWinners = [];
 
-    /** The mutable checkpoints specific to the batch phase. Keeping them
-     * together separates batch state from the run's lifecycle state. */
     #[ORM\Embedded(class: RunBatchProgress::class, columnPrefix: false)]
     private RunBatchProgress $batchProgress;
 
@@ -84,12 +70,8 @@ final class RecommendationRun
     private RunProfile $runProfile;
 
     /**
-     * Raw SSE bytes received so far by the provider call currently in flight,
-     * checkpointed every ~2 s by RecordedCall via direct DBAL updates and reset
-     * to 0 when the call ends. Written outside the EntityManager — this entity
-     * only reads it — so the value is visible to the cheap status poll while
-     * the tick request is still blocked on the provider. This is the progress
-     * indicator's liveness signal (#309), not debug data.
+     * The bytes the call in flight has received, written by RecordedCall straight to the database and 0 between calls,
+     * so a status poll sees progress while the tick is blocked on the provider. This entity only reads it.
      */
     #[ORM\Column(options: ['default' => 0])]
     private int $streamedChars = 0;
@@ -184,8 +166,6 @@ final class RecommendationRun
         $this->throttle->clearDeferral();
     }
 
-    /** Mark this run once its first scored batch starts, before the provider
-     * call begins so a concurrent status poll cannot start the ETA early. */
     public function markFirstBatchStarted(): void
     {
         $this->guardStatus(RunStatus::Running, 'mark the first batch as started');
@@ -199,10 +179,7 @@ final class RecommendationRun
     }
 
     /**
-     * Defaults the score for rows written before scores existed (a run in
-     * flight across the deploy) so the concession stays at the column, not in
-     * every consumer: callers always see a scored winner. Such a row sorts
-     * last, the run still completes, and the next run self-heals.
+     * Rows from before scores existed read as score 0, so every caller sees a scored winner; such a row sorts last.
      *
      * @return list<list<array{id: int, score: int, reason: string}>>
      */
@@ -301,11 +278,6 @@ final class RecommendationRun
         return new RunningThrottle($this->throttle);
     }
 
-    /**
-     * Records which provider and model this run is about to use. Called at
-     * start and again at resume, so a run resumed after the account switched
-     * models is stamped with the model it will actually call.
-     */
     public function stampProvider(?string $providerHost, ?string $model): void
     {
         $this->providerUsage->stamp($providerHost, $model);
@@ -358,12 +330,7 @@ final class RecommendationRun
         $this->throttle->clearDeferral();
     }
 
-    /**
-     * Failing is reachable from PENDING as well as RUNNING: a run whose
-     * account loses its AI configuration before its very first snapshot
-     * never reaches RUNNING at all, and that must still end in a terminal
-     * state rather than being stuck retried forever (#311).
-     */
+    /** Also legal from PENDING: a run whose account lost its AI configuration before the snapshot must still end. */
     public function fail(string $error, \DateTimeImmutable $when): void
     {
         $this->guardStatusOneOf(RunStatus::active(), 'fail');
@@ -373,16 +340,8 @@ final class RecommendationRun
     }
 
     /**
-     * Stopping is the user's own decision, so it is a terminal state of its
-     * own rather than a failure: nothing went wrong, and the debug surfaces
-     * must not read as though something did. Reachable from PENDING as well
-     * as RUNNING for the same reason fail() is — a run stopped before its
-     * first snapshot must still end somewhere terminal.
-     *
-     * A tick already inside a provider call cannot be interrupted, so this
-     * transition is only half the cancellation: RecommendationRunAdvancer
-     * re-reads the status after each call and throws its result away rather
-     * than flushing it over this one.
+     * A terminal state of its own, not a failure: the user decided. Also legal from PENDING, like fail(). A call
+     * already in flight still finishes; RecommendationTickCheckpoint then makes its tick discard the result.
      */
     public function cancel(\DateTimeImmutable $when): void
     {
@@ -401,12 +360,7 @@ final class RecommendationRun
         $this->throttle->reset();
     }
 
-    /**
-     * What every ending has in common. Extracted at the third one: completing,
-     * failing and cancelling had each grown their own copy of "set the status,
-     * stamp the time", and a fourth ending that forgot the stamp would leave a
-     * finished run looking unfinished to every query that reads completedAt.
-     */
+    /** Every ending goes through here: a run without completedAt reads as unfinished to every query. */
     private function terminate(RunStatus $status, \DateTimeImmutable $when): void
     {
         $this->status = $status;

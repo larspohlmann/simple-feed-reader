@@ -11,8 +11,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The ending of a 429 the tick will not wait out (#947): retry not before now plus the wait. A deferral is a wait,
- * not a failure, so it strikes nothing against the transport-failure ceiling.
+ * The ending of a 429 the tick will not wait out: retry not before now plus the wait. A deferral is a wait, not a
+ * failure, so it strikes nothing against the transport-failure ceiling.
  */
 final readonly class RecommendationRunDeferral
 {

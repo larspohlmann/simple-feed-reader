@@ -18,7 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 final readonly class BatchPhase implements ProviderPhaseInterface
 {
-    /** A poll or sweep tick is a web request: its wave stays this small whatever the connection allows (#344). */
+    /** A poll or sweep tick is a web request: its wave stays this small whatever the connection allows. */
     public const int POLL_MAX_CONCURRENCY = 2;
 
     public function __construct(
@@ -42,7 +42,7 @@ final readonly class BatchPhase implements ProviderPhaseInterface
         return RecommendationRunReportModel::fromRun($run);
     }
 
-    /** A 429 anywhere in the wave halves the run's concurrency, whether the plan recovered or defers (#947). */
+    /** A 429 anywhere in the wave halves the run's concurrency, whether the plan recovered or defers. */
     private function resolveWave(TickContext $tick): BatchWaveResultModel
     {
         try {
@@ -85,7 +85,7 @@ final readonly class BatchPhase implements ProviderPhaseInterface
         );
     }
 
-    /** Never below 1, like the wave cap: a directly stored concurrency ≤ 0 would wedge the run (#344). */
+    /** Never below 1, like the wave cap: a directly stored concurrency ≤ 0 would wedge the run. */
     private function effectiveCap(TickContext $tick): int
     {
         $connection = $tick->connection;

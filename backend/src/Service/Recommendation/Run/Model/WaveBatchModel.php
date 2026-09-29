@@ -7,8 +7,8 @@ namespace App\Service\Recommendation\Run\Model;
 use App\Service\Recommendation\Prompt\Model\PromptLineModel;
 
 /**
- * One batch of the frozen plan in a wave (#344): its plan position, its snapshot-order ids, and the prompt lines
- * those ids still resolve to. A batch pruned to nothing resolves to no winners without a provider call.
+ * One batch of the frozen plan in a wave: its plan position, its snapshot-order ids, and the prompt lines those ids
+ * still resolve to. A batch pruned to nothing resolves to no winners without a provider call.
  */
 final readonly class WaveBatchModel
 {

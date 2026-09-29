@@ -9,6 +9,9 @@ account's newest run is at least one interval old.
 
 On an install that runs the `worker` container, nothing else is needed. The
 worker starts due runs every five minutes and advances them to completion.
+If the worker stops, open tabs and the on-demand drainer take over its active
+runs once its heartbeat is 16 minutes old (`WorkerPresence::FRESH_SECONDS`),
+and the settings card stops reporting a worker at the same moment.
 
 ## Without a worker (external cron)
 

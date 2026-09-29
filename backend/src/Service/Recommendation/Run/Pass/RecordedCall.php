@@ -13,13 +13,9 @@ use App\Service\Ai\Completion\Model\CompletionStreamProgressModel;
 use App\Service\Ai\Completion\Model\CompletionUsageModel;
 use Symfony\Component\Clock\ClockInterface;
 
-/**
- * The stream observer for one recorded provider call (#309). Not readonly: its one piece of state is when it last
- * checkpointed.
- */
+/** The stream observer for one recorded provider call: checkpoints its transcript and settles its run-log row. */
 final class RecordedCall implements CompletionStreamObserverInterface
 {
-    /** The issue's ~2 s pseudo-streaming cadence. */
     private const int CHECKPOINT_SECONDS = 2;
 
     private \DateTimeImmutable $lastCheckpointAt;
@@ -31,20 +27,13 @@ final class RecordedCall implements CompletionStreamObserverInterface
      */
     private int $wireBytes = 0;
 
-    /** Held until the call settles: a `length` beside an empty answer is a truncation (#327). */
+    /** Held until the call settles: a `length` beside an empty answer is a truncation. */
     private ?string $finishReason = null;
 
-    /**
-     * The provider's own accounting for this call, held like $finishReason
-     * and banked when the call settles (#409). Sticky: it arrives in one late
-     * message, so a later report without it must not erase it.
-     */
+    /** Sticky: the usage arrives in one late message, so a later report without it must not erase it. */
     private ?CompletionUsageModel $usage = null;
 
-    /**
-     * Billed once per instance across every settle path; set only once
-     * bankUsage() writes, so a later path can still bank (#344, #409).
-     */
+    /** Billed once across every settle path; set only when bankUsage() writes, so a later path can still bank. */
     private bool $usageBanked = false;
 
     public function __construct(
@@ -53,9 +42,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
         private readonly int $runId,
         private readonly int $logId,
     ) {
-        // The interval is armed at begin() time: begin() already persisted
-        // everything worth persisting at time zero, so the first checkpoint
-        // is due CHECKPOINT_SECONDS after the call went out.
+        // The recorder's begin() already wrote time zero, so the first checkpoint is due CHECKPOINT_SECONDS after it.
         $this->lastCheckpointAt = $clock->now();
     }
 
@@ -85,7 +72,7 @@ final class RecordedCall implements CompletionStreamObserverInterface
         $this->finish($content, CallVerdict::Unusable);
     }
 
-    /** The stream died mid-answer: the salvaged checkpoints stay, stamped with the byte count and the error (#320). */
+    /** Settles the row as a transport failure; its checkpoints stay, stamped with the byte count and the error. */
     public function abortAfterTransportFailure(?string $errorDetail): void
     {
         $this->resetLiveness();

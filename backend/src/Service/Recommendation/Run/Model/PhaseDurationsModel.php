@@ -7,15 +7,9 @@ namespace App\Service\Recommendation\Run\Model;
 use App\Enum\CallPhase;
 
 /**
- * The average wall-clock cost of each recommendation phase, learned from an
- * account's recent completed runs (#638), making the time-left estimate
- * phase-aware: distill and consolidate are one heavy provider call each, so a
- * single blended average collapses to zero once the batches finish.
- *
- * `batchSeconds` is wall time per batch, not per batch phase: batch calls fan
- * out concurrently, so the phase span already folds concurrency in, and
- * dividing by the batch count gives one more batch's marginal cost — what
- * {@see predictedTotalSeconds()} multiplies.
+ * Each phase's average wall-clock cost over the account's recent completed runs; distill and consolidate are one heavy
+ * call each. `batchSeconds` is per batch: the phase span already folds in concurrency, so dividing by the batch count
+ * gives one more batch's marginal cost.
  */
 final readonly class PhaseDurationsModel
 {
@@ -27,11 +21,8 @@ final readonly class PhaseDurationsModel
     }
 
     /**
-     * Averages each phase across runs that carry all three phases. A run
-     * missing one — partial, or predating always-on logging (#638) —
-     * contributes to none, because a total from two phases understates by the
-     * third. Null means no run qualified; the caller must then fall back to no
-     * estimate, not a fabricated one.
+     * Averages only runs that carry all three phases: a total from two understates by the third. Null when no run
+     * qualifies; the caller then shows no estimate, never a made-up one.
      *
      * @param list<array{runId: int, phase: CallPhase, spanSeconds: float, batchCount: int}> $spans
      */
@@ -68,9 +59,7 @@ final readonly class PhaseDurationsModel
     }
 
     /**
-     * One completed run's three phase durations, with the batch phase reduced
-     * to seconds per batch, or null when the run is missing a phase and so must
-     * not contribute a partial prediction to the averages.
+     * One run's three durations, the batch phase per batch; null when a phase is missing.
      *
      * @param array<string, array{spanSeconds: float, batchCount: int}> $phases
      *

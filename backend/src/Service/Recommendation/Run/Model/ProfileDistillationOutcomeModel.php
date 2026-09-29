@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Run\Model;
 
-/** What a distillation call settled to: the profile text, or the unusable reply DistillationPhase retries (#493). */
+/** What a distillation call settled to: the profile text, or the unusable reply DistillationPhase retries. */
 final readonly class ProfileDistillationOutcomeModel
 {
     private function __construct(

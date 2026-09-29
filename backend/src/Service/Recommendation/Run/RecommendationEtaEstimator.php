@@ -13,16 +13,8 @@ use App\Service\Recommendation\Run\Support\RunLogRetention;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * The seconds a live recommendation run still needs, weighted by phase (#638).
- *
- * The estimate this replaced blended every phase into one average, so the two tail phases
- * -- distill and consolidate, one heavy provider call each -- read as a single batch's
- * worth of time, and the number collapsed to zero the moment the batches finished. This
- * predicts the whole run from the account's own phase history and subtracts what has
- * already elapsed, keeping the tail honest.
- *
- * Null means no estimate: the run is not in flight, or the account has no completed run to
- * learn from yet. It must surface as a blank, never a fabricated number.
+ * The seconds a live run still needs: the account's phase history predicts the whole run, minus what has elapsed.
+ * Null means no estimate (not in flight, or no completed run to learn from): a blank, never a made-up number.
  */
 final readonly class RecommendationEtaEstimator
 {

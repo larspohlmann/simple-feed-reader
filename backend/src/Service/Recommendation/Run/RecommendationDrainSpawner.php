@@ -7,16 +7,9 @@ namespace App\Service\Recommendation\Run;
 use App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface;
 
 /**
- * The one spawn policy for the on-demand drainer (#371): every trigger site goes through
- * this method, so "only when nobody is already driving the runs" is decided in one place.
- * Since #393 the only caller is RecommendationDrainOnTerminateListener, firing once per
- * HTTP request and never on console exit -- that is what keeps a request or cron tick from
- * forking more than once, with no memory needed here (why the console half was dropped is
- * on the listener).
- *
- * A stale read here is harmless: the drain command's own global lock and the per-user run
- * lock are the real guards against double work; this check only avoids forking next to a
- * healthy worker.
+ * The one spawn policy for the on-demand drainer: fork only while nobody drives the runs. Its only caller,
+ * RecommendationDrainOnTerminateListener, fires once per HTTP request. A stale read is harmless: the drain lock and
+ * the per-user run lock are the real guards against double work.
  */
 final readonly class RecommendationDrainSpawner
 {
@@ -30,9 +23,6 @@ final readonly class RecommendationDrainSpawner
 
     public function spawnIfNoWorker(): void
     {
-        // Either kind of worker counts: forking beside a live drainer is as
-        // pointless as forking beside the persistent worker, and the new
-        // process would only lose the drain lock.
         if ($this->presence->isAnybodyDrivingRecommendationRuns()) {
             return;
         }

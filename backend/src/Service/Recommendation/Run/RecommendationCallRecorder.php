@@ -14,8 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Opens the run-log row for one provider call the moment it is sent (#309) and hands back the RecordedCall that
- * watches its stream. Every run records, debug on or off: the log is the history the ETA reads (#638).
+ * Opens the run-log row for one provider call the moment it is sent and hands back the RecordedCall that watches its
+ * stream. Every run records, debug on or off: the log is the history the ETA reads.
  */
 final readonly class RecommendationCallRecorder
 {

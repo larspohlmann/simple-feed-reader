@@ -17,8 +17,8 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Settings\RecommendationSettingsWriter;
 
 /**
- * The distillation phase's one provider call (#493): the reader's full history in, a short profile out, cached on
- * the settings row so a later run can skip it. It never touches the run's progress.
+ * The distillation phase's one provider call: the reader's full history in, a short profile out, cached on the
+ * settings row so a later run can skip it. It never touches the run's progress.
  */
 final readonly class RecommendationProfileDistiller
 {

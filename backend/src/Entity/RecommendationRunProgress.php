@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Entity;
 
 /**
- * A snapshot of a recommendation run's derived progress, computed from the
- * frozen candidate batch plan, the number of batch calls completed so far,
- * and the retry count of the call in progress.
-
- * Everything the run derives rather than stores lives here, so a caller asks
- * one object what state the run is in instead of the entity growing a query
- * method per question. This is a plain value object — it holds no persistence mapping and
- * is rebuilt on every call to {@see RecommendationRun::getProgress()}.
+ * What a run's state implies, derived from the frozen batch plan, the batches done and the current call's attempts.
+ * A plain value, rebuilt by every RecommendationRun::getProgress() call.
  */
 final readonly class RecommendationRunProgress
 {
@@ -28,10 +22,8 @@ final readonly class RecommendationRunProgress
     }
 
     /**
-     * @param list<list<int>>|null $candidateBatches null while the run is
-     *     still pending, i.e. before {@see RecommendationRun::snapshot()}
+     * @param list<list<int>>|null $candidateBatches null before RecommendationRun::snapshot()
      * @param int                  $attempts         unusable replies for the call now in progress
-     * @param bool                 $distilled        whether {@see RecommendationRun::recordProfile()} has run
      */
     public static function forBatchPlan(
         ?array $candidateBatches,

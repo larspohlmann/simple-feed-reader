@@ -26,9 +26,9 @@ use App\Service\Recommendation\Run\Pass\TickContext;
 use App\Service\Recommendation\Run\Pass\WaveContext;
 
 /**
- * The batch phase's concurrent fan-out (#344): an unusable batch retries alone up to MAX_ATTEMPTS rounds, then
- * yields no winners. A transport failure settles every open call and banks nothing, the atomic-wave rule; a
- * deferring plan's 429 throws ProviderRateLimitedException instead (#947).
+ * The batch phase's concurrent fan-out: an unusable batch retries alone up to MAX_ATTEMPTS rounds, then yields no
+ * winners. A transport failure settles every open call and banks nothing, the atomic-wave rule; a deferring plan's 429
+ * throws ProviderRateLimitedException instead.
  */
 final readonly class RecommendationBatchWave
 {
@@ -164,7 +164,7 @@ final readonly class RecommendationBatchWave
 
     /**
      * A throw here means no call got a reply (an unreadable key, say): every opened row is settled first, so none
-     * reads as "still streaming", then the error propagates unchanged (#344).
+     * reads as "still streaming", then the error propagates unchanged.
      *
      * @param non-empty-list<ConcurrentCompletion> $calls
      * @param list<RecordedCall>                   $recordedCalls
@@ -187,8 +187,8 @@ final readonly class RecommendationBatchWave
     }
 
     /**
-     * The atomic-wave rule (#344): one transport failure settles every call of the round and banks none of it. A
-     * healthy sibling's answer is discarded and re-billed next tick; that cost is accepted, not a bug.
+     * The atomic-wave rule: one transport failure settles every call of the round and banks none of it. A healthy
+     * sibling's answer is discarded and re-billed next tick; that cost is accepted, not a bug.
      *
      * @param list<RecordedCall>           $recordedCalls
      * @param list<CompletionOutcomeModel> $outcomes
@@ -207,7 +207,7 @@ final readonly class RecommendationBatchWave
         throw $firstFailure;
     }
 
-    /** A call with its own cause, a spoiled reply included, names it; only a bystander borrows the wave's (#437). */
+    /** A call with its own cause, a spoiled reply included, names it; only a bystander borrows the wave's. */
     private static function abortDetailFor(CompletionOutcomeModel $outcome, \Throwable $waveFailure): string
     {
         return $outcome->hasCause() ? $outcome->cause()->getMessage() : $waveFailure->getMessage();
