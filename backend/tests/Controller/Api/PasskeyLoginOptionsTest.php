@@ -9,15 +9,7 @@ use App\Tests\Support\TogglesPasskeySignIn;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * WebAuthn login ("assertion") options (#624): issued to an anonymous
- * caller, discoverable-credential only, and rate-limited on its own budget.
- *
- * See PasskeyRegistrationTest for the sibling options endpoint. This one
- * takes no e-mail — the whole point of a discoverable-credential login is
- * that the server does not know who is asking — so there is no equivalent to
- * that file's pinRelyingParty()/authenticate() setup to reuse.
- */
+/** Login options: anonymous, discoverable credentials only, and rate-limited on their own budget. */
 final class PasskeyLoginOptionsTest extends ApiTestCase
 {
     use TogglesPasskeySignIn;
@@ -25,13 +17,8 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     private const string OPTIONS_PATH = '/api/auth/passkey/login/options';
 
     /**
-     * passkey_challenge is a per-IP FILESYSTEM-backed limiter (rate_limiter.yaml),
-     * which survives both the kernel reboot between requests and the end of
-     * the run. testTheChallengeEndpointIsRateLimited() below deliberately
-     * exhausts it, so both setUp() and tearDown() clear the pool: without the
-     * tearDown() half, a drained budget would leak into whichever test — in
-     * this file or another — runs next in the same process, which is exactly
-     * how the order-dependent flake in #651 keeps reappearing.
+     * passkey_challenge is a filesystem-backed per-IP limiter that outlives the run, and the rate-limit test drains
+     * it: setUp() and tearDown() both clear it, or the drained budget leaks into the next test in the process.
      */
     protected function setUp(): void
     {
@@ -51,11 +38,7 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     }
 
     /**
-     * Boots the kernel only long enough to clear the pool, then shuts it
-     * back down — self::createClient() refuses to run if the kernel is
-     * already booted when a test method starts, which getContainer() would
-     * otherwise leave it. See SetupControllerTest for the same shape, needed
-     * for the same reason.
+     * Boots only long enough to clear the pool: createClient() refuses to run on a kernel getContainer() left booted.
      */
     private function clearRateLimiterCache(): void
     {
@@ -97,12 +80,8 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     }
 
     /**
-     * Conditional mediation calls this on every login-page view, from every
-     * anonymous visitor, and each call writes a cache entry. Without its own
-     * budget that is an unbounded write surface a stranger controls.
-     *
-     * 30 matches passkey_challenge's configured limit in rate_limiter.yaml —
-     * keep the two in sync if that budget ever changes.
+     * Every login-page view calls this and writes a cache entry, so it has its own budget. 30 is passkey_challenge's
+     * limit in rate_limiter.yaml: change both together.
      */
     public function testTheChallengeEndpointIsRateLimited(): void
     {
@@ -119,11 +98,8 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     }
 
     /**
-     * The sorted key structure of one options response, with every random
-     * value stripped, so callers can compare SHAPE rather than bytes. Takes
-     * the client rather than creating its own: static::createClient() may be
-     * called at most once per test, and this is called twice in
-     * testTheResponseShapeDoesNotDependOnWhetherAccountsExist().
+     * The sorted key structure of one options response, random values stripped. Takes the client because
+     * createClient() may run once per test, and one test calls this twice.
      *
      * @return array<string, mixed>
      */
@@ -143,10 +119,7 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
         return $body;
     }
 
-    /**
-     * The one anonymous endpoint among the six #624 follow-up enforces: a
-     * disabled instance must not even hand out a login challenge.
-     */
+    /** The one anonymous guarded endpoint: a disabled instance must not even hand out a login challenge. */
     public function testTheOptionsEndpointRefusesWhenPasskeySignInIsDisabled(): void
     {
         $client = static::createClient();
@@ -159,14 +132,8 @@ final class PasskeyLoginOptionsTest extends ApiTestCase
     }
 
     /**
-     * Fix round 1: the limiter must charge BEFORE the availability guard
-     * runs, or a disabled instance would let an anonymous caller hammer this
-     * database-touching endpoint for free, forever 403 and never 429. Proves
-     * the ordering rather than just the unit count: every one of the first
-     * 30 calls is 403 (disabled, not throttled), and the 31st is 429 —
-     * exactly the shape testTheChallengeEndpointIsRateLimited proves for an
-     * ENABLED instance, so a regression that put the guard back in front of
-     * the limiter would show up here as a 403 on the 31st call instead.
+     * The limiter charges before the availability guard: on a disabled instance the first 30 calls are 403 and the
+     * 31st is 429. With the guard first, the 31st would be another free 403.
      */
     public function testTheDisabledInstanceStillGetsThrottledRatherThanRefusingForever(): void
     {

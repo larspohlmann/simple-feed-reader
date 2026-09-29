@@ -32,19 +32,8 @@ use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * WebAuthn login ("assertion") through PasskeyAuthenticator's own firewall
- * (#624 Task 10) — the flow that lets a user sign in with a passkey alone.
- *
- * Every scenario here reuses PasskeyFixtures::assertion() to sign a real
- * ECDSA assertion over a credential enrolled through the REAL registration
- * endpoint first (never a hand-built UserPasskey row) — see
- * AssertionVerifierTest's own docblock for why that matters. Relying party
- * and origin are pinned in every test, per PasskeyRegistrationTest's
- * convention, never left to resolve from APP_FRONTEND_URL.
- *
- * login_throttling persists attempt counters in a filesystem cache pool that
- * survives both the test and the whole run (#651) — both setUp() and
- * tearDown() clear it, copying PasskeyLoginOptionsTest's approach.
+ * Passkey login through PasskeyAuthenticator's firewall. Every scenario signs a real ECDSA assertion over a
+ * credential enrolled through the real registration endpoint, with relying party and origin pinned in the test.
  *
  * @phpstan-import-type PasskeyAssertionCredentialPayload from PasskeyFixtures
  */
@@ -97,11 +86,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * The structural guarantee the whole task is about: reusing json_login's
-     * own success handler means the token's CLAIMS, not merely its shape,
-     * are identical to password login's for the same account. Compared with
-     * `iat`/`exp` stripped, since the two logins happen at different
-     * instants.
+     * Reusing json_login's success handler makes the token's claims, not just its shape, match password login for
+     * the same account; `iat` and `exp` are stripped.
      */
     public function testTheTokenClaimsMatchPasswordLoginForTheSameUser(): void
     {
@@ -157,10 +143,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * Mirrors PasskeyRegistrationTest::testAnExpiredHandleIsRejected: a
-     * throwaway PasskeyChallengeStore over the SAME cache pool the
-     * container-wired one reads from, with its own MockClock set minutes in
-     * the past, so only this one entry is affected.
+     * A throwaway PasskeyChallengeStore over the container's pool, with a MockClock minutes in the past, expires only
+     * this one entry.
      */
     public function testAnExpiredHandleIsRejected(): void
     {
@@ -183,8 +167,7 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
 
         $this->assertRejected($client, 401);
-        // The safety argument for #727: an expired challenge must NOT look
-        // like an unknown credential, or the browser would prune a working key.
+        // An expired challenge must not look like an unknown credential, or the browser would prune a working key.
         self::assertSame('invalid_credentials', $this->payload($client)['type']);
     }
 
@@ -214,13 +197,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * The scenario the brief calls out by name. AssertionVerifier's own
-     * unit test (AssertionVerifierTest) pins the exact log fields; this
-     * proves the SAME thing through the real firewall, by swapping the
-     * container's AssertionVerifier for one built with a spy Logger — the
-     * same technique LoginTest::testEveryCredentialFailureCostsTheSameOneHash
-     * uses to observe a collaborator a functional request never returns
-     * directly.
+     * AssertionVerifierTest pins the log fields; this proves the same through the real firewall, with the container's
+     * AssertionVerifier swapped for one on a spy logger.
      */
     public function testABackwardsCounterIsRejectedAndLogsAWarning(): void
     {
@@ -233,11 +211,7 @@ final class PasskeyLoginTest extends ApiTestCase
         $this->serveFrom($client, self::ORIGIN);
         $user = $this->factory()->create('clone-victim@example.test');
         $fixture = $this->enrol($client, 'clone-victim@example.test');
-        // Swapped in BEFORE the first login: the container refuses set() on
-        // an already-initialized service, and the first login below is what
-        // would initialize the real one. Using this instance for both calls
-        // is equivalent to the container's own AssertionVerifier — same
-        // collaborators — with a spy Logger attached.
+        // Before the first login: set() refuses a service already initialised, and that login would initialise it.
         $logSpy = new TestHandler();
         self::getContainer()->set(AssertionVerifier::class, $this->verifierWithLogger($logSpy));
         $this->loginOnce($client, $fixture, signCount: 5);
@@ -258,12 +232,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * PasskeyAuthenticator::verifiedUser() guards this BEFORE calling
-     * AssertionVerifier::verify(string $handle, array $credential) — both
-     * parameters are typed, so a caller reaching that method with a null
-     * handle would hit a TypeError, not the clean 401 every other rejection
-     * in this suite produces. This proves the guard, not the verifier, is
-     * what turns a malformed body into a normal login failure.
+     * verifiedUser() rejects a missing handle before calling verify(), whose typed parameters would otherwise throw a
+     * TypeError instead of the 401 every other rejection gets.
      */
     public function testAPayloadMissingTheHandleIsRejected(): void
     {
@@ -317,25 +287,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * Fix round 1 (#624 Task 10): every OTHER negative case in this suite
-     * trips a ceremony step earlier than CheckSignature — challenge, origin,
-     * rpId, counter and credential-id resolution all short-circuit before
-     * the signature is ever examined. Without this test, dropping
-     * CheckSignature entirely (a library upgrade, a change to
-     * CeremonyStepManagerFactory) would leave the whole suite green while
-     * anyone holding a victim's credential id — stored in plain base64url
-     * and echoed back in every assertion, not a secret — could log in as
-     * them with a garbage signature.
-     *
-     * Verified this actually exercises CheckSignature and nothing earlier:
-     * temporarily removed `new CheckSignature($this->algorithmManager)`
-     * from CeremonyStepManagerFactory::requestCeremony() (vendor code) and
-     * re-ran this file plus AssertionVerifierTest. ONLY this test failed
-     * (200 instead of 401, since a request with a garbage signature was
-     * then accepted); the other 20 tests across both files, including every
-     * other negative case, stayed green. Restored the vendor file
-     * immediately after — see task-10-report.md's "Fix round 1" section for
-     * the full command output.
+     * The only negative case that reaches CheckSignature: every other one fails an earlier step. Without it, losing
+     * CheckSignature would leave the suite green while a credential id, which is no secret, logs anyone in.
      */
     public function testATamperedSignatureIsRejected(): void
     {
@@ -354,22 +307,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * AssertionOptionsFactory's own docblock calls user verification "the
-     * only check standing between 'the device is unlocked' and 'this
-     * account is logged in'" for a passkey login — this is the regression
-     * test for that enforcement actually firing on the ASSERTION side (the
-     * registration side already has its own equivalent,
-     * PasskeyRegistrationTest::testAnAttestationWithoutUserVerificationIsRejected).
-     *
-     * Verified load-bearing the same way that sibling test was: temporarily
-     * relaxed AssertionOptionsFactory::optionsFor()'s userVerification to
-     * PREFERRED and re-ran this file plus PasskeyLoginOptionsTest. Both this
-     * test AND PasskeyLoginOptionsTest::testTheOptionsAreIssuedToAnAnonymousCaller
-     * went red — exactly the coupling fix round 1's m1 fix intends:
-     * AssertionOptionsFactory::optionsFor() is now the ONE place this
-     * requirement lives, shared by the options endpoint and the verifier, so
-     * a regression here cannot pass one half and fail the other silently.
-     * Restored immediately after.
+     * User verification is the only check between an unlocked device and a logged-in account. The requirement lives
+     * in AssertionOptionsFactory::optionsFor() alone, so relaxing it fails this test and the options test together.
      */
     public function testAnAssertionWithoutUserVerificationIsRejected(): void
     {
@@ -458,10 +397,7 @@ final class PasskeyLoginTest extends ApiTestCase
         self::assertSame('suspended', $this->payload($client)['accountStatus']);
     }
 
-    /**
-     * Ruling: max_attempts: 5 admits five attempts and rejects the sixth —
-     * five failures, then the SIXTH is 429, never a seventh.
-     */
+    /** max_attempts: 5 admits five failures and rejects the sixth with 429, never a seventh. */
     public function testTheSixthFailedAttemptFromOneIpIsThrottled(): void
     {
         $client = static::createClient();
@@ -547,13 +483,8 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * Disables the toggle while leaving the relying party pinned to
-     * `self::RELYING_PARTY_ID`/`self::ORIGIN` — the exact configuration the
-     * enrolled fixture is valid against — so the toggle is the only variable
-     * between this and a request that would otherwise succeed. Deliberately
-     * NOT the shared `TogglesPasskeySignIn::disablePasskeySignIn()`, which
-     * resets the relying party to null and so cannot isolate the toggle from
-     * an incidental origin/RP-id mismatch (fix round 2).
+     * Disables the toggle but keeps the relying party the fixture was built for, so the toggle is the only variable.
+     * Not TogglesPasskeySignIn, which also resets the relying party.
      */
     private function disablePasskeySignInKeepingRelyingParty(): void
     {
@@ -569,11 +500,7 @@ final class PasskeyLoginTest extends ApiTestCase
         ));
     }
 
-    /**
-     * passkey_login has its OWN login_throttling budget, separate from the
-     * password `login` firewall's — see PasskeyLoginOptionsTest for the same
-     * cache-pool hygiene this copies, and #651 for why it matters.
-     */
+    /** passkey_login has its own login_throttling budget, cleared like PasskeyLoginOptionsTest's pool. */
     private function clearRateLimiterCache(): void
     {
         self::bootKernel();
@@ -678,12 +605,7 @@ final class PasskeyLoginTest extends ApiTestCase
         );
     }
 
-    /**
-     * Selects the record BY MESSAGE rather than assuming it is the first one
-     * captured — a spy Logger attached to a real container service can see
-     * other log lines (framework noise, other listeners) before the one this
-     * test cares about.
-     */
+    /** Selects the record by message: a spy on a real container service also sees framework log lines. */
     private function warningRecordContaining(TestHandler $logSpy, string $needle): LogRecord
     {
         foreach ($logSpy->getRecords() as $record) {
@@ -742,12 +664,7 @@ final class PasskeyLoginTest extends ApiTestCase
     }
 
     /**
-     * Flips one bit in the signature — enough to make it fail ECDSA
-     * verification while leaving every earlier ceremony step (challenge,
-     * origin, rpId, counter, credential id) untouched, so this is the one
-     * negative case that reaches CheckSignature. See
-     * testATamperedSignatureIsRejected for the removal experiment proving
-     * that.
+     * Flips one bit of the signature: ECDSA fails while every earlier step passes, so only CheckSignature can refuse.
      *
      * @param PasskeyAssertionCredentialPayload $credential
      *
@@ -762,14 +679,7 @@ final class PasskeyLoginTest extends ApiTestCase
         return $credential;
     }
 
-    /**
-     * Clears the identity map first (#624 Task 10, fix round 1): without
-     * this, the repository lookup below is served through the SAME entity
-     * manager that handled the request, so Doctrine hands back the in-memory
-     * mutated UserPasskey whether or not AssertionVerifier::verify() ever
-     * flushed it — this repo's own #556-style trap. Clearing forces the
-     * lookup to hit the database for real.
-     */
+    /** Clears the identity map, or Doctrine returns the mutated entity whether or not verify() ever flushed it. */
     private function onlyStoredPasskeyFor(User $user): UserPasskey
     {
         $this->entityManager()->clear();

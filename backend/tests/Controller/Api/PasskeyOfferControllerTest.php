@@ -10,9 +10,8 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * The one-time passkey enrolment offer (#624) is recorded, not re-asked: once
- * an account answers it — in whatever way the client presents that choice —
- * `/api/me` must stop reporting it as unanswered.
+ * The one-time passkey enrolment offer is recorded, not re-asked: once an account answers it, in whatever way the
+ * client presents that choice, `/api/me` must stop reporting it as unanswered.
  */
 final class PasskeyOfferControllerTest extends ApiTestCase
 {
