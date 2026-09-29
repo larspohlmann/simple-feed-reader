@@ -453,9 +453,11 @@ What a rollback does **not** do, because `activate-release.sh` is not re-run:
 
 ## Notes
 
-- There is **no scheduled refresh**. Feeds update when someone presses refresh in the UI.
-  `POST /maintenance/refresh` exists for an external pinger, but `MAINTENANCE_TOKEN` is empty
-  and an empty token is fail-closed — the endpoint refuses everything until one is set.
+- Nothing on this host schedules refresh: it has no crontab, and `deploy/strato/` ships no
+  cron. Refresh and the other sweeps run from an external cron that calls
+  `POST /maintenance/tick` with `MAINTENANCE_TOKEN` in an `X-Maintenance-Token` header. An empty
+  token is fail-closed — the endpoint refuses everything until one is set — so without a token
+  and a cron, feeds update only when someone presses refresh in the UI.
 - The server has no composer, no node, and no crontab. Everything is built on the runner.
 - **`api` and `maintenance` are reserved top-level names.** The `.htaccess` routes them to
   Symfony, so a static asset or directory with either name would be swallowed before the SPA
