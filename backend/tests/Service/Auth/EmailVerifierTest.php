@@ -8,13 +8,13 @@ use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
-use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Service\Auth\ActionTokenService;
 use App\Service\Auth\EmailVerifier;
 use App\Service\Auth\Exception\InvalidTokenException;
 use App\Service\Auth\RegistrationPolicy;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\RegistrationPolicies;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -28,9 +28,9 @@ final class EmailVerifierTest extends DbTestCase
     {
         $policy = $this->registrationPolicy(confirm: true, approve: true);
         $token = $this->pendingAccountToken('verifier-approval-on@example.com');
-        $captured = [];
+        $recording = new AwaitingApprovalRecorder();
 
-        $status = $this->verifier($policy, $this->recordingDispatcher($captured))->verify($token);
+        $status = $this->verifier($policy, $recording->dispatcher)->verify($token);
 
         self::assertSame(UserStatus::PendingApproval, $status);
         $user = $this->users()->findOneByEmail('verifier-approval-on@example.com');
@@ -38,18 +38,18 @@ final class EmailVerifierTest extends DbTestCase
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getApprovedAt());
         self::assertTrue($user->isEmailVerified());
-        self::assertCount(1, $captured);
-        self::assertSame($user, $captured[0]->user);
-        self::assertSame(RegistrationMethod::EmailPassword, $captured[0]->method);
+        self::assertCount(1, $recording->events());
+        self::assertSame($user, $recording->events()[0]->user);
+        self::assertSame(RegistrationMethod::EmailPassword, $recording->events()[0]->method);
     }
 
     public function testWithApprovalOffTheVerifiedAccountIsActiveWithoutAnEvent(): void
     {
         $policy = $this->registrationPolicy(confirm: true, approve: false);
         $token = $this->pendingAccountToken('verifier-approval-off@example.com');
-        $captured = [];
+        $recording = new AwaitingApprovalRecorder();
 
-        $status = $this->verifier($policy, $this->recordingDispatcher($captured))->verify($token);
+        $status = $this->verifier($policy, $recording->dispatcher)->verify($token);
 
         self::assertSame(UserStatus::Active, $status);
         $user = $this->users()->findOneByEmail('verifier-approval-off@example.com');
@@ -57,7 +57,7 @@ final class EmailVerifierTest extends DbTestCase
         self::assertSame(UserStatus::Active, $user->getStatus());
         self::assertNotNull($user->getApprovedAt());
         self::assertTrue($user->isEmailVerified());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
 
         // Past the identity map: the approval was flushed, not only set in memory.
         $this->em->clear();
@@ -93,23 +93,6 @@ final class EmailVerifierTest extends DbTestCase
         return new EmailVerifier($this->tokens(), $policy, $this->em, $events, $clock);
     }
 
-    /**
-     * @param list<UserAwaitingApproval> $captured
-     *
-     * @param-out list<UserAwaitingApproval> $captured
-     */
-    private function recordingDispatcher(array &$captured): EventDispatcherInterface
-    {
-        $events = new EventDispatcher();
-        $events->addListener(
-            UserAwaitingApproval::class,
-            static function (UserAwaitingApproval $event) use (&$captured): void {
-                $captured[] = $event;
-            },
-        );
-
-        return $events;
-    }
 
     private function tokens(): ActionTokenService
     {

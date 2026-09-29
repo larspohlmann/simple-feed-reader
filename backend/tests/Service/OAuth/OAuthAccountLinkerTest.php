@@ -8,12 +8,12 @@ use App\Entity\User;
 use App\Entity\UserIdentity;
 use App\Enum\RegistrationMethod;
 use App\Enum\UserStatus;
-use App\Event\UserAwaitingApproval;
 use App\Service\Auth\RegistrationPolicy;
 use App\Service\OAuth\Factory\OAuthUserFactory;
 use App\Service\OAuth\Model\OAuthIdentityModel;
 use App\Service\OAuth\OAuthAccountLinker;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\NewUserStatus;
 use App\Tests\Support\RegistrationPolicies;
 use Symfony\Component\Clock\MockClock;
@@ -281,29 +281,27 @@ final class OAuthAccountLinkerTest extends DbTestCase
 
     public function testANewOAuthAccountAnnouncesItselfToTheApprovalQueue(): void
     {
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
+        $this->linker($recording->dispatcher)
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
 
-        self::assertCount(1, $captured);
-        self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
-        self::assertSame('google', $captured[0]->oauthProvider);
-        self::assertSame('new@example.com', $captured[0]->user->getEmail());
+        self::assertCount(1, $recording->events());
+        self::assertSame(RegistrationMethod::OAuth, $recording->events()[0]->method);
+        self::assertSame('google', $recording->events()[0]->oauthProvider);
+        self::assertSame('new@example.com', $recording->events()[0]->user->getEmail());
     }
 
     public function testClaimingAnUnverifiedAccountAnnouncesItToTheApprovalQueue(): void
     {
         $this->persistUser('bob@example.com', UserStatus::PendingVerification);
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($recording->dispatcher)
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
-        self::assertCount(1, $captured);
-        self::assertSame(RegistrationMethod::OAuth, $captured[0]->method);
+        self::assertCount(1, $recording->events());
+        self::assertSame(RegistrationMethod::OAuth, $recording->events()[0]->method);
     }
 
     public function testAReturningIdentityAnnouncesNothing(): void
@@ -311,39 +309,35 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $user = $this->persistUser('bob@example.com', UserStatus::Active);
         $this->em->persist(new UserIdentity($user, 'google', 'sub-1', $this->now()));
         $this->em->flush();
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($recording->dispatcher)
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
     }
 
     public function testLinkingToAnAlreadyActiveAccountAnnouncesNothing(): void
     {
         $this->persistUser('bob@example.com', UserStatus::Active);
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $this->linker($events)->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
+        $this->linker($recording->dispatcher)
+            ->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
     }
 
     public function testNewOAuthUserWithApprovalOffIsActiveWithNoEvent(): void
     {
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
+        $resolved = $this->linker($recording->dispatcher, $this->registrationPolicy(confirm: true, approve: false))
             ->resolve(new OAuthIdentityModel('google', 'sub-1', 'new@example.com', true));
 
         self::assertSame(UserStatus::Active, $resolved->getStatus());
         self::assertEquals($this->now(), $resolved->getApprovedAt());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
     }
 
     public function testClaimUnverifiedWithApprovalOffActivatesAndWipesPasswordNoEvent(): void
@@ -351,11 +345,9 @@ final class OAuthAccountLinkerTest extends DbTestCase
         $planted = $this->persistUser('bob@example.com', UserStatus::PendingVerification);
         $planted->setPasswordHash('an-attackers-hash', new \DateTimeImmutable('2020-01-01 00:00:00'));
         $this->em->flush();
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $resolved = $this->linker($events, $this->registrationPolicy(confirm: true, approve: false))
+        $resolved = $this->linker($recording->dispatcher, $this->registrationPolicy(confirm: true, approve: false))
             ->resolve(new OAuthIdentityModel('google', 'sub-1', 'bob@example.com', true));
 
         self::assertSame($planted->getId(), $resolved->getId());
@@ -366,7 +358,7 @@ final class OAuthAccountLinkerTest extends DbTestCase
         // not to the party OAuth just proved owns the address.
         self::assertNull($resolved->getPasswordHash());
         self::assertEquals($this->now(), $resolved->getPasswordChangedAt());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
     }
 
     private function linker(
@@ -391,22 +383,6 @@ final class OAuthAccountLinkerTest extends DbTestCase
         );
     }
 
-    /**
-     * @return array{EventDispatcher, list<UserAwaitingApproval>}
-     */
-    private function recordingDispatcher(): array
-    {
-        $captured = [];
-        $events = new EventDispatcher();
-        $events->addListener(
-            UserAwaitingApproval::class,
-            static function (UserAwaitingApproval $event) use (&$captured): void {
-                $captured[] = $event;
-            },
-        );
-
-        return [$events, &$captured];
-    }
 
     private function persistUser(string $email, UserStatus $status): User
     {

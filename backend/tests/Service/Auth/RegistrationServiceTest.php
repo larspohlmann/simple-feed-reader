@@ -8,7 +8,6 @@ use App\Entity\User;
 use App\Enum\RegistrationMethod;
 use App\Enum\TokenPurpose;
 use App\Enum\UserStatus;
-use App\Event\UserAwaitingApproval;
 use App\Repository\UserRepository;
 use App\Security\PasswordWorkEqualizer;
 use App\Service\Auth\ActionTokenService;
@@ -21,6 +20,7 @@ use App\Service\Auth\UserByEmail\UserByEmailInterface;
 use App\Service\Mail\AccountMailer\AccountMailer;
 use App\Service\Mail\AccountMailer\AccountMailerInterface;
 use App\Tests\DbTestCase;
+use App\Tests\Support\AwaitingApprovalRecorder;
 use App\Tests\Support\RegistrationPolicies;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\EventDispatcher\EventDispatcher;
@@ -105,22 +105,6 @@ final class RegistrationServiceTest extends DbTestCase
         );
     }
 
-    /**
-     * @return array{EventDispatcherInterface, list<UserAwaitingApproval>}
-     */
-    private function recordingDispatcher(): array
-    {
-        $captured = [];
-        $events = new EventDispatcher();
-        $events->addListener(
-            UserAwaitingApproval::class,
-            static function (UserAwaitingApproval $event) use (&$captured): void {
-                $captured[] = $event;
-            },
-        );
-
-        return [$events, &$captured];
-    }
 
     public function testConfirmationOnLandsInPendingVerificationAndMails(): void
     {
@@ -138,18 +122,16 @@ final class RegistrationServiceTest extends DbTestCase
         $mailer->expects($this->never())->method('sendApproved');
         $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('newcomer@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('newcomer@example.com');
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::PendingVerification, $user->getStatus());
         self::assertNull($user->getApprovedAt());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
 
         self::assertIsString($capturedToken);
         /** @var ActionTokenService $tokens */
@@ -166,11 +148,9 @@ final class RegistrationServiceTest extends DbTestCase
         $mailer->expects($this->never())->method('sendApproved');
         $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('awaiting@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('awaiting@example.com');
@@ -178,9 +158,9 @@ final class RegistrationServiceTest extends DbTestCase
         self::assertSame(UserStatus::PendingApproval, $user->getStatus());
         self::assertNull($user->getApprovedAt());
 
-        self::assertCount(1, $captured);
-        self::assertSame($user, $captured[0]->user);
-        self::assertSame(RegistrationMethod::EmailPassword, $captured[0]->method);
+        self::assertCount(1, $recording->events());
+        self::assertSame($user, $recording->events()[0]->user);
+        self::assertSame(RegistrationMethod::EmailPassword, $recording->events()[0]->method);
     }
 
     public function testBothGatesOffLandsActiveWithApprovedAtAndNoEventNoMail(): void
@@ -192,18 +172,16 @@ final class RegistrationServiceTest extends DbTestCase
         $mailer->expects($this->never())->method('sendApproved');
         $mailer->expects($this->never())->method('sendPendingApprovalNotice');
 
-        $recording = $this->recordingDispatcher();
-        $events = $recording[0];
-        $captured = &$recording[1];
+        $recording = new AwaitingApprovalRecorder();
 
-        $service = $this->serviceUnderPolicy($policy, $mailer, $events);
+        $service = $this->serviceUnderPolicy($policy, $mailer, $recording->dispatcher);
         $service->register('instant@example.com', 'correct-horse-battery');
 
         $user = $this->users()->findOneByEmail('instant@example.com');
         self::assertInstanceOf(User::class, $user);
         self::assertSame(UserStatus::Active, $user->getStatus());
         self::assertNotNull($user->getApprovedAt());
-        self::assertSame([], $captured);
+        self::assertSame([], $recording->events());
     }
 
     public function testResettingWithAnUnknownTokenIsRefused(): void

@@ -6,6 +6,7 @@ namespace App\Tests\Service\Reader\Slideshow\Model;
 
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
 use App\Tests\Support\ParsesHtml;
+use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class ContainerSignatureModelTest extends TestCase
@@ -69,12 +70,12 @@ final class ContainerSignatureModelTest extends TestCase
         self::assertNull(ContainerSignatureModel::fromElement($this->element('<div>x</div>')));
     }
 
-    private function elementWithClass(string $classAttribute): \Dom\Element
+    private function elementWithClass(string $classAttribute): Element
     {
         return $this->element(\sprintf('<span class="%s">slides</span>', $classAttribute));
     }
 
-    private function element(string $markup): \Dom\Element
+    private function element(string $markup): Element
     {
         $document = $this->document("<div>{$markup}</div>");
 

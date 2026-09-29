@@ -6,6 +6,8 @@ namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
 use App\Tests\Support\ParsesHtml;
+use Dom\Element;
+use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackGatedVideoPlaceholderTest extends TestCase
@@ -202,7 +204,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         return '<html><head>' . $head . '</head><body>' . $body . '</body></html>';
     }
 
-    private function repairIn(string $html): \Dom\HTMLDocument
+    private function repairIn(string $html): HTMLDocument
     {
         $document = $this->document($html);
         $this->placeholder->repairIn($document);
@@ -210,7 +212,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
         return $document;
     }
 
-    private function teaser(\Dom\HTMLDocument $document): \Dom\Element
+    private function teaser(HTMLDocument $document): Element
     {
         foreach ($document->querySelectorAll('article p') as $paragraph) {
             if (str_contains((string) $paragraph->textContent, 'An ancient intuition')) {

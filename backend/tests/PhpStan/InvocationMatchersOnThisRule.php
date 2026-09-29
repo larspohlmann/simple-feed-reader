@@ -58,6 +58,6 @@ final readonly class InvocationMatchersOnThisRule implements Rule
     {
         $class = $scope->getClassReflection();
 
-        return $class !== null && $class->isSubclassOf(TestCase::class);
+        return null !== $class && $class->isSubclassOf(TestCase::class);
     }
 }
