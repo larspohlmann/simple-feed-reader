@@ -7,12 +7,8 @@ namespace App\Service\Recommendation\Prompt;
 use App\Service\Recommendation\Prompt\Model\ProfileParseResultModel;
 
 /**
- * Turns one raw distillation reply into a validated preference profile — the
- * same defensive boundary RecommendationPickParser and
- * RecommendationConsolidationParser are for their own replies. A profile is
- * unusable when the JSON does not parse, the shape is wrong, or the string it
- * carries is empty once trimmed: an empty profile tells the later phases
- * nothing they did not already know.
+ * Turns one distillation reply into a preference profile. Unusable when the JSON does not parse, the shape is wrong,
+ * or the trimmed string is empty: an empty profile tells the later phases nothing.
  */
 final readonly class RecommendationProfileParser
 {

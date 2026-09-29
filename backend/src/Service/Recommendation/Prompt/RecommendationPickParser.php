@@ -7,15 +7,8 @@ namespace App\Service\Recommendation\Prompt;
 use App\Service\Recommendation\Prompt\Model\PickParseResultModel;
 
 /**
- * Turns one raw assistant reply into validated picks — the defensive
- * boundary between an unreliable language model and the run state machine.
- *
- * A reply that parses keeps its valid picks even when some ids are invalid,
- * duplicated, or scoreless: partial credit is still credit. It is unusable —
- * and only unusable — when the JSON does not parse, the shape is wrong, or
- * zero picks survive validation. Tasks 10-11 branch on `usable`: a usable
- * result is recorded and the run advances; an unusable one triggers a retry
- * with a corrective message.
+ * Turns one batch reply into validated picks, the defensive boundary between the model and the run. Unusable only
+ * when the JSON does not parse, the shape is wrong, or no pick survives.
  */
 final readonly class RecommendationPickParser
 {
