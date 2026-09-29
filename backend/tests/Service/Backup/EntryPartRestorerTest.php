@@ -38,7 +38,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
     private const string FEED_URL = 'https://entry-part.example/feed.xml';
 
-    private UserFactory $users;
+    private UserFactory $userFactory;
     private RecordingSearchIndexWriter $indexWriter;
     private static int $userSequence = 0;
 
@@ -48,7 +48,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->users = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->em, $hasher);
         $this->indexWriter = new RecordingSearchIndexWriter();
     }
 
@@ -208,7 +208,7 @@ final class EntryPartRestorerTest extends DbTestCase
     {
         $user = $this->subscribedUser(self::FEED_URL);
         $feed = $this->feedByUrl(self::FEED_URL);
-        $stranger = $this->users->create($this->nextEmail());
+        $stranger = $this->userFactory->create($this->nextEmail());
         $this->em->persist(new Subscription($stranger, $feed, new \DateTimeImmutable('2026-07-02 00:00:00')));
         $this->em->flush();
 
@@ -442,7 +442,7 @@ final class EntryPartRestorerTest extends DbTestCase
 
     private function subscribedUser(string $feedUrl): User
     {
-        $user = $this->users->create($this->nextEmail());
+        $user = $this->userFactory->create($this->nextEmail());
         $feed = new Feed($feedUrl);
         $this->em->persist($feed);
         $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));

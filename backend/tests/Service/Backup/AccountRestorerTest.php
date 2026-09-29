@@ -48,7 +48,7 @@ final class AccountRestorerTest extends DbTestCase
     private const string TWO_URL = 'https://two.example/feed.xml';
     private const string FOUNDATION_FEED_URL = 'https://foundation.example/feed.xml';
 
-    private UserFactory $users;
+    private UserFactory $userFactory;
 
     protected function setUp(): void
     {
@@ -56,7 +56,7 @@ final class AccountRestorerTest extends DbTestCase
 
         /** @var UserPasswordHasherInterface $hasher */
         $hasher = self::getContainer()->get(UserPasswordHasherInterface::class);
-        $this->users = new UserFactory($this->em, $hasher);
+        $this->userFactory = new UserFactory($this->em, $hasher);
     }
 
     /**
@@ -110,7 +110,7 @@ final class AccountRestorerTest extends DbTestCase
 
     private function accountWithOneSubscription(): User
     {
-        $user = $this->users->create('one-subscription@example.com');
+        $user = $this->userFactory->create('one-subscription@example.com');
         $feed = new Feed('https://kept.example/feed.xml');
         $this->em->persist($feed);
         $this->em->persist(new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01 00:00:00')));
@@ -121,7 +121,7 @@ final class AccountRestorerTest extends DbTestCase
 
     private function emptyAccount(): User
     {
-        return $this->users->create('empty-account@example.com');
+        return $this->userFactory->create('empty-account@example.com');
     }
 
     private function subscriptionCount(User $user): int
@@ -309,7 +309,7 @@ final class AccountRestorerTest extends DbTestCase
 
     private function seededUser(string $email): User
     {
-        $user = $this->users->create($email);
+        $user = $this->userFactory->create($email);
         $this->seedRichAccount($user);
 
         return $user;
@@ -456,7 +456,7 @@ final class AccountRestorerTest extends DbTestCase
         $entryParts = $this->entryPartsOf($source);
         $sourceRows = $this->fixtureRowsOf($source);
 
-        $target = $this->users->create('drift-target@example.com');
+        $target = $this->userFactory->create('drift-target@example.com');
         $this->deleteEveryFeed();
 
         $this->restorer()->start($this->reload($target), $foundation, 'REPLACE');
@@ -684,7 +684,7 @@ final class AccountRestorerTest extends DbTestCase
         $feedId = $this->scalarInt('SELECT id FROM feed WHERE url = ?', [self::ONE_URL]);
         $this->em->clear();
 
-        $stranger = $this->users->create('feed-stranger@example.com');
+        $stranger = $this->userFactory->create('feed-stranger@example.com');
         $feed = $this->em->find(Feed::class, $feedId);
         self::assertInstanceOf(Feed::class, $feed);
         $feed->setTitle('Theirs');
@@ -725,7 +725,7 @@ final class AccountRestorerTest extends DbTestCase
         $source = $this->seededUser('fit-source@example.com');
         $gzip = $this->backupOf($source);
 
-        $target = $this->users->create('fit-target@example.com', maxSubscriptions: 1);
+        $target = $this->userFactory->create('fit-target@example.com', maxSubscriptions: 1);
         $this->seedRichAccountForCappedTarget($target);
         $targetId = $target->requireId();
 
@@ -835,7 +835,7 @@ final class AccountRestorerTest extends DbTestCase
 
     public function testAnEntryPartWiderThanOneInsertBatchLoadsEveryBatchAndItsStates(): void
     {
-        $user = $this->users->create('wide-batch@example.com');
+        $user = $this->userFactory->create('wide-batch@example.com');
         $this->seedFeedWiderThanOneBatch($user, 502);
         $userId = $user->requireId();
         $foundation = $this->backupOf($user);
