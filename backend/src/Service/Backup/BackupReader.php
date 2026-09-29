@@ -42,6 +42,16 @@ final readonly class BackupReader
         BackupSchema::KIND_ENTRY_STATE,
     ];
 
+    private const array BODY_LINES = [
+        BackupSchema::KIND_ACCOUNT => AccountLine::class,
+        BackupSchema::KIND_TAG => TagLine::class,
+        BackupSchema::KIND_SAVED_SEARCH => SavedSearchLine::class,
+        BackupSchema::KIND_FEED => FeedLine::class,
+        BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::class,
+        BackupSchema::KIND_ENTRY => EntryLine::class,
+        BackupSchema::KIND_ENTRY_STATE => EntryStateLine::class,
+    ];
+
     public function __construct(
         private int $maxInflatedBytes = self::MAX_INFLATED_BYTES,
     ) {
@@ -180,22 +190,15 @@ final readonly class BackupReader
     }
 
     /**
+     * read() takes the header and the footer itself, and BackupLineOrderModel refuses any other kind first.
+     *
      * @param array<string, mixed> $decoded
      */
     private function toDto(string $kind, array $decoded): object
     {
-        return match ($kind) {
-            BackupSchema::KIND_ACCOUNT => AccountLine::fromLine($decoded),
-            BackupSchema::KIND_TAG => TagLine::fromLine($decoded),
-            BackupSchema::KIND_SAVED_SEARCH => SavedSearchLine::fromLine($decoded),
-            BackupSchema::KIND_FEED => FeedLine::fromLine($decoded),
-            BackupSchema::KIND_SUBSCRIPTION => SubscriptionLine::fromLine($decoded),
-            BackupSchema::KIND_ENTRY => EntryLine::fromLine($decoded),
-            BackupSchema::KIND_ENTRY_STATE => EntryStateLine::fromLine($decoded),
-            // Unreachable: read() handles header/footer, and BackupLineOrderModel
-            // refuses any other kind. Stays only for match exhaustiveness.
-            default => throw new \LogicException(sprintf('BackupLineOrderModel admitted unknown kind "%s".', $kind)),
-        };
+        $lineClass = self::BODY_LINES[$kind];
+
+        return $lineClass::fromLine($decoded);
     }
 
     /**
