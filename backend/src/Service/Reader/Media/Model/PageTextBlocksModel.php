@@ -11,14 +11,8 @@ use Dom\HTMLDocument;
 use Dom\Node;
 
 /**
- * The prose blocks of a page, so a media element can be described by the block
- * it follows on the source page and found again by that block in the extracted
- * body. Readability removes a player block outright when its only text is a
- * link, but it keeps the paragraph before it nearly verbatim — that paragraph's
- * text is the one durable trace of where the player stood.
- *
- * Short blocks are skipped: a dateline or a kicker is exactly what the body
- * cleaners remove, so anchoring to one would lose the position anyway.
+ * A page's prose blocks, so media is found again in the extracted body by the block it followed: readability drops a
+ * link-only player block but keeps the paragraph before it. Short blocks are skipped, as body cleaners remove them.
  */
 final readonly class PageTextBlocksModel
 {

@@ -24,11 +24,6 @@ final readonly class MediaInsertionPlanModel
     ) {
     }
 
-    /**
-     * A top-placed video or embed takes the article's lead position, so the page
-     * hero must not stack above it; a top-placed audio player (narration, a
-     * podcast) leaves the hero its place (#907).
-     */
     public function topPlacesLeadVisual(): bool
     {
         return array_any(

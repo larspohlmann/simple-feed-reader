@@ -9,15 +9,8 @@ use App\Entity\EntryAttachment;
 use App\Entity\EntryMedium;
 
 /**
- * The media the feed already declared for one entry, matched against the URLs
- * the reader scrapes from the article page (#914). The feed states a media
- * item's kind, MIME, and pixel size authoritatively; when a scraped URL is one
- * the feed enumerated, the reader trusts those over its own extension-and-query
- * guesses — real dimensions against layout shift, the declared kind over a
- * sniff. No outbound HTTP: every URL and value is already persisted.
- *
- * Also the home of the #913 poster fallback, since it is the same feed-declared
- * media read for the same entry.
+ * The media the feed declared for one entry. For a scraped URL the feed enumerated, its declared kind, MIME and pixel
+ * size win over the reader's guesses; it also holds the poster fallback. No outbound HTTP: all of it is persisted.
  */
 final readonly class FeedMediaModel
 {
@@ -42,7 +35,7 @@ final readonly class FeedMediaModel
         return new self([], [], null);
     }
 
-    /** The still the reader gives a poster-less video: a video medium's own preview, else the lead image (#913). */
+    /** The still the reader gives a poster-less video: a video medium's own preview, else the lead image. */
     public function posterFallback(): ?string
     {
         foreach ($this->media as $medium) {

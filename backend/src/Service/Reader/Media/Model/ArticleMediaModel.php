@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Reader\Media\Model;
 
 /**
- * The media a source page offers for one article, in source order.
- *
- * The cap is a runaway guard, not an editorial choice: the largest measured
- * article carries ten embeds, and truncating that one would recreate the bug
- * this work fixes.
+ * The media a source page offers for one article, in source order. MAX_ITEMS is a runaway guard, not an editorial
+ * cap: the largest measured article carries ten embeds.
  */
 final readonly class ArticleMediaModel
 {

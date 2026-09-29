@@ -6,7 +6,7 @@ namespace App\Service\Reader\Model;
 
 /**
  * What the feed entry tells the extractor: its title (to drop a headline repeated in the body), its author, and the
- * media it declared, trusted over the reader's guesses for a scraped URL it enumerated (#914).
+ * media it declared, trusted over the reader's guesses for a scraped URL it enumerated.
  */
 final readonly class EntryHintsModel
 {

@@ -6,7 +6,7 @@ namespace App\Service\Reader\Model;
 
 /**
  * An extraction's outcome: the cleaned article, or why it failed, so the client falls back to the feed body.
- * `paywalled` marks an ok body that is the free preview of a paywalled article (#785).
+ * `paywalled` marks an ok body that is the free preview of a paywalled article.
  */
 final readonly class ExtractionResultModel
 {

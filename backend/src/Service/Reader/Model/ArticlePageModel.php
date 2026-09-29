@@ -9,7 +9,7 @@ use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use Dom\HTMLDocument;
 
-/** What the extractor reads off the fetched page before readability consumes the normalised document (#684). */
+/** What the extractor reads off the fetched page before readability consumes the normalised document. */
 final readonly class ArticlePageModel
 {
     /**
