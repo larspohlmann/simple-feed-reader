@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Support;
 
 /**
- * A synthetic "attestation: none" WebAuthn registration ceremony built by
- * PasskeyFixtures (#624), together with everything needed to reuse the same
- * credential in a later assertion ("login") ceremony: the private key never
- * left this fixture, exactly as a real authenticator's would not.
+ * A synthetic `attestation: none` registration from PasskeyFixtures, with the private key kept for later assertions,
+ * as a real authenticator keeps its own.
  *
  * @phpstan-type PasskeyCredentialPayload array{
  *     id: string,
