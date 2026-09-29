@@ -45,11 +45,8 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
     }
 
     /**
-     * What every URL nobody stubbed answers with. Opt-in, because the default
-     * default — a LogicException — is what keeps a test honest about which
-     * requests it expects. A test whose subject GUESSES addresses (feed-path
-     * probing) cannot list them without re-deriving the code under test, so it
-     * says "nothing else is out there" once instead.
+     * The answer for every unstubbed URL. Opt-in: the default LogicException keeps a test honest about its requests,
+     * but a subject that guesses addresses (feed-path probing) can only say "nothing else is out there".
      */
     public function willThrowForEverythingElse(FetchException $exception): void
     {
@@ -92,10 +89,7 @@ final class StubFeedFetcher implements FeedFetcherInterface, BatchFeedFetcherInt
      */
     private function runWave(array $wave): \Generator
     {
-        // Must precede the yielding loop below: a caller consuming the first
-        // outcome should already have paid the whole wave's cost, matching the
-        // real engine where nothing is readable until the network has answered.
-        // Task 9's budget assertions rely on this ordering.
+        // Before the yield: a caller holding the first outcome has paid the whole wave, as with the real engine.
         if ($this->secondsPerFetch > 0) {
             $this->clock?->sleep($this->secondsPerFetch);
         }

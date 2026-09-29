@@ -13,16 +13,8 @@ use App\Service\Ai\Exception\ProviderReplyFailureExceptionInterface;
 use App\Service\Ai\Model\ProviderConnectionModel;
 
 /**
- * Records every complete() call and answers with a queued response, so
- * recommendation tests can assert exactly which prompts reached the model
- * without a live provider call. Registered as the container's
- * ChatCompletionClientInterface in the test environment (services_test.yaml), so it
- * stands in wherever the production alias would resolve to
- * OpenAiCompatibleChatClient.
- *
- * Content and failures share one FIFO queue rather than two, so a test that
- * queues "fail, then succeed" (to prove a corrective retry) gets that exact
- * order regardless of which queue* method it called first.
+ * The test container's ChatCompletionClientInterface: records every call and answers from one FIFO queue, so a queued
+ * "fail, then succeed" keeps that order whichever queue* method ran first.
  */
 final class StubChatClient implements ChatCompletionClientInterface
 {
@@ -52,14 +44,7 @@ final class StubChatClient implements ChatCompletionClientInterface
         $this->queue[] = $exception;
     }
 
-    /**
-     * Runs inside the next complete(), before it answers.
-     *
-     * A provider call is the one window where the world can change underneath
-     * a tick — it is the only part that takes minutes — so a test that needs
-     * to model "something happened while the model was thinking" has nowhere
-     * else to stand. Cancellation is exactly that test.
-     */
+    /** Runs inside the next complete(), before it answers: the provider call is where a tick can change underneath. */
     public function duringNextCall(\Closure $hook): void
     {
         $this->duringNextCall = $hook;
@@ -86,8 +71,7 @@ final class StubChatClient implements ChatCompletionClientInterface
     ): string {
         $next = $this->answer($request);
 
-        // A spoiled reply is content, not an exception — the real client
-        // returns it so the caller's parser can judge it (#437).
+        // A spoiled reply is content, not an exception: the real client returns it for the caller's parser to judge.
         if ($next instanceof ProviderReplyFailureExceptionInterface) {
             return $next->partialAnswer();
         }
@@ -100,10 +84,8 @@ final class StubChatClient implements ChatCompletionClientInterface
     }
 
     /**
-     * Answers each call from the same FIFO queue as complete(), but folds a
-     * queued failure into that call's outcome rather than throwing — the
-     * concurrent contract, where one failed call never aborts its siblings
-     * (#344). Outcomes stay aligned to $calls by index.
+     * Answers from complete()'s queue, but folds a queued failure into that call's outcome instead of throwing: one
+     * failed call never aborts its siblings. Outcomes align with $calls by index.
      */
     public function completeMany(ProviderConnectionModel $connection, array $calls): array
     {
@@ -135,11 +117,9 @@ final class StubChatClient implements ChatCompletionClientInterface
             'model' => $request->model,
             'messages' => $request->messages,
             'maxAnswerTokens' => $request->maxAnswerTokens,
-            // The schema name proves each phase asked for its own structured
-            // shape -- a batch call for the ranking, a dedup call for the
-            // duplicate list -- rather than sharing one (#329).
+            // Proves each phase asked for its own structured shape (ranking, duplicate list) rather than sharing one.
             'responseSchemaName' => $request->responseSchema->name,
-            // Proves the connection's per-config preference reached the request (#323).
+            // Proves the connection's per-config preference reached the request.
             'suppressReasoning' => Reasoning::Suppressed === $request->reasoning,
         ];
 

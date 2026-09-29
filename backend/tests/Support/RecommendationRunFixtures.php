@@ -24,15 +24,8 @@ use App\Service\Ai\Crypto\ApiKeyCipher;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The recommendation pipeline's most-seeded fixtures: a ready-to-call AI
- * connection, an unread entry, a run and its debug-log rows.
- * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest both
- * drive real runs end to end, so both need the exact same "an account that
- * can actually call a provider" and "an entry that actually shows up as a
- * candidate" setup; RecommendationDebugLogControllerTest and
- * RecommendationRunLogRepositoryTest both need the exact same run and
- * debug-log row shape — a second near-identical copy would drift the moment
- * one of them changed a default.
+ * The recommendation pipeline's shared fixtures (a ready AI connection, candidate entries, a run and its log rows), so
+ * the tests that drive real runs all build them one way.
  */
 final readonly class RecommendationRunFixtures
 {
@@ -56,11 +49,8 @@ final readonly class RecommendationRunFixtures
     }
 
     /**
-     * Caps how many candidates one batch may hold by writing the connection's
-     * per-batch ceiling — the production knob the resolver reads, so a test can
-     * force an exact batch count without a user-facing override. Not flushed,
-     * like {@see createRun()}: the caller batches it with the surrounding
-     * fixture rows. Requires {@see seedReadyAiSettings()} first.
+     * Writes the connection's per-batch ceiling, the knob the resolver reads, so a test forces an exact batch count.
+     * Not flushed, like createRun(). Requires seedReadyAiSettings() first.
      */
     public function capBatchesAt(User $user, int $maximumBatchSize): void
     {
@@ -69,14 +59,7 @@ final readonly class RecommendationRunFixtures
         $provider->setMaxBatchSize($maximumBatchSize);
     }
 
-    /**
-     * The smallest account that can actually run: a ready AI connection and
-     * five candidate entries, which the packer fits into a single batch. Three
-     * worker-regime tests drive exactly this shape --
-     * AdvanceRecommendationRunsHandlerTest, WorkerRunSweepTest and
-     * RecommendationDrainCommandTest -- and a copy per test drifts the moment
-     * one of them changes a default (#371 follow-up).
-     */
+    /** The smallest account that can run: a ready AI connection and five candidates, which fit in one batch. */
     public function seedSingleBatchFixture(User $user): void
     {
         $this->seedReadyAiSettings($user);
@@ -116,16 +99,8 @@ final readonly class RecommendationRunFixtures
     }
 
     /**
-     * Simulates the account losing its AI configuration mid-run: both
-     * RecommendationRunAdvancerTest and AdvanceRecommendationRunsHandlerTest
-     * drive that race, and both need the row gone and the identity map clear
-     * before the next tick sees it.
-     *
-     * The active pointer is also cleared on the in-memory $user directly:
-     * ON DELETE SET NULL clears the database column, but a caller that keeps
-     * driving this exact $user instance afterward (rather than reloading it)
-     * would otherwise still read the now-deleted row off the object's own
-     * property, which em->clear() does not touch.
+     * The account loses its AI configuration mid-run: the row is deleted and the identity map cleared. The pointer is
+     * also nulled on $user itself, since ON DELETE SET NULL reaches the column, not an instance a caller still holds.
      */
     public function deleteAiSettings(User $user): void
     {
@@ -146,13 +121,7 @@ final readonly class RecommendationRunFixtures
         return $run;
     }
 
-    /**
-     * A run pinned at an exact instant, and flushed — unlike {@see createRun()},
-     * which fixes its own date because most of its callers do not care about
-     * timing. A test that asserts on month bucketing does care, and cannot use
-     * that date: it lives in a file shared with unrelated suites and would
-     * move the moment one of them needed it elsewhere.
-     */
+    /** A run created at $createdAt, and flushed, for tests that assert on timing; createRun() fixes its own date. */
     public function persistRunAt(User $user, \DateTimeImmutable $createdAt): RecommendationRun
     {
         $run = new RecommendationRun($user, $createdAt);
@@ -163,15 +132,8 @@ final readonly class RecommendationRunFixtures
     }
 
     /**
-     * The provider price is banked through raw SQL arithmetic in production
-     * (RecordedCall::bankUsage(), never through the entity — see
-     * ProviderUsage's class doc), so a fixture that wants a priced run has to
-     * write the same column the same way rather than call a setter that does
-     * not exist.
-     *
-     * The identity map is cleared afterwards, because the managed entities no
-     * longer match the row: a caller that keeps using $run or its User as a
-     * Doctrine association has to re-fetch them first.
+     * Writes the price with raw SQL, as RecordedCall banks it in production; the entity has no setter. The identity map
+     * is cleared, so a caller re-fetches $run and its User before using them as associations.
      */
     public function priceRun(RecommendationRun $run, int $costNanoCredits): void
     {
@@ -184,11 +146,7 @@ final readonly class RecommendationRunFixtures
         $this->entityManager->clear();
     }
 
-    /**
-     * Not flushed, for the same reason as {@see createRun()}. $createdAt
-     * defaults to the run's own creation instant — most callers don't care
-     * about call timing and only a handful of #321 tests need to pin it.
-     */
+    /** Not flushed, like createRun(). $createdAt defaults to the fixed instant createRun() gives every run. */
     public function log(
         RecommendationRun $run,
         CallPhase $phase,
@@ -221,15 +179,7 @@ final readonly class RecommendationRunFixtures
         $this->entityManager->refresh($log);
     }
 
-    /**
-     * The default-valued settings row the tests need only to flip the debug
-     * switch on. Debug's one remaining job is the per-run call log (#576 took
-     * the score off it), so the callers that matter are the recorder, the
-     * distiller and the consolidation resolver — plus the two feed tests that
-     * assert debug now reaches nothing in the payload. Two named methods
-     * instead of a boolean flag, so a call site reads as what it means rather
-     * than what it passes.
-     */
+    /** Default settings with debug on, which drives only the per-run call log and nothing in the feed payload. */
     public function debugEnabledSettings(User $user): RecommendationSettings
     {
         return $this->recommendationSettings($user, true);
@@ -240,17 +190,13 @@ final readonly class RecommendationRunFixtures
         return $this->recommendationSettings($user, false);
     }
 
-    /** Reasons on, debug off: the combination that proves the explanation —
-     *  the reason and its score both — rides on the reader's own preference
-     *  and needs nothing from debug (#576). */
+    /** Reasons on, debug off: proves the reason and its score ride on the reader's own preference alone. */
     public function showReasonsEnabledSettings(User $user): RecommendationSettings
     {
         return $this->recommendationSettings($user, false, showReasons: true);
     }
 
-    /** Both on: proves debug does not take away what showReasons reveals. The
-     *  two flags are independent settings that simply no longer meet in the
-     *  feed payload, so the combination has to be exercised, not assumed. */
+    /** Both on: the flags are independent, so the pair is exercised to prove debug takes nothing from showReasons. */
     public function showReasonsAndDebugEnabledSettings(User $user): RecommendationSettings
     {
         return $this->recommendationSettings($user, true, showReasons: true);
@@ -277,12 +223,7 @@ final readonly class RecommendationRunFixtures
         return $settings;
     }
 
-    /**
-     * A candidate entry stamped $minutesAgo before now. Relative on purpose:
-     * the recommendation pool has a look-back window (#386), so an absolute
-     * date in a fixture silently ages out of it and leaves the run with
-     * nothing to snapshot.
-     */
+    /** Stamped $minutesAgo before now: an absolute date would age out of the pool's look-back window. */
     public function entry(Feed $feed, string $guid, int $minutesAgo): Entry
     {
         $effectiveDate = new \DateTimeImmutable(\sprintf('-%d minutes', $minutesAgo));

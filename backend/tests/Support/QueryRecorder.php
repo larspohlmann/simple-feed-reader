@@ -8,35 +8,15 @@ use Doctrine\DBAL\Driver;
 use Doctrine\DBAL\Driver\Middleware;
 
 /**
- * A DBAL middleware that records the SQL a request actually executed.
- *
- * Exists so "this is one query, not one per row" can be **counted** rather than
- * read off the source. An N+1 is invisible to an assertion on the response body
- * — the payload is identical either way — so the only test that can fail when
- * somebody replaces the batched lookup with a loop is one that looks at the
- * wire.
- *
- * Registered as a `doctrine.middleware` in `config/services_test.yaml`, test
- * environment only. It is deliberately not a logger: it holds strings in
- * memory, is cleared per case, and never sees bound parameter values, so no
- * credential or token can reach it.
+ * Records every SQL statement run, so a test can count queries: an N+1 returns the same body as one batched read.
+ * Fetch it after the request you measure: each request after a client's first reboots the kernel, whose connection
+ * reports to a new recorder, so one fetched earlier records nothing.
  */
 final class QueryRecorder implements Middleware
 {
     /**
-     * The id a test must fetch — note the suffix.
-     *
-     * DoctrineBundle clones every `doctrine.middleware` service once per
-     * connection and appends the connection name, and it is the clone the
-     * connection is built with. Fetching the plain class id hands you a
-     * second, freshly constructed instance that is wired to nothing and
-     * reports zero queries forever.
-     *
-     * That fails loudly rather than silently — the guard asserts an exact count
-     * of one, so zero is red, not green — but it fails as "the batched read
-     * vanished" when the truth is "you fetched the wrong object", and those two
-     * send you to opposite ends of the codebase. This cost an hour; it is a
-     * constant so it cannot cost another.
+     * DoctrineBundle builds the connection with a per-connection clone registered under this id; the plain class id is
+     * an unwired instance that records nothing.
      */
     public const SERVICE_ID = self::class . '.default';
 
@@ -68,13 +48,7 @@ final class QueryRecorder implements Middleware
         return $this->queries;
     }
 
-    /**
-     * The subset touching one table, matched case-insensitively on a bare
-     * substring — good enough to separate `user_identity` reads from the rest
-     * of a request, and it does not need to parse SQL to do it.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     public function queriesMatching(string $needle): array
     {
         return array_values(array_filter(
