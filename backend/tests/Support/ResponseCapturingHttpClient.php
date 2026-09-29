@@ -8,12 +8,8 @@ use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * MockHttpClient::request() always wraps the response it is given in a fresh
- * instance (MockResponse::fromRequest()), so the object passed to the
- * constructor is never the one a client under test actually streams or
- * cancels. This decorator records the instance request() returns — the same
- * one the client holds — so a test can assert on it afterwards, e.g. that
- * cancel() was really called.
+ * Records the response instance request() returns, the one the client streams or cancels: MockHttpClient wraps each
+ * given response in a fresh instance, so the one passed in never is.
  */
 final class ResponseCapturingHttpClient extends MockHttpClient
 {

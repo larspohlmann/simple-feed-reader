@@ -9,10 +9,8 @@ use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockInterface;
 
 /**
- * A lock double that counts refresh() calls instead of talking to a store, so
- * TickLockKeepaliveTest can pin exactly when a beat refreshed without a real
- * lock backend. Every other LockInterface method is a stub -- the keepalive
- * only ever calls refresh().
+ * Counts refresh() calls without a store, so TickLockKeepaliveTest can pin when a beat refreshed. The keepalive calls
+ * only refresh(), so every other method is a stub.
  */
 final class RefreshCountingLock implements LockInterface
 {

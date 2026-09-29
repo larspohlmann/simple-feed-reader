@@ -8,18 +8,8 @@ use Symfony\Component\Lock\PersistingStoreInterface;
 use Symfony\Component\Lock\SharedLockInterface;
 
 /**
- * A real lock factory that also remembers the TTL each lock was asked for,
- * and the lock it handed back.
- *
- * The advancer sizes its per-user lock from the connection it is about to
- * call (#433), so the number is no longer a constant a test can read: it is
- * decided per tick. Recording what the tick actually asked for is the only
- * way to pin the invariant against the code that runs, rather than against a
- * re-derivation of it in the test.
- *
- * The lock itself is kept for the same reason (#444): a tick's keepalive
- * refreshes a lock the tick created internally, and the remaining lifetime of
- * that very object is the only place a refresh shows up.
+ * Exposes the TTL each tick asked for and the lock it got: the advancer sizes its lock per tick from the connection it
+ * calls, and a keepalive's refresh shows only in that very lock's remaining lifetime.
  */
 final class TtlRecordingLockFactory extends RecordingLockFactory
 {

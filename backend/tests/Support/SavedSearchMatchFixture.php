@@ -13,9 +13,8 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * A real saved search backed by the membership table, for tests that need
- * DigestEntryFinder to find a match. SavedSearchEntryRepository is final, so
- * it cannot be doubled — these rows are the only way to feed it one (#1116).
+ * A real saved search backed by the membership table, for tests that need DigestEntryFinder to find a match.
+ * SavedSearchEntryRepository is final, so it cannot be doubled: these rows are the only way to feed it one.
  */
 final readonly class SavedSearchMatchFixture
 {

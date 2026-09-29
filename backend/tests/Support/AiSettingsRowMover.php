@@ -9,20 +9,9 @@ use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Simulates an AiProviderSettings row ending up under the wrong account — a
- * cross-account key-mismatch scenario several tests need to prove a stored
- * key can never be opened under an id it was not sealed for. Goes around
- * AiProviderConfigurator (the only real writer of this association) via bulk
- * DQL, which is the only way to reach a state the configurator itself would
- * refuse to create.
- *
- * moveOwnership() and pointActiveAt() are separate calls, not one method,
- * because callers need the active pointer applied two different ways: a
- * caller that reloads $to afterward (a fresh User instance queried from the
- * database) is satisfied by pointActiveAt()'s own DQL write, while a caller
- * that keeps driving the exact $to instance it already holds has to set the
- * pointer on that instance directly — em->clear() detaches it rather than
- * refreshing it, so a bulk DQL write alone would never become visible to it.
+ * Moves an AiProviderSettings row to another account by bulk DQL, a state AiProviderConfigurator refuses to create, so
+ * tests prove a key never opens under an id it was not sealed for. pointActiveAt() writes only the row: a caller that
+ * keeps its $to instance sets the pointer on it too, since em->clear() detaches it rather than refreshing it.
  */
 final readonly class AiSettingsRowMover
 {
@@ -30,12 +19,7 @@ final readonly class AiSettingsRowMover
     {
     }
 
-    /**
-     * Moves the row's ownership FK from $from to $to, then hands back the
-     * same row freshly queried under its new owner — the identity map is
-     * cleared as part of this, so anything either account was attached to
-     * before this call is now detached.
-     */
+    /** Returns the row re-read under its new owner; the identity map is cleared, so all held entities are detached. */
     public function moveOwnership(User $from, User $to): AiProviderSettings
     {
         $this->entityManager->createQuery(

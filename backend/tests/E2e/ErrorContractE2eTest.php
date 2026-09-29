@@ -30,24 +30,13 @@ final class ErrorContractE2eTest extends E2eTestCase
             $this->firstHeader($response, 'content-type'),
         );
 
-        // errors.altcha must be present (narrow the mixed body for PHPStan max).
         $body = $response->toArray(false);
         self::assertArrayHasKey('errors', $body);
         self::assertIsArray($body['errors']);
         self::assertArrayHasKey('altcha', $body['errors']);
 
-        // And it created no account. Asserting "a later registration for the same
-        // address still 202s" would prove nothing — /api/auth/register returns 202
-        // for an already-existing address too, by enumeration-safe design. So prove
-        // it through the one observable side effect of real creation: the
-        // verification email. Registration only mails on genuine creation, and this
-        // request was refused at the ALTCHA gate before that path.
-        //
-        // The mailer flushes on kernel.terminate (after the response), so a bare
-        // "no mail yet" check could pass simply because a hypothetical mail had not
-        // flushed. Register a *control* account and block until ITS mail lands —
-        // that proves the mailer has since flushed — then assert the rejected
-        // address still has no mail at all.
+        // No account was made. Registration answers 202 for a known address too, so only the verification mail tells,
+        // and mail flushes after the response: wait for a control registration's mail, then assert none for $email.
         $control = $this->uniqueEmail();
         self::assertSame(202, $this->register($control, 'valid-enough-password')->getStatusCode());
         $this->mailpit->latestBodyTo($control);
@@ -69,11 +58,6 @@ final class ErrorContractE2eTest extends E2eTestCase
         );
     }
 
-    /**
-     * getHeaders(false) is precisely typed as array<string, list<string>>, but
-     * a missing header would still make `[0]` undefined; guard both steps so
-     * PHPStan sees a real string rather than trusting an assumed offset.
-     */
     private function firstHeader(ResponseInterface $response, string $name): string
     {
         $values = $response->getHeaders(false)[$name] ?? null;

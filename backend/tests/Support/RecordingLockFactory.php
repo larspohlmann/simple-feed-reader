@@ -8,15 +8,8 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\SharedLockInterface;
 
 /**
- * A real lock factory that remembers what it handed out, so a test can reach
- * a lock the code under test created for itself.
- *
- * The advancer never lets its per-user lock out (#444): it creates it, sizes
- * it from the connection it is about to call, refreshes it from the stream
- * and releases it, all inside advance(). The factory is therefore the only
- * seam a test has on that object, and both of the things worth watching --
- * the TTL a tick asked for, and the lifetime left on the lock afterwards --
- * are read off what this recorded.
+ * A real lock factory that records what it hands out. The advancer creates, sizes, refreshes and releases its per-user
+ * lock inside advance(), so this is a test's only seam on the TTL a tick asked for and the lifetime left afterwards.
  */
 abstract class RecordingLockFactory extends LockFactory
 {

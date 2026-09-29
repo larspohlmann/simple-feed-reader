@@ -7,32 +7,12 @@ namespace App\Tests;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The request-body ceiling is declared in five files across two Docker stacks
- * that share no configuration: the dev stack (docker/nginx/default.conf,
- * docker/php/conf.d/app.ini) and the prod images (docker/web/http.conf,
- * docker/web/tls.conf, docker/php/conf.d/prod.ini). All five have to carry the
- * same number, for two different reasons:
- *
- * - nginx ABOVE php lets a body pass the web server and die inside PHP, which
- *   does not answer 413: it drops the body and the client gets an empty 200 it
- *   cannot interpret. nginx at or below php refuses the same body itself, with
- *   a 413 the client can read. Equality is the simplest form of "not above",
- *   and it is what this test enforces -- a php limit raised on its own is safe
- *   but pointless, since nginx still refuses everything over its own cap.
- * - dev out of step with prod means a limit verified on localhost is still
- *   wrong on a self-hosted install.
- *
- * Both failures have already shipped: #412 raised the limit in the dev stack
- * only, and a self-hosted install went on refusing a real account backup until
- * #458. Nothing else in the tree ties these files together, so this test is
- * the only thing that does.
+ * Five files in two stacks declare the request-body ceiling, and they must agree: nginx above php lets a body die in
+ * PHP as an empty 200 instead of nginx's readable 413, and a dev stack out of step with prod passes on localhost only.
  */
 final class RequestBodyLimitAgreementTest extends TestCase
 {
-    /** Both anchor at the start of a line, so a commented-out mention -- of
-     *  which docker/nginx/default.conf has several -- can never match. Both
-     *  tolerate a trailing comment, which is legal in either syntax and would
-     *  otherwise read as "this file declares no limit at all". */
+    /** Line-anchored, so a commented-out mention never matches; a trailing comment is legal and still matches. */
     private const string NGINX_PATTERN = '/^[ \t]*client_max_body_size\s+(\d+)([kmg]?)\s*;/mi';
     private const string PHP_PATTERN = '/^[ \t]*post_max_size\s*=\s*(\d+)([kmg]?)[ \t]*(?:;.*)?$/mi';
 
@@ -67,12 +47,8 @@ final class RequestBodyLimitAgreementTest extends TestCase
     }
 
     /**
-     * The five config files live under the repository root, which is present in
-     * the CI runner and on a developer host but NOT inside the app container —
-     * it mounts only backend/ (see docker-compose.yml). Where the whole docker/
-     * tree is absent there is nothing to compare, so skip rather than fail. A
-     * single file that goes missing WHILE the tree is present is a real drift
-     * and still fails in declaredLimitIn().
+     * The app container mounts only backend/, so where the docker/ tree is absent there is nothing to compare: skip.
+     * One file missing while the tree exists is drift, and declaredLimitIn() fails on it.
      */
     private function requireStackConfigs(): void
     {

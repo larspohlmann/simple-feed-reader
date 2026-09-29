@@ -16,29 +16,14 @@ use App\Entity\User;
 use App\Service\Backup\Support\BackupSchema;
 
 /**
- * The write-direction declarations `BackupSchemaCoverageTest` owns, lifted
- * out so a second test can be driven off the same source of truth rather
- * than a hand-kept copy that silently diverges.
- *
- * `BackupSchemaCoverageTest` asks the write question: does every `BACKED_UP`
- * field reach the exporter's output. That question alone is not enough — a
- * field can pass it and still be lost, because the exporter writes it but no
- * Line DTO reads it back on restore. `AccountRestorerTest` asks that read
- * question, driven off this same list, so a field added here is checked in
- * both directions rather than only the one a reviewer happened to think of
- * (#556).
+ * The backed-up fields, checked both ways from this one list: BackupSchemaCoverageTest proves the exporter writes each,
+ * AccountRestorerTest that a Line DTO reads it back on restore.
  */
 final class BackupFieldDeclarations
 {
     /**
-     * Doctrine class => [field or association => exported JSON key, or the
-     * list of keys when one field is written as several — an entry
-     * reference is a feed URL and a GUID hash together, and neither half
-     * identifies an entry on its own].
-     *
-     * Mirrors what used to live inline in `BackupSchemaCoverageTest::BACKED_UP`;
-     * that class still owns the `NOT_BACKED_UP` and `NEVER_BACKED_UP`
-     * counterparts this list has no need of.
+     * Doctrine class => [field or association => exported JSON key, or a list of keys when one field is written as
+     * several]. BackupSchemaCoverageTest keeps the NOT_BACKED_UP and NEVER_BACKED_UP counterparts.
      */
     public const array BACKED_UP = [
         User::class => [
@@ -90,10 +75,8 @@ final class BackupFieldDeclarations
             'discussion.bodyIsOpeningPost' => 'bodyIsOpeningPost',
         ],
         EntryState::class => [
-            // Both halves, because both are load-bearing: guidHash picks the
-            // entry out of a feed, feedUrl says which feed. Declaring only one
-            // would leave the other claimed by nothing, and deleting it from
-            // entryStateLine() would still pass.
+            // Both halves: guidHash picks the entry within its feed, feedUrl the feed. Declaring only one would let
+            // entryStateLine() drop the other unnoticed.
             'entry' => ['feedUrl', 'guidHash'],
             'isHidden' => 'isHidden', 'isFavorite' => 'isFavorite', 'isKept' => 'isKept',
             'hiddenAt' => 'hiddenAt', 'isViewed' => 'isViewed', 'viewedAt' => 'viewedAt',

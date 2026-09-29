@@ -11,16 +11,8 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The fixture helpers that were hand-rolled, byte-for-byte, in three separate
- * controller test classes: a `UserFactory` bound to the current kernel's
- * services, the user repository, the entity manager, and a decoded JSON
- * response body.
- *
- * Deliberately narrow. How a test authenticates — minting a token straight
- * from the JWT manager, going through `/api/auth/login`, or something else —
- * varies by what the suite is actually proving, so that stays in the
- * concrete test class rather than growing into a one-size-fits-all method
- * here.
+ * Fixture access shared by controller tests. Authentication stays in each test class: how a suite gets its token
+ * depends on what it proves.
  */
 abstract class ApiTestCase extends WebTestCase
 {

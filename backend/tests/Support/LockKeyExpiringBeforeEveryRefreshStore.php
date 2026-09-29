@@ -9,19 +9,8 @@ use Symfony\Component\Lock\Key;
 use Symfony\Component\Lock\PersistingStoreInterface;
 
 /**
- * Wraps a real lock store and makes the drain loop's own `refresh()` fail the
- * way a lapsed TTL fails: the key is dropped first, then the call throws.
- * Nobody else holds the key afterwards, so the drainer's bid to take it back
- * must win and the drain must carry on rather than abandon healthy in-flight
- * work to the once-a-minute cron (#371 final review, Finding 4b). That is the
- * case LockLostAfterFirstRefreshStore cannot express: there the key survives
- * the failure, and a second drainer really does own it.
- *
- * Only a refresh the *caller* makes may fail, which is what `$savedSinceLast`
- * separates out: `Lock::acquire()` calls `refresh()` itself right after
- * `save()` to seed the TTL, and failing that one would make every acquire
- * return false and no drain could ever start. A refresh with no save before
- * it is the drain loop's own.
+ * Fails the drain loop's own refresh() as a lapsed TTL does: the key is dropped, then the call throws, so the drainer's
+ * bid to retake it must win. The refresh Lock::acquire() makes right after save() passes, or no drain could start.
  */
 final class LockKeyExpiringBeforeEveryRefreshStore implements PersistingStoreInterface
 {
