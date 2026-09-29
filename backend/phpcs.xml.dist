@@ -4,11 +4,15 @@
     <arg name="extensions" value="php"/>
     <arg name="colors"/>
     <arg value="p"/>
-    <rule ref="PSR12"/>
+    <rule ref="PSR12">
+        <!-- PHPStan rule fixtures deliberately break PSR-12 (several classes per file,
+             controllers with private methods) to exercise ThinControllerRule. -->
+        <exclude-pattern>*/tests/PhpStan/data/*</exclude-pattern>
+        <!-- Doctrine generates migrations; only their strict-types declaration is held to the house rule. -->
+        <exclude-pattern>*/migrations/*</exclude-pattern>
+    </rule>
     <rule ref="Generic.PHP.RequireStrictTypes"/>
     <file>src</file>
     <file>tests</file>
-    <!-- PHPStan rule fixtures deliberately break PSR-12 (several classes per file,
-         controllers with private methods) to exercise ThinControllerRule. -->
-    <exclude-pattern>tests/PhpStan/data/*</exclude-pattern>
+    <file>migrations</file>
 </ruleset>
