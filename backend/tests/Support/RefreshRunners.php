@@ -29,6 +29,7 @@ use App\Service\Search\Index\SearchIndexWriter\SearchIndexWriterInterface;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Container\ContainerInterface;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\DependencyInjection\ServiceLocator;
@@ -46,6 +47,7 @@ final readonly class RefreshRunners
         private LockFactory $lockFactory,
         private ContentChangeMarkerInterface $changeMarker,
         private SearchIndexWriterInterface $indexWriter,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -62,6 +64,7 @@ final readonly class RefreshRunners
             new LockFactory(new InMemoryStore()),
             new RecordingContentChangeMarker(),
             new RecordingSearchIndexWriter(),
+            new NullLogger(),
         );
     }
 
@@ -76,6 +79,7 @@ final readonly class RefreshRunners
             $this->lockFactory,
             $this->changeMarker,
             $this->indexWriter,
+            $this->logger,
         );
     }
 
@@ -89,6 +93,7 @@ final readonly class RefreshRunners
             $lockFactory,
             $this->changeMarker,
             $this->indexWriter,
+            $this->logger,
         );
     }
 
@@ -102,6 +107,7 @@ final readonly class RefreshRunners
             $this->lockFactory,
             $changeMarker,
             $this->indexWriter,
+            $this->logger,
         );
     }
 
@@ -115,6 +121,21 @@ final readonly class RefreshRunners
             $this->lockFactory,
             $this->changeMarker,
             $indexWriter,
+            $this->logger,
+        );
+    }
+
+    public function loggingTo(LoggerInterface $logger): self
+    {
+        return new self(
+            $this->entityManager,
+            $this->clock,
+            $this->bodyParser,
+            $this->flushingEntityManager,
+            $this->lockFactory,
+            $this->changeMarker,
+            $this->indexWriter,
+            $logger,
         );
     }
 
@@ -153,7 +174,7 @@ final readonly class RefreshRunners
             ),
             $this->lockFactory,
             $this->clock,
-            new NullLogger(),
+            $this->logger,
             $this->changeMarker,
         );
     }
