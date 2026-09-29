@@ -10,15 +10,9 @@ use App\Service\Backup\Model\BackupInventoryModel;
 use App\Service\Subscription\SubscriptionLimitResolver;
 
 /**
- * Whether a counted backup fits this account, checked before deletion: too
- * many subscriptions for the account's limit, or too much of any other
- * counted line kind for the file format to plausibly hold.
- *
- * Every dimension is bounded, not just the costliest two. The load runs after
- * the wipe, and tag/feed/subscription rows stay managed entities until the
- * entry phase flushes them — millions of such lines would exhaust memory on
- * an already-emptied account, a fatal that BackupLoadFailedException cannot
- * catch or report.
+ * Whether a counted backup fits this account, checked before the wipe. Every line kind is bounded: the load keeps
+ * tags, feeds and subscriptions managed until the entry phase flushes, so millions of them would be a fatal on an
+ * already-emptied account that BackupLoadFailedException cannot report.
  */
 final readonly class BackupFitCheck
 {
@@ -41,11 +35,8 @@ final readonly class BackupFitCheck
     private const int MAX_TAGS = 5_000;
 
     /**
-     * A genuine backup carries exactly one feed line per subscription, and the
-     * subscription count is bounded by the account's own limit just above.
-     * This ceiling therefore only catches a file whose feed lines are
-     * unrelated to its subscriptions — while keeping the pre-flush set of
-     * managed Feed entities small enough to hold.
+     * A genuine file has one feed line per subscription, already bounded by the account limit; this only catches
+     * feed lines unrelated to subscriptions, and keeps the pre-flush set of managed Feed entities small.
      */
     private const int MAX_FEEDS = 20_000;
 

@@ -11,14 +11,8 @@ use App\Service\Backup\Model\RestoreResultModel;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The whole restore, in the only safe order: validate and count the real
- * bytes, refuse anything that does not fit, and only then wipe and load.
- * The two passes read the same in-memory gzip string, so the file that
- * passed the fit check is byte-for-byte the file that loads.
- *
- * Deliberately NOT transactional (spec §8): a crash mid-load leaves a wiped,
- * partly loaded account, and the remedy is re-running the same file — the
- * wipe is idempotent.
+ * Validates and counts the real bytes, refuses a file that does not fit, and only then wipes and loads; both passes
+ * read the same in-memory gzip. Not transactional on purpose: docs/backup.md#4-when-a-restore-fails.
  */
 final readonly class AccountRestorer
 {

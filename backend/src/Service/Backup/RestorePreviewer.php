@@ -12,11 +12,8 @@ use App\Repository\TagRepository;
 use App\Service\Backup\Model\RestorePreviewModel;
 
 /**
- * Assembles a restore preview: inspect the file, refuse it if it does not
- * fit, then describe what the account currently holds so the UI can show a
- * before/after. A non-fitting file throws BackupDoesNotFitException rather
- * than returning a preview — the caller shows the refusal instead of a
- * report the user could otherwise mistake for permission to proceed.
+ * Inspects the file, refuses it if it does not fit, then describes what the account holds now, for a before/after.
+ * A misfit throws BackupDoesNotFitException rather than returning a preview a user could read as permission.
  */
 final readonly class RestorePreviewer
 {

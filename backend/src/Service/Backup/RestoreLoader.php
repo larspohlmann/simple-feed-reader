@@ -13,13 +13,8 @@ use App\Service\Search\SavedSearchSlug;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Pass 2 of the restore: the second read of the same bytes, this time writing
- * rows. It assumes AccountReset has just run — nothing here removes anything.
- *
- * The service itself is stateless and shared. All the per-run state a load
- * needs lives on the RestoreLoadPass built here and discarded with the call,
- * which is the shape phptramp asks for instead of threading it through a
- * chain of parameters.
+ * Pass 2 of the restore: the second read of the same bytes, now writing rows. It assumes AccountReset has just run
+ * and removes nothing; the per-run state lives on the RestoreLoadPass built for each call.
  */
 final readonly class RestoreLoader
 {
