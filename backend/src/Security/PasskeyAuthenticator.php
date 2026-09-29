@@ -19,47 +19,17 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Passport;
 use Symfony\Component\Security\Http\Authenticator\Passport\SelfValidatingPassport;
 
 /**
- * Authenticates a WebAuthn login ("assertion") response as its own firewall
- * (#624) — config/packages/security.yaml's `passkey_login` block, inserted
- * between `login` and `api` because firewalls match in declaration order and
- * `api` already matches every `^/api` path.
- *
- * A firewall, not a controller, makes "the JWT a passkey login returns is the
- * same JWT password login returns" structural rather than copied.
- * $successHandler is the exact `lexik_jwt_authentication.handler.
- * authentication_success` service `json_login` uses, so both flows call the
- * same `JWTTokenManager::create()` and pick up every JWT-issuance listener —
- * StampLastLoginOnTokenIssueListener among them. $failureHandler is the same
- * `App\Security\LoginFailureHandler`.
- *
- * Reusing LoginFailureHandler means LoginTimingEqualizer runs on every passkey
- * failure too, with an empty submitted identifier (no e-mail in this flow), so
- * every failure gets the same constant delay regardless of which check in
- * AssertionVerifier rejected it. Leaks nothing: a discoverable-credential
- * login has no address to enumerate.
- *
- * Verification runs lazily, inside the UserBadge's user loader, not eagerly in
- * authenticate(): LoginThrottlingListener::checkPassport runs on the same
- * CheckPassportEvent at higher priority than the badge-resolving listener, so
- * it can reject an over-budget request with a 429 before AssertionVerifier
- * ever runs. Calling verify() eagerly would skip that.
- *
- * UserBadge gets a fixed, non-secret sentinel (THROTTLE_IDENTIFIER) rather
- * than an empty string: a discoverable login has no identifier to key
- * throttling on, and UserBadge's constructor deprecates an empty one.
- * DefaultLoginRateLimiter keys on `identifier-IP`, so the fixed identifier
- * collapses to one bucket per client IP.
- *
- * `final class`, not `final readonly class`: PHP refuses a readonly class that
- * extends a non-readonly parent, and AbstractAuthenticator is not one.
+ * Passkey login as a firewall, so it issues the JWT through json_login's success and failure handlers.
+ * Verification stays inside the UserBadge loader: eager verify() would run before LoginThrottlingListener's 429.
+ * Why: docs/security.md#passkey-login-firewall
  */
 final class PasskeyAuthenticator extends AbstractAuthenticator
 {
     private const string LOGIN_PATH = '/api/auth/passkey/login';
 
     /**
-     * Not a real identifier — see the class docblock for why this is a
-     * fixed sentinel rather than the empty string or anything client-supplied.
+     * A fixed sentinel, never client input: a discoverable login has no identifier and UserBadge deprecates ''.
+     * The throttle keys on `identifier-IP`, so this is one bucket per client IP.
      */
     private const string THROTTLE_IDENTIFIER = 'passkey';
 
@@ -96,9 +66,8 @@ final class PasskeyAuthenticator extends AbstractAuthenticator
     }
 
     /**
-     * Runs lazily from the UserBadge loader (see the class docblock). Every PasskeySignInFailureExceptionInterface
-     * becomes a plain AuthenticationException, so LoginFailureHandler treats it like a password failure, #727's
-     * `previous` aside.
+     * Every PasskeySignInFailureExceptionInterface becomes a plain AuthenticationException (the original kept as
+     * `previous`), so LoginFailureHandler treats it like a password failure.
      *
      * @param array<string, mixed> $payload
      */

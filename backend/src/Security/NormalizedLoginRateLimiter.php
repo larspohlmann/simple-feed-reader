@@ -11,34 +11,9 @@ use Symfony\Component\RateLimiter\RateLimit;
 use Symfony\Component\Security\Http\SecurityRequestAttributes;
 
 /**
- * Makes the login throttle bucket agree with the account it is protecting.
- *
- * Symfony's DefaultLoginRateLimiter keys its per-identifier bucket off the
- * `_security.last_username` request attribute — the RAW submitted identifier,
- * lowercased and nothing else. Our user provider resolves accounts through
- * User::normalizeEmail(), which also trims. The two disagree on whitespace:
- * " bob@example.com" and "bob@example.com" authenticate as the SAME account
- * but land in DIFFERENT throttle buckets. trim() strips six bytes in any
- * combination and length, so an attacker has an unbounded supply of spellings
- * for one address, each with a fresh `max_attempts` budget — the
- * per-identifier throttle stops existing, leaving only the per-IP limiter
- * (and not even that across distributed sources).
- *
- * Rewriting the attribute in place, rather than reimplementing key
- * derivation, keeps the fix honest: hashing, secret and two-limiter structure
- * stay with Symfony, and "normalised" still has exactly one definition
- * (User::normalizeEmail()) — a second one here is the drift this bug was.
- * MUTATING THE REQUEST IS DELIBERATE: the normalised value is what every
- * other layer uses, and the only other consumer, AuthenticationUtils::
- * getLastUsername(), re-displays it on a form login — this firewall is a
- * stateless JSON endpoint that never re-displays anything.
- *
- * PEEKABLE IS LOAD-BEARING. LoginThrottlingListener peeks at CheckPassportEvent
- * and consumes only on failure, instead of consuming up front. Decorating a
- * peekable limiter with a non-peekable one would silently shift the boundary
- * by one attempt, so the interface is preserved and the constructor demands a
- * peekable inner — a container error at build time beats an off-by-one in a
- * brute-force defence.
+ * Keys the login throttle on User::normalizeEmail(), so padded spellings of one address share a bucket. It rewrites
+ * the request attribute in place and must stay peekable: a non-peekable decorator shifts the limit by one attempt.
+ * Why: docs/security.md#login-throttle-key
  */
 final readonly class NormalizedLoginRateLimiter implements PeekableRequestRateLimiterInterface
 {

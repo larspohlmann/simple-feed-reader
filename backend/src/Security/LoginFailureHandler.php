@@ -18,7 +18,7 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationFailureHandlerI
 
 /**
  * The firewall answers before kernel.exception, so login failures resolve here. A bad password and an unknown
- * email give one response (no enumeration oracle); only an unknown passkey keeps its own type (#727).
+ * email give one response (no enumeration oracle); only an unknown passkey keeps its own type.
  */
 final readonly class LoginFailureHandler implements AuthenticationFailureHandlerInterface
 {
