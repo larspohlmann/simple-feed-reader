@@ -26,6 +26,7 @@ final readonly class ReaderAuditRunner
         private ArticleExtractorInterface $extractor,
         private ExtractionCoverageGate $coverageGate,
         private CleanupMarkers $markers,
+        private LeadingRegion $leadingRegion,
     ) {
     }
 
@@ -104,7 +105,7 @@ final readonly class ReaderAuditRunner
             'paragraphs' => $body->paragraphCount,
             'links' => \count($body->links),
             'images' => \count($body->imageSources),
-            'leadingBlocks' => \count($body->leadingBlocks()),
+            'leadingBlocks' => \count($this->leadingRegion->blocksOf($body)),
             'paywalled' => (int) $result->paywalled,
         ];
     }

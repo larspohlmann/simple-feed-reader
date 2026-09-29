@@ -11,11 +11,17 @@ use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 
 final readonly class LeadingEngagementMarkers
 {
+    public function __construct(
+        private LeadingEngagementRules $rules,
+        private LeadingRegion $leadingRegion,
+    ) {
+    }
+
     /** @return list<CleanupMarkerModel> */
     public function detect(ExtractedBodyModel $body, ?string $entryAuthor): array
     {
         $blocks = array_values(array_filter(
-            $body->leadingBlocks(),
+            $this->leadingRegion->blocksOf($body),
             fn (BodyBlockModel $block): bool => $this->isEngagement($block, $entryAuthor),
         ));
 
@@ -33,10 +39,10 @@ final readonly class LeadingEngagementMarkers
 
     private function isEngagement(BodyBlockModel $block, ?string $entryAuthor): bool
     {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
+        return $this->rules->isEmojiOnly($block->text)
+            || $this->rules->isCounter($block->text)
             || $block->isTimeOnly
-            || (LeadingEngagementRules::hasAuthor($entryAuthor) && LeadingEngagementRules::isByline($block->text));
+            || ($this->rules->hasAuthor($entryAuthor) && $this->rules->isByline($block->text));
     }
 
     /** @param list<BodyBlockModel> $blocks */

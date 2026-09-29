@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader;
 
-final class LeadingEngagementRules
+final readonly class LeadingEngagementRules
 {
     public const int PROSE_CHARS = 120;
 
@@ -20,14 +20,14 @@ final class LeadingEngagementRules
     private const int KICKER_MAX_CHARS = 30;
 
     /** Callers pass text already collapsed by {@see \App\Service\Text\Support\Whitespace::collapse()}. */
-    public static function isProse(string $text, int $linkTextLength): bool
+    public function isProse(string $text, int $linkTextLength): bool
     {
         $textLength = mb_strlen($text);
 
         return $textLength >= self::PROSE_CHARS && $linkTextLength / $textLength < self::LINK_DOMINATED;
     }
 
-    public static function isEmojiOnly(string $text): bool
+    public function isEmojiOnly(string $text): bool
     {
         $symbols = str_replace(["\u{FE0E}", "\u{FE0F}"], '', self::withoutWhitespace($text));
 
@@ -37,7 +37,7 @@ final class LeadingEngagementRules
         return $symbols !== '' && preg_match($emojiSequence, $symbols) === 1;
     }
 
-    public static function isCounter(string $text): bool
+    public function isCounter(string $text): bool
     {
         $number = '(?:\\d{1,3}(?:[., ]\\d{3})*|\\d+)';
         $nouns = implode('|', self::COUNTER_NOUNS);
@@ -45,25 +45,25 @@ final class LeadingEngagementRules
         return preg_match('/^' . $number . '\\s+(?:' . $nouns . ')$/u', mb_strtolower($text)) === 1;
     }
 
-    public static function isByline(string $text): bool
+    public function isByline(string $text): bool
     {
         return preg_match('/^(?:von|by)\\s+\\S.*$/ui', $text) === 1;
     }
 
     /** A reading-time stamp: "9 min.", "11 min read", "9 minutes". */
-    public static function isReadingTime(string $text): bool
+    public function isReadingTime(string $text): bool
     {
         return preg_match('/^\d+\s*min(?:\.|ute[ns]?|\s+read)?$/iu', $text) === 1;
     }
 
     /** A stray engagement count rendered as a bare number, e.g. "0". */
-    public static function isBareNumber(string $text): bool
+    public function isBareNumber(string $text): bool
     {
         return $text !== '' && ctype_digit($text);
     }
 
     /** A masthead separator with no words of its own: "|", "›", "•". */
-    public static function isSeparatorOnly(string $text): bool
+    public function isSeparatorOnly(string $text): bool
     {
         return $text !== '' && preg_match('/^[\s|\/~•·‣›‹»«—–\-…]+$/u', $text) === 1;
     }
@@ -72,7 +72,7 @@ final class LeadingEngagementRules
      * A breadcrumb or section label: short enough to be no article prose, and
      * carried almost entirely by outbound links.
      */
-    public static function isNavigationLabel(string $text, int $linkTextLength): bool
+    public function isNavigationLabel(string $text, int $linkTextLength): bool
     {
         $length = mb_strlen($text);
 
@@ -80,9 +80,9 @@ final class LeadingEngagementRules
     }
 
     /** A kicker or category eyebrow above the title: a few link-less label words. */
-    public static function isKicker(string $text, int $linkTextLength): bool
+    public function isKicker(string $text, int $linkTextLength): bool
     {
-        if ($linkTextLength > 0 || mb_strlen($text) > self::KICKER_MAX_CHARS || self::isByline($text)) {
+        if ($linkTextLength > 0 || mb_strlen($text) > self::KICKER_MAX_CHARS || $this->isByline($text)) {
             return false;
         }
         if (preg_match('/[.!?:]/u', $text) === 1 || preg_match('/\pL/u', $text) !== 1) {
@@ -92,7 +92,7 @@ final class LeadingEngagementRules
         return count(preg_split('/\s+/u', $text) ?: []) <= self::KICKER_MAX_WORDS;
     }
 
-    public static function hasAuthor(?string $entryAuthor): bool
+    public function hasAuthor(?string $entryAuthor): bool
     {
         return $entryAuthor !== null && trim($entryAuthor) !== '';
     }
@@ -100,9 +100,5 @@ final class LeadingEngagementRules
     private static function withoutWhitespace(string $text): string
     {
         return (string) preg_replace('/\s+/u', '', $text);
-    }
-
-    private function __construct()
-    {
     }
 }

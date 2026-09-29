@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader;
 
 use App\Service\Reader\LeadingBlockJudge;
+use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Tests\Support\ParsesHtml;
 use Dom\Element;
@@ -53,7 +54,7 @@ final class LeadingBlockJudgeTest extends TestCase
 
     private function judge(): LeadingBlockJudge
     {
-        return new LeadingBlockJudge();
+        return new LeadingBlockJudge(new LeadingEngagementRules());
     }
 
     private function element(string $bodyHtml, string $selector): Element

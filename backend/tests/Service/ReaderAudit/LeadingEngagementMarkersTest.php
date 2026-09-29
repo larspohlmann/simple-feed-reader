@@ -9,6 +9,7 @@ use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
+use App\Tests\Support\AuditMarkers;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;
 use PHPUnit\Framework\TestCase;
@@ -24,7 +25,7 @@ final class LeadingEngagementMarkersTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markers = new LeadingEngagementMarkers();
+        $this->markers = AuditMarkers::leadingEngagement();
     }
 
     public function testReportsTheIssueEngagementChromeBeforeCleanupAndNothingAfter(): void

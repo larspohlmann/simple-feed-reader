@@ -22,6 +22,7 @@ final readonly class LeadingFurniture
         private ?string $entryAuthor,
         private DateLineRecognizer $dateLines,
         private LeadingBlockJudge $judge,
+        private LeadingEngagementRules $rules,
     ) {
     }
 
@@ -62,21 +63,21 @@ final readonly class LeadingFurniture
     {
         $linkTextLength = BlockText::linkTextLength($block->element);
 
-        return LeadingEngagementRules::isSeparatorOnly($block->text)
-            || LeadingEngagementRules::isNavigationLabel($block->text, $linkTextLength)
-            || LeadingEngagementRules::isKicker($block->text, $linkTextLength);
+        return $this->rules->isSeparatorOnly($block->text)
+            || $this->rules->isNavigationLabel($block->text, $linkTextLength)
+            || $this->rules->isKicker($block->text, $linkTextLength);
     }
 
     /** Emoji rows, engagement counters, date and reading-time stamps and a duplicate byline. */
     private function isEngagementMeta(LeadingBlockModel $block): bool
     {
-        return LeadingEngagementRules::isEmojiOnly($block->text)
-            || LeadingEngagementRules::isCounter($block->text)
-            || LeadingEngagementRules::isBareNumber($block->text)
-            || LeadingEngagementRules::isReadingTime($block->text)
+        return $this->rules->isEmojiOnly($block->text)
+            || $this->rules->isCounter($block->text)
+            || $this->rules->isBareNumber($block->text)
+            || $this->rules->isReadingTime($block->text)
             || $this->dateLines->isDateLine($block->text)
             || LeadingEngagementBlocks::isTimeOnly($block->element)
-            || ($this->hasAuthor() && LeadingEngagementRules::isByline($block->text));
+            || ($this->hasAuthor() && $this->rules->isByline($block->text));
     }
 
     /** @param list<LeadingBlockModel> $blocks */
@@ -106,6 +107,6 @@ final readonly class LeadingFurniture
 
     private function hasAuthor(): bool
     {
-        return LeadingEngagementRules::hasAuthor($this->entryAuthor);
+        return $this->rules->hasAuthor($this->entryAuthor);
     }
 }

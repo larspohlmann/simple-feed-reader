@@ -23,6 +23,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
     public function __construct(
         private DateLineRecognizer $dateLines,
         private LeadingBlockJudge $judge,
+        private LeadingEngagementRules $rules,
     ) {
     }
 
@@ -37,7 +38,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
             return;
         }
 
-        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines, $this->judge);
+        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines, $this->judge, $this->rules);
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
         $anchor = $furniture->bodyStart($blocks);
@@ -182,9 +183,9 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
      */
     private function isDuplicateByline(LeadingBlockModel $block, ?string $entryAuthor): bool
     {
-        return LeadingEngagementRules::hasAuthor($entryAuthor)
+        return $this->rules->hasAuthor($entryAuthor)
             && !$this->judge->isProse($block)
-            && LeadingEngagementRules::isByline($block->text);
+            && $this->rules->isByline($block->text);
     }
 
     private function isRemainder(Element $element): bool

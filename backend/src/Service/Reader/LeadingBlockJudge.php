@@ -14,9 +14,13 @@ final readonly class LeadingBlockJudge
     /** Tags that are article content in their own right and are never furniture. */
     private const array CONTENT_TAGS = ['figcaption', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 
+    public function __construct(private LeadingEngagementRules $rules)
+    {
+    }
+
     public function isProse(LeadingBlockModel $block): bool
     {
-        return LeadingEngagementRules::isProse($block->text, BlockText::linkTextLength($block->element));
+        return $this->rules->isProse($block->text, BlockText::linkTextLength($block->element));
     }
 
     /** A caption, a heading or anything inside a <figure> is content, never furniture. */

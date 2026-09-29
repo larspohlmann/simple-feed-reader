@@ -7,6 +7,7 @@ namespace App\Tests\Service\ReaderAudit;
 use App\Service\ReaderAudit\LeadingChromeMarkers;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingChromeMarkersTest extends TestCase
@@ -20,7 +21,7 @@ final class LeadingChromeMarkersTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markers = new LeadingChromeMarkers();
+        $this->markers = AuditMarkers::leadingChrome();
     }
 
     public function testReportsARessortListStandingAboveTheFirstParagraph(): void

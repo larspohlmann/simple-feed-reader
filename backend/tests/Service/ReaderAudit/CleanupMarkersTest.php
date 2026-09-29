@@ -6,14 +6,10 @@ namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Reader\Model\ExtractionFailure;
 use App\Service\Reader\Model\ExtractionResultModel;
-use App\Service\ReaderAudit\BodyShapeMarkers;
 use App\Service\ReaderAudit\CleanupMarkers;
-use App\Service\ReaderAudit\LeadingChromeMarkers;
-use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
-use App\Service\ReaderAudit\PhraseMarkers;
-use App\Service\ReaderAudit\SocialWidgetMarkers;
+use App\Tests\Support\AuditMarkers;
 use PHPUnit\Framework\TestCase;
 
 final class CleanupMarkersTest extends TestCase
@@ -22,13 +18,7 @@ final class CleanupMarkersTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->markers = new CleanupMarkers(
-            new LeadingChromeMarkers(),
-            new LeadingEngagementMarkers(),
-            new SocialWidgetMarkers(),
-            new BodyShapeMarkers(),
-            new PhraseMarkers(),
-        );
+        $this->markers = AuditMarkers::cleanupMarkers();
     }
 
     public function testNoFailedExtractionIsAFindingWhateverItsReason(): void

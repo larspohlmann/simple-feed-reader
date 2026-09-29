@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit\Model;
 
-use App\Service\Reader\LeadingEngagementRules;
-
 /**
  * One paragraph-level line of the cleaned article, with enough about its links
  * to say whether it is prose or chrome. Where a block sits matters more than
@@ -84,13 +82,7 @@ final readonly class BodyBlockModel
         return \in_array($this->tag, ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'], true);
     }
 
-    /** The first block that answers true is where the article begins. */
-    public function isProse(): bool
-    {
-        return LeadingEngagementRules::isProse($this->text, $this->linkedTextLength());
-    }
-
-    private function linkedTextLength(): int
+    public function linkedTextLength(): int
     {
         $length = 0;
         foreach ($this->links as $link) {
