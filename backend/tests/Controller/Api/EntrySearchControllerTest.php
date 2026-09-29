@@ -30,11 +30,7 @@ final class EntrySearchControllerTest extends ApiTestCase
         return [['HTTP_AUTHORIZATION' => 'Bearer ' . $tokens->create($user)], $user];
     }
 
-    /**
-     * Seeds a feed the given user is subscribed to, with $count entries whose
-     * titles are "$titlePrefix $index" and whose effective dates are distinct days,
-     * so ordering and cursor paging are both real.
-     */
+    /** Titles are "$titlePrefix Post $index", each entry on its own day, so ordering and cursor paging are real. */
     private function seedSubscribedFeedWithEntries(User $user, string $titlePrefix, int $count): Subscription
     {
         $entityManager = self::getContainer()->get(EntityManagerInterface::class);

@@ -364,12 +364,7 @@ final class AccountBackupControllerTest extends WebTestCase
         self::assertSame('invalid_backup', $body['type']);
     }
 
-    /**
-     * The preview test above proves a corrupt gzip is refused; it never
-     * touches the destructive route. Pass 1 runs before the wipe on either
-     * route, so this is low risk -- but nothing else proves it for the one
-     * route where getting it wrong deletes the account.
-     */
+    /** Pass 1 runs before the wipe on both routes; this proves it on the one where a miss deletes the account. */
     public function testACorruptGzipBodyToTheDestructiveRouteIs422AndDeletesNothing(): void
     {
         $client = self::createClient();
@@ -420,14 +415,8 @@ final class AccountBackupControllerTest extends WebTestCase
     }
 
     /**
-     * A feed url declared twice would otherwise make RestoreLoadPass::loadFeed
-     * persist two rows for it and violate feed.url's unique index — but only
-     * once the wipe has already run, because loadFeed re-queries per line and
-     * never sees its own unflushed Feed. A url the account already carried
-     * before the restore would not reproduce that: the pre-existing row would
-     * absorb both lines. This fixture declares a url the account has never
-     * seen, twice, so the tally has to catch it in pass 1, before deleting
-     * anything.
+     * A url new to the account, declared twice, must be refused in pass 1: RestoreLoadPass::loadFeed() misses its own
+     * unflushed Feed, so the unique index would fail after the wipe. A url the account already had would hide the bug.
      */
     public function testADuplicateFeedUrlIs422AndDeletesNothing(): void
     {

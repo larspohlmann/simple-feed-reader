@@ -544,12 +544,10 @@ final class EntryControllerTest extends WebTestCase
         self::assertSame('Post 1', $first['title']);
         self::assertArrayNotHasKey('contentHtml', $first);
         self::assertSame('For-you body text.', $first['excerpt']);
-        // Debug off hides both the score and the reason (#342): the reason used
-        // to show with the score suppressed, which read as inconsistent.
+        // With default settings, neither the reason nor its score is sent.
         self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
-        // The run identity and generation time ARE sent with debug off — the
-        // run-boundary divider is a normal-user feature (#348).
+        // The run identity and generation time ARE sent with debug off: the run divider is a normal-user feature.
         self::assertSame($run->getId(), $first['runId']);
         self::assertSame('2026-08-07T09:05:00+00:00', $first['runGeneratedAt']);
         self::assertArrayHasKey('nextCursor', $body);
@@ -676,9 +674,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        // Debug keeps the per-run call logs and reaches nothing in the feed
-        // (#576): it is not a second way to reveal an explanation the reader
-        // asked to keep hidden, not even half of one.
+        // Debug reaches only the per-run call logs, never the feed: no second way to reveal a hidden reason.
         self::assertArrayNotHasKey('recommendationReason', $first);
         self::assertArrayNotHasKey('recommendationScore', $first);
     }
@@ -710,8 +706,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['entries']);
         $first = $body['entries'][0];
         self::assertIsArray($first);
-        // showReasons on, debug off: the reason and the score beside it both
-        // show — one explanation, one switch (#576).
+        // showReasons on, debug off: the reason and the score beside it both show, one explanation, one switch.
         self::assertSame('Matches your interest in g1', $first['recommendationReason']);
         self::assertSame(42, $first['recommendationScore']);
     }
@@ -882,7 +877,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertIsArray($body['state']);
         self::assertTrue($body['state']['isViewed']);
         self::assertNotNull($body['state']['viewedAt']);
-        // Viewing reads the entry (#482 subset invariant, enforced on flush).
+        // Viewing reads the entry (the subset invariant, enforced on flush).
         self::assertTrue($body['state']['isHidden']);
     }
 
@@ -903,8 +898,7 @@ final class EntryControllerTest extends WebTestCase
         self::assertTrue($viewed['isViewed']);
         self::assertTrue($viewed['isHidden']);
 
-        // Un-ticking (#482) clears viewed but leaves the entry read — hiding from
-        // the unread list is sticky.
+        // Un-ticking clears viewed but leaves the entry read: hiding from the unread list is sticky.
         $client->request(
             'PATCH',
             "/api/entries/$entryId/state",
@@ -989,8 +983,8 @@ final class EntryControllerTest extends WebTestCase
 
         self::assertTrue($this->markViewed($client, $headers, $onTheWatermark)['isHidden']);
 
-        // Above the watermark the sweep left it unread, but viewing reads it now
-        // (#482 subset invariant): viewed can never be true while read is false.
+        // Above the watermark the sweep left it unread, but viewing reads it now: viewed is never true while read is
+        // false.
         $above = $this->markViewed($client, $headers, $aboveTheWatermark);
         self::assertTrue($above['isHidden']);
         self::assertNotNull($above['hiddenAt']);
@@ -1091,13 +1085,8 @@ final class EntryControllerTest extends WebTestCase
     }
 
     /**
-     * The duplicate-collapse badge count (#496) hides a higher-id duplicate's
-     * own unread count as long as a lower-id copy is unread: two subscribed
-     * copies of the same article show ONE unread, attributed to the survivor
-     * (lowest id). Without the mirror, hiding the survivor alone would make the
-     * sibling's own copy the "only" unread one left in its group — its badge
-     * would jump from 0 to 1, a duplicate resurfacing as unread in another
-     * feed. Mirroring isHidden onto the sibling keeps its badge at 0.
+     * The badge counts one unread per duplicate group, on the lowest-id survivor. Hiding the survivor alone would
+     * resurface the sibling's copy as unread (0 to 1), so isHidden mirrors onto the sibling and its badge stays 0.
      */
     public function testHidingASurvivorMirrorsToTheSiblingSoItsBadgeStaysClear(): void
     {

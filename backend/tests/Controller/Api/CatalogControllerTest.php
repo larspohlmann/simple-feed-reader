@@ -16,12 +16,7 @@ use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * Fixtures are built in-test on purpose: tests/bootstrap.php creates the schema
- * from ORM metadata, so no migration ever runs and the catalog tables are EMPTY
- * here until something imports one. A test written against the shipped catalog
- * would depend on an import having run, which no test fixture guarantees.
- */
+/** Fixtures are built in-test: the schema comes from ORM metadata, so no migration seeds the catalog tables. */
 final class CatalogControllerTest extends WebTestCase
 {
     /** @return array<string, string> */
@@ -74,10 +69,7 @@ final class CatalogControllerTest extends WebTestCase
             $entityManager->persist($row);
         }
         $entityManager->flush();
-        // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
-        // querying $technology back in this same EntityManager without a clear()
-        // would return the managed object with its original (pre-join) empty
-        // feeds collection instead of hydrating it from the query below.
+        // Without a clear(), the identity map would return $technology with its pre-join, empty feeds collection.
         $entityManager->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
@@ -123,10 +115,7 @@ final class CatalogControllerTest extends WebTestCase
             $entityManager->persist($row);
         }
         $entityManager->flush();
-        // Same identity-map-hydration reason as CatalogCategoryRepositoryTest:
-        // querying $category back in this same EntityManager without a clear()
-        // would return the managed object with its original (pre-join) empty
-        // feeds collection instead of hydrating it from the query below.
+        // Without a clear(), the identity map would return $category with its pre-join, empty feeds collection.
         $entityManager->clear();
 
         $client->request('GET', '/api/catalog', server: $headers);
@@ -142,10 +131,8 @@ final class CatalogControllerTest extends WebTestCase
     }
 
     /**
-     * The `subscribed` flag is per-user, and the picker locks whatever carries
-     * it. #263 was reported as "a new account sees feeds marked subscribed";
-     * the cause turned out to be a client-side cache, but nothing here proved
-     * the server side, because no test had a second user in the database.
+     * The `subscribed` flag is per-user: another account's subscription must not lock the feed in this user's
+     * picker.
      */
     public function testAnotherUsersSubscriptionDoesNotMarkTheFeedSubscribed(): void
     {
