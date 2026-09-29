@@ -11,15 +11,15 @@ use App\Tests\DbTestCase;
 
 final class UserIdentityRepositoryTest extends DbTestCase
 {
-    private UserIdentityRepository $repository;
+    private UserIdentityRepository $identities;
     private \DateTimeImmutable $now;
 
     protected function setUp(): void
     {
         parent::setUp();
-        /** @var UserIdentityRepository $repository */
-        $repository = $this->entityManager->getRepository(UserIdentity::class);
-        $this->repository = $repository;
+        /** @var UserIdentityRepository $identities */
+        $identities = $this->entityManager->getRepository(UserIdentity::class);
+        $this->identities = $identities;
         $this->now = new \DateTimeImmutable('2026-07-21 12:00:00');
     }
 
@@ -45,7 +45,7 @@ final class UserIdentityRepositoryTest extends DbTestCase
         $identity = $this->identity('bob@example.com', 'google', 'sub-123');
         $this->entityManager->flush();
 
-        $found = $this->repository->findOneByProviderAndSubject('google', 'sub-123');
+        $found = $this->identities->findOneByProviderAndSubject('google', 'sub-123');
 
         self::assertNotNull($found);
         self::assertSame($identity->getUser()->getId(), $found->getUser()->getId());
@@ -59,7 +59,7 @@ final class UserIdentityRepositoryTest extends DbTestCase
         // Subject identifiers are only unique within a provider. If this ever
         // returned the Google identity, an Apple account whose `sub` happened
         // to collide would sign in as somebody else.
-        self::assertNull($this->repository->findOneByProviderAndSubject('apple', 'sub-123'));
+        self::assertNull($this->identities->findOneByProviderAndSubject('apple', 'sub-123'));
     }
 
     /**
@@ -74,8 +74,8 @@ final class UserIdentityRepositoryTest extends DbTestCase
         $apple = $this->identity('alice@example.com', 'apple', 'sub-123');
         $this->entityManager->flush();
 
-        $foundGoogle = $this->repository->findOneByProviderAndSubject('google', 'sub-123');
-        $foundApple = $this->repository->findOneByProviderAndSubject('apple', 'sub-123');
+        $foundGoogle = $this->identities->findOneByProviderAndSubject('google', 'sub-123');
+        $foundApple = $this->identities->findOneByProviderAndSubject('apple', 'sub-123');
 
         self::assertNotNull($foundGoogle);
         self::assertNotNull($foundApple);
@@ -103,13 +103,13 @@ final class UserIdentityRepositoryTest extends DbTestCase
         $this->identity('bob@example.com', 'google', 'Sub-ABC');
         $this->entityManager->flush();
 
-        self::assertNull($this->repository->findOneByProviderAndSubject('google', 'sub-abc'));
-        self::assertNotNull($this->repository->findOneByProviderAndSubject('google', 'Sub-ABC'));
+        self::assertNull($this->identities->findOneByProviderAndSubject('google', 'sub-abc'));
+        self::assertNotNull($this->identities->findOneByProviderAndSubject('google', 'Sub-ABC'));
     }
 
     public function testAnUnknownSubjectReturnsNull(): void
     {
-        self::assertNull($this->repository->findOneByProviderAndSubject('google', 'nobody'));
+        self::assertNull($this->identities->findOneByProviderAndSubject('google', 'nobody'));
     }
 
     /**
@@ -124,7 +124,7 @@ final class UserIdentityRepositoryTest extends DbTestCase
         $this->entityManager->persist($unlinked);
         $this->entityManager->flush();
 
-        self::assertTrue($this->repository->existsForUser($linked->getUser()));
-        self::assertFalse($this->repository->existsForUser($unlinked));
+        self::assertTrue($this->identities->existsForUser($linked->getUser()));
+        self::assertFalse($this->identities->existsForUser($unlinked));
     }
 }

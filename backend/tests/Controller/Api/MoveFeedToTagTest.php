@@ -24,9 +24,9 @@ final class MoveFeedToTagTest extends WebTestCase
         $user = $this->user('mover@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $tech = $this->makeTag($user, 'Tech', 1);
-        $ahead = $this->makeSub($user, 'https://x.example.com/rss', 0, $tech, 0);
-        $behind = $this->makeSub($user, 'https://y.example.com/rss', 0, $tech, 1);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $ahead = $this->makeSubscription($user, 'https://x.example.com/rss', 0, $tech, 0);
+        $behind = $this->makeSubscription($user, 'https://y.example.com/rss', 0, $tech, 1);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -51,7 +51,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $user = $this->user('mover-body@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $tech = $this->makeTag($user, 'Tech', 1);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -75,7 +75,7 @@ final class MoveFeedToTagTest extends WebTestCase
         $stranger = $this->user('stranger@example.com');
         $news = $this->makeTag($user, 'News', 0);
         $theirs = $this->makeTag($stranger, 'Theirs', 0);
-        $moved = $this->makeSub($user, 'https://m.example.com/rss', 0, $news, 0);
+        $moved = $this->makeSubscription($user, 'https://m.example.com/rss', 0, $news, 0);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/' . $moved->getId() . '/move-to-tag', [
@@ -133,7 +133,7 @@ final class MoveFeedToTagTest extends WebTestCase
         return $tag;
     }
 
-    private function makeSub(
+    private function makeSubscription(
         User $user,
         string $url,
         int $position,

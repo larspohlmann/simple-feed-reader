@@ -106,7 +106,7 @@ final class EntryListTest extends DbTestCase
      * branch (#1099) can be forced through a handful of fixture rows instead
      * of DateOrderedPage::DEFAULT_WINDOW_SIZE.
      */
-    private function repoWithWindow(int $windowSize): EntryListRepository
+    private function repositoryWithWindow(int $windowSize): EntryListRepository
     {
         $container = self::getContainer();
         /** @var ManagerRegistry $registry */
@@ -798,7 +798,7 @@ final class EntryListTest extends DbTestCase
         $firstEntry = $this->entryIn($feed, 't1', '2026-07-10T00:00:00Z');
         $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
 
-        $repository = $this->repoWithWindow(5);
+        $repository = $this->repositoryWithWindow(5);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 10);
 
         $recorded = $this->recordedList($repository, $query);
@@ -820,7 +820,7 @@ final class EntryListTest extends DbTestCase
         $secondEntry = $this->entryIn($feed, 't2', '2026-07-09T00:00:00Z');
         $this->entryIn($this->fillerFeed(), 'filler', '2026-07-08T00:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
 
         $recorded = $this->recordedList($repository, $query);
@@ -844,7 +844,7 @@ final class EntryListTest extends DbTestCase
         $firstEntry = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
         $secondEntry = $this->entryIn($feed, 't2', '2026-07-04T00:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 2);
 
         $recorded = $this->recordedList($repository, $query);
@@ -867,7 +867,7 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($filler, 'f3', '2026-07-08T00:00:00Z');
         $firstEntry = $this->entryIn($feed, 't1', '2026-07-05T00:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $rows = $repository->listForUser(new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 5));
 
         self::assertSame([$firstEntry->getGuid()], array_map(static fn ($row) => $row->entry->getGuid(), $rows));
@@ -882,7 +882,7 @@ final class EntryListTest extends DbTestCase
         $secondEntry = $this->entryIn($feed, 't2', '2026-07-05T00:00:00Z');
         $thirdEntry = $this->entryIn($feed, 't3', '2026-07-05T00:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), tagId: $tag->getId(), limit: 3);
 
         $recorded = $this->recordedList($repository, $query);
@@ -907,7 +907,7 @@ final class EntryListTest extends DbTestCase
         $fourthEntry = $this->entryIn($feed, 't4', '2026-07-11T00:00:00Z');
         $this->entryIn($feed, 't5', '2026-07-10T00:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
         $page1 = $repository->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
@@ -946,7 +946,7 @@ final class EntryListTest extends DbTestCase
             limit: 2,
             order: ListOrder::OldestFirst,
         );
-        $recorded = $this->recordedList($this->repoWithWindow(2), $query);
+        $recorded = $this->recordedList($this->repositoryWithWindow(2), $query);
 
         self::assertCount(2, $recorded['queries'], 'a full windowed page must never fall back');
         self::assertSame(['t1', 't2'], $this->guids($recorded['rows']));
@@ -958,7 +958,7 @@ final class EntryListTest extends DbTestCase
         foreach (['t1' => 10, 't2' => 11, 't3' => 12, 't4' => 13, 't5' => 14] as $guid => $day) {
             $this->entryIn($feed, $guid, sprintf('2026-07-%02dT00:00:00Z', $day));
         }
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
         $page1 = $repository->listForUser(
@@ -988,7 +988,7 @@ final class EntryListTest extends DbTestCase
         $this->entryIn($filler, 'g1', '2026-07-08T18:00:00Z');
         $this->entryIn($filler, 'g2', '2026-07-08T12:00:00Z');
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $userId = $this->user->requireId();
 
         $page1 = $repository->listForUser(new EntryQuery($userId, tagId: $tag->getId(), limit: 2));
@@ -1022,7 +1022,7 @@ final class EntryListTest extends DbTestCase
         $this->entityManager->persist($this->hidden($secondEntry));
         $this->entityManager->flush();
 
-        $repository = $this->repoWithWindow(2);
+        $repository = $this->repositoryWithWindow(2);
         $query = new EntryQuery($this->user->requireId(), view: EntryView::Unread, tagId: $tag->getId(), limit: 2);
 
         $recorded = $this->recordedList($repository, $query);

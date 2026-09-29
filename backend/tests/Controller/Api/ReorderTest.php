@@ -47,7 +47,7 @@ final class ReorderTest extends WebTestCase
         return $tag;
     }
 
-    private function makeSub(
+    private function makeSubscription(
         User $user,
         string $url,
         int $position,
@@ -213,9 +213,9 @@ final class ReorderTest extends WebTestCase
     {
         $client = self::createClient();
         $user = $this->user('reorder-feeds@example.com');
-        $firstSubscription = $this->makeSub($user, 'https://f/1', 0);
-        $secondSubscription = $this->makeSub($user, 'https://f/2', 1);
-        $thirdSubscription = $this->makeSub($user, 'https://f/3', 2);
+        $firstSubscription = $this->makeSubscription($user, 'https://f/1', 0);
+        $secondSubscription = $this->makeSubscription($user, 'https://f/2', 1);
+        $thirdSubscription = $this->makeSubscription($user, 'https://f/3', 2);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/subscriptions/reorder', [
@@ -244,9 +244,9 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('reorder-in-tag@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $firstSubscription = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
-        $secondSubscription = $this->makeSub($user, 'https://f/2', 1, $tag, 1);
-        $thirdSubscription = $this->makeSub($user, 'https://f/3', 2, $tag, 2);
+        $firstSubscription = $this->makeSubscription($user, 'https://f/1', 0, $tag, 0);
+        $secondSubscription = $this->makeSubscription($user, 'https://f/2', 1, $tag, 1);
+        $thirdSubscription = $this->makeSubscription($user, 'https://f/3', 2, $tag, 2);
         $this->entityManager()->flush();
 
         // New within-tag order: s3, s1, s2.
@@ -290,9 +290,9 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('reorder-in-tag-db@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $firstSubscription = $this->makeSub($user, 'https://db/1', 0, $tag, 0);
-        $secondSubscription = $this->makeSub($user, 'https://db/2', 1, $tag, 1);
-        $thirdSubscription = $this->makeSub($user, 'https://db/3', 2, $tag, 2);
+        $firstSubscription = $this->makeSubscription($user, 'https://db/1', 0, $tag, 0);
+        $secondSubscription = $this->makeSubscription($user, 'https://db/2', 1, $tag, 1);
+        $thirdSubscription = $this->makeSubscription($user, 'https://db/3', 2, $tag, 2);
         $this->entityManager()->flush();
 
         $this->patch($client, $user, '/api/tags/' . $tag->getId() . '/feed-order', [
@@ -325,9 +325,9 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('untag-append@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $this->makeSub($user, 'https://f/1', 0); // untagged, position 0
-        $this->makeSub($user, 'https://f/2', 1); // untagged, position 1
-        $tagged = $this->makeSub($user, 'https://f/3', 0, $tag, 0); // tagged, position 0
+        $this->makeSubscription($user, 'https://f/1', 0); // untagged, position 0
+        $this->makeSubscription($user, 'https://f/2', 1); // untagged, position 1
+        $tagged = $this->makeSubscription($user, 'https://f/3', 0, $tag, 0); // tagged, position 0
         $this->entityManager()->flush();
 
         // Remove its only tag: it joins the untagged list and must append (2),
@@ -349,8 +349,8 @@ final class ReorderTest extends WebTestCase
         $client = self::createClient();
         $user = $this->user('reorder-foreign-feed@example.com');
         $tag = $this->makeTag($user, 'Tech', 0);
-        $inTag = $this->makeSub($user, 'https://f/1', 0, $tag, 0);
-        $notInTag = $this->makeSub($user, 'https://f/2', 1);
+        $inTag = $this->makeSubscription($user, 'https://f/1', 0, $tag, 0);
+        $notInTag = $this->makeSubscription($user, 'https://f/2', 1);
         $this->entityManager()->flush();
 
         // A feed that doesn't carry the tag makes the set inexact → 422.
