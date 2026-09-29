@@ -42,14 +42,10 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     {
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
-        // Favicon resolution keeps using the stub: this test's subject is the
-        // feed-fetch budget gate, not favicon plumbing (already covered
-        // elsewhere), and the real engine would otherwise need its own
-        // SSRF-guarded MockHttpClient wiring for homepage fetches too.
+        // Favicons keep the stub: the subject is the feed-fetch budget gate, and the real engine would need its own
+        // SSRF-guarded MockHttpClient for the homepage fetches.
         $this->faviconFetcher = new StubFeedFetcher();
-        // dueFeed() subscribes every fixture feed to this user so the #246
-        // orphan sweep (wired into every allDue() request) never deletes a
-        // feed this test is trying to fetch.
+        // dueFeed() subscribes every fixture feed to this user so the orphan sweep never deletes it.
         $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
         $this->entityManager->persist($this->subscriber);
     }
@@ -108,9 +104,6 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
     private function rss(string $title, string $guid): string
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>{$title}</title>
@@ -121,7 +114,7 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
 
     /**
      * A 304 answering a request that carried no validator confirms nothing, so the engine turns it into an empty
-     * fetch, and the empty body fails the parse like any other unreadable document (#1165).
+     * fetch, and the empty body fails the parse like any other unreadable document.
      */
     public function testANotModifiedToAnUnconditionalRequestIsRecordedAsAFailure(): void
     {
@@ -151,17 +144,9 @@ final class RefreshRunnerConcurrentFetchTest extends DbTestCase
     }
 
     /**
-     * BudgetedFeedQueue's safety margin is 10 seconds and the first feed is
-     * always started unconditionally; every feed after it is gated purely on
-     * wall-clock time remaining against the deadline. A 5-second budget is
-     * therefore below the margin from the very first check, so exactly one of
-     * three due feeds can ever start — deterministic without needing the
-     * fetch itself to consume simulated time. What is under test is whether
-     * ConcurrentFeedFetcher, driven through FetchQueue's lazy pull, actually
-     * stops asking BudgetedFeedQueue's generator for more tickets once the
-     * budget says no, and whether RefreshRunner turns that into an accurate
-     * report — not the arithmetic of the gate itself, which BudgetedFeedQueue
-     * already tests in isolation.
+     * BudgetedFeedQueue always starts the first feed and gates each later one on a 10-second margin, so a 5-second
+     * budget lets one of three start. Under test: the real engine stops pulling tickets once the budget says no, and
+     * the runner reports it; the gate's arithmetic is BudgetedFeedQueueTest's.
      */
     public function testTheBudgetGateStopsTheRealConcurrentEngineMidBatch(): void
     {

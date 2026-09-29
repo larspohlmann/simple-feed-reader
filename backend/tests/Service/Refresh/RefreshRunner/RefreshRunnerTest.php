@@ -58,11 +58,8 @@ final class RefreshRunnerTest extends DbTestCase
         $this->faviconFetcher = new StubFeedFetcher();
         $this->lockFactory = new TtlRecordingLockFactory(new InMemoryStore());
         $this->indexWriter = new RecordingSearchIndexWriter();
-        // dueFeed() subscribes every fixture feed to this user so the #246
-        // orphan sweep (wired into every allDue() request) never deletes a
-        // feed a test is trying to fetch. Orphan behaviour itself is covered
-        // by RefreshRunnerOrphanSweepTest, which persists feeds with no
-        // subscriber on purpose.
+        // dueFeed() subscribes every fixture feed to this user so the orphan sweep never deletes it;
+        // RefreshRunnerOrphanSweepTest covers orphans.
         $this->subscriber = new User('fixture-subscriber@example.com', $this->clock->now());
         $this->entityManager->persist($this->subscriber);
     }
@@ -93,11 +90,8 @@ final class RefreshRunnerTest extends DbTestCase
         $this->entityManager->persist($feed);
         $this->entityManager->persist(new Subscription($this->subscriber, $feed, $this->clock->now()));
 
-        // Every due feed starts without a favicon, so a successful refresh
-        // always triggers phase two's homepage fetch for it. Stub a bland
-        // default here so tests that don't care about the favicon outcome
-        // aren't forced to configure one; a test that does can still call
-        // faviconFetcher->willReturn() afterwards to override it.
+        // Every due feed lacks a favicon, so a successful refresh fetches its homepage in the favicon pass; this bland
+        // default spares the tests that do not care, and a later willReturn() overrides it.
         $origin = 'https://' . (string) parse_url($url, \PHP_URL_HOST);
         $this->faviconFetcher->willReturn(
             $origin,
@@ -117,9 +111,6 @@ final class RefreshRunnerTest extends DbTestCase
 
     private function rss(string $title, string $guid): string
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         return /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>{$title}</title>
@@ -222,12 +213,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * The #432 ordering trap: EntryIngestor persists but never flushes, so an
-     * entry has no id until the runner's own flush assigns one. Indexing
-     * before that flush would send Meilisearch a document with id 0 — this
-     * proves the id the index actually received matches the id the database
-     * actually assigned, which "index called after ingest()" alone would not
-     * catch (a call placed before the flush still compiles and still runs).
+     * Only the flush assigns ids, so indexing before it would send the index an id of 0: this pins the id the index
+     * received to the one the database assigned.
      */
     public function testIndexesFetchedEntriesWithTheirRealIdsAfterFlush(): void
     {
@@ -279,10 +266,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * The #384 ordering trap: EntryIngestContext's previousFetchAt must be read
-     * BEFORE recordSuccess() stamps the feed's new lastSuccessfulFetchAt, or
-     * every article — however old — would read as published since we last
-     * looked.
+     * FeedIngestContext's previous fetch time is read before recordSuccess() stamps the new one; read after, every
+     * article, however old, would look published since the last fetch.
      */
     public function testARefreshSinksAnArticleTheFeedServedBeforeTheLastFetch(): void
     {
@@ -290,9 +275,6 @@ final class RefreshRunnerTest extends DbTestCase
         $feed->recordSuccessfulFetch(new \DateTimeImmutable('2026-07-21 06:00:00'), 60);
         $this->entityManager->flush();
 
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $body = /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>T</title>
@@ -319,14 +301,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * The #384 grace-window defect: FeedScheduler::recordFailure() also stamps
-     * lastFetchedAt, so a feed that failed for nine days and just recovered
-     * has a lastFetchedAt from minutes ago. Reading THAT as "the previous
-     * fetch" makes every article published during the outage look like one
-     * the feed was already serving, so it sinks to its own publication date
-     * instead of surfacing. The fix reads lastSuccessfulFetchAt instead, which
-     * only recordSuccess() advances — a failed attempt is not evidence about
-     * what the feed was serving.
+     * FeedScheduler::recordFailure() also stamps lastFetchedAt, so after an outage the previous fetch must come from
+     * lastSuccessfulFetchAt; otherwise everything published during the outage sinks to its own date.
      */
     public function testARefreshSurfacesBacklogPublishedDuringAFeedOutage(): void
     {
@@ -335,9 +311,6 @@ final class RefreshRunnerTest extends DbTestCase
         $feed->recordFailedFetch(new \DateTimeImmutable('2026-07-21 11:00:00'), 'HTTP 503', 30);
         $this->entityManager->flush();
 
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $body = /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>T</title>
@@ -360,9 +333,8 @@ final class RefreshRunnerTest extends DbTestCase
 
     public function testRefreshBackfillsTheImageOntoAnAlreadyStoredEntryThatLacksOne(): void
     {
-        // A functional guard on the #148 wiring: FillMissingImagesTest calls the ingestor directly, which cannot
-        // prove the refresh calls it inside FeedOutcomePersister's unit of work. Pre-store an imageless entry,
-        // then serve the same guid carrying a media image.
+        // FillMissingImagesTest calls the ingestor directly; this proves the refresh calls it too, inside
+        // FeedOutcomePersister's unit of work, by serving an already stored guid with a media image.
         $feed = $this->dueFeed('https://img.example.com/feed');
         $stored = new Entry(
             $feed,
@@ -376,9 +348,6 @@ final class RefreshRunnerTest extends DbTestCase
         $this->entityManager->flush();
         self::assertNull($stored->getImageUrl());
 
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $body = /** @lang TEXT */ <<<XML
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/"><channel><title>T</title>
@@ -420,18 +389,14 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(FeedStatus::Erroring, $bad->getStatus());
         self::assertSame(1, $bad->getConsecutiveFailures());
         self::assertStringContainsString('connection refused', (string) $bad->getLastErrorMessage());
-        // The failed feed has no new content to show an icon beside, and
-        // retrying its homepage on every sweep would add a permanent guarded
-        // HTTP round trip for a feed that may never recover — so it must not
-        // be in phase two's favicon batch at all, favicon-less or not.
+        // A failed feed has nothing new to show an icon beside, and its homepage may never answer again, so it stays
+        // out of the favicon pass.
         self::assertNotContains('https://bad.example.com', $this->faviconFetcher->fetchedUrls);
     }
 
     /**
-     * The #290 case: Reddit rations to about one request a minute, so a healthy
-     * feed draws a 429 whenever it is asked twice in a row. Recording that as a
-     * failure would set the erroring status and back the feed off for hours,
-     * for a document that would arrive on the next attempt.
+     * A rationing site answers a healthy feed with 429 when asked twice in a row (#290). Recording that as a failure
+     * would mark the feed erroring and back it off for hours, for a document the next attempt would get.
      */
     public function testAThrottledFeedKeepsItsHealthAndIsAskedAgainShortly(): void
     {
@@ -446,8 +411,7 @@ final class RefreshRunnerTest extends DbTestCase
 
         $report = $this->runner()->run(RefreshRequestModel::allDue(300));
 
-        // Its own bucket: reporting it as a failure is what let the Reddit
-        // feeds look broken while nothing was wrong with them.
+        // Its own bucket: a throttled feed is healthy, not failed.
         self::assertSame(1, $report->throttled);
         self::assertSame(0, $report->failed);
         self::assertSame(0, $report->fetched);
@@ -481,10 +445,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * An empty 200 body must degrade to a per-feed failure, not an uncaught
-     * ValueError from loadXML() that 500s the whole run and stops every feed
-     * queued after it — the exact defect that left OPML-imported feeds empty no
-     * matter how often refresh was clicked.
+     * An empty 200 body is a per-feed failure, not an uncaught ValueError from loadXML() that fails the whole run and
+     * every feed queued after it.
      */
     public function testEmptyBodyIsRecordedAsFailureAndOthersContinue(): void
     {
@@ -520,11 +482,7 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('Blog', 'b-1'), null, null),
         );
-        // The site homepage (origin) advertises an icon; the favicon fetcher —
-        // not the feed fetcher — serves it. `/icon.png` is a deliberately fake
-        // path, because resolving it is what the test is about, so `@lang TEXT`
-        // stops PhpStorm injecting HTML here and reporting the target as
-        // unresolvable.
+        // The favicon fetcher, not the feed fetcher, serves the homepage's icon.
         $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
             'https://blog.example.com/',
             false,
@@ -550,8 +508,6 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponseModel::notModified($feed->getUrl(), false, null, null),
         );
-        // `@lang TEXT` for the same reason as above: `/icon.png` must stay a
-        // fake path, so the injected-HTML "cannot resolve file" hint is wrong.
         $this->faviconFetcher->willReturn('https://blog.example.com', FetchResponseModel::fetched(
             'https://blog.example.com/',
             false,
@@ -574,8 +530,6 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponseModel::fetched($feed->getUrl(), false, $this->rss('F', 'g-1'), null, null),
         );
-        // `@lang TEXT` for the same reason as above: `/i.png` must stay a fake
-        // path, so the injected-HTML "cannot resolve file" hint is wrong.
         $this->faviconFetcher->willReturn(
             'https://one.example.com',
             FetchResponseModel::fetched(
@@ -609,7 +563,7 @@ final class RefreshRunnerTest extends DbTestCase
         $report = $this->runner($failingEntityManager)->run(RefreshRequestModel::allDue(300));
 
         self::assertSame('aborted', $report->status);
-        // The EntityManager is closed; phase two never ran.
+        // The EntityManager is closed; the favicon pass never ran.
         self::assertSame([], $this->faviconFetcher->fetchedUrls);
     }
 
@@ -627,11 +581,7 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertNull($feed->getNextFetchAt());
     }
 
-    /**
-     * With concurrency 1 the engine starts one feed per wave, so the deadline is
-     * re-checked between each — the same skid the serial runner had, now
-     * expressed in terms of when a fetch may *start*.
-     */
+    /** With concurrency 1 the engine starts one feed per wave, so the deadline is re-checked before each start. */
     public function testBudgetExhaustionSkipsFeedsThatWereNeverStarted(): void
     {
         $first = $this->dueFeed('https://one.example.com/feed');
@@ -663,17 +613,11 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(1, $report->skippedForBudget);
         self::assertSame(1, $report->remaining);
         self::assertCount(2, $this->fetcher->fetchedUrls);
-        // The third feed's fetch never started, so phase two must not chase
-        // its homepage either — doing so would spend wall-clock the budget
-        // just refused to grant.
+        // The third feed never started, so the favicon pass must not spend the refused time on its homepage.
         self::assertNotContains('https://three.example.com', $this->faviconFetcher->fetchedUrls);
     }
 
-    /**
-     * The counterpart to the test above, and the actual point of this change: at
-     * a realistic concurrency the same three feeds all fit in one wave, so a
-     * budget that used to skip one now completes the sweep.
-     */
+    /** At a realistic concurrency the same three feeds fit one wave, so the budget that skips one above completes. */
     public function testAConcurrentWaveCompletesWithinABudgetThatSerialWouldExhaust(): void
     {
         foreach (['one', 'two', 'three'] as $index => $name) {
@@ -775,8 +719,7 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponseModel::fetched('https://new.example.com/feed', true, $this->rss('Moved', 'm-1'), null, null),
         );
-        // The redirect adopts the new URL before phase two runs, so the
-        // favicon homepage fetch targets the new origin, not the old one.
+        // The redirect adopts the new URL before the favicon pass, so the homepage fetch targets the new origin.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
             FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
@@ -836,8 +779,7 @@ final class RefreshRunnerTest extends DbTestCase
             $feed->getUrl(),
             FetchResponseModel::notModified('https://new.example.com/feed', true, null, null),
         );
-        // The redirect adopts the new URL before phase two runs, so the
-        // favicon homepage fetch targets the new origin, not the old one.
+        // The redirect adopts the new URL before the favicon pass, so the homepage fetch targets the new origin.
         $this->faviconFetcher->willReturn(
             'https://new.example.com',
             FetchResponseModel::fetched('https://new.example.com', false, '<html lang="en"></html>', null, null),
@@ -914,12 +856,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * A 429 is the one outcome that leaves lastFetchedAt untouched, and does so
-     * on purpose (#290): the field records when content last arrived, and the
-     * manual refresh's cooldown reads it. `remaining` must therefore not be
-     * re-derived from that field, or the throttled feed stays due forever, the
-     * report stays `partial`, and the client's poll loop hammers the very site
-     * that asked for less — 89 requests to one Reddit feed in production (#302).
+     * A 429 leaves lastFetchedAt untouched, so `remaining` must not be derived from it: the feed would stay due and
+     * the client's poll loop would hammer the site that asked for less (89 requests to one feed in production, #302).
      */
     public function testThrottledFeedIsNotCountedAsRemaining(): void
     {
@@ -973,12 +911,8 @@ final class RefreshRunnerTest extends DbTestCase
         $this->entityManager->persist($user);
         $feed = $this->dueFeed('https://a.example.com/feed');
 
-        // Twenty recent filler entries hold the feed above EntryPruner's
-        // per-feed floor, so the ancient entry below falls beyond the
-        // newest-twenty boundary and would be eligible for the age pass —
-        // this isolates the user-scope check itself, since a below-floor
-        // feed would survive pruning regardless of whether this run scope
-        // is meant to prune at all.
+        // Twenty recent fillers hold the feed above EntryPruner's floor, so the ancient entry below is prunable and
+        // only the run's scope decides whether it goes.
         $recentDate = $this->clock->now()->modify('-1 day');
         for ($index = 0; $index < 20; ++$index) {
             $filler = new Entry($feed, 'filler-' . $index, null, 'Filler ' . $index, $recentDate, $recentDate);
@@ -1085,10 +1019,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * A unique-constraint violation on flush rolls back AND closes the
-     * EntityManager. Continuing the loop would turn one collision into
-     * "EntityManager is closed" for every remaining feed, so the runner must
-     * abort — and it must never touch the EM again (no countDue, no prune).
+     * A failed flush closes the EntityManager, so the run aborts instead of failing every remaining feed with
+     * "EntityManager is closed", and never touches the EntityManager again (no countDue, no prune).
      */
     public function testEntityManagerFailureAbortsRunWithoutCascading(): void
     {
@@ -1125,7 +1057,7 @@ final class RefreshRunnerTest extends DbTestCase
         // The run stopped: the third feed's outcome was never processed.
         self::assertCount(2, $this->fetcher->fetchedUrls);
         self::assertNotContains('https://three.example.com/feed', $this->fetcher->fetchedUrls);
-        // The first feed's entries were committed before the second flush failed (#720).
+        // The first feed's entries were committed before the second flush failed.
         self::assertSame(1, $this->changeMarker->marks);
     }
 
@@ -1176,13 +1108,8 @@ final class RefreshRunnerTest extends DbTestCase
     }
 
     /**
-     * The scenario a plain UniqueConstraintViolationException does not cover
-     * (#246): a feed vanishes mid-run because its last subscriber unsubscribes
-     * while the runner is mid-fetch — OrphanedFeedReclaimer::reclaim() holds no
-     * lock, only the runner's own `feed-refresh` lock does. The flush that
-     * follows then fails on the FK, not a unique key, so this must degrade to
-     * `aborted` exactly like the unique-constraint case rather than letting a
-     * DBAL exception escape run().
+     * A feed whose last subscriber leaves mid-fetch is reclaimed without the refresh lock, so the flush fails on the
+     * foreign key, not a unique key; that too degrades to `aborted` instead of escaping run().
      */
     public function testForeignKeyViolationFromAVanishedFeedAbortsTheRunWithoutThrowing(): void
     {

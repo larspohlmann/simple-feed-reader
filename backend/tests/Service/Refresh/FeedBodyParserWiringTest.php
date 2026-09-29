@@ -11,12 +11,8 @@ use App\Tests\Service\Scraper\ScrapedFixtures;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * RefreshRunnerTest hands the dispatcher a hand-built locator, so it stays
- * green even if the container's app.feed_body_parser tag collects nothing —
- * the same silent failure mode HtmlItemExtractorWiringTest documents for the
- * scrape layers. This test drives the REAL container wiring: both formats
- * must resolve through the tagged locator, and an unknown format must take
- * the xml fallback instead of blowing up on a legacy row.
+ * Drives the real container wiring, which the refresh tests' hand-built locator (RefreshRunners) cannot prove: every
+ * format resolves through the app.feed_body_parser tag, and an unknown one takes the xml fallback.
  */
 final class FeedBodyParserWiringTest extends KernelTestCase
 {
@@ -35,9 +31,6 @@ final class FeedBodyParserWiringTest extends KernelTestCase
     {
         $feed = new Feed('https://example.com/feed.xml'); // sourceFormat defaults to 'xml'
 
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $rss = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"><channel><title>Wired</title>
@@ -62,13 +55,8 @@ final class FeedBodyParserWiringTest extends KernelTestCase
     }
 
     /**
-     * A sourceFormat the locator does not know (a row written by a future
-     * version, or a format since removed) falls back to 'xml'. For a non-XML
-     * body that surfaces as FeedParseException — proof the xml parser handled
-     * it: the dispatcher neither matched 'jsonfeed' nor threw a locator
-     * NotFoundException — and the message names the missing format, so a
-     * stale row is distinguishable from a genuinely broken feed in
-     * lastErrorMessage.
+     * An unknown sourceFormat (a newer version's row, or a removed format) falls back to 'xml': a non-XML body then
+     * fails as FeedParseException, not a locator NotFoundException, and the message names the missing format.
      */
     public function testUnknownFormatFallsBackToTheXmlParserAndNamesTheGap(): void
     {
