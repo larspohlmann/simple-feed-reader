@@ -10,18 +10,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Removes a publisher's "related articles" teaser grid from the raw page before
- * readability runs. Readability keeps the grid's thumbnails as content but
- * strips their anchors, headlines and classes, so by the time the body is
- * cleaned only orphan images remain — no signal is left to recognise them
- * (#1002). Acting on the intact page keeps the strong signal: a container of
- * cards, each pairing a thumbnail with a headline that links to a distinct
- * article. A container a slideshow recognizer already claimed is left alone, so
- * a real carousel with linked captions survives.
- *
- * This deliberately mirrors EdgeBoilerplateTrimmer's job one stage earlier: the
- * trimmer reads class/link signals off readability's output, which readability
- * has already stripped from this grid, so the two are not mergeable.
+ * Removes a related-articles grid from the raw page, since readability keeps its thumbnails but strips the links and
+ * headlines that identify it: a container of 3+ image cards whose headlines link to distinct articles. A container a
+ * slideshow recognizer claimed stays.
  */
 final readonly class RelatedTeaserGridRemover
 {

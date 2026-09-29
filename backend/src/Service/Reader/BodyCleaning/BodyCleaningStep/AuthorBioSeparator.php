@@ -12,14 +12,8 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Wraps the "about the author" furniture that trails an article — the bio, its
- * profile link, an adjacent affiliate disclosure — in a marked figure, so the
- * reader can set it apart from the body instead of running it on as prose.
- *
- * The article body is found by descending into whichever child holds the bulk
- * of the substantial paragraphs; its following siblings are the trailing
- * furniture. A link to an author-profile page (host-agnostic path segment) is
- * the signal that those siblings are a bio and not a second article section.
+ * Wraps the author-bio furniture trailing an article in a marked figure. The body is the child holding a majority of
+ * the substantial paragraphs; its following siblings count as a bio only when one links to an author-profile page.
  */
 final readonly class AuthorBioSeparator implements BodyCleaningStepInterface
 {

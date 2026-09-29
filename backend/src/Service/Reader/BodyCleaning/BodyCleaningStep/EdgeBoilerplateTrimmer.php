@@ -13,16 +13,8 @@ use Dom\HTMLDocument;
 use Dom\Text;
 
 /**
- * Removes boilerplate blocks that survive readability at the head or tail of an
- * extracted article — related-post grids, newsletter prompts, comment blocks
- * (#582). It never touches the middle of the article: the same "related-links"
- * shape in the body is almost always a real subheading, so position is the
- * first gate. BoilerplateVerdict judges the blocks the edges expose.
- *
- * Runs on the readability output BEFORE EntrySanitizer, because the sanitizer
- * strips the class attributes and <form> elements the verdict reads as signals.
- * Mutates the shared document in place (ReaderBodyCleaner parses and serialises
- * once around it). An undefined edge leaves the document unchanged.
+ * Removes the blocks BoilerplateVerdict condemns before the first or after the last substantial paragraph, never
+ * between them: mid-article the same shape is almost always a real subheading.
  */
 final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
 {
@@ -64,10 +56,7 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
     }
 
     /**
-     * The element that directly holds the article's blocks. Readability wraps
-     * its output in one container; descend through single-element container
-     * wrappers so the block list is the real one, not a one-item list holding
-     * the wrapper.
+     * The element holding the article's blocks, below the single-child containers readability wraps its output in.
      */
     private function contentRoot(Element $body): Element
     {
@@ -99,9 +88,7 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
             : null;
     }
 
-    /**
-     * @return list<Element> the element children of the content root, in order
-     */
+    /** @return list<Element> */
     private function topLevelBlocks(Element $root): array
     {
         $blocks = [];
@@ -115,10 +102,7 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
     }
 
     /**
-     * The indexes of blocks that sit in the leading or trailing edge region.
-     * Leading edge = blocks before the first substantial paragraph; trailing
-     * edge = blocks after the last one. An article with no substantial
-     * paragraph has no defined edge.
+     * The blocks before the first substantial paragraph and after the last; none when there is no such paragraph.
      *
      * @param list<Element> $blocks
      * @return list<int>
@@ -140,8 +124,7 @@ final readonly class EdgeBoilerplateTrimmer implements BodyCleaningStepInterface
     }
 
     /**
-     * The last index of the leading edge region and the first index of the
-     * trailing edge region.
+     * The leading edge's exclusive end and the trailing edge's first index.
      *
      * @param non-empty-list<int> $substantial
      * @return array{0: int, 1: int}
