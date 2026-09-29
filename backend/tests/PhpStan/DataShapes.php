@@ -6,7 +6,7 @@ namespace App\Tests\PhpStan;
 
 /**
  * A model is domain data: final readonly or an enum, holding no service and naming no DTO. A DTO is a transfer
- * shape: final readonly, holding no service, never named like a model (#1202).
+ * shape: final readonly, holding no service, never named like a model.
  */
 final readonly class DataShapes implements ServiceRoleChecker
 {

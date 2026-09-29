@@ -6,8 +6,8 @@ namespace App\Tests\PhpStan;
 
 /**
  * An application interface ends in Interface and sits in a folder named after it, beside its same-module
- * implementations; an implementation in another module stays there (#1202). In Factory/, Model/ and Exception/ the
- * role goes before Interface; RoleFolderInterfaces places the first two, and an Exception/ one stays flat.
+ * implementations; an implementation in another module stays there. In Factory/, Model/ and Exception/ the role
+ * goes before Interface; RoleFolderInterfaces places the first two, and an Exception/ one stays flat.
  */
 final readonly class InterfacePlacement implements ServiceRoleChecker
 {

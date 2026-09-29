@@ -13,8 +13,8 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Rules\Rule;
 
 /**
- * Thin-controller rule, expression half (#1157). A ?-> call also arrives as a MethodCall (F1); a first-class callable
- * arrives only as a *CallableNode, which the two ControllerMutatesNoEntityThrough*CallableRule siblings take.
+ * Thin-controller rule, expression half. A ?-> call also arrives as a MethodCall; a first-class callable arrives
+ * only as a *CallableNode, which the two ControllerMutatesNoEntityThrough*CallableRule siblings take.
  *
  * @implements Rule<CallLike>
  */

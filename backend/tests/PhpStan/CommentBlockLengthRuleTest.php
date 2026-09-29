@@ -12,20 +12,12 @@ final class CommentBlockLengthRuleTest extends RuleTestCase
 {
     private const string FIXTURES = __DIR__ . '/data/comment-block-length/';
 
-    private const string UNSWEPT_FIXTURE = 'tests/PhpStan/data/comment-block-length/allow-listed.php';
-
     private const string MESSAGE = 'This comment has %d lines of prose; CLAUDE.md allows three at the absolute most. '
         . 'Rename, extract, or move the reasoning to docs/ or the commit message.';
 
-    /** @var list<string> */
-    private array $unsweptFiles = [];
-
     protected function getRule(): Rule
     {
-        return new CommentBlockLengthRule(
-            new CommentBlocks(new CommentProse(new PhpDocTypeReader())),
-            $this->unsweptFiles,
-        );
+        return new CommentBlockLengthRule(new CommentBlocks(new CommentProse(new PhpDocTypeReader())));
     }
 
     public function testCommentsWithOnlyWhitespaceBetweenThemAreOneBlock(): void
@@ -66,20 +58,6 @@ final class CommentBlockLengthRuleTest extends RuleTestCase
         $this->analyse([self::FIXTURES . 'tool-directives.php'], [
             [self::message(4), 34],
             [self::message(4), 42],
-        ]);
-    }
-
-    public function testAnUnsweptFileIsSkipped(): void
-    {
-        $this->unsweptFiles = [self::UNSWEPT_FIXTURE];
-
-        $this->analyse([self::FIXTURES . 'allow-listed.php'], []);
-    }
-
-    public function testAFileOffTheListIsChecked(): void
-    {
-        $this->analyse([self::FIXTURES . 'allow-listed.php'], [
-            [self::message(4), 12],
         ]);
     }
 

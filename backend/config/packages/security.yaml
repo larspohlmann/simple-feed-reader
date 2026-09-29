@@ -1,13 +1,6 @@
 security:
-    # Default is `None`, which rewrites every AccountStatusException into a
-    # BadCredentialsException — the pending/suspended 403 would silently become
-    # a 401 and the spec's per-status message would be unreachable.
-    #
-    # `AccountStatus` exposes ONLY account-status errors. It deliberately does
-    # NOT expose UserNotFoundException, which stays masked as bad credentials —
-    # that masking is what keeps "unknown email" and "wrong password"
-    # indistinguishable. Never raise this to `All`: that would expose
-    # UserNotFoundException and turn login into an enumeration oracle.
+    # AccountStatus lets the pending/suspended 403 through; UserNotFoundException stays masked as bad credentials.
+    # Never `All`: exposing it turns login into an enumeration oracle (docs/security.md#account-status-checks).
     expose_security_errors: !php/enum Symfony\Component\Security\Http\Authentication\ExposeSecurityLevel::AccountStatus
 
     password_hashers:
@@ -18,13 +11,8 @@ security:
         app_users:
             entity:
                 class: App\Entity\User
-                # No `property: email` on purpose. That option makes
-                # EntityUserProvider query the submitted identifier verbatim,
-                # which would bypass the case normalisation every write and
-                # every other lookup goes through — so a user who registered as
-                # `bob@` and typed `Bob@` here would get an unexplained 401.
-                # Omitting it delegates to UserRepository::loadUserByIdentifier,
-                # keeping normalisation in exactly one place.
+                # No `property: email`: it would look the submitted identifier up verbatim, skipping the case
+                # normalisation UserRepository::loadUserByIdentifier applies, so `Bob@` would not find `bob@`.
 
     firewalls:
         dev:
@@ -41,10 +29,8 @@ security:
             pattern: ^/api/auth/login$
             stateless: true
             provider: app_users
-            # NOT the same checker as the api firewall below. This one checks
-            # status in checkPostAuth, i.e. only after the password has been
-            # verified, so a wrong password cannot reveal that an address is
-            # registered-but-suspended. See App\Security\LoginUserChecker.
+            # LoginUserChecker checks status only after the password verified, so a wrong password cannot reveal a
+            # suspended account (docs/security.md#account-status-checks).
             user_checker: App\Security\LoginUserChecker
             json_login:
                 check_path: /api/auth/login
@@ -56,13 +42,8 @@ security:
                 max_attempts: 5
                 interval: '15 minutes'
 
-        # ORDER MATTERS. Firewalls match in declaration order and `api` below
-        # matches every `^/api` path, so this block MUST stay between `login`
-        # and `api` — placed after `api`, it would never be reached and every
-        # passkey login would silently fall through to the jwt-only firewall
-        # and 401. See PasskeyAuthenticator's own docblock for how the
-        # authenticator reuses json_login's success/failure handlers despite
-        # authenticating differently.
+        # Must stay between `login` and `api`: firewalls match in order and `api` takes every ^/api path, so a passkey
+        # login would fall through to the JWT firewall and 401 (docs/security.md#passkey-login-firewall).
         passkey_login:
             pattern: ^/api/auth/passkey/login$
             stateless: true
@@ -72,13 +53,8 @@ security:
             # App\Security\LoginUserChecker.
             user_checker: App\Security\LoginUserChecker
             custom_authenticator: App\Security\PasskeyAuthenticator
-            # The request carries no e-mail, so PasskeyAuthenticator passes a
-            # fixed, non-secret sentinel identifier to UserBadge instead (see
-            # its own docblock — an empty string is deprecated by Symfony and
-            # becomes a hard failure in 8.0). A fixed identifier still keys
-            # DefaultLoginRateLimiter's local bucket to exactly one per
-            # client IP, so this is five attempts per quarter hour per IP —
-            # the right budget for a flow with no real identifier to key on.
+            # No identifier to key on: PasskeyAuthenticator's fixed sentinel gives one bucket per client IP, five
+            # attempts a quarter hour (docs/security.md#passkey-login-firewall).
             login_throttling:
                 max_attempts: 5
                 interval: '15 minutes'
@@ -93,19 +69,13 @@ security:
 
     access_control:
         - { path: ^/api/health$, roles: PUBLIC_ACCESS }
-        # Both sit under ^/api/auth/, which the next rule makes public, and the
-        # first match wins — so without these two the enrolment endpoints are
-        # open to anyone. The first also covers /register/options; the second
-        # also covers /passkeys/{id}. Neither matches /passkey/login, which is
-        # public on purpose (the flow is discoverable-credential only).
+        # These two must precede ^/api/auth/ (first match wins), or passkey enrolment is open to anyone.
+        # /api/auth/passkey/login stays public: the flow is discoverable-credential only.
         - { path: ^/api/auth/passkey/register, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth/passkeys, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/api/auth/, roles: PUBLIC_ACCESS }
         - { path: ^/api/setup/, roles: PUBLIC_ACCESS }
-        # Catalog favicons are public image bytes (cached icon or a monogram
-        # placeholder), served to plain <img> tags that cannot carry the bearer
-        # JWT. They hold no user data — the subscribed flags live on the
-        # authenticated /api/catalog list, not here — so this one path is public.
+        # Catalog favicons are public image bytes for plain <img> tags, which cannot send the JWT; no user data.
         - { path: '^/api/catalog/feeds/\d+/favicon$', roles: PUBLIC_ACCESS }
         # Frontend error ingest (#984). Anonymous is allowed — errors happen
         # while logged out — but the api firewall still runs the JWT

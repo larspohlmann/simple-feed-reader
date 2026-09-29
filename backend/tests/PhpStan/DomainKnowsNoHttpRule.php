@@ -13,8 +13,8 @@ use PHPStan\Rules\Rule;
 use PHPStan\Rules\RuleErrorBuilder;
 
 /**
- * Domain code returns typed values and throws typed exceptions; src/Http shapes them (#1158), and a controller hands a
- * service a value, never a request DTO (#1182). Strings, group imports and namespace aliases count too.
+ * Domain code returns typed values and throws typed exceptions; src/Http shapes them, and a controller hands a
+ * service a value, never a request DTO. Strings, group imports and namespace aliases count too.
  *
  * @implements Rule<FileNode>
  */

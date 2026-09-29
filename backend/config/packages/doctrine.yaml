@@ -8,19 +8,12 @@ doctrine:
 
         profiling_collect_backtrace: '%kernel.debug%'
         use_savepoints: true
-        # messenger_messages (the doctrine failure transport, #311) is created
-        # lazily by auto_setup on the first failed delivery, which only the
-        # worker container can trigger; FPM/Strato installs never see it. If
-        # Doctrine kept mapping the table, schema:validate and migrations:diff
-        # would demand a migration for a table that must be allowed to not
-        # exist, so the schema filter excludes it from the mapped schema
-        # entirely instead.
+        # messenger_messages is created lazily by the failure transport, and only the worker ever creates it. The
+        # filter keeps it out of the mapped schema, so schema:validate and migrations:diff do not demand it.
         schema_filter: '~^(?!messenger_messages$)~'
     orm:
         auto_generate_proxy_classes: true
-        # PHP 8.4 native lazy objects instead of generated proxies: drops the
-        # deprecated Doctrine\ORM\Proxy\Autoloader (doctrine-bundle skips it when
-        # this is on) and needs no proxy_dir. Unblocked by the 8.3→8.4 platform bump.
+        # PHP 8.4 native lazy objects instead of generated proxies: no deprecated proxy autoloader, no proxy_dir.
         enable_native_lazy_objects: true
         report_fields_where_declared: true
         validate_xml_mapping: true

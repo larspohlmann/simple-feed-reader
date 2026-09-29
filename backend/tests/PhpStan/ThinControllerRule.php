@@ -19,7 +19,7 @@ use PHPStan\Type\TypeCombinator;
 
 /**
  * CLAUDE.md's thin-controller rule for method shapes: no private or protected helper outside {@see self::ALLOW_LIST},
- * and no ObjectManager or ManagerRegistry parameter on any controller method (#1157).
+ * and no ObjectManager or ManagerRegistry parameter on any controller method.
  *
  * @implements Rule<InClassMethodNode>
  */

@@ -18,18 +18,14 @@ framework:
 
         # Namespaced pools use the above "app" backend by default
         pools:
-            # Remembers spent ALTCHA solutions so one proof-of-work cannot
-            # authorise more than one request. Lifetime deliberately exceeds the
-            # challenge's own validity window so an entry never expires while
-            # the challenge it guards is still acceptable.
+            # Spent ALTCHA solutions, so one proof of work authorises one request. Outlives the challenge's validity
+            # window, so no entry expires while its challenge still passes.
             altcha.replay.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 4200
 
-            # Flow state between our 302 to the provider and the provider's
-            # callback. Filesystem, not a session: the API is stateless and
-            # Apple's form_post callback is a cross-site POST that would not
-            # carry a SameSite=Lax session cookie anyway.
+            # OAuth flow state between our redirect and the provider's callback. Not a session: the API is stateless,
+            # and Apple's form_post callback is a cross-site POST no SameSite=Lax cookie rides on.
             oauth.state.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 600
@@ -40,41 +36,25 @@ framework:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 60
 
-            # The worker schedule's checkpoints (#311). Without a pool that
-            # outlives the consumer process, every schedule entry re-anchors
-            # its first run to process start -- and the consumer is recycled
-            # hourly by --time-limit=3600, so the daily housekeeping entry
-            # could never reach its own due date. No lifetime: a checkpoint
-            # expiring would put the schedule right back where it started.
+            # The worker schedule's checkpoints. Without them every entry re-anchors to process start, and the
+            # consumer restarts hourly (--time-limit=3600), so the daily entry would never come due. No lifetime.
             scheduler.state.cache:
                 adapter: cache.adapter.filesystem
 
-            # The newest GitHub release, so "is there an update?" costs one
-            # request per window however many users ask. The reader sets an
-            # explicit six-hour expiry on each entry; this lifetime is only a
-            # backstop for an entry whose expiry was somehow lost.
+            # The newest GitHub release, one request per window however many users ask. The reader expires each
+            # entry after six hours; this lifetime is the backstop.
             github.release.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 21600
 
-            # WebAuthn ceremony challenges (#624). PasskeyChallengeStore already
-            # calls expiresAfter(300) on every entry it writes, so this lifetime
-            # is never the thing actually expiring a live challenge -- it is a
-            # backstop for an entry whose explicit expiry was somehow lost, the
-            # same relationship oauth.login_code.cache has to its store. Twice
-            # the store's own 300 s window, matching that ratio.
+            # WebAuthn challenges. PasskeyChallengeStore expires each entry after 300 s; this lifetime, twice that, is
+            # the backstop.
             passkey.challenge.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 600
 
-            # One refresh run's progress between two of its slices (#721). The
-            # store sets an explicit ten-minute expiry on every entry it writes;
-            # this lifetime is only a backstop for an entry whose expiry was
-            # somehow lost, the same relationship oauth.login_code.cache has to
-            # its store. A run itself lasts a couple of minutes and its record is
-            # worthless once it ends — losing one costs a single jump of the
-            # progress bar. That is why two integers get a cache pool rather than
-            # a table, a migration and a sweeper for abandoned runs.
+            # One refresh run's progress between its slices. The store expires each entry after ten minutes; this
+            # lifetime is the backstop. Losing a record costs one jump of the progress bar, so no table.
             refresh.run.cache:
                 adapter: cache.adapter.filesystem
                 default_lifetime: 900

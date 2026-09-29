@@ -9,49 +9,26 @@
     logs: {
         text: 'var/infection.log',
     },
+    // Each ignore names one mutator and one method, for an equivalent mutant, never wholesale: a real mutant in the
+    // same method still fails the build.
     mutators: {
         '@default': true,
-        // Two equivalent mutants in FeedParser::parse(). Both rewrite the code
-        // without changing anything it can do, so no honest test kills them, and
-        // the only other way to pass the gate for that file would be a test that
-        // asserts a difference which does not exist. Each is ignored by name and
-        // by method, never wholesale — a real mutant in the same method still
-        // fails the build.
-        //
-        // UnwrapFinally: nothing inside the try can throw. loadXML() raises a
-        // ValueError for an empty string only, and the guard above it refuses an
-        // empty body first, so the finally never unwinds an exception. It stays
-        // as defence for the day that changes.
-        //
-        // BitwiseOr (LIBXML_NONET | LIBXML_COMPACT): the flag is defence in
-        // depth, not the active control. libxml never fetches an external DTD
-        // here because LIBXML_DTDLOAD is off — measured, not assumed: with the
-        // flag mutated to '&', testDoesNotFetchAnExternalDtdOverTheNetwork still
-        // sees no connection.
+        // FeedParser::parse(): UnwrapFinally, since the empty-body guard precedes loadXML() and nothing in the try
+        // throws; BitwiseOr, since LIBXML_DTDLOAD is off: with the flag mutated to '&',
+        // testDoesNotFetchAnExternalDtdOverTheNetwork still sees no connection (measured).
         UnwrapFinally: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
         BitwiseOr: { ignore: ['App\\Service\\Parser\\FeedParser::parse'] },
-        // CastString in SubstackProfileFeed::feedUrl(): parse_url returns null
-        // for a URL with no path (e.g. https://substack.com), and (string) null
-        // is '' — but the profile regex refuses both null and '' identically, so
-        // the cast changes nothing the method can do. Equivalent mutant, ignored
-        // by name and method; a real mutant in the same method still fails.
-        //
-        // CastString in ClientErrorScrubber::redact(): preg_replace() only
-        // returns null on a PCRE engine failure (backtrack/recursion limit,
-        // invalid UTF-8 under /u), none of which the fixed PATTERNS trigger on
-        // realistic input — the cast exists so PHPStan accepts the string
-        // return type, not to change observable behaviour.
+        // CastString, equivalent: SubstackProfileFeed::feedUrl()'s regex refuses null and '' alike, and
+        // ClientErrorScrubber::redact()'s preg_replace() returns null only on a PCRE failure its fixed patterns
+        // never hit; the cast is for PHPStan.
         CastString: {
             ignore: [
                 'App\\Service\\Discovery\\SubstackProfileFeed::feedUrl',
                 'App\\Service\\ClientError\\ClientErrorScrubber::redact',
             ],
         },
-        // MethodCallRemoval on a landed response's cancel(): it only releases the
-        // underlying connection early once the caller is done with it. Against
-        // MockHttpClient that has no observable effect, and a spy asserting the
-        // call would test the mock, not behaviour. Ignored by name and method in
-        // the three places a landed response is discarded this way.
+        // cancel() on a landed response only frees the connection early: against MockHttpClient it has no
+        // observable effect, and a spy on it would test the mock.
         MethodCallRemoval: {
             ignore: [
                 'App\\Service\\Fetch\\RedirectFollower::redirectTarget',
@@ -59,18 +36,10 @@
                 'App\\Service\\Reader\\Media\\StreamLocationResolver::landingUrlOf',
             ],
         },
-        // FalseValue on HtmlPageFetcher::content()'s getContent(false): the
-        // buffer-vs-throw flag only differs on a non-2xx response, but content()
-        // runs only after fetch() has already confirmed isSuccess(), so the flag
-        // has no reachable effect here.
+        // content() runs only after fetch() confirmed isSuccess(), and getContent()'s flag differs only on a non-2xx.
         FalseValue: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::content'] },
-        // GreaterThan and Throw_ on HtmlPageFetcher's 3 MB byte cap: the post-read
-        // check in fetch() and the streaming check in options()'s on_progress
-        // closure enforce the same hard limit, the streaming one as
-        // defence-in-depth behind the post-read one. The `>` vs `>=` boundary on
-        // a fixed 3-million-byte constant is not a behaviour worth a 3 MB test
-        // fixture, and Throw_ dropping the streaming throw still leaves the
-        // post-read check to catch an oversized body.
+        // The 3 MB cap is checked twice, while streaming and after the read: `>` vs `>=` on it is not worth a 3 MB
+        // fixture, and dropping the streaming throw leaves the post-read check.
         GreaterThan: {
             ignore: [
                 'App\\Service\\Reader\\HtmlPageFetcher::fetch',
@@ -78,10 +47,7 @@
             ],
         },
         Throw_: { ignore: ['App\\Service\\Reader\\HtmlPageFetcher::options'] },
-        // TrueValue on EntryMediaAssembler::visualMedia()'s $seen[...] = true:
-        // $seen is read only through isset(), which is indifferent to true vs
-        // false — only key absence or an explicit null flips it. Equivalent
-        // mutant; a real mutant in the same method still fails the build.
+        // EntryMediaAssembler::visualMedia() reads $seen only through isset(), which true and false both satisfy.
         TrueValue: { ignore: ['App\\Service\\Ingest\\Support\\EntryMediaAssembler::visualMedia'] },
         // Cast on (int) $entity->getId() as an array key only narrows ?int for
         // PHPStan; the id is always set, so the key is identical.

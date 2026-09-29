@@ -9,37 +9,17 @@ parameters:
     # worker's OS-level memory cap sits far below memory_limit (#1025).
     fetch_concurrency: '%env(int:FETCH_CONCURRENCY)%'
 
-    # How many of those in-flight requests may target one host at once. Caps the
-    # burst a host concentration (many Substack, YouTube or shared-CDN feeds)
-    # would otherwise fire at a single origin, which earns a 429. Two is polite
-    # and still lets the global cap fill with other hosts.
+    # In-flight requests to one host: many Substack, YouTube or shared-CDN feeds would otherwise burst one origin
+    # into a 429. Two still lets the global cap fill with other hosts.
     fetch_host_concurrency: 2
 
-    # The one User-Agent every outbound request to a publisher carries.
-    #
-    # It names NO host, and it must stay that way. The usual courtesy of a
-    # `(+https://project/url)` self-identification is what broke #255: Akamai Bot
-    # Manager rejects a User-Agent containing a domain-shaped token, and it does
-    # not answer 403 — it finishes the TLS handshake and then resets the HTTP/2
-    # stream. Nothing reaches the transport, so the reader can only report the
-    # site as unreachable and tell the user to check an address that was correct
-    # all along. An invented domain is blocked exactly like a real one, so there
-    # is no wording of the URL that survives. OutboundUserAgentWiringTest fails
-    # if a host-shaped token ever reappears here.
-    #
-    # A parameter rather than a class constant for two reasons: the catalog rot
-    # check must send the same string as the fetcher it is a probe for (a
-    # publisher blocking only one of them would leave the rot check reporting a
-    # healthy catalog nobody can subscribe to), and if another CDN objects later
-    # the value moves in config instead of in three classes.
+    # The one User-Agent every request to a publisher sends. It names no host (#255): Akamai Bot Manager resets the
+    # stream for any domain-shaped token, real or invented, so the site looks unreachable. A parameter, so the
+    # catalog rot check probes with the fetcher's exact string. OutboundUserAgentWiringTest pins both.
     outbound_user_agent: 'SimpleFeedReader/1.0'
 
-    # Which GitHub repository the "update available" check reads its releases
-    # from — see GITHUB_RELEASE_REPOSITORY in backend/.env for the default and
-    # what an empty value means. Read straight from the env, deliberately NOT via
-    # the `default:` processor: that processor treats an empty value as "unset"
-    # and substitutes its fallback, which would make the test suite's forced-empty
-    # var reach GitHub instead of switching the check off.
+    # Read raw, not through `default:`: that processor treats empty as unset, and the test suite's empty value must
+    # switch the update check off instead of reaching GitHub. backend/.env holds the default.
     github_release_repository: '%env(GITHUB_RELEASE_REPOSITORY)%'
 
     app.loki_spool_directory: '%kernel.logs_dir%/loki-spool'
@@ -58,53 +38,24 @@ services:
             Psr\Cache\CacheItemPoolInterface $refreshRunCache: '@refresh.run.cache'
             Psr\Cache\CacheItemPoolInterface $grafanaSettingsCache: '@grafana.settings.cache'
             Symfony\Contracts\Cache\CacheInterface $schedulerStateCache: '@scheduler.state.cache'
-            # A name-matched bind, unlike the $concurrency case further down: there
-            # the global match was the objection, here it is the point. Any service
-            # that asks for a $userAgent is talking to a publisher, and every one of
-            # them has to send the same string — see the parameter's comment for why
-            # a second agent string is a bug rather than a nicety.
+            # A name-matched bind on purpose: every service that asks for a $userAgent talks to a publisher and must
+            # send outbound_user_agent.
             string $userAgent: '%outbound_user_agent%'
 
-    # Tags every OAuth provider so OAuthProviderRegistry's #[AutowireIterator]
-    # can collect them.
-    #
-    # This is NOT redundant with `autoconfigure: true`. Autoconfiguration
-    # registers an interface-named tag only for interfaces some bundle has
-    # declared as an autoconfigured tag; a plain application interface gets
-    # nothing, so `#[AutowireIterator(OAuthProviderInterface::class)]` on its
-    # own resolves to an EMPTY iterator. It fails silently, too: the registry
-    # builds, every lookup throws UnknownProviderException, and the result is
-    # indistinguishable from a correctly wired deployment holding no
-    # credentials. Verified by booting the test kernel and reading the
-    # registry's collected providers — [] before this block, both providers
-    # after. OAuthProviderWiringTest keeps it that way.
+    # A plain application interface gets no tag from autoconfigure, so an #[AutowireIterator] over it collects
+    # nothing, silently. Each collected interface below is tagged here.
     _instanceof:
         App\Service\OAuth\OAuthProvider\OAuthProviderInterface:
             tags: ['app.oauth_provider']
-        # Same reason as the OAuth block above: a plain application interface is
-        # not auto-tagged, so FeedParserFactory's #[AutowireIterator] needs this
-        # tag to collect the dialect parsers. FeedParserWiringTest guards it.
         App\Service\Parser\FeedFormatParser\FeedFormatParserInterface:
             tags: ['app.feed_parser']
-        # Same reason as the blocks above: a plain application interface is not
-        # auto-tagged, so EmbedProviders' #[AutowireIterator] would silently
-        # collect nothing. EmbedProvidersWiringTest guards it.
         App\Service\Reader\Media\EmbedProvider\EmbedProviderInterface:
             tags: ['app.embed_provider']
-        # Same reason as the blocks above: a plain application interface is not
-        # auto-tagged, so the slideshow pipeline's #[AutowireIterator] needs this
-        # tag to collect the per-library recognizers.
         App\Service\Reader\Slideshow\SlideshowRecognizer\SlideshowRecognizerInterface:
             tags: ['app.slideshow_recognizer']
-        # Same reason as the blocks above: a plain application interface is not
-        # auto-tagged, so PlatformEntryRules' #[AutowireIterator] needs this tag
-        # to collect the per-platform rules.
         App\Service\Ingest\PlatformEntryRule\PlatformEntryRuleInterface:
             tags: ['app.platform_entry_rule']
-        # Same reason as the blocks above: Symfony's mailer wires its transport
-        # chain from a `mailer.transport_factory`-tagged iterator, and it only
-        # auto-tags the bridge factories it ships — never a plain implementation
-        # of its own interface. Without this, `dynamic://` resolves to nothing
+        # Symfony's mailer auto-tags only the transport factories it ships; without this `dynamic://` has no factory
         # and MAILER_DSN=dynamic://default throws UnsupportedSchemeException.
         Symfony\Component\Mailer\Transport\TransportFactoryInterface:
             tags: ['mailer.transport_factory']
@@ -130,14 +81,8 @@ services:
     App\Service\Settings\ServingHost\ServingHostInterface: '@App\Http\RequestServingHost'
     App\Service\Reader\StatusReasonPhrases\StatusReasonPhrasesInterface: '@App\Http\SymfonyStatusReasonPhrases'
 
-    # The reader's page repairs run as an ordered pipeline before readability
-    # scores the page. The order is a real dependency, not a tag-collection
-    # accident: the class-reading repairs (share-widget and Substack fingerprints,
-    # the screen-reader and glyph classes) must run before the class-stripping
-    # ones (ImageWrapperClassRemover, HeadingClassRemover), which delete the very
-    # class those readers key on. Declared here as one explicit list so the
-    # sequence is visible in a single place and a new repair joins by adding a
-    # line at the right point — never by growing a constructor.
+    # Page repairs, in this order, before readability scores the page: the class-reading repairs precede
+    # ImageWrapperClassRemover and HeadingClassRemover, which strip the classes they key on.
     App\Service\Reader\FetchedPageNormalizer:
         arguments:
             $repairs:
@@ -205,17 +150,9 @@ services:
             $gitHubRepository: '%github_release_repository%'
     App\Service\Ai\ModelCatalog\ModelCatalogInterface: '@App\Service\Ai\ModelCatalog\OpenAiCompatibleCatalog'
     App\Service\Ai\Completion\ChatCompletionClient\ChatCompletionClientInterface: '@App\Service\Ai\Completion\ChatCompletionClient\OpenAiCompatibleChatClient'
-    # The transport pings one heartbeat per chunk and must not learn how many
-    # things care (#433, #444), so the interface resolves to a composite whose
-    # two members are wired explicitly here -- the one place the indirection
-    # applies. TickLockKeepalive refreshes a streaming tick's per-user lock;
-    # nothing arms it outside a tick. SweepStreamHeartbeat marks a sweeping
-    # worker's liveness; nothing arms it in a web request and every ping is
-    # then a no-op. Both stay injectable by their own class name too, because
-    # their arming methods (hold()/release(), sweepStarted()/sweepEnded()) are
-    # called by name from the advancer and from the sweep, not through the
-    # interface. Which of the two beats first is the composite's own rule and
-    # lives in its beat() -- these arguments only say which member is which.
+    # The transport pings one heartbeat per chunk and must not know who listens: a composite of the run-lock
+    # keepalive and the sweep's liveness beat. Both stay injectable by class, as the advancer and the sweep arm them
+    # by name. Which beats first is CompositeCompletionStreamHeartbeat::beat()'s rule.
     App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface: '@App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat'
     App\Service\Ai\Completion\CompletionStreamHeartbeat\CompositeCompletionStreamHeartbeat:
         arguments:
@@ -224,71 +161,39 @@ services:
     App\Service\Process\ShellCommandRunner\ShellCommandRunnerInterface: '@App\Service\Process\ShellCommandRunner\ExecShellCommandRunner'
     App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncherInterface: '@App\Service\Process\DetachedProcessLauncher\DetachedProcessLauncher'
 
-    # MeController's own outbound-mail rate limiters (#636), grouped so the
-    # controller takes one collaborator instead of one parameter per limiter.
-    # Wired against the underlying `limiter.<name>` service ids directly,
-    # bypassing the `$<name>Limiter`-named autowiring alias this class does
-    # not use.
+    # MeController's outbound-mail limiters as one collaborator, wired by limiter service id: the class does not use
+    # the `$<name>Limiter` autowiring aliases.
     App\Service\RateLimit\MeRateLimiters:
         arguments:
             $digestTest: '@limiter.digest_test'
             $resendVerification: '@limiter.resend_verification'
 
-    # Two classes implement AccountMailerInterface (AccountMailer and its
-    # #[AsDecorator] MailGatedAccountMailer below), so the container will not
-    # auto-create an interface alias for it — ambiguous. This alias resolves the
-    # interface to the AccountMailer service id, which decoration then swaps for
-    # the decorator: the alias target's id does not change, only what it builds.
-    # Every consumer that typehints the interface therefore gets the mail gate
-    # for free. MailGatedAccountMailerWiringTest pins this.
+    # Two classes implement AccountMailerInterface, so it gets no automatic alias. This one names AccountMailer's id,
+    # which #[AsDecorator] turns into MailGatedAccountMailer, so every consumer gets the mail gate.
+    # MailGatedAccountMailerWiringTest pins it.
     App\Service\Mail\AccountMailer\AccountMailerInterface: '@App\Service\Mail\AccountMailer\AccountMailer'
 
-    # Same ambiguity, same fix, for the digest mailer (#636): DigestMailer and
-    # its #[AsDecorator] MailGatedDigestMailer both implement
-    # DigestMailerInterface, so this alias resolves to the DigestMailer service
-    # id, which decoration then swaps for the decorator.
+    # The same alias-then-decorate wiring for DigestMailer and MailGatedDigestMailer.
     App\Service\Mail\Digest\DigestMailer\DigestMailerInterface: '@App\Service\Mail\Digest\DigestMailer\DigestMailer'
 
     App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface: '@App\Service\Mail\MailSendingSettings\EffectiveMailSettings'
 
-    # The sweep's in-flight cap. Wired on this one service rather than as a
-    # `bind` in _defaults: a binding matches by parameter NAME, so a global
-    # `int $concurrency` would also feed any unrelated service that ever names a
-    # parameter that way, and renaming the engine's own parameter to
-    # `$fetchConcurrency` just to satisfy the binder would stutter at every read.
-    # The engine rejects a value below 1, so a broken parameter fails at boot.
+    # Wired on this service, not bound globally: a bind matches by parameter name, and `int $concurrency` would feed
+    # any service that names a parameter that way.
     App\Service\Fetch\BatchFeedFetcher\ConcurrentFeedFetcher:
         arguments:
             $concurrency: '%fetch_concurrency%'
             $hostConcurrency: '%fetch_host_concurrency%'
 
-    # Account mail is queued and sent on kernel.terminate, after the response
-    # has been flushed — see App\Service\Mail\DeferredMailer for why that is a
-    # security property and not just a latency win.
-    #
-    # Bound here rather than by decorating `mailer.mailer`, so the indirection
-    # is visible at the one call site it applies to and AccountMailer keeps
-    # depending on the plain MailerInterface (its unit test injects its own).
-    # DeferredMailer itself autowires the real mailer, so there is no cycle.
+    # Account mail leaves on kernel.terminate, after the response (DeferredMailer says why). Bound here, not by
+    # decorating `mailer.mailer`, so only AccountMailer takes the detour.
     App\Service\Mail\AccountMailer\AccountMailer:
         arguments:
             $mailer: '@App\Service\Mail\DeferredMailer'
 
-    # Wraps the throttle limiter the `login` firewall's login_throttling block
-    # generates, so the bucket key sees the same normalised address the user
-    # provider resolves. See App\Security\NormalizedLoginRateLimiter for the
-    # bypass this closes.
-    #
-    # DECORATION, not a `limiter:` service id in security.yaml. Naming a custom
-    # limiter there makes LoginThrottlingFactory skip registering the global and
-    # local RateLimiterFactory pair entirely, which would mean restating
-    # max_attempts, the interval, the 5x global multiplier and the cache pool by
-    # hand — four numbers to drift from the ones security.yaml already declares.
-    # Decorating leaves all of that where it belongs and replaces only the key.
-    #
-    # The service id is generated as `security.login_throttling.<firewall>.limiter`.
-    # If the firewall is ever renamed, the container fails at build time with an
-    # unknown-decoration-target error rather than silently dropping the fix.
+    # Keys the login throttle on the normalised address (docs/security.md#login-throttle-key). Decorated, not named
+    # as `limiter:` in security.yaml, which would drop Symfony's global and local limiter pair. The decorated id
+    # follows the `login` firewall's name, so renaming the firewall fails the container build.
     App\Security\NormalizedLoginRateLimiter:
         decorates: security.login_throttling.login.limiter
         arguments:

@@ -24,11 +24,8 @@ final readonly class CommentBlockLengthRule implements Rule
     private const string MESSAGE = 'This comment has %d lines of prose; CLAUDE.md allows three at the absolute most. '
         . 'Rename, extract, or move the reasoning to docs/ or the commit message.';
 
-    /** @param list<string> $unsweptFiles paths relative to backend/; overridable only for the rule's own test */
-    public function __construct(
-        private CommentBlocks $commentBlocks,
-        private array $unsweptFiles = UnsweptCommentFiles::FILES,
-    ) {
+    public function __construct(private CommentBlocks $commentBlocks)
+    {
     }
 
     public function getNodeType(): string
@@ -38,24 +35,12 @@ final readonly class CommentBlockLengthRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        $file = $scope->getFile();
-        if (\in_array(self::relativePath($file), $this->unsweptFiles, true)) {
-            return [];
-        }
-
         $overlong = array_filter(
-            $this->commentBlocks->in(self::contentsOf($file)),
+            $this->commentBlocks->in(self::contentsOf($scope->getFile())),
             static fn (CommentBlock $block): bool => $block->proseLines > self::MAX_PROSE_LINES,
         );
 
         return array_values(array_map(self::error(...), $overlong));
-    }
-
-    private static function relativePath(string $file): string
-    {
-        $backend = dirname(__DIR__, 2) . '/';
-
-        return str_starts_with($file, $backend) ? substr($file, strlen($backend)) : $file;
     }
 
     private static function contentsOf(string $file): string

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 /**
- * Factory/ and Model/ go together with their suffix, both ways (#1202). Enums in Model/ keep plain names, and an
- * interface inside its role folder is InterfacePlacement's to name.
+ * Factory/ and Model/ go together with their suffix, both ways. Enums in Model/ keep plain names, and an interface
+ * inside its role folder is InterfacePlacement's to name.
  */
 final readonly class RoleFolderNames implements ServiceRoleChecker
 {

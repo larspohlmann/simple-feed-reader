@@ -15,7 +15,7 @@ use PHPUnit\Framework\TestCase;
 
 /**
  * One spelling for PHPUnit's invocation matchers: PhpStorm's EA inspection warns on `self::once()` and
- * `self::never()`, and a warning blocks the lint gate (#1169).
+ * `self::never()`, and a warning blocks the lint gate.
  *
  * @implements Rule<StaticCall>
  */
