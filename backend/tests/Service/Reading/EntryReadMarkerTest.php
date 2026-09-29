@@ -63,6 +63,19 @@ final class EntryReadMarkerTest extends DbTestCase
         self::assertNotNull($state->getHiddenAt());
     }
 
+    public function testAStateLoadedBeforeMarkingReadsAsHiddenWhenFetchedStraightAfter(): void
+    {
+        $entry = $this->entry('loaded', '2026-07-05T00:00:00Z');
+        $this->explicitlyUnread($entry);
+
+        $this->marker()->markEntriesRead($this->reader->requireId(), [$entry->requireId()]);
+
+        $state = $this->entityManager->getRepository(EntryState::class)
+            ->findOneForUserEntry($this->reader->requireId(), $entry->requireId());
+        self::assertNotNull($state);
+        self::assertTrue($state->isHidden());
+    }
+
     public function testMarkingEntriesLeavesEveryOtherEntryAlone(): void
     {
         $marked = $this->entry('marked', '2026-07-05T00:00:00Z');
