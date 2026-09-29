@@ -9,11 +9,8 @@ use App\Tests\Support\ParsesHtml;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * SlideshowScannerTest injects both recognizers by hand, so it stays green even
- * if the container's 'app.slideshow_recognizer' tag collects nothing — the same
- * silent empty-iterator failure FeedParserWiringTest documents. This drives the
- * REAL container wiring: both recognizer families must resolve through the
- * tagged iterator over one page carrying both gallery shapes.
+ * SlideshowScannerTest injects both recognizers by hand; this drives the container's 'app.slideshow_recognizer'
+ * tagged iterator, which fails silently when the tag collects nothing.
  */
 final class SlideshowScannerWiringTest extends KernelTestCase
 {

@@ -8,10 +8,8 @@ use App\Service\Reader\Media\Model\MediaKind;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * Every measured page, through the real container. The generic sources carry the
- * whole set host-agnostically; ZdfPlayerConfigSource is the one deliberate
- * host-keyed exception (#1055), for ZDF pages that name a clip but ship no URL to
- * seed the generic rule.
+ * Every measured page, through the real container. The generic sources carry the whole set host-agnostically;
+ * ZdfPlayerConfigSource is the one deliberate host-keyed exception.
  */
 final class HostAgnosticDiscoveryTest extends KernelTestCase
 {
@@ -90,7 +88,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertStringEndsWith('.mp3', $media->candidates[0]->url);
     }
 
-    /** tagesschau 494183: the related-content sidebar's podcast is not this article's audio. */
+    /** The related-content sidebar's podcast is not this article's audio. */
     public function testASidebarTeaserDoesNotBecomeTheArticlesMedia(): void
     {
         $media = $this->scan(
@@ -102,7 +100,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertSame([MediaKind::Video], $kinds);
     }
 
-    /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds inside <noscript>. */
+    /** JSON-LD declares one of four videos; the other three exist only as page embeds inside <noscript>. */
     public function testAPageThatDeclaresOneOfFourVideosYieldsAllFourInPageOrder(): void
     {
         $media = $this->scan(
@@ -122,7 +120,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         }
     }
 
-    /** Al Jazeera 469835: the VideoObject offers nothing but a Brightcove player page. */
+    /** The VideoObject offers nothing but a Brightcove player page. */
     public function testAlJazeeraYieldsItsBrightcovePlayerWithTheDeclaredPoster(): void
     {
         $media = $this->scan(
@@ -139,7 +137,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertStringContainsString('image-1787184739.jpg', (string) $media->candidates[0]->posterUrl);
     }
 
-    /** ZDF 491430: contentUrl is an HLS playlist, embedUrl a first-party miniplayer nobody frames. */
+    /** The contentUrl is an HLS playlist, the embedUrl a first-party miniplayer nobody frames. */
     public function testZdfYieldsItsStreamWithTheDeclaredPoster(): void
     {
         $media = $this->scan(
@@ -174,7 +172,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         );
     }
 
-    /** ardmediathek: the HLS master sits beside progressive mp4s; the file is the one player. */
+    /** The HLS master sits beside progressive mp4s; the file is the one player. */
     public function testAFileBesideAStreamYieldsTheFileOnly(): void
     {
         $media = $this->scan(
@@ -198,7 +196,7 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
         self::assertSame('https://www.youtube-nocookie.com/embed/pz8VRrI0p0U', $media->candidates[0]->url);
     }
 
-    /** tagesschau 496523: a broadcast page has no og:image; the still beside the player is the poster. */
+    /** A broadcast page has no og:image; the still beside the player is the poster. */
     public function testABroadcastPageWithoutOgImageYieldsItsVideoWithThePlayersStillAndItsAudio(): void
     {
         $media = $this->scan(
@@ -218,9 +216,8 @@ final class HostAgnosticDiscoveryTest extends KernelTestCase
     }
 
     /**
-     * The one deliberate host-keyed source (#1055): ZDF names each clip only in a
-     * player config, and a text-led page ships no VideoObject to seed the generic
-     * rule, so ZdfPlayerConfigSource seeds a stream per declared player.
+     * ZDF names each clip only in a player config, and a text-led page ships no VideoObject to seed the generic rule,
+     * so ZdfPlayerConfigSource seeds a stream per declared player.
      */
     public function testTheZdfPlayerConfigsEachSeedAStream(): void
     {

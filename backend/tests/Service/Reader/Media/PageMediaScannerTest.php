@@ -108,7 +108,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertSame([], $media->candidates);
     }
 
-    /** A later source's og:image completes a poster-less video before the fallback is ever consulted (#913). */
+    /** A later source's og:image completes a poster-less video before the fallback is ever consulted. */
     public function testKeepsACrossSourcePosterOverTheFallback(): void
     {
         $scanner = new PageMediaScanner([
@@ -167,7 +167,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertSame('https://x.test/declared.jpg', $media->candidates[0]->posterUrl);
     }
 
-    /** vice 495401: JSON-LD declares the first video from the <head>, with no prose anchor; the page scan knows where it stands. */
+    /** JSON-LD declares the first video from the <head>, with no prose anchor; the page scan knows where it stands. */
     public function testALaterSourceFillsTheAnchorTheDeclarationLacks(): void
     {
         $url = 'https://www.youtube-nocookie.com/embed/aaaaaaaaaaa';
@@ -187,7 +187,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertSame('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg', $media->candidates[0]->posterUrl);
     }
 
-    /** vice 495401: JSON-LD declares one of four videos; the other three exist only as page embeds. */
+    /** JSON-LD declares one of four videos; the other three exist only as page embeds. */
     public function testALaterSourceAddsTheUrlsTheEarlierOneNeverNamed(): void
     {
         $embed = static fn (string $id): MediaCandidateModel => new MediaCandidateModel(
@@ -212,7 +212,10 @@ final class PageMediaScannerTest extends TestCase
         ], $urls);
     }
 
-    /** ARD: a lower source that re-confirms no URL of a claimed kind is seeing a rendition, not a new player — its unique URL is dropped (#788). */
+    /**
+     * A lower source that re-confirms no URL of a claimed kind is seeing a rendition, not a new player: its unique
+     * URL is dropped.
+     */
     public function testALowerSourceThatConfirmsNothingAddsNoUrlOfAClaimedKind(): void
     {
         $poster = 'https://x.test/p.jpg';
@@ -242,7 +245,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertCount(ArticleMediaModel::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
-    /** Kinds are independent, so NPR keeps both its video embed and its audio. */
+    /** Kinds are independent, so a page keeps both its video embed and its audio. */
     public function testADifferentKindStillComesThroughALaterSource(): void
     {
         $scanner = new PageMediaScanner([
@@ -257,7 +260,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertCount(2, $media->candidates);
     }
 
-    /** OZORA: many embeds from one source all survive; only later SOURCES lose. */
+    /** Many embeds from one source all survive; only later SOURCES lose. */
     public function testOneSourceMayYieldManyOfAKind(): void
     {
         $scanner = new PageMediaScanner([
@@ -282,7 +285,10 @@ final class PageMediaScannerTest extends TestCase
         self::assertCount(ArticleMediaModel::MAX_ITEMS, $scanner->scan($this->page())->candidates);
     }
 
-    /** The guard is per-source: a new URL from a source that re-confirms nothing is dropped even when a still-later source re-confirms the kind (#788). */
+    /**
+     * The guard is per-source: a new URL from a source that re-confirms nothing is dropped even when a still-later
+     * source re-confirms the kind.
+     */
     public function testANewUrlFromANonReconfirmingSourceIsDroppedEvenIfALaterSourceReconfirms(): void
     {
         $scanner = new PageMediaScanner([
@@ -299,7 +305,7 @@ final class PageMediaScannerTest extends TestCase
         self::assertSame(['https://x.test/a'], $urls);
     }
 
-    /** ardmediathek: the HLS master sits beside progressive mp4s; the file plays everywhere without a library. */
+    /** The HLS master sits beside progressive mp4s; the file plays everywhere without a library. */
     public function testAStreamNeverDoublesAFileAcrossSources(): void
     {
         $scanner = new PageMediaScanner([

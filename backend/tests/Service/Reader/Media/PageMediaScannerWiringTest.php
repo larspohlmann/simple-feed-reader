@@ -68,8 +68,8 @@ final class PageMediaScannerWiringTest extends KernelTestCase
     }
 
     /**
-     * The order IS the behaviour: the first source to name a URL sets its poster and place, and every
-     * lower one only fills gaps. A new source must fail here until someone places it on purpose (#756).
+     * The order is behaviour: the first source to name a URL sets its poster and place, and every lower one only
+     * fills gaps. A new source fails here until it is placed on purpose.
      */
     public function testTheSourcesRunInTheirDeclaredOrder(): void
     {
@@ -94,9 +94,8 @@ final class PageMediaScannerWiringTest extends KernelTestCase
     }
 
     /**
-     * Entry 491912: two <video> elements, each with its own poster. The attribute scan sees both files
-     * too but knows only the page's og:image, so it must run AFTER the semantic source or one video
-     * shows the other's still (#756).
+     * The attribute scan sees both files but knows only the page's og:image, so it must run after the semantic source,
+     * or one video shows the other's still.
      */
     public function testEachVideoKeepsItsOwnPosterOverThePageImage(): void
     {

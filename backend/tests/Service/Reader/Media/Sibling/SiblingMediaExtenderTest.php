@@ -94,9 +94,8 @@ final class SiblingMediaExtenderTest extends TestCase
 
     public function testSkipsASiblingAlreadyDeclaredAsASeedWithoutAskingTheNetwork(): void
     {
-        // The page seeds the same clip twice — its VideoObject and its player
-        // config (#1055) — so the search re-derives a seed already declared. The
-        // extender must skip it before the redirect-follow, making no request.
+        // The page seeds the same clip twice, as its VideoObject and its player config, so the search re-derives
+        // a seed already declared. The extender must skip it before the redirect-follow, making no request.
         $declared = new ArticleMediaModel([
             self::found()->candidates[0],
             new MediaCandidateModel(
