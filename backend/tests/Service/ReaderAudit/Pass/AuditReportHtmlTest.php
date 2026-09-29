@@ -173,7 +173,7 @@ final class AuditReportHtmlTest extends TestCase
         return (new AuditReportHtml($maxCandidates))->render($findings, '2026-08-31 10:00');
     }
 
-    /** Every fixture is its own entry: a repeated id reads as one re-measured article (#783). */
+    /** Every fixture is its own entry: a repeated id reads as one re-measured article. */
     private int $nextEntryId = 1;
 
     private function clean(string $title): AuditFindingModel

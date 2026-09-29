@@ -23,9 +23,6 @@ final class CleanupMarkersTest extends TestCase
 
     public function testNoFailedExtractionIsAFindingWhateverItsReason(): void
     {
-        // Whatever went wrong, the reader falls back to the feed body and shows
-        // the user the original. That is a real outcome and no cleaner changes
-        // it; listing it filled the report with work nobody could do (#744).
         foreach (ExtractionFailure::cases() as $reason) {
             $failed = ExtractionResultModel::failed(null, $reason);
 

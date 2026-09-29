@@ -35,8 +35,6 @@ final class PhraseMarkersTest extends TestCase
 
     public function testReportsEachFamilyOnceHoweverManyLinesMatchIt(): void
     {
-        // A share bar renders one line per network; eight findings for one bar
-        // would bury every other marker on the page.
         $html = '<p>Auf Facebook teilen</p><p>Auf X teilen</p><p>Per WhatsApp</p>';
 
         self::assertSame(['chrome_share'], $this->codesFor($html));
@@ -68,10 +66,6 @@ final class PhraseMarkersTest extends TestCase
 
     public function testAConsentLineInsideARealArticleIsItsOwnFinePrintNotAWall(): void
     {
-        // correctiv.org: the newsletter box's "Datenschutzerklärung" sentence
-        // sits inside a 3000-character article the reader renders correctly. A
-        // wall is the ABSENCE of the article, so a body that has one cannot be
-        // behind a wall (#744).
         $article = '<p>' . str_repeat(self::PROSE, 7) . '</p>'
             . '<p>Mit der Anmeldung willigen Sie der Verarbeitung Ihrer Daten gemäß unserer '
             . 'Datenschutzerklärung ein.</p>';
@@ -88,8 +82,6 @@ final class PhraseMarkersTest extends TestCase
 
     public function testEachFamilyMatchesItsFirstListedPhrase(): void
     {
-        // A phrase silently dropped from the table is a publisher stopping to be
-        // reported, with nothing failing to say so.
         foreach ($this->phrases->families() as $family) {
             $block = '<p>' . $family->phrases[0] . '</p>';
 

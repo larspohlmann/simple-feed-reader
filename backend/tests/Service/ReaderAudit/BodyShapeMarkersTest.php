@@ -31,8 +31,6 @@ final class BodyShapeMarkersTest extends TestCase
 
     public function testAShortArticleIsNotAFinding(): void
     {
-        // A radio-script piece is 800 characters and complete; the previous
-        // length rule reported every one of them (#744).
         self::assertSame([], $this->codesFor('<p>' . str_repeat(self::PROSE, 3) . '</p>'));
     }
 
@@ -52,8 +50,6 @@ final class BodyShapeMarkersTest extends TestCase
 
     public function testASectionedEssayIsNotAnIndexPage(): void
     {
-        // An Anarchist Library pamphlet: nineteen section titles, all of them
-        // plain text, all of them the article's own (#744).
         $html = '<p>' . str_repeat(self::PROSE, 3) . '</p>';
         foreach (range(1, 19) as $section) {
             $html .= '<h2>Abschnitt ' . $section . '</h2><p>Ein kurzer Absatz.</p>';
@@ -71,8 +67,6 @@ final class BodyShapeMarkersTest extends TestCase
 
     public function testAnEmptyBodyIsNotReportedAsHavingNoParagraph(): void
     {
-        // A failed extraction has its own marker; reporting it twice would count
-        // one broken page as two findings.
         self::assertSame([], $this->codesFor(''));
     }
 
