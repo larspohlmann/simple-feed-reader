@@ -21,19 +21,8 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 
 /**
- * Two narrow unit tests. The first pins the one-query feed lookup of #455
- * (AccountRestorerTest proves the same path end to end). The second covers
- * the one branch AccountRestorerTest can no longer reach through content:
- * #412's final review closed every route by which a crafted-but-otherwise-
- * valid foundation could still make the database refuse a value (BackupTally
- * now catches a duplicate tag, feed or subscription in pass 1). What is left
- * of "the database rejects a value" is a driver failure with no content
- * behind it at all — a schema mismatch, a dropped connection, a column too
- * narrow for a title the grammar never bounds. That is not reproducible
- * through the real service graph without corrupting the schema mid-test,
- * which itself breaks the MySQL leg's transactional test isolation. A fake
- * EntityManager whose flush() throws is the direct way to prove
- * RestoreLoadPass still wraps it.
+ * Pins the one-query feed lookup, and the flush wrap no file content can reach: pass 1 refuses duplicates, so only a
+ * driver failure is left, which a fake EntityManager whose flush() throws stands in for.
  */
 final class RestoreLoadPassTest extends TestCase
 {
@@ -72,7 +61,7 @@ final class RestoreLoadPassTest extends TestCase
 
         // No subscription line ever runs, so loadSubscription() never gets a
         // chance to call resolveHeldFeeds() itself — only the final flush can
-        // still resolve (and create) these feeds (#455).
+        // still resolve (and create) these feeds.
         $result = $pass->run($user, (function () {
             yield $this->feedLine('https://orphan-one.example/feed.xml');
             yield $this->feedLine('https://orphan-two.example/feed.xml');

@@ -21,11 +21,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * One account as gzipped backup parts: every entry part first, the foundation
- * last, because only then are the part count and totals its header declares
- * known. The foundation's record lines are captured up front, before the entry
- * walk clear()s the entity manager, so the parts and the foundation name the
- * same subscriptions and feeds even if the account changes mid-export.
+ * One account as gzipped backup parts: every entry part first, then the foundation, whose header needs their count
+ * and totals. Its lines are captured before the entry walk clear()s the entity manager, so both name the same feeds.
  */
 final readonly class AccountBackupExporter
 {

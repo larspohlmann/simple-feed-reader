@@ -8,12 +8,7 @@ use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\Model\IndexMatchesModel;
 use App\Service\Search\Index\Model\IndexSearchModel;
 
-/**
- * The read side of the index gateway. Separate from SearchIndexWriterInterface so that
- * IndexedEntrySearch — the only caller that ever searches — cannot be handed a
- * dependency wide enough to also write, and app:search:reindex — the only
- * caller that ever writes — cannot be handed one wide enough to also search.
- */
+/** The read side of the index gateway, apart from SearchIndexWriterInterface so a searcher is never handed a writer. */
 interface SearchIndexReaderInterface
 {
     /** @throws SearchEngineUnavailableException */

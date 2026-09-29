@@ -95,10 +95,8 @@ final readonly class EntryPartInspector
     }
 
     /**
-     * Only entries this part would actually insert count against the ceiling:
-     * a re-import of rows the feed already holds adds nothing (the load dedupes
-     * on the same (feed, guidHash)), so counting the raw lines would refuse an
-     * account near the ceiling from restoring its own export after the wipe.
+     * Counts only the entries this part would insert (the load dedupes on feed and guidHash), so an account near the
+     * ceiling can still restore its own export.
      *
      * @param array<string, array<string, true>> $guidHashesByFeedUrl
      * @param array<string, int>                  $feedIdsByUrl

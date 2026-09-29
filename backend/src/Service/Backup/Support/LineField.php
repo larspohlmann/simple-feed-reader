@@ -7,11 +7,8 @@ namespace App\Service\Backup\Support;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
- * Typed accessors for a decoded backup line. Each helper reads one key from
- * the line's associative array and throws InvalidBackupException naming that
- * key when the value is missing or of the wrong shape — so a malformed
- * backup fails with a message an operator can act on, never a silent
- * type-juggled default.
+ * Typed accessors for a decoded backup line. A missing or mis-shaped key throws InvalidBackupException naming the
+ * key, never a type-juggled default.
  */
 final class LineField
 {

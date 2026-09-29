@@ -187,10 +187,7 @@ final class RestorePreviewerTest extends DbTestCase
     }
 
     /**
-     * Every counted dimension is bounded, not only the two that dominate the
-     * load's runtime: tags, feeds and subscriptions all accumulate as managed
-     * entities until the entry phase flushes, so an unbounded one would run a
-     * WIPED account out of memory — and a fatal cannot be reported at all.
+     * Every counted dimension has a ceiling, not only the two that dominate the load; BackupFitCheck says why.
      *
      * @return iterable<string, array{array<string, int>}>
      */

@@ -11,26 +11,9 @@ use App\Service\Search\SearchEngineCapability;
 use Psr\Log\LoggerInterface;
 
 /**
- * The class services.yaml hands every caller of EntrySearchInterface: prefer
- * the engine, fall back to the database. This makes Meilisearch optional
- * rather than a hard dependency for #432 — delete this class and re-alias to
- * LikeEntrySearch, and the rest of the application does not notice.
- *
- * Named collaborators, not two EntrySearchInterface arguments: the container
- * cannot tell two same-typed arguments apart, nor could a reader tell which
- * is primary and which the fallback without the concrete names.
- *
- * The two failure modes look alike to the caller but differ for an operator:
- *
- * - No engine configured (SearchEngineCapability::isConfigured() false) is the
- *   Strato deployment — permanent and correct, so nothing is logged (a line
- *   per search would bury a real incident later).
- * - An engine that IS configured but doesn't answer
- *   (SearchEngineUnavailableException) is degraded and worth exactly one
- *   warning, carrying the exception for its stack trace.
- *
- * Any other exception propagates — catching more broadly would hide a real
- * bug behind a silently worse (LIKE) result, the hardest failure to notice.
+ * EntrySearchInterface's alias: the engine first, the database as fallback. No engine configured is a permanent
+ * setup and logs nothing; a configured engine throwing SearchEngineUnavailableException logs one warning. Any other
+ * exception propagates rather than hide a bug behind a silently worse LIKE result.
  */
 final readonly class EntrySearchWithFallback implements EntrySearchInterface
 {

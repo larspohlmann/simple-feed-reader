@@ -4,12 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Backup\Model;
 
-/**
- * What a backup file holds, without holding the file itself: its source, plus
- * a count for every repeatable line kind. Produced by BackupInspector's full
- * pass over BackupReader, consumed by BackupFitCheck before anything is
- * deleted and by RestorePreviewer to describe the file to the user.
- */
+/** What a backup file holds, without holding the file: its source and a count for every repeatable line kind. */
 final readonly class BackupInventoryModel
 {
     public function __construct(

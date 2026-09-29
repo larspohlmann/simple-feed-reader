@@ -18,12 +18,8 @@ use App\Service\Backup\Model\BackupProvenanceModel;
 use App\Service\Backup\Support\BackupSchema;
 
 /**
- * Shapes one backup record into its encoded NDJSON line. Every "…Line"
- * method here is a pure mapping from one entity to the JSON schema
- * BackupReader parses back — the exporter decides which lines to call and in
- * what order, this class owns only what each line looks like. The instant a
- * header carries is read once from the clock by the exporter, so every part
- * of one export shares it — this class only formats the value it is given.
+ * Encodes one backup record as its NDJSON line, the schema BackupReader parses back. The exporter decides which
+ * lines to write and in what order, and reads the header's instant once so every part shares it.
  */
 final readonly class BackupLines
 {

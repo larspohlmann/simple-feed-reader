@@ -22,15 +22,8 @@ use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The foundation's own load: settings, tags, saved searches, feeds and
- * subscriptions, plus the dispatch over the line stream. Constructed per
- * restore and thrown away with it: the name ⇒ Tag and url ⇒ Feed maps it
- * holds are working state, which is exactly why they do not live on the
- * autowired RestoreLoader.
- *
- * The account is assumed to be freshly reset. Nothing here reads or updates a
- * row the wipe left behind. Entries and entry states belong to
- * EntryPartRestorer; this pass never sees them.
+ * The foundation's load (settings, tags, saved searches, feeds, subscriptions), built per restore for its name => Tag
+ * and url => Feed maps. It assumes a freshly reset account; entries and states belong to EntryPartRestorer.
  */
 final class RestoreLoadPass
 {
@@ -40,10 +33,10 @@ final class RestoreLoadPass
     /** @var array<string, Feed> */
     private array $feedsByUrl = [];
 
-    /** @var list<FeedLine> held back until one lookup resolves them all (#455) */
+    /** @var list<FeedLine> held back until one lookup resolves them all */
     private array $heldFeedLines = [];
 
-    /** @var list<SavedSearch> held back until the flush that assigns their id (#1118) */
+    /** @var list<SavedSearch> held back until the flush that assigns their id */
     private array $loadedSavedSearches = [];
 
     /** @var array{tags: int, savedSearches: int, feeds: int, subscriptions: int} */
@@ -117,12 +110,7 @@ final class RestoreLoadPass
         ++$this->counts['savedSearches'];
     }
 
-    /**
-     * The slug embeds the row's id, which does not exist until the flush
-     * above assigns it — so it cannot be built alongside the rest of
-     * loadSavedSearch(), and restoring the file's own (now-stale) id is not
-     * an option: RestoreLoadPass never restores an id at all.
-     */
+    /** The slug embeds the row's id, so it is built only after the flush; the file's own id is never restored. */
     private function regenerateSavedSearchSlugs(): void
     {
         if ([] === $this->loadedSavedSearches) {
@@ -141,15 +129,8 @@ final class RestoreLoadPass
     }
 
     /**
-     * BackupReader puts every feed line before the first subscription, so by
-     * the time anything needs a Feed the file's whole set is known and one
-     * query resolves it (#455).
-     *
-     * A feed row is shared between accounts, so a known one is referenced and
-     * never touched — not even to improve a null title. sourceFormat is
-     * therefore written only on a row this restore creates, which is
-     * SubscriptionCreator's trust rule at its strictest: a value asserted by
-     * an uploaded file may not overwrite what the instance already learned.
+     * BackupReader puts every feed line before the first subscription, so one query resolves the file's whole set.
+     * A known feed row is shared: it is referenced, never updated, so a file's sourceFormat reaches only new rows.
      */
     private function resolveHeldFeeds(): void
     {

@@ -8,12 +8,8 @@ use App\Service\Backup\Exception\BackupCompressionException;
 use App\Service\Backup\Exception\InvalidBackupException;
 
 /**
- * Streams the lines of a gzipped text held in memory. The restore reads its
- * upload twice (validate, then load), and php://input yields its bytes only
- * once — so the caller holds the ~4 MiB gzip body as a string and this class
- * inflates it lazily per pass. fgets() does the line assembly in C with an
- * internal carry; never re-split a shared buffer with substr() — that is
- * O(n²) and measured 100× slower (see the spec's appendix).
+ * Streams the lines of an in-memory gzip, inflating lazily per pass: the restore reads its upload twice and
+ * php://input yields once. Let fgets() assemble the lines; re-splitting a shared buffer with substr() is O(n²).
  */
 final readonly class GzipLineReader
 {

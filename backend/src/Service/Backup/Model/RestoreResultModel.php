@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Backup\Model;
 
 /**
- * What a restore actually loaded, counted as rows WRITTEN rather than lines
- * read. `feeds` and `entries` are therefore usually far below the file's own
- * counts on an instance that already holds the same shared rows: a feed
- * another account already subscribes to is referenced, never re-created, and
- * an entry already present is left exactly as it is.
+ * Rows written, not lines read: a feed or entry the instance already holds is referenced, never re-created, so
+ * `feeds` and `entries` can sit far below the file's own counts.
  */
 final readonly class RestoreResultModel
 {

@@ -13,24 +13,9 @@ use App\Service\Text\Support\PlainText;
 use Psr\Log\LoggerInterface;
 
 /**
- * Keeps the search index in step with what the database already holds: called
- * once a caller's flush has given every new Entry its id, and once
- * EntryPruner has decided which ids a bulk delete removed.
- *
- * Indexing is a side effect of storing (or discarding) an entry, never a
- * condition of it succeeding: a slow or down search engine must cost a
- * refresh nothing beyond staler results, so every method here swallows
- * SearchEngineUnavailableException and logs it rather than propagating —
- * `app:search:reindex` is the repair path, do not make the exception escape
- * again. An unconfigured engine raises no exception at all: MeilisearchIndex
- * makes every write a no-op (#816), so an install without search stays silent.
- *
- * NOT `final readonly class`: $configured is a memoised flag mutated after
- * construction (see index()). This service is a process-lifetime singleton and
- * FeedOutcomePersister calls index() once per feed (up to 50 per sweep), so without
- * memoising it would PATCH identical, idempotent settings up to 50 times per
- * sweep for no gain. Every other collaborator stays constructor-promoted
- * `readonly`; only $configured needs to change after construction.
+ * Keeps the search index in step with the database, after a caller's flush gave each Entry its id and after
+ * EntryPruner's bulk delete. Indexing never fails the caller: every method logs SearchEngineUnavailableException,
+ * and app:search:reindex is the repair path. An unconfigured engine makes every write a no-op.
  */
 #[ProcessLifetimeState('The index settings are pushed once per process')]
 final class EntryIndexer
@@ -63,11 +48,8 @@ final class EntryIndexer
     }
 
     /**
-     * Idempotent and cheap on Meilisearch's side (a PATCH of the same settings) —
-     * this is what makes a freshly enabled container usable without a separate
-     * provisioning step, so it must run at least once. Memoised to at most once
-     * per process; a failed attempt leaves $configured false so the next
-     * index() call retries.
+     * Pushes the idempotent index settings, which makes a freshly enabled engine usable without a provisioning step.
+     * At most once per process; a failure leaves $configured false, so the next index() retries.
      *
      * @throws SearchEngineUnavailableException
      */
@@ -82,12 +64,8 @@ final class EntryIndexer
     }
 
     /**
-     * The Entry-to-IndexedEntryModel mapping alone: no engine call, nothing swallowed.
-     * `app:search:reindex` needs the exact same mapping this class uses at ingest
-     * time (a second, drifting mapping is the bug DRY prevents), but must let
-     * SearchEngineUnavailableException reach its caller rather than disappear
-     * into a log line — ruling out reusing index() itself. This pure entry
-     * point is the shared piece, with no opinion on a failed write.
+     * The mapping alone, with no engine call and nothing swallowed: app:search:reindex shares it but must see
+     * SearchEngineUnavailableException, so it cannot reuse index().
      *
      * @param list<Entry> $entries
      *
@@ -117,11 +95,8 @@ final class EntryIndexer
     }
 
     /**
-     * A feed's title can change on any later refresh
-     * (EntryIngestor::updateFeedMetadata), but an already-indexed entry keeps the
-     * feedTitle given here until a full app:search:reindex — this class doesn't
-     * propagate renames onto entries indexed under the old title. Accepted: a
-     * renamed feed is rare next to the ingest volume per-entry propagation would cost.
+     * An indexed entry keeps this feedTitle until app:search:reindex, even after a refresh renames the feed; accepted,
+     * since renames are rare next to the ingest volume propagation would cost.
      */
     private static function toIndexedEntry(Entry $entry): IndexedEntryModel
     {

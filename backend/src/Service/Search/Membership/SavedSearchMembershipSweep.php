@@ -19,7 +19,7 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Fills saved_search_entry incrementally (#1116): each search carries a
+ * Fills saved_search_entry incrementally: each search carries a
  * high-water mark; a run walks entry ids above it to a settled ceiling in
  * chunks, inserts the matches and advances the mark, within a budget.
  */

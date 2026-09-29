@@ -11,11 +11,8 @@ use App\Service\Backup\Factory\RestoreEntryLoaderFactory;
 use App\Service\Backup\Model\RestoreResultModel;
 
 /**
- * The entries endpoint's whole restore: additive and idempotent, unlike
- * AccountRestorer's start() — no confirmation phrase, no wipe. Pass 1
- * (EntryPartInspector) validates against the account's actual rows while
- * writing nothing; pass 2 loads through a fresh RestoreEntryLoader built for
- * this call alone.
+ * The entries endpoint's restore: additive and idempotent, with no confirmation phrase and no wipe. EntryPartInspector
+ * validates while writing nothing, then a fresh RestoreEntryLoader, built for this call alone, loads.
  */
 final readonly class EntryPartRestorer
 {

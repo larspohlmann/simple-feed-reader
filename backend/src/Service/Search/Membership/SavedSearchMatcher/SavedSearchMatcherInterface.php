@@ -9,7 +9,7 @@ use App\Service\Search\Model\SavedSearchTermModel;
 
 /**
  * Which of a handful of candidate entries each saved search matches — the one
- * question the membership sweep asks, on whichever engine the host has (#1116).
+ * question the membership sweep asks, on whichever engine the host has.
  */
 interface SavedSearchMatcherInterface
 {

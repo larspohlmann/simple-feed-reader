@@ -21,12 +21,7 @@ use App\Service\Search\Model\SearchTermsModel;
 use App\Tests\DbTestCase;
 use App\Tests\Service\Search\FakeSearchIndexReader;
 
-/**
- * IndexedEntrySearch: asks the index for entry ids, then hydrates them
- * through EntryListRepository::rowsByIdsForUser. The reader itself is faked, so
- * this covers only what IndexedEntrySearch does with it — the hydration and
- * security behaviour of rowsByIdsForUser is EntryRowsByIdsTest's job.
- */
+/** What IndexedEntrySearch does with a faked reader; rowsByIdsForUser's own security is EntryRowsByIdsTest's job. */
 final class IndexedEntrySearchTest extends DbTestCase
 {
     private User $user;
@@ -108,9 +103,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
     public function testTheWholeWordModeReachesTheReaderWithTheTermsItQualifies(): void
     {
-        // The mode used to be left behind here — IndexedEntrySearch unpacked
-        // the terms and passed the list alone, so every index search ran as a
-        // substring search however the user typed it (#450).
+        // The terms' mode must reach the engine, not only their words.
         $reader = new FakeSearchIndexReader();
 
         $this->search($reader, new EntrySearchQuery(
@@ -184,11 +177,8 @@ final class IndexedEntrySearchTest extends DbTestCase
     }
 
     /**
-     * The bug this branch fixes. A ghost id — one the engine still returns
-     * but that no longer hydrates, exactly what a failed async
-     * EntryIndexer::forget() leaves behind — must not shrink matchCount. The
-     * caller (SearchPage, via EntryPage::withMatchCount) needs the engine's
-     * own count to keep offering a cursor, even though only one row survived.
+     * A ghost id, which a failed async EntryIndexer::forget() leaves behind, drops from the rows but not from
+     * matchCount: EntryPage::withMatchCount() needs the engine's count to keep offering a cursor.
      */
     public function testAGhostIdIsDroppedFromRowsButNotFromTheMatchCount(): void
     {
@@ -215,10 +205,7 @@ final class IndexedEntrySearchTest extends DbTestCase
 
     public function testAnUnreadSearchDropsTheReadCandidatesButResumesPastThem(): void
     {
-        // A read match sits BETWEEN two others so the filter removes a middle
-        // element: the surviving rows must be a clean list, not keep the gap in
-        // their keys. The last candidate is read, so the page must still resume
-        // past it rather than past the last unread row it shows.
+        // A read match in the middle must leave a clean list, and a read last candidate still sets the resume point.
         $readNewer = $this->entry('read-newer', '2026-07-13T00:00:00Z');
         $unread = $this->entry('unread', '2026-07-12T00:00:00Z');
         $readOlder = $this->entry('read-older', '2026-07-11T00:00:00Z');
@@ -267,12 +254,7 @@ final class IndexedEntrySearchTest extends DbTestCase
         self::assertSame(['read', 'unread'], $this->guids($result));
     }
 
-    /**
-     * The bug the engine-frontier cursor fixes: a page whose every match is
-     * already read leaves no unread row, but the engine may hold older unread
-     * matches. Resuming from the last candidate — not the last shown row — is
-     * what keeps the list going instead of ending it on the first read page.
-     */
+    /** A fully read page shows no row, but the engine may hold older unread matches: resume past the last candidate. */
     public function testAFullyReadPageStillCarriesAContinuationRow(): void
     {
         $read = $this->entry('read');

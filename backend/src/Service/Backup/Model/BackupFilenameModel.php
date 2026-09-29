@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Backup\Model;
 
 /**
- * The backup download's filename: app slug, release version, account and
- * export date, joined by "-". Both human- and machine-readable is a real
- * constraint here, not decoration — the name has to survive being pasted into
- * a shell, a support ticket, or a bug report, so every field is reduced to
- * [a-z0-9_-] and nothing else. Sanitisation lives in exactly one place
- * (self::sanitised()) so a stray "+" tag in an address, a pre-release suffix
- * like "-dev.3", or an accented character all collapse the same way.
+ * The backup download's filename: app slug, release version, account and export date, joined by "-". It must survive
+ * a shell, a ticket or a bug report, so every field goes through sanitised() down to [a-z0-9_-].
  */
 final readonly class BackupFilenameModel
 {
@@ -47,13 +42,8 @@ final readonly class BackupFilenameModel
     }
 
     /**
-     * "ada.lovelace+tag@fastmail.com" -> "ada-lovelace-tag-at-fastmail". The
-     * assembled "{local}-at-{domain}" string is sanitised again as a whole:
-     * an address with no "@", an empty local part, or an empty domain leaves
-     * one half of the join blank, which would otherwise surface as a
-     * doubled, leading, or trailing separator. Nothing upstream validates
-     * email *format* (only non-emptiness), so this is reachable in
-     * production, not merely theoretical.
+     * "ada.lovelace+tag@fastmail.com" -> "ada-lovelace-tag-at-fastmail". The joined string is sanitised again, because
+     * nothing validates an address's format and a missing "@" or empty half would leave a stray separator.
      */
     private function normalisedAccount(): string
     {
@@ -69,12 +59,7 @@ final readonly class BackupFilenameModel
         ));
     }
 
-    /**
-     * Lowercases, replaces every run of characters outside [a-z0-9_-] with a
-     * single "-", collapses any run of repeated "-" or "_" left behind by
-     * that substitution, and trims stray separators from both ends. The one
-     * normalisation rule the whole filename obeys.
-     */
+    /** Lowercases, turns every run outside [a-z0-9_-] into one "-", collapses repeated separators, trims both ends. */
     private static function sanitised(string $value): string
     {
         $lowered = strtolower($value);

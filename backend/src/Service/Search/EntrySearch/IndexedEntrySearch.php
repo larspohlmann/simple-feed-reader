@@ -13,26 +13,9 @@ use App\Service\Search\Index\SearchIndexReader\SearchIndexReaderInterface;
 use App\Service\Search\Model\EntrySearchResultModel;
 
 /**
- * Matching through the search index: ask the engine for entry ids scoped to
- * the caller's own subscribed feeds, then hydrate those ids through the same
- * projection every other list uses. That hydration is what makes per-user
- * read state and the subscription access check behave identically to the
- * rest of the app — the engine's own filter is never the last word on what
- * a caller may see, EntryListRepository::rowsByIdsForUser is.
- *
- * The unread refinement rides on that same hydration: the engine holds no
- * per-user read state, so it still ranks and paginates every match, and the
- * hydrated projection — which already folds in the caller's read state — is
- * what drops the read rows. The page then resumes past the last candidate the
- * engine returned, not the last unread row shown, so a page that is entirely
- * read still advances the cursor instead of ending the list (continuationRow).
- *
- * Reuses FeedRepository::idsSubscribedByUser (already answering "which feeds
- * may this user see" for AccountDeleter) rather than adding an equivalent
- * query to SubscriptionRepository, keeping that query in one place.
- *
- * Does not catch SearchEngineUnavailableException itself: a caller wanting
- * the LIKE fallback on that failure decorates this class instead.
+ * Asks the engine for ids within the caller's subscribed feeds, then hydrates them through
+ * EntryListRepository::rowsByIdsForUser, the access check that has the last word. The unread refinement drops read
+ * rows after hydration, and the page resumes past the last candidate, not the last row shown (continuationRow).
  */
 final readonly class IndexedEntrySearch implements EntrySearchInterface
 {
@@ -65,11 +48,8 @@ final readonly class IndexedEntrySearch implements EntrySearchInterface
         return new EntrySearchResultModel(
             rows: $query->unread ? $this->unreadOnly($candidates) : $candidates,
             matchedWords: $matches->matchedWords,
-            // The engine's own count, not count($rows): rowsByIdsForUser's
-            // subscription join can silently drop an id the engine returned (a ghost
-            // from a failed async index delete), and the unread filter below drops
-            // the read ones — but a dropped row still means the engine may hold
-            // more matches beyond this page.
+            // The engine's count, not count($rows): hydration drops ghost ids and the unread filter drops read rows,
+            // yet the engine may still hold matches beyond this page.
             matchCount: \count($matches->entryIds),
             continuationRow: $candidates[array_key_last($candidates)] ?? null,
         );

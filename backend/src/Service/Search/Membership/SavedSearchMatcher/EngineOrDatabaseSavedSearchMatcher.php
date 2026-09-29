@@ -8,10 +8,8 @@ use App\Repository\DatabaseSavedSearchMatcher;
 use App\Service\Search\SearchEngineCapability;
 
 /**
- * The engine when one is configured, the database otherwise — and never the
- * database as a fallback when the engine fails: a table filled by two
- * matchers with different recall would be sticky and wrong, so an engine
- * failure stops the sweep for this run instead (see SavedSearchMembershipSweep).
+ * The engine when one is configured, the database otherwise, and never the database after an engine failure: two
+ * matchers with different recall would leave sticky, wrong rows, so a failure stops this run's sweep instead.
  */
 final readonly class EngineOrDatabaseSavedSearchMatcher implements SavedSearchMatcherInterface
 {

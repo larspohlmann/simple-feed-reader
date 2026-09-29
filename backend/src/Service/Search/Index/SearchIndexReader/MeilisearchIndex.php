@@ -15,63 +15,28 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * The one class in this codebase that knows Meilisearch's wire format. Talks
- * to it as a plain JSON API over HttpClientInterface (see
- * Service/Recommendation/OpenAiCompatibleChatClient for the same pattern
- * against a different engine) rather than the vendor SDK, so its whole surface
- * — five endpoints — stays inspectable and testable with MockHttpClient
- * instead of pulled in behind a PSR-18 client the SDK would discover on its own.
- *
- * Every write Meilisearch accepts answers 202 with an enqueued task and indexes
- * afterwards (confirmed by probe, see `docs/meilisearch-wire-format.md`); this
- * class deliberately does NOT poll `GET /tasks/{taskUid}`. SearchIndexWriterInterface's
- * methods return void precisely because nothing here reports back whether a
- * write landed: an ingest-time call (EntryIndexer) is a side effect of storing
- * an entry that must never turn a refresh into a poll loop over the queue, and
- * `app:search:reindex` is the durable repair path if a write is lost. A caller
- * that genuinely needs to know a rebuild finished would be that repair command
- * itself, which can poll the task queue directly without ingest-time callers
- * paying for it.
+ * The one class that knows Meilisearch's wire format (docs/meilisearch-wire-format.md), spoken as plain JSON over
+ * HttpClientInterface rather than through the vendor SDK. Writes are enqueued (202) and never polled: an ingest-time
+ * write must not wait on the task queue, and app:search:reindex repairs a lost one.
  */
 final readonly class MeilisearchIndex implements SearchIndexReaderInterface, SearchIndexWriterInterface
 {
     private const string INDEX = 'entries';
 
-    /**
-     * The engine is a container on the same network as this process, not a
-     * remote provider: an answer here is never more than a fast local
-     * round-trip away, and the database is always a fallback away too, so a
-     * hung request must fail fast rather than hold a user's search open.
-     */
+    /** A local container with the database as fallback: a hung request must fail fast, not hold a search open. */
     private const float TIMEOUT_SECONDS = 3.0;
 
     /**
-     * Sentinel highlight delimiters, not `<mark>`/`</mark>`: an article can
-     * legitimately contain a literal "<mark>" (copy-pasted HTML in a feed body),
-     * which would make highlightedWordsIn() miss a real match or invent one from
-     * someone else's markup. These bracket-and-colon sequences can't come from
-     * Meilisearch's indexed text — PlainText::from() strips tags before either
-     * field reaches this class. Distinct open/close strings, not a single
-     * symmetric tag, let the extraction regex require both ends before matching.
+     * Sentinels, not <mark>: a feed body can contain a literal "<mark>", which would fake or hide a match in
+     * highlightedWordsIn(). Distinct open and close strings let the pattern require both ends.
      */
     private const string HIGHLIGHT_START = '[[sfr:hl]]';
     private const string HIGHLIGHT_END = '[[/sfr:hl]]';
 
     /**
-     * The wire shape measured against the running engine — see
-     * `docs/meilisearch-wire-format.md` for the probed requests this is built from.
-     *
-     * `searchableAttributes` covers every field #432 asks to be searchable —
-     * title, summary, plain-text content, and feed title — the ticket's
-     * full-content-matching goal: a word appearing only in an article body
-     * must find something.
-     *
-     * `sort` leads `rankingRules`: the keyset cursor pages by (effectiveDate, id), so a
-     * page must be the next rows in that order. A relevance rule ahead of it lets an
-     * old title match onto page one, and the cursor then skips every newer match.
-     *
-     * filterable/sortable list precisely the fields IndexSearchModel's cursor and
-     * feed scoping use.
+     * Built from the probes in docs/meilisearch-wire-format.md. `sort` leads `rankingRules` because the keyset cursor
+     * pages by (effectiveDate, id): a relevance rule ahead of it pulls an old match onto page one, and the cursor then
+     * skips every newer one.
      *
      * @var array{
      *     searchableAttributes: list<string>,
@@ -133,10 +98,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             return;
         }
 
-        // The primary key can never be inferred (see the class docblock's
-        // linked probe): every document below carries both `id` and `feedId`,
-        // two field names ending in "id", which is exactly the ambiguity
-        // Meilisearch refuses to guess through.
+        // `id` and `feedId` both end in "id", so Meilisearch cannot infer the key (docs/meilisearch-wire-format.md).
         $this->write('POST', '/indexes/' . self::INDEX . '/documents?primaryKey=id', [
             'json' => array_map($this->documentOf(...), $entries),
         ]);
@@ -167,16 +129,10 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             'q' => $this->queryStringFor($search->terms),
             'filter' => $this->filterFor($search),
             'sort' => ['effectiveDate:' . $search->order->value, 'id:' . $search->order->value],
-            // Every term must match somewhere in the document. The default ("last")
-            // silently drops trailing terms until something matches, which turns a
-            // two-word search that matches nothing into a one-word search that
-            // matches everything -- worse than no results (confirmed by probe).
+            // Every term must match; the default ("last") drops trailing terms until something matches.
             'matchingStrategy' => 'all',
             'limit' => $search->limit,
-            // title/summary are highlighted without being requested here: the
-            // probe confirmed `_formatted` carries them from
-            // attributesToHighlight alone, so retrieving anything beyond the
-            // id this class actually uses would be dead weight on every reply.
+            // `_formatted` carries title and summary from attributesToHighlight alone, so only the id is retrieved.
             'attributesToRetrieve' => ['id'],
             'attributesToHighlight' => ['title', 'summary'],
             'highlightPreTag' => self::HIGHLIGHT_START,
@@ -185,16 +141,8 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /**
-     * The `q` string for one search. A whole-word search — the trailing space
-     * the user typed, carried as SearchTermsModel::$isWholeWord — becomes one quoted
-     * phrase per term: a phrase matches the word exactly, where a bare term also
-     * matches by prefix and typo. That's why a whole-word search for "punk" was
-     * answering with "Pünktlichkeit" until #450; probed against v1.13, which
-     * narrowed that search from 82 hits to 16.
-     *
-     * A phrase search — the wrapping quotes the user typed, carried as
-     * SearchTermsModel::$isPhrase — becomes one quoted phrase over the whole term,
-     * Meilisearch's own way of asking for those words in order and adjacent (#702).
+     * Whole-word quotes each term: a bare term also matches by prefix and typo ("punk" found "Pünktlichkeit", #450).
+     * Phrase quotes the whole term, Meilisearch's way of asking for the words in order and adjacent.
      */
     private function queryStringFor(SearchTermsModel $terms): string
     {
@@ -211,12 +159,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         return implode(' ', array_map(static fn (string $word): string => '"' . $word . '"', $words));
     }
 
-    /**
-     * A double quote opens/closes a phrase in Meilisearch's query language, so
-     * one inside a term would close a whole-word phrase early. It becomes a
-     * space — matching what the LIKE engine's WordBoundaries already does, so a
-     * quote reads as a word boundary on both engines, not a character to match.
-     */
+    /** A double quote would close a phrase early; as a space it is a word boundary, as in the LIKE engine. */
     private static function withoutPhraseDelimiters(string $term): string
     {
         return str_replace('"', ' ', $term);
@@ -343,10 +286,7 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     /** @return list<string> */
     private function highlightedWordsIn(string $formattedField): array
     {
-        // Non-greedy capture between the sentinel pair: greedy would span from
-        // the first open tag to the LAST close tag in the field, swallowing
-        // any unhighlighted text between two separate matches into one
-        // "word".
+        // Non-greedy: a greedy capture would swallow the text between two separate matches.
         $pattern = '/' . preg_quote(self::HIGHLIGHT_START, '/') . '(.*?)' . preg_quote(self::HIGHLIGHT_END, '/') . '/';
         preg_match_all($pattern, $formattedField, $matches);
 
@@ -381,12 +321,8 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /**
-     * Search is optional: an install may leave MEILISEARCH_URL empty. Every
-     * write then does nothing rather than build a relative URL from an empty
-     * base, which the HTTP client refuses, turning each maintenance tick into a
-     * logged error (#816). find() needs no such guard — EntrySearchWithFallback
-     * never asks an unconfigured engine to read. A write discards the body, so
-     * this returns void where requestBody() returns the response.
+     * An empty MEILISEARCH_URL makes every write a no-op, not a relative-URL error on every maintenance tick. find()
+     * needs no guard: EntrySearchWithFallback never reads from an unconfigured engine.
      *
      * @param array<string, mixed> $options
      *
@@ -402,10 +338,8 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
     }
 
     /**
-     * The shared core of every call: send, read the whole body (a
-     * short-lived local response, never worth streaming), and turn a
-     * transport failure or a non-2xx status into the one exception every
-     * caller already knows how to handle.
+     * Sends, reads the whole body, and turns a transport failure or a non-2xx status into the one exception every
+     * caller handles.
      *
      * @param array<string, mixed> $options
      *

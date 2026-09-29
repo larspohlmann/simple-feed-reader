@@ -8,13 +8,8 @@ use App\Exception\ValidationException;
 use App\Service\Text\Support\Whitespace;
 
 /**
- * The terms a search runs on, parsed from one raw query string.
- *
- * Every term must match for a row to qualify, so each extra term is another
- * pair of unindexable LIKE predicates — hence the ceiling on how many a single
- * query may carry. A paste past that ceiling loses its tail rather than being
- * rejected: the user still gets the search they asked for, only narrower than
- * the ceiling would allow.
+ * The terms a search runs on, parsed from one raw query. Each term adds two unindexable LIKE predicates, hence the
+ * ceiling; a paste past it loses its tail rather than being rejected.
  */
 final readonly class SearchTermsModel
 {
@@ -23,15 +18,8 @@ final readonly class SearchTermsModel
     public const int MAX_TERMS = 6;
 
     /**
-     * What counts as whitespace for the mode check, trim, and term split alike —
-     * one definition, used everywhere in this class. Plain `\s` is ASCII-only,
-     * but the frontend's trailing-space detection (`normalizeSearchInput` in
-     * `query.ts`) runs on JavaScript's `\s`, which also matches a no-break space
-     * and other Unicode "space separator" characters a paste or autocorrect can
-     * leave behind. `\p{Z}` closes that gap: without it, a trailing no-break
-     * space reads as whole-word on the client but substring here, and since
-     * neither `trim()` nor a plain `\s+` split touches it, the character
-     * survives into the last term and the search silently matches nothing.
+     * Whitespace for the mode check, trim and split alike. `\p{Z}` matches what JavaScript's `\s` does in the client's
+     * normalizeSearchInput: a trailing no-break space must mean whole-word here too, not a stray character in a term.
      */
     private const string WHITESPACE = '[\s\p{Z}]';
 
@@ -50,31 +38,19 @@ final readonly class SearchTermsModel
         $trimmed = self::stripSurroundingWhitespace($input);
         self::assertLengthIsUsable($trimmed);
 
-        // A query wrapped in double quotes is one exact phrase -- the strongest
-        // signal, so it is read before the trailing-space check and wins when both
-        // are present. An empty phrase (only quotes and whitespace inside) is no
-        // phrase at all and falls through to ordinary parsing.
+        // Wrapping quotes are the strongest signal, so the phrase is read first; an empty phrase is no phrase.
         $phrase = self::phraseWithin($trimmed);
         if ($phrase !== null) {
             return new self([$phrase], isWholeWord: false, isPhrase: true);
         }
 
-        // The mode is a property of the raw input, decided before trimming: a
-        // trailing space is the signal, and trimming would erase it. It is one flag
-        // for the whole query, not per-term -- a per-term rule would mark every term
-        // but the last "whole word" just for being followed by a space while typing.
+        // Read before trim() erases the trailing space, and one flag for the whole query, not per term.
         $isWholeWord = (bool) preg_match('/' . self::WHITESPACE . '\z/u', $input);
 
         return self::split($trimmed, $isWholeWord);
     }
 
-    /**
-     * The same terms, for a caller that already holds the mode as its own
-     * field instead of as a trailing space or wrapping quotes — a saved search
-     * stores the mode apart from the bare term. Without this, such a caller
-     * has to re-encode a raw query string purely so fromInput can parse the
-     * mode back off it.
-     */
+    /** The same terms for a caller that stores the mode apart from the bare term, as a saved search does. */
     public static function fromTermAndMode(string $term, SearchMode $mode): self
     {
         $trimmed = self::stripSurroundingWhitespace($term);
@@ -96,11 +72,8 @@ final readonly class SearchTermsModel
     }
 
     /**
-     * The phrase inside a query wrapped in double quotes, or null when the
-     * query is not wrapped or wraps nothing usable. Inner quotes become
-     * boundaries (a stray one would otherwise reopen a phrase) and inner
-     * whitespace collapses to single spaces, so the phrase lines up with the
-     * single spaces of real article text.
+     * The phrase inside wrapping double quotes, or null when there is none usable. Inner quotes become boundaries and
+     * inner whitespace collapses to single spaces, to line up with real article text.
      */
     private static function phraseWithin(string $trimmed): ?string
     {

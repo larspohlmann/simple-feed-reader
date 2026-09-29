@@ -7,10 +7,8 @@ namespace App\Service\Backup\Pass;
 use App\Service\Backup\Model\BackupPartModel;
 
 /**
- * Accumulates one entry part's lines until it hits its byte or entry budget,
- * then drains itself into gzip-compressed bytes and resets for the next part.
- * Mutable by design — the per-export walk owns one instance and fills it as
- * it streams entries, which is exactly why it is not `readonly`.
+ * Accumulates one entry part's lines until its byte or entry budget is hit, then drains them as gzip bytes and resets
+ * for the next part.
  */
 final class BackupPartBuffer
 {
