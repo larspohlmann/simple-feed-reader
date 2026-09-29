@@ -17,7 +17,7 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
     private ?GrafanaSettingsSnapshotModel $memoised = null;
 
     public function __construct(
-        private readonly StoredGrafanaSettingsInterface $repository,
+        private readonly StoredGrafanaSettingsInterface $storedSettings,
         private readonly GrafanaApiKeyCipher $cipher,
         private readonly GrafanaEnvDefaults $defaults,
         private readonly GrafanaSettingsCache $cache,
@@ -71,7 +71,7 @@ final class EffectiveGrafanaSettings implements ProfilingConfigSourceInterface
     private function loadSingleton(): GrafanaSettingsSnapshotModel
     {
         return GrafanaSettingsSnapshotModel::fromEntity(
-            $this->repository->findSingleton() ?? new GrafanaSettingsEntity(),
+            $this->storedSettings->findSingleton() ?? new GrafanaSettingsEntity(),
         );
     }
 

@@ -15,7 +15,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class GrafanaSettings
 {
     public function __construct(
-        private StoredGrafanaSettingsInterface $repository,
+        private StoredGrafanaSettingsInterface $storedSettings,
         private EntityManagerInterface $entityManager,
         private GrafanaApiKeyCipher $cipher,
         private EffectiveGrafanaSettings $effective,
@@ -35,7 +35,7 @@ final readonly class GrafanaSettings
 
     public function update(GrafanaSettingsUpdateModel $update): void
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->storedSettings->findSingleton();
         if (null === $settings) {
             $settings = new GrafanaSettingsEntity();
             $this->entityManager->persist($settings);

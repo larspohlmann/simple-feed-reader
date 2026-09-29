@@ -19,7 +19,7 @@ final readonly class ImageVerificationSweep
     private const int BUDGET_SECONDS = 15;
 
     public function __construct(
-        private PendingImageVerificationRepository $repository,
+        private PendingImageVerificationRepository $pendingVerifications,
         private ImageVerifier $imageVerifier,
         private EntityManagerInterface $entityManager,
     ) {
@@ -34,7 +34,7 @@ final readonly class ImageVerificationSweep
         $retried = 0;
         $processed = 0;
 
-        foreach ($this->repository->findPendingImageVerification(self::MAX_PER_TICK) as $entry) {
+        foreach ($this->pendingVerifications->findPendingImageVerification(self::MAX_PER_TICK) as $entry) {
             if (microtime(true) >= $deadline) {
                 break;
             }

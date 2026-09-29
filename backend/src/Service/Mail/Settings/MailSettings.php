@@ -18,7 +18,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class MailSettings
 {
     public function __construct(
-        private MailServerSettingsRepository $repository,
+        private MailServerSettingsRepository $mailServerSettings,
         private EntityManagerInterface $entityManager,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
@@ -28,7 +28,7 @@ final readonly class MailSettings
 
     public function overview(): MailSettingsOverviewModel
     {
-        $saved = $this->repository->findSingleton();
+        $saved = $this->mailServerSettings->findSingleton();
         $proxy = $this->proxySettings->current();
 
         return new MailSettingsOverviewModel(
@@ -40,7 +40,7 @@ final readonly class MailSettings
 
     public function resetToEnvironment(): void
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->mailServerSettings->findSingleton();
         if (null !== $settings) {
             $this->entityManager->remove($settings);
             $this->entityManager->flush();
@@ -49,7 +49,7 @@ final readonly class MailSettings
 
     public function update(MailSettingsUpdateModel $update): void
     {
-        $existing = $this->repository->findSingleton();
+        $existing = $this->mailServerSettings->findSingleton();
         $this->guardAgainstEnablingWithoutATransport($update->connection);
         $this->guardAgainstIncompleteAuthenticatedRow($update, $existing);
         $this->guardAgainstProxyRoutingWithoutAProxy($update->connection);
