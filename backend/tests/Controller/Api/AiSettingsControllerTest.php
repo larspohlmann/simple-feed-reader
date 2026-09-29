@@ -20,10 +20,8 @@ use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
 /**
- * The provider is never really called: the catalog is replaced in the
- * container, so these cases prove the endpoints' own behaviour without a
- * network. Tokens are minted from the JWT manager so the login throttler's
- * filesystem pool stays out of it.
+ * The catalog is replaced in the container, so no provider is ever called. Tokens come from the JWT manager, which
+ * keeps the login throttler's filesystem pool out of these cases.
  */
 final class AiSettingsControllerTest extends ApiTestCase
 {
@@ -377,13 +375,8 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * Clearing the cap is a deliberate feature, so it has to be asked for
-     * rather than fallen into. A body that never names the key -- `{}`, or the
-     * misspelling below, since unknown keys are ignored -- is a mistake, and
-     * answering 200 to it dropped a cap the account had set and raised its
-     * effective batch size back to the packer's default (#445). The stored
-     * value is re-read afterwards because the silent reset was the damage, not
-     * the status code.
+     * Clearing the cap must be asked for: a body that never names the key is a mistake, and answering 200 dropped
+     * the account's cap (#445). The stored value is re-read, since the silent reset was the damage.
      */
     public function testSettingMaxBatchSizeRejectsABodyThatOmitsTheKey(): void
     {
@@ -636,10 +629,8 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * A stored key that no longer decrypts — a rotated INSTANCE_SECRET_KEY, an edited
-     * row, a row moved between accounts. Without the mapping this is an
-     * uncaught throw, so the account gets an opaque 500 on every read and no
-     * hint that entering the key again is the way out.
+     * A stored key that no longer decrypts (rotated INSTANCE_SECRET_KEY, edited or moved row) must answer 422 with a
+     * way out, not an opaque 500 on every read.
      */
     public function testAnUnreadableStoredKeyIsReportedAsUnprocessable(): void
     {
@@ -665,10 +656,8 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * Sweeps the write paths and demands the stored secret appears in none of
-     * them. The sweep carries its own positive control: a body containing the
-     * key's last four characters proves the response really was assembled
-     * from the saved row.
+     * No write path returns the stored secret; a body carrying the key's last four characters is the sweep's
+     * positive control.
      */
     public function testNoEndpointEverReturnsTheApiKey(): void
     {
@@ -707,13 +696,8 @@ final class AiSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * Pins that the budget is actually spent. Every other case proves only
-     * that the limiter does NOT fire, so a limiter argument bound to the
-     * wrong service — it autowires by parameter name — would leave the whole
-     * suite green with the endpoints uncapped.
-     *
-     * One add, then the rest of the budget spent on the model list — both
-     * routes share the budget and both pay into it.
+     * Pins that the budget is spent: every other case proves only that the limiter does not fire, so a limiter bound
+     * to the wrong service (it autowires by parameter name) would pass them. The add and the model list share it.
      */
     public function testTheProviderBudgetIsSpentAndRunsOut(): void
     {
@@ -738,12 +722,7 @@ final class AiSettingsControllerTest extends ApiTestCase
         self::assertResponseStatusCodeSame(429);
     }
 
-    /**
-     * The other side of the same budget: a request that cannot make an
-     * outbound call must not pay for one. More refusals than the budget
-     * holds, and every one of them still answers 404 rather than turning
-     * into a 429.
-     */
+    /** A lookup that cannot reach the provider must not spend its budget: more refusals than it holds, all 404. */
     public function testAnOwnedConfigurationLookupFailureDoesNotSpendTheProviderBudget(): void
     {
         $client = $this->clientAnswering(['gpt-4o']);

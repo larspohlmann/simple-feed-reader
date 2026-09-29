@@ -11,7 +11,6 @@ use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/** `/api/admin/mail/errors` is covered by the `^/api/admin/` ROLE_ADMIN prefix rule. */
 final class AdminMailErrorsControllerTest extends ApiTestCase
 {
     private const string ERRORS = '/api/admin/mail/errors';

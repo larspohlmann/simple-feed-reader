@@ -14,13 +14,6 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/**
- * The two registration-gate toggles plus the admin-configured passkey
- * relying party (#624), all admin-facing. `/api/admin/settings` is covered by
- * the existing `^/api/admin/` ROLE_ADMIN prefix rule in security.yaml — no
- * new access_control entry needed, confirmed by reading it before writing
- * this test.
- */
 final class AdminSettingsControllerTest extends ApiTestCase
 {
     use EnablesMailInTests;
@@ -29,12 +22,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
 
     private KernelBrowser $client;
 
-    /**
-     * Created once, up front: createClient() refuses to run after any other
-     * container access (factory(), entityManager()…) has already booted the kernel, so
-     * every other helper below must reuse this one browser instead of
-     * calling createClient() again.
-     */
+    /** One browser for the whole test: createClient() refuses once any other container access has booted the kernel. */
     protected function setUp(): void
     {
         parent::setUp();
@@ -98,11 +86,6 @@ final class AdminSettingsControllerTest extends ApiTestCase
         ];
     }
 
-    /**
-     * There is no enrolment endpoint yet (it arrives in a later task), so the
-     * fixture builds the row directly through the entity manager, exactly as
-     * an enrolment would leave it.
-     */
     private function givenAnEnrolledPasskey(): UserPasskey
     {
         $owner = $this->factory()->create('passkey-owner-' . bin2hex(random_bytes(4)) . '@example.com');
@@ -141,8 +124,7 @@ final class AdminSettingsControllerTest extends ApiTestCase
                 'passkeyRpName' => null,
                 // Derived from APP_FRONTEND_URL (http://localhost:4200) in the test env.
                 'passkeyRpIdEffective' => 'localhost',
-                // Off by default (#624 follow-up, addendum): a fresh install
-                // ships with passkey sign-in invisible until an admin opts in.
+                // Off by default: a fresh install hides passkey sign-in until an admin opts in.
                 'passkeySignInEnabled' => false,
             ],
             $this->payload($client),
@@ -384,10 +366,8 @@ final class AdminSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * The case that proves this guard is not merely "any settings change":
-     * publicBaseUrl moves to an unrelated host under the same registrable
-     * suffix, but passkeyRpId is explicitly pinned throughout, so the
-     * effective id never moves and no confirmation is required.
+     * Proves the guard is not "any settings change": publicBaseUrl moves to another host under the same suffix, but
+     * the pinned passkeyRpId keeps the effective id, so no confirmation is needed.
      */
     public function testPinningTheRelyingPartyIdSurvivesAPublicBaseUrlChangeWithNoConfirmation(): void
     {
@@ -434,10 +414,8 @@ final class AdminSettingsControllerTest extends ApiTestCase
     }
 
     /**
-     * The instance-wide passkey sign-in switch (#624 follow-up, addendum):
-     * off by default — a fresh install ships with the feature invisible
-     * until an admin opts in — and a PUT that turns it on round-trips on the
-     * next GET.
+     * Off by default, so a fresh install hides passkey sign-in until an admin opts in; a PUT that enables it
+     * round-trips.
      */
     public function testPasskeySignInEnabledDefaultsToFalseAndRoundTrips(): void
     {

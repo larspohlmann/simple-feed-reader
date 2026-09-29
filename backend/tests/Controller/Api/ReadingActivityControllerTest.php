@@ -17,10 +17,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * The reading-activity chart's endpoint (#896): thirty days of per-day open
- * counts in the viewer's zone. Read-only, so ownership is proven the way the
- * run-history endpoint proves it — an anonymous request is refused, and the
- * window drops opens that fall outside it.
+ * Read-only, so ownership is proven as for the run history: an anonymous request is refused, and opens outside the
+ * thirty-day window are dropped.
  */
 final class ReadingActivityControllerTest extends WebTestCase
 {

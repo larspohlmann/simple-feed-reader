@@ -14,10 +14,6 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * ROLE_ADMIN is enforced by the `^/api/admin/` prefix rule in security.yaml,
- * not by a per-action attribute here.
- */
 #[Route('/api/admin/proxy')]
 final readonly class AdminProxyController
 {

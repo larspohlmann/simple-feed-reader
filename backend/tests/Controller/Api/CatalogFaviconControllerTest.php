@@ -106,11 +106,8 @@ final class CatalogFaviconControllerTest extends WebTestCase
     }
 
     /**
-     * The picker renders these with plain <img> tags, which cannot carry the
-     * bearer JWT, so the endpoint MUST be reachable anonymously. It holds no user
-     * data — the subscribed flags live on the authenticated /api/catalog list —
-     * so serving the bytes without auth is safe. Guards the security.yaml rule
-     * against a regression that would render every favicon as a broken image.
+     * Plain <img> tags cannot carry the bearer JWT, so the favicon must be public; it holds no user data. Guards
+     * security.yaml's PUBLIC_ACCESS rule for it.
      */
     public function testTheFaviconIsPubliclyReachableWithoutAuthentication(): void
     {

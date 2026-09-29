@@ -14,15 +14,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Deletes the throwaway accounts the e2e suites leave behind. The backend suite
- * mints `e2e-…@example.com` and the Playwright onboarding journey registers
- * `onboarding-…@example.com`; both confirm and approve their accounts, so the
- * unverified-account purge never reclaims them and the dev database grows run
- * after run (#184). The e2e runners call this before each run, so cleanup is
- * automatic rather than a thing to remember.
- *
- * Refuses to run outside dev/test: it deletes accounts by an email pattern, and
- * that pattern must never be evaluated against production data.
+ * Deletes the confirmed e2e fixture accounts (`e2e-…@example.com`, `onboarding-…@example.com`) that the
+ * unverified-account purge never reclaims; the e2e runners call it before each run. Refuses outside dev/test.
  */
 #[AsCommand(
     name: 'app:e2e:purge-users',
@@ -62,10 +55,8 @@ final class E2ePurgeUsersCommand extends Command
         $fixtures = $this->users->findE2eFixtureAccounts(self::PROTECTED_ADMIN_EMAIL);
 
         foreach ($fixtures as $user) {
-            // remove(), not a DQL bulk DELETE: going through the ORM keeps the unit
-            // of work aware of what left, and each account's subscriptions, tags and
-            // read state follow via FK ON DELETE CASCADE. Same reasoning as
-            // PurgeUnverifiedUsersCommand.
+            // remove(), not a bulk DQL DELETE, so the unit of work knows what left; subscriptions, tags and read state
+            // follow by FK ON DELETE CASCADE.
             $this->entityManager->remove($user);
         }
 

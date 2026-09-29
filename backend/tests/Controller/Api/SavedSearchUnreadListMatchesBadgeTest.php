@@ -15,12 +15,8 @@ use App\Tests\Support\ApiTestCase;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 
 /**
- * The regression test for the Docker bug the black-box e2e once caught
- * (spec §10): the badge and the unread list must agree even when the newest
- * members of a saved search are read and only an older one is still unread.
- * Both reads key on effectiveDate + unread state, never on createdAt or
- * insertion order, so the fixtures are built directly against the membership
- * table rather than through the matcher — DB-only and engine-independent.
+ * The badge and the unread list must agree when a saved search's newest members are read and only an older one is
+ * unread. Fixtures go straight into the membership table: both reads key on effectiveDate and unread state alone.
  */
 final class SavedSearchUnreadListMatchesBadgeTest extends ApiTestCase
 {

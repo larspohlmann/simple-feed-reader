@@ -43,12 +43,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     use SeedsUsers;
 
     /**
-     * candidatePoolSize 20 with the connection's per-batch ceiling forced to
-     * 10 makes packBatches produce exactly two batches of 10 (see
-     * seedTwoBatchFixture) -- enough to prove the drain command's loop
-     * actually loops, which a single-batch fixture cannot: one sweep
-     * finalizes a single-batch run outright, so a command that replaced its
-     * `while` with a one-shot `if` would still pass a single-batch test.
+     * With a per-batch ceiling of 10 this packs into two batches, so one sweep cannot finish the run: a one-shot `if`
+     * in place of the command's `while` would still pass a single-batch fixture.
      */
     private const int TWO_BATCH_ENTRY_COUNT = 20;
 
@@ -64,14 +60,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * The whole point of the drainer: it does not advance once and exit, it
-     * loops until nothing is active. batchConcurrency defaults to 1, so a
-     * snapshotted two-batch run needs four sweeps to complete -- one
-     * distillation tick, one provider tick per batch, then one consolidation
-     * tick (#493) -- and a fifth sweep to observe that nothing is left; a
-     * one-shot `if` instead of the `while` would leave this run running
-     * forever, one sweep short. Completion proves the loop really looped, not
-     * just that it fired once.
+     * A two-batch run needs four sweeps (distillation, one per batch, consolidation) and a fifth that finds nothing,
+     * so reaching completion proves the loop really looped.
      */
     public function testDrainsAnActiveRunToCompletionAndReleasesTheLock(): void
     {
@@ -126,12 +116,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         self::assertSame(RunStatus::Pending, $run->getStatus());
     }
 
-    /**
-     * A stuck run must never pin a process forever: the cap ends the loop
-     * with the run still active, and the cron tick respawns later. The
-     * TickingClock steps a full hour per reading, so the very first cap
-     * check is already past MAX_RUNTIME_SECONDS.
-     */
+    /** The TickingClock steps an hour per reading, so the first cap check is already past MAX_RUNTIME_SECONDS. */
     public function testStopsAtTheWallClockCapWithTheRunStillActive(): void
     {
         $user = $this->user('drain-wall-cap@example.test');
@@ -150,12 +135,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * A lock genuinely taken over by a second drainer must degrade to the
-     * same clean handoff as never winning acquire() in the first place: the
-     * exception refresh() throws must never escape the command, and the bid
-     * to take the key back must lose, leaving the work to its new owner. The
-     * two-batch fixture is what makes the handoff observable -- the run is
-     * still active when this drainer walks away, one sweep short of done.
+     * Another drainer's takeover must look like losing acquire(): refresh()'s exception never escapes, the re-bid
+     * loses, and the two-batch run is left active, one sweep short.
      */
     public function testHandsOverCleanlyWhenAnotherDrainerHoldsTheLock(): void
     {
@@ -175,13 +156,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         self::assertNotNull($this->runs()->findActiveForUser($user));
     }
 
-    /**
-     * A refresh that fails only proves the key is gone, not that anyone else
-     * took it -- and abandoning a healthy drain on that reading drops the run
-     * back to the once-a-minute cron. So the drainer bids for the key again
-     * and keeps going, which is what carrying this two-batch run all the way
-     * to COMPLETED proves: every refresh in this store lapses the key.
-     */
+    /** Every refresh in this store lapses the key, so reaching COMPLETED proves the drainer re-bids and keeps going. */
     public function testKeepsDrainingWhenTheLockKeyMerelyExpired(): void
     {
         $user = $this->user('drain-lock-expired@example.test');
@@ -209,13 +184,8 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * The drainer is a worker only while it lives. Leaving the heartbeat
-     * fresh on the way out makes the poll driver report the run as running in
-     * the background, and stops the cron's respawn net from spawning a
-     * replacement, for up to WorkerPresence::FRESH_SECONDS -- eleven minutes
-     * of a frozen run on a worker-less install (#371 final review, Finding 1).
-     * The wall cap is the cheapest way to leave the command with a run still
-     * active, which is exactly the state that would freeze.
+     * A drainer that exits with runs still active must clear its heartbeat, or the run freezes for up to
+     * WorkerPresence::FRESH_SECONDS on a worker-less install. The wall cap is the cheapest way to exit like that.
      */
     public function testSurrendersTheWorkerHeartbeatWhenItExitsWithRunsStillActive(): void
     {
@@ -235,18 +205,9 @@ final class RecommendationDrainCommandTest extends DbTestCase
     }
 
     /**
-     * The lock TTL is pinned as a RELATIONSHIP, because that is what the
-     * choice actually is (#371 follow-up). Above one call on the standard
-     * profile, so the usual sweep -- one run, one call -- never lapses at all.
-     * Below one worst-case sweep, deliberately: the TTL is what a SIGKILLed
-     * drainer costs a replacement, and sizing it for the worst sweep bought a
-     * five-hour respawn blackout to prevent a lapse that
-     * testKeepsDrainingWhenTheLockKeyMerelyExpired proves is survivable.
-     *
-     * The standard profile is the right yardstick here even though a slow
-     * connection can outlast the TTL in one call (#433): that is the same
-     * survivable lapse, and holding the drain lock for a multiple of an hour
-     * to avoid it would make a SIGKILL cost hours of respawn blackout.
+     * Pinned as a relationship: above one standard-profile call, so the usual sweep never lapses, and below a
+     * worst-case sweep, because the TTL is also the respawn blackout after a SIGKILL. A lapse is survivable
+     * (testKeepsDrainingWhenTheLockKeyMerelyExpired).
      */
     public function testTheLockOutlivesOneProviderCallButNotAWorstCaseSweep(): void
     {
@@ -270,13 +231,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         self::assertTrue($this->command()->getDefinition()->hasOption('detach'));
     }
 
-    /**
-     * The lock release is a `finally`, not a trailing statement, and a
-     * drainer that dies mid-drain without releasing parks the key for
-     * LOCK_TTL_SECONDS. A clock that throws on its first reading is the
-     * cheapest way to make the drain body fail; what matters is that the key
-     * is free afterwards.
-     */
+    /** The release sits in a `finally`; a clock that throws on its first reading is the cheapest failing drain body. */
     public function testReleasesTheLockEvenWhenTheDrainBodyThrows(): void
     {
         $command = $this->command(new ThrowingClock());
@@ -326,11 +281,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
         return $presence;
     }
 
-    /**
-     * Built by hand for the same inlining reason as WorkerRunSweepTest: a
-     * private service with too few references may be inlined away, and this
-     * command is hand-built anyway so a test clock can replace real sleeping.
-     */
+    /** Hand-built because the test builds the command itself, so a test clock can replace real sleeping. */
     private function sweep(): WorkerRunSweep
     {
         return new WorkerRunSweep(
@@ -463,12 +414,7 @@ final class RecommendationDrainCommandTest extends DbTestCase
 
         return $advancer;
     }
-    /**
-     * A heartbeat over the same presence the sweep marks with. It only ever
-     * writes while a completion is streaming, and nothing in these tests
-     * streams — StubChatClient answers in one piece — so it is inert here and
-     * does not disturb the mark counts the presence clocks pin.
-     */
+    /** Writes only while a completion streams; StubChatClient answers in one piece, so the mark counts stay put. */
     private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
     {
         return new SweepStreamHeartbeat($presence, new MockClock());

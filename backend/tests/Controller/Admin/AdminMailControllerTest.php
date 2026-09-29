@@ -11,7 +11,6 @@ use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 
-/** `/api/admin/mail` is covered by the `^/api/admin/` ROLE_ADMIN prefix rule in security.yaml. */
 final class AdminMailControllerTest extends ApiTestCase
 {
     private const string MAIL = '/api/admin/mail';
@@ -147,12 +146,8 @@ final class AdminMailControllerTest extends ApiTestCase
     }
 
     /**
-     * The unit test (MailConnectionTesterTest) constructs the request DTO
-     * directly, bypassing the validator and Security::getUser() — it cannot
-     * prove the tester reaches a real transport for a logged-in admin. This
-     * goes through the actual HTTP PUT and POST /test as an admin, with an
-     * unreachable host, and checks the failure is a transport error, not the
-     * "not_configured" short circuit.
+     * MailConnectionTesterTest skips the validator and the logged-in admin, so this drives the real PUT and POST /test
+     * at an unreachable host and expects a transport error, not "not_configured".
      */
     public function testTestConnectionReachesTheTransportForAnUnreachableServer(): void
     {

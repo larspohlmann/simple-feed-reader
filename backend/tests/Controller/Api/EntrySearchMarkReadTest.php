@@ -77,11 +77,8 @@ final class EntrySearchMarkReadTest extends ApiTestCase
 
     public function testHundredCharWholeWordTermIsAccepted(): void
     {
-        // The whole-word request raw `q` carries a trailing space
-        // (`term . ' '`), so a 100-char term sends 101 raw characters. The
-        // trimmed length SearchTermsModel::fromInput() enforces stays within
-        // bounds; a redundant Length constraint on this DTO used to reject
-        // it at 101 (#581 off-by-one).
+        // The whole-word raw `q` carries a trailing space, so a 100-character term sends 101; only the trimmed length
+        // SearchTermsModel::fromInput() enforces may count.
         $client = self::createClient();
         $user = $this->factory()->create('hundred-char-term@example.com');
         $headers = $this->authHeader($user);

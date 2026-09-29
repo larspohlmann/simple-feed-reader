@@ -18,12 +18,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-/**
- * Imports a catalog document from disk, defaulting to the one this release
- * ships. The admin area is the primary route; this exists so a fresh
- * environment — a developer's box, the e2e stack, a new production install —
- * can be seeded without clicking through the UI.
- */
+/** Imports a catalog document from disk (default: the one this release ships) to seed an install without the UI. */
 #[AsCommand(
     name: 'app:catalog:import',
     description: 'Import a catalog OPML document',

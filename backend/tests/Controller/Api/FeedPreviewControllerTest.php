@@ -52,13 +52,8 @@ final class FeedPreviewControllerTest extends WebTestCase
     }
 
     /**
-     * FeedPreviewService is `final readonly`, so it cannot be subclassed into
-     * a mock, and it is wired from a private container definition, so it
-     * cannot be swapped directly either. Instead swap its one I/O dependency
-     * — FeedFetcherInterface, already exposed public in services_test.yaml
-     * for exactly this reason (see EntryReaderControllerTest's analogous use
-     * of ArticleExtractorInterface) — and let the real FeedPreviewService and
-     * FeedParser run unmodified against the stubbed fetch result.
+     * FeedPreviewService is final and privately wired, so the test swaps its one I/O dependency, FeedFetcherInterface
+     * (public in services_test.yaml for this), and lets the real service and parser run.
      */
     private function installFetcher(StubFeedFetcher $fetcher): void
     {
@@ -84,9 +79,6 @@ final class FeedPreviewControllerTest extends WebTestCase
 
     private function feedXml(): string
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         return /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rss version="2.0"
@@ -198,11 +190,8 @@ final class FeedPreviewControllerTest extends WebTestCase
     }
 
     /**
-     * The same hand-made-request bypass SubscriptionController closes: without
-     * this guard, a scraped preview would run the extractor for an account that
-     * never sees a scraped candidate offered to it. No fetcher is stubbed, so a
-     * regression that lets the request reach the fetcher fails loudly here
-     * rather than silently returning a preview.
+     * The hand-made-request bypass SubscriptionController also closes: a scraped preview for an account with
+     * scraping off. No fetcher is stubbed, so a request that reaches it fails loudly.
      */
     public function testScrapedFormatPreviewReturnsProblemWhenScrapingIsDisabled(): void
     {
@@ -273,9 +262,6 @@ final class FeedPreviewControllerTest extends WebTestCase
     {
         $client = self::createClient();
         [$headers] = $this->auth('preview-notfeed@example.com');
-        // @lang TEXT: this body is the input under test — the preview must fail
-        // on it — so it stays exactly as written rather than growing a `lang`
-        // attribute to satisfy PhpStorm's injected-HTML check.
         $this->installFetcher(
             $this->fetcherWithBody(/** @lang TEXT */ '<html><body>Not a feed at all.</body></html>'),
         );

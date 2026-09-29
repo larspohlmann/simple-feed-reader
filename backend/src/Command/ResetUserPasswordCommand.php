@@ -16,12 +16,8 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
- * Resets one user's password from a shell. The supported recovery path on a
- * mailless instance (issue #230), where the email reset flow cannot deliver.
- * With --generate the command mints a random password and prints it once, for
- * the operator to relay out of band; otherwise it reads one from a hidden
- * prompt. Never takes the password as an argument — that leaks into shell
- * history and the process list.
+ * Resets a user's password from a shell, the recovery path on an instance that sends no mail. --generate prints a
+ * random one once; otherwise a hidden prompt reads it. Never an argument: shell history and ps would show it.
  */
 #[AsCommand(
     name: 'app:user:reset-password',

@@ -24,12 +24,8 @@ final class RefreshControllerTest extends WebTestCase
         /** @var CacheItemPoolInterface $rateLimiterCache */
         $rateLimiterCache = self::getContainer()->get('test.cache.rate_limiter');
         $rateLimiterCache->clear();
-        // refresh.run.cache is a filesystem pool with a ten-minute TTL and
-        // reused auto-increment ids, so a run left behind by an earlier test
-        // process could be resumed by a same-id user here and corrupt the
-        // `progress` assertions with no cause visible in this file. Not
-        // reachable today — every test in this class ends `completed` and
-        // TrackedRefreshRunner forgets a completed run — but cheap insurance.
+        // refresh.run.cache is a filesystem pool and ids are reused, so a run another test process left could be
+        // resumed here and corrupt `progress`. Cheap insurance.
         /** @var CacheItemPoolInterface $refreshRunCache */
         $refreshRunCache = self::getContainer()->get('test.cache.refresh_run');
         $refreshRunCache->clear();
@@ -63,9 +59,7 @@ final class RefreshControllerTest extends WebTestCase
         self::assertIsArray($body);
         self::assertSame('completed', $body['status']);
         self::assertSame(['done' => 0, 'total' => 0], $body['progress']);
-        // `total` was this slice's server-capped batch size sitting next to a
-        // run-wide `remaining`, and dividing one by the other is issue #721. It is
-        // gone, and this asserts it stays gone.
+        // No `total`: a slice's capped batch size beside a run-wide `remaining` invited dividing the two (#721).
         self::assertArrayNotHasKey('total', $body);
     }
 
@@ -194,14 +188,8 @@ final class RefreshControllerTest extends WebTestCase
     }
 
     /**
-     * The per-feed and the per-tag scope each sweep exactly one feed, so both
-     * end in the same claim about the run.
-     *
-     * Asserted as an invariant rather than as two literals: either scope may
-     * answer `completed` or `partial`, and a partial slice leaves feeds in
-     * `remaining` that belong in the run's denominator. `total` is absent
-     * because it was this slice's server-capped batch size sitting next to a
-     * run-wide `remaining`, and dividing one by the other is issue #721.
+     * Both scopes sweep one feed, so both must claim a run of one: asserted as an invariant because either may answer
+     * `completed` or `partial`, and a partial slice leaves feeds in `remaining`.
      */
     private function assertReportsARunOfOneFeed(mixed $body): void
     {

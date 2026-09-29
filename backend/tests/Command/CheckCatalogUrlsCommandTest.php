@@ -67,13 +67,6 @@ final class CheckCatalogUrlsCommandTest extends KernelTestCase
         self::assertSame(0, $tester->getStatusCode());
     }
 
-    /**
-     * A multi-byte prefix long enough that its BYTE length already exceeds
-     * the 2048 head we read, while its CHARACTER length does not: reading by
-     * byte instead of by character would cut the head off before ever
-     * reaching the feed tag that follows, mistaking a healthy feed for a
-     * broken one.
-     */
     public function testAFeedTagPastTheByteLimitButWithinTheCharacterLimitIsStillFound(): void
     {
         $multiByteFiller = str_repeat('é', 2000);

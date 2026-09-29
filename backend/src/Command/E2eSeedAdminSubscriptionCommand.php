@@ -25,24 +25,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Ensures the seeded e2e admin owns a VISIBLE subscription to the fixture feed.
- * With zero subscriptions the reader shell redirects to onboarding instead of
- * mounting, so every Playwright smoke waiting for reader chrome times out (#222).
- *
- * The fixture feed's URL never resolves and so is never fetched; it is marked
- * already-fetched to skip the post-onboarding refresh sweep. Its one entry and
- * long, multi-clause title exist because the magazine-kicker smokes measure a
- * rendered row and need a title long enough to exercise the one-line clip (#155).
- *
- * Every step (feed, entry, subscription, visibility) is checked and repaired
- * independently rather than inferred from one "subscription exists" guard: a feed
- * can outlive its entry, and an entry can go invisible via an entry_state read
- * marker or a markedReadUntil watermark. Either failure reproduces an empty
- * reader with the subscription still in the sidebar, silently disarming the
- * #155 clip specs while the suite reports green.
- *
- * Runs after app:e2e:seed-admin, which creates the admin this attaches to.
- * Refuses to run under APP_ENV=prod, the same guard as its sibling.
+ * Gives the seeded e2e admin a visible subscription to a never-fetched fixture feed: without one the reader redirects
+ * to onboarding and every Playwright smoke times out. Each step is repaired on its own, so a re-run heals any of them.
+ * Runs after app:e2e:seed-admin; refuses under APP_ENV=prod.
  */
 #[AsCommand(
     name: 'app:e2e:seed-admin-subscription',
@@ -57,11 +42,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
      */
     private const string FIXTURE_FEED_URL = 'https://fixtures.sfr-e2e.example/feed.xml';
 
-    /**
-     * Deliberately long and multi-clause: it is the "source" the magazine kicker
-     * line renders, and the one-line-clip smokes need a title that overflows a
-     * narrow row so the ellipsis path is exercised (#155).
-     */
+    /** Long and multi-clause on purpose: the one-line-clip smokes need a magazine kicker that overflows its row. */
     private const string FIXTURE_FEED_TITLE =
         'SFR E2E Fixtures - Das Beste am Norden - Radio - Fernsehen - Nachrichten - Sport - Wetter';
 
@@ -140,12 +121,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         return $feed;
     }
 
-    /**
-     * Checked independently of feed creation: nothing else in this codebase
-     * deletes an Entry without its Feed today, but this command must not
-     * assume that stays true forever, and a re-run must repair a feed that
-     * somehow lost its entry just as readily as one that never had it.
-     */
+    /** Checked apart from the feed: a re-run must repair a feed that lost its entry, however that came about. */
     private function ensureSampleEntry(Feed $feed): Entry
     {
         $entry = $this->entries->findOneBy(['feed' => $feed]);
@@ -177,12 +153,8 @@ final class E2eSeedAdminSubscriptionCommand extends Command
     }
 
     /**
-     * EntryRepository's unread filter (the reader's default view) hides an
-     * entry once the subscription's markedReadUntil watermark reaches its
-     * effective date, or once the caller's entry_state row marks it read.
-     * Both are cleared unconditionally rather than trusted from a prior run,
-     * because either one alone reproduces the same symptom as a missing
-     * entry: an empty reader with the subscription still in the sidebar.
+     * Clears both things that hide the entry from the default unread view, the subscription's markedReadUntil
+     * watermark and the admin's entry_state read mark, whatever a prior run left.
      */
     private function ensureEntryVisible(User $admin, Subscription $subscription, Entry $entry): void
     {

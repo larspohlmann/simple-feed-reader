@@ -15,12 +15,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
-/**
- * Turns the sweep's JSONL files into the ranked, clickable report. Separate from
- * the sweep because it is instant and gets re-run every time a threshold or a
- * phrase is questioned — re-fetching a thousand pages to re-score them would be
- * the whole cost of the audit for none of its value.
- */
+/** Ranks the sweep's JSONL files into the clickable report; separate, so re-scoring never re-fetches the pages. */
 #[AsCommand(
     name: 'app:reader:audit:report',
     description: 'Rank the reader-audit findings and write the clickable HTML report',

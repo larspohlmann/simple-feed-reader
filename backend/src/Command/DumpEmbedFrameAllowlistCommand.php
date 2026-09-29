@@ -13,11 +13,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Writes the reader client's embed allow-list from the backend providers, so the
- * two never drift: the frontend upgrades a link to an `<iframe>` only when its
- * URL matches one of these patterns, and each pattern is a provider's own
- * `framePattern()` (#1048). Run this after adding or changing an embed provider;
- * `EmbedFrameAllowlistTest` fails the build until the committed file is current.
+ * Writes the frontend's embed allow-list from each provider's framePattern(), so the two never drift. Run it after
+ * changing an embed provider; EmbedFrameAllowlistTest fails until the committed file is current.
  */
 #[AsCommand(
     name: 'app:embed:dump-frame-allowlist',

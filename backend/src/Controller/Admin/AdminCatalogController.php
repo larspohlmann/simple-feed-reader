@@ -11,14 +11,6 @@ use App\Service\Catalog\CatalogFaviconWarmer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Catalog-wide administration: the full listing and the budgeted favicon warm.
- * Per-resource CRUD lives in AdminCatalogCategoryController and
- * AdminCatalogFeedController.
- *
- * Access is enforced by ROLE_ADMIN on ^/api/admin/ in the firewall, consistent
- * with AdminUserController.
- */
 #[Route('/api/admin/catalog')]
 final readonly class AdminCatalogController
 {

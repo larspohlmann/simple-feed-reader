@@ -15,10 +15,6 @@ use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
-/**
- * Catalog import. Access is enforced by ROLE_ADMIN on ^/api/admin/ in the
- * firewall, consistent with the other admin controllers.
- */
 #[Route('/api/admin/catalog')]
 final readonly class AdminCatalogImportController
 {

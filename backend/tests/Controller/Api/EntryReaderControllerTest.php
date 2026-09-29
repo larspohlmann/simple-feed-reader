@@ -111,8 +111,7 @@ final class EntryReaderControllerTest extends WebTestCase
         self::assertSame('Example', $body['siteName']);
         self::assertSame('An excerpt.', $body['excerpt']);
         self::assertFalse($body['paywalled']);
-        // The reader body now carries its own lead picture inside contentHtml, so
-        // the response declares no separate reader hero (#681).
+        // The reader body carries its own lead picture inside contentHtml, so the response declares no reader hero.
         self::assertArrayNotHasKey('readerHero', $body);
         // The feed body carries no picture of its own, so the feed's own image
         // leads the original view.

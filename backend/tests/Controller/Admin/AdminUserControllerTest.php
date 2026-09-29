@@ -279,10 +279,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The other first-time grant. An admin approving someone who never clicked
-     * their verification link is overriding double opt-in — deliberate, since
-     * the queue lists every status — so the grant is as real as the queued one
-     * and the mail says the same true thing.
+     * Approving an unverified user overrides double opt-in on purpose (the queue lists every status), so it is a
+     * first-time grant and mails like one.
      */
     public function testApprovingAnUnverifiedUserAlsoSendsTheApprovalMail(): void
     {
@@ -318,19 +316,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * Approving a REJECTED account is a first-time grant, not a reinstatement,
-     * and this used to be classified the wrong way.
-     *
-     * The rule is "the mail means you have been granted access for the first
-     * time". Rejection only ever happens from pending_approval — reject() is
-     * how an admin empties the queue — so a rejected user has NEVER had access.
-     * Reversing that decision hands them access for the first time, and it is
-     * the one case where the user is guaranteed to be waiting to hear: they
-     * applied, and as far as they know nothing happened. Staying silent left
-     * them with a working account they had no reason to try.
-     *
-     * Only suspended (access genuinely restored) and already-active (no-op)
-     * remain silent.
+     * A rejected user never had access (rejection happens only from pending_approval), so approving one is a
+     * first-time grant and mails. Only suspended and already-active accounts stay silent.
      */
     public function testApprovingARejectedUserSendsTheApprovalMail(): void
     {
@@ -448,8 +435,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The mailless-instance recovery path (#230): the admin relays this value
-     * out of band, so the response is the only place it ever appears.
+     * The mailless-instance recovery path: the admin relays this value out of band, so the response is the only
+     * place it ever appears.
      */
     public function testResetPasswordReturnsAFreshGeneratedSecretOnce(): void
     {
@@ -558,14 +545,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The N+1 guard, and the only assertion here that can fail: the response
-     * body is byte-identical whether the providers are read in one query or in
-     * one per row, so nothing above notices a loop.
-     *
-     * User holds no ORM association to UserIdentity — Plan 1 kept that
-     * relationship one-directional and lets the database FK cascade the deletes
-     * — so the batched read is hand-written and a future edit could easily
-     * "simplify" it into a per-user lookup.
+     * The N+1 guard, the only assertion here a per-row provider lookup would fail: the body is identical either way.
+     * User has no ORM association to UserIdentity, so the batched read is hand-written and easy to "simplify".
      */
     public function testTheProviderColumnCostsOneQueryHoweverManyUsersAreListed(): void
     {
@@ -577,10 +558,7 @@ final class AdminUserControllerTest extends WebTestCase
 
         $token = $this->tokenFor($admin);
 
-        // Cleared after seeding, so the INSERTs above are not counted. The
-        // recorder outlives the kernel reboot the request triggers, because
-        // dama/doctrine-test-bundle keeps one connection for the whole process
-        // and the middleware is bound to it, not to the container.
+        // Reset after seeding, so the INSERTs above are not counted.
         /** @var QueryRecorder $recorder */
         $recorder = self::getContainer()->get(QueryRecorder::SERVICE_ID);
         $recorder->reset();
@@ -672,14 +650,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertNull($this->rowFor('fresh@example.com')['lastLoginAt']);
     }
 
-    /**
-     * Pins the property, not a magic number: the same request costs the same
-     * number of footprint reads whether it lists a handful of users or a
-     * dozen. A fixed assertCount(1, ...) at one fixture size cannot tell "one
-     * query, however many users" apart from "one query, because there happen
-     * to be exactly this many users" — asserting equality across two sizes
-     * can.
-     */
+    /** Equal read counts at two list sizes prove "one query, however many users"; a single size could not. */
     public function testTheFootprintCountsCostTheSameNumberOfQueriesHoweverManyUsersAreListed(): void
     {
         $admin = $this->admin();
@@ -696,15 +667,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * Adds $additionalUsers fresh users, lists them all, and returns how many
-     * queries touched each footprint table.
-     *
-     * The recorder is fetched AFTER the request, not before. Every request
-     * reboots the kernel, and DoctrineBundle builds a brand new
-     * QueryRecorder instance — already empty of any earlier request's
-     * queries — for the rebooted container. A reference fetched and reset()
-     * beforehand is bound to the PREVIOUS boot and records nothing for the
-     * request that follows it.
+     * Fetched after the request: each request reboots the kernel, and a recorder fetched before it belongs to the
+     * previous boot and records nothing.
      *
      * @return array{feeds: int, tags: int}
      */
@@ -727,13 +691,7 @@ final class AdminUserControllerTest extends WebTestCase
         ];
     }
 
-    /**
-     * The empty case, with COMPLETE key coverage on both the account and the
-     * footprint section — not a handful of spot-checked fields. Proved by
-     * mutation: before this test asserted array_keys(), renaming
-     * feedsLimit -> feedLimit or user.identities -> user.providers in the
-     * controller left every test in this class green.
-     */
+    /** The empty case, with complete key coverage on the account and footprint sections, so a renamed field fails. */
     public function testTheDetailEndpointReturnsTheAccountItsFootprintAndItsLists(): void
     {
         $admin = $this->admin();
@@ -788,12 +746,7 @@ final class AdminUserControllerTest extends WebTestCase
         self::assertNull($limits['maxSubscriptions']);
     }
 
-    /**
-     * The non-null case for the section above: an admin-set trial and cap
-     * both reach the detail screen under their own 'limits' key, distinct
-     * from the account section that testTheDetailEndpointReturnsTheAccount...
-     * pins.
-     */
+    /** An admin-set trial and cap reach the detail screen under their own 'limits' key. */
     public function testTheDetailEndpointIncludesTrialAndSubscriptionLimits(): void
     {
         $admin = $this->admin();
@@ -815,13 +768,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The counterpart to the empty case above: a feed that HAS been fetched,
-     * and fetched long enough ago to be stale. Proved by mutation:
-     * hard-wiring AdminUserController::footprintRow()'s lastRefreshAt to null
-     * and staleFeedsCount to 0, and subscriptionRows()'s lastFetchedAt to
-     * null, left every other test in this class green — no other fixture
-     * here ever records a fetch (`Feed::recordSuccessfulFetch()`), so the
-     * null/zero branch was the only one ever pinned.
+     * The only fixture that records a fetch, so the only one that pins a real lastRefreshAt, staleFeedsCount and
+     * lastFetchedAt rather than null and zero.
      */
     public function testTheFootprintAndSubscriptionRowCarryARealFetchTimestamp(): void
     {
@@ -886,18 +834,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The full tag and subscription rows: complete key coverage on every row
-     * shape (a renamed or dropped field fails here even though its value type
-     * is unchanged — proved by mutation: renaming tag `icon` -> `iconName`
-     * used to leave this class green), mutually distinct non-zero figures
-     * throughout (archive sits on both subscriptions, reading on only one, so
-     * a count swap between the two tags is caught — a single shared
-     * subscription can only ever produce 0 or 1 and cannot catch a swap), and
-     * insertion order that does NOT match position order on both the
-     * subscription list and the tags-within-a-subscription list — proved by
-     * mutation: sorting SubscriptionRepository::findForUserWithTags() by
-     * `s.id DESC` instead of position left this class green before these
-     * order assertions existed.
+     * Complete key coverage on every tag and subscription row, distinct non-zero counts (a swap between the two tags
+     * shows), and insertion order unlike position order in both lists, so a sort by id or createdAt fails.
      */
     public function testTheDetailListsCarryTheFullTagAndSubscriptionRows(): void
     {
@@ -926,11 +864,8 @@ final class AdminUserControllerTest extends WebTestCase
         $feedTwo->setTitle('Second Shelf');
         $entityManager->persist($feedTwo);
 
-        // Inserted FIRST but placed SECOND by position — a return to
-        // createdAt/insertion ordering is caught. Its two tags are also
-        // attached in the REVERSE of their position order (reading, then
-        // archive), so orderedSubscriptionTags()'s sort is actually
-        // exercised rather than merely echoing insertion order.
+        // Inserted first but placed second, with its tags attached in reverse position order (reading, then
+        // archive), so both sorts are exercised.
         $subscriptionOne = new Subscription($user, $feedOne, new \DateTimeImmutable('2026-07-05 12:00:00'));
         $subscriptionOne->setCustomTitle('My Weekly Read');
         $subscriptionOne->setPosition(1);
@@ -1013,26 +948,13 @@ final class AdminUserControllerTest extends WebTestCase
             self::assertIsArray($tagOnSubscription);
             self::assertSame(['id', 'name', 'color', 'icon'], array_keys($tagOnSubscription));
         }
-        // The subscription's own tag chips carry the same icon as the
-        // account's tag list, so the admin UI can render one glyph
-        // consistently instead of a plain dot on this row and the real
-        // glyph on the tags list above.
+        // The row's tag chips carry the same icon as the tag list, so the admin UI renders one glyph for both.
         self::assertSame(['archive-icon', 'book-icon'], array_column($weeklyTags, 'icon'));
     }
 
     /**
-     * The N+1 guard for the detail screen, pinned to the exact counts the
-     * single-load refactor promises: ONE read of the subscription x tag join
-     * set and ONE read of the tag list, however many rows the user owns —
-     * not the three and two respectively that a version re-querying inside
-     * tagRows()/subscriptionRows() would cost. Each subscription in the
-     * fixture carries its own genuinely-attached tag — not just a tag present
-     * somewhere on the account — so a per-subscription tag lookup, or the
-     * join-fetch being dropped from findForUserWithTags(), would show up as
-     * growth between the two sizes. A fixed count at one fixture size cannot
-     * tell "batched" apart from "batched because there happen to be exactly
-     * this many rows"; asserting equality across two very different sizes
-     * can.
+     * One read of the subscription x tag join and one of the tag list, at two very different sizes, each subscription
+     * with its own attached tag: a per-subscription tag lookup or a dropped join fetch shows up as growth.
      */
     public function testTheDetailListsCostTheSameNumberOfQueriesHoweverManySubscriptionsAndTagsExist(): void
     {
@@ -1115,24 +1037,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * NOT a test of the 409 last-admin refusal. $soleAdmin and $deputy are
-     * both Active (the factory default), so ensureNotTheLastAdmin($deputy)
-     * sees countActiveAdmins() >= 2 — $deputy and $soleAdmin both count — and
-     * the guard has nothing to refuse; the self-delete guard (422) is also
-     * moot, since the caller and target are distinct here. countActiveAdmins()
-     * being status-aware DOES make the 409 reachable through this route in
-     * general (deleting a non-Active admin while the caller is the sole
-     * remaining Active admin refuses with 409), just not through the two
-     * Active admins this test constructs.
-     *
-     * What this test actually proves: $soleAdmin deletes $deputy (204), and
-     * $deputy's now-stale token can no longer authenticate anything (401) —
-     * the api firewall's JWT provider fails to reload a deleted user before
-     * access_control or the controller ever run, so a second delete attempt
-     * with that token cannot reach AccountDeleter at all. The final
-     * assertion — $soleAdmin still exists — confirms the first deletion did
-     * not take out the wrong account; it says nothing about the last-admin
-     * guard, since that guard was never exercised by this request.
+     * Not the 409 last-admin refusal: both admins are active, so that guard has nothing to refuse. It proves the
+     * deleted admin's token no longer authenticates (401) and that the right account went.
      */
     public function testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate(): void
     {
@@ -1160,11 +1066,8 @@ final class AdminUserControllerTest extends WebTestCase
     }
 
     /**
-     * The 409 path this route's other delete tests deliberately do not cover
-     * (see the docblock above testAnAdminDeletedByAnotherAdminCanNoLongerAuthenticate):
-     * countActiveAdmins() is status-aware, so deleting a non-Active admin
-     * while the caller is the sole remaining Active admin refuses too, not
-     * only self-delete through DELETE /api/me.
+     * The 409 path: countActiveAdmins() is status-aware, so deleting a non-active admin is refused when the caller is
+     * the sole active admin.
      */
     public function testDeletingASuspendedAdminIsRefusedWhenTheCallerIsTheSoleActiveAdmin(): void
     {

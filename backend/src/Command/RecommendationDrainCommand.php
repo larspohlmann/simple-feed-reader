@@ -18,16 +18,8 @@ use Symfony\Component\Lock\LockFactory;
 use Symfony\Component\Lock\LockInterface;
 
 /**
- * The on-demand drainer (#371): a short-lived worker, spawned by a web request on
- * installs with no persistent worker, that drives every active recommendation run
- * to completion at worker concurrency. Each sweep marks
- * RecommendationDriverKind::OnDemandDrainer's liveness key so open browsers demote
- * to the read-only /current poll, then clears it on exit so poll and cron take
- * over immediately instead of waiting out the freshness window. Own key rationale:
- * {@see WorkerPresence}.
- *
- * Only ever advances existing runs -- starting runs (and their spend budget, #308)
- * stays with the callers that already own it.
+ * A short-lived worker a web request spawns on installs without one: it drives every active run to completion and
+ * marks OnDemandDrainer's liveness key meanwhile. It only advances runs; starting one stays with their callers.
  */
 #[AsCommand(
     name: 'app:recommendations:drain',
@@ -38,33 +30,12 @@ final class RecommendationDrainCommand extends Command
     public const string LOCK_NAME = 'recommendation-drain';
 
     /**
-     * What a SIGKILL costs, and nothing else -- the one thing this TTL decides. A
-     * hard kill skips `finally` and the shutdown hook, so the key sits until it
-     * lapses and no replacement drainer can spawn; 900 s bounds that blackout at
-     * fifteen minutes.
-     *
-     * It does NOT bound one sweep's worst case (ten runs x MAX_ATTEMPTS x provider
-     * timeout -- five hours standard, more on the slow profile), even though the
-     * key only refreshes between sweeps; since #433 a single call can outlast the
-     * TTL alone. That's the same lapse, not a new failure: refreshOrReacquireLock()
-     * re-bids for the key mid-sweep and carries on when it wins, so a longer TTL
-     * would only multiply the post-SIGKILL blackout for no benefit here.
-     *
-     * A lapse can let a second drainer in for the rest of the sweep; the incumbent's
-     * re-bid then loses and it hands over cleanly. Overlapping drainers can't
-     * double-advance a run regardless -- every advance takes
-     * RecommendationRunAdvancer's per-user lock, which is also why runs keep
-     * progressing under cron no matter who holds this one.
+     * What a SIGKILL costs: the key outlives a killed drainer by this long. It need not cover a sweep, because
+     * refreshOrReacquireLock() re-bids after a lapse and every advance also takes the per-user run lock.
      */
     public const float LOCK_TTL_SECONDS = 900.0;
 
-    /**
-     * Bounds the drain *loop*, not the process: the cap is read between
-     * sweeps, so the sweep in flight when it passes still runs to its own
-     * end. Past the cap the drainer starts no further sweep and exits,
-     * surrendering both the lock and its liveness key, and the next cron tick
-     * spawns a fresh one that resumes from the last committed checkpoint.
-     */
+    /** Read between sweeps: past it the drainer starts no new sweep and exits, and the next cron tick respawns one. */
     public const int MAX_RUNTIME_SECONDS = 3600;
 
     /**
@@ -74,12 +45,7 @@ final class RecommendationDrainCommand extends Command
      */
     public const float SWEEP_PAUSE_SECONDS = 1.0;
 
-    /**
-     * Set by the `finally` that does the ordinary cleanup, read by the
-     * shutdown hook that exists only for the crash that skips it. Command
-     * state rather than a captured local, so the hook's check reads the value
-     * at shutdown time and not the one it closed over.
-     */
+    /** Set by the `finally`; a property, not a captured local, so the shutdown hook reads its value at shutdown. */
     private bool $cleanedUp = false;
 
     public function __construct(
@@ -104,9 +70,7 @@ final class RecommendationDrainCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if ((bool) $input->getOption('detach') && \function_exists('posix_setsid')) {
-            // Survival does not depend on a setsid/nohup wrapper binary --
-            // the production host has neither setsid nor a crontab, but it
-            // does have ext-posix (#371 Strato probe). Behind --detach so an
+            // The production host has no setsid binary but has ext-posix (#371's probe). Behind --detach so an
             // in-process test run cannot detach the test runner's session.
             posix_setsid();
         }
@@ -118,12 +82,8 @@ final class RecommendationDrainCommand extends Command
             return Command::SUCCESS;
         }
 
-        // A fatal error skips finally, and this CLI has no request timeout --
-        // same belt-and-braces as RecommendationRunAdvancer::advance(). The
-        // release is token-scoped (never frees a lock this process lost) and
-        // SIGKILL falls back to the TTL. The flag keeps it a safety net, not a
-        // double cleanup: this closure runs on EVERY termination, so without it
-        // the ordinary path released the lock twice.
+        // A fatal error skips `finally`, so a shutdown hook releases too (token-scoped; SIGKILL falls back to the
+        // TTL). The flag stops it releasing again after the ordinary path already did.
         $this->cleanedUp = false;
         register_shutdown_function(function () use ($lock): void {
             if ($this->cleanedUp) {
@@ -152,13 +112,8 @@ final class RecommendationDrainCommand extends Command
     }
 
     /**
-     * This process was a worker only as long as it lived. Leaving its liveness key
-     * fresh would make the poll driver report the run as still running and stop
-     * cron's respawn net, for up to WorkerPresence::FRESH_SECONDS -- eleven minutes
-     * of a frozen run on a worker-less install. Unconditional and safe: it names
-     * the drainer's own kind, so it cannot touch a persistent worker's heartbeat.
-     * Best-effort because this also runs from the shutdown hook, where a throw
-     * would pile a second fatal; a failed clear just leaves the key to age out.
+     * A fresh drainer key after exit would freeze the run for up to WorkerPresence::FRESH_SECONDS on a worker-less
+     * install. It names only the drainer's kind, and never throws: the shutdown hook calls it too.
      */
     private function surrenderTheDrainerLiveness(): void
     {
@@ -187,12 +142,8 @@ final class RecommendationDrainCommand extends Command
     }
 
     /**
-     * A failed refresh() only proves the key is gone, not that another drainer
-     * owns it -- walking away would drop healthy in-flight work back to the
-     * once-a-minute cron. So this re-bids and carries on when it wins. Only a
-     * lost bid proves a second drainer holds it, and that handoff is as benign
-     * as never winning acquire() in the first place -- not a failure worth a
-     * non-SUCCESS exit.
+     * A failed refresh() proves only that the key lapsed, so this re-bids and carries on when it wins. A lost bid means
+     * another drainer took over: a clean handoff, not a failure.
      */
     private function refreshOrReacquireLock(LockInterface $lock): bool
     {

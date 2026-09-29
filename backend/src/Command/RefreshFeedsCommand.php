@@ -21,10 +21,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class RefreshFeedsCommand extends Command
 {
     /**
-     * The production host caps execution at 240 s and one pathological feed can
-     * burn ~120 s (5 redirect hops x 20 s), so a feed starting near the budget
-     * edge must still finish inside the cap. This also leaves room for the
-     * runner's safety margin and the pruning pass.
+     * The host caps a run at 240 s and one feed can take ~120 s (5 redirect hops x 20 s), so a feed starting near the
+     * budget still finishes, with room for the runner's margin and the pruning pass.
      */
     private const int DEFAULT_BUDGET_SECONDS = 120;
 

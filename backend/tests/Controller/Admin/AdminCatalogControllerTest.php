@@ -21,16 +21,8 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 final class AdminCatalogControllerTest extends WebTestCase
 {
     /**
-     * Make the favicon path hermetic: resolution hands back a canned URL and the
-     * download of it always fails. Both the warm slice and the single-row refresh
-     * then exercise their real wiring — the endpoint, the warmer, the failure
-     * bookkeeping — without any test reaching the network.
-     *
-     * The warmer autowires the INTERFACES (FaviconResolverInterface,
-     * FaviconFetcherInterface), which PHPUnit can double where the final
-     * concrete classes cannot. We register the doubles under both the interface
-     * id and the concrete-class id so whichever id the warmer's dependency
-     * resolves to receives the failing mock.
+     * Resolution returns a canned URL and every download fails, so the warm and refresh endpoints run their real wiring
+     * without the network. The doubles replace the concrete service ids the interfaces alias to.
      */
     private function stubFaviconServicesToFail(): void
     {
