@@ -12,17 +12,9 @@ use Dom\Element;
 use Dom\HTMLDocument;
 
 /**
- * Reads the feeds an HTML page points at, in two passes — the first to find
- * anything wins. The strict pass reads the autodiscovery links a
- * well-behaved page publishes — `<link rel="alternate"
- * type="application/rss+xml">` and its Atom twin — and its result is exact:
- * the type attribute names the dialect.
- *
- * The fuzzy pass runs only when the strict pass found nothing, guessing from
- * an `<link rel="alternate">` with a vaguer type or an ordinary `<a>` whose
- * address or label looks like a feed (the RSS icon in a footer). A guess
- * costs no request here — the dialog previews every candidate, so a wrong
- * guess shows an unavailable preview, not a bad subscription.
+ * Reads the feeds an HTML page points at. The strict pass reads the rss/atom autodiscovery links, whose type names
+ * the dialect; only when it finds nothing does the fuzzy pass guess from vaguer types and feed-shaped anchors. A
+ * wrong guess costs no subscription: the dialog previews every candidate.
  */
 final readonly class FeedLinkScanner
 {
@@ -107,8 +99,6 @@ final readonly class FeedLinkScanner
             }
 
             $candidates[$url] = new FeedCandidateModel($url, $label, self::GUESSED_FORMAT);
-            // A page carries hundreds of anchors; stop as soon as the list is
-            // full rather than resolving every one of them to throw it away.
             if (\count($candidates) === self::MAX_GUESSES) {
                 break;
             }
@@ -132,11 +122,8 @@ final readonly class FeedLinkScanner
     }
 
     /**
-     * Absolute http(s) URL of the link, or null when there is nothing to
-     * subscribe to: an empty href, a `javascript:` or `mailto:` action, a bare
-     * fragment, or the page being scanned — offering a page as its own feed is
-     * how a "subscribe" anchor in a nav bar becomes a candidate that cannot
-     * work.
+     * Absolute http(s) URL of the link, or null when there is nothing to subscribe to. The page itself counts as
+     * nothing: a "subscribe" anchor in a nav bar must not become a candidate that cannot work.
      */
     private function subscribableUrl(Element $link, PageUrls $pageUrls): ?string
     {

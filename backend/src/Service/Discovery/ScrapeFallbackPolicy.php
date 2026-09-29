@@ -22,11 +22,8 @@ final readonly class ScrapeFallbackPolicy
     }
 
     /**
-     * Refuses a scraped subscribe or preview for an account with the
-     * preference off. Discovery never offers a scraped candidate to such an
-     * account, so reaching here at all means a hand-made request — this is
-     * the one place that refusal is decided, so SubscriptionService and
-     * FeedPreviewService cannot drift on it.
+     * Refuses a scraped subscribe or preview for an account with the preference off. Discovery never offers one to
+     * such an account, so only a hand-made request gets here; SubscriptionService and FeedPreviewService share this.
      *
      * @throws ScrapingDisabledException
      */

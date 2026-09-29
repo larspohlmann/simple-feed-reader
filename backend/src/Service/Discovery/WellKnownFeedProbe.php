@@ -13,18 +13,9 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedParser;
 
 /**
- * Looks for a feed under the conventional paths of a page that named none.
- *
- * Some sites serve their feed while answering their HTML page with 403 to
- * anything that is not a browser — reddit.com is the archetype: /r/<name>/
- * is refused, /r/<name>/.rss is not. Discovery has nothing to read on those
- * sites and gives up on a feed one request away; this guesses that request.
- *
- * The guesses go out together over the concurrent fetcher, so the walk costs
- * one round trip rather than seven — a slow host must not hold the subscribe
- * request for seven timeouts. They inherit that fetcher's SSRF guard, and a
- * failed guess is not an error: a 404, a timeout, and a non-feed body are
- * all just answers of "not here".
+ * Looks for a feed under the conventional paths of a page that named none, for sites that refuse their HTML to
+ * non-browsers but serve the feed (reddit refuses /r/<name>/, not /r/<name>/.rss). The guesses go out together over
+ * the SSRF-guarded concurrent fetcher: one round trip, not seven timeouts.
  */
 final readonly class WellKnownFeedProbe
 {
@@ -44,10 +35,8 @@ final readonly class WellKnownFeedProbe
     }
 
     /**
-     * The likeliest conventional path that answers with a parseable feed, with
-     * the document it answered — or null when none does. Null is an absence,
-     * not a failure signal: a site with no feed under a conventional path is
-     * the ordinary case, and the caller reports the page's own outcome instead.
+     * The likeliest conventional path that serves a parseable feed, or null: no feed under a conventional path is the
+     * ordinary case, not a failure.
      */
     public function probe(string $pageUrl): ?DiscoveredFeedModel
     {
@@ -115,14 +104,9 @@ final readonly class WellKnownFeedProbe
     }
 
     /**
-     * One URL per conventional suffix, in preference order, or none at all when
-     * there is nothing worth asking for: a URL with no host, or one that already
-     * IS a feed address. The latter was refused rather than missing — a rate
-     * limiter, typically — and `/.rss/.rss` can only add load.
-     *
-     * The entered URL is treated as a directory. That matters: a section address
-     * is usually written without a trailing slash, and RFC 3986 resolves `.rss`
-     * against `/r/Bitwig` as `/r/.rss`, probing the wrong level of the site.
+     * One URL per suffix in preference order, or none for a URL with no host or one that already is a feed address
+     * (refused, not missing: `/.rss/.rss` only adds load). The URL is a directory: RFC 3986 would resolve `.rss`
+     * against `/r/Bitwig` as `/r/.rss`.
      *
      * @return array<int, string>
      */

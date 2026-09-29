@@ -7,15 +7,8 @@ namespace App\Service\Discovery\Model;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
- * A feed discovery has read, not merely located: its canonical URL together
- * with the document that proved it was a feed.
- *
- * Discovery has to parse the document anyway to know it found a feed, and the
- * subscribe that follows would otherwise fetch the very same URL again seconds
- * later — a second request that some sites answer with 429, leaving the new
- * subscription empty (#290). Carrying the document forward turns that second
- * request into no request at all, and a new subscription arrives with its
- * entries already in place.
+ * A feed discovery has read, not merely located: its final URL and the document that proved it a feed. The subscribe
+ * stores this document instead of fetching the URL again, a second request some sites answer with 429 (#290).
  */
 final readonly class DiscoveredFeedModel
 {
