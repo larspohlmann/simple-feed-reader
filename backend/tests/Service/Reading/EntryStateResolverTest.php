@@ -96,8 +96,8 @@ final class EntryStateResolverTest extends DbTestCase
     }
 
     /**
-     * #496: a concurrent writer inserts the row after this request resolved it. resolve() reloads the winning
-     * row, so the flush issues an UPDATE, not a duplicate-key INSERT.
+     * A concurrent writer inserts the row after this request resolved it. resolve() reloads the winning row, so the
+     * flush issues an UPDATE, not a duplicate-key INSERT.
      */
     public function testResolveSurvivesAConcurrentInsertOfTheSameRow(): void
     {

@@ -83,10 +83,7 @@ final class UnsubscribeAllTest extends KernelTestCase
 
         $this->subscriptions->unsubscribeAll([$subscription]);
 
-        // reclaim() deletes via bulk DQL, which bypasses the unit of work: the
-        // Feed entity persisted above is still cached as managed. Without
-        // clear(), find() would serve that stale copy instead of asking the
-        // database (see OrphanedFeedReclaimerTest for the same pattern).
+        // reclaim() deletes by bulk DQL, past the unit of work: without clear(), find() serves the stale managed Feed.
         $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
@@ -105,10 +102,7 @@ final class UnsubscribeAllTest extends KernelTestCase
 
         $this->subscriptions->unsubscribeAll([$ours]);
 
-        // Same identity-map staleness as testReclaimsAFeedNobodySubscribesToAnyMore:
-        // reclaim() deletes via bulk DQL, which bypasses the unit of work, so
-        // find() would serve the Feed entity persisted above instead of asking
-        // the database.
+        // Same identity-map staleness as testReclaimsAFeedNobodySubscribesToAnyMore.
         $this->entityManager->clear();
         $feeds = self::getContainer()->get(FeedRepository::class);
         self::assertInstanceOf(FeedRepository::class, $feeds);
@@ -116,15 +110,8 @@ final class UnsubscribeAllTest extends KernelTestCase
     }
 
     /**
-     * reclaim() is idempotent — a second call against an already-deleted feed
-     * id returns false and issues its DELETE anyway, changing nothing. So
-     * "the feed is gone" holds whether unsubscribeAll() reclaims the shared
-     * feed once (per distinct id, as intended) or twice (once per removed
-     * subscription); an outcome-only assertion cannot tell those apart.
-     * Counting the DELETE statements reclaim() issues is the only way to pin
-     * the de-duplication itself, not just its externally visible result —
-     * same reasoning as RecommendationCandidateLoaderTest's empty-id-list
-     * guard.
+     * reclaim() is idempotent, so "the feed is gone" holds whether the shared feed is reclaimed once or twice: only
+     * the DELETE count pins the de-duplication.
      */
     public function testTwoSubscriptionsToOneFeedReclaimItOnce(): void
     {
@@ -161,13 +148,8 @@ final class UnsubscribeAllTest extends KernelTestCase
     }
 
     /**
-     * testAnEmptyListRemovesNothing only pins the return value, and
-     * `\count([])` is 0 whether or not the empty-list guard runs — Doctrine's
-     * own UnitOfWork::commit() already no-ops a flush with nothing scheduled,
-     * so even counting executed queries cannot tell the guard apart from its
-     * absence. Only a mock that would fail the test on a call to flush() or
-     * remove() can: it proves the guard, not just its externally-identical
-     * result.
+     * Doctrine already skips an empty flush, so neither the return value nor a query count sees the empty-list guard;
+     * only a mock that fails on flush() or remove() does.
      */
     public function testAnEmptyListNeverTouchesTheEntityManager(): void
     {

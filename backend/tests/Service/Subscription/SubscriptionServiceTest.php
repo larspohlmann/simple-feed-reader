@@ -48,7 +48,6 @@ final class SubscriptionServiceTest extends DbTestCase
         return new UserFactory($this->entityManager, $hasher);
     }
 
-    /** A FeedDiscovery test double returning a fixed result. */
     private function discoveryReturning(FeedDiscoveryResultModel $result): FeedDiscoveryInterface
     {
         return new class ($result) implements FeedDiscoveryInterface {
@@ -125,11 +124,7 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertSame([], $outcome->candidates);
     }
 
-    /**
-     * The #290 promise: discovery already read the document, so the feed
-     * arrives with its entries and on the normal schedule. Nothing fetches the
-     * URL a second time, which is what a rationing site answers with 429.
-     */
+    /** Discovery's document is stored as the feed's first fetch: its entries arrive and the feed gets a schedule. */
     public function testANewSubscriptionArrivesWithTheEntriesDiscoveryAlreadyRead(): void
     {
         $user = $this->factory()->create('seeded@example.com');
@@ -155,10 +150,6 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertNotNull($feed->getNextFetchAt());
     }
 
-    /**
-     * A feed somebody else already subscribed to has a schedule and a history
-     * of its own; this user's subscribe is no reason to rewrite either.
-     */
     public function testAnAlreadyFetchedFeedKeepsItsSchedule(): void
     {
         $fetchedAt = new \DateTimeImmutable('2026-05-30T09:00:00Z');
@@ -188,13 +179,7 @@ final class SubscriptionServiceTest extends DbTestCase
         $service->subscribe($user, 'https://example.com/feed');
     }
 
-    /**
-     * A user can assert format 'scraped' for a URL that really serves an XML
-     * feed, poisoning the SHARED row: refresh then runs the HTML extractor
-     * over RSS forever. When discovery later PROVES the URL is a direct feed
-     * (a stronger fact than the first subscriber's assertion), the row heals
-     * to 'xml' instead of chaining new subscribers to the broken format.
-     */
+    /** A shared row poisoned as 'scraped' heals to 'xml' once discovery proves the URL is a feed. */
     public function testDiscoveryVerifiedSubscribeHealsAScrapedPoisonedFeed(): void
     {
         $user = $this->factory()->create('healer@example.com');
@@ -214,12 +199,8 @@ final class SubscriptionServiceTest extends DbTestCase
     }
 
     /**
-     * The natural "re-add it to fix it" move by an EXISTING victim: the user is
-     * already subscribed to the poisoned row, so the duplicate check aborts the
-     * subscribe with AlreadySubscribedException — but the heal it triggered on
-     * the way must still stick. The format change is flushed in its own step
-     * before the throw, so re-reading the row from the database (after clearing
-     * the identity map) shows 'xml', not the un-persisted 'scraped'.
+     * An existing subscriber re-adding the poisoned feed gets AlreadySubscribedException, and the heal still sticks:
+     * the row re-read from the database says 'xml'.
      */
     public function testHealPersistsEvenWhenTheUserIsAlreadySubscribed(): void
     {
@@ -250,11 +231,6 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertSame('xml', $reloaded->getSourceFormat());
     }
 
-    /**
-     * The reverse direction must never flip: a 'scraped' arrival is only the
-     * USER's assertion, so it cannot downgrade a row that discovery (or the
-     * row's creator) established as a real feed document.
-     */
     public function testScrapedSubscribeNeverDowngradesAnXmlFeed(): void
     {
         $user = $this->factory()->create('downgrader@example.com');
@@ -296,11 +272,6 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertSame(['News', 'Tech'], $tagNames);
     }
 
-    /**
-     * The 'scraped' shortcut skips discovery, but it still runs through
-     * createSubscription — so the tags picked in the add-feed form must land on
-     * the row it creates, exactly as on the discovery-confirmed path.
-     */
     public function testScrapedSubscribeAttachesTheGivenTags(): void
     {
         $user = $this->factory()->create('scrapedtagger@example.com');
@@ -322,11 +293,6 @@ final class SubscriptionServiceTest extends DbTestCase
         );
     }
 
-    /**
-     * Discovery never offers a scraped candidate to an account with the
-     * preference off, so a 'scraped' subscribe reaching here at all is a
-     * hand-made request — exactly the bypass this guard exists to close.
-     */
     public function testAScrapedSubscribeIsRefusedWhenTheUserHasScrapingDisabled(): void
     {
         $user = $this->factory()->create('scrape-off@example.com');
@@ -433,11 +399,6 @@ final class SubscriptionServiceTest extends DbTestCase
         self::assertNotNull($outcome->subscription);
     }
 
-    /**
-     * A newly tagged feed appends to the END of that tag's list: its join
-     * position is one past the tag's current maximum, not a fixed 0 that would
-     * float it above feeds already in the tag.
-     */
     public function testNewlyTaggedFeedAppendsWithinTheTag(): void
     {
         $user = $this->factory()->create('appender@example.com');

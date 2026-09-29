@@ -8,10 +8,6 @@ use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Reading\Model\ReadingWindowModel;
 use PHPUnit\Framework\TestCase;
 
-/**
- * The window the reading chart covers (#896): the last N calendar days cut in
- * the viewer's own timezone, with the lower query bound expressed in UTC.
- */
 final class ReadingWindowModelTest extends TestCase
 {
     public function testCoversTheLastNDaysInclusiveOfTodayOldestFirst(): void

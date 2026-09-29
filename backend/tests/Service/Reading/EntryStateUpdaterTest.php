@@ -159,7 +159,7 @@ final class EntryStateUpdaterTest extends DbTestCase
 
         self::assertTrue($this->stateOf($user, $target)->isViewed());
         self::assertTrue($this->stateOf($user, $sibling)->isViewed());
-        // #482: a viewed row is always hidden, on the mirrored copy too.
+        // A viewed row is always hidden, on the mirrored copy too.
         self::assertTrue($this->stateOf($user, $sibling)->isHidden());
     }
 

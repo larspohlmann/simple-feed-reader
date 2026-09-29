@@ -54,14 +54,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         self::assertSame(0, $this->positions()->nextForTag($tag));
     }
 
-    /**
-     * The whole point of this class: BulkSubscriptionUpdater calls sync() once
-     * per subscription and flushes only once after the loop, so a repeated
-     * MAX(position) query would return the same stale value for every feed.
-     * Calling nextForTag() three times in a row, as three loop iterations
-     * would, must hand out the exact ascending sequence seeded from the
-     * database — not merely three distinct numbers.
-     */
+    /** Three calls draw the exact ascending sequence from the database seed, not merely three distinct numbers. */
     public function testNextForTagHandsOutTheExactAscendingSequenceSeededFromTheDatabase(): void
     {
         $user = $this->user('tag-positions-seed@example.com');
@@ -86,14 +79,7 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         self::assertSame(0, $this->positions()->nextUntaggedForUser($user->requireId()));
     }
 
-    /**
-     * The #659 fix itself: nextUntaggedForUser() used to be a fresh MAX()
-     * query every call, so a bulk request stripping the last tag from several
-     * feeds in one flush-less loop gave every feed the SAME position. Assert
-     * the exact ascending sequence, not merely that the results are distinct
-     * — distinctness alone does not pin the counter to the seed it must start
-     * counting from.
-     */
+    /** The exact sequence from the seed: distinct values alone would not pin the counter to where it must start. */
     public function testNextUntaggedForUserHandsOutTheExactAscendingSequenceSeededFromTheDatabase(): void
     {
         $user = $this->user('untagged-positions-seed@example.com');
@@ -109,10 +95,6 @@ final class SubscriptionTagPositionsTest extends DbTestCase
         self::assertSame(7, $positions->nextUntaggedForUser($user->requireId()));
     }
 
-    /**
-     * The two counters are keyed separately (by tag id, by user id) and must
-     * never share state: seeding one must not perturb the other.
-     */
     public function testTheTwoCountersAreIndependent(): void
     {
         $user = $this->user('independent-counters@example.com');
