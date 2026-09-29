@@ -54,6 +54,19 @@ final class TickLockKeepaliveTest extends TestCase
         self::assertSame(1, $lock->refreshCount());
     }
 
+    public function testAResetBetweenMessagesDisarmsIt(): void
+    {
+        $clock = new MockClock('2026-08-16 12:00:00');
+        $keepalive = new TickLockKeepalive($clock, new Logger('test'));
+        $lock = new RefreshCountingLock();
+        $keepalive->hold($lock, self::LOCK_RESOURCE);
+
+        $keepalive->reset();
+        $keepalive->beat();
+
+        self::assertSame(0, $lock->refreshCount());
+    }
+
     /**
      * A streamed answer delivers deltas many times a second and each refresh
      * is a call to the lock store, so the beats are throttled. The throttle

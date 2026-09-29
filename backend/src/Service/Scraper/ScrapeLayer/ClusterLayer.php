@@ -22,7 +22,7 @@ use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
  * (mean title length breaks ties) becomes the item list, in document order.
  */
 #[AsTaggedItem(priority: 10)]
-final class ClusterLayer implements ScrapeLayerInterface
+final readonly class ClusterLayer implements ScrapeLayerInterface
 {
     private const int MIN_CLUSTER_SIZE = 3;
     private const int MAX_CONTAINER_HOPS = 3;

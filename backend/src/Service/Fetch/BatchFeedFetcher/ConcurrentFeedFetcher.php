@@ -30,19 +30,19 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * sweep is network-wait-bound, so requests overlap while the caller still
  * processes results one at a time.
  */
-final class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
+final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
 {
     private const float TIMEOUT_SECONDS = 10.0;
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly UrlGuard $urlGuard,
-        private readonly ResponseClassifier $classifier,
-        private readonly int $concurrency,
-        private readonly int $hostConcurrency,
-        private readonly string $userAgent,
-        private readonly EgressProxySourceInterface $egressProxySource,
-        private readonly FetchRetryPolicy $retryPolicy,
+        private HttpClientInterface $httpClient,
+        private UrlGuard $urlGuard,
+        private ResponseClassifier $classifier,
+        private int $concurrency,
+        private int $hostConcurrency,
+        private string $userAgent,
+        private EgressProxySourceInterface $egressProxySource,
+        private FetchRetryPolicy $retryPolicy,
     ) {
         // A cap below one opens no requests at all, and the engine would report
         // an empty run as a clean one: the sweep's `remaining` never decrements

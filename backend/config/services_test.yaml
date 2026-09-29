@@ -345,6 +345,7 @@ services:
     # fetch it. Same `autowire` caveat as above.
     App\Service\Settings\InstanceSettings:
         autowire: true
+        autoconfigure: true
         public: true
 
     # StubChatClient replaces the real provider call for every recommendation
@@ -484,10 +485,12 @@ services:
     # entries above. Test environment only — production keeps them private.
     App\Service\Recommendation\Run\TickLockKeepalive:
         autowire: true
+        autoconfigure: true
         public: true
 
     App\Service\Recommendation\Run\SweepStreamHeartbeat:
         autowire: true
+        autoconfigure: true
         public: true
 
     App\Service\Ai\Completion\CompletionStreamHeartbeat\CompletionStreamHeartbeatInterface:

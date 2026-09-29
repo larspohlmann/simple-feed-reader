@@ -10,6 +10,7 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\Exception\ExceptionInterface as LockExceptionInterface;
 use Symfony\Component\Lock\Exception\LockConflictedException;
 use Symfony\Component\Lock\LockInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Keeps the lock of a streaming tick from expiring under it (#439, #444).
@@ -45,7 +46,7 @@ use Symfony\Component\Lock\LockInterface;
  *
  * Not readonly: the held lock is the point.
  */
-final class TickLockKeepalive implements CompletionStreamHeartbeatInterface
+final class TickLockKeepalive implements CompletionStreamHeartbeatInterface, ResetInterface
 {
     public const int MINIMUM_INTERVAL_SECONDS = 30;
 
@@ -101,6 +102,11 @@ final class TickLockKeepalive implements CompletionStreamHeartbeatInterface
         $this->held = null;
         $this->resource = null;
         $this->lastRefreshAt = null;
+    }
+
+    public function reset(): void
+    {
+        $this->release();
     }
 
     /**

@@ -20,7 +20,7 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
  * computation: no collaborators, so every method is a straight function of
  * its arguments.
  */
-final class RecommendationPromptBuilder
+final readonly class RecommendationPromptBuilder
 {
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;

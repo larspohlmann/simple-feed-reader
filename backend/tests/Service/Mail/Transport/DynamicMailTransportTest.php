@@ -8,21 +8,45 @@ use App\Entity\MailConnection;
 use App\Entity\MailServerSettings;
 use App\Entity\SealedSecret;
 use App\Enum\MailEncryption;
+use App\Enum\ProxyType;
+use App\Service\Fetch\Model\ProxyConfigModel;
+use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Crypto\MailPasswordCipher;
 use App\Service\Mail\Settings\MailSettings;
+use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\DynamicMailTransport;
+use App\Service\Mail\Transport\Factory\ActiveMailTransportFactory;
+use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
 use App\Service\Mail\Transport\Pass\CurlSmtpTransport;
+use App\Service\Proxy\ConfiguredProxySource\ConfiguredProxySourceInterface;
 use App\Tests\Support\ConfiguresAProxy;
 use App\Tests\Support\SettingsRequests;
 use App\Tests\Support\UnreadableProxyPasswordRows;
 use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Psr\EventDispatcher\EventDispatcherInterface;
+use Psr\Log\NullLogger;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Mailer\Exception\TransportException;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class DynamicMailTransportTest extends KernelTestCase
 {
     use ConfiguresAProxy;
+
+    private ?ProxyConfigModel $configuredProxy = null;
+
+    /** @return iterable<string, array{ProxyConfigModel}> */
+    public static function proxyEdits(): iterable
+    {
+        yield 'type' => [new ProxyConfigModel(ProxyType::Http, 'proxy.test', 1080, 'bob', 'pw', true, false)];
+        yield 'host' => [new ProxyConfigModel(ProxyType::Socks5, 'other.test', 1080, 'bob', 'pw', true, false)];
+        yield 'port' => [new ProxyConfigModel(ProxyType::Socks5, 'proxy.test', 1081, 'bob', 'pw', true, false)];
+        yield 'username' => [new ProxyConfigModel(ProxyType::Socks5, 'proxy.test', 1080, 'eve', 'pw', true, false)];
+        yield 'password' => [new ProxyConfigModel(ProxyType::Socks5, 'proxy.test', 1080, 'bob', 'new-pw', true, false)];
+        yield 'remote DNS' => [new ProxyConfigModel(ProxyType::Socks5, 'proxy.test', 1080, 'bob', 'pw', true, true)];
+    }
 
     public function testWithoutARowItBuildsFromTheFallbackDsn(): void
     {
@@ -156,5 +180,70 @@ final class DynamicMailTransportTest extends KernelTestCase
         $transport = self::getContainer()->get(DynamicMailTransport::class);
 
         self::assertInstanceOf(EsmtpTransport::class, $transport->activeTransport());
+    }
+
+    #[DataProvider('proxyEdits')]
+    public function testAProxyEditRebuildsTheProxiedTransportOnTheNextSend(ProxyConfigModel $edited): void
+    {
+        $this->configuredProxy = self::originalProxy();
+        $transport = $this->proxiedTransport();
+        $beforeTheEdit = $transport->activeTransport();
+
+        $this->configuredProxy = $edited;
+
+        self::assertNotSame($beforeTheEdit, $transport->activeTransport());
+    }
+
+    public function testAnUnchangedProxyKeepsTheProxiedTransport(): void
+    {
+        $this->configuredProxy = self::originalProxy();
+        $transport = $this->proxiedTransport();
+        $first = $transport->activeTransport();
+
+        $this->configuredProxy = self::originalProxy();
+
+        self::assertSame($first, $transport->activeTransport());
+    }
+
+    public function testADeletedProxyFailsTheNextSendOfAProxiedRow(): void
+    {
+        $this->configuredProxy = self::originalProxy();
+        $transport = $this->proxiedTransport();
+        $transport->activeTransport();
+
+        $this->configuredProxy = null;
+
+        $this->expectException(TransportException::class);
+        $this->expectExceptionMessage(
+            'The mail configuration is incomplete: Mail is set to use the egress proxy, but no proxy is configured.',
+        );
+        $transport->activeTransport();
+    }
+
+    private static function originalProxy(): ProxyConfigModel
+    {
+        return new ProxyConfigModel(ProxyType::Socks5, 'proxy.test', 1080, 'bob', 'pw', true, false);
+    }
+
+    private function proxiedTransport(): DynamicMailTransport
+    {
+        $settings = $this->createStub(MailSendingSettingsInterface::class);
+        $settings->method('configuredTransport')->willReturn(
+            new ResolvedMailTransportModel('smtp.gmail.com', 587, 'alice', 'app-pw', MailEncryption::Starttls, true),
+        );
+        $proxySource = $this->createStub(ConfiguredProxySourceInterface::class);
+        $proxySource->method('configuredProxy')->willReturnCallback(fn (): ?ProxyConfigModel => $this->configuredProxy);
+        $factory = new ActiveMailTransportFactory(
+            $proxySource,
+            $this->createStub(HttpClientInterface::class),
+            new EsmtpTransportFactory(),
+        );
+
+        return new DynamicMailTransport(
+            $settings,
+            $factory,
+            $this->createStub(EventDispatcherInterface::class),
+            new NullLogger(),
+        );
     }
 }

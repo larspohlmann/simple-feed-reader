@@ -16,7 +16,7 @@ namespace App\Service\Url;
  * sharing a base URL but differing by a real parameter (`?id=42` vs
  * `?id=43`) never collapse into one.
  */
-final class UrlNormalizer
+final readonly class UrlNormalizer
 {
     /** Query keys, or key prefixes, that never identify the article itself. */
     private const array TRACKING_PREFIXES = ['utm_', 'at_', 'wt_'];

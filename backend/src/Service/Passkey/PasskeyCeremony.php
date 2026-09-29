@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Passkey;
 
+use App\DependencyInjection\ProcessLifetimeState;
 use App\Service\Settings\PasskeyRelyingParty\PasskeyRelyingPartyInterface;
 use Symfony\Component\Serializer\SerializerInterface;
 use Webauthn\AttestationStatement\AttestationStatementSupportManager;
@@ -16,6 +17,7 @@ use Webauthn\Denormalizer\WebauthnSerializerFactory;
  * `final readonly`: the managers are built lazily and memoised, which a
  * readonly property cannot do.
  */
+#[ProcessLifetimeState('Library machinery built from no setting; host() reads the relying party each call')]
 final class PasskeyCeremony
 {
     private ?CeremonyStepManager $creation = null;

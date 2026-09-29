@@ -8,7 +8,7 @@ namespace App\Service\Fetch;
  * Decides whether an IP address is publicly routable. Everything private,
  * loopback, link-local, reserved, or multicast is rejected (SSRF guard).
  */
-final class IpValidator
+final readonly class IpValidator
 {
     private const array BLOCKED_RANGES = [
         '0.0.0.0/8',

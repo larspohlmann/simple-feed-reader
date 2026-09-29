@@ -56,6 +56,35 @@ final class ActiveMailTransportFactoryTest extends TestCase
         );
     }
 
+    public function testADirectRowIsSignedByItsOwnSettingsAlone(): void
+    {
+        $resolved = new ResolvedMailTransportModel('h', 587, 'u', 'p', MailEncryption::Starttls, false);
+
+        self::assertSame($resolved->signature(), $this->factory(self::proxy())->signatureOf($resolved));
+    }
+
+    public function testAProxiedRowIsSignedByItsSettingsAndItsProxy(): void
+    {
+        $resolved = new ResolvedMailTransportModel('h', 587, 'u', 'p', MailEncryption::Starttls, true);
+
+        self::assertSame(
+            $resolved->signature() . '|' . self::proxy()->signature(),
+            $this->factory(self::proxy())->signatureOf($resolved),
+        );
+    }
+
+    public function testAProxiedRowWithoutAProxyIsSignedAsMissingIt(): void
+    {
+        $resolved = new ResolvedMailTransportModel('h', 587, 'u', 'p', MailEncryption::Starttls, true);
+
+        self::assertSame($resolved->signature() . '|proxy-missing', $this->factory(null)->signatureOf($resolved));
+    }
+
+    private static function proxy(): ProxyConfigModel
+    {
+        return new ProxyConfigModel(ProxyType::Socks5, 'proxy.example', 1080, null, null, true, true);
+    }
+
     private function factory(?ProxyConfigModel $configuredProxy): ActiveMailTransportFactory
     {
         $proxySource = $this->createStub(ConfiguredProxySourceInterface::class);

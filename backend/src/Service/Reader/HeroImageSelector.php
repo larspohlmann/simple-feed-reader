@@ -26,7 +26,7 @@ use Dom\Element;
  * The candidate is guarded to http(s) so a javascript:/data: URL from the
  * feed can never reach the client's <img src>.
  */
-final class HeroImageSelector
+final readonly class HeroImageSelector
 {
     /**
      * Below this a known width only upscales into the hero band; an inline

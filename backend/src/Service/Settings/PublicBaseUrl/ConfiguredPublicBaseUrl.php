@@ -6,6 +6,7 @@ namespace App\Service\Settings\PublicBaseUrl;
 
 use App\Service\Settings\InstanceSettings;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Resolves the public base URL from the admin-editable instance setting,
@@ -13,7 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * The result is memoised: one email may build many links, and the setting does
  * not change within a single send.
  */
-final class ConfiguredPublicBaseUrl implements PublicBaseUrlInterface
+final class ConfiguredPublicBaseUrl implements PublicBaseUrlInterface, ResetInterface
 {
     private ?string $resolved = null;
 
@@ -27,6 +28,11 @@ final class ConfiguredPublicBaseUrl implements PublicBaseUrlInterface
     public function get(): string
     {
         return $this->resolved ??= rtrim($this->configured() ?? $this->fallback, '/');
+    }
+
+    public function reset(): void
+    {
+        $this->resolved = null;
     }
 
     private function configured(): ?string

@@ -18,12 +18,12 @@ use Doctrine\ORM\EntityManagerInterface;
  * Category rows, then writes the per-entry links. Write-once: only for
  * entries ingest just created, never on refresh.
  */
-final class EntryCategoryWriter
+final readonly class EntryCategoryWriter
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly CategoryRepository $categories,
-        private readonly CategoryNormalizer $normalizer,
+        private EntityManagerInterface $entityManager,
+        private CategoryRepository $categories,
+        private CategoryNormalizer $normalizer,
     ) {
     }
 

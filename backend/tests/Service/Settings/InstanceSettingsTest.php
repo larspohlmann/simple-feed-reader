@@ -38,7 +38,7 @@ final class InstanceSettingsTest extends KernelTestCase
      * that disagrees with the entity's property default.
      *
      * Reflects over InstanceSettings' own zero-argument public methods
-     * (fix round 2) rather than naming each getter by hand: a hand-enumerated
+     * rather than naming each getter by hand: a hand-enumerated
      * list catches an EXISTING getter regaining a drifting fallback, but a
      * NEW setting added with its own literal default would add a getter this
      * test never calls, and pass silently — precisely the drift this test
@@ -54,6 +54,7 @@ final class InstanceSettingsTest extends KernelTestCase
             $reflection->getMethods(\ReflectionMethod::IS_PUBLIC),
             static fn (\ReflectionMethod $method): bool => !$method->isStatic()
                 && !$method->isConstructor()
+                && 'void' !== (string) $method->getReturnType()
                 && 0 === $method->getNumberOfParameters(),
         );
         self::assertNotEmpty($getters, 'Expected InstanceSettings to expose at least one getter.');

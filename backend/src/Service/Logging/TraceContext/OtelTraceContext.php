@@ -6,7 +6,7 @@ namespace App\Service\Logging\TraceContext;
 
 use OpenTelemetry\API\Trace\Span;
 
-final class OtelTraceContext implements TraceContextInterface
+final readonly class OtelTraceContext implements TraceContextInterface
 {
     public function traceId(): ?string
     {

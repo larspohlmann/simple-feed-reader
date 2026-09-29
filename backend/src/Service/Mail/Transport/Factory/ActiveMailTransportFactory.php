@@ -45,6 +45,15 @@ final readonly class ActiveMailTransportFactory
         return new CurlSmtpTransport($resolved, $proxy, $dispatcher, $logger);
     }
 
+    public function signatureOf(ResolvedMailTransportModel $resolved): string
+    {
+        if (!$resolved->useProxy) {
+            return $resolved->signature();
+        }
+
+        return $resolved->signature() . '|' . ($this->proxySource->configuredProxy()?->signature() ?? 'proxy-missing');
+    }
+
     public function forFallbackDsn(
         string $dsn,
         ?EventDispatcherInterface $dispatcher,

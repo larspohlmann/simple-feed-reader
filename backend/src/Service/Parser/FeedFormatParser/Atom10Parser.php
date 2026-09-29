@@ -8,7 +8,7 @@ namespace App\Service\Parser\FeedFormatParser;
  * Atom 1.0 (RFC 4287): the current dialect, namespaced
  * "http://www.w3.org/2005/Atom".
  */
-final class Atom10Parser extends AbstractAtomParser
+final readonly class Atom10Parser extends AbstractAtomParser
 {
     public const string NAMESPACE = 'http://www.w3.org/2005/Atom';
 

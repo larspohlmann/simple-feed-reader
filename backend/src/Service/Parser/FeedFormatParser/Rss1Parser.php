@@ -17,7 +17,7 @@ use App\Service\Parser\Support\ItemMediaExtractor;
 use App\Service\Parser\Support\XmlHelper;
 use App\Service\Text\Support\PlainText;
 
-final class Rss1Parser implements FeedFormatParserInterface
+final readonly class Rss1Parser implements FeedFormatParserInterface
 {
     private const string RSS1_NS = 'http://purl.org/rss/1.0/';
     private const string RDF_NS = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
