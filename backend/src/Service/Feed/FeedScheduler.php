@@ -102,9 +102,8 @@ final readonly class FeedScheduler
     /** The grow branch keeps the floor guard: a stored interval <= 0 would otherwise refetch the feed every run. */
     private function grownInterval(Feed $feed): int
     {
-        return max(
-            self::FLOOR_MINUTES,
-            min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5)),
-        );
+        $minutes = $feed->getFetchIntervalMinutes();
+
+        return max(self::FLOOR_MINUTES, min(self::CEILING_MINUTES, $minutes + intdiv($minutes + 1, 2)));
     }
 }
