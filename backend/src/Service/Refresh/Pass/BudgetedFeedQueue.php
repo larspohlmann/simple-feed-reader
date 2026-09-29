@@ -9,12 +9,8 @@ use App\Service\Fetch\Model\FetchTicketModel;
 use Symfony\Component\Clock\ClockInterface;
 
 /**
- * Feeds the fetch engine tickets while the time budget allows, and remembers how
- * many it let through.
- *
- * The engine pulls lazily, one ticket per free slot, so the deadline is checked
- * at the moment a fetch would start rather than up front — a wave that finishes
- * early therefore buys the next feed its chance.
+ * Hands the fetch engine tickets while the time budget allows. The engine pulls one per free slot, so the deadline is
+ * checked when a fetch would start, and a wave that finishes early buys the next feed its chance.
  */
 final class BudgetedFeedQueue
 {
@@ -49,14 +45,7 @@ final class BudgetedFeedQueue
         }
     }
 
-    /**
-     * The feeds this run took on. They are what the sweep must NOT count as
-     * still due afterwards: an outcome that writes no fetch time — a 429 does
-     * exactly that — would otherwise keep its feed in `remaining` forever and
-     * spin the client's poll loop (#302).
-     *
-     * @return list<int>
-     */
+    /** @return list<int> */
     public function startedFeedIds(): array
     {
         return $this->startedFeedIds;
@@ -73,10 +62,8 @@ final class BudgetedFeedQueue
     }
 
     /**
-     * The first feed is always started. A run that returns without touching
-     * anything leaves `remaining` unchanged, and the user endpoint polls until
-     * `remaining` hits 0 — so a budget at or below the safety margin would spin
-     * the client forever. One feed per call is slow; zero never terminates.
+     * The first feed always starts: the user endpoint polls until `remaining` reaches 0, so a run that starts nothing
+     * would spin the client forever. One feed per call is slow; zero never terminates.
      */
     private function mayStartAnother(): bool
     {

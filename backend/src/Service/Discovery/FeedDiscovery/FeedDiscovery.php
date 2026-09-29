@@ -24,19 +24,9 @@ use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
- * Turns a user-entered URL into something to subscribe to, trying five
- * sources in decreasing order of certainty: the URL itself parsed as a feed;
- * the feeds the page points at (FeedLinkScanner, exact first, guessed
- * second) followed by a WordPress REST posts endpoint (WordPressRestProbe)
- * as a fallback; a feed under a conventional path (WellKnownFeedProbe) —
- * also the only source left when the page never arrives, as on sites that
- * refuse every non-browser client; and finally a synthetic 'scraped'
- * candidate built from the page's own article list.
- *
- * Discovery never throws for a bad address: failures come back as a
- * scrapeFailureReason so the subscribe endpoint can always answer with a
- * renderable outcome. Every fetch goes through the SSRF-guarded fetcher, so
- * discovery inherits the same protection as refresh.
+ * Turns an entered URL into something to subscribe to, most certain source first: the URL as a feed, the feeds the
+ * page links (then WordPress REST), a feed under a conventional path, and last a 'scraped' candidate from the page.
+ * Never throws for a bad address: a failure is a scrapeFailureReason, so the subscribe endpoint can always answer.
  */
 final readonly class FeedDiscovery implements FeedDiscoveryInterface
 {
@@ -61,8 +51,6 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
 
     public function discover(string $url, ScrapeFallback $fallback): FeedDiscoveryResultModel
     {
-        // A Substack profile-share URL names its feed on another host; rewrite
-        // it before the fetch so the direct-feed path below can parse-verify it.
         $url = $this->substackProfile->feedUrl($url) ?? $url;
 
         try {
@@ -81,9 +69,6 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
         $body = $response->modifiedBody();
 
         try {
-            // Parsing IS the test of "is this a feed?", and the document it
-            // yields is what the subscribe stores — so the URL is never fetched
-            // a second time to read what we are holding already.
             $document = $this->parser->parse($body);
 
             return FeedDiscoveryResultModel::directFeed(new DiscoveredFeedModel(
@@ -103,9 +88,7 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
             return FeedDiscoveryResultModel::scrapeFailed(ScrapeFailureReason::Blocked);
         }
 
-        // Native feeds first: an <link rel="alternate"> RSS/Atom is the site's
-        // own declared feed, so it leads the list and is the one the dialog
-        // opens expanded. The WordPress REST alternative follows as a fallback
+        // The page's own advertised feeds lead, and the dialog opens the first one expanded; WordPress REST follows
         // for sites whose RSS is truncated.
         $restCandidate = $this->wordPressRest->offer($body, $response->finalUrl);
         $candidates = array_values(array_filter([
@@ -135,14 +118,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     }
 
     /**
-     * The page did not arrive, but the site may still serve a feed under it —
-     * that page was the only way to LEARN the feed's address, so the probe
-     * guesses it instead.
-     *
-     * Only worth asking when the site actually answered, and answered for
-     * itself: a missing status code is a DNS failure or a dead connection, and
-     * a 5xx is a server that is currently answering nothing correctly. Either
-     * way the guesses would fail the same way the page did.
+     * The page did not arrive, but its site may still serve a feed under a conventional path. Only worth probing when
+     * the site answered for itself: no status (DNS, a dead connection) or a 5xx would fail the guesses the same way.
      */
     private function feedTheSiteMightStillServe(
         string $url,
@@ -173,11 +150,8 @@ final readonly class FeedDiscovery implements FeedDiscoveryInterface
     }
 
     /**
-     * Last resort for pages advertising no feeds: offer the page ITSELF as a
-     * 'scraped' candidate — but only after proving the extractor gets an
-     * article list out of it, so the user is never offered a candidate whose
-     * first refresh is guaranteed to fail. Keyed by the fetch's final URL so
-     * the later subscribe stores the same canonical address.
+     * Offers the page itself as a 'scraped' candidate, but only once the extractor gets an article list out of it, so
+     * no candidate's first refresh is bound to fail. Keyed by the final URL, which the subscribe then stores.
      */
     private function scrapeFallback(string $body, string $finalUrl): FeedDiscoveryResultModel
     {

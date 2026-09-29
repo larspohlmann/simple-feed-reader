@@ -7,10 +7,7 @@ namespace App\Service\Preview\Model;
 final readonly class FeedPreviewModel
 {
     /**
-     * @param string|null                   $title
-     * @param int                           $itemCount
      * @param 'full'|'summary'|'title-only' $content
-     * @param bool                          $hasImages
      * @param list<FeedPreviewItemModel>    $items
      */
     public function __construct(

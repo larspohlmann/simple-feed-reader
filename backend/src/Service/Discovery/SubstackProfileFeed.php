@@ -8,32 +8,12 @@ use App\Service\Fetch\Exception\FetchException;
 use App\Service\Fetch\FeedFetcher\FeedFetcherInterface;
 
 /**
- * Maps a Substack profile-share URL onto the feed it stands for.
- *
- * "Copy link to profile" hands the user `https://substack.com/@handle?…utm…`
- * — a page with no autodiscovery link, rendered client-side, whose feed lives
- * on a different host (`https://<subdomain>.substack.com/feed`) that
- * same-origin path guessing (WellKnownFeedProbe) can never reach. This finds
- * the host.
- *
- * The handle is NOT the subdomain — `@abbeyheffer` publishes at
- * `theopenbookshelf.substack.com` — so the subdomain is read from Substack's
- * public-profile API (`primaryPublication.subdomain`) via the same
- * SSRF-guarded fetcher, resolving even custom domains since Substack
- * redirects the subdomain feed and the fetcher follows.
- *
- * Never trusted alone — discovery fetches and PARSES the result — and only
- * ever ADDS a subscription: every failure returns null and discovery
- * proceeds with the entered URL untouched.
- *
- * Planned refactoring: deliberately one platform-specific class, wired atop
- * FeedDiscovery::discover(). Once a SECOND platform needs a host-level
- * rewrite (Medium, Bluesky, …), extract a keyed rule interface
- * (`feedUrl(string): ?string`) and move Substack in as its first rule.
+ * Maps a `substack.com/@handle` profile-share URL to its publication's feed. The handle is not the subdomain, so the
+ * subdomain comes from Substack's public-profile API. Every failure is a null, and discovery still parses the result,
+ * so this can only ever add a subscription.
  */
 final readonly class SubstackProfileFeed
 {
-    /** The hosts a profile-share URL is served from. */
     private const array PROFILE_HOSTS = ['substack.com', 'www.substack.com'];
 
     /** Substack's public-profile API; `%s` is the profile handle. */
@@ -46,11 +26,7 @@ final readonly class SubstackProfileFeed
     {
     }
 
-    /**
-     * The publication feed a profile URL points at, or null when the URL is not
-     * a bare Substack profile or its publication cannot be resolved — in which
-     * case discovery proceeds with the entered URL untouched.
-     */
+    /** The publication feed a profile URL points at, or null when it is not one or cannot be resolved. */
     public function feedUrl(string $enteredUrl): ?string
     {
         $handle = $this->profileHandle($enteredUrl);
@@ -78,12 +54,6 @@ final readonly class SubstackProfileFeed
             : null;
     }
 
-    /**
-     * The subdomain of the handle's primary publication per Substack's
-     * public-profile API, or null when the profile has none or the API cannot
-     * be read. An unreachable or refusing API is a null, never an exception:
-     * the caller only ever gains a subscription from a resolved subdomain.
-     */
     private function primaryPublicationSubdomain(string $handle): ?string
     {
         try {

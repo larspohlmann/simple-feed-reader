@@ -35,9 +35,6 @@ final class FeedDiscoveryTest extends KernelTestCase
 
     public function testHtmlPageReturnsResolvedCandidates(): void
     {
-        // @lang TEXT: `/rss.xml` and `/style.css` are deliberately fake paths —
-        // discovering and resolving them is what the test is about — so the
-        // injected-HTML "cannot resolve file" and missing-`lang` hints are wrong.
         $html = /** @lang TEXT */ <<<'HTML'
             <!doctype html><html><head>
               <link rel="alternate" type="application/rss+xml" title="Main" href="/rss.xml">
@@ -119,11 +116,8 @@ final class FeedDiscoveryTest extends KernelTestCase
     }
 
     /**
-     * The heise homepage snapshot advertises no feed autodiscovery links (its
-     * rel="alternate" links are hreflang language alternates), but its article
-     * list extracts — the page itself becomes the one 'scraped' candidate,
-     * keyed by the fetch's FINAL url so the later subscribe fetches the same
-     * canonical address.
+     * The fixture page advertises no feed (its rel="alternate" links are hreflang alternates) but its article list
+     * extracts, so the page itself becomes the one 'scraped' candidate, keyed by the fetch's final URL.
      */
     public function testFeedlessPageFallsBackToOneScrapedCandidate(): void
     {
@@ -199,16 +193,11 @@ final class FeedDiscoveryTest extends KernelTestCase
     }
 
     /**
-     * A bot gate refuses with a success status: SiteGround answers 202 and a
-     * meta refresh to its captcha. Nothing in the status says "refused", so
-     * without recognising the body the user is told no feed exists at an address
-     * that serves one — which is what three subscriptions hit from the Strato
-     * box (#424). The scrape fallback is enabled here on purpose: a challenge
-     * page must not become a scraped candidate either.
+     * A bot gate answers with a success status, so only its body shows the refusal: Blocked, not "no feed here". The
+     * scrape fallback is on because the challenge page must not become a scraped candidate either.
      */
     public function testACaptchaChallengeReportsBlockedRatherThanNoFeed(): void
     {
-        // @lang TEXT: the gate's own body, kept as served.
         $challenge = /** @lang TEXT */ '<html><head><link rel="icon" href="data:;">'
             . '<meta http-equiv="refresh" content="0;/.well-known/sgcaptcha/'
             . '?r=%2Ffeed%2F&y=ipc:81.169.144.135:1786832352.672"></meta></head></html>';
@@ -229,10 +218,7 @@ final class FeedDiscoveryTest extends KernelTestCase
         self::assertSame([], $result->candidates);
     }
 
-    /**
-     * The #283 case: the site refuses its own page but serves the feed under a
-     * conventional path, so the subscribe completes instead of dead-ending.
-     */
+    /** The site refuses its own page but serves the feed under a conventional path, so the subscribe completes. */
     public function testARefusedPageSubscribesTheFeedFoundUnderAConventionalPath(): void
     {
         $xml = file_get_contents(__DIR__ . '/../../../Fixtures/feeds/rss2-basic.xml');

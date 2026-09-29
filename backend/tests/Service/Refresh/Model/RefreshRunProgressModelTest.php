@@ -18,10 +18,8 @@ final class RefreshRunProgressModelTest extends TestCase
     }
 
     /**
-     * The point of the whole issue. A slice reports its own batch (server-capped
-     * at 50) and the run-wide count of what is still due; the run's denominator is
-     * neither of those, it is their sum. 20 handled with 180 still due means the
-     * run is 20 of 200 — NOT (50 - 180) / 50, which is negative (#721).
+     * A slice reports its own batch (capped at 50) and the run-wide count still due; the run's total is their sum, so
+     * 20 handled with 180 due is 20 of 200.
      */
     public function testTheFirstSliceEstablishesTheRunWideDenominator(): void
     {
@@ -57,12 +55,8 @@ final class RefreshRunProgressModelTest extends TestCase
     }
 
     /**
-     * The clamp, exercised where it actually clamps. Another sweep can fetch our
-     * due feeds between two of our slices, so `remaining` can collapse without
-     * this run having handled anything; `done + remaining` is then 75 and the
-     * denominator must hold at 200. Every earlier version of this test chose
-     * numbers where `done + remaining` already exceeded the total, so it passed
-     * with max() deleted.
+     * Another sweep can take our due feeds between two slices, so `done + remaining` (75) falls below the total and
+     * max() must hold it at 200. Keep numbers like these: when the sum exceeds the total, max() goes untested.
      */
     public function testTheDenominatorHoldsWhenWorkLeavesTheDueSetWithoutBeingHandled(): void
     {
@@ -111,12 +105,7 @@ final class RefreshRunProgressModelTest extends TestCase
         self::assertSame(200, $progress->total);
     }
 
-    /**
-     * The store hands a run back to its next slice through this constructor, so
-     * it is exercised here rather than left for the store's own tests: a named
-     * constructor no test in this class calls is untested code, however soon its
-     * caller lands.
-     */
+    /** The store hands a run to its next slice through resumed(), so it is pinned here, not only via the store. */
     public function testARunResumesExactlyWhereTheStoreLeftIt(): void
     {
         $progress = RefreshRunProgressModel::resumed(20, 200)->advancedBy(30, 150);

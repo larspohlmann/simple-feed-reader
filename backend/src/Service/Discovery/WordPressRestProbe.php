@@ -14,18 +14,9 @@ use App\Service\Scraper\Support\TextNormalizer;
 use Dom\HTMLDocument;
 
 /**
- * Offers a WordPress REST posts endpoint as a richer alternative to a site's
- * RSS feed. Sibling of WellKnownFeedProbe, but it runs ALONGSIDE the link scan
- * rather than as a fallback: the whole point is to sit next to the RSS
- * candidate on a page that advertises both.
- *
- * The REST root is resolved in two tiers, both silent on absence:
- *   1. the canonical head link <link rel="https://api.w.org/">, or
- *   2. the default {origin}/wp-json/ — but only when the page body carries a
- *      WordPress fingerprint, so a non-WordPress page is never probed.
- * A resolved root is verified once through the SSRF-guarded fetcher: only a
- * non-empty JSON post array becomes a candidate, so a disabled or gated REST
- * API (the common reason the head link is stripped) simply offers nothing.
+ * Offers a WordPress REST posts endpoint beside a site's RSS candidate. The REST root is the head link
+ * `rel="https://api.w.org/"`, else `{origin}/wp-json/` on a page with a WordPress fingerprint; only a root whose
+ * posts endpoint answers a non-empty JSON array becomes a candidate.
  */
 final readonly class WordPressRestProbe
 {
@@ -37,11 +28,8 @@ final readonly class WordPressRestProbe
     private const int PER_PAGE = 20;
 
     /**
-     * Only the fields the parser reads. Crucially this drops `_embed`: on large
-     * sites (TechCrunch) `_embed` adds ~1.3 MB per post, so `per_page` posts
-     * never arrive inside the fetcher's timeout / size cap. `content.rendered`
-     * (the full article) is present without it; the featured image comes from
-     * the top-level `jetpack_featured_media_url` field instead of an embed.
+     * Only the fields the parser reads. Never `_embed`: it adds about 1.3 MB per post on large sites, so a page of
+     * posts misses the fetcher's timeout and size cap; the image comes from `jetpack_featured_media_url` instead.
      */
     private const string FIELDS = 'id,date_gmt,link,guid,title,content,excerpt,jetpack_featured_media_url';
 

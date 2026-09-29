@@ -22,6 +22,12 @@ use Symfony\Component\Clock\MockClock;
 
 final class EntryPrunerTest extends DbTestCase
 {
+    /** EntryPruner's newest-twenty floor: a feed filled to it puts any older entry seeded afterwards past it. */
+    private const int FLOOR = 20;
+
+    /** Above the floor, so the pruner's clamp cannot mask the cap boundary a test exercises. */
+    private const int CAP_ABOVE_THE_FLOOR = self::FLOOR + 2;
+
     private EntryPruner $pruner;
     private MockClock $clock;
     private RecordingSearchIndexWriter $indexWriter;
@@ -120,11 +126,7 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testKeepsAnOldArticleThatWasFetchedRecently(): void
     {
-        // Twenty recent filler entries hold the feed above the floor, so the
-        // archive entry below falls beyond the newest-twenty boundary — this
-        // isolates the age check itself, since a below-floor feed would
-        // survive regardless of which date the age pass reads.
-        $feed = $this->feedWithEntries(20, $this->daysAgo(1));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(1));
         $this->seedEntry($feed, 'archive', $this->daysAgo(2), $this->daysAgo(2000));
 
         $this->pruner->prune();
@@ -159,12 +161,7 @@ final class EntryPrunerTest extends DbTestCase
         self::assertCount(21, $this->findAllEntries($feed));
     }
 
-    /**
-     * The bulk DQL delete bypasses the ORM's events, which is exactly why
-     * EntryPruner tells the index explicitly — this pins that the ids it
-     * forgets are the SAME ids the DELETE removed, captured before the row
-     * was gone rather than guessed from some other ordering.
-     */
+    /** A bulk DELETE fires no ORM event, so the pruner forgets the ids itself: exactly the ids the DELETE removed. */
     public function testPruningTellsTheIndexToForgetExactlyTheDeletedIds(): void
     {
         $feed = $this->feedWithEntries(30, $this->daysAgo(100));
@@ -183,10 +180,7 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
-     * The single most important rule for this collaboration: an unreachable
-     * search engine must never turn into a failed prune. EntryIndexer
-     * swallows SearchEngineUnavailableException on its own, but this proves
-     * the wiring end to end rather than trusting it by inspection.
+     * An unreachable search engine must never fail a prune: EntryIndexer swallows the outage, and this pins the wiring.
      */
     public function testPruningSucceedsEvenWhenTheIndexIsUnreachable(): void
     {
@@ -219,17 +213,12 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testAFeedOfTwentyOldEntriesLosesNone(): void
     {
-        $this->feedWithEntries(20, $this->daysAgo(100));
+        $this->feedWithEntries(self::FLOOR, $this->daysAgo(100));
 
         self::assertSame(0, $this->pruner->prune());
     }
 
-    /**
-     * Two separate feeds, each 21 entries sharing one `createdAt`, all 100
-     * days old: the floor keeps 20 per feed and drops exactly the lowest id
-     * (entry-0) in each — the total must be the sum across feeds, not just
-     * the last feed scanned.
-     */
+    /** Two feeds of 21 old entries each lose entry-0 to the floor; the total sums both feeds, not the last one. */
     public function testAgePassSumsDeletionsAcrossFeeds(): void
     {
         $feedA = $this->feedWithEntries(21, $this->daysAgo(100));
@@ -252,9 +241,7 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapPassSumsDeletionsAcrossFeeds(): void
     {
-        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
-        // the boundary this test exercises.
-        $cap = 22;
+        $cap = self::CAP_ABOVE_THE_FLOOR;
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $this->feedWithEntries($cap + 1, $this->daysAgo(1));
@@ -270,9 +257,7 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapPassBreaksATieById(): void
     {
-        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
-        // the boundary this test exercises.
-        $cap = 22;
+        $cap = self::CAP_ABOVE_THE_FLOOR;
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $feed = $this->feedWithEntries($cap + 2, $this->daysAgo(1));
@@ -290,9 +275,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->persist($user);
         $this->entityManager->flush();
 
-        // Twenty recent filler entries hold the feed above the floor, so the
-        // four old entries below all fall beyond the newest-twenty boundary.
-        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
 
         $old = $this->daysAgo(120);
         $this->seedEntry($feed, 'old-plain', $old);
@@ -332,9 +315,7 @@ final class EntryPrunerTest extends DbTestCase
         $this->entityManager->persist($alice);
         $this->entityManager->persist($bob);
 
-        // Twenty recent filler entries hold the feed above the floor, so the
-        // shared entry below falls beyond the newest-twenty boundary.
-        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
         $shared = $this->seedEntry($feed, 'shared', $this->daysAgo(200));
 
         $aliceRead = new EntryState($alice, $shared);
@@ -354,9 +335,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
 
-        // Twenty recent filler entries hold the feed above the floor, so the
-        // doomed entry below falls beyond the newest-twenty boundary.
-        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
         $state = new EntryState($user, $doomed);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
@@ -369,7 +348,7 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testEntryWithoutPublishedAtUsesCreatedAt(): void
     {
-        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
         $undatedCreatedAt = $this->daysAgo(200);
         $undated = new Entry($feed, 'undated', null, 'No date', $undatedCreatedAt, $undatedCreatedAt);
         $this->entityManager->persist($undated);
@@ -397,9 +376,7 @@ final class EntryPrunerTest extends DbTestCase
 
     public function testCapsEntriesPerFeedKeepingNewestAndProtected(): void
     {
-        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
-        // the boundary this test exercises.
-        $cap = 22;
+        $cap = self::CAP_ABOVE_THE_FLOOR;
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
@@ -430,9 +407,7 @@ final class EntryPrunerTest extends DbTestCase
      */
     public function testCapPassDeletesEntryWithOnlyAReadState(): void
     {
-        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
-        // the boundary this test exercises.
-        $cap = 22;
+        $cap = self::CAP_ABOVE_THE_FLOOR;
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
@@ -453,27 +428,18 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
-     * Pins the semantic this task chose over the pre-existing one: a
-     * protected entry still occupies a ranking slot among the newest `keep`,
-     * rather than being excluded from the ranking before the cap is applied.
-     * With the favorite at the very top, cap 3 keeps only its two youngest
-     * non-protected neighbours and drops the two oldest — not just one.
+     * A protected entry still takes one of the newest `keep` ranking slots rather than standing outside the ranking,
+     * so a favorite above `$cap + 1` older entries leaves two of them past the cap, not one.
      */
     public function testProtectedNewestEntryStillOccupiesARankingSlot(): void
     {
-        // A cap above MIN_ENTRIES_PER_FEED, so the #384 clamp doesn't mask
-        // the boundary this test exercises.
-        $cap = 22;
+        $cap = self::CAP_ABOVE_THE_FLOOR;
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: $cap);
 
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
 
-        // `$cap + 1` same-day entries (tie-broken by id, oldest-inserted
-        // lowest) plus one favorite strictly newer than all of them: the
-        // favorite still occupies a ranking slot, so it isn't "one extra
-        // keep" — the two lowest ids in the tied group fall beyond the cap,
-        // not just one.
+        // `$cap + 1` same-day entries, tie-broken by id, under one strictly newer favorite.
         $feed = $this->feedWithEntries($cap + 1, $this->daysAgo(2));
         $favorite = $this->seedEntry($feed, 'favorite-newest', $this->daysAgo(1));
 
@@ -510,9 +476,7 @@ final class EntryPrunerTest extends DbTestCase
         $user = new User('reader@example.com', $this->clock->now());
         $this->entityManager->persist($user);
 
-        // Twenty recent filler entries hold the feed above the floor, so the
-        // doomed entry below falls beyond the newest-twenty boundary.
-        $feed = $this->feedWithEntries(20, $this->daysAgo(5));
+        $feed = $this->feedWithEntries(self::FLOOR, $this->daysAgo(5));
         $doomed = $this->seedEntry($feed, 'doomed', $this->daysAgo(200));
 
         $run = new RecommendationRun($user, $this->clock->now());
@@ -574,10 +538,8 @@ final class EntryPrunerTest extends DbTestCase
     }
 
     /**
-     * `maxEntriesPerFeed` is overridable via the service definition; a value
-     * configured below the 20-entry floor must not defeat it, and the clamp
-     * must also stop `rankBoundaryBeyond()` from turning a `keep` of 0 into a
-     * negative `setFirstResult()`.
+     * A `maxEntriesPerFeed` set below the 20-entry floor is raised to it, which also keeps `rankBoundaryBeyond()`
+     * from turning a `keep` of 0 into a negative `setFirstResult()`.
      */
     public function testCapBelowTheFloorIsClampedToTheFloor(): void
     {
@@ -593,8 +555,6 @@ final class EntryPrunerTest extends DbTestCase
     {
         $pruner = new EntryPruner($this->retention(), $this->clock, $this->indexer(), maxEntriesPerFeed: 3);
 
-        // Two feeds, each at the cap — globally 4 entries, but per-feed nothing
-        // exceeds the cap, so a global cap would wrongly delete here.
         foreach (['https://a.example/feed', 'https://b.example/feed'] as $feedNumber => $url) {
             $feed = new Feed($url);
             $this->entityManager->persist($feed);

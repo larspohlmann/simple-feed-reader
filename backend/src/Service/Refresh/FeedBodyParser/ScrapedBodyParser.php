@@ -10,11 +10,8 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Scraper\HtmlItemExtractor;
 
 /**
- * Refresh strategy for feeds synthesized from a plain HTML page ('scraped'
- * candidates the user subscribed). Extraction failures surface as
- * HtmlExtractionException, a FeedParseException subtype, so the runner's
- * existing parse-failure handling (recordFailure, backoff, Erroring status)
- * applies to scraped feeds unchanged.
+ * Refresh strategy for feeds synthesized from an HTML page. HtmlExtractionException is a FeedParseException, so a
+ * scraped feed fails, backs off and turns Erroring exactly like an xml one.
  */
 final readonly class ScrapedBodyParser implements FeedBodyParserInterface
 {

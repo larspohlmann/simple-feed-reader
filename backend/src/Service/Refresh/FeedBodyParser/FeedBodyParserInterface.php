@@ -10,11 +10,8 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use Symfony\Component\DependencyInjection\Attribute\AutoconfigureTag;
 
 /**
- * One strategy for turning a fetched body into a ParsedFeedModel, keyed by the
- * Feed::sourceFormat value it owns. Implementations are tagged automatically
- * and collected into FeedBodyParser's keyed locator, indexed by format() —
- * so adding a format to the refresh pipeline is ONE new class implementing
- * this interface: no dispatcher edit, no registration list, no match arm.
+ * One strategy for turning a fetched body into a ParsedFeedModel, keyed by the Feed::sourceFormat it owns. Tagged
+ * into FeedBodyParser's keyed locator, so a new format is one new class: no dispatcher edit, no list, no match arm.
  */
 #[AutoconfigureTag('app.feed_body_parser')]
 interface FeedBodyParserInterface

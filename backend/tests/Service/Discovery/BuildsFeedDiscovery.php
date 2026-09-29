@@ -16,13 +16,7 @@ use App\Service\Parser\FeedParser;
 use App\Service\Scraper\HtmlItemExtractor;
 use App\Tests\Support\StubFeedFetcher;
 
-/**
- * Wires a FeedDiscovery around a stub fetcher — the whole collaborator graph in
- * one place, so a test names only the behaviour it exercises, not the
- * constructor. The platform-specific SubstackProfileFeed is one of those
- * collaborators; it lives here, at the single wiring point that mirrors the
- * real container, and so stays out of the generic discovery test.
- */
+/** Wires a FeedDiscovery around a stub fetcher, so a test names the behaviour it exercises, not the constructor. */
 trait BuildsFeedDiscovery
 {
     private function discovery(StubFeedFetcher $fetcher): FeedDiscovery
@@ -45,10 +39,8 @@ trait BuildsFeedDiscovery
     }
 
     /**
-     * A site that serves nothing but the URLs a test stubs. Discovery guesses
-     * feed addresses now, so a test cannot list every URL it will ask for
-     * without re-deriving the code under test; it says "nothing else is out
-     * there" once instead.
+     * A site serving only the URLs a test stubs: discovery guesses addresses, so a test says "nothing else is out
+     * there" once instead of listing every guess.
      */
     private function fetcher(): StubFeedFetcher
     {

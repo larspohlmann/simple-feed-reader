@@ -10,11 +10,8 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Parser\WordPressJsonParser;
 
 /**
- * Refresh strategy for feeds subscribed as a WordPress REST posts endpoint.
- * Wraps WordPressJsonParser so refresh and the subscribe-dialog preview read
- * the same JSON through one implementation, exactly as XmlBodyParser wraps
- * FeedParser. Parse failures surface as FeedParseException, so the runner's
- * recordFailure / backoff / Erroring handling applies unchanged.
+ * Refresh strategy for a WordPress REST posts endpoint, through the WordPressJsonParser the subscribe preview uses
+ * too. Its failures are FeedParseException, so the usual failure handling applies.
  */
 final readonly class WpJsonBodyParser implements FeedBodyParserInterface
 {
