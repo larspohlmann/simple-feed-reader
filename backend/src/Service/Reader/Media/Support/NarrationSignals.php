@@ -63,4 +63,8 @@ final readonly class NarrationSignals
     {
         return '/(?<![a-z0-9])(?:' . implode('|', self::NARRATION_TOKENS) . ')(?![a-z0-9])/i';
     }
+
+    private function __construct()
+    {
+    }
 }

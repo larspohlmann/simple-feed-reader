@@ -113,4 +113,8 @@ final class FeedWebsite
 
         return \count($labels) >= 3 && \in_array(strtolower($labels[0]), self::FEED_SUBDOMAINS, true);
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -72,4 +72,8 @@ final class HttpsImageUrl
     {
         return $url === null || mb_strlen($url) > self::MAX_LENGTH ? null : $url;
     }
+
+    private function __construct()
+    {
+    }
 }

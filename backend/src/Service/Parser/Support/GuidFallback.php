@@ -18,4 +18,8 @@ final class GuidFallback
 
         return 'urn:sfr:' . hash('sha256', ($url ?? '') . '|' . ($title ?? ''));
     }
+
+    private function __construct()
+    {
+    }
 }

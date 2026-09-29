@@ -47,4 +47,8 @@ final class HtmlTranscoder
             $meta->setAttribute('content', $declared);
         }
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -18,4 +18,8 @@ final class MediaImageClassifier
     {
         return FeedMediaClassifier::kind($element) === FeedMediaKind::Image;
     }
+
+    private function __construct()
+    {
+    }
 }

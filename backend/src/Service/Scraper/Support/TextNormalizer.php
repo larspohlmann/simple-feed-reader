@@ -12,4 +12,8 @@ final class TextNormalizer
     {
         return Whitespace::collapse(str_replace("\u{00AD}", '', $text));
     }
+
+    private function __construct()
+    {
+    }
 }

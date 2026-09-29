@@ -17,4 +17,8 @@ final class ContentTypeCharset
 
         return $match[1];
     }
+
+    private function __construct()
+    {
+    }
 }

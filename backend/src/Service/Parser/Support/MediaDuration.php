@@ -41,4 +41,8 @@ final class MediaDuration
 
         return $total;
     }
+
+    private function __construct()
+    {
+    }
 }

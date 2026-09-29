@@ -29,4 +29,8 @@ final readonly class PageFurniture
     {
         return $element->closest(self::CHROME) !== null;
     }
+
+    private function __construct()
+    {
+    }
 }

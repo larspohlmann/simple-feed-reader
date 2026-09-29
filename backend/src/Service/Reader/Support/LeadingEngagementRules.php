@@ -162,4 +162,8 @@ final class LeadingEngagementRules
     {
         return (string) preg_replace('/\s+/u', '', $text);
     }
+
+    private function __construct()
+    {
+    }
 }

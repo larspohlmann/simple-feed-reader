@@ -28,4 +28,8 @@ final readonly class PaywallSignals
         return PaywallBlocks::foundOutsideFurnitureIn($normalized)
             || MembershipCheckout::foundOutsideFurnitureIn($normalized);
     }
+
+    private function __construct()
+    {
+    }
 }

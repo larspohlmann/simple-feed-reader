@@ -52,4 +52,8 @@ final class EgressOptions
             ...CrossFamilyFailover::freshConnectionAfter($pinAttempt),
         ];
     }
+
+    private function __construct()
+    {
+    }
 }

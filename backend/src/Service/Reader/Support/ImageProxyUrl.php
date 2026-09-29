@@ -63,4 +63,8 @@ final readonly class ImageProxyUrl
 
         return AbsoluteHttpUrl::matches($decoded) ? $decoded : null;
     }
+
+    private function __construct()
+    {
+    }
 }

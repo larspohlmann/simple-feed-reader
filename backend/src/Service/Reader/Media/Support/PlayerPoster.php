@@ -43,4 +43,8 @@ final readonly class PlayerPoster
 
         return null;
     }
+
+    private function __construct()
+    {
+    }
 }

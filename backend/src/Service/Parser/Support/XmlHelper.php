@@ -89,4 +89,8 @@ final class XmlHelper
             yield $child;
         }
     }
+
+    private function __construct()
+    {
+    }
 }

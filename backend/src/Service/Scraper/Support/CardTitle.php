@@ -146,4 +146,8 @@ final class CardTitle
 
         return null;
     }
+
+    private function __construct()
+    {
+    }
 }

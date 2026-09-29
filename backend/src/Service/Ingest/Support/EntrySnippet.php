@@ -23,4 +23,8 @@ final class EntrySnippet
 
         return $text === null ? null : mb_substr($text, 0, self::MAX_LENGTH);
     }
+
+    private function __construct()
+    {
+    }
 }

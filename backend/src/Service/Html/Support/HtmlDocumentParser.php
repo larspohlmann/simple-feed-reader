@@ -31,4 +31,8 @@ final class HtmlDocumentParser
             return null;
         }
     }
+
+    private function __construct()
+    {
+    }
 }

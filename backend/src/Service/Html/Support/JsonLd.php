@@ -44,4 +44,8 @@ final class JsonLd
             }
         }
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -96,4 +96,8 @@ final readonly class RecommendationAnswerBudget
             Reasoning::Allowed => self::REASONING_HEADROOM_TOKENS,
         };
     }
+
+    private function __construct()
+    {
+    }
 }

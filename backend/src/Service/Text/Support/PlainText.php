@@ -57,4 +57,8 @@ final class PlainText
 
         return self::from($withBoundaries);
     }
+
+    private function __construct()
+    {
+    }
 }

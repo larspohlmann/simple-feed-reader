@@ -41,4 +41,8 @@ final class AuthorProfileLink
 
         return array_intersect($segments, self::PROFILE_SEGMENTS) !== [];
     }
+
+    private function __construct()
+    {
+    }
 }

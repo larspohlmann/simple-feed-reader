@@ -40,4 +40,8 @@ final readonly class DatabaseValue
             \sprintf('Expected %s, got %s.', $expected, get_debug_type($value)),
         );
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -33,4 +33,8 @@ final readonly class OutsideFurniture
     {
         return \in_array($element->localName, self::DOCUMENT_ROOTS, true);
     }
+
+    private function __construct()
+    {
+    }
 }

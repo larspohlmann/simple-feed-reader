@@ -21,4 +21,8 @@ final class UrlOrigin
     {
         return $scheme . '://' . $host . (null === $port ? '' : ':' . $port);
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -143,4 +143,8 @@ final class Srcset
 
         return (float) $matches[1];
     }
+
+    private function __construct()
+    {
+    }
 }

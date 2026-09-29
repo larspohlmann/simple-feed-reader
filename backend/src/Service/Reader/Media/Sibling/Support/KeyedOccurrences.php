@@ -61,4 +61,8 @@ final readonly class KeyedOccurrences
     {
         return preg_match(self::ANY_KEY, $text, $matches) === 1 ? $matches[1] : '';
     }
+
+    private function __construct()
+    {
+    }
 }

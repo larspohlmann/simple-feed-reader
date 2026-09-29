@@ -30,4 +30,8 @@ final class ArticleContentGate
     {
         return mb_strlen(trim((string) $article->textContent));
     }
+
+    private function __construct()
+    {
+    }
 }

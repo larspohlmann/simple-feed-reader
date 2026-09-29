@@ -45,4 +45,8 @@ final readonly class NearbyPoster
 
         return (int) $width * (int) $height;
     }
+
+    private function __construct()
+    {
+    }
 }

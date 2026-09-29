@@ -51,4 +51,8 @@ final class CurlSmtpOptions
 
         return \sprintf('%s://%s:%d', $scheme, $resolved->host, $resolved->port);
     }
+
+    private function __construct()
+    {
+    }
 }

@@ -42,4 +42,8 @@ final class BlockText
 
         return $length;
     }
+
+    private function __construct()
+    {
+    }
 }

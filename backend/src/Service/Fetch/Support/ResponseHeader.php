@@ -17,4 +17,8 @@ final class ResponseHeader
             return null;
         }
     }
+
+    private function __construct()
+    {
+    }
 }

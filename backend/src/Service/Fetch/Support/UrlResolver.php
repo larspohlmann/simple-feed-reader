@@ -39,4 +39,8 @@ final class UrlResolver
 
         return $origin . ($directory === '' ? '/' : $directory) . $location;
     }
+
+    private function __construct()
+    {
+    }
 }

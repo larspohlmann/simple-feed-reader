@@ -42,4 +42,8 @@ final class FeedItemImageSelector
 
         return null;
     }
+
+    private function __construct()
+    {
+    }
 }

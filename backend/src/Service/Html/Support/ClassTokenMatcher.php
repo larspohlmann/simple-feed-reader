@@ -30,4 +30,8 @@ final class ClassTokenMatcher
             static fn (string $classToken): bool => in_array($classToken, $tokens, true),
         );
     }
+
+    private function __construct()
+    {
+    }
 }

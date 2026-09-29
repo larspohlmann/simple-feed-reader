@@ -39,4 +39,8 @@ final class RecommendationSettingsBounds
             'max' => self::CONTEXT_WINDOW_MAXIMUM,
         ],
     ];
+
+    private function __construct()
+    {
+    }
 }

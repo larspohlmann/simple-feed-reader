@@ -20,4 +20,8 @@ final class ImageSourceUrl
     {
         return $url !== null && $url !== '' && preg_match(self::FOREIGN_SCHEME, $url) !== 1;
     }
+
+    private function __construct()
+    {
+    }
 }
