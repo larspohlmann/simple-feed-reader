@@ -38,6 +38,20 @@ final readonly class ProxyConfigModel
         return sprintf('%s://%s%s:%d', $scheme, $this->credentials(), $this->host, $this->port);
     }
 
+    /** Stable while the settings a proxied SMTP send reads are, so its transport is rebuilt only when they change.
+     *  The password enters as a digest: the plaintext must not leave this object. */
+    public function signature(): string
+    {
+        return implode('|', [
+            $this->type->value,
+            $this->host,
+            (string) $this->port,
+            $this->username ?? '',
+            null === $this->password ? 'no-pass' : hash('sha256', $this->password),
+            $this->remoteDns ? 'remote-dns' : 'local-dns',
+        ]);
+    }
+
     /** Whether curl resolves the destination name on this host, rather than the
      *  proxy doing it. Only a plain-`socks5` proxy does. */
     public function resolvesLocally(): bool

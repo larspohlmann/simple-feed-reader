@@ -78,4 +78,21 @@ final class ProxyConfigModelTest extends TestCase
 
         self::assertFalse($config->resolvesLocally());
     }
+
+    public function testTheSignatureCarriesThePasswordOnlyAsADigest(): void
+    {
+        $config = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example', 1080, 'user', 'secret', remoteDns: true);
+
+        self::assertSame(
+            'SOCKS5|proxy.example|1080|user|' . hash('sha256', 'secret') . '|remote-dns',
+            $config->signature(),
+        );
+    }
+
+    public function testTheSignatureOfAProxyWithoutCredentials(): void
+    {
+        $config = new ProxyConfigModel(ProxyType::Http, 'proxy.example', 8080, null, null);
+
+        self::assertSame('HTTP|proxy.example|8080||no-pass|local-dns', $config->signature());
+    }
 }
