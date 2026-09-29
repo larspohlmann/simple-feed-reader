@@ -20,9 +20,8 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 /**
- * RecordedCall's own DBAL writes, isolated from RecommendationCallRecorder
- * (#321): the recorder is what decides whether a log row exists at all, this
- * is what decides what a settled call writes into it once it does.
+ * RecordedCall's own DBAL writes, apart from RecommendationCallRecorder: the recorder decides whether a log row
+ * exists, RecordedCall what a settled call writes into it.
  */
 final class RecordedCallTest extends DbTestCase
 {
@@ -113,9 +112,8 @@ final class RecordedCallTest extends DbTestCase
     }
 
     /**
-     * The reason the provider stamped before the stream died is exactly what
-     * explains the death: a `length` here turns an empty "answered without a
-     * completion" row into "the answer was truncated by max_tokens" (#327).
+     * The finish reason stamped before the stream died explains the death: a `length` turns an empty "answered
+     * without a completion" row into "truncated by max_tokens".
      */
     public function testATransportFailureKeepsTheFinishReasonSeenBeforeItDied(): void
     {
@@ -221,13 +219,8 @@ final class RecordedCallTest extends DbTestCase
     }
 
     /**
-     * Both totals start at 0 / NULL for a single call, so nothing in the
-     * tests above tells `SET x = x + :n` apart from `SET x = :n` -- an
-     * overwrite would pass them just as well. A second call against the same
-     * run is what only accumulation survives: the token sum proves the SQL
-     * arithmetic, and the cost sum proves COALESCE both initialises the
-     * column on the first priced call and adds on top of it for the second,
-     * rather than a plain assignment either time.
+     * A second call against the same run tells `SET x = x + :n` from `SET x = :n`: the token sum proves the addition,
+     * the cost sum that COALESCE both initialises the column and adds to it.
      */
     public function testBanksTwoCallsUsageAsASumNotAnOverwrite(): void
     {
@@ -260,14 +253,7 @@ final class RecordedCallTest extends DbTestCase
         ], $this->runTotals());
     }
 
-    /**
-     * $this->usage is only ever assigned `$progress->usage ?? $this->usage`
-     * (streamProgressed()), never a bare `$progress->usage` -- a later report
-     * that carries no usage of its own must not erase the one already seen.
-     * A plain assignment passes every other test in this file (none of them
-     * report progress twice with the second report bare), so this is the one
-     * that actually exercises the `??`.
-     */
+    /** A later progress report without usage must not erase the usage already seen (streamProgressed()'s `??`). */
     public function testKeepsTheUsageSeenBeforeALaterReportArrivesWithoutIt(): void
     {
         $call = $this->call();
@@ -320,13 +306,6 @@ final class RecordedCallTest extends DbTestCase
         ];
     }
 
-    /**
-     * fetchAssociative() hands back a row typed as array<string, mixed>, and a
-     * bare (int) cast on mixed is exactly what PHPStan max forbids -- this is
-     * the narrowing step that makes the cast legal, not a workaround for it.
-     * A PHPUnit assertion narrows exactly as well as a thrown exception would
-     * and fails as a readable test rather than an uncaught RuntimeException.
-     */
     private static function columnAsInt(mixed $value): int
     {
         self::assertTrue(

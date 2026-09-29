@@ -62,9 +62,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
     }
 
     /**
-     * The row is written for every run, not only a debugged one (#638): the
-     * debug switch is off here, yet the request body lands the moment the
-     * call goes out, because the ETA reads this log as its timing history.
+     * The row is written for every run, debugged or not: the ETA reads this log as its timing history, so the request
+     * body lands the moment the call goes out.
      */
     public function testBeginPersistsTheRequestBodyImmediatelyRegardlessOfTheDebugSwitch(): void
     {
@@ -153,9 +152,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     }
 
     /**
-     * The #320 case the panel exists to explain: a reasoning model streams
-     * megabytes and never answers, so the call dies with an empty response.
-     * Without the byte count that row is indistinguishable from a provider
+     * A reasoning model can stream megabytes and never answer: without the byte count, that row reads like a provider
      * that said nothing at all.
      */
     public function testAnAbortRecordsTheBytesEvenWhenNothingWasAnswered(): void
@@ -175,13 +172,8 @@ final class RecommendationCallRecorderTest extends DbTestCase
     }
 
     /**
-     * DBAL's Connection::update() silently drops the WHERE clause on an
-     * empty criteria array instead of raising — with a single row seeded,
-     * a scoped and an unscoped UPDATE are observationally identical. Every
-     * checkpoint/verdict write in RecordedCall must stay row-scoped in a
-     * multi-user table, so this seeds a second user's run and log row and
-     * proves they survive every write RecordedCall makes for the first
-     * user's call.
+     * DBAL's update() drops the WHERE clause on empty criteria instead of raising, so a second user's run and log row
+     * must survive every write RecordedCall makes for the first user's call.
      */
     public function testUpdatesStayScopedToTheOwningRunAndLog(): void
     {
@@ -262,8 +254,7 @@ final class RecommendationCallRecorderTest extends DbTestCase
     }
 
     /**
-     * The rows of the run under test. The log keeps ten runs (#401), so a
-     * read names one; every test here drives a single run.
+     * The rows of the run under test: the log keeps ten runs, so a read names one.
      *
      * @return list<DebugLogRow>
      */

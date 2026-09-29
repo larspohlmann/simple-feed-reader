@@ -7,7 +7,6 @@ namespace App\Tests\Service\Recommendation\Run;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
 use App\Enum\RecommendationBatchSize;
@@ -124,12 +123,6 @@ final class DueRecommendationRunFinderTest extends DbTestCase
         self::assertContains('finder-never-ran@example.test', $this->dueEmails());
     }
 
-    /**
-     * The active-run guard is load-bearing on its own, not made redundant by
-     * the anchor check below it: a PENDING run (active) with a stale creation
-     * time would read as due by the anchor alone, so only the guard keeps it
-     * out. Pins that the guard's early return actually fires.
-     */
     public function testNotDueWhileAnOldActiveRunExists(): void
     {
         $user = $this->user('finder-old-active@example.test');

@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
-use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\Subscription;
 use App\Entity\User;
@@ -134,17 +133,8 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
-     * While the cron sweep advances runs it IS the install's driver, and the
-     * browser polling the very account it is working on must be able to read
-     * that (#439). The sweep used to mark no liveness at all, so that poll
-     * found a held lock with nothing vouching for it and told the user their
-     * healthy run had stalled.
-     *
-     * The provider call is the observation window: it is the one point that
-     * is unambiguously inside a sweep. The same window answers the second
-     * question WorkerPresence is asked -- a cron sweep must never read as a
-     * persistent worker, or the settings card would tell the operator to drop
-     * the very cron entry that is driving this run.
+     * While it advances runs the cron sweep is the install's driver, observed during the provider call: a poll must
+     * see it driving, and it must never read as a persistent worker, or Settings would say the cron entry can go.
      */
     public function testTheSweepClaimsDriverLivenessWhileItAdvancesARun(): void
     {
@@ -173,11 +163,8 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
-     * The pre-run mark alone cannot carry a run whose single provider call
-     * outlives the freshness window, so the sweep arms the mid-call heartbeat
-     * too (#433, #439). The beat stands in for a chunk arriving long after
-     * that mark aged out: the key is dropped inside the call, and the beat has
-     * to put it back.
+     * The pre-run mark cannot outlast a provider call longer than the freshness window, so the sweep arms the
+     * mid-call heartbeat: the key is dropped inside the call, and the beat has to put it back.
      */
     public function testTheSweepArmsTheMidCallHeartbeat(): void
     {
@@ -199,11 +186,8 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
-     * And disarms it again: a sweep that has ended is no longer evidence of
-     * anything, and it has just surrendered its key -- a heartbeat left armed
-     * would write that key straight back. Nothing beats during this sweep, so
-     * the beat below is the first one due and would land if the disarm were
-     * missing.
+     * A heartbeat left armed would write the surrendered key straight back. Nothing beats during this sweep, so the
+     * beat below is the first one due and lands if the disarm is missing.
      */
     public function testTheSweepDisarmsTheMidCallHeartbeatOnItsWayOut(): void
     {
@@ -222,12 +206,8 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
-     * The key is surrendered in a `finally`, not in a trailing statement: a
-     * pass that dies partway through must not leave every browser deferring
-     * to a sweep that is over for the rest of the freshness window. The
-     * presence clock is the seam -- one good reading carries the first run's
-     * mark, and the second run's mark then fails inside the loop, with the key
-     * already written.
+     * A pass that dies partway must still surrender its key, or every browser defers to a finished sweep for the rest
+     * of the freshness window. The presence clock gives one good reading, then fails the second run's mark.
      */
     public function testSurrendersItsKeyEvenWhenThePassDiesPartWayThrough(): void
     {
@@ -250,20 +230,8 @@ final class ForYouSweepTest extends DbTestCase
     }
 
     /**
-     * `finally` is only half the cover, because the ending this sweep is most
-     * exposed to does not unwind the stack: the gateway kills the request the
-     * cron made, and a shutdown hook is what surrenders the key then. On every
-     * ordinary pass that hook therefore fires on top of a `finally` that has
-     * already surrendered, and it carries no has-it-been-cleaned-up flag --
-     * unlike RecommendationDrainCommand's, whose hook also releases a lock. The
-     * assumption that buys is exactly what this pins: forgetting a name that is
-     * already forgotten changes nothing and raises nothing. Break it in
-     * WorkerHeartbeatRepository and the hook needs a guard.
-     *
-     * What no in-process test can reach is the hook FIRING -- that is PHP's own
-     * contract for a request the gateway cuts off, and the reason the two
-     * shutdown hooks already in this tree (RecommendationRunAdvancer,
-     * RecommendationDrainCommand) are covered no further than this either.
+     * When the gateway kills the cron's request a shutdown hook surrenders the key; on an ordinary pass it repeats the
+     * `finally`'s forget unguarded, so forgetting an already-forgotten name must change and raise nothing.
      */
     public function testTheCleanupTheShutdownHookRepeatsIsSafeToRunTwice(): void
     {

@@ -21,11 +21,7 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
         self::assertSame([['app:recommendations:drain', '--detach']], $launcher->launches);
     }
 
-    /**
-     * The Docker install's real worker keeps the heartbeat fresh, which is
-     * exactly what must make the web request never spawn a second driver --
-     * the feature self-disables where it is not needed (#371).
-     */
+    /** A fresh worker heartbeat means no spawn: the feature disables itself where a worker already drives. */
     public function testAFreshWorkerHeartbeatSuppressesTheSpawn(): void
     {
         $launcher = new RecordingProcessLauncher();
@@ -37,10 +33,8 @@ final class RecommendationDrainSpawnerTest extends DbTestCase
     }
 
     /**
-     * A live drainer is a driver too, and it holds the drain lock: a second
-     * one would pay a full Symfony boot only to lose the lock and exit. The
-     * spawn question is "is anybody driving?", not "is there a persistent
-     * worker?" -- the two answers differ exactly here (#371 follow-up).
+     * A live drainer holds the drain lock, so a second would boot Symfony only to lose it and exit: the question is
+     * "is anybody driving?", not "is there a persistent worker?".
      */
     public function testALiveDrainerAlsoSuppressesTheSpawn(): void
     {
