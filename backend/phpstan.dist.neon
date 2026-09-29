@@ -21,6 +21,8 @@ parameters:
         - modelHome
         - passHome
         - supportHome
+        - rootService
+        - statefulService
     paths:
         - src
         - tests

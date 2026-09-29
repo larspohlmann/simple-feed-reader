@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail;
 
+use App\DependencyInjection\ProcessLifetimeState;
 use Symfony\Component\Mailer\Envelope;
 use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
 use Symfony\Component\Mailer\MailerInterface;
@@ -29,6 +30,7 @@ use Symfony\Component\Mime\RawMessage;
  *
  * Not readonly: the queue is the point.
  */
+#[ProcessLifetimeState('Drained on kernel.terminate; a reset between messages would drop queued mail')]
 final class DeferredMailer implements MailerInterface
 {
     /** @var list<array{RawMessage, ?Envelope}> */

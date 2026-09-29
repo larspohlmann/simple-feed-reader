@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search;
 
+use App\DependencyInjection\ProcessLifetimeState;
 use App\Entity\Entry;
 use App\Service\Search\Exception\SearchEngineUnavailableException;
 use App\Service\Search\Index\Model\IndexedEntryModel;
@@ -31,6 +32,7 @@ use Psr\Log\LoggerInterface;
  * sweep for no gain. Every other collaborator stays constructor-promoted
  * `readonly`; only $configured needs to change after construction.
  */
+#[ProcessLifetimeState('The index settings are pushed once per process')]
 final class EntryIndexer
 {
     private bool $configured = false;

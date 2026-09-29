@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Mail\Transport;
 
+use App\DependencyInjection\ProcessLifetimeState;
 use App\Service\Crypto\Exception\SecretUnreadableException;
 use App\Service\Mail\MailSendingSettings\MailSendingSettingsInterface;
 use App\Service\Mail\Settings\Exception\IncompleteMailConfigurationException;
@@ -25,6 +26,7 @@ use Symfony\Component\Mime\RawMessage;
  * still collects sent messages, and from the DEFAULT factory set — which does not
  * include `dynamic` — so there is no recursion.
  */
+#[ProcessLifetimeState('The transport is cached per settings signature, re-checked on every send')]
 final class DynamicMailTransport implements TransportInterface
 {
     private ?TransportInterface $cached = null;

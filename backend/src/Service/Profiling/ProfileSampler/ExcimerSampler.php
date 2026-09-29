@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Service\Profiling\ProfileSampler;
 
+use App\DependencyInjection\ProcessLifetimeState;
 use App\Service\Profiling\Model\CollapsedProfileModel;
 
+#[ProcessLifetimeState('WorkerProfilingListener samples the worker across messages')]
 final class ExcimerSampler implements ProfileSamplerInterface
 {
     private const int MAX_STACK_DEPTH = 250;
