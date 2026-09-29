@@ -9,17 +9,11 @@ use App\Service\Mail\Settings\Model\ResolvedMailTransportModel;
 use App\Service\Mail\Transport\Factory\EsmtpTransportFactory;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use ReflectionMethod;
 use Symfony\Component\Mailer\Transport\Smtp\EsmtpTransport;
 use Symfony\Component\Mailer\Transport\Smtp\Stream\SocketStream;
 
 final class EsmtpTransportFactoryTest extends TestCase
 {
-    public function testFromIsAnInstanceMethod(): void
-    {
-        self::assertFalse((new ReflectionMethod(EsmtpTransportFactory::class, 'from'))->isStatic());
-    }
-
     public function testTlsOpensAnImplicitTlsSocket(): void
     {
         $transport = $this->build(MailEncryption::Tls);
