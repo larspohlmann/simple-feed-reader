@@ -89,7 +89,7 @@ final readonly class FeedOutcomePersister
     {
         // A moved feed can answer 304 at its new address; without this the redirect chain is re-walked every time.
         $this->applyPermanentRedirect($feed, $response);
-        $this->scheduler->recordSuccess($feed, 0);
+        $this->scheduler->recordNotModified($feed);
         $this->em->flush();
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);

@@ -29,19 +29,23 @@ final readonly class FeedScheduler
     public function recordSuccess(Feed $feed, int $newEntryCount): void
     {
         // New entries reset to the floor at once, not by halving, or a burst blocks the top of All items (#643).
-        // The grow branch keeps the floor guard: a stored interval <= 0 would otherwise refetch the feed every run.
-        $interval = $newEntryCount > 0
-            ? self::FLOOR_MINUTES
-            : max(
-                self::FLOOR_MINUTES,
-                min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5)),
-            );
+        $interval = $newEntryCount > 0 ? self::FLOOR_MINUTES : $this->grownInterval($feed);
 
         $now = $this->clock->now();
         $feed->recordSuccessfulFetch($now, $interval);
         if ($newEntryCount > 0) {
             $feed->recordNewEntries($now);
         }
+    }
+
+    /**
+     * A 304: a successful fetch that carried nothing new.
+     *
+     * @throws \DateMalformedStringException
+     */
+    public function recordNotModified(Feed $feed): void
+    {
+        $feed->recordSuccessfulFetch($this->clock->now(), $this->grownInterval($feed));
     }
 
     /**
@@ -92,6 +96,15 @@ final readonly class FeedScheduler
             self::FAILURE_CAP_MINUTES,
             max($feed->getFetchIntervalMinutes(), self::FLOOR_MINUTES)
                 * (2 ** min($failures, self::MAX_BACKOFF_EXPONENT)),
+        );
+    }
+
+    /** The grow branch keeps the floor guard: a stored interval <= 0 would otherwise refetch the feed every run. */
+    private function grownInterval(Feed $feed): int
+    {
+        return max(
+            self::FLOOR_MINUTES,
+            min(self::CEILING_MINUTES, (int) round($feed->getFetchIntervalMinutes() * 1.5)),
         );
     }
 }
