@@ -8,9 +8,8 @@ use App\Service\Fetch\Support\ProxyHandshakeFailure;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
- * A proxied SMTP send that failed at the curl layer, with the raw curl message
- * run through the same admin-facing explainer the fetch path and the proxy Test
- * button use — so a SOCKS5 reply code becomes a reason, not a bare byte (#880).
+ * A proxied SMTP send that failed at the curl layer, with the raw curl message run through the same admin-facing
+ * explainer the fetch path and the proxy Test button use, so a SOCKS5 reply code becomes a reason, not a bare byte.
  */
 final class ProxiedSmtpSendException extends TransportException
 {

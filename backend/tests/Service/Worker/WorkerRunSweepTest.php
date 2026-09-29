@@ -26,12 +26,8 @@ use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * The shared worker-regime sweep (#371). Its coordination behavior --
- * heartbeat per run, error ladder, identity-map hygiene -- is pinned by
- * AdvanceRecommendationRunsHandlerTest, which now exercises it through the
- * handler's delegation. What is new here is the return value: the drain
- * command loops until sweep() reports no active run was attempted, so the
- * count is load-bearing, not informational.
+ * AdvanceRecommendationRunsHandlerTest pins the sweep's coordination through the handler. Here: the returned count,
+ * which the drain command loops on until no run was attempted.
  */
 final class WorkerRunSweepTest extends DbTestCase
 {
@@ -56,10 +52,8 @@ final class WorkerRunSweepTest extends DbTestCase
     }
 
     /**
-     * The sweep marks whoever runs it and nothing else (#371 follow-up). Run
-     * by the drainer, it must claim the drainer's key alone: the settings card
-     * reads the persistent worker's key to decide whether the install still
-     * needs a cron, and a drainer never starts a due run.
+     * The sweep marks only its caller's key: the settings card reads the persistent worker's key to decide whether an
+     * install still needs a cron, and a drainer never starts a due run.
      */
     public function testASweepRunByTheDrainerClaimsOnlyTheDrainerKey(): void
     {
@@ -91,14 +85,8 @@ final class WorkerRunSweepTest extends DbTestCase
     }
 
     /**
-     * The identity map is per-sweep state, so its cleanup is a `finally` and
-     * not a trailing statement -- a sweep that dies mid-run must not leave a
-     * dirty map for the next one, and the drain command runs sweep after
-     * sweep in one process (#371 final review, Finding 9). The presence clock
-     * is the seam: the sweep marks the heartbeat once per run it advances, so
-     * a clock good for exactly one reading carries the first of these two runs
-     * and then fails inside the loop, after findAllActive() has already filled
-     * the map.
+     * clear() sits in `finally`: the drain command runs sweep after sweep in one process. The seam is a presence clock
+     * good for one reading: it carries the first run, then fails inside the loop after findAllActive() filled the map.
      */
     public function testClearsTheIdentityMapEvenWhenTheSweepBodyThrows(): void
     {
@@ -132,14 +120,8 @@ final class WorkerRunSweepTest extends DbTestCase
     }
 
     /**
-     * The sweep arms the mid-call heartbeat and disarms it again (#433). Both
-     * halves are observable through a beat: one fired from inside the provider
-     * call must reach the presence row, and one fired after the sweep must
-     * not.
-     *
-     * The clock ticks, so the beat's write lands strictly later than the mark
-     * the sweep makes before the run. A sweep that never armed the heartbeat
-     * would leave the row at that mark.
+     * The sweep arms the mid-call heartbeat and disarms it after: a beat from inside the provider call reaches the
+     * presence row, one after the sweep does not. The clock ticks, so the beat lands strictly after the pre-run mark.
      */
     public function testItArmsTheStreamHeartbeatForTheSweepAndDisarmsItAfterwards(): void
     {
@@ -226,13 +208,6 @@ final class WorkerRunSweepTest extends DbTestCase
         return $presence;
     }
 
-    /**
-     * Built by hand, not fetched from the container: until the drain command
-     * exists (a later task), the handler is this service's only reference,
-     * and the compiler inlines single-reference private services away -- the
-     * test container then cannot fetch it (the same caveat
-     * config/services_test.yaml documents for StubChatClient's neighbours).
-     */
     private function sweep(): WorkerRunSweep
     {
         return new WorkerRunSweep(
@@ -253,12 +228,7 @@ final class WorkerRunSweepTest extends DbTestCase
         return $advancer;
     }
 
-    /**
-     * A heartbeat over the same presence the sweep marks with. It only ever
-     * writes while a completion is streaming, and nothing in these tests
-     * streams — StubChatClient answers in one piece — so it is inert here and
-     * does not disturb the mark counts the presence clocks pin.
-     */
+    /** Writes only while a completion streams, and StubChatClient never streams: it cannot disturb the mark counts. */
     private function streamHeartbeat(WorkerPresence $presence): SweepStreamHeartbeat
     {
         return new SweepStreamHeartbeat($presence, new MockClock());

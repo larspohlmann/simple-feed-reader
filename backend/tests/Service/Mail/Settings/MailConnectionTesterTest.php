@@ -191,9 +191,10 @@ final class MailConnectionTesterTest extends KernelTestCase
         self::assertSame([], $health->recordedFailures());
     }
 
-    /** A sendmail transport piped to the 'false' binary attempts a real send
-     *  and fails it, through the exact production code path, proving a failed
-     *  SEND records a Test-kind failure against the acting admin (#882). */
+    /**
+     * A sendmail transport piped to the 'false' binary attempts a real send and fails it through the production path,
+     * so a failed SEND records a Test-kind failure against the acting admin.
+     */
     public function testAFailedSendRecordsATestFailureAgainstTheActingAdmin(): void
     {
         putenv('MAILER_FALLBACK_DSN=sendmail://default?command=false+-t');
@@ -212,10 +213,10 @@ final class MailConnectionTesterTest extends KernelTestCase
         );
     }
 
-    /** A pre-send config guard (here: no from-address) never dials a
-     *  transport, so it must not be mistaken for a delivery failure -- the
-     *  pill would otherwise flag an admin who has not finished configuring
-     *  mail yet, not one whose mail server is actually failing (#882). */
+    /**
+     * A pre-send config guard (here: no from-address) never dials a transport, so it records nothing: the pill must
+     * flag a failing mail server, not an admin who has not finished configuring mail.
+     */
     public function testAPreSendConfigGuardRecordsNothing(): void
     {
         putenv('MAIL_FROM=');

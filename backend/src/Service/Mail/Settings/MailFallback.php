@@ -12,10 +12,8 @@ use Symfony\Component\Mailer\Exception\InvalidArgumentException;
 use Symfony\Component\Mailer\Transport\Dsn;
 
 /**
- * The env transport DSN and MAIL_FROM(_NAME), read as the fallback used when no
- * DB row exists. Parses only SMTP DSNs into form defaults; a sendmail or null
- * transport is reported as enabled-but-blank so the SMTP form starts empty while
- * the env transport keeps sending until the admin saves a DB config.
+ * The env DSN and MAIL_FROM(_NAME), used while no DB row exists. Only an SMTP DSN prefills the form: sendmail or null
+ * reads as enabled-but-blank, and the env transport keeps sending until the admin saves a DB config.
  */
 final readonly class MailFallback
 {

@@ -19,13 +19,9 @@ use Symfony\Component\Mailer\Transport\TransportInterface;
 use Symfony\Component\Mime\RawMessage;
 
 /**
- * The one mailer transport. It resolves the active transport at SEND time, never
- * at construction: the DB is not reachable during cache:warmup. A saved SMTP row
- * wins; otherwise the env fallback DSN is used. The built transport is memoised
- * per signature so a digest batch does not reconnect per message. The fallback is
- * built with the app's dispatcher/logger/client so the message-logger listener
- * still collects sent messages, and from the DEFAULT factory set — which does not
- * include `dynamic` — so there is no recursion.
+ * Resolves the transport at send time, never at construction: the DB is unreachable during cache:warmup. The fallback
+ * gets the app's dispatcher, so the message-logger listener still sees its sends, and comes from the DEFAULT factory
+ * set, which has no `dynamic` scheme, so it cannot recurse into this class.
  */
 #[ProcessLifetimeState('The transport is cached per settings signature, re-checked on every send')]
 final class DynamicMailTransport implements TransportInterface
@@ -76,8 +72,7 @@ final class DynamicMailTransport implements TransportInterface
             // every send path degrades the way a dead relay already does.
             throw new TransportException(
                 'The stored mail password is unreadable: ' . $exception->getMessage(),
-                0,
-                $exception,
+                previous: $exception,
             );
         }
     }

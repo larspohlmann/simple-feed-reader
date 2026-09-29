@@ -12,12 +12,8 @@ use Doctrine\DBAL\Schema\Table;
 use Doctrine\DBAL\Types\Types;
 
 /**
- * `messenger_messages` is created lazily by `auto_setup` on the first failed
- * delivery (config/packages/doctrine.yaml's `schema_filter` hides it from
- * the ORM-built test schema), so a stack that never failed a message has no
- * table for this handler to purge against. Both cases are exercised here:
- * the table missing, and the table present with rows on both sides of the
- * retention boundary.
+ * `messenger_messages` exists only after auto_setup's first failed delivery (doctrine.yaml's schema_filter hides it
+ * from the test schema), so both cases run: the table missing, and rows on both sides of the retention boundary.
  */
 final class PurgeFailedMessagesHandlerTest extends DbTestCase
 {
@@ -41,14 +37,8 @@ final class PurgeFailedMessagesHandlerTest extends DbTestCase
     }
 
     /**
-     * Built through the DBAL schema API rather than raw DDL, so the column
-     * types land correctly on both SQLite (native test run) and MySQL
-     * (Docker leg) — `AUTOINCREMENT`/`CLOB` are SQLite-only keywords that a
-     * MySQL server rejects outright. Created as a TEMPORARY table: plain
-     * `CREATE TABLE` implicitly commits on MySQL, which would tear down the
-     * transaction DAMA's test bundle wraps every test in and cascade
-     * failures into every test that runs afterwards. `CREATE TEMPORARY
-     * TABLE` is the documented exception to that implicit commit.
+     * DBAL schema API, not raw DDL, so the column types suit SQLite and MySQL. TEMPORARY, because a plain CREATE
+     * TABLE commits implicitly on MySQL and would end the transaction DAMA wraps every test in.
      */
     private function createMessengerMessagesTable(): void
     {

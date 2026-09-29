@@ -18,11 +18,7 @@ use App\Service\Mail\Digest\DigestEntryFinder;
 use App\Tests\DbTestCase;
 use App\Tests\Support\SavedSearchMatchFixture;
 
-/**
- * DigestEntryFinder caps a saved search's unread-since matches for the digest
- * (#636) — the count callers use for "+N more" must stay the pre-cap total,
- * newest-first order comes straight from the membership table (#1116).
- */
+/** The "+N more" count stays the pre-cap total, and the newest-first order comes straight from the membership table. */
 final class DigestEntryFinderTest extends DbTestCase
 {
     private User $user;

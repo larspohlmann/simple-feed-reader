@@ -18,13 +18,8 @@ use Monolog\Handler\TestHandler;
 use Monolog\Logger;
 
 /**
- * Drives the handler through the container's real RefreshRunner, the same
- * "no mocks" stance as AdvanceRecommendationRunsHandlerTest -- the handler's
- * whole job is calling the runner with a fixed budget and logging its
- * report, so a mock would only re-encode that call. Only the outbound
- * fetcher is swapped, following the exact idiom
- * RefreshControllerTest::testPerFeedRefreshOfOwnFeedIsAccepted() uses to
- * keep a real refresh off the network.
+ * Runs the container's real RefreshRunner; only the outbound fetcher is swapped, as
+ * RefreshControllerTest::testPerFeedRefreshOfOwnFeedIsAccepted() does, to keep the refresh off the network.
  */
 final class RefreshDueFeedsHandlerTest extends DbTestCase
 {

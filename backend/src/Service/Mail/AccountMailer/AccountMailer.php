@@ -15,11 +15,7 @@ use Symfony\Component\Mime\Address;
 use Symfony\Component\Mime\Email;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
-/**
- * The account emails the application sends. Plain text on purpose: the API
- * renders no HTML anywhere else, and plain bodies survive every client. Subject
- * and body are translated into the recipient's own language (User::$locale).
- */
+/** The account emails, in plain text on purpose (plain bodies survive every client) and in the recipient's locale. */
 final readonly class AccountMailer implements AccountMailerInterface
 {
     public function __construct(
@@ -95,9 +91,6 @@ final readonly class AccountMailer implements AccountMailerInterface
         $identity = $this->mailSettings->identity();
 
         $this->mailer->send(
-            // Parenthesised for PDepend 2.16.2 (composer md), which cannot parse
-            // the PHP 8.4 "new without parentheses" chain yet — keep the parens.
-            // See #183.
             (new Email())
                 ->from(new Address($identity->address, $identity->name))
                 ->to($user->getEmail())

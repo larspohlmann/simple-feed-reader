@@ -29,11 +29,7 @@ use Symfony\Component\Mime\Email;
 use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
-/**
- * DigestMailer is now a thin transport: DigestMailFactory decides the message
- * shape from the recipient's digest_format (#726), so this test wraps a REAL
- * builder and asserts what survives through the stubbed MailerInterface.
- */
+/** Wraps a real DigestMailFactory, which picks the message shape, and asserts what reaches the stubbed mailer. */
 final class DigestMailerTest extends TestCase
 {
     /** @var list<Email> */

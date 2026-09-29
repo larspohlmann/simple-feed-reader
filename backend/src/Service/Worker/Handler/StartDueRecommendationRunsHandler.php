@@ -8,11 +8,7 @@ use App\Service\Recommendation\Run\ForYouSweep;
 use App\Service\Worker\Message\StartDueRecommendationRuns;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-/**
- * Starts the due runs every five minutes (#333). Advancing them to completion
- * stays the ten-second AdvanceRecommendationRuns sweep's job, so this handler
- * only starts — the two concerns never merge into one message.
- */
+/** Only starts due runs; advancing them stays AdvanceRecommendationRuns' job, so the two never share a message. */
 #[AsMessageHandler]
 final readonly class StartDueRecommendationRunsHandler
 {

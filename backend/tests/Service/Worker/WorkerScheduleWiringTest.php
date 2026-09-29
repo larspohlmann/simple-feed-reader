@@ -18,16 +18,7 @@ use Symfony\Component\Scheduler\Generator\MessageContext;
 use Symfony\Component\Scheduler\Generator\MessageGenerator;
 use Symfony\Component\Scheduler\RecurringMessage;
 
-/**
- * Mirrors the house `*WiringTest` convention: pin what the container
- * actually wires, so a refactor cannot silently drop a schedule entry.
- *
- * `RecurringMessage::getMessages()` takes a `MessageContext` in this
- * Symfony version rather than being a no-argument accessor; the context's
- * content is irrelevant here because these are static message providers
- * (see `RecurringMessage::every()`), which ignore it and always yield the
- * same message instance.
- */
+/** Pins what the container wires, so a refactor cannot silently drop a schedule entry or change its cadence. */
 final class WorkerScheduleWiringTest extends KernelTestCase
 {
     public function testTheWorkerScheduleCarriesExactlyTheDecidedEntries(): void
@@ -55,12 +46,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
             $classes,
         );
 
-        // The class assertion above cannot catch a right-message-wrong-cadence
-        // regression (e.g. AdvanceRecommendationRuns running every 10 minutes
-        // instead of every 10 seconds): PeriodicalTrigger::__toString() is the
-        // same description `debug:scheduler` prints in its "Trigger" column,
-        // so it is a stable, meaningful pin on the frequency, not an
-        // implementation accident.
+        // PeriodicalTrigger::__toString() is what `debug:scheduler` prints as "Trigger": a stable pin on the cadence.
         $frequencies = array_map(
             static fn (RecurringMessage $recurring): string => (string) $recurring->getTrigger(),
             $recurringMessages,
@@ -78,11 +64,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         );
     }
 
-    /**
-     * The daily housekeeping entry is unreachable without this: an in-process
-     * checkpoint re-anchors every entry to process start, and the consumer is
-     * recycled hourly by --time-limit=3600 (#311 final review, Critical 1).
-     */
+    /** Without a persistent pool the daily entry never fires: an in-process checkpoint re-anchors at each restart. */
     public function testTheScheduleKeepsItsCheckpointsInAPersistentPool(): void
     {
         self::bootKernel();
@@ -96,17 +78,8 @@ final class WorkerScheduleWiringTest extends KernelTestCase
     }
 
     /**
-     * The behavioural proof behind the wiring assertion above, driven through
-     * the real MessageGenerator rather than through `debug:scheduler` -- the
-     * command renders next run dates from the checkpoint's *last run* time
-     * without calling StatefulTriggerInterface::continue(), so it cannot show
-     * this at all.
-     *
-     * A consumer recycled every hour by --time-limit=3600 is modelled as a
-     * new generator per hour over one shared pool. With an in-process
-     * checkpoint each of those generators anchored the daily entry at its own
-     * start, so the purge was always ~24 h away and never fired; with the
-     * pool it comes due 24 h after the FIRST start and is yielded there.
+     * The behavioural proof, through the real MessageGenerator: `debug:scheduler` never calls continue(), so it
+     * cannot show this. Each hourly consumer restart is a new generator over one shared pool.
      */
     public function testTheDailyEntryFiresAcrossHourlyConsumerRestarts(): void
     {
@@ -127,12 +100,7 @@ final class WorkerScheduleWiringTest extends KernelTestCase
         self::assertSame(1, $purgesYielded);
     }
 
-    /**
-     * The companion to statefulness: a persisted checkpoint means a consumer
-     * that was down owes every occurrence it missed, and an hour of downtime
-     * owes the ten-second entry 360 firings. All three messages are sweeps,
-     * so catching up means running once, now.
-     */
+    /** A consumer that was down owes the ten-second entry 360 firings; every entry is a sweep, so each fires once. */
     public function testDowntimeIsCaughtUpWithOneFiringPerEntryRatherThanEveryMissedOne(): void
     {
         $pool = new ArrayAdapter();

@@ -9,9 +9,8 @@ use App\Service\Mail\Digest\DigestMailer\DigestMailerInterface;
 use Psr\Clock\ClockInterface;
 
 /**
- * The "send me a test digest" action (#636): compose over the last N days and
- * send immediately, WITHOUT advancing digestLastSentAt — a preview, not a real
- * send. Returns whether there was anything to send.
+ * The "send me a test digest" action: composes over the last N days and sends at once, but never advances
+ * digestLastSentAt, because it is a preview, not a real send.
  */
 final readonly class SendTestDigest
 {

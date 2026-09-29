@@ -9,16 +9,8 @@ use App\Service\Mail\AccountMailer\MailGatedAccountMailer;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * MailGatedAccountMailerTest constructs the decorator by hand, so it can never
- * catch a wiring regression: two classes implement AccountMailerInterface
- * (AccountMailer and this decorator), which makes Symfony's automatic
- * interface-autowiring alias ambiguous and skip itself. Without the explicit
- * `App\Service\Mail\AccountMailer\AccountMailerInterface: '@App\Service\Mail\AccountMailer\AccountMailer'`
- * alias in services.yaml, every consumer that typehints the interface would
- * fail to build at all — or, worse, a future refactor could point the alias at
- * the wrong side and every account mail would silently start bypassing the
- * mail gate. This test drives the REAL container to prove the interface
- * resolves to the decorated chain, not the bare mailer.
+ * Two classes implement AccountMailerInterface, so autowiring cannot alias it; services.yaml does, and a wrong target
+ * would let every account mail bypass the mail gate. MailGatedAccountMailerTest builds the decorator by hand.
  */
 final class MailGatedAccountMailerWiringTest extends KernelTestCase
 {

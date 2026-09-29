@@ -33,10 +33,8 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Mailer\Exception\TransportException;
 
 /**
- * Drives the real catch/success branches of SendDueDigests::sendAndAdvance()
- * against a real MailDeliveryHealth and MailSendFailureRepository (#882), so
- * the digest send path is proven to actually persist and clear failure rows,
- * not just call a mock.
+ * Drives SendDueDigests::sendAndAdvance()'s catch and success branches against the real MailDeliveryHealth and its
+ * repository, so the digest path is proven to persist and clear failure rows.
  */
 final class SendDueDigestsHealthTest extends DbTestCase
 {

@@ -20,17 +20,7 @@ use App\Tests\DbTestCase;
 use App\Tests\Support\FixedPublicBaseUrl;
 use PHPUnit\Framework\MockObject\Stub;
 
-/**
- * DigestComposer turns a user's includeInDigest saved searches into the
- * DigestModel an email renders (#636) — a search with no matches contributes
- * no group, and a user with nothing to report gets no digest at all.
- *
- * DigestEntryFinder now reads the membership table through
- * SavedSearchEntryRepository, which is `final` and cannot be doubled, so
- * these tests run the real finder and hydrator over persisted rows (#1116) —
- * which also exercises DigestComposer against the finder's real capping
- * behaviour (DigestEntryFinder::PER_SEARCH).
- */
+/** A search with no matches contributes no group, and a user with nothing to report gets no digest at all. */
 final class DigestComposerTest extends DbTestCase
 {
     private DigestSavedSearchesInterface&Stub $savedSearches;

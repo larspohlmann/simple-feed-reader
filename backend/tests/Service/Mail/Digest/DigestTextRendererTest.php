@@ -13,10 +13,8 @@ use Symfony\Component\Translation\Loader\YamlFileLoader;
 use Symfony\Component\Translation\Translator;
 
 /**
- * DigestTextRenderer turns a DigestModel into the plain-text subject and body
- * an email carries (#636). The renderer is exercised against the real shipped
- * `emails` translation files rather than a stub translator, so a missing or
- * misspelled catalog key fails the test instead of silently echoing the key.
+ * Runs against the shipped `emails` translation files, not a stub translator, so a missing or misspelled catalog key
+ * fails instead of echoing the key.
  */
 final class DigestTextRendererTest extends TestCase
 {
@@ -41,7 +39,6 @@ final class DigestTextRendererTest extends TestCase
 
         self::assertStringContainsString('7', $rendered->subject);
 
-        // A short introductory line opens the body, before any results.
         self::assertStringStartsWith('These are new entries matching your saved searches', $rendered->body);
 
         self::assertStringContainsString('rust (5)', $rendered->body);

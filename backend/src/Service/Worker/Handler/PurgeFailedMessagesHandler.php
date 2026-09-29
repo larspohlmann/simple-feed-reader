@@ -9,7 +9,7 @@ use App\Service\Worker\Message\PurgeFailedMessages;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
-/** Daily housekeeping (#311): a stuck worker must not grow the failure transport without bound. */
+/** Daily housekeeping: a stuck worker must not grow the failure transport without bound. */
 #[AsMessageHandler]
 final readonly class PurgeFailedMessagesHandler
 {

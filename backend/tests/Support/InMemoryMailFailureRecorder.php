@@ -7,7 +7,7 @@ namespace App\Tests\Support;
 use App\Enum\MailKind;
 use App\Service\Mail\MailFailureRecorder\MailFailureRecorderInterface;
 
-/** A MailFailureRecorderInterface that captures calls in memory, for tests (#882). */
+/** A MailFailureRecorderInterface that captures calls in memory. */
 final class InMemoryMailFailureRecorder implements MailFailureRecorderInterface
 {
     /** @var list<array{kind: MailKind, recipient: string, error: string}> */

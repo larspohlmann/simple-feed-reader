@@ -11,9 +11,8 @@ use App\Service\Clock\NaiveUtcClock;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * The in-app signal that automated mail is failing (#882). Every send path
- * records its outcome here; any success clears the whole log, so a non-empty
- * log means the most recent send failed.
+ * The in-app signal that automated mail is failing. Every send path records its outcome here; any success clears the
+ * whole log, so a non-empty log means the most recent send failed.
  */
 final readonly class MailDeliveryHealth implements MailFailureRecorderInterface
 {

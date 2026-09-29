@@ -10,13 +10,7 @@ use App\Service\Mail\MailCapability;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 
-/**
- * On a mailless instance (issue #230) a digest send is a no-op that leaves a
- * log line, instead of a send that silently succeeds into null://null. The
- * log line is what makes "no digest went out" visible to the operator rather
- * than a mystery. Decorates DigestMailer so no send site has to know whether
- * mail is on (#636), mirroring MailGatedAccountMailer.
- */
+/** On a mailless instance a digest send is a logged no-op, not a silent send into null://null, as for account mail. */
 #[AsDecorator(decorates: DigestMailer::class)]
 final readonly class MailGatedDigestMailer implements DigestMailerInterface
 {
