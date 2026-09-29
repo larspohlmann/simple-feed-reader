@@ -20,7 +20,7 @@ use Symfony\Component\Mailer\Exception\TransportExceptionInterface;
  * adds nothing to the latency of the request that triggered the approval.
  */
 #[AsEventListener(event: UserAwaitingApproval::class, method: '__invoke')]
-final readonly class NotifyAdminsOfPendingApproval
+final readonly class NotifyAdminsOfPendingApprovalListener
 {
     public function __construct(
         private UserRepository $users,

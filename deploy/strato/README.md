@@ -253,7 +253,7 @@ each time. Absolute is what rules the default out; pointing it into `shared/` is
 
 One other placeholder fails at runtime rather than at deploy time, because the secret may
 legitimately be absent while the cache is warmed: if `ALTCHA_HMAC_KEY` still holds the value
-committed to this public repository, `InsecureProductionConfigGuard` refuses **every**
+committed to this public repository, `InsecureProductionConfigGuardListener` refuses **every**
 request with a 500 and logs which variable to set. That is deliberate — a site with a void
 CAPTCHA is not degraded, it is quietly failing at the thing it exists for. Mail has no such
 guard: `MAILER_FALLBACK_DSN` left at `null://null` with no admin-configured transport is the

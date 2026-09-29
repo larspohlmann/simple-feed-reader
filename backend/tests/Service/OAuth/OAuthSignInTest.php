@@ -99,7 +99,7 @@ final class OAuthSignInTest extends DbTestCase
     }
 
     /**
-     * Proves App\EventListener\StampLastLoginOnTokenIssue actually fires on
+     * Proves App\EventListener\StampLastLoginOnTokenIssueListener actually fires on
      * this path: redeemLoginCode() mints the token through the real
      * JwtManager/dispatcher, exactly as the HTTP endpoint does, so a direct
      * call to the listener could never stand in for this.

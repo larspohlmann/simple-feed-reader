@@ -9,9 +9,9 @@ use Lexik\Bundle\JWTAuthenticationBundle\Event\JWTCreatedEvent;
 use Lexik\Bundle\JWTAuthenticationBundle\Events;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
-/** Registered on Events::JWT_CREATED, not the class name — see StampLastLoginOnTokenIssue. */
+/** Registered on Events::JWT_CREATED, not the class name — see StampLastLoginOnTokenIssueListener. */
 #[AsEventListener(event: Events::JWT_CREATED, method: '__invoke')]
-final readonly class AddUserIdClaimOnTokenIssue
+final readonly class AddUserIdClaimOnTokenIssueListener
 {
     public const string CLAIM = 'userId';
 
