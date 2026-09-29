@@ -39,3 +39,10 @@ namespace App\Service\Fixtures {
     {
     }
 }
+
+namespace App\Entity\Fixtures\Documented {
+    /** @final */
+    class DocblockFinalEntity
+    {
+    }
+}

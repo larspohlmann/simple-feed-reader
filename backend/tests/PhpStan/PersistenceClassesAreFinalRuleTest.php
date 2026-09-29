@@ -22,6 +22,7 @@ final class PersistenceClassesAreFinalRuleTest extends RuleTestCase
             [
                 [self::message('App\Entity\Fixtures\OpenEntity'), 9],
                 [self::message('App\Repository\Fixtures\AbstractBaseRepository'), 28],
+                [self::message('App\Entity\Fixtures\Documented\DocblockFinalEntity'), 45],
             ],
         );
     }
