@@ -1,59 +1,83 @@
 # Simple Feed Reader — Design
 
 **Date:** 2026-07-21
-**Status:** Approved design, pre-implementation
+**Status:** Living design, kept in line with `develop`
 
-A multi-user RSS/Atom feed reader. Symfony JSON API + Angular SPA, deployed to
-Strato shared hosting via GitHub Actions. The repository is public and serves as
-a showcase for the backend code.
+A multi-user RSS/Atom feed reader. Symfony JSON API + Angular SPA. The supported
+way to run it is the Docker stack ([docs/docker-production.md](../../docker-production.md));
+the maintainer's own instance runs on Strato shared hosting, deployed by GitHub
+Actions (`deploy/strato/`). The repository is public and serves as a showcase for
+the backend code.
 
 ## Constraints (fixed)
 
 - **Hosting:** Strato shared hosting **with SSH access** (verified
   2026-07-21). No Docker, no long-running processes, no Redis. PHP version
-  selectable in the panel. `max_execution_time` applies to every request.
+  selectable in the panel. `max_execution_time` applies to every web request.
+  The Docker stack adds a long-running `worker` container, but everything it
+  schedules must also run on Strato without it (see *Fetch pipeline*).
 - **Server facts** (analyzed 2026-07-21, host `59606538.ssh.w1.strato.hosting`,
   SSH alias `strato-feedreader`, deploy key in GitHub Secrets):
-  - git 2.51, rsync 3.4.1, curl, mysql client available; **no composer, no
-    crontab, no node** — build everything in CI, ship artifacts.
-  - PHP 8.0–8.5 as `php80`…`php85` binaries — all **cgi-fcgi SAPI, no true
-    CLI**. Console commands run as `php83 -q -f bin/console <command> <args>`
-    (argv works; `-q` suppresses CGI headers). `memory_limit` 512M,
-    `max_execution_time` 240 — SSH-run console commands get ~3 min budget.
+  - git 2.51, rsync 3.4.1, curl; the host's `mysql` client is a 5.6 build that
+    cannot authenticate to the MySQL 8 server; **no composer, no crontab, no
+    node** — build everything in CI, ship artifacts.
+  - PHP 8.0–8.5 as `php80`…`php85` binaries on `PATH`, all **cgi-fcgi
+    SAPI**; each version's real CLI sits off `PATH` at
+    `/opt/RZphp82/bin/php-cli` through `/opt/RZphp85/bin/php-cli`. Console
+    commands run as `/opt/RZphp84/bin/php-cli <release>/bin/console <command>
+    <args>`. `memory_limit` 512M for both; `max_execution_time` is 240 for
+    cgi-fcgi (every web request) and 0 for the CLI.
   - Home = htdocs root `/mnt/web319/b2/38/59606538/htdocs/`, app lives in
     `simplefeedreader/`. Symlinks work → atomic releases possible.
   - Outbound HTTPS works (git can reach GitHub).
-- **`bin/console` runs only over SSH** (deploys, manual ops). Anything that
-  must run *unattended* still needs a web-reachable path, because there is no
-  crontab on the server.
-- **Refresh triggering:** must work via an external scheduler hitting an HTTP
-  endpoint (GitHub Actions `schedule` is the default pinger; cron-job.org as
-  fallback) and manually from the UI — same code path, different time budgets.
-- **Database:** MySQL in production, SQLite for local dev and tests. Doctrine
-  abstraction; no vendor-specific SQL without a portability check.
-- **Code style:** PSR-12, enforced by PHPCS. PHPStan at max level. During
-  development the checks run through `mcp-phpstan-server` and
-  `mcp-phpcs-server`; CI runs the same binaries.
+- **`bin/console` runs over SSH** (deploys, manual ops), or detached from a
+  web request that spawns it (the recommendation drainer,
+  `RecommendationDrainSpawner`). Anything that must run *unattended* still
+  needs a web-reachable path, because there is no crontab on the server.
+- **Refresh triggering:** must work via an external cron hitting an HTTP
+  endpoint (`POST /maintenance/tick`), via the Docker worker's scheduler, and
+  manually from the UI — same code path, different time budgets.
+- **Database:** MySQL on Strato and in both Docker stacks (the production stack
+  can run on SQLite instead), SQLite for native dev and the native test run.
+  Doctrine abstraction; no vendor-specific SQL without a portability check.
+- **Code style:** PSR-12, enforced by PHPCS. PHPStan at max level with the
+  project's own rules (`backend/tests/PhpStan/`), plus PHPMD codesize and
+  phptramp. `composer check` runs PHPCS, PHPStan and phptramp locally; CI runs
+  the same scripts and `composer md`.
 
 ## Scope
 
-**v1 in:** subscribe/unsubscribe by URL (with feed autodiscovery), tags
-(many-to-many, with color + icon), unread counts, article list + reading view,
-read/unread (single + mark-all-read), favorite flag, keep flag,
-retention/cleanup, OPML import/export, manual refresh with live progress,
-email+password auth (CAPTCHA + double opt-in), Google + Apple sign-in,
-manual account approval, admin area (user queue, feed health, log viewer).
+**In:** subscribe/unsubscribe by URL (with feed discovery, down to scraping a
+page that has no feed), a curated catalog to subscribe from, tags
+(many-to-many, with color + icon), unread counts, feed health, article list +
+reading view with full-article extraction and comments, read/unread (single +
+mark-all-read), favorite, keep and viewed flags, retention/cleanup, OPML
+import/export, account backup and restore, full-text search and saved
+searches, email digests, AI "For you" recommendations through the user's own
+provider, manual refresh with live progress, email+password auth (CAPTCHA,
+email confirmation and admin approval), Google + Apple sign-in, passkeys,
+first-run setup, English and German, admin area (user queue and per-account
+limits, instance, mail and proxy settings, the optional Grafana connection, the
+catalog).
 
-**v1 out:** full-text search, keyboard shortcuts, full-article scraping,
-mobile apps, social features, E2E test suite.
+**Out:** keyboard shortcuts (only `/`, which focuses the search field), mobile
+apps (a native iOS client is kept viable, [docs/architecture.md](../../architecture.md)),
+social features.
 
 ## Architecture
 
 Pragmatic Symfony: hand-written controllers → services → Doctrine entities.
-No API Platform, no hexagonal layering. Two interfaces exist because tests
-need them, not for ceremony:
+No API Platform, no hexagonal layering. Controllers stay thin; services live in
+one module per concern under `src/Service`, depend on interfaces they inject,
+and know no HTTP; queries live in `src/Repository`. The layer rules and the
+role folders are in [docs/architecture.md](../../architecture.md) §7–§10. Two
+seams carry the tests:
 
-- `FeedFetcherInterface` — all outbound HTTP; carries the SSRF guard; faked in
+- `BatchFeedFetcherInterface` and its single-URL adapter `FeedFetcherInterface`
+  (`App\Service\Fetch`) — feed fetches. Every fetch of a feed or page URL
+  passes the SSRF guard (`UrlGuard`, `RedirectFollower`); the AI provider base
+  URL is the one recorded exception
+  ([docs/security.md](../../security.md#ai-provider-endpoints)). Faked in
   tests.
 - `ClockInterface` (symfony/clock) — injected everywhere time matters; no
   service calls `new \DateTimeImmutable()` directly.
@@ -62,24 +86,27 @@ need them, not for ceremony:
 
 ```
 simple-feed-reader/
-├── backend/                  # Symfony 7.4 LTS, PHP 8.3+
+├── backend/                  # Symfony 7.4 LTS, PHP 8.4
 │   ├── src/
-│   │   ├── Controller/       #   Api/, Admin/ (JSON only, no Twig)
-│   │   ├── Entity/
-│   │   ├── Repository/
-│   │   ├── Service/          #   FeedFetcher, RefreshRunner, Sanitizer, OpmlService, …
-│   │   ├── Security/         #   UserChecker, MaintenanceTokenAuthenticator, OAuth providers
-│   │   └── Command/          #   app:feeds:refresh, app:user:*
-│   ├── config/  migrations/  tests/
+│   │   ├── Controller/       #   Api/, Admin/, MaintenanceController (JSON only; Twig renders only the digest mail)
+│   │   ├── Service/          #   one module per concern, e.g. Fetch, Refresh, Reader, OAuth, Worker
+│   │   ├── Entity/  Enum/  Repository/  Doctrine/  Pagination/
+│   │   ├── Dto/  Http/       #   request shapes; response mappers, problem mapping, MaintenanceTokenGuard
+│   │   ├── Security/         #   UserChecker, LoginUserChecker, PasskeyAuthenticator, TrialExpiryGuard
+│   │   └── Command/          #   app:feeds:refresh, app:admin:create, app:user:reset-password, app:users:purge-unverified
+│   ├── config/  migrations/  templates/  tests/
 │   └── public/index.php
-├── frontend/                 # Angular workspace
-├── .github/workflows/        # ci.yml, deploy.yml
+├── frontend/                 # Angular 20 workspace
+├── docker/  docker-compose.yml  docker-compose.prod.yml
+├── deploy/strato/            # the maintainer's Strato deployment
+├── scripts/                  # install, update, prod start/stop
+├── .github/workflows/        # ci.yml, deploy-strato.yml, release.yml, e2e-rot-check.yml, catalog-rot-check.yml
 ├── docs/
 └── README.md
 ```
 
-`backend/` and `frontend/` are complete standalone projects; CI treats them as
-two jobs.
+`backend/` and `frontend/` are complete standalone projects; CI runs each in
+its own jobs.
 
 ### Production layout (Strato)
 
@@ -88,24 +115,29 @@ Capistrano-style releases under `simplefeedreader/`:
 ```
 simplefeedreader/
 ├── releases/
-│   ├── v1.0.0/               # full artifact: backend + built frontend + vendor
-│   └── v1.0.1/
-├── shared/
-│   └── var/log/              # symlinked into each release (survives deploys)
-└── current -> releases/v1.0.1   # atomic switch via ln -sfn
+│   ├── 20260928101500-v1.0.16-dev.5/   # full artifact: backend + built frontend + vendor
+│   └── 20260929083000-v1.0.16-dev.6/
+├── shared/                   # symlinked into each release (survives deploys)
+│   ├── .env.local            #   secrets, written on the server
+│   ├── config/jwt/           #   signing keypair
+│   ├── var/log/
+│   └── var/cache-pools/      #   rate limiter, ALTCHA replay, OAuth state, login codes
+└── current -> releases/20260929083000-v1.0.16-dev.6   # atomic switch by rename
 ```
 
-Everything on one domain. The Strato docroot is mapped (one-time, in the
-panel) to `simplefeedreader/current/public`, so `vendor/`, `var/`, and config
-are never web-reachable. The Angular production build is copied into
-`public/app/` at build time. Symfony serves `/api/*` and `/maintenance/*`; an
-`.htaccess` fallback hands everything else to the Angular `index.html`. Same
-origin → no CORS.
+Everything on one domain, under the `/reader` subpath: a symlink in the main
+domain's docroot, `~/larspohlmann/reader → ~/simplefeedreader/current/public`,
+so `vendor/`, `var/`, and config are never web-reachable. The Angular
+production build (base href `/reader/`) is copied into `public/` at build time.
+Symfony serves `/api/*` and `/maintenance/*`; the `.htaccess` serves files that
+exist and hands everything else to the Angular `index.html`. Same origin → no
+CORS.
 
 ### Frontend
 
-One Angular app. The admin section is a lazy-loaded route module guarded by a
-route guard reading the role claim from the JWT. The guard is UX only —
+One Angular app of standalone components. The admin pages are lazy-loaded
+routes under `/settings/admin/`, guarded by `adminGuard`, which reads
+`ROLE_ADMIN` from the user `GET /api/me` returns. The guard is UX only —
 enforcement is `ROLE_ADMIN` on `/api/admin/*` in `security.yaml`.
 
 ## Authentication & accounts
