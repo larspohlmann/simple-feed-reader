@@ -9,7 +9,7 @@
          bootstrap="vendor/autoload.php"
 >
     <php>
-        <!-- Where the running stack lives. Override to point at staging later. -->
+        <!-- Where the running stack lives. -->
         <env name="E2E_BASE_URL" value="https://localhost:8443" />
         <env name="E2E_MAILPIT_URL" value="http://localhost:8025" />
     </php>
