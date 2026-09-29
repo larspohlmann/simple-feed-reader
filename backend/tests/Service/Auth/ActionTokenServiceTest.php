@@ -78,6 +78,19 @@ final class ActionTokenServiceTest extends DbTestCase
         );
     }
 
+    public function testConsumeStaysSingleUseForTheNextRequest(): void
+    {
+        $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
+        $this->service->consume($plain, TokenPurpose::VerifyEmail);
+        $this->entityManager->clear();
+
+        $this->assertRefused(
+            fn () => $this->service->consume($plain, TokenPurpose::VerifyEmail),
+            InvalidTokenException::class,
+            'The token was redeemed.',
+        );
+    }
+
     public function testConsumeRejectsTheWrongPurpose(): void
     {
         $plain = $this->service->issue($this->user, TokenPurpose::VerifyEmail);
