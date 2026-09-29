@@ -35,7 +35,6 @@ final class ArticleContentGateTest extends TestCase
         $this->assertRefused($this->article('<p>body</p>', str_repeat('a', 199)), ArticleMediaModel::none());
     }
 
-    /** #748: recovered media is itself evidence of an article, so a thin text passes. */
     public function testAcceptsAShortArticleWhoseMediaCarriesIt(): void
     {
         $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Video, 'https://x.test/clip.mp4')]);

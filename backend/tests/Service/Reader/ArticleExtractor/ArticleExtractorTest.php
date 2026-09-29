@@ -205,9 +205,8 @@ final class ArticleExtractorTest extends TestCase
     }
 
     /**
-     * Readability's built-in keep-list has no Spotify or Dailymotion, so it would
-     * strip those frames; the keep-regex generated from the embed providers holds
-     * them in the body, where the rewriter turns each into an embed link (#1053).
+     * Readability's built-in keep-list has no Spotify or Dailymotion, so it would strip those frames; the keep-regex
+     * generated from the embed providers holds them in the body, where the rewriter turns each into an embed link.
      */
     public function testKeepsInBodyProviderEmbedsReadabilityWouldStrip(): void
     {
@@ -231,9 +230,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDropsTheRelatedTeaserGridButKeepsTheStoryAndLeadImage(): void
     {
-        // NDR (#1002): the "Mehr zum Thema" box is a grid of headline-linked
-        // thumbnails. Readability keeps its images but strips the links, leaving
-        // orphan thumbnails at the tail; the grid must go, the lead image stays.
+        // A "Mehr zum Thema" grid of headline-linked thumbnails: readability keeps the images but strips the
+        // links, leaving orphan thumbnails at the tail. The grid goes, the lead image stays.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/related-teaser-grid.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -289,9 +287,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testKeepsOneMarkedNarrationPlayerAndDropsTheDeadOne(): void
     {
-        // ZEIT (#903): the page's own <audio> names its file only in data-src,
-        // which the sanitizer strips, so it must not survive as a dead control.
-        // The one player that reaches the reader is the recovered, marked one.
+        // The page's own <audio> names its file only in data-src, which the sanitizer strips, so it must not
+        // survive as a dead control. The one player that reaches the reader is the recovered, marked one.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-narration-zeit.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -306,8 +303,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testKeepsTheHeroAboveATopPlacedNarrationPlayer(): void
     {
-        // #907: a narration audio player is top-placed, but it is not a picture,
-        // so the page hero must still be restored — above the compact player.
+        // A narration audio player is top-placed, but it is not a picture, so the page hero is still restored,
+        // above the compact player.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-narration-with-hero-zeit.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -323,9 +320,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDropsASilentTextToSpeechWidgetButKeepsTheArticle(): void
     {
-        // CBC (#959): a script-driven text-to-speech widget with no <audio>.
-        // The reader has no player to attach, so the whole widget is chrome;
-        // the lead figure and prose beside it stay.
+        // A script-driven text-to-speech widget with no <audio>: the reader has no player to attach, so the
+        // whole widget is chrome, and the lead figure and prose beside it stay.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-tts-widget-cbc.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -341,10 +337,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRebuildsAPpMediaGalleryAsAReaderSlideshow(): void
     {
-        // A "purple/pp-media" carousel (Mopo et al.): normalisation keeps the
-        // slideshowcontainer/slideshow-image classes because each slide holds
-        // caption text, so the recogniser sees it on the raw page and the cleaner
-        // rebuilds it even though readability would drop the original box.
+        // Normalisation keeps a pp-media carousel's slideshow classes because each slide holds caption text, so
+        // the recogniser sees it on the raw page and the cleaner rebuilds it after readability drops the box.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-slideshow-ppmedia.html');
         $extractor = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
@@ -368,10 +362,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDropsTeaserCarouselsThatAreRowsOfIdenticalPlaceholderImages(): void
     {
-        // Times of India (#1091): the "Videos" and "Photostories" teaser
-        // carousels after the author bio are slick-slider markup whose every
-        // slide carries the same remote placeholder src; no real thumbnail is in
-        // the HTML, so they resolve to one image and must not become a slideshow.
+        // Teaser carousels after the author bio whose every slide carries the same placeholder src resolve to one
+        // image and must not become a slideshow.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-toi-placeholder-carousel.html');
         $extractor = $this->extractor(
             [new MockResponse($html, ['http_code' => 200])],
@@ -408,9 +400,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRecoversAnImageStoredOnlyInsideNoscript(): void
     {
-        // heise ships the real photo only inside <noscript>, next to a `data:`
-        // placeholder <img>; the sanitizer would otherwise drop the tag with
-        // the image still inside it (#894).
+        // The real photo sits only inside <noscript>, next to a `data:` placeholder <img>; the sanitizer would
+        // otherwise drop the tag with the image still inside it.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-noscript-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -427,9 +418,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRestoresTheLeadIntoATextOnlyBody(): void
     {
-        // readability drops the og:image (it sits outside the scored body) and the
-        // body carries no picture of its own. With nothing to duplicate, the lead
-        // is restored at the top so the story is not left imageless (#681).
+        // readability drops the og:image (it sits outside the scored body) and the body carries no picture of
+        // its own. With nothing to duplicate, the lead is restored at the top.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-lead-image.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -441,9 +431,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRestoresTheLeadInlineWithItsCaption(): void
     {
-        // heise: the dropped header figure carries a figcaption naming the
-        // photographer. The restored lead must bring that caption along, not
-        // just the bare image (#894).
+        // The dropped header figure carries a figcaption naming the photographer; the restored lead brings that
+        // caption along, not just the bare image.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-lead-image-caption.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -460,10 +449,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRestoresADistinctPageHeroAboveTheBodyPhoto(): void
     {
-        // #681: the og:image hero sits in the page header (a different CDN image id
-        // than the body photo). readability drops it as chrome; because the page
-        // draws it and the body's own photo is a different picture, the lead is
-        // restored at the top — the mopo pattern that used to lose the first image.
+        // The og:image hero sits in the page header, a different picture from the body photo. Readability drops
+        // it as chrome; the page draws it, so the lead is restored at the top.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-distinct-hero.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -612,9 +599,8 @@ final class ArticleExtractorTest extends TestCase
     }
 
     /**
-     * The gate exits before the media that survives it ever pays for network verification (#800): the mock
-     * client below answers only the page request, so a stream candidate resolved before the gate would reach
-     * it for a second, unmocked request.
+     * The gate exits before the media that survives it pays for network verification: the mock client answers only
+     * the page request, so a stream candidate resolved before the gate would reach it for a second, unmocked request.
      */
     public function testMediaVerificationNeverRunsBeforeTheContentGate(): void
     {
@@ -679,9 +665,8 @@ final class ArticleExtractorTest extends TestCase
     }
 
     /**
-     * Readability demotes the page's own duplicate h1 to h2 and checks only the top candidate (see
-     * LeadingTitleRemover's docblock), so this h2 survives extraction; the page <title> alone, with no feed
-     * entry title passed, is what lets the body cleaner catch and drop it.
+     * Readability demotes the page's own duplicate h1 to h2 and checks only the top candidate, so this h2 survives
+     * extraction; the page <title> alone, with no entry title passed, lets the body cleaner catch and drop it.
      */
     public function testDropsTheDuplicateHeadingFromReadabilitysOwnTitleAlone(): void
     {
@@ -769,10 +754,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testKeepsTheArticleWhenCollapsingWouldElevatePublisherChrome(): void
     {
-        // A real Shopify blog capture (#476, entry 466491). Readability extracts
-        // the article on the neutral candidate, but the wrapper-chain collapse
-        // flips the winner to the promo banner. Dual extraction keeps the richer
-        // (article) result.
+        // On this page the wrapper-chain collapse flips readability's winner to the promo banner; dual extraction
+        // keeps the richer, article result.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-shopify-promo.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -798,9 +781,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testStripsTheShariffBarFromTheExtractedArticle(): void
     {
-        // #582: the Shariff share bar leads the hanfjournal body ("teilen …
-        // merken"). It must not appear in the extracted, reader-ready HTML,
-        // while the real article text survives.
+        // A Shariff share bar leads the body ("teilen … merken"); it must not reach the extracted HTML, while the
+        // article text does.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/hanfjournal-shariff.html');
         $extractor = $this->extractor([new MockResponse($html, ['http_code' => 200])]);
 
@@ -814,18 +796,9 @@ final class ArticleExtractorTest extends TestCase
 
     public function testTrimsATrailingNewsletterPromptFromTheExtractedArticle(): void
     {
-        // #582 stage 2: a newsletter prompt at the tail of the article is
-        // removed, while the middle prose is kept. The content root needs at
-        // least 4 top-level blocks — the edge cap is floor(0.25 * blockCount),
-        // and a 3-block root (cap 0) would make the trim a no-op.
-        //
-        // A "related posts" grid is not usable here: readability's own
-        // UNLIKELY_CANDIDATES/NEGATIVE regexes already match "related" and its
-        // own cleanConditionally('div') removes any link-heavy div outright, so
-        // such a fixture would pass without EdgeBoilerplateTrimmer ever running
-        // (verified empirically). "newsletter" matches neither readability
-        // regex and this block carries no links, so only the trimmer's
-        // fingerprint + corroborating-heading-phrase rule removes it.
+        // A "related posts" grid would not test the trimmer: readability's own regexes already drop "related" and
+        // link-heavy divs. "newsletter" matches neither, and the block has no links, so only the trimmer's
+        // fingerprint plus heading phrase removes this tail.
         $prose = str_repeat('Ein langer echter Absatz mit Fliesstext. ', 8);
         $body = '<article><div class="entry-content">'
             . '<p>' . $prose . '</p><p>' . $prose . '</p><p>' . $prose . '</p>'
@@ -868,9 +841,8 @@ final class ArticleExtractorTest extends TestCase
     }
 
     /**
-     * tagesschau 494183: readability drops the inline video block because its
-     * only text is a link, so the body keeps no trace of where the player was.
-     * The paragraph before it survives, and that is where the player belongs.
+     * Readability drops the inline video block because its only text is a link, so the body keeps no trace of where
+     * the player was. The paragraph before it survives, and that is where the player belongs.
      */
     public function testRestoresAnInlineVideoAfterTheParagraphItFollowed(): void
     {
@@ -898,9 +870,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testTrustsAPremiumDeclarationEvenWithoutAGatedBlock(): void
     {
-        // The fixture declares the article premium (string "False") and serves the
-        // full body with no gated block, as mopo.de does for its MOPO+ articles.
-        // The declaration is trusted; the reader shows the banner (a #908 trade-off).
+        // The fixture declares the article premium (string "False") yet serves the full body with no gated block.
+        // The declaration is trusted, and the reader shows the banner.
         $result = $this->extractFixture('article-paywalled-jsonld-string.html');
 
         self::assertTrue($result->ok);
@@ -918,9 +889,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testFlagsAMemberfulGatedArticleWithNoDeclarationOrGateClass(): void
     {
-        // psychedelicalpha.com: the JSON-LD @graph declares no isAccessibleForFree
-        // and the gate is a generic `<div class="join">`; the Memberful checkout
-        // link below the free intro carries the verdict (#998).
+        // The JSON-LD @graph declares no isAccessibleForFree and the gate is a generic `<div class="join">`: the
+        // Memberful checkout link below the free intro carries the verdict.
         $result = $this->extractFixture('article-paywalled-memberful.html');
 
         self::assertTrue($result->ok);
@@ -930,9 +900,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testTrustsThePremiumDeclarationOnAZeitFadedArticle(): void
     {
-        // ZEIT+ fades the last visible paragraph and declares the article premium.
-        // The declaration alone now carries the verdict; the fade class is no
-        // longer read (#908, replacing the #898 fade gate).
+        // The fade class is not read: the premium declaration alone carries the verdict.
         $result = $this->extractFixture('article-paywalled-faded-paragraph.html');
 
         self::assertTrue($result->ok);
@@ -963,9 +931,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testFlagsAPaywallBannerAboveAnUndeclaredArticle(): void
     {
-        // Without the anchor test, a paywall-class banner above a free article now
-        // flags. The fixture declares nothing, so the block presence decides (an
-        // accepted #908 trade-off: simplicity over the position guard).
+        // Nothing is declared, so the block's presence decides and a paywall-class banner above a free article
+        // flags: an accepted trade-off, simplicity over a position guard.
         $result = $this->extractFixture('article-free-paywall-banner.html');
 
         self::assertTrue($result->ok);
@@ -1004,7 +971,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('youtube', $html);
     }
 
-    /** nature.com 495343: lazy pictures on data-srcset, one in a custom element, one in a media-classed wrapper, one in a captioned figure. */
+    /** Lazy pictures on data-srcset, in a custom element, a media-classed wrapper and a captioned figure. */
     public function testKeepsEveryPhotoOfAnImmersiveGalleryBesideItsCaption(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-immersive-gallery.html');
@@ -1024,7 +991,6 @@ final class ArticleExtractorTest extends TestCase
         self::assertLessThan((int) strpos($body, 'The nuclear detonation'), (int) strpos($body, 'rock/alloy'));
     }
 
-    /** Al Jazeera 469835: the Brightcove link takes the place of the thumbnail the body already shows. */
     public function testPlacesTheBrightcovePlayerWhereTheBodyShowedItsThumbnail(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/aljazeera-brightcove.html');
@@ -1052,7 +1018,7 @@ final class ArticleExtractorTest extends TestCase
         );
     }
 
-    /** Al Jazeera 495829: the node's file plays in place of its thumbnail; the Brightcove page is not a second player. */
+    /** The node's file plays in place of its thumbnail; the Brightcove page is not a second player. */
     public function testOneVideoObjectWithFileAndPlayerPageYieldsOnePlayer(): void
     {
         $html = (string) file_get_contents(
@@ -1070,7 +1036,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('players.brightcove.net', $body);
     }
 
-    /** ZDF 491430: the stream is a <video> at the Akamai master its playlist URL redirects to (#782 follow-up). */
+    /** ZDF: the stream is a <video> at the master its playlist URL redirects to. */
     public function testEmitsAnHlsStreamAsAVideoAtItsLanding(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/zdf-hls-video.html');
@@ -1096,7 +1062,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('ngp.zdf.de', $body);
     }
 
-    /** Guardian 493958: the body opens with the player where the page had no URL at all, and no stacked lead. */
+    /** The body opens with the player where the page had no URL at all, and no stacked lead. */
     public function testAYouTubeIdInADataAttributeBecomesTheLeadPlayer(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/guardian-youtube-atom.html');
@@ -1119,7 +1085,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringContainsString('earliest known recording of whale song', $body);
     }
 
-    /** tagesschau 496523: both players reach the body; the video carries the still the page drew beside it. */
+    /** Both players reach the body; the video carries the still the page drew beside it. */
     public function testABroadcastPageWithoutOgImageKeepsItsVideoBesideTheAudio(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/ard-broadcast-no-og-image.html');
@@ -1145,7 +1111,7 @@ final class ArticleExtractorTest extends TestCase
         self::assertStringNotContainsString('sendungsbild-other', $body);
     }
 
-    /** zdfheute 1374175: three of four videos exist only as ids in the payload; the page's own template recovers them. */
+    /** Three of four videos exist only as ids in the payload; the page's own template recovers them. */
     public function testRecoversTheVideosThePageNamesOnlyByASiblingId(): void
     {
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/media/zdf-sibling-video-configs.html');
@@ -1189,9 +1155,8 @@ final class ArticleExtractorTest extends TestCase
 
     public function testRendersASubstackAudioPostAsItsProseAndPlayer(): void
     {
-        // #786: a post without pictures reports the subscribe card as og:image,
-        // keeps its player's clock readouts as paragraphs, links to itself with
-        // action=share, and plays through a bare script-driven <audio>.
+        // A post without pictures reports the subscribe card as og:image, keeps its player's clock readouts as
+        // paragraphs, links to itself with action=share, and plays through a bare script-driven <audio>.
         $body = $this->extractFixture('substack-audio-post.html')->contentHtml ?? '';
 
         self::assertStringNotContainsString('<img', $body, 'the subscribe card is not a lead');
@@ -1216,7 +1181,7 @@ final class ArticleExtractorTest extends TestCase
 
     public function testDecodesAPageWhoseCharsetOnlyTheHttpHeaderDeclares(): void
     {
-        // #904: a legacy site that states its charset in Content-Type alone.
+        // A legacy site that states its charset in Content-Type alone.
         $html = (string) file_get_contents(__DIR__ . '/../../../Fixtures/reader/article-windows-1252.html');
         $extractor = $this->extractor([new MockResponse($html, [
             'http_code' => 200,
