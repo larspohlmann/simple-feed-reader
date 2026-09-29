@@ -4,13 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Index\Model;
 
-/**
- * One entry as the index needs to see it. The caller (EntryIndexer) is the
- * one place that knows how to turn an Entry into this — including reducing its
- * HTML body to plain text with PlainText::fromHtmlBlocks() — so nothing in
- * this namespace, and nothing MeilisearchIndex sends over the wire, ever
- * touches HTML.
- */
+/** One entry as the index sees it: EntryIndexer reduces the body to plain text, so no HTML reaches the engine. */
 final readonly class IndexedEntryModel
 {
     public function __construct(

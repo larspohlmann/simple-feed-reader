@@ -9,15 +9,8 @@ use App\Pagination\EntryCursor;
 use App\Service\Search\Model\SearchTermsModel;
 
 /**
- * One search read, addressed to whichever engine sits behind SearchIndexReaderInterface.
- * A value object rather than loose parameters: MeilisearchIndex turns every
- * field here into wire format in one place, and a future second engine reads
- * the same shape without touching the caller.
- *
- * Carries the whole SearchTermsModel, not its word list: the words and the mode
- * they are matched in are one value, and separating them is precisely how the
- * whole-word mode came to be dropped on the way to the engine while the LIKE
- * engine still honoured it (#450).
+ * One search read for whichever engine sits behind SearchIndexReaderInterface. It carries the whole SearchTermsModel,
+ * because words split from their mode lost whole-word matching on the way to the engine (#450).
  */
 final readonly class IndexSearchModel
 {
@@ -40,7 +33,7 @@ final readonly class IndexSearchModel
     }
 
     /**
-     * A membership probe (#1116): which of exactly these entries match, on every
+     * A membership probe: which of exactly these entries match, on every
      * feed. The limit is the candidate count, so no member is dropped.
      *
      * @param non-empty-list<int> $entryIds
