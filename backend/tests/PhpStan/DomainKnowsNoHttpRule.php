@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 use PhpParser\Node;
-use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\FileNode;
@@ -55,33 +54,17 @@ final readonly class DomainKnowsNoHttpRule implements Rule
 
     public function processNode(Node $node, Scope $scope): array
     {
-        $errors = [];
-        foreach ($this->references->namespacesIn($node) as $namespace) {
-            $errors = [...$errors, ...$this->errorsIn($namespace)];
-        }
-
-        return $errors;
-    }
-
-    /** @return list<IdentifierRuleError> */
-    private function errorsIn(Namespace_ $namespace): array
-    {
-        $namespaceName = $namespace->name?->toString() ?? '';
-        if (!ClassNameReferences::isInAnyOf($namespaceName, self::DOMAIN_NAMESPACES)) {
-            return [];
-        }
-
         return array_map(
-            static fn (ForbiddenReference $reference): IdentifierRuleError => self::error($namespaceName, $reference),
-            $this->references->forbiddenIn($namespace),
+            self::error(...),
+            $this->references->forbiddenInFile($node, self::DOMAIN_NAMESPACES),
         );
     }
 
-    private static function error(string $namespaceName, ForbiddenReference $reference): IdentifierRuleError
+    private static function error(ForbiddenReference $reference): IdentifierRuleError
     {
         return RuleErrorBuilder::message(sprintf(
             'Domain code must not know HTTP: %s references %s. %s',
-            $namespaceName,
+            $reference->inNamespace,
             $reference->name,
             self::REMEDIES[$reference->matchedRule],
         ))

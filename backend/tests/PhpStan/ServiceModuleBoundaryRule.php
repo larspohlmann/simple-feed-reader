@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\PhpStan;
 
 use PhpParser\Node;
-use PhpParser\Node\Stmt\Namespace_;
 use PhpParser\NodeFinder;
 use PHPStan\Analyser\Scope;
 use PHPStan\Node\FileNode;
@@ -51,37 +50,19 @@ final readonly class ServiceModuleBoundaryRule implements Rule
     {
         $errors = [];
         foreach ($this->referencesByModule as $module => $references) {
-            foreach ($references->namespacesIn($node) as $namespace) {
-                $errors = [...$errors, ...self::errorsIn($module, $namespace, $references)];
+            foreach ($references->forbiddenInFile($node, [$module]) as $reference) {
+                $errors[] = self::error($module, $reference);
             }
         }
 
         return $errors;
     }
 
-    /** @return list<IdentifierRuleError> */
-    private static function errorsIn(string $module, Namespace_ $namespace, ClassNameReferences $references): array
+    private static function error(string $module, ForbiddenReference $reference): IdentifierRuleError
     {
-        $namespaceName = $namespace->name?->toString() ?? '';
-        if (!ClassNameReferences::isInAnyOf($namespaceName, [$module])) {
-            return [];
-        }
-
-        return array_map(
-            static fn (ForbiddenReference $reference): IdentifierRuleError
-                => self::error($module, $namespaceName, $reference),
-            $references->forbiddenIn($namespace),
-        );
-    }
-
-    private static function error(
-        string $module,
-        string $namespaceName,
-        ForbiddenReference $reference,
-    ): IdentifierRuleError {
         return RuleErrorBuilder::message(sprintf(
             'Service module boundary: %s references %s. %s',
-            $namespaceName,
+            $reference->inNamespace,
             $reference->name,
             self::REMEDIES[$module][$reference->matchedRule],
         ))
