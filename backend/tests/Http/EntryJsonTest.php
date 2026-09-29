@@ -108,6 +108,29 @@ final class EntryJsonTest extends TestCase
         self::assertSame('A short summary.', $json['excerpt']);
     }
 
+    public function testListRowCarriesTheEntrysOwnFields(): void
+    {
+        $entry = new Entry(
+            new Feed('https://example.com/feed'),
+            'guid',
+            'https://example.com/a',
+            'Article',
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+            new \DateTimeImmutable('2026-09-07T00:00:00Z'),
+        );
+        $entry->setPublishedAt(new \DateTimeImmutable('2026-09-06T10:00:00Z'));
+        $entry->setAuthor('A. Writer');
+        $entry->setSummary('A short summary.');
+
+        $json = EntryJson::listRow($this->row($entry));
+
+        self::assertSame('https://example.com/a', $json['url']);
+        self::assertSame('A. Writer', $json['author']);
+        self::assertSame('A short summary.', $json['summary']);
+        self::assertSame('2026-09-06T10:00:00+00:00', $json['publishedAt']);
+        self::assertSame('2026-09-07T00:00:00+00:00', $json['createdAt']);
+    }
+
     public function testDetailHasContentHtmlAndListShapedDuplicates(): void
     {
         $sibling = new Entry(
