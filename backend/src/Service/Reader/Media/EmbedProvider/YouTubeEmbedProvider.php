@@ -65,13 +65,13 @@ final readonly class YouTubeEmbedProvider implements EmbedProviderInterface
 
     private function idFromPath(string $path): ?string
     {
-        return preg_match('#^/(?:embed/|v/)?(' . self::ID . ')$#', $path, $m) === 1 ? $m[1] : null;
+        return preg_match('#^/(?:embed/|v/)?(' . self::ID . ')$#', $path, $matches) === 1 ? $matches[1] : null;
     }
 
     private function idFromQuery(string $query): ?string
     {
-        parse_str($query, $params);
-        $id = $params['v'] ?? null;
+        parse_str($query, $queryParameters);
+        $id = $queryParameters['v'] ?? null;
 
         return \is_string($id) && preg_match('#^' . self::ID . '$#', $id) === 1 ? $id : null;
     }

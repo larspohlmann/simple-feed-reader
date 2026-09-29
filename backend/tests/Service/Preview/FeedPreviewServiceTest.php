@@ -298,6 +298,22 @@ final class FeedPreviewServiceTest extends KernelTestCase
         $this->service($fetcher)->preview($this->user(), self::URL);
     }
 
+    public function testAFetchFailureCarriesItsCauseAndNoErrorCode(): void
+    {
+        $cause = new FeedUnreachableException('blocked');
+        $fetcher = new StubFeedFetcher();
+        $fetcher->willThrow(self::URL, $cause);
+
+        try {
+            $this->service($fetcher)->preview($this->user(), self::URL);
+            self::fail('expected the preview to fail');
+        } catch (FeedPreviewException $exception) {
+            self::assertSame('The feed could not be loaded.', $exception->getMessage());
+            self::assertSame(0, $exception->getCode());
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
     public function testUnparseableBodyBecomesFeedPreviewException(): void
     {
         // @lang TEXT: this truncated body is the input under test — the preview

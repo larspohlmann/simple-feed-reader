@@ -31,10 +31,10 @@ final readonly class RecommendationProviderCall
                 $recordedCall,
                 $tick->retryPlan(),
             );
-        } catch (\Throwable $e) {
-            $recordedCall->abortAfterTransportFailure($e->getMessage());
+        } catch (\Throwable $exception) {
+            $recordedCall->abortAfterTransportFailure($exception->getMessage());
 
-            throw $e;
+            throw $exception;
         }
     }
 }

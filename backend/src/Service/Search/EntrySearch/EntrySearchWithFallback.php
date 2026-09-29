@@ -50,9 +50,9 @@ final readonly class EntrySearchWithFallback implements EntrySearchInterface
 
         try {
             return $this->engine->search($query);
-        } catch (SearchEngineUnavailableException $e) {
+        } catch (SearchEngineUnavailableException $exception) {
             $this->logger->warning('Search engine unavailable; falling back to database search.', [
-                'exception' => $e,
+                'exception' => $exception,
             ]);
 
             return $this->database->search($query);

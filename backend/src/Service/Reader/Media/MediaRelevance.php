@@ -34,7 +34,8 @@ final readonly class MediaRelevance
         $ordered = $urls;
         usort(
             $ordered,
-            fn (string $a, string $b): int => $this->score($b, $slugTokens) <=> $this->score($a, $slugTokens),
+            fn (string $left, string $right): int
+                => $this->score($right, $slugTokens) <=> $this->score($left, $slugTokens),
         );
 
         return $ordered;
@@ -61,7 +62,7 @@ final readonly class MediaRelevance
         $words = preg_split('#[^a-z0-9]+#i', strtolower($path)) ?: [];
         $keep = array_filter(
             $words,
-            static fn (string $w): bool => \strlen($w) >= self::MIN_TOKEN_LENGTH && !ctype_digit($w),
+            static fn (string $word): bool => \strlen($word) >= self::MIN_TOKEN_LENGTH && !ctype_digit($word),
         );
 
         return array_values(array_unique($keep));

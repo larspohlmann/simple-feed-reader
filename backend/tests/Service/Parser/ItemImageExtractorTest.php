@@ -9,6 +9,8 @@ use PHPUnit\Framework\TestCase;
 
 final class ItemImageExtractorTest extends TestCase
 {
+    private const ATOM_NAMESPACE = 'http://www.w3.org/2005/Atom';
+
     private ItemImageExtractor $extractor;
 
     protected function setUp(): void
@@ -343,5 +345,49 @@ final class ItemImageExtractorTest extends TestCase
 
         self::assertNotNull($image);
         self::assertSame('http://www.techmeme.com/x/i1.jpg', $image->url);
+    }
+
+    public function testAnAtomEnclosureLinkYieldsItsImage(): void
+    {
+        $image = $this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<link rel="enclosure" type="image/png" href="https://i/enc.png"/>'),
+            self::ATOM_NAMESPACE,
+        );
+
+        self::assertSame('https://i/enc.png', $image?->url);
+    }
+
+    public function testAnAtomLinkThatIsNotAnEnclosureYieldsNoImage(): void
+    {
+        self::assertNull($this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<link rel="alternate" type="image/png" href="https://i/alt.png"/>'),
+            self::ATOM_NAMESPACE,
+        ));
+    }
+
+    public function testAnEnclosureLinkOutsideTheAtomNamespaceYieldsNoImage(): void
+    {
+        self::assertNull($this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<x:link xmlns:x="urn:other" rel="enclosure" type="image/png" href="https://i/x.png"/>'),
+            self::ATOM_NAMESPACE,
+        ));
+    }
+
+    public function testAnEnclosureElementThatIsNotALinkYieldsNoImage(): void
+    {
+        self::assertNull($this->extractor->fromAtomEnclosure(
+            $this->atomEntry('<content rel="enclosure" type="image/png" href="https://i/c.png"/>'),
+            self::ATOM_NAMESPACE,
+        ));
+    }
+
+    private function atomEntry(string $innerXml): \DOMElement
+    {
+        $document = new \DOMDocument();
+        $document->loadXML('<feed xmlns="' . self::ATOM_NAMESPACE . '"><entry>' . $innerXml . '</entry></feed>');
+        $entry = $document->getElementsByTagName('entry')->item(0);
+        self::assertInstanceOf(\DOMElement::class, $entry);
+
+        return $entry;
     }
 }

@@ -45,7 +45,7 @@ final class InstanceSetting
      * derives it from the public base URL's host instead. It exists because
      * an RP id is baked into every credential at registration time: changing
      * it invalidates every passkey on the instance, which is why the write
-     * path guards a change with {@see \App\Service\Settings\RelyingPartyChange}.
+     * path guards a change with {@see \App\Service\Settings\RelyingPartyChangeGuard}.
      */
     #[ORM\Column(name: 'passkey_rp_id', length: 255, nullable: true)]
     private ?string $passkeyRpId = null;

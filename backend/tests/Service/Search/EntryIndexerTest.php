@@ -209,7 +209,9 @@ final class EntryIndexerTest extends DbTestCase
         $indexer->forget([11]);
 
         self::assertTrue($logSpy->hasErrorRecords());
-        self::assertCount(1, $logSpy->getRecords());
+        $records = $logSpy->getRecords();
+        self::assertCount(1, $records);
+        self::assertSame($failure, $records[0]->context['exception']);
     }
 
     public function testForgetWithAnEmptyListDoesNothingAtAll(): void

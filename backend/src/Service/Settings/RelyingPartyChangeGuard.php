@@ -15,7 +15,7 @@ use App\Service\Settings\ServingHost\ServingHostInterface;
  * A change of the EFFECTIVE relying-party id orphans every enrolled passkey, so it needs confirmation and then deletes
  * them all. The delete commits before the settings flush; a crash between the two is accepted.
  */
-final readonly class RelyingPartyChange
+final readonly class RelyingPartyChangeGuard
 {
     public function __construct(
         private PasskeyRelyingPartyInterface $relyingParty,

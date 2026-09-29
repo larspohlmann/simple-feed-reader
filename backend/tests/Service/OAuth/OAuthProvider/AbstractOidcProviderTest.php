@@ -6,6 +6,7 @@ namespace App\Tests\Service\OAuth\OAuthProvider;
 
 use App\Http\Problem\ExceptionProblems\OAuthProblems;
 use App\Service\OAuth\Exception\OAuthFailedException;
+use App\Service\OAuth\OAuthProvider\AbstractOidcProvider;
 use App\Tests\Service\OAuth\StubOidcProvider;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -439,6 +440,66 @@ final class AbstractOidcProviderTest extends TestCase
         self::assertTrue($seen['verify_peer'] ?? null);
         self::assertTrue($seen['verify_host'] ?? null);
         self::assertSame(0, $seen['max_redirects'] ?? null);
+    }
+
+    public function testAnOverrideBuildsOnTheEmptyDefaultExtraAuthorizationParameters(): void
+    {
+        $provider = new readonly class (
+            new MockHttpClient(),
+            $this->clock,
+            'https://app.test',
+        ) extends AbstractOidcProvider {
+            public function getName(): string
+            {
+                return 'extended';
+            }
+
+            public function isConfigured(): bool
+            {
+                return true;
+            }
+
+            protected function getAuthorizationEndpoint(): string
+            {
+                return 'https://issuer.test/authorize';
+            }
+
+            protected function getScope(): string
+            {
+                return 'openid';
+            }
+
+            protected function getTokenEndpointUrl(): string
+            {
+                return 'https://issuer.test/token';
+            }
+
+            protected function getIssuers(): array
+            {
+                return ['https://issuer.test'];
+            }
+
+            protected function getClientId(): string
+            {
+                return 'extended-client-id';
+            }
+
+            protected function getClientSecret(): string
+            {
+                return 'extended-client-secret';
+            }
+
+            protected function extraAuthorizationParameters(): array
+            {
+                return parent::extraAuthorizationParameters() + ['prompt' => 'consent'];
+            }
+        };
+
+        $query = [];
+        parse_str((string) parse_url($provider->getAuthorizationUrl('s', 'n', 'c'), \PHP_URL_QUERY), $query);
+
+        self::assertSame('consent', $query['prompt'] ?? null);
+        self::assertCount(9, $query);
     }
 
     public function testEveryFailureLooksIdenticalToTheCaller(): void

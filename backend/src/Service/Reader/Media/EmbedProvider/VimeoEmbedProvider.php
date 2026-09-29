@@ -71,8 +71,8 @@ final readonly class VimeoEmbedProvider implements EmbedProviderInterface
         if (preg_match('#^/video/(\d+)/?$#', $path, $matches) !== 1) {
             return null;
         }
-        parse_str($query, $params);
-        $hash = $params['h'] ?? null;
+        parse_str($query, $queryParameters);
+        $hash = $queryParameters['h'] ?? null;
 
         return [$matches[1], \is_string($hash) && preg_match('#^' . self::HASH . '$#', $hash) === 1 ? $hash : null];
     }

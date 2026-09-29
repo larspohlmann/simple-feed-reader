@@ -125,12 +125,12 @@ final readonly class RecommendationRunAdvancer
             $this->entityManager->refresh($run);
 
             return RecommendationRunReportModel::fromRun($run);
-        } catch (AiNotConfiguredException | AiKeyUnreadableException $e) {
+        } catch (AiNotConfiguredException | AiKeyUnreadableException $exception) {
             // Such a run can never advance again, so it fails here for every driver (#311), and the error still
             // propagates to the HTTP mapping and the worker's fault floor.
-            $this->failPermanently($run, self::failureMessageFor($e));
+            $this->failPermanently($run, self::failureMessageFor($exception));
 
-            throw $e;
+            throw $exception;
         }
     }
 
@@ -150,9 +150,9 @@ final readonly class RecommendationRunAdvancer
         $this->entityManager->flush();
     }
 
-    private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $e): string
+    private static function failureMessageFor(AiNotConfiguredException | AiKeyUnreadableException $exception): string
     {
-        return $e instanceof AiKeyUnreadableException
+        return $exception instanceof AiKeyUnreadableException
             ? 'The stored API key can no longer be read.'
             : 'The AI provider is no longer configured.';
     }

@@ -30,7 +30,7 @@ final class InstanceSettings implements ResetInterface
     private ?InstanceSetting $memoisedSettings = null;
 
     public function __construct(
-        private readonly InstanceSettingRepository $repository,
+        private readonly InstanceSettingRepository $storedSettings,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -67,7 +67,7 @@ final class InstanceSettings implements ResetInterface
 
     public function update(InstanceSettingsUpdate $update): void
     {
-        $setting = $this->repository->findSingleton();
+        $setting = $this->storedSettings->findSingleton();
 
         if (null === $setting) {
             $setting = new InstanceSetting();
@@ -91,6 +91,6 @@ final class InstanceSettings implements ResetInterface
      */
     private function settings(): InstanceSetting
     {
-        return $this->memoisedSettings ??= $this->repository->findSingleton() ?? new InstanceSetting();
+        return $this->memoisedSettings ??= $this->storedSettings->findSingleton() ?? new InstanceSetting();
     }
 }

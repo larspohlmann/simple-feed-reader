@@ -72,7 +72,7 @@ final class GitHubLatestReleaseReaderTest extends TestCase
     {
         $client = new MockHttpClient();
 
-        $latest = $this->reader($client, repository: '')->read();
+        $latest = $this->reader($client, gitHubRepository: '')->read();
 
         self::assertNull($latest);
         self::assertSame(0, $client->getRequestsCount());
@@ -94,13 +94,15 @@ final class GitHubLatestReleaseReaderTest extends TestCase
         self::assertSame(1, $client->getRequestsCount());
     }
 
-    private function reader(MockHttpClient $client, string $repository = self::REPOSITORY): GitHubLatestReleaseReader
-    {
+    private function reader(
+        MockHttpClient $client,
+        string $gitHubRepository = self::REPOSITORY,
+    ): GitHubLatestReleaseReader {
         return new GitHubLatestReleaseReader(
             $client,
             new ArrayAdapter(),
             new NullLogger(),
-            $repository,
+            $gitHubRepository,
             'SimpleFeedReader/1.0',
         );
     }

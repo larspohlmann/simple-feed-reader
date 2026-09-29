@@ -57,8 +57,8 @@ final class EntryIndexer
         try {
             $this->configureOnce();
             $this->index->upsert(self::toIndexedEntries($entries));
-        } catch (SearchEngineUnavailableException $e) {
-            $this->logger->error('Failed to index entries', ['exception' => $e]);
+        } catch (SearchEngineUnavailableException $exception) {
+            $this->logger->error('Failed to index entries', ['exception' => $exception]);
         }
     }
 
@@ -111,8 +111,8 @@ final class EntryIndexer
 
         try {
             $this->index->forget($entryIds);
-        } catch (SearchEngineUnavailableException $e) {
-            $this->logger->error('Failed to remove entries from the index', ['exception' => $e]);
+        } catch (SearchEngineUnavailableException $exception) {
+            $this->logger->error('Failed to remove entries from the index', ['exception' => $exception]);
         }
     }
 

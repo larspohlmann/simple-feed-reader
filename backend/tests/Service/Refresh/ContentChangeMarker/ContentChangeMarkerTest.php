@@ -74,7 +74,7 @@ final class ContentChangeMarkerTest extends TestCase
         $this->marker()->markChanged();
 
         $entries = array_diff((array) scandir($this->projectDir . '/public/state'), ['.', '..']);
-        self::assertSame(['counts.json'], array_values($entries));
+        self::assertSame(['change-marker.json'], array_values($entries));
     }
 
     public function testAWrittenMarkerLogsNothing(): void
@@ -97,7 +97,7 @@ final class ContentChangeMarkerTest extends TestCase
         self::assertCount(1, $logger->records);
         self::assertStringContainsString('{directory}', $logger->records[0]['message']);
         self::assertSame($file . '/public/state', $logger->records[0]['context']['directory']);
-        self::assertFileDoesNotExist($file . '/public/state/counts.json');
+        self::assertFileDoesNotExist($file . '/public/state/change-marker.json');
     }
 
     public function testAnUnwritableWebRootDoesNotThrow(): void
@@ -117,7 +117,7 @@ final class ContentChangeMarkerTest extends TestCase
 
     private function markerPath(): string
     {
-        return $this->projectDir . '/public/state/counts.json';
+        return $this->projectDir . '/public/state/change-marker.json';
     }
 
     private function removeRecursively(string $path): void

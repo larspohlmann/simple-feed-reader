@@ -52,7 +52,8 @@ final readonly class AuditReportHtml
     private function suspects(AuditFindingsModel $findings): string
     {
         $rows = '';
-        foreach ($findings->tally(static fn (CleanupMarkerModel $m): string => $m->suspect) as $suspect => $count) {
+        $bySuspect = $findings->tally(static fn (CleanupMarkerModel $marker): string => $marker->suspect);
+        foreach ($bySuspect as $suspect => $count) {
             $rows .= \sprintf('<tr><td>%s</td><td class="n">%d</td></tr>', $this->escape($suspect), $count);
         }
 

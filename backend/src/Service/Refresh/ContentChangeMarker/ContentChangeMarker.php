@@ -34,7 +34,7 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
         if (!$this->ensureDirectory($directory)) {
             return;
         }
-        $this->writeAtomically($directory, $directory . '/counts.json', $this->payload());
+        $this->writeAtomically($directory, $directory . '/change-marker.json', $this->payload());
     }
 
     // UTC to the microsecond: the worker clock is not UTC on Strato, and two
@@ -60,18 +60,22 @@ final readonly class ContentChangeMarker implements ContentChangeMarkerInterface
     // Temp file plus rename on the same filesystem, so a polling reader never
     // sees half a write. The marker is chmod'd readable because the web server
     // serves it as a different user than the one the refresh runs as.
-    private function writeAtomically(string $directory, string $target, string $token): void
+    private function writeAtomically(string $directory, string $target, string $payload): void
     {
-        $temp = @tempnam($directory, 'counts');
-        if (false === $temp) {
+        $temporaryFile = @tempnam($directory, 'change-marker');
+        if (false === $temporaryFile) {
             $this->logger->warning('Change marker: no temp file in {directory}', ['directory' => $directory]);
 
             return;
         }
-        if (false !== @file_put_contents($temp, $token) && @chmod($temp, 0644) && @rename($temp, $target)) {
+        if (
+            false !== @file_put_contents($temporaryFile, $payload)
+            && @chmod($temporaryFile, 0644)
+            && @rename($temporaryFile, $target)
+        ) {
             return;
         }
-        @unlink($temp);
+        @unlink($temporaryFile);
         $this->logger->warning('Change marker: cannot write {target}', ['target' => $target]);
     }
 }

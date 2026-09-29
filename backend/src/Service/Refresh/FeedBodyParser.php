@@ -37,11 +37,11 @@ final readonly class FeedBodyParser
         // which is what every row meant before the seam existed.
         try {
             return $this->resolve(SourceFormat::XML)->parse($body, $feed);
-        } catch (FeedParseException $e) {
+        } catch (FeedParseException $exception) {
             throw new FeedParseException(
-                sprintf('No parser for source format "%s"; tried xml: %s', $format, $e->getMessage()),
+                sprintf('No parser for source format "%s"; tried xml: %s', $format, $exception->getMessage()),
                 0,
-                $e,
+                $exception,
             );
         }
     }
@@ -50,8 +50,8 @@ final readonly class FeedBodyParser
     {
         try {
             $parser = $this->parsers->get($format);
-        } catch (ContainerExceptionInterface $e) {
-            throw new \LogicException(sprintf('No feed body parser is wired for "%s".', $format), previous: $e);
+        } catch (ContainerExceptionInterface $exception) {
+            throw new \LogicException(sprintf('No feed body parser is wired for "%s".', $format), previous: $exception);
         }
         \assert($parser instanceof FeedBodyParserInterface);
 

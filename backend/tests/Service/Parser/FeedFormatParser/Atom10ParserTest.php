@@ -453,4 +453,33 @@ final class Atom10ParserTest extends TestCase
         self::assertCount(1, $bundle->attachments);
         self::assertSame('https://cdn/ep.mp3', $bundle->attachments[0]->url);
     }
+
+    public function testAnAtomElementThatIsNotAnEntryIsNotParsedAsOne(): void
+    {
+        $feed = $this->parse(<<<'XML'
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>F</title>
+              <source><title>Stray</title></source>
+              <entry><title>Real</title></entry>
+            </feed>
+            XML);
+
+        self::assertSame(
+            ['Real'],
+            array_map(static fn (ParsedEntryModel $entry): string => $entry->title, $feed->entries),
+        );
+    }
+
+    public function testALinkOutsideTheAtomNamespaceIsNotTheEntryUrl(): void
+    {
+        $entry = $this->parseSingleEntry(<<<'XML'
+            <entry>
+              <title>T</title>
+              <x:link xmlns:x="urn:other" rel="alternate" href="https://foreign.example/"/>
+              <link rel="alternate" href="https://e/real"/>
+            </entry>
+            XML);
+
+        self::assertSame('https://e/real', $entry->url);
+    }
 }

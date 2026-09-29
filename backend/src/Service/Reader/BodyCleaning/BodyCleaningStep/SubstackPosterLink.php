@@ -53,6 +53,6 @@ final readonly class SubstackPosterLink implements BodyCleaningStepInterface
             return null;
         }
 
-        return preg_match(self::POSTER_PATTERN, $image->getAttribute('src') ?? '', $m) === 1 ? $m[1] : null;
+        return preg_match(self::POSTER_PATTERN, $image->getAttribute('src') ?? '', $matches) === 1 ? $matches[1] : null;
     }
 }

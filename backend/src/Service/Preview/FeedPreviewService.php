@@ -57,8 +57,8 @@ final readonly class FeedPreviewService
 
         try {
             $response = $this->fetcher->fetch($url);
-        } catch (FetchException $e) {
-            throw new FeedPreviewException('The feed could not be loaded.', 0, $e);
+        } catch (FetchException $exception) {
+            throw new FeedPreviewException('The feed could not be loaded.', 0, $exception);
         }
 
         $body = $response->modifiedBody();
@@ -76,22 +76,22 @@ final readonly class FeedPreviewService
                 SourceFormat::WP_JSON => $this->wordPressJsonParser->parse($body),
                 default => $this->parser->parse($body),
             };
-        } catch (FeedParseException $e) {
+        } catch (FeedParseException $exception) {
             // The generic wording fits a feed-document mismatch; a scraped preview
             // keeps the extractor's own message ("No article list was detected on
             // the page."), which already names the actual problem in user-
             // appropriate words. Flattening it would only lose information.
             throw new FeedPreviewException(
-                $format === SourceFormat::SCRAPED ? $e->getMessage() : 'That address is not a readable feed.',
+                $format === SourceFormat::SCRAPED ? $exception->getMessage() : 'That address is not a readable feed.',
                 0,
-                $e,
+                $exception,
             );
         }
 
         $sample = \array_slice($feed->entries, 0, self::SAMPLE_SIZE);
-        $tiers = array_map(fn (ParsedEntryModel $e): string => $this->tier($e), $sample);
+        $tiers = array_map(fn (ParsedEntryModel $entry): string => $this->tier($entry), $sample);
         $displayed = \array_slice($sample, 0, self::PREVIEW_ITEMS);
-        $items = array_map(fn (ParsedEntryModel $e): FeedPreviewItemModel => $this->item($e), $displayed);
+        $items = array_map(fn (ParsedEntryModel $entry): FeedPreviewItemModel => $this->item($entry), $displayed);
 
         return new FeedPreviewModel(
             title: $feed->title,
@@ -99,7 +99,7 @@ final readonly class FeedPreviewService
             content: $this->verdict($tiers),
             hasImages: array_any(
                 $sample,
-                fn (ParsedEntryModel $e): bool => $this->httpsImageUrl($e->media->image) !== null,
+                fn (ParsedEntryModel $entry): bool => $this->httpsImageUrl($entry->media->image) !== null,
             ),
             items: $items,
         );

@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class ProxySettings
 {
     public function __construct(
-        private StoredProxySettingsInterface $repository,
+        private StoredProxySettingsInterface $storedSettings,
         private EntityManagerInterface $entityManager,
         private ProxyPasswordCipher $cipher,
     ) {
@@ -22,12 +22,14 @@ final readonly class ProxySettings
 
     public function current(): ProxySettingsSnapshotModel
     {
-        return ProxySettingsSnapshotModel::fromEntity($this->repository->findSingleton() ?? new ProxyServerSettings());
+        return ProxySettingsSnapshotModel::fromEntity(
+            $this->storedSettings->findSingleton() ?? new ProxyServerSettings(),
+        );
     }
 
     public function update(ProxySettingsUpdateModel $update): void
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->storedSettings->findSingleton();
 
         if (null === $settings) {
             $settings = new ProxyServerSettings();

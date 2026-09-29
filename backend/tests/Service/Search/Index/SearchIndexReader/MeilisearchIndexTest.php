@@ -337,6 +337,23 @@ final class MeilisearchIndexTest extends TestCase
         $this->index($client)->find($this->search());
     }
 
+    public function testATransportFailureCarriesItsCauseAndNoErrorCode(): void
+    {
+        $cause = new TransportException('Connection refused');
+        $client = new MockHttpClient(static function () use ($cause): MockResponse {
+            throw $cause;
+        });
+
+        try {
+            $this->index($client)->find($this->search());
+            self::fail('expected the search to fail');
+        } catch (SearchEngineUnavailableException $exception) {
+            self::assertSame('The search engine did not answer.', $exception->getMessage());
+            self::assertSame(0, $exception->getCode());
+            self::assertSame($cause, $exception->getPrevious());
+        }
+    }
+
     public function testAServerErrorBecomesSearchEngineUnavailable(): void
     {
         $client = new MockHttpClient(new MockResponse('', ['http_code' => 500]));
@@ -397,6 +414,21 @@ final class MeilisearchIndexTest extends TestCase
 
         self::assertSame([7], $matches[0]->entryIds);
         self::assertSame([9, 11], $matches[1]->entryIds);
+    }
+
+    public function testFindManyIgnoresResultEntriesThatAreNotResultSets(): void
+    {
+        $client = $this->clientCapturing(new MockResponse(
+            '{"results":[{"hits":[{"id":7}]},"junk",{"hits":[{"id":9}]}]}',
+        ));
+        $matches = $this->index($client)->findMany([
+            new IndexSearchModel(SearchTermsModel::fromInput('widgets'), [1], null, 20),
+            new IndexSearchModel(SearchTermsModel::fromInput('gizmos'), [1], null, 20),
+        ]);
+
+        self::assertSame([0, 1], array_keys($matches));
+        self::assertSame([7], $matches[0]->entryIds);
+        self::assertSame([9], $matches[1]->entryIds);
     }
 
     public function testFindManyRaisesWhenTheResultCountDoesNotMatchTheQueryCount(): void

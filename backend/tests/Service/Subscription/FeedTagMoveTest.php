@@ -100,6 +100,39 @@ final class FeedTagMoveTest extends DbTestCase
         self::assertSame(2, $second->getPosition());
     }
 
+    public function testTheTargetTagsFeedsKeepTheirPositionOrderNotTheirCreationOrder(): void
+    {
+        $user = $this->user('tag-order@example.com');
+        $news = $this->tag($user, 'News');
+        $tech = $this->tag($user, 'Tech');
+        $late = $this->taggedSubscription($user, 'https://late.example.com/rss', [[$tech, 1]]);
+        $early = $this->taggedSubscription($user, 'https://early.example.com/rss', [[$tech, 0]]);
+        $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
+
+        $this->move($moved, new FeedMoveModel($news->requireId(), $tech->requireId(), 1));
+        $this->entityManager->flush();
+
+        self::assertSame(0, TagJoins::positionOf($early, $tech));
+        self::assertSame(1, TagJoins::positionOf($moved, $tech));
+        self::assertSame(2, TagJoins::positionOf($late, $tech));
+    }
+
+    public function testTheUntaggedFeedsKeepTheirPositionOrderNotTheirCreationOrder(): void
+    {
+        $user = $this->user('untagged-order@example.com');
+        $news = $this->tag($user, 'News');
+        $late = $this->untaggedSubscription($user, 'https://late.example.com/rss', 1);
+        $early = $this->untaggedSubscription($user, 'https://early.example.com/rss', 0);
+        $moved = $this->taggedSubscription($user, 'https://m.example.com/rss', [[$news, 0]]);
+
+        $this->move($moved, new FeedMoveModel($news->requireId(), null, 1));
+        $this->entityManager->flush();
+
+        self::assertSame(0, $early->getPosition());
+        self::assertSame(1, $moved->getPosition());
+        self::assertSame(2, $late->getPosition());
+    }
+
     public function testClampsAPositionBeyondTheListToTheEnd(): void
     {
         $user = $this->user('clamper@example.com');

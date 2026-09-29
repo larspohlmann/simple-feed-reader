@@ -28,7 +28,7 @@ final readonly class PasskeyCredentials
 {
     private const int HANDLE_LENGTH_BYTES = 32;
 
-    public function __construct(private UserPasskeyRepository $repository)
+    public function __construct(private UserPasskeyRepository $passkeys)
     {
     }
 
@@ -41,7 +41,7 @@ final readonly class PasskeyCredentials
      */
     public function userHandleFor(User $user): string
     {
-        return $this->sharedHandle($this->repository->findForUser($user)) ?? self::randomHandle();
+        return $this->sharedHandle($this->passkeys->findForUser($user)) ?? self::randomHandle();
     }
 
     /**
@@ -66,7 +66,7 @@ final readonly class PasskeyCredentials
     {
         return array_map(
             self::toDescriptor(...),
-            $this->repository->findForUser($user),
+            $this->passkeys->findForUser($user),
         );
     }
 

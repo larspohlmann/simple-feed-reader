@@ -187,7 +187,8 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
     {
         $search = $this->search('climate');
         $this->entry('a');
-        $matcher = new RecordingSavedSearchMatcher([], new SearchEngineUnavailableException('down'));
+        $failure = new SearchEngineUnavailableException('down');
+        $matcher = new RecordingSavedSearchMatcher([], $failure);
         $logger = new RecordingLogger();
 
         $report = $this->sweep($matcher, logger: $logger)->sweep(SweepBudgetModel::seconds(10));
@@ -198,6 +199,7 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertSame([], $this->memberEntryIds($search));
         self::assertCount(1, $logger->records);
         self::assertSame('warning', $logger->records[0]['level']);
+        self::assertSame(['exception' => $failure], $logger->records[0]['context']);
     }
 
     public function testAFailureAfterTheInsertRollsBackTheRowsKeepsTheMarkAndStopsTheRun(): void
@@ -230,6 +232,9 @@ final class SavedSearchMembershipSweepTest extends DbTestCase
         self::assertSame([], $this->memberEntryIds($search));
         self::assertCount(1, $logger->records);
         self::assertSame('error', $logger->records[0]['level']);
+        $logged = $logger->records[0]['context']['exception'] ?? null;
+        self::assertInstanceOf(\RuntimeException::class, $logged);
+        self::assertSame('simulated failure after the insert', $logged->getMessage());
     }
 
     public function testASecondRunOverTheSameChunkInsertsNothingAndDoesNotFail(): void

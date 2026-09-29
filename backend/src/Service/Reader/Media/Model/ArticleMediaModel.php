@@ -32,9 +32,10 @@ final readonly class ArticleMediaModel
 
     public function withoutEmbeds(): self
     {
-        return new self(array_values(
-            array_filter($this->candidates, static fn (MediaCandidateModel $c): bool => $c->kind !== MediaKind::Embed)
-        ));
+        return new self(array_values(array_filter(
+            $this->candidates,
+            static fn (MediaCandidateModel $candidate): bool => $candidate->kind !== MediaKind::Embed,
+        )));
     }
 
     /** A file plays everywhere without a library; a stream is the fallback for a page that offers no file. */
@@ -44,9 +45,10 @@ final readonly class ArticleMediaModel
             return $this;
         }
 
-        return new self(array_values(
-            array_filter($this->candidates, static fn (MediaCandidateModel $c): bool => $c->kind !== MediaKind::Stream)
-        ));
+        return new self(array_values(array_filter(
+            $this->candidates,
+            static fn (MediaCandidateModel $candidate): bool => $candidate->kind !== MediaKind::Stream,
+        )));
     }
 
     /** @param list<MediaCandidateModel> $more */

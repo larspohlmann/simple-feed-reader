@@ -21,6 +21,7 @@ use App\Tests\Service\Search\RecordingSearchIndexWriter;
 use App\Tests\Support\DuplicateKeyViolation;
 use App\Tests\Support\FlushFailingEntityManager;
 use App\Tests\Support\RecordingContentChangeMarker;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\RefreshRunners;
 use App\Tests\Support\StubFeedFetcher;
 use App\Tests\Support\TtlRecordingLockFactory;
@@ -43,12 +44,14 @@ final class RefreshRunnerTest extends DbTestCase
     private User $subscriber;
     private RecordingSearchIndexWriter $indexWriter;
     private RecordingContentChangeMarker $changeMarker;
+    private RecordingLogger $logger;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->clock = new MockClock('2026-07-21 12:00:00', 'UTC');
         $this->changeMarker = new RecordingContentChangeMarker();
+        $this->logger = new RecordingLogger();
         $this->fetcher = new StubFeedFetcher($this->clock);
         // Favicon resolution has its own fetcher so homepage fetches never
         // pollute assertions on which FEEDS the runner fetched.
@@ -71,6 +74,7 @@ final class RefreshRunnerTest extends DbTestCase
             ->lockingWith($this->lockFactory)
             ->markingChangesOn($this->changeMarker)
             ->indexingInto($this->indexWriter)
+            ->loggingTo($this->logger)
             ->build($this->fetcher, $this->faviconFetcher);
     }
 
@@ -1162,6 +1166,13 @@ final class RefreshRunnerTest extends DbTestCase
         self::assertSame(0, $report->pruned);
         self::assertSame(0, $report->skippedForBudget);
         self::assertSame(0, $report->remaining);
+        self::assertCount(1, $this->logger->records);
+        self::assertSame('error', $this->logger->records[0]['level']);
+        self::assertSame(
+            'Refresh aborted: persistence failed while resolving favicons',
+            $this->logger->records[0]['message'],
+        );
+        self::assertSame(['exception' => $thrown], $this->logger->records[0]['context']);
     }
 
     /**

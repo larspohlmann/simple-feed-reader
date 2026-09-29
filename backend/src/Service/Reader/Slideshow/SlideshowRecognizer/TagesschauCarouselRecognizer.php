@@ -36,13 +36,13 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
 
     private function fromCarousel(Element $carousel, PageTextBlocksModel $textBlocks): ?SlideshowModel
     {
-        $data = json_decode($carousel->getAttribute('data-v') ?? '', true);
-        if (!is_array($data) || !isset($data['images']) || !is_array($data['images'])) {
+        $carouselConfig = json_decode($carousel->getAttribute('data-v') ?? '', true);
+        if (!is_array($carouselConfig) || !isset($carouselConfig['images']) || !is_array($carouselConfig['images'])) {
             return null;
         }
 
         $slides = [];
-        foreach ($data['images'] as $image) {
+        foreach ($carouselConfig['images'] as $image) {
             $slide = $this->slide($image);
             if ($slide !== null) {
                 $slides[] = $slide;
@@ -51,7 +51,7 @@ final readonly class TagesschauCarouselRecognizer implements SlideshowRecognizer
 
         return SlideshowModel::fromSlides(
             $slides,
-            is_string($data['name'] ?? null) ? $data['name'] : null,
+            is_string($carouselConfig['name'] ?? null) ? $carouselConfig['name'] : null,
             $textBlocks->before($carousel),
             ContainerSignatureModel::fromElement($carousel),
         );

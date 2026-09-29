@@ -102,13 +102,13 @@ final readonly class AppleClientSecretFactory
                 ->expiresAt($now->add(new \DateInterval('PT' . self::LIFETIME_SECONDS . 'S')))
                 ->getToken(new Sha256(), InMemory::plainText($this->privateKey))
                 ->toString();
-        } catch (\Throwable $e) {
+        } catch (\Throwable $exception) {
             // A malformed .p8, a wrong-curve key, newlines a dotenv/secrets UI
             // flattened — all deployment mistakes that must reach the user as
             // nothing but "sign-in failed". OAuthFailedException renders the
             // same whatever went wrong, so it cannot be used to probe how Apple
             // is configured; the cause survives in $logDetail and $previous.
-            throw new OAuthFailedException('apple client secret could not be signed', $e);
+            throw new OAuthFailedException('apple client secret could not be signed', $exception);
         }
     }
 }

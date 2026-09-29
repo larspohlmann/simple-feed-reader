@@ -24,7 +24,7 @@ use Doctrine\ORM\EntityManagerInterface;
 final readonly class RecommendationSettingsWriter
 {
     public function __construct(
-        private RecommendationSettingsRepository $repository,
+        private RecommendationSettingsRepository $recommendationSettings,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -46,7 +46,7 @@ final readonly class RecommendationSettingsWriter
 
     private function loadOrCreate(User $user): RecommendationSettings
     {
-        $settings = $this->repository->findForUser($user);
+        $settings = $this->recommendationSettings->findForUser($user);
 
         if (null !== $settings) {
             return $settings;

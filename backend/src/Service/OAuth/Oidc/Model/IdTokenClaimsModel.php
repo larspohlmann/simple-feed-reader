@@ -132,8 +132,8 @@ final readonly class IdTokenClaimsModel
     {
         try {
             $claims = json_decode($json, true, 512, \JSON_THROW_ON_ERROR);
-        } catch (\JsonException $e) {
-            throw new OAuthFailedException('id_token payload is not valid JSON', $e);
+        } catch (\JsonException $exception) {
+            throw new OAuthFailedException('id_token payload is not valid JSON', $exception);
         }
 
         if (!\is_array($claims)) {

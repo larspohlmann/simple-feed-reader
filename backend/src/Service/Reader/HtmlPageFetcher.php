@@ -72,8 +72,8 @@ final readonly class HtmlPageFetcher
     {
         try {
             return $this->redirects->follow($url, $this->options(), $maxRedirects);
-        } catch (RedirectChainException $e) {
-            throw new PageFetchException($e->getMessage(), previous: $e);
+        } catch (RedirectChainException $exception) {
+            throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
     }
 
@@ -178,8 +178,8 @@ final readonly class HtmlPageFetcher
     {
         try {
             return $landed->response->getContent(false);
-        } catch (ExceptionInterface $e) {
-            throw new PageFetchException($e->getMessage(), previous: $e);
+        } catch (ExceptionInterface $exception) {
+            throw new PageFetchException($exception->getMessage(), previous: $exception);
         }
     }
 }

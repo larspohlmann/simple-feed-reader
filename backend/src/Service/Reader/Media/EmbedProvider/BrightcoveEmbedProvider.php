@@ -58,8 +58,8 @@ final readonly class BrightcoveEmbedProvider implements EmbedProviderInterface
 
     private function videoId(string $query): ?string
     {
-        parse_str($query, $params);
-        $videoId = $params['videoId'] ?? null;
+        parse_str($query, $queryParameters);
+        $videoId = $queryParameters['videoId'] ?? null;
 
         return \is_string($videoId) && preg_match(self::VIDEO_ID_PATTERN, $videoId) === 1 ? $videoId : null;
     }

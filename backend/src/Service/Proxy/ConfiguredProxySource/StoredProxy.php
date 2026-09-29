@@ -13,19 +13,19 @@ use App\Service\Proxy\StoredProxySettings\StoredProxySettingsInterface;
 final readonly class StoredProxy implements EgressProxySourceInterface, ConfiguredProxySourceInterface
 {
     public function __construct(
-        private StoredProxySettingsInterface $repository,
+        private StoredProxySettingsInterface $storedSettings,
         private ProxyPasswordCipher $cipher,
     ) {
     }
 
     public function configuredProxy(): ?ProxyConfigModel
     {
-        return $this->proxyFrom($this->repository->findSingleton());
+        return $this->proxyFrom($this->storedSettings->findSingleton());
     }
 
     public function egressProxy(): ?ProxyConfigModel
     {
-        $settings = $this->repository->findSingleton();
+        $settings = $this->storedSettings->findSingleton();
 
         return null !== $settings && $settings->isEnabled() ? $this->proxyFrom($settings) : null;
     }

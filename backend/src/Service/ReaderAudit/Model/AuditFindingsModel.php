@@ -52,9 +52,12 @@ final readonly class AuditFindingsModel
     {
         $flagged = array_values(array_filter(
             $this->findings,
-            static fn (AuditFindingModel $f): bool => $f->markers !== [],
+            static fn (AuditFindingModel $finding): bool => $finding->markers !== [],
         ));
-        usort($flagged, static fn (AuditFindingModel $a, AuditFindingModel $b): int => $b->score() <=> $a->score());
+        usort(
+            $flagged,
+            static fn (AuditFindingModel $left, AuditFindingModel $right): int => $right->score() <=> $left->score(),
+        );
 
         return $flagged;
     }
@@ -87,8 +90,8 @@ final readonly class AuditFindingsModel
             $row['share'] = (float) $row['flagged'] / $row['audited'];
             $rows[] = $row;
         }
-        $worstFirst = static fn (array $a, array $b): int
-            => [$b['share'], $b['flagged']] <=> [$a['share'], $a['flagged']];
+        $worstFirst = static fn (array $left, array $right): int
+            => [$right['share'], $right['flagged']] <=> [$left['share'], $left['flagged']];
         usort($rows, $worstFirst);
 
         return $rows;
@@ -122,11 +125,17 @@ final readonly class AuditFindingsModel
 
     public function extracted(): int
     {
-        return \count(array_filter($this->findings, static fn (AuditFindingModel $f): bool => $f->extracted));
+        return \count(array_filter(
+            $this->findings,
+            static fn (AuditFindingModel $finding): bool => $finding->extracted,
+        ));
     }
 
     public function feedCount(): int
     {
-        return \count(array_unique(array_map(static fn (AuditFindingModel $f): int => $f->feedId, $this->findings)));
+        return \count(array_unique(array_map(
+            static fn (AuditFindingModel $finding): int => $finding->feedId,
+            $this->findings,
+        )));
     }
 }

@@ -62,12 +62,12 @@ final readonly class TickPhases
     ): RecommendationRunReportModel {
         try {
             return $phase->advance($tick);
-        } catch (ProviderRateLimitedException $e) {
-            return $this->deferral->defer($tick->run, $e);
-        } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $e) {
-            $this->transportFailures->record($tick->run, $tick->connection, $e->getMessage());
+        } catch (ProviderRateLimitedException $exception) {
+            return $this->deferral->defer($tick->run, $exception);
+        } catch (ProviderUnreachableException | CredentialsRejectedException | RetryableProviderException $exception) {
+            $this->transportFailures->record($tick->run, $tick->connection, $exception->getMessage());
 
-            throw $e;
+            throw $exception;
         }
     }
 }

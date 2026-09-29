@@ -57,4 +57,36 @@ final class OpmlExporterTest extends DbTestCase
         $doc = new \DOMDocument();
         self::assertTrue($doc->loadXML($xml));
     }
+
+    public function testTheHeadTitlesTheExportAndTheMarkupIsIndented(): void
+    {
+        $user = new User('head@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertStringContainsString(
+            "<opml version=\"2.0\">\n  <head>\n    <title>Simple Feed Reader subscriptions</title>\n  </head>",
+            $xml,
+        );
+    }
+
+    public function testACustomSubscriptionTitleWinsOverTheFeedTitle(): void
+    {
+        $user = new User('custom@example.com', new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $this->entityManager->persist($user);
+        $feed = new Feed('https://custom.example.com/feed.xml');
+        $feed->setTitle('Feed title');
+        $this->entityManager->persist($feed);
+        $subscription = new Subscription($user, $feed, new \DateTimeImmutable('2026-07-01T00:00:00Z'));
+        $subscription->setCustomTitle('My title');
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
+
+        $xml = $this->exporter()->export($user);
+
+        self::assertStringContainsString('text="My title" title="My title"', $xml);
+        self::assertStringNotContainsString('Feed title', $xml);
+    }
 }

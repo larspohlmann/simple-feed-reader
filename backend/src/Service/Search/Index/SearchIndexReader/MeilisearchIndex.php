@@ -268,7 +268,10 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
         }
 
         /** @var list<array<mixed>> $results */
-        $results = array_values(array_filter($decoded['results'], static fn (mixed $r): bool => \is_array($r)));
+        $results = array_values(array_filter(
+            $decoded['results'],
+            static fn (mixed $result): bool => \is_array($result),
+        ));
         if (\count($results) !== $expected) {
             throw new SearchEngineUnavailableException(
                 'The search engine returned a different number of result sets than queries.',
@@ -431,8 +434,8 @@ final readonly class MeilisearchIndex implements SearchIndexReaderInterface, Sea
             }
 
             return $response->getContent();
-        } catch (ExceptionInterface $e) {
-            throw new SearchEngineUnavailableException('The search engine did not answer.', 0, $e);
+        } catch (ExceptionInterface $exception) {
+            throw new SearchEngineUnavailableException('The search engine did not answer.', 0, $exception);
         }
     }
 }
