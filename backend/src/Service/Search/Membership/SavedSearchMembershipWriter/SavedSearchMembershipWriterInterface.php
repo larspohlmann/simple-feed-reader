@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Search\Membership\SavedSearchMembershipWriter;
 
-/** The one write the membership sweep makes: store the pairs a chunk matched (#1116). */
+/** The one write the membership sweep makes: store the pairs a chunk matched. */
 interface SavedSearchMembershipWriterInterface
 {
     /**

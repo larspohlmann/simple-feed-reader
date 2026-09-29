@@ -5,19 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Search\Model;
 
 /**
- * How a query's terms are matched. The three modes are mutually exclusive and
- * decided once for the whole query, not per term:
- *
- * - Substring: the default — each word matches anywhere inside a title or
- *   summary.
- * - WholeWord: a trailing space in the raw query — each word matches only on a
- *   word boundary.
- * - Phrase: the raw query wrapped in double quotes — the whole inner text
- *   matches as one exact, contiguous phrase.
- *
- * A saved search stores the mode as two booleans (its own columns); this enum
- * is the single value the domain threads instead, so no method forks on a pair
- * of flags.
+ * How a query's terms match, decided once for the whole query: Substring by default, WholeWord after a trailing
+ * space, Phrase when the query is wrapped in double quotes. A saved search stores it as two boolean columns.
  */
 enum SearchMode
 {

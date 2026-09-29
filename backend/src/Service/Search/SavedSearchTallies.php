@@ -12,7 +12,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 /**
  * What each saved search's badge and heading count: the unread member ids,
  * which the client drops one by one as they are read, and the member total.
- * Read from the membership table (#1116), every search in one query each.
+ * Read from the membership table, every search in one query each.
  */
 final readonly class SavedSearchTallies
 {

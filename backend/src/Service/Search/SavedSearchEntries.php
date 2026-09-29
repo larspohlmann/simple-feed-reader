@@ -9,8 +9,8 @@ use App\Repository\SavedSearchListQuery;
 use App\Service\Search\Model\SavedSearchEntriesResultModel;
 
 /**
- * The combined saved-search list (#769) over the membership table (#1116):
- * the page of every entry any of the caller's searches matches.
+ * The combined saved-search list over the membership table: the page of
+ * every entry any of the caller's searches matches.
  */
 final readonly class SavedSearchEntries
 {
