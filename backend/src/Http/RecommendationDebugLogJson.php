@@ -10,7 +10,7 @@ use App\Repository\RecommendationRunLogRepository;
 use App\Service\Recommendation\Feed\Model\RecommendationDebugLogModel;
 
 /**
- * Response shapes for the recommendation debug log (#309): poll-cheap, bodies never ride along, only sizes, except
+ * Response shapes for the recommendation debug log: poll-cheap, bodies never ride along, only sizes, except
  * the one call still streaming, whose growing text is the live view.
  *
  * @phpstan-import-type DebugLogRow from RecommendationRunLogRepository

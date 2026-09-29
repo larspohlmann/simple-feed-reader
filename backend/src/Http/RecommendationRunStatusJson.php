@@ -7,11 +7,8 @@ namespace App\Http;
 use App\Service\Recommendation\Feed\Model\RecommendationRunStatusModel;
 
 /**
- * The wire shape every /api/recommendations/runs* action returns: the run
- * report, the run's live `elapsedSeconds` (computed on the server's own clock —
- * the client never subtracts timestamps across machines), the phase-weighted
- * `etaSeconds` (null when there is no estimate yet, #638), and the for-you
- * summary.
+ * The shape every /api/recommendations/runs* action returns. `elapsedSeconds` comes from the server's clock, so the
+ * client never subtracts timestamps across machines; `etaSeconds` is null until there is an estimate.
  */
 final class RecommendationRunStatusJson
 {
@@ -33,7 +30,7 @@ final class RecommendationRunStatusJson
             'elapsedSeconds' => $report->elapsedSecondsAt($status->observedAt),
             'etaSeconds' => $status->etaSeconds,
             'forYou' => [
-                // The count of unread surviving picks (#724); the field name
+                // The count of unread surviving picks; the field name
                 // stays `itemCount` for wire compatibility.
                 'itemCount' => $summary->itemCount,
                 'totalCount' => $summary->totalCount,

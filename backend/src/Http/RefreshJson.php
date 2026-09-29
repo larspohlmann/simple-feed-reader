@@ -7,16 +7,8 @@ namespace App\Http;
 use App\Service\Refresh\Model\TrackedRefreshReportModel;
 
 /**
- * The refresh endpoint's response.
- *
- * `progress` is the run — the one figure a client renders, and the reason no client
- * has to reconcile anything. The counters beside it describe the slice that just
- * landed and name their own scope.
- *
- * There is deliberately no `total`. It was this slice's batch size, capped by
- * RefreshRunner::BATCH_LIMIT, sitting next to a run-wide `remaining` and inviting the
- * division that produced #721. RefreshReportModel still carries it for the worker's log,
- * which is a different audience with a different question.
+ * The refresh response. `progress` covers the whole run and is the one figure a client renders; the counters are
+ * this slice's. No `total`: a slice's batch size beside a run-wide `remaining` invites a wrong division (#721).
  */
 final class RefreshJson
 {

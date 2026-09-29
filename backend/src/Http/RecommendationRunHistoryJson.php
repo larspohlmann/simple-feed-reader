@@ -10,18 +10,8 @@ use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
 
 /**
- * The wire shape of the run history (#409): the overview card (the account's
- * all-time cost total, one summary per calendar month, and the newest month's
- * first page) and the further month pages it expands into.
- *
- * Fed with the repository's scalar projection, not runs: the entity carries the
- * frozen candidate pool, every pick's reason and the last rejected provider
- * reply, none of which belongs on a path that formats twelve numbers.
- *
- * `durationSeconds` is computed here, not left to the client (the rule
- * RecommendationRunStatusJson follows) — the client never subtracts timestamps
- * across machines. `status` goes out as the raw wire vocabulary, untranslated,
- * the same convention the #309 debug log records.
+ * The run history's overview card and month pages, fed with the repository's scalar rows, not runs, which carry the
+ * candidate pool and replies. `durationSeconds` is computed here so no client subtracts timestamps across clocks.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  * @phpstan-type MonthPagePayload array{
@@ -96,12 +86,8 @@ final class RecommendationRunHistoryJson
     }
 
     /**
-     * When the run ended, or null while it has not ended. Read off the status
-     * rather than off the column, because the two disagree: resume() puts a
-     * failed run back into RUNNING and deliberately leaves the completedAt of
-     * the attempt that failed standing. Reporting that timestamp would put a
-     * completion time — and the duration derived from it — beside a RUNNING
-     * badge, and both would be measuring the wrong attempt.
+     * Read off the status, not the column: resume() puts a failed run back to RUNNING and keeps the failed attempt's
+     * completedAt, which must not appear beside a RUNNING badge.
      *
      * @param HistoryRow $run
      */
@@ -130,11 +116,7 @@ final class RecommendationRunHistoryJson
     }
 
     /**
-     * The price as the wire contract states it: an integer, or null when no
-     * call of the run reported one. BIGINT hydrates as a PHP int for every
-     * value nano-credits can reach, but a scalar query may still hand the
-     * column back as the driver's own string, so the payload's type is pinned
-     * here rather than left to whichever database answered.
+     * An int or null, whichever database answered: a scalar query may return the BIGINT as the driver's string.
      *
      * @param HistoryRow $run
      */
