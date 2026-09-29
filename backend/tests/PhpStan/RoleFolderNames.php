@@ -54,7 +54,7 @@ final readonly class RoleFolderNames implements ServiceRoleChecker
             $check,
             $class,
             sprintf('ends in %s, so it sits in %s/', $expected, $role),
-            $class->area() . '\\' . $role . '\\' . $class->shortName(),
+            $class->roleHome($role),
         );
     }
 }

@@ -76,6 +76,16 @@ final readonly class ServiceRoleClass
         return ServiceRoleNames::areaOf($this->namespace());
     }
 
+    public function movedTo(string $namespace): string
+    {
+        return $namespace . '\\' . $this->shortName();
+    }
+
+    public function roleHome(string $role): string
+    {
+        return $this->movedTo($this->area() . '\\' . $role);
+    }
+
     public function isInterface(): bool
     {
         return $this->reflection->isInterface();

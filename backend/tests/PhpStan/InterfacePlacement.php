@@ -102,7 +102,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
             ServiceRoleCheck::InterfaceFolder,
             $class,
             sprintf('implements %s, so it sits in that interface\'s folder', $interfaces[0]),
-            $folders[0] . '\\' . $class->shortName(),
+            $class->movedTo($folders[0]),
         )];
     }
 
@@ -118,7 +118,7 @@ final readonly class InterfacePlacement implements ServiceRoleChecker
             ServiceRoleCheck::InterfaceFolder,
             $class,
             sprintf('sits in the folder of %s but does not implement it', $folderInterface),
-            ServiceRoleNames::namespaceOf($class->namespace()) . '\\' . $class->shortName(),
+            $class->movedTo(ServiceRoleNames::namespaceOf($class->namespace())),
         )];
     }
 }

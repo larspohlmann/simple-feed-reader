@@ -54,10 +54,12 @@ final readonly class RootPlacement implements ServiceRoleChecker
             return null;
         }
         if ($class->isEnum()) {
-            return new ServiceRoleViolation(ServiceRoleCheck::ModelHome, $class, 'is an enum', self::homeIn(
+            return new ServiceRoleViolation(
+                ServiceRoleCheck::ModelHome,
                 $class,
-                ServiceRoleNames::MODEL,
-            ));
+                'is an enum',
+                $class->roleHome(ServiceRoleNames::MODEL),
+            );
         }
 
         return self::isPlacedByItsInterfaceOrName($map, $class) ? null : self::perCallViolation($map, $class);
@@ -72,10 +74,12 @@ final readonly class RootPlacement implements ServiceRoleChecker
 
     private static function staticOnlyViolation(ServiceRoleClass $class): ServiceRoleViolation
     {
-        return new ServiceRoleViolation(ServiceRoleCheck::SupportHome, $class, 'is static-only', self::homeIn(
+        return new ServiceRoleViolation(
+            ServiceRoleCheck::SupportHome,
             $class,
-            ServiceRoleNames::SUPPORT,
-        ));
+            'is static-only',
+            $class->roleHome(ServiceRoleNames::SUPPORT),
+        );
     }
 
     private static function isPlacedByItsInterfaceOrName(ServiceRoleMap $map, ServiceRoleClass $class): bool
@@ -91,10 +95,12 @@ final readonly class RootPlacement implements ServiceRoleChecker
             return null;
         }
         if (self::isPass($map, $class)) {
-            return new ServiceRoleViolation(ServiceRoleCheck::PassHome, $class, 'is built per call', self::homeIn(
+            return new ServiceRoleViolation(
+                ServiceRoleCheck::PassHome,
                 $class,
-                ServiceRoleNames::PASS,
-            ));
+                'is built per call',
+                $class->roleHome(ServiceRoleNames::PASS),
+            );
         }
         $name = str_ends_with($class->shortName(), 'Model') ? $class->shortName() : $class->shortName() . 'Model';
 
@@ -135,10 +141,5 @@ final readonly class RootPlacement implements ServiceRoleChecker
 
         return ServiceRoleNames::PASS === $held->role()
             || ($map->isPerCall($held) && self::isPass($map, $held, $seen));
-    }
-
-    private static function homeIn(ServiceRoleClass $class, string $role): string
-    {
-        return $class->area() . '\\' . $role . '\\' . $class->shortName();
     }
 }

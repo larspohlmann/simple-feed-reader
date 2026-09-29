@@ -53,7 +53,7 @@ final readonly class RoleFolderInterfaces implements ServiceRoleChecker
                     $check,
                     $member,
                     sprintf('sits in the wrong %s/ folder', $tree->role),
-                    $folders[0] . '\\' . $member->shortName(),
+                    $member->movedTo($folders[0]),
                 );
             }
         }
