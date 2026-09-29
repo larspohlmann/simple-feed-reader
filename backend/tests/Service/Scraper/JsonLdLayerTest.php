@@ -42,10 +42,8 @@ final class JsonLdLayerTest extends TestCase
     }
 
     /**
-     * heise.de ships teasers in schema.org "abstract" rather than
-     * "description", mixes bare string entries into itemListElement, and
-     * references some items by URL string — the former must map, the latter
-     * two must be skipped without extracting the ListItem wrapper instead.
+     * An "abstract" teaser maps. Bare string entries in itemListElement and items referenced by URL string are
+     * skipped, without extracting the ListItem wrapper instead.
      */
     public function testAbstractTeaserFallbackAndNonArrayEntriesAreSkipped(): void
     {
@@ -83,12 +81,7 @@ final class JsonLdLayerTest extends TestCase
         self::assertStringContainsString('abstract property', (string) $items[0]->teaser);
     }
 
-    /**
-     * A pathological @graph of many valid Article nodes must not force
-     * unbounded work: collection stops at MAX_COLLECT (200), yielding the
-     * first 200 nodes in document order. The facade caps the final output at
-     * 50 downstream, so real pages are unaffected. Completes near-instantly.
-     */
+    /** A pathological @graph stops at MAX_COLLECT (200), keeping the first 200 nodes in document order. */
     public function testGraphCollectionIsBoundedAtMaxCollect(): void
     {
         $nodes = [];

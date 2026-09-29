@@ -22,13 +22,7 @@ final class CardTitleTest extends TestCase
         return $anchor;
     }
 
-    /**
-     * \Dom\HTMLDocument (lexbor) parses arbitrarily deep nesting — verified
-     * empirically at 60 000 wrapper elements, no parser-side depth cap — so
-     * the title walk must not recurse per element: PHP 8.3+ turns stack
-     * exhaustion into an \Error, which escapes the FeedParseException failure
-     * channel the scrape pipeline reports through.
-     */
+    /** The parser has no depth cap (60,000 wrappers parse), so the title walk must not recurse per element. */
     public function testAdversariallyDeepAnchorNestingDoesNotBlowTheStack(): void
     {
         $depth = 60000;
