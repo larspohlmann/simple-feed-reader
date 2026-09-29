@@ -7,7 +7,6 @@ namespace App\Service\Reader;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Model\PageResponseModel;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
-use App\Service\Reader\Support\ArticleContentGate;
 use Dom\HTMLDocument;
 use fivefilters\Readability\Article;
 use fivefilters\Readability\Configuration;

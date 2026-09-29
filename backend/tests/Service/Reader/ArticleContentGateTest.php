@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Support;
+namespace App\Tests\Service\Reader;
 
+use App\Service\Reader\ArticleContentGate;
 use App\Service\Reader\Exception\ArticleNotExtractedException;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Model\ExtractionFailure;
-use App\Service\Reader\Support\ArticleContentGate;
 use fivefilters\Readability\Article;
 use PHPUnit\Framework\TestCase;
 

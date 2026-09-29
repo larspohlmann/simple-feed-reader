@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\AuthorBio\Support;
+namespace App\Service\Reader\AuthorBio;
 
 use Dom\Element;
 

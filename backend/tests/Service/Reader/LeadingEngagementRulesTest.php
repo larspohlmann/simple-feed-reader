@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Support;
+namespace App\Tests\Service\Reader;
 
-use App\Service\Reader\Support\LeadingEngagementRules;
+use App\Service\Reader\LeadingEngagementRules;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementRulesTest extends TestCase

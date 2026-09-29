@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Support;
+namespace App\Service\Reader;
 
 use App\Service\Reader\Exception\ArticleNotExtractedException;
 use App\Service\Reader\Media\Model\ArticleMediaModel;

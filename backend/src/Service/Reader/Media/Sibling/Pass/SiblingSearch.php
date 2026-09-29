@@ -8,8 +8,8 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Sibling\Model\KeyedOccurrenceModel;
 use App\Service\Reader\Media\Sibling\Model\SiblingModel;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use App\Service\Reader\Media\Sibling\Support\KeyedOccurrences;
-use App\Service\Reader\Media\Sibling\Support\NearbyPoster;
 
 /**
  * One page's sibling search: the raw HTML is per-pass state, bound once here

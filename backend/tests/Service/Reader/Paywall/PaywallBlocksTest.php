@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall\Support;
+namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Paywall\Support\PaywallBlocks;
+use App\Service\Reader\Paywall\PaywallBlocks;
 use PHPUnit\Framework\TestCase;
 
 final class PaywallBlocksTest extends TestCase

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\ReaderAudit\Model;
 
-use App\Service\Reader\Support\LeadingEngagementRules;
+use App\Service\Reader\LeadingEngagementRules;
 
 /**
  * One paragraph-level line of the cleaned article, with enough about its links

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Service\Reader\Support;
 
+use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Text\Support\Whitespace;
 use Dom\Element;

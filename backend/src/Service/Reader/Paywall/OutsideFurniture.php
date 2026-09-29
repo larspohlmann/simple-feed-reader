@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
-use App\Service\Reader\Media\Support\PageFurniture;
+use App\Service\Reader\Media\PageFurniture;
 use Dom\Element;
 use Dom\HTMLDocument;
 use Dom\XPath;

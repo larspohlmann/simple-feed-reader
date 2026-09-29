@@ -8,7 +8,7 @@ use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Media\Sibling\Support\NearbyPoster;
+use App\Service\Reader\Media\Sibling\NearbyPoster;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall\Support;
+namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\Paywall\Support\MembershipCheckout;
+use App\Service\Reader\Paywall\MembershipCheckout;
 use PHPUnit\Framework\TestCase;
 
 final class MembershipCheckoutTest extends TestCase

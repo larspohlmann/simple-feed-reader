@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\Media\Support\NarrationSignals;
+use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Support\LeadingEngagementBlocks;
 use App\Service\Text\Support\Whitespace;
 use Dom\Element;

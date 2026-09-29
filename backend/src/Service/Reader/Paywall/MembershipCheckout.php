@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
 use Dom\HTMLDocument;
 

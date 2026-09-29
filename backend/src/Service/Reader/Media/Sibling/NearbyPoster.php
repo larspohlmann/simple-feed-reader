@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Media\Sibling\Support;
+namespace App\Service\Reader\Media\Sibling;
 
 /** The largest still declared within reach of a position — a player config lists its poster's renditions beside its id. */
 final readonly class NearbyPoster

@@ -2,9 +2,10 @@
 
 declare(strict_types=1);
 
-namespace App\Service\Reader\Paywall\Support;
+namespace App\Service\Reader\Paywall;
 
 use App\Service\Reader\Paywall\Model\AccessDeclaration;
+use App\Service\Reader\Paywall\Support\SchemaOrgAccess;
 use Dom\HTMLDocument;
 
 /**

@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Tests\Service\Reader\Paywall\Support;
+namespace App\Tests\Service\Reader\Paywall;
 
 use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\RawPageModel;
-use App\Service\Reader\Paywall\Support\PaywallSignals;
+use App\Service\Reader\Paywall\PaywallSignals;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
