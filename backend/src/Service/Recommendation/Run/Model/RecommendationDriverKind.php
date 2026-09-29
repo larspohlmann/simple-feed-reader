@@ -7,19 +7,8 @@ namespace App\Service\Recommendation\Run\Model;
 use App\Service\Recommendation\Run\WorkerPresence;
 
 /**
- * Which regime is driving recommendation runs, and under which heartbeat name
- * it says so (#371 follow-up). The cases advance runs on somebody else's
- * behalf: the always-on worker container's ten-second firing, the detached
- * drain command a web request spawns on an install that has none, and the
- * cron sweep a worker-less install drives through /maintenance/tick.
- *
- * A browser poll tick is deliberately NOT one of them: it advances the run of
- * the very account watching it, and claiming worker liveness for it would
- * tell every other tab to stop driving (#433).
- *
- * A kind rather than a collaborator per regime, since the name was the only
- * difference and WorkerPresence is the one place that turns a name into
- * liveness — see {@see WorkerPresence} for why the names must stay apart.
+ * The regimes that drive runs on the install's behalf, each under its own heartbeat name (WorkerPresence says why the
+ * names stay apart). A browser poll tick is not one: claiming liveness for it would stop every other tab driving.
  */
 enum RecommendationDriverKind: string
 {
@@ -27,21 +16,14 @@ enum RecommendationDriverKind: string
     case OnDemandDrainer = 'recommendation-drain-sweep';
     case CronSweep = 'recommendation-cron-sweep';
 
-    /**
-     * The backing value IS the heartbeat row's name; this method is what says
-     * so at the call sites, where a bare `->value` would not.
-     */
     public function heartbeatName(): string
     {
         return $this->value;
     }
 
     /**
-     * A driver that exists for one pass surrenders its key on the way out —
-     * it knows when it is done, and otherwise every browser would keep
-     * deferring to it for the whole freshness window. A persistent worker
-     * never does: it just stops touching its row and ages out, and a running
-     * one must not have its key cleared by anybody else.
+     * A one-pass driver clears its key on exit, or polls would defer to it for the whole freshness window. The
+     * persistent worker's key only ages out: nobody else may clear a running worker's key.
      */
     public function surrendersItsKeyOnExit(): bool
     {

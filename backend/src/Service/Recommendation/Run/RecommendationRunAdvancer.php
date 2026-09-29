@@ -24,16 +24,16 @@ use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\Lock\LockFactory;
 
 /**
- * The driver-agnostic tick (#311): the worker, the poll endpoint and the cron sweep all call advance(), one tick
- * per account at a time behind a per-user lock. TickPhases decides what the tick does.
+ * The driver-agnostic tick: the worker, the poll endpoint and the cron sweep all call advance(), one tick per account
+ * at a time behind a per-user lock. TickPhases decides what the tick does.
  */
 final readonly class RecommendationRunAdvancer
 {
     private const string LOCK_NAME_PREFIX = 'ai-recommendations-';
 
     /**
-     * Headroom over the longest silence a live holder produces: loading and packing before a request, banking
-     * between waves, the whole snapshot tick (#444). Public so the test pins the TTL against its two inputs.
+     * Headroom over the longest silence a live holder produces: loading and packing before a request, banking between
+     * waves, the whole snapshot tick. Public so the test pins the TTL against its two inputs.
      */
     public const float LOCK_TTL_MARGIN_SECONDS = 300.0;
 
@@ -50,7 +50,7 @@ final readonly class RecommendationRunAdvancer
     ) {
     }
 
-    /** The one place the lock's name is formed; RecommendationPollDriver logs this very name (#439). */
+    /** The one place the lock's name is formed; RecommendationPollDriver logs this very name. */
     public static function lockNameFor(User $user): string
     {
         return self::LOCK_NAME_PREFIX . $user->requireId();
@@ -62,7 +62,7 @@ final readonly class RecommendationRunAdvancer
         $lock = $this->lockFactory->createLock($lockName, $this->lockTtlFor($user));
 
         if (!$lock->acquire()) {
-            // Silent: a failed acquire is the healthy, frequent case; only the poll driver can tell a stall (#439).
+            // Silent: a failed acquire is the healthy, frequent case; only the poll driver can tell a stall.
             return RecommendationRunReportModel::busy();
         }
 
@@ -88,8 +88,8 @@ final readonly class RecommendationRunAdvancer
     }
 
     /**
-     * The TTL clears the longest silence a live holder produces, one first-byte wait, not the whole tick: the
-     * keepalive refreshes the lock on streamed chunks (#444). A slow-marked connection waits longer (#433).
+     * One first-byte wait plus the margin, not the whole tick: the keepalive refreshes the lock on streamed chunks.
+     * Sizing: docs/recommendations-runs.md#the-tick-lock
      */
     private function lockTtlFor(User $user): float
     {
@@ -121,13 +121,13 @@ final readonly class RecommendationRunAdvancer
                 $driver,
             ));
         } catch (RecommendationRunCancelledException | RecommendationTickLockLostException) {
-            // Stopped by the user or by a lost lock (#444): drop this tick's work, re-read the row its owner wrote.
+            // Stopped by the user or by a lost lock: drop this tick's work, re-read the row its owner wrote.
             $this->entityManager->refresh($run);
 
             return RecommendationRunReportModel::fromRun($run);
         } catch (AiNotConfiguredException | AiKeyUnreadableException $exception) {
-            // Such a run can never advance again, so it fails here for every driver (#311), and the error still
-            // propagates to the HTTP mapping and the worker's fault floor.
+            // Such a run can never advance again, so it fails here for every driver, and the error still propagates
+            // to the HTTP mapping and the worker's fault floor.
             $this->failPermanently($run, self::failureMessageFor($exception));
 
             throw $exception;

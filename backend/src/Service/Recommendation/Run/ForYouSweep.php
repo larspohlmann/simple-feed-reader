@@ -14,8 +14,8 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
- * Scheduled "For you" (#333): startDueRuns() for the worker; sweepOnce() for the cron, which also advances each
- * active run one Sweep tick. While sweeping it holds its own liveness key (#439), surrendered when the sweep ends.
+ * Scheduled "For you": startDueRuns() for the worker; sweepOnce() for the cron, which also advances each active run one
+ * Sweep tick. While sweeping it holds its own liveness key, surrendered when the sweep ends.
  */
 final readonly class ForYouSweep
 {
@@ -40,9 +40,7 @@ final readonly class ForYouSweep
                 $this->starter->start($user);
                 ++$started;
             } catch (AiNotConfiguredException) {
-                // The finder already filters unready accounts; this is the
-                // defensive floor for a race where the config changed between
-                // the query and the start. Skip, do not fail the sweep.
+                // The configuration changed since the finder's check: skip this account, not the sweep.
             }
         }
 
@@ -62,19 +60,9 @@ final readonly class ForYouSweep
     }
 
     /**
-     * One pass over the active runs, under this sweep's liveness key — like
-     * WorkerRunSweep, marked before each run (a sweep can span a whole provider
-     * timeout, summed over its runs) and beaten mid-call too, since one streamed
-     * call can outlast WorkerPresence::FRESH_SECONDS (#433).
-     *
-     * The key is surrendered twice: `finally` covers a normal unwind, but not
-     * the gateway killing the request, which is routine here (Strato caps a web
-     * request at 240s, and /maintenance/tick is what the cron calls) — a
-     * shutdown hook covers that case. Both are needed: a kill mid-advanceOne()
-     * has already written the key, and leaving it fresh for FRESH_SECONDS would
-     * suppress the paths that recover the run — the poll tick (demotes to a
-     * status read) and the drain spawner (declines to fork) — for sixteen
-     * minutes.
+     * Marks the cron key before each run and beats it mid-call. The key is surrendered in `finally` and, for a request
+     * the gateway kills (Strato's 240 s cap), by a shutdown hook: a stale key would keep the poll tick and the drain
+     * spawner from recovering the run for FRESH_SECONDS.
      */
     private function advanceEveryActiveRunAsTheDriver(): int
     {
@@ -96,21 +84,8 @@ final readonly class ForYouSweep
     }
 
     /**
-     * Registered before the first mark, so no instant exists where the key
-     * could exist without something registered to take it back — the same net
-     * RecommendationRunAdvancer puts under its per-user lock and
-     * RecommendationDrainCommand under its own liveness key.
-     *
-     * Deliberately unguarded against running twice: both this and the
-     * `finally` surrender the key on an ordinary pass, and forgetting an
-     * already-forgotten name is a documented no-op
-     * ({@see \App\Repository\WorkerHeartbeatRepository::forget()}). The flag
-     * RecommendationDrainCommand carries buys nothing here, since its hook
-     * also releases a lock.
-     *
-     * What still defeats it: a kill that skips PHP's shutdown handlers
-     * (SIGKILL, OOM, a crashing extension) — the key then ages out over
-     * FRESH_SECONDS, the behaviour this hook exists to stop being normal.
+     * Registered before the first mark, so the key never exists without a hook to take it back. Running it after the
+     * `finally` is harmless: forgetting a forgotten name is a no-op. A kill skipping shutdown handlers still ages out.
      */
     private function surrenderTheCronSweepKeyIfTheRequestIsKilled(): void
     {
@@ -119,12 +94,7 @@ final readonly class ForYouSweep
         });
     }
 
-    /**
-     * Best-effort, for a different reason in each caller: thrown from the `finally` it
-     * would REPLACE the failure that ended the pass; thrown from the shutdown hook it
-     * would pile a second fatal on whatever ended the request. A failed surrender simply
-     * leaves the old behaviour, a key that ages out.
-     */
+    /** Never throws: from `finally` it would mask the pass's own failure, from the shutdown hook add a second fatal. */
     private function surrenderTheCronSweepKey(): void
     {
         try {
@@ -141,9 +111,7 @@ final readonly class ForYouSweep
 
             return 1;
         } catch (\Throwable $exception) {
-            // The advancer already recorded the failure against the run before
-            // rethrowing; a broken provider for one account must not abort the
-            // sweep for the rest. Log and move on.
+            // The advancer already recorded the failure on the run; one broken provider must not stop the others.
             $this->logger->warning('For You sweep: advancing a run failed.', [
                 'runId' => $run->getId(),
                 'exception' => $exception,
