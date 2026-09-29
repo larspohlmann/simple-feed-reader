@@ -18,6 +18,9 @@ parameters:
         - modelShape
         - modelFolder
         - dtoShape
+        - modelHome
+        - passHome
+        - supportHome
     paths:
         - src
         - tests
