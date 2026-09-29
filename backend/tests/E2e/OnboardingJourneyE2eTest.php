@@ -7,10 +7,8 @@ namespace App\Tests\E2e;
 use App\Tests\E2e\Support\E2eTestCase;
 
 /**
- * The whole account lifecycle through the real stack: register → verify (token
- * from Mailpit) → admin approves → login → authenticated /api/me. Every hop is a
- * real HTTP round-trip against MySQL, so this catches wiring the in-kernel tests
- * cannot — nginx routing, real mail delivery, the JWT actually validating.
+ * The account lifecycle through the real stack: register, verify with the mailed token, admin approval, login, /api/me.
+ * It catches what in-kernel tests cannot: nginx routing, real mail delivery, a JWT that actually validates.
  */
 final class OnboardingJourneyE2eTest extends E2eTestCase
 {

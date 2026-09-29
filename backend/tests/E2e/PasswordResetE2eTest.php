@@ -7,10 +7,8 @@ namespace App\Tests\E2e;
 use App\Tests\E2e\Support\E2eTestCase;
 
 /**
- * A password reset must revoke tokens issued before it — the property the
- * password_changed_at column exists for. Proven end to end: an active user's
- * pre-reset JWT works, then stops working the moment the password is reset,
- * while the new password logs in fresh.
+ * A password reset revokes every token issued before it, end to end: the pre-reset JWT works, then gets 401 after the
+ * reset, and the new password logs in.
  */
 final class PasswordResetE2eTest extends E2eTestCase
 {
@@ -31,16 +29,10 @@ final class PasswordResetE2eTest extends E2eTestCase
         $preResetToken = $this->login($email, $oldPassword);
         self::assertSame(200, $this->getJson('/api/me', $preResetToken)->getStatusCode());
 
-        // (A) The revocation check compares whole-second `iat < passwordChangedAt`
-        // STRICTLY (see App\Security\InvalidatePasswordChangeTokensListener). Guarantee the
-        // reset lands in a strictly later second than the pre-reset token's iat, so
-        // the 401 assertion below is deterministic rather than a sub-second race.
+        // Revocation compares whole seconds (`iat < passwordChangedAt`): a reset a second later makes the 401 certain.
         sleep(1);
 
-        // (B) Clear Mailpit so tokenFromEmail() after the reset-request cannot grab
-        // the still-present VERIFICATION email (the reset email is flushed on
-        // kernel.terminate, after the response). Tests run sequentially, so a global
-        // clear here is safe.
+        // Clear the verification mail so tokenFromEmail() finds the reset mail; e2e runs serially, so this is safe.
         $this->mailpit->deleteAll();
 
         // Request + perform the reset with the token from the (now only) email.
@@ -63,7 +55,6 @@ final class PasswordResetE2eTest extends E2eTestCase
 
     private function adminFindUserId(string $adminToken, string $email): int
     {
-        // Narrow exactly as OnboardingJourneyE2eTest::adminFindUserId does.
         $body = $this->getJson('/api/admin/users', $adminToken)->toArray();
 
         if (!isset($body['users']) || !is_array($body['users'])) {

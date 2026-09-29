@@ -12,29 +12,9 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * The reader API against the real internet: feed autodiscovery, subscribing to a
- * concrete feed, driving the refresh loop, and confirming the ingest pipeline
- * resolved the feed's title — every hop a real HTTP round-trip through nginx →
- * PHP-FPM → MySQL, with the app's SSRF-guarded fetcher reaching out to real news
- * sites (heise, tagesschau, spiegel).
- *
- * Because it depends on external sites, it degrades gracefully and never flakes:
- * a domain that is unreachable (down, slow, blocking us) is skipped, not failed.
- * Assertions are on structure and end-to-end behaviour, never on article
- * content, counts, or exact titles — all of which change minute to minute.
- *
- * Auth is the seeded `app:e2e:seed-admin` account, reused across the class (the
- * JWT TTL is a week), so the reader suite adds zero registrations to the tight
- * per-IP registration budget the README documents.
- *
- * Every test method in this class asserts against a site nobody here
- * controls (directly, or via `discoverFeedCandidates()`/`isReachable()`
- * reaching heise/tagesschau/spiegel), so the whole class carries
- * `external-site`. The unattended weekly rot-check workflow excludes that
- * group -- a datacenter IP getting a different response than a developer's
- * connection would otherwise turn the check red for a reason that has
- * nothing to do with this repository. A local `composer e2e` still runs
- * everything, where a human is present to judge a failure.
+ * The reader API against real news sites (heise, tagesschau, spiegel): an unreachable site skips, and nothing asserts
+ * content. Group external-site: the weekly rot check excludes it, since a datacenter IP gets other answers. It logs in
+ * as the seeded admin, so it adds no registrations to the per-IP budget.
  */
 #[Group('external-site')]
 final class ReaderJourneyE2eTest extends E2eTestCase
@@ -56,20 +36,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     private static ?string $adminJwt = null;
 
     /**
-     * Feed autodiscovery from a real homepage: posting the site root returns a
-     * 200 with a non-empty, well-formed `candidates` list — native rss/atom
-     * candidates when the homepage advertises `<link rel="alternate">` feeds,
-     * or the synthetic 'scraped' fallback candidate when it does not (heise's
-     * homepage, for one, offers none) — the seeded admin has the scrape
-     * fallback on, so that candidate is offered to it. Discovery no longer
-     * answers 422 for a feedless page; a homepage the scraper cannot handle
-     * either comes back with an empty list, which being a real, uncontrollable
-     * property of the site is skipped rather than failed.
-     *
-     * An empty list carries a `scrapeFailureReason` only when the site itself
-     * is the obstacle. "Nothing advertised and nothing scrapable" is not one of
-     * those reasons, so the reason is asserted for its shape when present and
-     * never demanded — the dialog renders a bare empty list as "no feeds found".
+     * Posting a homepage answers 200 with well-formed candidates: its advertised feeds, or the 'scraped' fallback the
+     * seeded admin is offered. An empty list is the site's doing and skips; a scrapeFailureReason is checked if given.
      */
     #[DataProvider('provideDomains')]
     public function testHomepageFeedDiscovery(string $label, string $homepage): void
@@ -112,17 +80,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     }
 
     /**
-     * The full reader journey against a live feed: discover feeds from the
-     * homepages, subscribe to a concrete feed, drive the refresh loop to
-     * completion, and confirm the pipeline ingested it (its title resolves to
-     * the feed's `<title>`, not the raw URL). Cleans up the subscription after.
-     *
-     * It walks the discovered candidates and stops at the first one that
-     * resolves a title, because not every real feed does: tagesschau's primary
-     * feed is Atom 0.3 (`xmlns="http://purl.org/atom/ns#"`), which the parser
-     * fetches but leaves untitled, whereas its RSS 2.0 feed and both of
-     * spiegel's resolve cleanly. The whole flow is skipped only when no reachable
-     * homepage offers a feed at all.
+     * Discover, subscribe, refresh to completion, and see the feed's <title> resolve. It takes the first candidate that
+     * resolves one, since not every real feed does (tagesschau's Atom 0.3 stays untitled), and skips if none is found.
      */
     public function testSubscribeRefreshAndResolveTitle(): void
     {
@@ -173,11 +132,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             $title = $mine['title'] ?? null;
             self::assertIsString($title, 'a subscription should carry a string title');
 
-            // A resolved title (the feed's <title>, not the raw URL) proves the
-            // fetch → parse → ingest pipeline ran end to end. Robust to the
-            // 5-minute refresh cooldown a rapid re-run hits (force-refresh still
-            // honours it): a prior run's fetch left the title in place, so this
-            // passes whether or not THIS run did the fetching.
+            // A title other than the URL proves fetch, parse and ingest ran. A rerun inside the 5-minute cooldown
+            // fetches nothing, but the earlier run's title still counts.
             if ('' !== trim($title) && $title !== $feedUrl) {
                 self::assertNotSame($feedUrl, $title, 'title should be the ingested feed <title>, not the feedUrl');
                 $this->deleteSubscription($token, $subscriptionId); // one verified journey is enough
@@ -192,17 +148,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     }
 
     /**
-     * The reader surface against a live, ingested feed: list its entries, flip an
-     * entry's read/favorite state, prove the view filters follow, read the
-     * per-subscription unread count, watermark everything read, then round-trip
-     * the whole subscription through OPML export → re-import.
-     *
-     * Every external hop degrades gracefully: a candidate that fails to subscribe
-     * between discovery and here, or a feed that ingested nothing this run (empty,
-     * or an Atom 0.3 feed the parser leaves itemless), is not a stack fault — the
-     * loop moves to the next candidate, and the whole test skips if none yield
-     * entries. All assertions are structural or behavioural; never on entry
-     * counts, titles, or article text, which change minute to minute.
+     * Against a live ingested feed: entries, read and favourite state and the views that follow them, the unread count,
+     * mark-all-read, and an OPML export re-imported as already subscribed. A candidate with no entries is skipped.
      */
     public function testReaderSurfaceEntriesStateMarkReadAndOpml(): void
     {
@@ -256,7 +203,6 @@ final class ReaderJourneyE2eTest extends E2eTestCase
                 continue;
             }
 
-            // ---- Reader surface: structural / behavioural assertions only ----
             // The entry list carries the reader read-model shape for each row.
             $first = $entries[0];
             self::assertIsArray($first);
@@ -269,10 +215,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             $unreadPath = '/api/entries?subscription=' . $subscriptionId . '&view=unread';
 
-            // (a) Force the entry UNREAD → it appears in the unread view. Driving
-            // the flag explicitly (rather than assuming a fresh ingest starts
-            // unread) keeps this robust to re-runs: EntryState rows outlive the
-            // subscription, so a prior run may have left this entry read.
+            // (a) Force it unread: EntryState rows outlive the subscription, so an earlier run may have left it read.
             $unreadResponse = $this->patchState($token, $entryId, ['isHidden' => false]);
             self::assertSame(200, $unreadResponse->getStatusCode());
             $unreadState = $unreadResponse->toArray()['state'] ?? null;
@@ -379,7 +322,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
             );
 
             if ('busy' === ($report['status'] ?? null)) {
-                usleep(500_000); // 500 ms, then retry
+                usleep(500_000);
                 continue;
             }
 
@@ -398,10 +341,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     }
 
     /**
-     * Every feed candidate advertised by the reachable homepages, as
-     * `[label, candidateUrl, format]` triples in domain order (format is null
-     * for a direct feed URL). Empty when nothing is reachable or advertises a
-     * feed.
+     * Every candidate the reachable homepages advertise, as [label, url, format] in domain order; format is null for a
+     * direct feed URL.
      *
      * @return list<array{string, string, string|null}>
      */
@@ -416,7 +357,7 @@ final class ReaderJourneyE2eTest extends E2eTestCase
 
             $response = $this->postJson('/api/subscriptions', ['url' => $homepage], $token);
             if (200 !== $response->getStatusCode()) {
-                continue; // homepage offered no feed (e.g. heise answers 422)
+                continue;
             }
 
             $candidates = $response->toArray()['candidates'] ?? [];
@@ -520,10 +461,8 @@ final class ReaderJourneyE2eTest extends E2eTestCase
     }
 
     /**
-     * Host-side reachability probe using a fresh client (never the app client):
-     * a short GET straight to the public site. Any transport error, timeout, or
-     * non-2xx/3xx status means "treat as down". Public HTTPS validates against
-     * the system CA bundle, so no special trust store is needed here.
+     * A short GET to the public site with a fresh client, never the app's; a transport error, a timeout or a status
+     * outside 2xx and 3xx counts as down.
      */
     private function isReachable(string $url): bool
     {
