@@ -19,11 +19,8 @@ final readonly class FeedParser
     {
         $feedXml = $this->fromTheDeclaration($this->withoutIllegalControlCharacters($xml));
 
-        // loadXML() throws a raw ValueError on an empty string, not false, so
-        // guard it here (mirroring HtmlItemExtractor's empty-page check). An empty
-        // 200 body is a per-feed parse failure the refresh runner already handles,
-        // not an error that 500s the whole run. The guard reads the stripped body:
-        // a BOM-only document survives trim() but is empty when loadXML() sees it.
+        // loadXML('') throws a ValueError that would 500 the whole refresh run, so an empty body (a BOM-only one
+        // included, once stripped) must fail here as a per-feed parse error.
         if ($feedXml === '') {
             throw new FeedParseException('Document is not well-formed XML');
         }
@@ -42,37 +39,24 @@ final readonly class FeedParser
             throw new FeedParseException('Document is not well-formed XML');
         }
 
-        // Feeds never need a DTD, and internal entities ARE expanded by libxml
-        // (external ones are not, so XXE is already out). Rejecting doctypes
-        // outright makes entity-expansion DoS impossible here, rather than relying
-        // on libxml's built-in amplification limit, which varies by version.
+        // Feeds never need a DTD. Rejecting any doctype keeps a declared entity from ever being expanded by the
+        // dialect parsers, instead of relying on libxml's amplification limit, which varies by version.
         if ($document->doctype !== null) {
             throw new FeedParseException('Feed documents must not declare a DTD');
         }
 
-        // Which dialect parser handles this root — including the Atom 1.0 vs 0.3
-        // namespace split — is each parser's own call now; the factory returns
-        // the match or raises FeedParseException when none claims the root.
         return $this->parserFactory->parserFor($root)->parse($document);
     }
 
-    /**
-     * An XML declaration is only a declaration when it starts at byte 0, so a
-     * blank line a plugin echoed ahead of the feed makes libxml refuse the whole
-     * document. Feeds arrive that way often enough to cost real subscriptions
-     * (#423), and nothing of value can precede the declaration — so drop it.
-     */
+    /** An XML declaration only counts at byte 0, and nothing of value can precede it, so leading blanks go. */
     private function fromTheDeclaration(string $xml): string
     {
         return ltrim($xml, " \t\n\r\0\x0B\u{FEFF}");
     }
 
     /**
-     * XML 1.0 forbids the C0 control characters (all but tab, newline and
-     * carriage return) anywhere in a document, so one stray byte makes libxml
-     * refuse the whole feed. WordPress plugins inject them into item content
-     * (#857); the byte carries no meaning, and a UTF-8 continuation byte never
-     * falls in this range, so dropping it at byte level is lossless.
+     * XML 1.0 forbids the C0 controls but tab, LF and CR, so one stray byte makes libxml refuse the feed. No UTF-8
+     * continuation byte falls in this range, so dropping them byte-wise is lossless.
      */
     private function withoutIllegalControlCharacters(string $xml): string
     {

@@ -8,19 +8,11 @@ use App\Service\Parser\Exception\FeedParseException;
 use App\Service\Parser\FeedFormatParser\FeedFormatParserInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
-/**
- * Picks the parser for a feed document from its root element. The dialect
- * knowledge lives in each parser's supports(); this only walks the registered
- * parsers in order and returns the first match, so adding a dialect means adding
- * a parser, not editing a central match.
- */
 final readonly class FeedParserFactory
 {
     /**
-     * The 'app.feed_parser' tag is applied to every FeedFormatParserInterface by
-     * the `_instanceof` block in services.yaml; a bare
-     * `#[AutowireIterator(FeedFormatParserInterface::class)]` would collect
-     * nothing, exactly as documented for OAuthProviderRegistry.
+     * The tag comes from services.yaml's `_instanceof`: an `#[AutowireIterator]` on the interface collects nothing
+     * (FeedParserWiringTest).
      *
      * @param iterable<FeedFormatParserInterface> $parsers
      */

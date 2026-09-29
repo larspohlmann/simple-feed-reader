@@ -7,11 +7,8 @@ namespace App\Service\Parser\FeedFormatParser;
 use App\Service\Parser\Model\ParsedFeedModel;
 
 /**
- * A parser for one feed dialect (RSS 2.0, RSS 1.0, Atom 1.0/0.3).
- *
- * Each implementation owns the knowledge of which document root it handles via
- * supports(), so FeedParserFactory can pick a parser without a central match on
- * element names and namespaces.
+ * A parser for one feed dialect (RSS 2.0, RSS 1.0, Atom 1.0/0.3). Each claims its own document root through
+ * supports(), so FeedParserFactory holds no central match on element names and namespaces.
  */
 interface FeedFormatParserInterface
 {
