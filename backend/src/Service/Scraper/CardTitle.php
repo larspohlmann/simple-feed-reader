@@ -10,16 +10,8 @@ use Dom\Node;
 use Dom\Text;
 
 /**
- * Title heuristic for one card container + anchor (split out of CardFields
- * to keep each class' complexity readable). Candidate order per the scraper
- * design spec:
- * - first heading (h1-h4) in the container;
- * - else the FIRST element whose class matches title|headline, descending to
- *   its deepest matching descendant (card__title > card__title-text) — a
- *   later sibling match (card__subtitle) must never override the title;
- * - else the anchor's first text node — never the anchor's full text, which
- *   on heading-less cards would mash title, byline, and description together.
- * Length rules (min 5, truncate 300) are applied by the caller, CardFields.
+ * A card's title: its first h1 to h4, else its first title- or headline-classed element, else the anchor's first text
+ * node, never the anchor's full text, which on a heading-less card mashes title, byline and teaser together.
  */
 final readonly class CardTitle
 {
@@ -41,12 +33,7 @@ final readonly class CardTitle
         return $text === '' ? null : $text;
     }
 
-    /**
-     * First matching element in document order wins, then descends into it:
-     * a deeper matching descendant (card__title > card__title-text) is the
-     * more precise text node, but a later SIBLING match must not override —
-     * "last match wins" made card__subtitle beat the card__title before it.
-     */
+    /** The first match in document order wins; a later sibling match (card__subtitle) must never override it. */
     private static function classHintedTitle(Element $container): ?string
     {
         foreach ($container->querySelectorAll('*') as $element) {
@@ -62,7 +49,6 @@ final readonly class CardTitle
         return null;
     }
 
-    /** True when the element's class names it a title or headline. */
     private static function isTitleClassed(Element $element): bool
     {
         $class = $element->getAttribute('class');
@@ -97,7 +83,6 @@ final readonly class CardTitle
         return $best;
     }
 
-    /** Element depth below an ancestor: 1 for a direct child, 2 for a grandchild, … */
     private static function depthBelow(Element $element, Element $ancestor): int
     {
         $depth = 1;
@@ -111,16 +96,9 @@ final readonly class CardTitle
     }
 
     /**
-     * First non-empty text node under the anchor, depth-first in document
-     * order. Splitting textContent on newlines breaks on minified HTML —
-     * block elements contribute no newline to textContent, so title, byline,
-     * and teaser mash into one "line". The DOM keeps them as separate text
-     * nodes regardless of source formatting.
-     *
-     * Iterative on purpose: \Dom\HTMLDocument parses adversarially deep
-     * nesting without a depth cap, and PHP 8.3+ turns a recursive walk's
-     * stack exhaustion into an \Error that would escape the
-     * FeedParseException failure channel the scrape pipeline reports through.
+     * Depth-first, because textContent gives block elements no newline: on minified HTML, title, byline and teaser
+     * run together. Iterative, because a recursive walk over adversarially deep nesting exhausts the stack with an
+     * \Error that escapes the FeedParseException channel.
      */
     private static function firstAnchorText(Element $anchor): ?string
     {
@@ -138,8 +116,7 @@ final readonly class CardTitle
             if (!$node instanceof Element) {
                 continue;
             }
-            // Push children in reverse so the leftmost child pops first —
-            // the same document-order traversal the recursive version had.
+            // Pushed in reverse, so the leftmost child pops first.
             for ($child = $node->lastChild; $child !== null; $child = $child->previousSibling) {
                 $stack[] = $child;
             }

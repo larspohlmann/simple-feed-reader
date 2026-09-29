@@ -9,10 +9,8 @@ use App\Service\Fetch\Exception\SsrfBlockedException;
 use App\Service\Fetch\Model\GuardedUrlModel;
 
 /**
- * Validates an outbound URL before any connection: scheme allowlist, DNS
- * resolution up front, and rejection of private/reserved target IPs. The
- * resolved IP is returned so the HTTP client can pin the connection to it
- * (closes the DNS-rebinding window).
+ * Validates an outbound URL before any connection: scheme allowlist, DNS resolved up front, no private or reserved
+ * target. It returns the resolved IPs for the client to pin, which closes the DNS-rebinding window.
  */
 final readonly class UrlGuard
 {
@@ -33,10 +31,6 @@ final readonly class UrlGuard
         return new GuardedUrlModel($host, $ips);
     }
 
-    /**
-     * Rejects malformed URLs, embedded credentials and non-HTTP schemes, then
-     * returns the normalised host (lowercased, IPv6 brackets stripped).
-     */
     private function parseAllowedHost(string $url): string
     {
         $parts = parse_url($url);
@@ -56,8 +50,7 @@ final readonly class UrlGuard
     }
 
     /**
-     * Resolves the host to its target addresses and rejects the whole URL if
-     * any record is a private/reserved address. An IP literal skips DNS.
+     * Rejects the whole URL when any record is private or reserved; an IP literal skips DNS.
      *
      * @return non-empty-list<string>
      */

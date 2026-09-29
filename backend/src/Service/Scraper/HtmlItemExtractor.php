@@ -18,15 +18,9 @@ use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AutowireIterator;
 
 /**
- * Synthesizes a ParsedFeedModel from a feedless HTML page. The heuristic layers
- * run in order of trustworthiness — JSON-LD, semantic article markup, anchor
- * clustering — and the first one that survives the guards wins: at least
- * three items after dropping self-links (url equal to the page) and URL
- * duplicates, capped at fifty entries. Pages where no layer succeeds throw
- * HtmlExtractionException, a FeedParseException subtype, so the existing
- * refresh error handling applies. New extraction strategies (microformats,
- * site-specific layers, …) plug in by implementing ScrapeLayerInterface —
- * the app.scrape_layer tag collects them here in AsTaggedItem priority order.
+ * Synthesises a feed from a feedless HTML page. The `app.scrape_layer` layers run most trustworthy first, and the
+ * first to keep MIN_ITEMS after dropping self-links and duplicate URLs wins. With none, HtmlExtractionException, a
+ * FeedParseException, lets the refresh error handling apply.
  */
 final readonly class HtmlItemExtractor
 {
@@ -86,9 +80,6 @@ final readonly class HtmlItemExtractor
     }
 
     /**
-     * Drops items linking back to the page itself and URL duplicates (first
-     * occurrence wins), keeping document order.
-     *
      * @param list<ScrapedItemModel> $items
      * @return list<ScrapedItemModel>
      */
@@ -132,9 +123,7 @@ final readonly class HtmlItemExtractor
 
     private function toEntry(ScrapedItemModel $item): ParsedEntryModel
     {
-        // The teaser cap is applied once here, at the funnel every layer's
-        // output passes through — a clamp inside one layer (CardFields) let
-        // JSON-LD descriptions of arbitrary length walk straight past it.
+        // The teaser cap applies here, at the funnel every layer's output passes, so no layer's teasers escape it.
         $teaser = $item->teaser === null
             ? null
             : mb_substr($item->teaser, 0, CardFields::MAX_TEASER_LENGTH);

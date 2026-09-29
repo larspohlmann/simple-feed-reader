@@ -9,19 +9,9 @@ use App\Service\Fetch\Model\FetchTicketModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 
 /**
- * The engine's work list: redirect continuations first, then tickets not yet
- * started. Continuations jump the queue because they already hold an open
- * redirect chain — deferring them behind fresh work would let a chain sit
- * half-finished while the concurrency slots fill with new feeds.
- *
- * It also paces per host. An attempt whose host already runs at capacity is
- * parked rather than started, and served later once a same-host slot frees — so
- * a run over many feeds on one host never bursts. To keep a busy host from
- * starving the free global slots, the queue looks a bounded number of tickets
- * past a full host to find one that can run; beyond that it waits rather than
- * draining — and committing — the whole budgeted ticket source up front.
- *
- * Mutable by design; it is the one piece of the fetch loop that has to be.
+ * The engine's work list. Redirect continuations jump the queue so an open chain never sits half-finished. An attempt
+ * whose host is full is parked, and the queue looks at most `$lookAhead` tickets past it instead of draining, and so
+ * committing, the budget-gated ticket source up front.
  */
 final class FetchQueue
 {
@@ -33,13 +23,7 @@ final class FetchQueue
 
     private bool $currentConsumed = false;
 
-    /**
-     * The batch proxy is a field here rather than a value copied onto every
-     * ticket: it is resolved once per run and is the same for every feed, so
-     * this is the one place that has to know it.
-     *
-     * @param \Iterator<int|string, FetchTicketModel> $tickets
-     */
+    /** @param \Iterator<int|string, FetchTicketModel> $tickets */
     public function __construct(
         private readonly \Iterator $tickets,
         private readonly HostSlots $hostSlots,
@@ -53,13 +37,11 @@ final class FetchQueue
         $this->continuations[] = $attempt;
     }
 
-    /** Records that an attempt went on the wire, occupying a slot on its host. */
     public function onSent(FetchAttemptModel $attempt): void
     {
         $this->hostSlots->acquire($attempt);
     }
 
-    /** Records that an attempt's response retired, freeing its host slot. */
     public function onRetired(FetchAttemptModel $attempt): void
     {
         $this->hostSlots->release($attempt);

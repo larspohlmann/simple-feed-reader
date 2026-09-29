@@ -5,12 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Fetch\Support;
 
 /**
- * The key that decides whether two feed URLs share a host for pacing purposes.
- *
- * Folds the incidental differences that still name the same origin — case, a
- * leading `www.`, an explicit port — so that a burst against one publisher is
- * recognised as one host. Family folding (all `*.youtube.com` into one) is
- * deliberately out of scope; a distinct subdomain stays a distinct host.
+ * The host two feed URLs share for pacing: case, a leading `www.` and a port fold away. A distinct subdomain stays a
+ * distinct host; folding sibling subdomains into one family is deliberately out of scope.
  */
 final class HostKey
 {

@@ -10,11 +10,6 @@ use PHPUnit\Framework\TestCase;
 
 final class ProxyConfigModelTest extends TestCase
 {
-    /**
-     * Local DNS is the default because it is the one that works everywhere:
-     * Private Internet Access, among others, answers every host name with
-     * "host unreachable" rather than resolving it (#490).
-     */
     public function testSocks5DsnResolvesLocallyByDefault(): void
     {
         $config = new ProxyConfigModel(ProxyType::Socks5, 'proxy.example', 1080, null, null);

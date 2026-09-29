@@ -44,10 +44,8 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         private EgressProxySourceInterface $egressProxySource,
         private FetchRetryPolicy $retryPolicy,
     ) {
-        // A cap below one opens no requests at all, and the engine would report
-        // an empty run as a clean one: the sweep's `remaining` never decrements
-        // and the frontend's poll loop recurses forever on `partial`. These are
-        // bound from container parameters, so a typo has to fail loudly.
+        // A cap below one opens no request, so an empty run would read as a clean one: the sweep's `remaining` never
+        // decrements and the frontend polls forever on `partial`.
         if ($concurrency < 1) {
             throw new \InvalidArgumentException(
                 sprintf('Concurrency must be at least 1, got %d.', $concurrency),
@@ -70,19 +68,14 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         try {
             $batchProxy = $this->egressProxySource->egressProxy();
         } catch (SecretUnreadableException $exception) {
-            // The proxy is enabled but its stored password cannot be opened, so
-            // no feed in this batch can be reached. Report that per feed instead
-            // of letting it escape: the sweep's `remaining` only decrements on a
-            // yielded outcome, so an abort here would strand the whole run.
+            // An unreadable proxy password fails every feed, one outcome each: the sweep's `remaining` only
+            // decrements on a yielded outcome, so letting the exception escape would strand the run.
             yield from $this->failEvery($tickets, $exception);
 
             return;
         }
 
-        // Look no further past a full host than there are slots to fill: staging
-        // more full-host candidates than that cannot open a request this pass, and
-        // it would advance — and so commit — the budget-gated ticket source for
-        // feeds no slot has opened for.
+        // More full-host candidates than there are slots cannot open a request this pass.
         $lookAhead = $this->concurrency;
         $hostSlots = new HostSlots($this->hostConcurrency);
         $queue = new FetchQueue($this->iterator($tickets), $hostSlots, $lookAhead, $batchProxy);
@@ -109,13 +102,6 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * Opens requests until the concurrency cap is reached or no queued attempt
-     * can run now — the queue returns null both when it is empty and when every
-     * remaining attempt's host is at capacity, in which case a freed slot has to
-     * come from an in-flight response. A URL the guard rejects never becomes a
-     * request, so it is reported here. The host slot is claimed on the queue the
-     * moment the request goes on the wire and released when its response retires.
-     *
      * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
      *
      * @return \Generator<int|string, FetchOutcomeModel>
@@ -147,10 +133,8 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * Streams the in-flight set until one response resolves, then returns so the
-     * freed slot can be refilled. Redirects go back on the queue rather than
-     * being followed inline, which is what lets a feed on its fourth hop share
-     * the loop with one on its first.
+     * Streams until one response resolves, then returns so the freed slot is refilled. A redirect goes back on the
+     * queue instead of being followed inline, so a feed on its fourth hop shares the loop with one on its first.
      *
      * @param \SplObjectStorage<ResponseInterface, FetchAttemptModel> $inFlight
      *
@@ -208,11 +192,9 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
         FetchAttemptModel $attempt,
     ): FetchResponseModel|FetchAttemptModel|null {
         try {
-            // Order is load-bearing. On a timeout ErrorChunk isTimeout() returns
-            // true while isFirst() throws, so asking isFirst() first would report
-            // every timeout as a generic transport failure. On an error chunk
-            // isTimeout() throws instead, which the catch below turns into the
-            // message carrying the real cause.
+            // Order is load-bearing: on a timeout chunk isFirst() throws while isTimeout() returns true, so asking
+            // isFirst() first would report every timeout as a transport failure. On an error chunk isTimeout() throws,
+            // and the catch below keeps the real cause.
             if ($chunk->isTimeout()) {
                 throw new FeedUnreachableException(sprintf('%s: timed out', $attempt->url));
             }
@@ -329,10 +311,6 @@ final readonly class ConcurrentFeedFetcher implements BatchFeedFetcherInterface
     }
 
     /**
-     * Every ticket in the batch, failed with the same cause. Used when the
-     * egress cannot be resolved at all, which is a property of the run rather
-     * than of any one feed.
-     *
      * @param iterable<int|string, FetchTicketModel> $tickets
      *
      * @return \Generator<int|string, FetchOutcomeModel>

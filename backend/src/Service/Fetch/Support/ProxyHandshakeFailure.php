@@ -7,13 +7,8 @@ namespace App\Service\Fetch\Support;
 use App\Service\Fetch\Model\SocksReplyCode;
 
 /**
- * Turns curl's SOCKS5 handshake messages into something an admin can act on.
- *
- * curl reports both handshake failures as raw protocol bytes and nothing else —
- * "cannot complete SOCKS5 connection to api.ipify.org. (4)" for a refused
- * CONNECT, "User was rejected by the SOCKS5 server (1 1)." for a refused login
- * — so the Proxy settings page showed numbers where it needed reasons. Any
- * other message passes through untouched.
+ * Turns curl's SOCKS5 handshake failures, which it reports only as raw protocol bytes, into a reason an admin can act
+ * on. Any other message passes through untouched.
  */
 final readonly class ProxyHandshakeFailure
 {

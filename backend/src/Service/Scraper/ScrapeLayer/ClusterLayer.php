@@ -13,14 +13,8 @@ use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
 /**
- * Last-resort layer for pages without JSON-LD or article markup: clusters
- * anchors by their own class tokens (BEM modifiers stripped), assuming a
- * listing repeats one card component many times. An anchor joins one group
- * per token, so variants sharing a component class (featured vs. plain
- * mntl-card) land in one cluster even across wrapper-depth differences that
- * would fragment an ancestor-path signature. Nav/header/footer/aside
- * subtrees are excluded so link lists can never win; the biggest cluster
- * (mean title length breaks ties) becomes the item list, in document order.
+ * Last-resort layer: clusters the anchors outside nav, header, footer and aside by each of their class tokens, so
+ * card variants share a cluster whatever their wrapper depth. The biggest cluster wins, in document order.
  */
 #[AsTaggedItem(priority: 10)]
 final readonly class ClusterLayer implements ScrapeLayerInterface
@@ -34,11 +28,8 @@ final readonly class ClusterLayer implements ScrapeLayerInterface
 
     public function extract(HTMLDocument $document, string $baseUrl): array
     {
-        // Eligible-anchor counts memoized per element, scoped to this pass (never
-        // static -- documents differ between calls). Without it, N anchors sharing
-        // one parent rescan that parent's whole subtree N times: O(N²), about 10s
-        // for 2,000 flat sibling links, worse within the 5MB fetch cap. The memo
-        // makes it one scan plus O(1) lookups.
+        // Per-pass memo, never static: documents differ between calls. Without it, N anchors under one parent rescan
+        // its subtree N times, O(N²): about 10 s for 2,000 flat sibling links.
         /** @var \SplObjectStorage<Element, int> $counts */
         $counts = new \SplObjectStorage();
 

@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Html\Model;
 
 /**
- * One entry of a srcset list: a URL and the descriptor that sizes it. A width
- * descriptor states the file's pixel width. A density descriptor states only
- * the ratio to the layout width, so it ranks the candidates of one list but
- * measures nothing against the world outside that list.
+ * One srcset entry. A width descriptor states the file's pixel width; a density only ranks the candidates of its own
+ * list and measures nothing outside it.
  */
 final readonly class SrcsetCandidateModel
 {

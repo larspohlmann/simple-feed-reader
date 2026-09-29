@@ -8,19 +8,14 @@ use App\Service\Fetch\Model\GuardedUrlModel;
 use App\Service\Fetch\Model\ProxyConfigModel;
 
 /**
- * The single place the "how do we reach the host" request options are built, so
- * the proxy-vs-pin rule lives once for both fetch builders. The invariant: the
- * caller has ALREADY run UrlGuard::assertSafe (the host guard is kept on both
- * paths); this only chooses the transport. Proxied drops the IP pin — impossible
- * through socks5h, where DNS resolves at the proxy — and keeps everything else.
+ * The "how do we reach the host" request options, built once for both fetch paths. The caller has already run
+ * UrlGuard::assertSafe; proxied drops only the IP pin, which socks5h cannot honour.
  */
 final class EgressOptions
 {
     /**
-     * `no_proxy` is pinned empty on purpose. Left unset, curl falls back to the
-     * ambient no_proxy/NO_PROXY environment variable and sends a matching host
-     * DIRECT — succeeding silently, with no transport failure for the caller to
-     * notice, which would defeat the whole point of `directFallback` off.
+     * `no_proxy` stays pinned empty: unset, curl reads the ambient NO_PROXY and silently sends a matching host direct,
+     * which defeats `directFallback` off.
      *
      * @return array{proxy: string, no_proxy: string, extra?: array{curl: array<int, int>}}
      */
@@ -54,11 +49,8 @@ final class EgressOptions
     }
 
     /**
-     * The `extra.curl` option that forces a failover retry onto its own
-     * connection, empty on the first attempt. curl pools connections by
-     * host:port, so without this a retry pinned to a new family would reuse the
-     * previous family's still-open connection (taz's IPv6 answers 403 and stays
-     * keep-alive) and ignore the new pin, defeating the failover.
+     * A failover retry gets its own connection: curl pools by host:port, so a retry pinned to a new family would
+     * otherwise reuse the old family's keep-alive connection and ignore the pin.
      *
      * @return array{extra?: array{curl: array<int, bool>}}
      */

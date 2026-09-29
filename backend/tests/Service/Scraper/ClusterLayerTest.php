@@ -47,11 +47,8 @@ final class ClusterLayerTest extends TestCase
     }
 
     /**
-     * Regression guard for the container-ascent memoization: thousands of
-     * sibling anchors under one parent used to trigger an O(N^2) rescan of
-     * that parent (about 10s at 2,000 anchors). No timing assertion — the
-     * suite duration itself is the tell — but the extraction must stay
-     * correct on this degenerate shape.
+     * Guards the container-ascent memo on a flat page: no timing assertion, since the suite's duration is the tell, but
+     * the extraction must stay correct.
      */
     public function testFlatPageWithThousandsOfSiblingAnchorsStillExtracts(): void
     {

@@ -8,15 +8,8 @@ use App\Service\Html\Model\ImageRenditionModel;
 use App\Service\Html\Model\SrcsetCandidateModel;
 
 /**
- * Reads a `srcset` attribute: a list of candidates, each a URL optionally
- * followed by a width or density descriptor.
- *
- * A comma separates candidates, but a comma is also a legal URL character, so
- * the list cannot be split on every comma. Substack serves Cloudinary transform
- * URLs that spell their options `$s_!-_9x!,w_1456,c_limit,f_auto` (#706), and
- * splitting those shreds each candidate into fragments. The HTML parsing rules
- * read a URL as a run of non-space characters and treat only the comma that
- * ends such a run as the separator, which is what this reader does.
+ * Reads a `srcset` list. A comma is a legal URL character (Cloudinary transforms spell `w_1456,c_limit,f_auto`, #706),
+ * so, as in the HTML parsing rules, only a comma that ends a run of non-space characters separates two candidates.
  */
 final class Srcset
 {
@@ -26,18 +19,12 @@ final class Srcset
     /** A density descriptor; a candidate without one is 1x, as the HTML spec reads it. */
     private const string DENSITY_DESCRIPTOR = '/^(\d+(?:\.\d+)?)x$/';
 
-    /** The first candidate URL of a srcset list, or null when it yields none. */
     public static function firstUrl(?string $srcset): ?string
     {
         return self::candidates($srcset)[0]->url ?? null;
     }
 
-    /**
-     * The candidate with the greatest declared width, so a reader that shows one
-     * rendition picks the sharpest. A list with no width descriptors ranks by
-     * density instead, the densest candidate being the largest file; a bare
-     * list is all 1x and keeps its first candidate, as a browser would.
-     */
+    /** The sharpest candidate; a bare list is all 1x and keeps its first candidate, as a browser would. */
     public static function widest(?string $srcset): ?ImageRenditionModel
     {
         $widest = null;
@@ -50,11 +37,7 @@ final class Srcset
         return $widest?->rendition();
     }
 
-    /**
-     * The candidates the list declares, in source order.
-     *
-     * @return list<SrcsetCandidateModel>
-     */
+    /** @return list<SrcsetCandidateModel> */
     private static function candidates(?string $srcset): array
     {
         if ($srcset === null) {
@@ -65,9 +48,7 @@ final class Srcset
     }
 
     /**
-     * The space-separated tokens of each candidate. A token closes its candidate
-     * when it ends in a comma; commas anywhere else stay inside the token, which
-     * is what keeps a transform URL whole.
+     * The space-separated tokens of each candidate.
      *
      * @return list<non-empty-list<string>>
      */
@@ -95,12 +76,7 @@ final class Srcset
         return $candidates;
     }
 
-    /**
-     * The list's tokens. Dropping the empty pieces also absorbs the whitespace
-     * around the list, so a blank srcset yields no tokens at all.
-     *
-     * @return list<string>
-     */
+    /** @return list<string> */
     private static function spaceSeparated(string $srcset): array
     {
         $tokens = preg_split('/\s+/', $srcset, -1, PREG_SPLIT_NO_EMPTY);
@@ -108,11 +84,7 @@ final class Srcset
         return $tokens === false ? [] : $tokens;
     }
 
-    /**
-     * A candidate's URL with the width or density its descriptor declares.
-     *
-     * @param non-empty-list<string> $tokens
-     */
+    /** @param non-empty-list<string> $tokens */
     private static function candidateFrom(array $tokens): SrcsetCandidateModel
     {
         $descriptor = $tokens[1] ?? null;
@@ -124,7 +96,6 @@ final class Srcset
         );
     }
 
-    /** The pixel width a descriptor states, or null when it states none. */
     private static function declaredWidth(?string $descriptor): ?int
     {
         if ($descriptor === null || preg_match(self::WIDTH_DESCRIPTOR, $descriptor, $matches) !== 1) {
@@ -134,7 +105,6 @@ final class Srcset
         return (int) $matches[1];
     }
 
-    /** The density a descriptor states; 1x when it states none. */
     private static function declaredDensity(?string $descriptor): float
     {
         if ($descriptor === null || preg_match(self::DENSITY_DESCRIPTOR, $descriptor, $matches) !== 1) {

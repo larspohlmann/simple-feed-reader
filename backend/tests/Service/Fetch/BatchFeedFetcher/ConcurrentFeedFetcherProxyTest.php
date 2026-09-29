@@ -81,11 +81,6 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         return $collected;
     }
 
-    /**
-     * The sweep's `remaining` only decrements on a yielded outcome, so letting
-     * the egress source's failure escape would strand the whole run rather
-     * than report it. Every feed comes back failed instead.
-     */
     public function testAnUnreadableProxyPasswordFailsEveryFeedInsteadOfAbortingTheSweep(): void
     {
         $seen = [];
@@ -191,12 +186,7 @@ final class ConcurrentFeedFetcherProxyTest extends TestCase
         self::assertSame('socks5://p:1080', $seenOptions[0]['proxy']);
     }
 
-    /**
-     * SECURITY: a dual-stack host must not let the cross-family retry smuggle a
-     * still-proxied attempt back onto the wire. With directFallback off, the
-     * proxied failure has to be terminal after exactly one request, regardless
-     * of how many address families the guard could otherwise walk through.
-     */
+    /** SECURITY: a cross-family retry must never put a still-proxied attempt back on the wire. */
     public function testProxiedFailureOnADualStackHostIsTerminalWhenDirectFallbackIsDisabled(): void
     {
         $proxy = new ProxyConfigModel(ProxyType::Socks5, 'p', 1080, null, null, false);

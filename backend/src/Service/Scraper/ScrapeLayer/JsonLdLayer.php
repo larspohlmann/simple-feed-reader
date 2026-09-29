@@ -10,14 +10,7 @@ use App\Service\Scraper\Pass\JsonLdArticles;
 use Dom\HTMLDocument;
 use Symfony\Component\DependencyInjection\Attribute\AsTaggedItem;
 
-/**
- * Extracts items from JSON-LD blocks: ItemList structures (with ListItems
- * carrying either a full article node or bare url/name), plain article nodes
- * (NewsArticle, BlogPosting, Article), and @graph wrappers around either.
- * Non-article structured data (Organization, BreadcrumbList, …) is ignored.
- *
- * The layer reads the blocks; JsonLdArticles walks what they decode to.
- */
+/** The most trusted scrape layer: the articles a page's JSON-LD blocks describe. */
 #[AsTaggedItem(priority: 30)]
 final readonly class JsonLdLayer implements ScrapeLayerInterface
 {

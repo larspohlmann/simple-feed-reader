@@ -105,11 +105,6 @@ final class ConcurrentFeedFetcherTest extends TestCase
         };
     }
 
-    /**
-     * The cap is bound from a container parameter so the host can be dialled
-     * down in config alone. A value below one opens no requests, which the
-     * engine cannot tell apart from an empty batch — it has to fail loudly.
-     */
     public function testRejectsAConcurrencyBelowOne(): void
     {
         $this->expectException(\InvalidArgumentException::class);
@@ -136,12 +131,6 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertSame('<rss/>', $outcomes[7]->responseOrThrow()->modifiedBody());
     }
 
-    /**
-     * A host whose IPv4 route is a blackhole but whose IPv6 route is healthy
-     * (fazemag.de from Strato) must still connect. Pinning only the first
-     * address defeats the client's cross-family fallback and times out; pinning
-     * every validated address lets happy-eyeballs reach the live one.
-     */
     public function testPinsEveryResolvedAddressSoTheClientCanFallBackAcrossFamilies(): void
     {
         /** @var array<string, string> $seenResolve */
@@ -167,10 +156,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
     }
 
     /**
-     * The mirror of the fazemag case: heise's IPv6 route from Strato completes
-     * the TCP connect and then resets at the TLS handshake, which happy-eyeballs
-     * cannot recover from because the connect already succeeded. The both-family
-     * pin leads with IPv6, so the feed must fall over to an IPv4-only pin.
+     * The both-family pin leads with IPv6, which connects and then resets at TLS, so the feed must fall over to an
+     * IPv4-only pin.
      */
     public function testFailsOverToIpv4WhenIpv6ConnectsButResetsBeforeHeaders(): void
     {
@@ -233,8 +220,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
     public function testFailsOverToIpv4WhenIpv6AnswersWithAnErrorStatus(): void
     {
-        // taz.de forbids its IPv6 range from Strato (403) while IPv4 serves 200;
-        // the error status must fall over to the family that answers.
+        // IPv6 answers 403 while IPv4 serves 200: the error status must fall over to the family that answers.
         $ipv6 = '2a02:2e0:3fe:1001:7777:772e:2:85';
         $ipv4 = '193.99.144.85';
         $fetcher = $this->fetcher(
@@ -256,9 +242,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
     public function testAFailoverRetryForcesAFreshConnection(): void
     {
-        // curl pools by host:port, so a retry pinned to IPv4 would otherwise reuse
-        // the previous family's live connection (taz's IPv6 answers 403). The
-        // first attempt reuses the pool; the retry must open its own connection.
+        // curl pools by host:port: the first attempt may reuse the pool, the IPv4 retry must open its own connection.
         /** @var list<bool> $freshConnectPerAttempt */
         $freshConnectPerAttempt = [];
         $ipv4 = '193.99.144.85';
@@ -305,9 +289,7 @@ final class ConcurrentFeedFetcherTest extends TestCase
 
     public function testATimeoutIsNotFailedOverToAnotherFamily(): void
     {
-        // A timeout means the family answered the connect but is slow, not that
-        // the route is dead. Even with a second family available, re-driving would
-        // only multiply the wait, so the timeout stands as the outcome.
+        // A timeout is a slow family, not a dead route, so it stands even with a second family available.
         $requestCount = 0;
         $fetcher = $this->fetcher(
             function () use (&$requestCount): MockResponse {
@@ -484,10 +466,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
         self::assertNull($outcomes[2]->failure());
         self::assertInstanceOf(FeedUnreachableException::class, $outcomes[1]->failure());
 
-        // The real claim: the fast feed goes on the wire second, while the slow
-        // one is only one hop into its chain. Run serially it would wait out all
-        // six of the slow feed's hops and be requested seventh instead, so this
-        // ordering — not the fact that both terminate — is what proves overlap.
+        // The fast feed goes on the wire second while the slow one is one hop in; run serially, it would be requested
+        // seventh. That ordering, not both terminating, proves the overlap.
         self::assertSame(
             ['https://slow.example.com/feed', 'https://fast.example.com/feed'],
             \array_slice($requested, 0, 2),
@@ -607,10 +587,8 @@ final class ConcurrentFeedFetcherTest extends TestCase
     }
 
     /**
-     * A run over many feeds on one host must not burst: the per-host cap keeps
-     * at most N of them on the wire at once even when the global cap would allow
-     * more, and every feed still completes this run — a feed the cap defers is
-     * paced, not failed.
+     * The per-host cap holds a host to N requests in flight even when the global cap allows more, and a feed it defers
+     * is paced, not failed.
      */
     public function testCapsConcurrentRequestsToOneHost(): void
     {

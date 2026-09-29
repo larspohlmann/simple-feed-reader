@@ -10,12 +10,8 @@ use App\Service\Fetch\Exception\ResponseTooLargeException;
 use App\Service\Fetch\Model\FetchAttemptModel;
 
 /**
- * What a failed fetch attempt earns next: the one direct fallback for a proxied
- * attempt, or the next address family for a direct one.
- *
- * Separate from ConcurrentFeedFetcher because these are rules about a single
- * attempt, not about the concurrency engine that runs them — and because they
- * are the branch-heavy part, which is far easier to read and to test on its own.
+ * What a failed fetch attempt earns next: the one direct fallback for a proxied attempt, or the next address family
+ * for a direct one.
  */
 final readonly class FetchRetryPolicy
 {
@@ -24,12 +20,8 @@ final readonly class FetchRetryPolicy
     }
 
     /**
-     * The next attempt this failure earns, or null when it is terminal.
-     *
-     * A still-proxied attempt (direct fallback off, so no fallback applies) must
-     * not fall through to a cross-family retry: that would re-send the same
-     * proxied request once per address family, when the spec requires the
-     * failure to be terminal instead.
+     * The next attempt this failure earns, or null when it is terminal. A still-proxied attempt (no direct fallback)
+     * never retries over another family: that would re-send the same proxied request once per family.
      */
     public function nextAttemptAfter(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
@@ -41,7 +33,6 @@ final readonly class FetchRetryPolicy
         return $attempt->isProxied() ? null : $this->overNextFamily($attempt, $failure);
     }
 
-    /** The one direct fallback for a proxied attempt, or null when none applies. */
     public function directFallbackFor(FetchAttemptModel $attempt): ?FetchAttemptModel
     {
         $proxy = $attempt->proxy;
@@ -49,11 +40,6 @@ final readonly class FetchRetryPolicy
         return null !== $proxy && $proxy->directFallback ? $attempt->withoutProxy() : null;
     }
 
-    /**
-     * The same attempt pinned to the next address family, or null when a
-     * different family cannot help (see warrantsAnotherFamily). A single-family
-     * host has nothing left to try, so the guard's attempt list bounds the retry.
-     */
     private function overNextFamily(FetchAttemptModel $attempt, FetchException $failure): ?FetchAttemptModel
     {
         if (!$this->warrantsAnotherFamily($failure)) {
@@ -72,11 +58,8 @@ final readonly class FetchRetryPolicy
     }
 
     /**
-     * Whether this failure could clear on a different address family. An error
-     * status (any non-2xx the classifier raised — a 4xx/5xx, or the 410/429 it
-     * singles out) can be tied to the source address, so the other family is
-     * worth a try. With no status it is a transport failure: a dead-route reset
-     * qualifies, a timeout does not. An oversized body would repeat on any family.
+     * An error status can be tied to the source address, so another family may answer; with no status, a dead-route
+     * reset qualifies and a timeout does not. An oversized body would repeat on any family.
      */
     private function warrantsAnotherFamily(FetchException $failure): bool
     {

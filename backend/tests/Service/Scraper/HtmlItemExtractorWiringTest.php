@@ -8,16 +8,8 @@ use App\Service\Scraper\HtmlItemExtractor;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * The unit tests hand the extractor its layers as a plain array, so they stay
- * green even if the container's tagged iterator collects nothing — the same
- * silent failure mode OAuthProviderWiringTest documents for its registry.
- * This test proves the app.scrape_layer tag and the AsTaggedItem priorities
- * actually wire: an empty iterator would throw on the tagesschau fixture, a
- * wrong order would let clustering (5 promo links) beat the four-item
- * JSON-LD list, and articles-blog pins semantic-before-cluster — its
- * div-based promo rail is a six-link cluster that WOULD win under the
- * cluster layer (verified directly against the layer), while the semantic
- * layer returns exactly the five articles.
+ * Proves the `app.scrape_layer` tag and its priorities wire: the unit tests hand the extractor its layers as a plain
+ * array, so they stay green even when the container's iterator collects nothing.
  */
 final class HtmlItemExtractorWiringTest extends KernelTestCase
 {

@@ -69,11 +69,8 @@ final class FailoverRequestSenderProxyTest extends TestCase
     }
 
     /**
-     * A CDN/WAF that blocks the proxy's egress IP answers with a status, not a
-     * dropped connection — so the transport-failure branch never sees it. With
-     * direct fallback on, a direct route may still be served (radiohamburg.de's
-     * CloudFront 403s the proxy, 200s a direct request), so the refusal must
-     * fall through exactly as a transport failure does.
+     * A CDN that blocks the proxy's egress IP answers with a status, which the transport-failure branch never sees.
+     * With fallback on, the refusal must fall through to direct exactly as a transport failure does.
      */
     public function testProxyErrorStatusFallsThroughToPinnedDirectWhenFallbackOn(): void
     {
@@ -151,10 +148,8 @@ final class FailoverRequestSenderProxyTest extends TestCase
     }
 
     /**
-     * MockHttpClient wraps every response in a fresh object, so a canceled flag
-     * set on the mock template is invisible from the test. A hand-built
-     * ResponseInterface double is the only way to observe that the failed proxy
-     * attempt is actually released rather than left open.
+     * MockHttpClient wraps each response in a fresh object, so only a hand-built ResponseInterface double can observe
+     * that the failed proxy attempt is cancelled.
      */
     public function testProxyTransportFailureCancelsTheFailedResponse(): void
     {
@@ -245,12 +240,6 @@ final class FailoverRequestSenderProxyTest extends TestCase
         }
     }
 
-    /**
-     * A proxy that is enabled but whose stored password cannot be opened must
-     * not silently degrade to a direct request — that would reveal the very IP
-     * the proxy exists to hide. It arrives as a transport failure instead, which
-     * is what the callers already know how to report.
-     */
     public function testAnUnreadableProxyPasswordFailsTheSendAndNeverGoesDirect(): void
     {
         $calls = [];

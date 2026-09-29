@@ -19,24 +19,14 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Decides what one HTTP response means for the feed that asked for it.
- *
- * SECURITY: this is the single copy of the redirect and status-code rules that
- * the SSRF guard depends on — every hop it returns is re-validated by UrlGuard
- * before the next request. A second implementation would drift out of step with
- * that guard, so both the serial and the concurrent fetcher route through here.
+ * What one HTTP response means for the feed that asked for it. SECURITY: every redirect target it returns goes back
+ * through UrlGuard before the next request; the fetcher sends `max_redirects` 0, so the client never follows one.
  */
 final readonly class ResponseClassifier
 {
     private const array REDIRECT_CODES = [301, 302, 303, 307, 308];
     private const array PERMANENT_CODES = [301, 308];
 
-    /**
-     * Injected rather than read from the global clock: the only use is the
-     * distance to a Retry-After date, and the tier that computes it is the one
-     * observed running an hour fast — so it shares the refresh pipeline's
-     * database clock (see config/services.yaml, RefreshClockWiringTest).
-     */
     public function __construct(private ClockInterface $clock)
     {
     }
@@ -121,12 +111,7 @@ final readonly class ResponseClassifier
             : HeaderVerdictModel::temporaryRedirectTo($target);
     }
 
-    /**
-     * The wait a Retry-After header asks for, in seconds. The header comes in
-     * two shapes (RFC 9110): a delay, or the date the door reopens. Anything
-     * else — and a date already in the past — names no delay, and the caller
-     * falls back to its own retry window.
-     */
+    /** Retry-After as a delay or an HTTP date (RFC 9110); anything else, or a date already past, names no delay. */
     private function retryAfterSeconds(ResponseInterface $response): ?int
     {
         $header = ResponseHeader::first($response, 'retry-after');

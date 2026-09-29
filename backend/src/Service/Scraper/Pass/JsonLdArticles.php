@@ -9,26 +9,14 @@ use App\Service\Parser\Support\DateParser;
 use App\Service\Scraper\Model\ScrapedItemModel;
 use App\Service\Scraper\Support\TextNormalizer;
 
-/**
- * The articles one page's JSON-LD blocks describe, collected node by node.
- *
- * A document's blocks nest arbitrarily — lists of nodes, @graph wrappers,
- * ItemList structures whose entries wrap another node again — so collection is
- * a recursion. The page URL every article URL resolves against and the items
- * found so far are this walk's state, held here as fields: the recursion then
- * passes only the node it is looking at.
- */
+/** The articles a page's JSON-LD describes, found by recursing through lists, @graph and ItemList entries. */
 final class JsonLdArticles
 {
     private const array ARTICLE_TYPES = ['NewsArticle', 'BlogPosting', 'Article'];
 
     /**
-     * Hard ceiling on JSON-LD items collected from a single document. A
-     * pathological @graph (or top-level list) of tens of thousands of Article
-     * nodes would otherwise force the extractor to walk every node; stopping
-     * early bounds the work at O(MAX_COLLECT). The facade caps final output at
-     * 50 (well below this), and 200 comfortably exceeds real pages (heise
-     * ships 190 ItemList entries), so genuine extraction is never truncated.
+     * Bounds the walk over a pathological @graph of tens of thousands of nodes. Real pages stay well below it (190
+     * ItemList entries on the largest seen), and the extractor keeps only 50.
      */
     private const int MAX_COLLECT = 200;
 
@@ -40,9 +28,7 @@ final class JsonLdArticles
     }
 
     /**
-     * Appends whatever articles a decoded block describes. Appending never
-     * spreads a growing array, so collection stays O(N); each entry point bails
-     * once the cap is reached.
+     * Appending never spreads a growing array, so collection stays O(N).
      *
      * @param array<mixed> $node
      */
@@ -99,10 +85,8 @@ final class JsonLdArticles
     }
 
     /**
-     * A ListItem either wraps a full article node in "item" or carries bare
-     * url/name fields itself; both shapes map through article(). Entries that
-     * are not arrays (heise mixes bare URL strings into itemListElement) and
-     * "item" references that are not article nodes are skipped silently.
+     * A ListItem wraps an article node in "item" or carries url and name itself. A non-array entry, such as a bare URL
+     * string, and an "item" that is not an article node are skipped.
      *
      * @param array<mixed> $elements
      */
@@ -132,12 +116,7 @@ final class JsonLdArticles
         }
     }
 
-    /**
-     * @param array<mixed> $node
-     * @param string       ...$types
-     *
-     * @return bool
-     */
+    /** @param array<mixed> $node */
     private function hasType(array $node, string ...$types): bool
     {
         $declared = $node['@type'] ?? null;
@@ -149,11 +128,7 @@ final class JsonLdArticles
         return array_intersect($types, array_filter($declared, \is_string(...))) !== [];
     }
 
-    /**
-     * @param array<mixed> $node
-     *
-     * @return ScrapedItemModel|null
-     */
+    /** @param array<mixed> $node */
     private function article(array $node): ?ScrapedItemModel
     {
         $url = $this->pageUrls->httpUrl($this->url($node));
@@ -175,11 +150,7 @@ final class JsonLdArticles
         );
     }
 
-    /**
-     * @param array<mixed> $node
-     *
-     * @return string|null
-     */
+    /** @param array<mixed> $node */
     private function url(array $node): ?string
     {
         $url = $node['url'] ?? null;
@@ -194,11 +165,7 @@ final class JsonLdArticles
         return \is_string($main) ? $main : null;
     }
 
-    /**
-     * @param array<mixed> $node
-     *
-     * @return string|null
-     */
+    /** @param array<mixed> $node */
     private function title(array $node): ?string
     {
         $raw = $node['headline'] ?? $node['name'] ?? null;
@@ -213,14 +180,10 @@ final class JsonLdArticles
         return mb_substr($title, 0, CardFields::MAX_TITLE_LENGTH);
     }
 
-    /**
-     * @param array<mixed> $node
-     *
-     * @return string|null
-     */
+    /** @param array<mixed> $node */
     private function teaser(array $node): ?string
     {
-        // Most sites use "description"; heise ships its teasers as "abstract".
+        // "description" first, then schema.org's "abstract", which some sites use for teasers instead.
         foreach ([$node['description'] ?? null, $node['abstract'] ?? null] as $candidate) {
             if (!\is_string($candidate)) {
                 continue;
@@ -239,8 +202,6 @@ final class JsonLdArticles
      * ImageObject with a url field, or a list of either.
      *
      * @param array<mixed> $node
-     *
-     * @return string|null
      */
     private function imageCandidate(array $node): ?string
     {

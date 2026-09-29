@@ -9,13 +9,8 @@ use App\Service\Fetch\Model\FetchResponseModel;
 use App\Service\Fetch\Model\FetchTicketModel;
 
 /**
- * Single-URL adapter over the batch engine, for the callers that genuinely want
- * one feed and can afford to block: discovery, preview, favicon resolution and
- * the backfill command.
- *
- * It delegates rather than implementing a second fetch loop on purpose — the
- * redirect and status-code rules are an SSRF control, and two copies of them
- * would drift.
+ * Single-URL adapter over the batch engine, for the callers that can block on one feed. It delegates instead of
+ * running a second fetch loop: the redirect and status rules are an SSRF control, and two copies would drift.
  */
 final readonly class HttpFeedFetcher implements FeedFetcherInterface
 {
@@ -29,10 +24,8 @@ final readonly class HttpFeedFetcher implements FeedFetcherInterface
             return $outcome->responseOrThrow();
         }
 
-        // Not a FetchException: the engine yields exactly one outcome per ticket,
-        // so an empty result is a broken batch implementation, not a bad feed.
-        // Every caller of fetch() swallows FetchException as "this feed failed",
-        // which would bury the defect behind four plausible-looking feed errors.
+        // A LogicException, not a FetchException: every caller swallows FetchException as "this feed failed", and an
+        // empty result is a broken engine (it yields one outcome per ticket), not a bad feed.
         throw new \LogicException(sprintf('%s: the fetcher returned no outcome.', $url));
     }
 }

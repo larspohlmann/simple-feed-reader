@@ -13,11 +13,8 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Follows a GET to the first response that is not a redirect, passing every hop
- * through the SSRF guard: `max_redirects` is forced to 0, so the client can never
- * follow a Location this class has not checked. The reader's page fetch and its
- * stream locator share it; the feed engine keeps ResponseClassifier, which is
- * built around FetchAttemptModel.
+ * Follows a GET to the first response that is not a redirect, passing every hop through the SSRF guard:
+ * `max_redirects` is forced to 0, so the client never follows a Location this class has not checked.
  */
 final readonly class RedirectFollower
 {
