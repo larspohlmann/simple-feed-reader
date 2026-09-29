@@ -6,14 +6,14 @@ namespace App\Tests\Service\Backup\Pass;
 
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
-use App\Repository\EntryRepository;
-use App\Repository\EntryStateRepository;
-use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
 use App\Service\Backup\Pass\RestoreDestination;
 use App\Service\Backup\Pass\RestoreEntryLoader;
 use App\Service\Backup\Pass\RestoreFeedTargets;
+use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
+use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Search\EntryIndexer;
 use App\Service\Url\UrlNormalizer;
 use App\Tests\Service\Search\RecordingSearchIndexWriter;
@@ -37,7 +37,7 @@ final class RestoreEntryLoaderTest extends TestCase
     {
         $known = $this->line('guid-known');
         $fresh = $this->line('guid-fresh');
-        $entries = $this->createMock(EntryRepository::class);
+        $entries = $this->createMock(RestoreEntriesInterface::class);
         $entries->method('guidHashToIdMapForFeed')->with(7)->willReturn([$known->guidHash => 1]);
         $entries->expects($this->once())
             ->method('entryIdsByGuidHash')
@@ -56,7 +56,7 @@ final class RestoreEntryLoaderTest extends TestCase
     public function testAReadBackThatMissesARowItJustWroteIsALogicError(): void
     {
         $fresh = $this->line('guid-fresh');
-        $entries = $this->createStub(EntryRepository::class);
+        $entries = $this->createStub(RestoreEntriesInterface::class);
         $entries->method('entryIdsByGuidHash')->willReturn([]);
         $entries->method('guidHashToIdMapForFeed')->willReturn([]);
         $loader = $this->loader($entries);
@@ -68,12 +68,12 @@ final class RestoreEntryLoaderTest extends TestCase
         $loader->finish();
     }
 
-    private function loader(EntryRepository $entries): RestoreEntryLoader
+    private function loader(RestoreEntriesInterface $entries): RestoreEntryLoader
     {
         return new RestoreEntryLoader(
             $this->createStub(EntityManagerInterface::class),
             $entries,
-            $this->createStub(EntryStateRepository::class),
+            $this->createStub(RestoreEntryStatesInterface::class),
             new EntryBatchInserter($this->createStub(Connection::class), new UrlNormalizer()),
             new EntryIndexer(new RecordingSearchIndexWriter(), new NullLogger()),
             new RestoredEntryStateFactory(new MockClock('2026-08-01 00:00:00', 'UTC')),
@@ -81,9 +81,9 @@ final class RestoreEntryLoaderTest extends TestCase
         );
     }
 
-    private function targets(EntryRepository $entries): RestoreFeedTargets
+    private function targets(RestoreEntriesInterface $entries): RestoreFeedTargets
     {
-        $feeds = $this->createStub(FeedRepository::class);
+        $feeds = $this->createStub(RestoreFeedsInterface::class);
         $feeds->method('isReadByAnotherUser')->willReturn(false);
 
         return new RestoreFeedTargets(1, [self::FEED_URL => 7], $feeds, $entries);

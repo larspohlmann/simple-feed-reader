@@ -6,12 +6,12 @@ namespace App\Tests\Service\Backup\Pass;
 
 use App\Entity\Feed;
 use App\Entity\User;
-use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SubscriptionLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\Pass\RestoreLoadPass;
+use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Feed\Factory\FeedFactory;
 use App\Service\Search\SavedSearchSlug;
 use App\Service\Tag\Factory\TagFactory;
@@ -41,12 +41,11 @@ final class RestoreLoadPassTest extends TestCase
     {
         $user = new User('one-lookup@example.com', new \DateTimeImmutable('2026-08-01'));
         $em = $this->createStub(EntityManagerInterface::class);
-        $feeds = $this->createMock(FeedRepository::class);
+        $feeds = $this->createMock(RestoreFeedsInterface::class);
         $feeds->expects($this->once())
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://known.example/feed.xml', 'https://new.example/feed.xml'])
             ->willReturn(['https://known.example/feed.xml' => new Feed('https://known.example/feed.xml')]);
-        $feeds->expects($this->never())->method('findOneBy');
         $pass = new RestoreLoadPass($em, $feeds, $this->savedSearchSlug(), self::rows());
 
         $result = $pass->run($user, (function () {
@@ -64,7 +63,7 @@ final class RestoreLoadPassTest extends TestCase
     {
         $user = new User('feeds-only@example.com', new \DateTimeImmutable('2026-08-01'));
         $em = $this->createStub(EntityManagerInterface::class);
-        $feeds = $this->createMock(FeedRepository::class);
+        $feeds = $this->createMock(RestoreFeedsInterface::class);
         $feeds->expects($this->once())
             ->method('findByUrlsIndexedByUrl')
             ->with(['https://orphan-one.example/feed.xml', 'https://orphan-two.example/feed.xml'])
@@ -116,7 +115,7 @@ final class RestoreLoadPassTest extends TestCase
         $em->method('flush')->willThrowException($this->dbalException());
         $pass = new RestoreLoadPass(
             $em,
-            $this->createStub(FeedRepository::class),
+            $this->createStub(RestoreFeedsInterface::class),
             $this->savedSearchSlug(),
             self::rows(),
         );

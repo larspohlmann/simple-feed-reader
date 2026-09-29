@@ -7,13 +7,14 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\Feed;
 use App\Entity\Subscription;
+use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
  * @extends ServiceEntityRepository<Entry>
  */
-class EntryRepository extends ServiceEntityRepository
+final class EntryRepository extends ServiceEntityRepository implements RestoreEntriesInterface
 {
     public function __construct(ManagerRegistry $registry)
     {

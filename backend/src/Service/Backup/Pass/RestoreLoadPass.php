@@ -8,7 +8,6 @@ use App\Entity\Feed;
 use App\Entity\SavedSearch;
 use App\Entity\Tag;
 use App\Entity\User;
-use App\Repository\FeedRepository;
 use App\Service\Backup\Dto\AccountLine;
 use App\Service\Backup\Dto\FeedLine;
 use App\Service\Backup\Dto\SavedSearchLine;
@@ -17,6 +16,7 @@ use App\Service\Backup\Dto\TagLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredFoundationFactory;
 use App\Service\Backup\Model\RestoreResultModel;
+use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use App\Service\Search\SavedSearchSlug;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -53,7 +53,7 @@ final class RestoreLoadPass
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly FeedRepository $feeds,
+        private readonly RestoreFeedsInterface $feeds,
         private readonly SavedSearchSlug $slug,
         private readonly RestoredFoundationFactory $rows,
     ) {

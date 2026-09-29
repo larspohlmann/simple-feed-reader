@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\Subscription;
+use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\QueryBuilder;
@@ -16,7 +17,7 @@ use OpenTelemetry\API\Instrumentation\WithSpan;
 /**
  * @extends ServiceEntityRepository<EntryState>
  */
-class EntryStateRepository extends ServiceEntityRepository
+final class EntryStateRepository extends ServiceEntityRepository implements RestoreEntryStatesInterface
 {
     public function __construct(
         ManagerRegistry $registry,

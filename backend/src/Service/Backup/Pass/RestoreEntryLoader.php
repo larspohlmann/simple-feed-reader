@@ -8,12 +8,12 @@ use App\Entity\Entry;
 use App\Entity\EntryState;
 use App\Entity\User;
 use App\Repository\EntryBatchInserter;
-use App\Repository\EntryRepository;
-use App\Repository\EntryStateRepository;
 use App\Service\Backup\Dto\EntryLine;
 use App\Service\Backup\Dto\EntryStateLine;
 use App\Service\Backup\Exception\BackupLoadFailedException;
 use App\Service\Backup\Factory\RestoredEntryStateFactory;
+use App\Service\Backup\RestoreEntries\RestoreEntriesInterface;
+use App\Service\Backup\RestoreEntryStates\RestoreEntryStatesInterface;
 use App\Service\Search\EntryIndexer;
 use Doctrine\DBAL\Exception as DbalException;
 use Doctrine\ORM\EntityManagerInterface;
@@ -48,8 +48,8 @@ final class RestoreEntryLoader
 
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly EntryRepository $entries,
-        private readonly EntryStateRepository $entryStates,
+        private readonly RestoreEntriesInterface $entries,
+        private readonly RestoreEntryStatesInterface $entryStates,
         private readonly EntryBatchInserter $inserter,
         private readonly EntryIndexer $indexer,
         private readonly RestoredEntryStateFactory $states,

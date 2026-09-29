@@ -7,6 +7,7 @@ namespace App\Repository;
 use App\Entity\Feed;
 use App\Entity\Subscription;
 use App\Enum\FeedStatus;
+use App\Service\Backup\RestoreFeeds\RestoreFeedsInterface;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -14,7 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
 /**
  * @extends ServiceEntityRepository<Feed>
  */
-class FeedRepository extends ServiceEntityRepository
+final class FeedRepository extends ServiceEntityRepository implements RestoreFeedsInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
