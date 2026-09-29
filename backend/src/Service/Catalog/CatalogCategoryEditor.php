@@ -50,10 +50,6 @@ final readonly class CatalogCategoryEditor
     /** @param list<int> $orderedCategoryIds */
     public function reorder(array $orderedCategoryIds): void
     {
-        $byId = [];
-        foreach ($orderedCategoryIds as $id) {
-            $byId[$id] = $this->categories->getById($id);
-        }
-        $this->reorderer->reorder($orderedCategoryIds, $byId);
+        $this->reorderer->reorderFound($orderedCategoryIds, $this->categories->getById(...));
     }
 }
