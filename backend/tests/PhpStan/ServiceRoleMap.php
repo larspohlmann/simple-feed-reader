@@ -143,7 +143,7 @@ final readonly class ServiceRoleMap
         $class = $this->classFor($type);
         $isPerCall = null === $class ? isset($this->builtPerCall[$type]) : $this->isPerCall($class);
 
-        return !$isPerCall && ServiceRoleClass::declaresPublicInstanceMethod($reflection);
+        return !$isPerCall && self::declaresPublicInstanceMethod($reflection);
     }
 
     /** @return list<string> the interfaces of its own module it implements, outside Factory/, Model/, Exception/ */
@@ -192,6 +192,17 @@ final readonly class ServiceRoleMap
         }
 
         return true;
+    }
+
+    private static function declaresPublicInstanceMethod(ClassReflection $reflection): bool
+    {
+        foreach ($reflection->getNativeReflection()->getMethods() as $method) {
+            if (!$method->isStatic() && !$method->isConstructor() && $method->isPublic()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function isValue(ClassReflection $reflection): bool

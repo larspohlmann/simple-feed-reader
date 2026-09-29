@@ -106,9 +106,19 @@ final readonly class ServiceRoleClass
         return $this->reflection->isAbstract();
     }
 
+    public function isFinal(): bool
+    {
+        return $this->reflection->isFinalByKeyword();
+    }
+
+    public function isReadonly(): bool
+    {
+        return $this->reflection->isReadOnly();
+    }
+
     public function isFinalReadonly(): bool
     {
-        return $this->reflection->isFinalByKeyword() && $this->reflection->isReadOnly();
+        return $this->isFinal() && $this->isReadonly();
     }
 
     public function mayBeReadonly(): bool
@@ -141,17 +151,6 @@ final readonly class ServiceRoleClass
     {
         foreach ($this->reflection->getNativeReflection()->getMethods(\ReflectionMethod::IS_STATIC) as $method) {
             if ($method->getDeclaringClass()->getName() === $this->name()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public static function declaresPublicInstanceMethod(ClassReflection $reflection): bool
-    {
-        foreach ($reflection->getNativeReflection()->getMethods() as $method) {
-            if (!$method->isStatic() && !$method->isConstructor() && $method->isPublic()) {
                 return true;
             }
         }

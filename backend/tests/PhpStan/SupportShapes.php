@@ -30,7 +30,7 @@ final readonly class SupportShapes implements ServiceRoleChecker
     private static function shapeViolations(ServiceRoleClass $helper): array
     {
         $violations = [];
-        if (!$helper->reflection->isFinalByKeyword()) {
+        if (!$helper->isFinal()) {
             $violations[] = new ServiceRoleViolation(
                 ServiceRoleCheck::SupportShape,
                 $helper,
