@@ -14,11 +14,7 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
-/**
- * InstanceSettings is `final readonly`, so PHPUnit cannot double it — the
- * same constraint InstanceSettingsTest and RegistrationPolicyTest already
- * work around. We boot the kernel and drive the real service instead.
- */
+/** InstanceSettings is final, so PHPUnit cannot double it: the test boots the kernel and drives the real service. */
 final class ConfiguredPasskeyRelyingPartyTest extends KernelTestCase
 {
     private const string EMAIL_LINK_URL = 'https://mail-links.example.com/reader';

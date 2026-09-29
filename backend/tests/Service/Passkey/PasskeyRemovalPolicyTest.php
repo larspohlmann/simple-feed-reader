@@ -14,17 +14,8 @@ use App\Tests\Support\PasskeyRegistrations;
 use PHPUnit\Framework\TestCase;
 
 /**
- * The lock-out guard's truth table (#624 Task 8). Only the fourth row must
- * throw: a passkey-only, password-less, identity-less account whose last
- * passkey is being removed. Every other combination leaves the account with
- * some way back in, so removal is allowed.
- *
- * Both lookups are doubled rather than backed by a real database — this
- * is a pure decision over three inputs (passkey count, password hash,
- * identity existence), and mocking pins each test to exactly the combination
- * its row names, with no fixture noise from the other two. The expectation
- * on `existsForUser` also pins the short-circuit itself: it must never run
- * once a password hash already proves there is a fallback.
+ * The lock-out guard's truth table: only a password-less, identity-less account's last passkey is refused. The
+ * lookups are doubled, pinning each row's combination; `existsForUser` must not run once a password hash exists.
  */
 final class PasskeyRemovalPolicyTest extends TestCase
 {
@@ -65,12 +56,7 @@ final class PasskeyRemovalPolicyTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    /**
-     * The acceptance criterion. An OAuth-only account has a `null` password
-     * hash — "has a password" is a different question than "has an
-     * account" — and once its one passkey is gone there is no other way
-     * back in, so this is the one row that must refuse.
-     */
+    /** The one refused row: no password hash and no OAuth identity, so the last passkey is the only way back in. */
     public function testTheLastPasskeyOnAPasswordLessIdentityLessAccountIsRefused(): void
     {
         $passkeys = $this->createMock(PasskeyCountInterface::class);

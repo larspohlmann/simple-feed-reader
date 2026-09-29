@@ -15,15 +15,8 @@ use App\Tests\Support\PasskeyRegistrations;
 use App\Tests\Support\TogglesPasskeySignIn;
 
 /**
- * Whether passkey sign-in may be offered at all (#624 follow-up) — the toggle
- * AND the relying-party id both have to hold, and neither the toggle nor the
- * id check ever touches a credential or an account row: see
- * testTheAnswerNeverVariesWithHowManyCredentialsOrAccountsExist for the
- * no-enumeration guarantee this class exists to keep.
- *
- * A KernelTestCase, not a plain unit test, because InstanceSettings is
- * `final readonly` and cannot be doubled — ConfiguredPasskeyRelyingPartyTest
- * hits the identical constraint and works around it the same way.
+ * Passkey sign-in needs the toggle and a workable relying-party id, and neither check reads a credential or an
+ * account. Real services, as InstanceSettings is final readonly and cannot be doubled.
  */
 final class PasskeySignInAvailabilityTest extends ApiTestCase
 {
@@ -39,8 +32,7 @@ final class PasskeySignInAvailabilityTest extends ApiTestCase
     }
 
     /**
-     * Off by default (#624 follow-up, addendum): a fresh instance with no
-     * row, and no explicit enable call, must read as unavailable even with a
+     * Off by default: a fresh instance with no row, and no explicit enable call, must read as unavailable even with a
      * perfectly valid relying party.
      */
     public function testUnavailableByDefault(): void

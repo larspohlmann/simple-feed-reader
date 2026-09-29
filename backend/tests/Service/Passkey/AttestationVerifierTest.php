@@ -17,11 +17,8 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Uid\Uuid;
 
 /**
- * AttestationVerifier's own unit-level coverage (#624). PasskeyRegistrationTest
- * already proves the ceremony end to end through the real firewall; this file
- * exists for the handful of checks a full HTTP round trip cannot easily pin:
- * the two library-response type guards, the AAGUID round trip, and the
- * "a registration challenge must always carry a user handle" invariant.
+ * What an HTTP round trip cannot easily pin: the two response-type guards, the AAGUID round trip, and a registration
+ * challenge that must carry a user handle.
  */
 final class AttestationVerifierTest extends KernelTestCase
 {
@@ -31,13 +28,7 @@ final class AttestationVerifierTest extends KernelTestCase
     private const string RELYING_PARTY_ID = 'example.test';
     private const string ORIGIN = 'https://example.test';
 
-    /**
-     * deserialize() distinguishes an attestation from an assertion response
-     * purely by the deserialized object's runtime type. An assertion-shaped
-     * credential — the exact payload a LOGIN ceremony would send — must still
-     * be rejected cleanly when submitted to the REGISTRATION endpoint,
-     * mirroring AssertionVerifierTest's converse case.
-     */
+    /** An assertion-shaped credential posted to registration must be refused by deserialize()'s runtime-type check. */
     public function testAnAssertionResponseSubmittedAsAnAttestationIsRejected(): void
     {
         self::bootKernel();
@@ -67,15 +58,8 @@ final class AttestationVerifierTest extends KernelTestCase
     }
 
     /**
-     * check()'s null-coalesce guard defends an invariant no request-reachable
-     * caller can violate today: RegistrationOptionsFactory always pairs a
-     * non-null user id with a non-null user handle, and AssertionOptionsFactory
-     * pairs null with null (see PasskeyChallengeStore's own docblock) — so a
-     * registration challenge with a MATCHING user id but a null user handle
-     * cannot arise through either options endpoint. PasskeyChallengeStore's
-     * own issue() signature does not enforce that pairing, though, so this
-     * calls it directly to construct exactly that otherwise-unreachable
-     * shape, proving the guard fires rather than silently mishandling it.
+     * No options endpoint pairs a user id with a null handle, but issue() does not enforce the pairing: this builds
+     * that shape directly to prove check()'s guard refuses it.
      */
     public function testARegistrationChallengeWithNoUserHandleIsRejected(): void
     {
@@ -103,11 +87,7 @@ final class AttestationVerifierTest extends KernelTestCase
     }
 
     /**
-     * Every other test in this feature enrols against PasskeyFixtures' fixed
-     * all-zero AAGUID (the spec's "none assigned" sentinel), which
-     * UserPasskeyFactory::aaguidOrNull() normalises to a stored null — so none of them can tell
-     * the ternary is the right way round. This pins the other branch: a real,
-     * non-nil AAGUID must round-trip to its RFC 4122 string, not to null.
+     * Every other test uses the all-zero AAGUID, stored as null; a real AAGUID must round-trip to its RFC 4122 string.
      */
     public function testARealAaguidIsStoredAsItsRfc4122String(): void
     {

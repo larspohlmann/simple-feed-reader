@@ -42,11 +42,8 @@ final class PasskeyChallengeStoreTest extends TestCase
     }
 
     /**
-     * The exact instant a challenge's own `expires_at` field equals the
-     * clock's `now()` must still be VALID — expiry is "strictly in the
-     * past", not "at or before now". This is the one instant the pool's own
-     * TTL and this method's own clock-based check could disagree about, so
-     * it is the only instant worth pinning exactly.
+     * At the exact expiry instant the handle is still valid: expiry means strictly in the past. The pool's TTL and the
+     * clock check could disagree only here.
      */
     public function testAHandleIsStillValidAtTheExactExpiryInstant(): void
     {
@@ -82,12 +79,8 @@ final class PasskeyChallengeStoreTest extends TestCase
     }
 
     /**
-     * Pins the key's actual shape — a fixed, readable prefix followed by the
-     * handle's digest — rather than only proving the raw handle is absent
-     * (testTheHandleItselfIsNotTheCacheKey above). Without this, a change
-     * that silently drops or reorders the prefix would pass every other test
-     * in this file, since issue() and consume() would still agree with each
-     * other on whatever key they compute.
+     * Pins the key's shape, a fixed prefix plus the handle's digest: issue() and consume() would agree on any key, so
+     * nothing else would notice a dropped prefix.
      */
     public function testTheCacheKeyIsThePrefixedDigestOfTheHandle(): void
     {
@@ -106,10 +99,7 @@ final class PasskeyChallengeStoreTest extends TestCase
     }
 
     /**
-     * Each row below corrupts exactly ONE field of an otherwise well-formed
-     * stored entry, so every field the well-formedness check reads is proven
-     * load-bearing on its own, not just as part of the whole chain passing or
-     * failing together.
+     * Each row corrupts exactly one field of a well-formed entry, so every field the check reads is proven on its own.
      *
      * @return iterable<string, array{array<string, mixed>}>
      */
@@ -153,13 +143,8 @@ final class PasskeyChallengeStoreTest extends TestCase
     }
 
     /**
-     * The stored 'expires_at' field only guards against the injected clock
-     * disagreeing with the pool's own — see consume()'s docblock — so it is
-     * NOT a substitute for the pool's own TTL: without expiresAfter(), a
-     * real PSR-6 backend would keep a "consumed by our own check" entry on
-     * disk forever, growing the cache directory the whole class docblock
-     * calls out as sensitive. Verified with a mock rather than ArrayAdapter,
-     * which has no observable eviction to assert on.
+     * The stored `expires_at` only guards against clock disagreement; without expiresAfter() a real pool would keep
+     * every entry on disk. A mock, since ArrayAdapter has no observable eviction.
      */
     public function testIssueSetsThePoolItemsTtlToTheChallengeLifetime(): void
     {

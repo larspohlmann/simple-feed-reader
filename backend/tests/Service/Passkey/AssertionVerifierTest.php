@@ -33,17 +33,9 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Symfony\Component\Clock\MockClock;
 
 /**
- * AssertionVerifier's own unit-level coverage (#624 Task 10). The full
- * end-to-end proof — through the real firewall, throttling included — lives
- * in PasskeyLoginTest; this file exists specifically because the
- * counter-rejection log line is far easier to pin down against a hand-built
- * Logger here than through the whole HTTP stack.
- *
- * Every enrolled credential in this file goes through the REAL
- * AttestationVerifier rather than a hand-assembled UserPasskey row: the
- * stored public key, credential id and user handle are all
- * base64url-encoded library output, and re-deriving those bytes by hand here
- * would risk quietly disagreeing with what registration actually persists.
+ * AssertionVerifier's unit coverage, chiefly the counter-rejection log line, easier to pin on a hand-built logger
+ * than through HTTP (PasskeyLoginTest covers the firewall). Credentials are enrolled through the real
+ * AttestationVerifier, so the stored bytes are exactly what registration persists.
  */
 final class AssertionVerifierTest extends KernelTestCase
 {
@@ -54,17 +46,8 @@ final class AssertionVerifierTest extends KernelTestCase
     private const string ORIGIN = 'https://example.test';
 
     /**
-     * Fix round 1 (#624 Task 10): asserting on the object verify() RETURNS
-     * proves nothing about persistence — it is the SAME managed entity
-     * whether or not anything was ever flushed to the database. This test
-     * clears the entity manager's identity map before re-reading, so a
-     * repository lookup afterwards can only be satisfied by a real row,
-     * never by Doctrine handing back the in-memory mutated object. Confirmed
-     * this actually catches a missing flush: temporarily removed the
-     * `$this->entityManager->flush()` call from AssertionVerifier::verify() and re-ran
-     * this test — it failed (the re-fetched row still had counter 3, not
-     * 7) — before restoring it. See task-10-report.md's "Fix round 1"
-     * section for the removal experiment's real output.
+     * Re-reads after clearing the identity map, so only a flushed row can satisfy the lookup: the returned entity is
+     * the same managed object whether or not verify() flushed.
      */
     public function testAValidAssertionRecordsTheNewCounterAndTimestamp(): void
     {
@@ -116,18 +99,8 @@ final class AssertionVerifierTest extends KernelTestCase
     }
 
     /**
-     * parse() deserializes the wire payload through the SAME PublicKeyCredential
-     * class an attestation (registration) response uses; only the runtime type
-     * of ->response tells the two apart. Submitting an attestation-shaped
-     * credential — the exact payload a registration ceremony would send —
-     * to the login endpoint must still be rejected cleanly, not let a
-     * differently-typed response fall through to code that expects an
-     * AuthenticatorAssertionResponse.
-     *
-     * The credential MUST already be enrolled: resolveCredential() runs
-     * BEFORE the response is ever passed to checkAssertion(), so an
-     * unenrolled credential id would reject the request for an unrelated
-     * reason and never actually exercise the type guard this test is for.
+     * An attestation response posted as an assertion must be refused by the type guard. The credential is enrolled,
+     * since resolveCredential() would otherwise refuse it first for an unrelated reason.
      */
     public function testAnAttestationResponseSubmittedAsAnAssertionIsRejected(): void
     {
@@ -143,10 +116,8 @@ final class AssertionVerifierTest extends KernelTestCase
     }
 
     /**
-     * The scenario the brief calls out by name: a counter that goes
-     * backwards must be rejected AND logged, with the credential id and the
-     * user id an incident response would need — asserted through a real
-     * Monolog TestHandler, not by eyeballing a message string.
+     * A counter that goes backwards is rejected and logged with the credential id and user id an incident response
+     * needs, asserted on a Monolog TestHandler.
      */
     public function testABackwardsCounterIsRejectedAndLogsAWarning(): void
     {
@@ -234,11 +205,7 @@ final class AssertionVerifierTest extends KernelTestCase
             $signCount,
         );
 
-        // PasskeyChallengeStore::issue() expects the base64url TEXT form —
-        // the storage convention every stored identifier follows — not the
-        // fixture's raw bytes; RegistrationOptionsFactory decodes it back
-        // immediately (Base64UrlSafe::decodeNoPadding()) to build the
-        // options' user entity.
+        // issue() takes the base64url text every stored identifier uses, not the fixture's raw bytes.
         /** @var PasskeyChallengeStore $store */
         $store = self::getContainer()->get(PasskeyChallengeStore::class);
         $handle = $store->issue(
