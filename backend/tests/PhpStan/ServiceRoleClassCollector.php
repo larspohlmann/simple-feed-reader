@@ -11,6 +11,8 @@ use PHPStan\Analyser\Scope;
 use PHPStan\Collectors\Collector;
 use PHPStan\Node\InClassNode;
 use PHPStan\Reflection\ClassReflection;
+use PHPStan\Reflection\ExtendedMethodReflection;
+use PHPStan\Type\Type;
 
 /** @implements Collector<InClassNode, array{string, int, list<string>}> */
 final readonly class ServiceRoleClassCollector implements Collector
@@ -24,7 +26,7 @@ final readonly class ServiceRoleClassCollector implements Collector
         return InClassNode::class;
     }
 
-    /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes a model's body names */
+    /** @return array{string, int, list<string>}|null the class, its line, and the Dto classes a model names, in code or PHPDoc */
     public function processNode(Node $node, Scope $scope): ?array
     {
         $reflection = $node->getClassReflection();
@@ -45,16 +47,57 @@ final readonly class ServiceRoleClassCollector implements Collector
     /** @return list<string> */
     private function modelDtoReferencesIn(InClassNode $node): array
     {
-        if (ServiceRoleNames::MODEL !== ServiceRoleNames::roleOfClass($node->getClassReflection()->getName())) {
+        $reflection = $node->getClassReflection();
+        if (ServiceRoleNames::MODEL !== ServiceRoleNames::roleOfClass($reflection->getName())) {
             return [];
         }
-        $references = [];
-        foreach ($this->finder->findInstanceOf($node->getOriginalNode()->stmts, Name::class) as $name) {
-            if (str_contains($name->toString(), '\\Dto\\')) {
-                $references[] = $name->toString();
+        $references = array_filter(
+            [...$this->namesIn($node), ...self::docblockClassesOf($reflection)],
+            static fn (string $name): bool => str_contains($name, '\\Dto\\'),
+        );
+
+        return array_values(array_unique($references));
+    }
+
+    /** @return list<string> */
+    private function namesIn(InClassNode $node): array
+    {
+        return array_values(array_map(
+            static fn (Name $name): string => $name->toString(),
+            $this->finder->findInstanceOf($node->getOriginalNode()->stmts, Name::class),
+        ));
+    }
+
+    /** @return list<string> the classes the PHPDoc types of its own properties, parameters and returns name */
+    private static function docblockClassesOf(ClassReflection $reflection): array
+    {
+        $types = [];
+        $native = $reflection->getNativeReflection();
+        foreach ($native->getProperties() as $property) {
+            if ($property->getDeclaringClass()->getName() === $reflection->getName()) {
+                $types[] = $reflection->getNativeProperty($property->getName())->getPhpDocType();
+            }
+        }
+        foreach ($native->getMethods() as $method) {
+            if ($method->getDeclaringClass()->getName() === $reflection->getName()) {
+                $types = [...$types, ...self::phpDocTypesOf($reflection->getNativeMethod($method->getName()))];
             }
         }
 
-        return array_values(array_unique($references));
+        return array_merge(...array_map(static fn (Type $type): array => $type->getReferencedClasses(), $types));
+    }
+
+    /** @return list<Type> */
+    private static function phpDocTypesOf(ExtendedMethodReflection $method): array
+    {
+        $types = [];
+        foreach ($method->getVariants() as $variant) {
+            $types[] = $variant->getPhpDocReturnType();
+            foreach ($variant->getParameters() as $parameter) {
+                $types[] = $parameter->getPhpDocType();
+            }
+        }
+
+        return $types;
     }
 }

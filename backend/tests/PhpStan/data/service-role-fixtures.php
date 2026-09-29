@@ -777,3 +777,24 @@ namespace App\Security\Fixtures {
         }
     }
 }
+
+namespace App\Service\Ledger\Dto {
+    final readonly class EntryLine
+    {
+        public function __construct(public int $cents)
+        {
+        }
+    }
+}
+
+namespace App\Service\Ledger\Model {
+    use App\Service\Ledger\Dto\EntryLine;
+
+    final readonly class LedgerModel
+    {
+        /** @param list<EntryLine> $lines */
+        public function __construct(public array $lines)
+        {
+        }
+    }
+}

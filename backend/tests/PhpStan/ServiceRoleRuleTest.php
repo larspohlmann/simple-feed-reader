@@ -331,6 +331,14 @@ final class ServiceRoleRuleTest extends RuleTestCase
             [self::securityListener('GuardTheDoor'), 741],
             [self::securityListener('WatchTheWindow'), 749],
             [self::securityListener('CountTheVisitors'), 757],
+            [
+                self::message(
+                    'modelShape',
+                    'App\Service\Ledger\Model\LedgerModel',
+                    'names the DTO App\Service\Ledger\Dto\EntryLine; map it to a model at the boundary',
+                ),
+                793,
+            ],
         ]);
     }
 
