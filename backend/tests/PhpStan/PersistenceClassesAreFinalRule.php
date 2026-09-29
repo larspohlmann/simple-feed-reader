@@ -28,7 +28,7 @@ final readonly class PersistenceClassesAreFinalRule implements Rule
     public function processNode(Node $node, Scope $scope): array
     {
         $class = $node->getClassReflection();
-        if (!$class->isClass() || $class->isAnonymous() || $class->isFinalByKeyword()) {
+        if (!$class->isClass() || $class->isFinalByKeyword()) {
             return [];
         }
         if (!ClassNameReferences::isInAnyOf($class->getName(), self::PERSISTENCE_NAMESPACES)) {
