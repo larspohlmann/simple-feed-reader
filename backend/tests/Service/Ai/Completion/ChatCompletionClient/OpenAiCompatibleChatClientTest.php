@@ -1209,4 +1209,17 @@ final class OpenAiCompatibleChatClientTest extends TestCase
             }
         };
     }
+
+    public function testARequestPhaseFailureCarriesNoErrorCode(): void
+    {
+        $client = new MockHttpClient(static function (): MockResponse {
+            throw new TransportException('Connection refused');
+        });
+
+        $outcomes = $this->clientUsing($client)->completeMany($this->connection(), [
+            $this->concurrentCall(new NullCompletionStreamObserver()),
+        ]);
+
+        self::assertSame(0, $outcomes[0]->cause()->getCode());
+    }
 }
