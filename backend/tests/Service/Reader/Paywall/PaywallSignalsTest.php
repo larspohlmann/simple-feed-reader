@@ -31,9 +31,8 @@ final class PaywallSignalsTest extends TestCase
 
     public function testAPremiumDeclarationIsTrustedEvenWithoutAGateBlock(): void
     {
-        // The publisher declares the article premium but serves the whole body,
-        // as mopo.de does for its MOPO+ articles. The declaration is trusted and
-        // the reader shows the banner (an accepted #908 trade-off).
+        // The publisher declares the article premium but serves the whole body. The declaration is trusted, and
+        // the reader shows the banner.
         self::assertTrue($this->isPreview($this->page(self::BODY, '{"isAccessibleForFree":"False"}')));
     }
 
@@ -49,8 +48,7 @@ final class PaywallSignalsTest extends TestCase
 
     public function testAnAbsentDeclarationWithAMembershipCheckoutFlagsAPreview(): void
     {
-        // psychedelicalpha.com: no declaration, a generic `join` gate class, but a
-        // Memberful checkout link carries the signal (#998).
+        // No declaration and a generic `join` gate class, but a Memberful checkout link carries the signal.
         $checkout = '<div class="join"><a href="https://x.memberful.com/checkout?plan=1">Join</a></div>';
 
         self::assertTrue($this->isPreview($this->page(self::BODY . $checkout)));

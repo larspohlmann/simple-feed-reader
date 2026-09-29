@@ -16,8 +16,8 @@ final class MembershipCheckoutTest extends TestCase
 
     public function testFindsAMemberfulCheckoutLinkInTheBody(): void
     {
-        // psychedelicalpha.com: the intro cuts to a Memberful subscribe block whose
-        // class `join` is too generic to gate on; the checkout link carries the signal (#998).
+        // A Memberful subscribe block whose class `join` is too generic to gate on: the checkout link carries the
+        // signal.
         self::assertTrue($this->hasCheckout(
             '<article><p>Teaser.</p></article>'
             . '<div class="join"><a href="https://alpha.memberful.com/checkout?plan=99046">Monthly $20</a></div>',
