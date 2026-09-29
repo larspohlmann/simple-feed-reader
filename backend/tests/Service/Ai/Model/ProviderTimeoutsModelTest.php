@@ -24,11 +24,8 @@ final class ProviderTimeoutsModelTest extends TestCase
     }
 
     /**
-     * A first-byte bound at or above the wall clock could never fire: the call
-     * would be killed by the wall clock first, and a dead connection would be
-     * reported as an exhausted one. It also breaks WorkerPresence, which sizes
-     * its freshness window against the first-byte bound precisely because that
-     * bound is the smaller of the two.
+     * A first-byte bound at or above the wall clock never fires, reporting a dead connection as an exhausted one, and
+     * WorkerPresence sizes its freshness window from the first-byte bound.
      */
     public function testEveryProfileFailsSilenceBeforeItFailsTheWholeCall(): void
     {

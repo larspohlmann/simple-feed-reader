@@ -13,11 +13,8 @@ use PHPUnit\Framework\TestCase;
 final class CompositeCompletionStreamHeartbeatTest extends TestCase
 {
     /**
-     * The keepalive beats before the liveness marker, and the order is the
-     * composite's own: a member that throws skips the rest of the chunk, and
-     * a missed lock refresh costs far more than a missed liveness mark. Which
-     * container service fills each slot is CompletionStreamHeartbeatWiringTest's
-     * question, not this one's.
+     * The keepalive beats before the liveness marker; which service fills each slot is
+     * CompletionStreamHeartbeatWiringTest's question.
      */
     public function testBeatingTheCompositeBeatsEveryMemberExactlyOnceInOrder(): void
     {

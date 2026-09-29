@@ -25,11 +25,8 @@ use App\Tests\Support\SeedsUsers;
 use App\Tests\Support\StubModelCatalog;
 
 /**
- * Against the real repository and entity manager, not mocks: the account id is
- * bound into the sealed key, so a User that was never flushed has no id to
- * seal for and the interesting cases could not run at all.
- *
- * Only the catalog is replaced — nothing here calls a provider.
+ * Against the real repository and entity manager: the sealed key is bound to the account id, which an unflushed
+ * User lacks. Only the catalog is replaced; nothing here calls a provider.
  */
 final class AiProviderConfiguratorTest extends DbTestCase
 {
@@ -133,13 +130,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         $configurator->chooseModel($added->configuration, 'gpt-4o-mini');
     }
 
-    /**
-     * credentials() is public on purpose: a later caller that must talk to the
-     * provider directly (a prompt runner) reuses it instead of duplicating the
-     * cipher call. Called from here, outside the class, so a visibility
-     * regression back to private/protected fails this test rather than only
-     * a caller several tasks from now.
-     */
+    /** credentials() is public for callers that talk to the provider; called from outside to pin the visibility. */
     public function testCredentialsCanBeOpenedFromOutsideTheConfigurator(): void
     {
         $configurator = $this->configurator(['gpt-4o']);
@@ -270,13 +261,7 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame($second->configuration, $user->getActiveAiProviderSettings());
     }
 
-    /**
-     * The reverify is a live call, so it can fail exactly like the original
-     * choice could: the provider went away, or stopped offering the stored
-     * model. Either way the account keeps whatever was active before the
-     * failed attempt — activating a broken configuration must not leave the
-     * account with no working one.
-     */
+    /** A failed reverify (provider gone, model withdrawn) leaves the previously active configuration active. */
     public function testActivateLeavesTheCurrentActiveWhenReverifyFails(): void
     {
         $callCount = 0;
@@ -354,10 +339,9 @@ final class AiProviderConfiguratorTest extends DbTestCase
         self::assertSame(3, $copy->batchConcurrency());
         self::assertFalse($copy->suppressesReasoning());
         // A copy of a local endpoint is still that local endpoint: it answers
-        // just as slowly, so the profile travels with it (#433).
+        // just as slowly, so the profile travels with it.
         self::assertTrue($copy->isSlowModel());
-        // Same reasoning as slowModel above: a copy left at NULL would silently
-        // raise its ceiling to the default and reintroduce #437 (#445).
+        // A copy left at NULL would silently raise its batch ceiling to the default.
         self::assertSame(25, $copy->maxBatchSize());
         self::assertNotSame($copy, $user->getActiveAiProviderSettings());
         // The re-sealed key opens back to the same plaintext under the copy's own row.
@@ -446,22 +430,15 @@ final class AiProviderConfiguratorTest extends DbTestCase
 
         $name = $copy->getName();
         self::assertNotNull($name);
-        // mb-correct truncation to the 120-CHARACTER limit: "Copy of " + 112 of the
-        // multibyte chars. A byte-wise substr(0, 120) would cut mid-run and yield
-        // 64 characters, so asserting exactly 120 kills that mutation and proves the
-        // result is still valid UTF-8 (no split sequence).
+        // 120 characters, "Copy of " + 112: a byte-wise substr() would give 64 and could split a UTF-8 sequence.
         self::assertSame(120, mb_strlen($name));
         self::assertSame($name, mb_convert_encoding($name, 'UTF-8', 'UTF-8'));
         self::assertStringStartsWith('Copy of ', $name);
     }
 
     /**
-     * Moves the row's own ownership FK, then points the recipient's active
-     * pointer at it too — settingsFor()/requireConfiguration() now resolve
-     * through that pointer rather than a "find by owner" query, so a test
-     * simulating a row ending up under the wrong account has to move both.
-     * pointActiveAt() writes at the database level, which is enough here
-     * because the one caller reloads $to afterward (see reload()).
+     * Moves the row's owner FK and the recipient's active pointer, which settingsFor() and requireConfiguration()
+     * resolve through. pointActiveAt() writes at the database level, so the caller reloads $to.
      */
     private function moveSettingsRow(User $from, User $to): void
     {

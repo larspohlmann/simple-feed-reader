@@ -41,11 +41,7 @@ final class CompletionBodyDecoderTest extends TestCase
         self::assertNull($this->decoder->deltaContent('{"choices":[{"message":{"content":"x"}}]}'));
     }
 
-    /**
-     * A reasoning model's thinking phase arrives as deltas with no `content`
-     * at all — the exact traffic that made #320's calls look empty while
-     * megabytes flowed. Skipping them is the decoder's job, not the caller's.
-     */
+    /** A reasoning model's thinking arrives as deltas with no `content`; skipping them is the decoder's job. */
     public function testADeltaWithoutContentIsNull(): void
     {
         self::assertNull($this->decoder->deltaContent('{"choices":[{"delta":{"reasoning":"thinking…"}}]}'));
@@ -78,12 +74,7 @@ final class CompletionBodyDecoderTest extends TestCase
         self::assertNull($this->decoder->envelope('{"choices":"nope"}')['content']);
     }
 
-    /**
-     * The provider stamps why generation stopped on the choice, beside the
-     * delta rather than inside it. `length` is the signal that the answer was
-     * truncated by `max_tokens` — the diagnosis the debug log could not make
-     * before #327.
-     */
+    /** `finish_reason` sits on the choice beside the delta; `length` says `max_tokens` truncated the answer. */
     public function testTheFinishReasonRidesOnTheChoiceNotTheDelta(): void
     {
         self::assertSame(
@@ -139,7 +130,7 @@ final class CompletionBodyDecoderTest extends TestCase
 
     /**
      * LM Studio delivers a reasoning model's whole answer under
-     * `delta.reasoning_content`, leaving `content` empty (#323). The reader
+     * `delta.reasoning_content`, leaving `content` empty. The reader
      * needs that channel to recover an answer no other field carries.
      */
     public function testAStreamEventExposesTheReasoningContentChannel(): void
@@ -319,22 +310,15 @@ final class CompletionBodyDecoderTest extends TestCase
         self::assertNull($this->decoder->envelope('{"usage":{"cost":-1e999}}')['usage']?->costNanoCredits);
     }
 
-    /**
-     * Casting an out-of-range float to int is undefined in PHP, so the cast
-     * has to be unreachable rather than merely unlikely: one garbage value
-     * corrupts the account's total, and the next one makes BIGINT reject the
-     * write from inside the tick.
-     */
+    /** An out-of-range float-to-int cast is undefined, so it must be unreachable: one bad value corrupts the total. */
     public function testACostTooLargeForTheNanoCreditIntegerIsUnpriced(): void
     {
         self::assertNull($this->decoder->envelope('{"usage":{"cost":1e30}}')['usage']?->costNanoCredits);
     }
 
     /**
-     * The refusal above is a ceiling on the *nano* value, not a distrust of
-     * large prices: a cost that still fits stays exact. The ceiling sits one
-     * past the largest integer there is, so a cost landing exactly on it is
-     * refused too — that is the value whose (int) cast wraps to the smallest.
+     * The ceiling is on the nano value, not on large prices: a cost that fits stays exact, and one landing exactly on
+     * 2**63, whose cast wraps to the smallest int, is refused.
      */
     public function testTheCeilingIsTheFirstNanoValueNoIntegerCanHold(): void
     {
