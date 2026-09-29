@@ -22,8 +22,6 @@ final class FeedImageExtractorTest extends TestCase
 
     private function rss2Channel(string $imageMarkup): \DOMElement
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration.
         $document = $this->document(/** @lang TEXT */ <<<XML
             <?xml version="1.0"?>
             <rss version="2.0">
@@ -89,9 +87,6 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testKeepsAUrlAtExactlyTheColumnLimit(): void
     {
-        // URL_MAX itself must still round-trip: only a length OVER the limit
-        // is unusable, and the boundary is exactly where an off-by-one in the
-        // comparison would flip.
         $prefix = 'https://example.com/';
         $atLimit = $prefix . str_repeat('a', 2048 - mb_strlen($prefix));
         self::assertSame(2048, mb_strlen($atLimit));
@@ -102,11 +97,7 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testCountsTheLimitInCharactersNotBytes(): void
     {
-        // 'ü' is one character but two UTF-8 bytes. At exactly URL_MAX
-        // characters this URL is comfortably over URL_MAX bytes, so a
-        // byte-counting check would wrongly reject it while the
-        // character-counting one the persisted column actually needs stays
-        // within range.
+        // 'ü' is two UTF-8 bytes: at URL_MAX characters this URL is far over URL_MAX bytes.
         $prefix = 'https://example.com/';
         $atLimit = $prefix . str_repeat('ü', 2048 - mb_strlen($prefix));
         self::assertSame(2048, mb_strlen($atLimit));
@@ -141,14 +132,7 @@ final class FeedImageExtractorTest extends TestCase
 
     public function testSkipsAnRdfRootImageElementInADifferentNamespaceToFindTheRealOne(): void
     {
-        // A same-local-name, same-position (direct child of the RDF root)
-        // decoy comes FIRST, in a different namespace, with a deliberately
-        // different URL. Proves two things at once: that
-        // XmlHelper::childElement()'s namespace filter actually rejects a
-        // wrong-namespace candidate rather than matching by local name alone,
-        // and that rejecting it SKIPS to the next sibling rather than
-        // abandoning the search — a decoy earlier in document order must not
-        // hide the real image later in it.
+        // The decoy comes first, so rejecting it must skip on to the real image rather than stop.
         $document = $this->document(/** @lang TEXT */ <<<'XML'
             <?xml version="1.0"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"

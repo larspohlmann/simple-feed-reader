@@ -9,19 +9,8 @@ use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
- * The whole-body rules: not "the cleaners left something behind" but "this is
- * not the article". A body with no paragraph at all, more headings than
- * paragraphs, or several articles' worth of text is a region readability
- * picked wrongly, and no amount of trimming fixes it.
- *
- * Deliberately blind to what sits after the last paragraph — scoring the tail
- * flagged every well-cleaned page ending in a related-articles box, which is
- * most of them (#744).
- *
- * Length alone says nothing, in either direction: a Volts podcast transcript
- * is 88,000 characters and is one article, while a feed body longer than its
- * article is often a fuller press release, not cut prose — indistinguishable
- * by length, a case the coverage gate already guards (#744).
+ * The whole-body rules: not "the cleaners left something behind" but "readability picked something that is not the
+ * article". They never score the tail (see LeadingChromeMarkers) or length, which says nothing either way (#746).
  */
 final readonly class BodyShapeMarkers
 {
@@ -54,10 +43,8 @@ final readonly class BodyShapeMarkers
     }
 
     /**
-     * An index page is not a page with many headings — a sectioned essay has
-     * those, and counting them reported an Anarchist Library pamphlet with 19
-     * section titles. What an index page has is headings that are LINKS, each
-     * one a teaser for a different article (#744).
+     * An index page's headings are links, each a teaser for another article; a sectioned essay's plain headings are
+     * not (#746).
      */
     private function headingHeavy(ExtractedBodyModel $body): ?CleanupMarkerModel
     {
@@ -110,10 +97,8 @@ final readonly class BodyShapeMarkers
     }
 
     /**
-     * The headline reduced to its words. Deliberately not a letters-only smash:
-     * deutschlandfunk.de runs its kicker straight into the headline
-     * ("Privatsphäre im AltenheimDer Abschied…") where the feed writes them with
-     * a separator, and stripping every non-letter made those two identical (#744).
+     * The headline reduced to its words, not its letters: a kicker run into the headline ("…AltenheimDer…") must not
+     * equal the feed's title written with a separator (#746).
      */
     private function titleKey(string $text): string
     {

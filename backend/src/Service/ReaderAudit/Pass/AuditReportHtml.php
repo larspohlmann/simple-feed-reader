@@ -9,13 +9,8 @@ use App\Service\ReaderAudit\Model\AuditFindingsModel;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 
 /**
- * Renders the audit as one self-contained HTML page: the ranked candidates with
- * a link that opens each one in the running SPA, the feeds that fail most often,
- * and the stages those failures point at.
- *
- * Plain string building rather than Twig — this page is a developer tool with no
- * route, no layout to inherit and no translation, and a template would put half
- * of it in a second file for nothing.
+ * Renders the audit as one self-contained HTML page: the ranked candidates linked into the running SPA, the feeds
+ * that fail most, and the stages they point at. Plain strings, not Twig: a developer page with no route or layout.
  */
 final readonly class AuditReportHtml
 {

@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Parser\Model;
 
 /**
- * What a feed media node points at. `Other` is an enclosure that is clearly not
- * an image but not playable audio or video either — a downloadable file.
- * `Unknown` is a node with no type, no medium, and no recognizable extension:
- * it must be left out rather than guessed at.
+ * What a feed media node points at. `Other` is a downloadable file, neither image nor playable; `Unknown` has no
+ * type, medium or recognizable extension and must be left out, not guessed at.
  */
 enum FeedMediaKind
 {

@@ -9,14 +9,8 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 
 /**
- * What stands between the top of the reader view and the article's first
- * paragraph. This is the half of the audit that matters: a menu, a ressort list
- * or a run of bare links above the first sentence is what a reader hits, while
- * the same shapes under the last paragraph are the site's related-articles tail
- * and are tolerated (#744).
- *
- * Every rule here reads LeadingRegion::blocksOf() and nothing else, so no
- * rule can be fooled by furniture that sits safely at the end.
+ * What stands between the top of the reader view and the article's first paragraph, read from LeadingRegion only:
+ * chrome there is what a reader hits, while the same shapes under the last paragraph are a tolerated tail (#744).
  */
 final readonly class LeadingChromeMarkers
 {

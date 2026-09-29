@@ -8,23 +8,12 @@ use App\Service\Url\Support\AbsoluteHttpUrl;
 
 final class XmlHelper
 {
-    /**
-     * Dublin Core elements namespace. RSS 1.0/2.0 and the Atom 0.3 feeds of
-     * some publishers (tagesschau, NDR) carry the entry date as <dc:date> here
-     * rather than in the feed dialect's own date element.
-     */
+    /** Dublin Core: RSS feeds, and Atom feeds without their dialect's own date, carry the entry date as <dc:date>. */
     public const string DUBLIN_CORE_NAMESPACE = 'http://purl.org/dc/elements/1.1/';
 
     /**
-     * Trimmed text content of the first matching direct child element that
-     * HAS text, or null when none does.
-     *
-     * The first-with-text rule is not fussiness. Matching runs on local name,
-     * so an unqualified lookup for 'link' also matches <atom:link/>, and RSS
-     * 2.0 feeds routinely open their channel with a self-referencing
-     * <atom:link rel="self"/> before the real <link>. Returning on that first
-     * match left Al Jazeera and every feed shaped like it with no site URL at
-     * all.
+     * Trimmed text of the first matching direct child that HAS text. Matching is by local name, so an unqualified
+     * 'link' also matches the empty <atom:link rel="self"/> RSS 2.0 channels often put before the real <link>.
      */
     public static function childText(\DOMElement $parent, string $localName, ?string $namespaceUri = null): ?string
     {
@@ -38,11 +27,6 @@ final class XmlHelper
         return null;
     }
 
-    /**
-     * First matching direct child element, or null when absent. childText()
-     * cannot serve here: a feed's <image> holds its address in a grandchild
-     * <url>, so the element itself has to be handed back to be descended into.
-     */
     public static function childElement(
         \DOMElement $parent,
         string $localName,
@@ -68,8 +52,7 @@ final class XmlHelper
     }
 
     /**
-     * Every direct child element with this local name. A null $namespaceUri
-     * matches any namespace — the one place that rule is written down.
+     * Direct children with this local name; a null $namespaceUri matches any namespace.
      *
      * @return iterable<\DOMElement>
      */

@@ -35,10 +35,6 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     /** The single XML namespace this dialect uses throughout the document. */
     abstract protected function namespaceUri(): string;
 
-    /**
-     * A <feed> root is Atom; the dialect is decided by its namespace, so each
-     * subclass claims only the root whose namespace matches its own.
-     */
     public function supports(\DOMElement $root): bool
     {
         return $root->localName === 'feed' && $root->namespaceURI === $this->namespaceUri();
@@ -97,10 +93,8 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     {
         $title = XmlHelper::childText($entry, 'title', $this->namespaceUri());
         $id = XmlHelper::childText($entry, 'id', $this->namespaceUri());
-        // Some WordPress-generated Atom feeds (Jacobin) omit the per-entry <link>
-        // and carry the article permalink only in <id>. Fall back to it, but only
-        // when it is an absolute http(s) URL: a urn:/tag: id is not fetchable and
-        // must never become the article URL.
+        // Some WordPress Atom feeds carry the permalink only in <id>; only an absolute http(s) id may stand in,
+        // since a urn:/tag: id is not fetchable.
         $link = $this->alternateLink($entry) ?? AbsoluteHttpUrl::orNull($id);
         if ($title === null && $link === null) {
             return null;
@@ -148,10 +142,7 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
             }
         }
 
-        // Some publishers (tagesschau, NDR) serve Atom that omits the dialect's
-        // own date element and carries the timestamp only as Dublin Core
-        // <dc:date>, exactly as many RSS feeds do. Fall back to it rather than
-        // dropping the date and rendering every entry as "now".
+        // Some Atom feeds date entries only with Dublin Core <dc:date>; dropping it would show every entry as "now".
         return XmlHelper::childText($entry, 'date', XmlHelper::DUBLIN_CORE_NAMESPACE);
     }
 
@@ -198,11 +189,8 @@ abstract readonly class AbstractAtomParser implements FeedFormatParserInterface
     }
 
     /**
-     * The markup of an Atom text construct (<content> or <summary>). A
-     * type="xhtml" construct carries its markup as real child elements that
-     * must be serialized; every other type carries it as text. Returning it in
-     * both forms lets an <img> be found in a summary-only entry, not just in
-     * <content>.
+     * An Atom text construct's markup: a type="xhtml" one carries real child elements that must be serialized, every
+     * other type carries text. Both forms let an <img> be found in a summary-only entry.
      */
     private function elementMarkup(\DOMElement $entry, string $localName): ?string
     {

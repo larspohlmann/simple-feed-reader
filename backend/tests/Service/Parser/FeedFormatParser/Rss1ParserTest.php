@@ -19,9 +19,6 @@ final class Rss1ParserTest extends TestCase
 
     public function testImageUrlComesFromContentEncodedThenMediaThenNull(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -65,9 +62,6 @@ final class Rss1ParserTest extends TestCase
 
     public function testReadsACustomImageBigElementWhenTheItemHasNoStandardImage(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -98,9 +92,6 @@ final class Rss1ParserTest extends TestCase
 
     public function testMediaImageWinsOverACustomImageElement(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -128,9 +119,6 @@ final class Rss1ParserTest extends TestCase
 
     public function testCustomImageElementWinsOverAnInlineImg(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -157,9 +145,6 @@ final class Rss1ParserTest extends TestCase
 
     public function testTitlesAreReducedToPlainText(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"

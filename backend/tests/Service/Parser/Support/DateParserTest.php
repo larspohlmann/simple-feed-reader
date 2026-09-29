@@ -11,9 +11,7 @@ final class DateParserTest extends TestCase
 {
     public function testNormalisesAnOffsetDateToUtc(): void
     {
-        // The offset must be folded into UTC, not dropped: 17:51:45 +02:00 = 15:51:45Z.
-        // Otherwise the stored naive wall-clock lands ~2h ahead of the UTC clock the
-        // rest of the app uses, and such entries render as "now" (#48).
+        // Folded into UTC, not dropped: 17:51:45 +02:00 is 15:51:45Z.
         $date = DateParser::parse('Fri, 24 Jul 2026 17:51:45 +0200');
 
         self::assertNotNull($date);

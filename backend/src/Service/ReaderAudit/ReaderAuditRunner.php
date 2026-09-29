@@ -15,10 +15,8 @@ use App\Service\ReaderAudit\Model\ReaderLinkModel;
 use App\Service\ReaderAudit\Model\SampledEntryModel;
 
 /**
- * Runs the reader pipeline over sampled articles exactly as the reader endpoint
- * does — extract, then the coverage gate — and reports what the cleaners left
- * behind. It yields, so a thousand-article sweep streams to disk instead of
- * holding a thousand article bodies in memory.
+ * Runs the reader pipeline over sampled articles as the reader endpoint does (extract, then the coverage gate) and
+ * reports what the cleaners left. It yields, so a sweep streams to disk instead of holding every body in memory.
  */
 final readonly class ReaderAuditRunner
 {

@@ -7,11 +7,8 @@ namespace App\Service\Parser\Support;
 use App\Service\Parser\Model\FeedMediaKind;
 
 /**
- * Decides what a feed media node — `<media:content>`, `<media:thumbnail>`, or an
- * `<enclosure>` — carries. `<media:thumbnail>` is an image by definition. An
- * explicit `medium` or `type` is authoritative; when both are absent the URL's
- * file extension is the only signal left. A node that declares none of the three
- * stays Unknown so the caller can leave it out rather than mis-file it.
+ * What a feed media node carries. `<media:thumbnail>` is an image by definition; an explicit `medium` or `type` is
+ * authoritative, the URL's extension is the last signal, and a node with none of the three stays Unknown.
  */
 final class FeedMediaClassifier
 {

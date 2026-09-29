@@ -12,13 +12,8 @@ use App\Service\Parser\Model\ParsedFeedModel;
 use App\Service\Text\Support\PlainText;
 
 /**
- * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`)
- * into a ParsedFeedModel. The reusable core shared by the refresh strategy
- * (WpJsonBodyParser) and the subscribe-dialog preview, mirroring how
- * FeedParser and HtmlItemExtractor are used directly by both pipelines.
- *
- * The posts endpoint carries no site name, so ParsedFeedModel::title is null; the
- * discovery candidate supplies a readable title from the page instead.
+ * Turns a WordPress `wp/v2/posts` JSON array (`_fields`-pruned, no `_embed`) into a ParsedFeedModel, for the refresh
+ * strategy and the subscribe preview alike. The endpoint carries no site name, so the feed title is null.
  */
 final readonly class WordPressJsonParser
 {
@@ -67,12 +62,8 @@ final readonly class WordPressJsonParser
     }
 
     /**
-     * The featured image. Jetpack's top-level convenience field is preferred so
-     * no `_embed` is needed; a Jetpack-less site carries its picture inline in
-     * the body instead, so the content lead image is the fallback — the same
-     * precedence FeedParser applies to RSS/Atom items via ItemImageExtractor.
-     * Absent on both → null (the reader still extracts a hero on open).
-     * Dimensions are unknown from either source.
+     * Jetpack's top-level featured-image field needs no `_embed`; without Jetpack the content's first image stands in.
+     * Neither declares dimensions.
      *
      * @param array<string, mixed> $post
      */

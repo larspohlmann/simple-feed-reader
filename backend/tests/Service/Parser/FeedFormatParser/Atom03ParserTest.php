@@ -20,11 +20,6 @@ final class Atom03ParserTest extends TestCase
 
     public function testEntryDateComesFromDublinCoreWhenTheDialectDatesAreAbsent(): void
     {
-        // tagesschau and NDR serve Atom 0.3 that omits <issued>/<modified> and
-        // carries the timestamp only as Dublin Core <dc:date>.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://purl.org/atom/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" version="0.3">
@@ -50,7 +45,6 @@ final class Atom03ParserTest extends TestCase
 
     public function testDialectOwnIssuedDateWinsOverDublinCore(): void
     {
-        // @lang TEXT: see the note above on the indented heredoc.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="UTF-8"?>
             <feed xmlns="http://purl.org/atom/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" version="0.3">

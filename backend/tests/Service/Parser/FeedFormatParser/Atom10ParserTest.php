@@ -34,9 +34,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testEntryImageComesFromMediaThumbnailEnclosureOrInlineImg(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
@@ -81,9 +78,6 @@ final class Atom10ParserTest extends TestCase
     {
         // An Atom entry whose only picture is an <img> in a type="html"
         // <summary> and which carries no <content> element at all.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -107,9 +101,6 @@ final class Atom10ParserTest extends TestCase
     {
         // A type="xhtml" summary carries the <img> as a real nested element, so
         // its markup must be serialized before the <img> can be seen.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -133,9 +124,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testEntryContentImageStillWinsOverASummaryImage(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -158,9 +146,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testMediaImageWinsWhenEveryImageSourceIsPresent(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
@@ -186,9 +171,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testEnclosureWinsOverCustomImageAndBodyImages(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -213,9 +195,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testCustomImageElementWinsOverBodyImages(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -239,9 +218,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testEntryImageComesFromACustomImageBigElement(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -267,12 +243,7 @@ final class Atom10ParserTest extends TestCase
 
     public function testEntryUrlFallsBackToAnHttpIdWhenNoLinkIsPresent(): void
     {
-        // Jacobin and other WordPress-generated Atom feeds omit the per-entry
-        // <link> and carry the article permalink only in <id>. A urn:/tag: id is
-        // not a fetchable URL and must stay out of ->url.
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
+        // Some WordPress Atom feeds carry the permalink only in <id>; a urn:/tag: id must stay out of ->url.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">
@@ -316,9 +287,6 @@ final class Atom10ParserTest extends TestCase
 
     public function testTitlesAreReducedToPlainText(): void
     {
-        // @lang TEXT: the heredoc body is indented, so the XML PhpStorm injects
-        // starts with whitespace and it wrongly flags the declaration. The
-        // closing marker strips that indentation before the parser sees it.
         $xml = /** @lang TEXT */ <<<'XML'
             <?xml version="1.0" encoding="utf-8"?>
             <feed xmlns="http://www.w3.org/2005/Atom">

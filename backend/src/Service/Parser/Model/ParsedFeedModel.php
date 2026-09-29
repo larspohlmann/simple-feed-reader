@@ -19,10 +19,7 @@ final readonly class ParsedFeedModel
     }
 
     /**
-     * The same feed with a different entry list. Callers that narrow the
-     * entries — FirstFetchRecorder caps them on subscribe — used to rebuild
-     * the object field by field, which quietly dropped every field added
-     * afterwards. Copying here means a new field is carried by construction.
+     * The same feed with a different entry list, so a caller that narrows the entries keeps every other field.
      *
      * @param list<ParsedEntryModel> $entries
      */

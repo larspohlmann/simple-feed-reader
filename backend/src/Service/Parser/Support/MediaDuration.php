@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Parser\Support;
 
 /**
- * Reads a media duration into whole seconds. Feeds state it two ways: a plain
- * integer of seconds (MRSS `duration`) or a colon-separated clock the iTunes
- * podcast namespace uses (`HH:MM:SS` or `MM:SS`). A zero, an empty value, or a
- * non-numeric part means "unknown", never zero seconds.
+ * A media duration in whole seconds, from plain seconds (MRSS) or an iTunes `HH:MM:SS`/`MM:SS` clock. Zero, empty or
+ * non-numeric means unknown (null), never zero seconds.
  */
 final class MediaDuration
 {

@@ -9,15 +9,9 @@ use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
 
 /**
- * Share bars and social rows the widget remover missed, found by where the
- * links point rather than what they say — an icon-only share button carries
- * no text to match, and its wording differs on every site anyway.
- *
- * A share-intent URL is proof on its own: nothing but a share button links to
- * facebook.com/sharer or twitter.com/intent/tweet. A profile link is not, nor
- * is a row of them — an Attack Magazine interview links the artist's Spotify,
- * Instagram and TikTok inside its own sentences. A share bar stands alone,
- * its links in blocks with no prose around them (#744).
+ * Share bars the widget remover missed, found by where links point: an icon-only button has no text. A share-intent
+ * URL is proof alone; profile links count only in blocks with no prose around them, since articles link an artist's
+ * profiles inside their sentences (#746).
  */
 final readonly class SocialWidgetMarkers
 {

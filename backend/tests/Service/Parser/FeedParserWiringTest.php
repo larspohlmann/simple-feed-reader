@@ -9,11 +9,8 @@ use App\Service\Parser\FeedParser;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
 /**
- * FeedParserTest builds the factory with a hand-listed parser array, so it
- * stays green even if the container's 'app.feed_parser' tag collects nothing —
- * the same silent empty-iterator failure OAuthProviderWiringTest documents. This
- * drives the REAL container wiring: every dialect must resolve through the
- * tagged iterator, proving FeedFormatParserInterface is actually tagged.
+ * FeedParserTest hand-lists its parsers, so this boots the container to prove the 'app.feed_parser' tag collects
+ * every dialect.
  */
 final class FeedParserWiringTest extends KernelTestCase
 {

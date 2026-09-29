@@ -5,13 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * Builds the deep link that opens one audited article in the running SPA, in the
- * shape frontend/src/app/reader/slug.ts writes and parses: the subscription
- * selects the list, the id opens the entry, and the slug is cosmetic.
- *
- * A second spelling of that rule, in the language the report is written in. It
- * can only drift in the slug, which is decoration — the id still opens the
- * article — so the duplication costs nothing a reader of the report would notice.
+ * The deep link that opens one audited article in the SPA, in the shape frontend/src/app/reader/slug.ts writes: a
+ * second spelling that can only drift in the cosmetic slug, since the id alone opens the entry.
  */
 final readonly class ReaderLinkModel
 {

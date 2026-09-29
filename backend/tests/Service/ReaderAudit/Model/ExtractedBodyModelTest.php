@@ -77,8 +77,6 @@ final class ExtractedBodyModelTest extends TestCase
 
     public function testAnAnchorIntoThePagesOwnSectionsDoesNotLeaveThePage(): void
     {
-        // An article's table of contents. Counting its entries as navigation
-        // reported deutschlandfunk.de's own long-read format as chrome (#744).
         $body = ExtractedBodyModel::fromHtml('<li><a href="#kapitel">Regelfall Einzelzimmer</a></li>');
 
         self::assertSame(0, $body->blocks[0]->outboundLinks());

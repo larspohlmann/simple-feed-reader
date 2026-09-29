@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\ReaderAudit\Model;
 
 /**
- * What one sweep draws: whose subscriptions, how many articles, how many per
- * feed, which seed, and the cutoff that freezes the candidate set. Five values
- * that only mean anything together, and that every shard of a run must hold
- * identically — a signature of five scalars invites a shard to be started with
- * four of them right.
+ * What one sweep draws: whose subscriptions, how many articles in all and per feed, the seed, and the cutoff that
+ * freezes the candidate set. Every shard of a run must hold all five identically.
  */
 final readonly class AuditSampleModel
 {

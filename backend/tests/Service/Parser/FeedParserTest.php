@@ -38,18 +38,13 @@ final class FeedParserTest extends TestCase
 
         $first = $feed->entries[0];
         self::assertSame('tag:blog.example.com,2026:announcement', $first->guid);
-        // Titles are reduced to plain text: feeds ship entity-escaped HTML in
-        // <title> far more often than literal angle brackets, and the two are
-        // indistinguishable once the XML is decoded, so "<Announcement>" is
-        // stripped along with the "<em>" markup that would otherwise leak into
-        // the reader. The literal "&" survives as itself.
+        // "<Announcement>" goes with the "<em>" markup: escaped HTML and literal brackets look alike once decoded.
         self::assertSame('Big & More', $first->title);
         self::assertSame('https://blog.example.com/announcement', $first->url);
         self::assertSame('Jane Doe', $first->author);
         self::assertSame('Short teaser text.', $first->summary);
         self::assertStringContainsString('<strong>story</strong>', (string) $first->contentHtml);
-        // The feed's +02:00 pubDate is normalised to UTC (same instant) so stored
-        // dates share one timezone with createdAt (#48).
+        // The fixture's +02:00 pubDate, as the same instant in UTC.
         self::assertSame('2026-07-20T06:30:00+00:00', $first->publishedAt?->format(DATE_ATOM));
 
         $second = $feed->entries[1];
@@ -78,12 +73,6 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse('this is { not xml');
     }
 
-    /**
-     * An empty 200 response body is a real event (misconfigured feeds, edge
-     * CDNs). loadXML() throws a raw ValueError on '' instead of returning false,
-     * so without an explicit guard this escapes as an uncaught error and 500s
-     * the whole refresh run — one empty feed then stops every feed after it.
-     */
     public function testRejectsEmptyBody(): void
     {
         $this->expectException(FeedParseException::class);
@@ -96,12 +85,6 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse("  \n\t ");
     }
 
-    /**
-     * WordPress plugins routinely echo a blank line before the feed, and the XML
-     * declaration must start at byte 0 — so libxml refuses an otherwise perfect
-     * document over bytes that carry no meaning. trancentral.tv ships its feed
-     * this way and was unsubscribable because of it (#423).
-     */
     public function testParsesFeedPrecededByBlankLines(): void
     {
         $feed = $this->parser()->parse("\n\n" . $this->fixture('rss2-basic.xml'));
@@ -125,12 +108,6 @@ final class FeedParserTest extends TestCase
         self::assertSame('Example Tech Blog', $feed->title);
     }
 
-    /**
-     * A body of nothing but a BOM survives trim(), so it reaches loadXML() as an
-     * empty string once the declaration prefix is stripped — and loadXML() answers
-     * that with a raw ValueError, which would escape as a 500 and stall the whole
-     * refresh run. It has to arrive as a per-feed parse failure like any other.
-     */
     public function testRejectsBodyOfNothingButABom(): void
     {
         $this->expectException(FeedParseException::class);
@@ -143,13 +120,6 @@ final class FeedParserTest extends TestCase
         $this->parser()->parse("\u{FEFF}\r\n  \n");
     }
 
-    /**
-     * XML 1.0 forbids the C0 control characters (except tab, LF and CR) anywhere
-     * in a document, so a single stray byte makes libxml refuse the whole feed.
-     * WordPress plugins inject them into item content — konkret-magazin.de ships a
-     * 0x1D (group separator) inside a CDATA block and was unsubscribable over that
-     * one byte (#857). The byte carries no content, so the strip is lossless.
-     */
     public function testStripsIllegalControlCharactersBeforeParsing(): void
     {
         $feed = $this->parser()->parse(
@@ -165,12 +135,8 @@ final class FeedParserTest extends TestCase
     }
 
     /**
-     * A feed must never make the parser open a connection of the feed's choosing.
-     * Three things hold that line: external DTD loading is off (no
-     * LIBXML_DTDLOAD), entity substitution is off (no LIBXML_NOENT), and
-     * LIBXML_NONET refuses network access outright. The doctype guard cannot
-     * stand in for any of them, because it runs after the load — by then a
-     * request would already have left. The listener watches for exactly that.
+     * The doctype guard runs after the load, so only the load flags (LIBXML_NONET, no LIBXML_DTDLOAD or LIBXML_NOENT)
+     * keep a feed from making the parser open a connection of its choosing.
      */
     public function testDoesNotFetchAnExternalDtdOverTheNetwork(): void
     {
@@ -205,11 +171,6 @@ final class FeedParserTest extends TestCase
 
     public function testRejectsEntityExpansionBomb(): void
     {
-        // @lang TEXT: the bomb is spliced together from separate literals, so
-        // the XML PhpStorm injects never holds the declarations and their
-        // references at once and it reports every entity as unresolved. The
-        // fixture must stay exactly as it is — expanding it is what the parser
-        // has to refuse.
         $bomb = /** @lang TEXT */ '<?xml version="1.0"?><!DOCTYPE rss ['
             . '<!ENTITY a "AAAAAAAAAA"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;&a;&a;">'
             . '<!ENTITY c "&b;&b;&b;&b;&b;&b;&b;&b;&b;&b;"><!ENTITY d "&c;&c;&c;&c;&c;&c;&c;&c;&c;&c;">'
@@ -231,9 +192,6 @@ final class FeedParserTest extends TestCase
     public function testRejectsUnknownRootElement(): void
     {
         $this->expectException(FeedParseException::class);
-        // @lang TEXT: this document is the input under test — the parser must
-        // reject an html root — so it stays exactly as written rather than
-        // growing a `lang` attribute to satisfy PhpStorm's injected-HTML check.
         $this->parser()->parse(/** @lang TEXT */ '<?xml version="1.0"?><html><body>nope</body></html>');
     }
 
@@ -262,10 +220,6 @@ final class FeedParserTest extends TestCase
 
     public function testParsesAtom03Dialect(): void
     {
-        // tagesschau's primary feed is served in the old Atom 0.3 dialect
-        // (xmlns="http://purl.org/atom/ns#"). FeedParser routes any <feed> root
-        // here regardless of namespace, so the parser must adapt to the root's
-        // namespace rather than assume Atom 1.0.
         $feed = $this->parser()->parse($this->fixture('atom-03-basic.xml'));
 
         self::assertSame('Atom 0.3 Example', $feed->title);
@@ -286,16 +240,12 @@ final class FeedParserTest extends TestCase
 
     public function testRejectsAtomWithNeitherTitleNorEntries(): void
     {
-        // A <feed> we cannot extract anything from must fail loudly, so
-        // discovery/refresh report a real error instead of a silent empty feed.
         $this->expectException(FeedParseException::class);
         $this->parser()->parse('<?xml version="1.0"?><feed xmlns="http://www.w3.org/2005/Atom"></feed>');
     }
 
     public function testRejectsUnknownAtomNamespace(): void
     {
-        // A <feed> in a namespace we have no parser for is rejected at dispatch,
-        // rather than handed to the wrong parser and silently yielding nothing.
         $this->expectException(FeedParseException::class);
         $this->parser()->parse(
             '<?xml version="1.0"?><feed xmlns="http://example.com/not-atom"><title>x</title></feed>',
