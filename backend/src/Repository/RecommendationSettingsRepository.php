@@ -25,8 +25,7 @@ final class RecommendationSettingsRepository extends ServiceEntityRepository
     }
 
     /**
-     * Every account that opted into a scheduled run (#333); the finder decides
-     * which of them are actually due right now.
+     * Every account that opted into a scheduled run; the finder decides which of them are due right now.
      *
      * @return list<RecommendationSettings>
      */

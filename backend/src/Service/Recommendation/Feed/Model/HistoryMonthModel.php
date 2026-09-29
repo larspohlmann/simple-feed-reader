@@ -5,14 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Feed\Model;
 
 /**
- * One calendar month's worth of the run history card (#409): how many runs
- * fell in it and what they cost, bucketed in the viewer's own timezone by
- * HistoryMonthSummariser.
- *
- * `costNanoCredits` is null when no run in the month reported a price — the
- * same distinction a single row and the all-time total already make. A
- * month total of zero would claim every run in it was free, which is not
- * what an unpriced run means.
+ * One calendar month of the run history, bucketed in the viewer's zone. `costNanoCredits` is null when no run in it
+ * reported a price: zero would claim every run was free.
  */
 final readonly class HistoryMonthModel
 {

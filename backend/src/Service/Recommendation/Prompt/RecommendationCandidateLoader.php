@@ -20,7 +20,7 @@ final readonly class RecommendationCandidateLoader
 
     /**
      * The newest $request->poolSize candidates in an order seeded by $request->orderSeed, so batches sample the pool
-     * rather than cluster by recency (#344); the same seed always gives the same order.
+     * rather than cluster by recency; the same seed always gives the same order.
      *
      * @return list<PromptLineModel>
      */

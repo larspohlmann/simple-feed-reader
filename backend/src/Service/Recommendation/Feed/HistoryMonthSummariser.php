@@ -8,14 +8,8 @@ use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Feed\Model\HistoryMonthModel;
 
 /**
- * Folds a repository's spend timeline into one HistoryMonthModel per calendar month, newest
- * first, for the run-history card's collapsible sections (#409).
- *
- * Pure data shaping, no persistence: the timeline is already every run the account owns
- * (RecommendationRunHistoryRepository::spendTimeline()), and grouping it here rather than
- * in the database is the tradeoff recorded on that method — DQL has no portable month
- * extraction, and the buckets must be cut in the viewer's timezone while the column holds
- * naive UTC.
+ * Folds the spend timeline into one HistoryMonthModel per calendar month, newest first. Why this happens in PHP:
+ * RecommendationRunHistoryRepository::spendTimeline().
  */
 final readonly class HistoryMonthSummariser
 {
@@ -29,12 +23,8 @@ final readonly class HistoryMonthSummariser
         $totals = [];
 
         foreach ($spendTimeline as $row) {
-            // setTimezone() converts, it does not reinterpret, so this is correct
-            // only because the hydrated value carries UTC: Doctrine builds it in
-            // PHP's default zone and Kernel::boot() pins that to UTC (KernelTimezoneTest).
-            // Lose the pin and the rows still cut correctly (the window binds
-            // explicit-UTC boundaries), but these headers drift by the host offset —
-            // the header-contradicts-its-rows failure ViewerTimeZoneModel's docblock warns of.
+            // Correct only because the hydrated value carries UTC (Kernel::boot() pins the default zone, see
+            // KernelTimezoneTest). Lose the pin and these month headers drift from their rows by the host offset.
             $month = $row['createdAt']->setTimezone($viewer->zone)->format('Y-m');
             $totals[$month] = $this->foldRowInto($totals[$month] ?? null, $row['costNanoCredits']);
         }
@@ -53,10 +43,7 @@ final readonly class HistoryMonthSummariser
     }
 
     /**
-     * One row's contribution to its month's running total. The count grows
-     * on every row, priced or not; the cost only grows on a priced one, and
-     * stays null for as long as none of them are — null and zero are
-     * different answers here, see HistoryMonthModel.
+     * The count grows on every row; the cost stays null until a priced row arrives (see HistoryMonthModel).
      *
      * @param ?array{runCount: int, costNanoCredits: ?int} $runningTotal
      *

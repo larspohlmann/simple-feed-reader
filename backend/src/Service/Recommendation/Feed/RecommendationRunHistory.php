@@ -13,8 +13,7 @@ use App\Service\Recommendation\Feed\Model\RunHistoryMonthPageModel;
 use App\Service\Recommendation\Feed\Model\RunHistoryOverviewModel;
 
 /**
- * The run history (#409): the overview card and the month pages it expands into. The limit-plus-one
- * truncation lives once, in truncate(): an earlier split across controller and mapper was rejected.
+ * The run history: the overview card and the month pages it expands into.
  *
  * @phpstan-import-type HistoryRow from RecommendationRunHistoryRepository
  */
@@ -27,11 +26,8 @@ final readonly class RecommendationRunHistory
     }
 
     /**
-     * The all-time total is summed by the database over the same rows
-     * spendTimeline() returns. The duplication is deliberate: the timeline may
-     * gain a cap one day, and the SUM keeps the account total honest when it
-     * does. Deriving the total from the timeline would silently reduce it to
-     * "the total of what the timeline still covers".
+     * The total is summed by the database, not derived from the timeline, so it stays whole if the timeline is ever
+     * capped.
      */
     public function overview(User $user, ViewerTimeZoneModel $viewer): RunHistoryOverviewModel
     {
@@ -69,11 +65,6 @@ final readonly class RecommendationRunHistory
     }
 
     /**
-     * Splits the repository's HISTORY_LIMIT + 1 rows into the page the wire
-     * shape keeps and the cursor that says whether another one exists. The
-     * extra row is read purely as a yes/no signal and never shown, so it is
-     * dropped here rather than passed on for a caller to remember to trim.
-     *
      * @param list<HistoryRow> $rows
      *
      * @return array{0: list<HistoryRow>, 1: ?int}

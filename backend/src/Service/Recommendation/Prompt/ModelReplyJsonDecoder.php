@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt;
 
 /**
- * Decodes one raw assistant reply into a JSON array, tolerating the code fence
- * some models wrap around JSON, and — when the whole reply does not parse —
- * the thinking prose a reasoning model wraps around its answer (#323). Shared
- * by the pick and duplicate parsers so the tolerance exists once.
+ * Decodes one reply into a JSON array, tolerating a code fence and, when the whole reply does not parse, the thinking
+ * prose a reasoning model wraps around its answer. The pick, profile and consolidation parsers share it.
  */
 final readonly class ModelReplyJsonDecoder
 {
@@ -27,10 +25,8 @@ final readonly class ModelReplyJsonDecoder
     }
 
     /**
-     * The last complete `{...}` in the reply that decodes to an array — the
-     * object the model settled on last. LM Studio can route a reasoning answer
-     * through the reasoning channel, wrapped in thinking prose (#323). String
-     * literals are skipped so a brace inside a value cannot end an object early.
+     * The last complete `{...}` that decodes, the object the model settled on: LM Studio can route an answer through
+     * thinking prose. String literals are skipped, so a brace inside a value cannot end an object early.
      *
      * @return array<mixed>|null
      */
@@ -60,10 +56,8 @@ final readonly class ModelReplyJsonDecoder
     }
 
     /**
-     * The index of the closing quote of the string that opens at $openIndex, so
-     * the scan can jump past a value that may itself contain braces. A
-     * backslash escapes the next character, so an escaped quote does not close
-     * the string; an unterminated string runs to the end.
+     * Where the string opening at $openIndex closes. A backslash escapes the next character; an unterminated string
+     * runs to the end.
      */
     private function endOfString(string $text, int $openIndex): int
     {

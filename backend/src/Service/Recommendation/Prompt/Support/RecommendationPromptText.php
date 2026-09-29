@@ -11,13 +11,7 @@ namespace App\Service\Recommendation\Prompt\Support;
  */
 final class RecommendationPromptText
 {
-    /**
-     * Shared by every phase's retry: the model was not told what shape its
-     * previous reply was wrong in, only that it must try again in the shape
-     * it was already given. RecommendationBatchWave pairs this with the
-     * batch call's own contract; the distillation and consolidation phases
-     * use their own more specific corrections instead (#396).
-     */
+    /** The batch retry's correction; distillation and consolidation send their own, more specific ones. */
     public const string CORRECTIVE = 'Your previous reply was not usable. Reply again with JSON only, exactly '
         . 'in the required shape, using only candidate ids.';
 

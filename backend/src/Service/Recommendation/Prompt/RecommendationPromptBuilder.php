@@ -14,47 +14,32 @@ use App\Service\Recommendation\Prompt\Support\RecommendationPromptText;
 use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsModel;
 
 /**
- * Renders the prompt layers for the recommendation feature and partitions
- * the candidate pool into batches that fit the model's context window. Its one
- * collaborator is the answer budget, so a batch's reserve and its request's
- * output bound come from one place.
+ * Renders the recommendation prompts and packs the candidate pool into batches that fit the context window.
  */
 final readonly class RecommendationPromptBuilder
 {
     private const int CHARS_PER_TOKEN = 4;
     private const int FIXED_OVERHEAD_TOKENS = 1500;
 
-    /** What packBatches assumes the not-yet-distilled profile block will cost, so it can budget the
-     *  batch prompt before the distillation phase has run. An estimate on purpose — the real profile
-     *  is bounded to roughly this by DISTILL_ROLE's word cap (#493). */
+    /**
+     * What packBatches() budgets for the profile before distillation has written it. An estimate: DISTILL_ROLE's word
+     * cap bounds the real profile to roughly this.
+     */
     private const int ESTIMATED_PROFILE_TOKENS = 700;
 
     /**
-     * The consolidation call re-scores, reasons, and dedups its input in one pass, so its
-     * size is bounded at both ends. The floor is the old fixed cut -- twice the final list
-     * -- so dedup keeps its backfill slack. The ceiling caps the false-negative recovery
-     * against the reasoning cost of entries later dropped: six times the final list,
-     * generous without letting consolidation become the whole pipeline. Between them, the
-     * connection's context window decides (consolidationInputSize).
+     * Consolidation re-scores, reasons and dedups in one pass. The floor (twice the final list) keeps dedup's backfill
+     * slack, the ceiling (six times) bounds reasoning on entries later dropped; the context window picks between them.
      */
     private const int CONSOLIDATION_MIN_INPUT_FACTOR = 2;
     private const int CONSOLIDATION_MAX_INPUT_FACTOR = 6;
 
-    /**
-     * The non-description characters a candidate line carries — its id in
-     * brackets, the title, the feed, the date, and the separators between them.
-     * A rough constant is enough: consolidationInputSize only needs a per-line
-     * estimate to size the shortlist against the context window.
-     */
+    /** A candidate line's characters besides its description: id, title, feed, date and separators, roughly. */
     private const int CANDIDATE_LINE_FRAME_CHARS = 90;
 
     private const int MINIMUM_BATCH_SIZE = 10;
 
-    /**
-     * How much of an unusable reply the corrective tail quotes back. Wide
-     * enough that an ordinary rejected reply is shown whole, and far short of
-     * a runaway's tens of kilobytes of repetition (#437).
-     */
+    /** Quotes an ordinary rejected reply whole, and a runaway's tens of kilobytes of repetition only in part. */
     private const int QUOTED_REPLY_LIMIT_CHARS = 2000;
 
     /**
@@ -182,8 +167,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * The profile when there is one, FAVORITES only (KEPT and VIEWED shape the profile, #493), the whole pool's
-     * frame (#344 shuffles the pool into random batches), then the candidates.
+     * The profile when there is one, FAVORITES only (KEPT and VIEWED shaped the profile), the whole pool's frame (each
+     * batch is a random sample of it), then the candidates.
      *
      * @param list<PromptLineModel> $candidateLines
      *
@@ -224,10 +209,7 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * The distillation call is the one place the model sees the reader's full
-     * history: FAVORITES, KEPT and VIEWED together, so it can write a profile
-     * that draws on all three. Every later phase (batch, consolidation) sees
-     * only the profile this call produces plus FAVORITES (#493).
+     * The only call that sees KEPT and VIEWED; every later phase gets the profile it writes plus FAVORITES.
      *
      * @return list<array{role: string, content: string}>
      */
@@ -249,7 +231,7 @@ final readonly class RecommendationPromptBuilder
 
     /**
      * Profile and FAVORITES like the batch call, then the ranked shortlist rendered candidate-style, so each line
-     * keeps the id a recommendation resolves back to; a winner pruned since its batch is dropped (#493).
+     * keeps the id a recommendation resolves back to; a winner pruned since its batch is dropped.
      *
      * @param list<array{id: int, score: int, reason: string}> $rankedPool
      * @param array<int, PromptLineModel>                      $linesById
@@ -299,12 +281,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * As much of the model's own reply as is worth quoting back to it. A reply is normally
-     * short enough to quote whole, the clearest thing to correct against. A reply that ran
-     * away is not: it repeats one line for tens of kilobytes, and echoing it spends the
-     * retry's context on the loop and primes the model to continue it (#437). The head shows
-     * the same mistake at a fraction of the cost, and the marker tells the model it is
-     * seeing a fragment.
+     * A runaway reply repeats one line for tens of kilobytes: quoting it whole spends the retry's context on the loop
+     * and primes the model to continue it. Its head shows the same mistake, and the marker says it is a fragment.
      */
     private function quotableReply(string $invalidReply): string
     {
@@ -312,11 +290,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * One clip, in characters rather than bytes. `substr` would cut a multi-byte sequence
-     * in half, and this text goes straight into a JSON request body: a German reply clipped
-     * mid-umlaut makes `json_encode` fail and costs the retry the clip exists to enable.
-     * Every other clip in this class was already `mb_`-safe; #437 added a byte-based
-     * fourth, which is what this consolidates.
+     * Clips by character, not byte: this text goes into a JSON request body, and a German reply cut mid-umlaut makes
+     * json_encode fail and costs the retry the clip exists to enable.
      */
     private static function clipped(string $value, int $lengthInCharacters, string $marker): string
     {
@@ -328,14 +303,8 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * Appends the corrective tail for a retry -- the model's own last invalid reply and the
-     * correction instruction -- when there is one. Every phase retries the same way; passing
-     * the reply in keeps the tail tied to the call being retried: the batch phase passes each
-     * batch's own local last invalid reply, distillation and consolidation the run's
-     * cross-tick one (#344). The correction comes in with it because each phase rejects a
-     * reply for different reasons and asks for different things back (#396): only the
-     * consolidation reply carries duplicates, so only its correction can ask for them to be
-     * named correctly.
+     * Appends the model's last invalid reply and the phase's own correction, when there is a reply: the batch phase
+     * passes each batch's own, distillation and consolidation the run's; each phase asks for different things back.
      *
      * @param list<array{role: string, content: string}> $messages
      *
@@ -346,10 +315,8 @@ final readonly class RecommendationPromptBuilder
         ?string $lastInvalidReply,
         string $correction,
     ): array {
-        // Empty counts as absent. A blocking-shape runaway is cut before its
-        // body parses, so its answer is '' — quoting that back put an empty
-        // assistant turn beside a correction naming a reply the model cannot
-        // see (#437). Nothing to correct against; the retry goes as the plain question.
+        // Empty counts as absent: a runaway cut before its body parses answers '', and an empty assistant turn
+        // beside a correction names a reply the model cannot see. The retry goes as the plain question.
         if (!$this->hasContent($lastInvalidReply)) {
             return $messages;
         }
@@ -358,12 +325,6 @@ final readonly class RecommendationPromptBuilder
     }
 
     /**
-     * Whether a nullable string is worth acting on: not null, and not blank
-     * once trimmed. Shared by every place that treats an absent profile the
-     * same as an empty one, and an absent last-invalid-reply the same as a
-     * blank one -- the three occurrences of this exact check are one concept,
-     * not three (#493).
-     *
      * @phpstan-assert-if-true string $value
      */
     private function hasContent(?string $value): bool
@@ -371,12 +332,7 @@ final readonly class RecommendationPromptBuilder
         return null !== $value && '' !== trim($value);
     }
 
-    /**
-     * All three history sections, newest first within each: FAVORITES, KEPT,
-     * then VIEWED. Only distillMessages() renders this -- every later phase
-     * sees the profile it produces plus FAVORITES alone, not the full history
-     * (#493).
-     */
+    /** FAVORITES, KEPT, then VIEWED, newest first within each. */
     private function historySections(RecommendationHistoryModel $history, int $descriptionLength): string
     {
         return implode("\n\n", [

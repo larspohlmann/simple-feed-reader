@@ -5,16 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Clock\Model;
 
 /**
- * The IANA timezone a client wants its day and month buckets cut in (#409).
- *
- * Runs are stored as naive UTC, but the card prints each row in the reader's
- * own zone, so months must be cut in that same zone — otherwise a late-evening
- * run files under the wrong month and the section header contradicts its row.
- *
- * Fails soft on purpose: a display preference, not a security boundary. A
- * client with a stale timezone database should see its history in the wrong
- * zone, not lose access. A plain IANA identifier, so a native client sends it
- * as readily as a browser.
+ * The IANA zone a client wants its day and month buckets cut in; cut in any other zone, a late-evening row files
+ * under the wrong bucket. Fails soft to UTC: a display preference, not a security boundary.
  */
 final readonly class ViewerTimeZoneModel
 {

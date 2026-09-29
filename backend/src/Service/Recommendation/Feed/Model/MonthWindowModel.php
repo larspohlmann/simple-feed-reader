@@ -8,13 +8,8 @@ use App\Service\Clock\Model\ViewerTimeZoneModel;
 use App\Service\Recommendation\Exception\UnknownHistoryMonthException;
 
 /**
- * One calendar month of a viewer's history, as a range the database can be
- * asked about (#409). Half-open — `>= startUtc AND < endUtc` — so a run at a
- * month's last instant cannot fall into both windows, and no end-of-month
- * arithmetic has to know February's length. Boundaries come out in UTC because
- * that is the wall clock Doctrine persists: the month is cut in the viewer's
- * zone, then expressed in the column's zone. The other way round buckets a
- * viewer's late-evening runs into the following month.
+ * One calendar month as a half-open UTC range (`>= startUtc AND < endUtc`): cut in the viewer's zone, then expressed in
+ * the column's naive UTC. The other order files a viewer's late-evening runs under the following month.
  */
 final readonly class MonthWindowModel
 {
@@ -34,10 +29,7 @@ final readonly class MonthWindowModel
             throw new UnknownHistoryMonthException(sprintf('"%s" is not a calendar month.', $month));
         }
 
-        // Anchored to local midnight on the first, then advanced by a whole
-        // month rather than by a day count: `+1 month` keeps local midnight
-        // across a daylight-saving change, where adding 30 or 31 days would
-        // land an hour out.
+        // `+1 month` from local midnight on the first keeps local midnight across a DST change; adding days would not.
         $start = new \DateTimeImmutable($month . '-01 00:00:00', $viewer->zone);
 
         return new self($month, self::inUtc($start), self::inUtc($start->modify('+1 month')));

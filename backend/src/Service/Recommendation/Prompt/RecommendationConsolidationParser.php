@@ -7,16 +7,8 @@ namespace App\Service\Recommendation\Prompt;
 use App\Service\Recommendation\Prompt\Model\ConsolidationParseResultModel;
 
 /**
- * Turns one raw consolidation reply into validated picks and duplicate ids -- the call
- * answers both in one reply. Salvages picks via the shared RecommendationPickSalvager the
- * batch parser also uses, then layers on the duplicate-id list and the duplicate-share
- * guard PlausibleDuplicateShare enforces.
- *
- * A reply that parses keeps its valid picks even with some ids invalid, duplicated, or
- * scoreless -- partial credit, as for a batch reply. Unusable when the JSON does not parse,
- * the `recommendations` shape is wrong, zero picks survive, or the duplicate share is
- * implausible; that last case discards the picks too, since a reply untrustworthy about
- * duplicates isn't trustworthy about scores either (#396, #493).
+ * Turns one consolidation reply into picks (RecommendationPickSalvager) and duplicate ids. An implausible duplicate
+ * share (PlausibleDuplicateShare) discards the picks too: a reply wrong about duplicates is not trusted on scores.
  */
 final readonly class RecommendationConsolidationParser
 {

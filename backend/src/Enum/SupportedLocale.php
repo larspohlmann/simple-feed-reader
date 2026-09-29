@@ -5,16 +5,8 @@ declare(strict_types=1);
 namespace App\Enum;
 
 /**
- * The locales the UI ships translations for, and so the values User::$locale may hold.
- * A constants holder rather than a backed enum, matching {@see SourceFormat}: `User::$locale` and the request DTOs that
- * validate it stay plain strings, so this just needs to be the one list every call site checks against, not a new type
- * to convert.
- *
- * Shared between {@see \App\Dto\Me\UpdateLocaleRequest} (rejects an unsupported
- * value) and {@see \App\Service\Auth\Factory\SignupUserFactory} (falls back to
- * English) — those two used to keep their own copies and had already drifted on
- * what to do with an unsupported value. Also wired into
- * config/packages/translation.yaml's `enabled_locales` via `!php/const`.
+ * The locales the UI ships translations for, so the values User::$locale may hold. Constants, not a backed enum: the
+ * locale stays a plain string, and UpdateLocaleRequest, SignupUserFactory and translation.yaml read this one list.
  */
 final class SupportedLocale
 {

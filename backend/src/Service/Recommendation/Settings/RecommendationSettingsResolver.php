@@ -14,10 +14,8 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
 use App\Service\Recommendation\Settings\Model\RecommendationPackingSettingsModel;
 
 /**
- * Combines the per-user override row (if any) with the account's active AI
- * configuration's context window into the settings every recommendation
- * service reads, applying the caps' and window's fallback defaults in one
- * place.
+ * The settings every recommendation service reads: the user's row over the defaults, and the context window from the
+ * row, else the account's AI provider, else the fallback.
  */
 final readonly class RecommendationSettingsResolver
 {
@@ -56,12 +54,8 @@ final readonly class RecommendationSettingsResolver
     }
 
     /**
-     * How many candidates one batch may carry. Read off the connection, not
-     * offered as a setting, because it describes what the endpoint can be
-     * trusted with, not what the account likes (#437). The connection as
-     * configured carries it, not the model behind it, so the column survives a
-     * model change. No claim means the default. Split off `slow_model` in #445,
-     * which now governs timeouts alone.
+     * A property of the connection, not an account setting: what the endpoint can be trusted with. It lives on the
+     * connection as configured, so it survives a model change; unset means the default.
      */
     private static function batchCeilingFor(?AiProviderSettings $provider): int
     {

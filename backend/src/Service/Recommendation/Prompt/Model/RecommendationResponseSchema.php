@@ -7,15 +7,8 @@ namespace App\Service\Recommendation\Prompt\Model;
 use App\Service\Ai\Completion\Model\JsonSchemaModel;
 
 /**
- * The structured-output schema each provider phase asks for, the machine form
- * of the prose in RecommendationPromptText. OpenAiCompatibleChatClient records
- * why the answer is sent as a `json_schema` response format (#329).
- *
- * The score range and id validity are deliberately left out: they need the
- * strict-mode keywords (`minimum`, `maximum`) OpenAI structured outputs
- * rejects, and RecommendationPickParser already clamps the score and drops
- * unknown ids. Staying inside that shared subset is what lets one request body
- * succeed against both LM Studio and OpenAI-compatible hosts.
+ * Each provider phase's structured-output schema, the machine form of RecommendationPromptText's contract. No score
+ * range or id check: OpenAI's strict mode rejects `minimum`/`maximum`, so the parsers clamp scores and drop bad ids.
  */
 enum RecommendationResponseSchema
 {

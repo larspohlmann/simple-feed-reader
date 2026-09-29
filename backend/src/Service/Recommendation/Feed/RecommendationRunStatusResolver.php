@@ -13,7 +13,7 @@ use Symfony\Component\Clock\ClockInterface;
 
 /**
  * Sources the three facts every recommendation-run response carries beside the report — the for-you
- * summary, the clock reading and the phase-weighted ETA — so no controller gathers them itself (#638).
+ * summary, the clock reading and the phase-weighted ETA — so no controller gathers them itself.
  */
 final readonly class RecommendationRunStatusResolver
 {

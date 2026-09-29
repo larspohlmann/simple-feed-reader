@@ -26,13 +26,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * The for-you feed: items of the caller's completed runs, newest run
-     * first and position ascending within a run, keyset-paginated. An entry
-     * recommended in several runs shows only in its newest occurrence.
-     * Unsubscribed feeds drop out, exactly like the main entry list.
-     *
-     * The cursor arrives decoded, from the pager that owns the rule for a
-     * malformed one; everything else the page was asked for is on the query.
+     * The for-you feed, keyset-paginated: picks of the caller's completed runs, newest run first, then by position.
      *
      * @return list<RecommendationFeedRow>
      */
@@ -56,9 +50,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * The shared projection: same fields as EntryRepository::rowQueryBuilder
-     * so EntryListRow hydrates identically, plus the run/position/reason the
-     * main list has no concept of. Only completed runs of the caller.
+     * The fields EntryProjection::rowQueryBuilder() selects, so EntryListRow hydrates identically, plus the run's own.
      */
     private function rowQueryBuilder(int $userId): QueryBuilder
     {
@@ -78,14 +70,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * The unread picks in this user's for-you feed, from runs that had already
-     * finished at `$until`.
-     *
-     * The cut-off is the RUN's completion time, not the entry's date: the feed
-     * is ranked, not dated, so a run finishing while the reader looks at the
-     * list can add an old entry at the top. Bounding by entry date would mark
-     * that new pick read; bounding by the run leaves it, which is what the
-     * reader means by "mark all read" — everything I could see.
+     * Cut off by the run's completion, not the entry's date: the feed is ranked, so a run finishing mid-read can put an
+     * old entry on top, and "mark all read" must leave that unseen pick unread.
      *
      * @return list<int>
      */
@@ -104,10 +90,6 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         return array_map(static fn (array $row): int => (int) $row['id'], $rows);
     }
 
-    /** The unread picks in this user's for-you feed. "Unread" is the shared
-     *  `UnreadDql` definition — the entry state folded with the subscription's
-     *  read watermark — so the sidebar badge never counts a pick the reader has
-     *  already read. */
     public function countForYou(int $userId): int
     {
         $qb = $this->applyForYouCriteria($this->createQueryBuilder('i')->select('COUNT(i.id)'), $userId)
@@ -137,10 +119,7 @@ final class RecommendationItemRepository extends ServiceEntityRepository
         $this->rowIds->delete(RecommendationItem::class, $ids);
     }
 
-    /** The for-you feed's row set: completed runs of this user, entries still
-     *  subscribed to a feed with for-you recommendations enabled, deduped to
-     *  their newest run. Shared by the pager and the count so the sidebar
-     *  number can never disagree with the list. */
+    /** Shared by the pager and the counts, so the sidebar number can never disagree with the list. */
     private function applyForYouCriteria(QueryBuilder $qb, int $userId): QueryBuilder
     {
         return $qb
@@ -175,10 +154,8 @@ final class RecommendationItemRepository extends ServiceEntityRepository
     }
 
     /**
-     * "Unread" means here exactly what it means in the main list — the shared
-     * `UnreadDql` predicate, which folds the subscription's read watermark in
-     * with the entry's own state. Needs the `es`, `s` and `e` aliases the row
-     * projection already joins.
+     * The main list's `UnreadDql` predicate: the entry's own state folded with the subscription's read watermark. Needs
+     * the `es`, `s` and `e` aliases.
      */
     private function applyUnread(QueryBuilder $qb): void
     {

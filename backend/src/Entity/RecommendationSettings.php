@@ -37,12 +37,7 @@ final class RecommendationSettings
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $guidancePrompt = null;
 
-    /**
-     * The reader's inferred preference profile (#493): distilled by a later
-     * pipeline phase, not by this settings row's own writer path. Read-only
-     * from the settings API; only RecommendationSettingsWriter::storeProfile()
-     * sets it.
-     */
+    /** The distilled preference profile; only RecommendationSettingsWriter::storeProfile() changes it. */
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $profileText = null;
 
@@ -58,10 +53,7 @@ final class RecommendationSettings
     #[ORM\Column(options: ['default' => self::DEFAULT_CANDIDATE_POOL_SIZE])]
     private int $candidatePoolSize = self::DEFAULT_CANDIDATE_POOL_SIZE;
 
-    /**
-     * How many days back a run's candidate pool reaches (#386). The cap in
-     * candidatePoolSize applies inside this window.
-     */
+    /** How many days back a run's candidate pool reaches; candidatePoolSize caps the pool inside that window. */
     #[ORM\Column(options: ['default' => self::DEFAULT_LOOKBACK_DAYS])]
     private int $lookbackDays = self::DEFAULT_LOOKBACK_DAYS;
 
@@ -78,17 +70,13 @@ final class RecommendationSettings
     private bool $debugEnabled = false;
 
     /**
-     * How often the background worker (or the maintenance cron endpoint)
-     * starts a fresh run for this account. null means "only manually" (#333).
+     * How often the background worker (or the maintenance cron endpoint) starts a fresh run for this account; null
+     * means only manually.
      */
     #[ORM\Column(nullable: true)]
     private ?int $autoGenerateIntervalHours = null;
 
-    /**
-     * Whether the reader UI explains each pick — the one-line reason and the
-     * score beside it, which travel together (#541, widened to the score by
-     * #576). Debug mode does not reach either.
-     */
+    /** Whether the reader UI shows each pick's one-line reason and, beside it, its score. */
     #[ORM\Column(options: ['default' => false])]
     private bool $showReasons = false;
 

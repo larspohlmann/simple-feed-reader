@@ -15,17 +15,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 
 /**
- * What every for-you run has cost this account (#409): an overview with the
- * all-time total, one summary per calendar month and the newest month's own
- * runs, plus a route to page further into any other month.
- *
- * Read-only and cheap — scoped, indexed queries against one user — so it
- * carries no rate limiter, the same call the #309 debug log endpoint makes.
- * Ownership is enforced in the repository: every query filters on the
- * authenticated user, and there is no id in the route to forge.
- *
- * Its own controller rather than a seventh action on RecommendationRunController:
- * that class is about driving a run, and reading a spending record is not that.
+ * What every for-you run has cost this account. No rate limiter: scoped, indexed reads of the current user, with no
+ * id in the route to forge.
  */
 #[Route('/api/recommendations/runs/history')]
 final readonly class RecommendationRunHistoryController

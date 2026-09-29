@@ -7,24 +7,14 @@ namespace App\Service\Recommendation\Prompt;
 use App\Service\Recommendation\Prompt\Model\RecommendationPickModel;
 
 /**
- * Salvages the valid picks from a decoded model reply's `recommendations`
- * list -- the id/score/reason validation the batch parser and the
- * consolidation parser both apply to the same shape.
- *
- * A pick survives only with an id the model was shown, a numeric score clamped
- * to the scale, and at most one pick per id; a scoreless entry, an unknown id,
- * or a repeated id is dropped rather than failed. Partial credit is still
- * credit -- the caller keeps its valid picks even when some entries are
- * unusable, and treats an empty result as the unusable-reply signal.
+ * Salvages the valid picks of a decoded `recommendations` list for the batch and consolidation parsers. A pick needs an
+ * id the model was shown, a numeric score (clamped) and a first sighting of its id; others are dropped, not failed.
  */
 final readonly class RecommendationPickSalvager
 {
     /**
-     * The top of the scale the prompt asks for. It is 1000 rather than 100 so
-     * the model has room to separate candidates instead of stacking them on
-     * one round number -- 29 of one run's 50 picks scored exactly 85 (#403).
-     * Scores persisted before that change are on the old scale and are never
-     * compared with these.
+     * 1000, not 100, so the model separates candidates instead of stacking them on a round number: 29 of one run's 50
+     * picks scored exactly 85 (#403). Scores stored before then are on the old scale and never compared with these.
      */
     private const float MAXIMUM_SCORE = 1000.0;
 

@@ -11,15 +11,8 @@ use App\Service\Recommendation\Settings\Model\EffectiveRecommendationSettingsMod
 use App\Service\Recommendation\Settings\Support\RecommendationSettingsBounds;
 
 /**
- * The client's view of a user's recommendation settings: the effective
- * values every recommendation service reads, plus the fixed prompt layers
- * the settings card shows as read-only context for the editable guidance.
- *
- * `contextWindowOverride` and `contextWindow` are deliberately distinct:
- * the former is the user's own value, or null when the effective window came
- * from the account's AI provider or the fallback; the latter always carries
- * the effective value. The settings card renders one as an input and the
- * other as a hint.
+ * The effective recommendation settings plus the fixed prompt layers the card shows read-only. `contextWindowOverride`
+ * is the user's own value or null; `contextWindow` is always the effective one.
  */
 final class RecommendationSettingsJson
 {

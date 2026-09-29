@@ -5,11 +5,8 @@ declare(strict_types=1);
 namespace App\Service\Recommendation\Prompt\Model;
 
 /**
- * The outcome of parsing one consolidation reply, answering two questions:
- * which shortlisted posts to recommend, and which of those duplicate a
- * better-scored one. `usable` follows the picks alone -- empty `duplicateIds`
- * is a legitimate "none of them", but zero picks means the model recommended
- * nothing and the whole reply is unusable.
+ * One consolidation reply's picks and the ids among them that duplicate a better-scored one. `usable` follows the
+ * picks alone: no duplicates is a valid answer, no picks is not.
  */
 final readonly class ConsolidationParseResultModel
 {
