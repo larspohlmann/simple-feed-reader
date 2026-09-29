@@ -31,7 +31,7 @@ final class InstanceSettings implements ResetInterface
 
     public function __construct(
         private readonly InstanceSettingRepository $repository,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -71,11 +71,11 @@ final class InstanceSettings implements ResetInterface
 
         if (null === $setting) {
             $setting = new InstanceSetting();
-            $this->em->persist($setting);
+            $this->entityManager->persist($setting);
         }
 
         $setting->apply($update);
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->memoisedSettings = null;
     }
 

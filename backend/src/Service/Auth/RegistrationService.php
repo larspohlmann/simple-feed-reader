@@ -22,7 +22,7 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 final readonly class RegistrationService
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserByEmailInterface $users,
         private ActionTokenService $tokens,
         private AccountMailerInterface $mailer,
@@ -57,10 +57,10 @@ final readonly class RegistrationService
         }
 
         $user = $this->signupUserFactory->create($email, $plainPassword, $locale);
-        $this->em->persist($user);
+        $this->entityManager->persist($user);
 
         try {
-            $this->em->flush();
+            $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
             // Lost a race with a concurrent signup for the same address; the
             // winner already did the post-flush work. Saying nothing keeps this

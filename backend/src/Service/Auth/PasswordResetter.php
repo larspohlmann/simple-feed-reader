@@ -19,7 +19,7 @@ final readonly class PasswordResetter
     private const int GENERATED_LENGTH = 24;
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $hasher,
         private ClockInterface $clock,
     ) {
@@ -28,7 +28,7 @@ final readonly class PasswordResetter
     public function setPassword(User $user, string $plainPassword): void
     {
         $user->setPasswordHash($this->hasher->hashPassword($user, $plainPassword), $this->clock->now());
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     /**

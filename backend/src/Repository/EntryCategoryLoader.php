@@ -14,7 +14,7 @@ use Doctrine\ORM\EntityManagerInterface;
  */
 final readonly class EntryCategoryLoader
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
@@ -88,7 +88,7 @@ final readonly class EntryCategoryLoader
         }
 
         /** @var list<array{entryId: int, label: string}> $rows */
-        $rows = $this->em->createQueryBuilder()
+        $rows = $this->entityManager->createQueryBuilder()
             ->select('IDENTITY(ec.entry) AS entryId', 'ec.label AS label')
             ->from(EntryCategory::class, 'ec')
             ->where('ec.entry IN (:ids)')

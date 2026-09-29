@@ -52,7 +52,7 @@ final class RestoreLoadPass
     private User $user;
 
     public function __construct(
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly RestoreFeedsInterface $feeds,
         private readonly SavedSearchSlug $slug,
         private readonly RestoredFoundationFactory $foundationFactory,
@@ -103,7 +103,7 @@ final class RestoreLoadPass
     private function loadTag(TagLine $line): void
     {
         $tag = $this->foundationFactory->tag($this->user, $line);
-        $this->em->persist($tag);
+        $this->entityManager->persist($tag);
         $this->tagsByName[$line->name] = $tag;
         ++$this->counts['tags'];
     }
@@ -112,7 +112,7 @@ final class RestoreLoadPass
     {
         $savedSearch = new SavedSearch($this->user, $line->term, $line->wholeWord, $line->phrase);
         $savedSearch->setPosition($line->position);
-        $this->em->persist($savedSearch);
+        $this->entityManager->persist($savedSearch);
         $this->loadedSavedSearches[] = $savedSearch;
         ++$this->counts['savedSearches'];
     }
@@ -169,7 +169,7 @@ final class RestoreLoadPass
     private function createFeed(FeedLine $line): Feed
     {
         $feed = $this->foundationFactory->feed($line);
-        $this->em->persist($feed);
+        $this->entityManager->persist($feed);
         ++$this->counts['feeds'];
 
         return $feed;
@@ -188,7 +188,7 @@ final class RestoreLoadPass
             $subscription->addTag($this->tagNamed($ref->name), $ref->position);
         }
 
-        $this->em->persist($subscription);
+        $this->entityManager->persist($subscription);
         ++$this->counts['subscriptions'];
     }
 
@@ -208,7 +208,7 @@ final class RestoreLoadPass
     private function flush(): void
     {
         try {
-            $this->em->flush();
+            $this->entityManager->flush();
         } catch (DbalException $e) {
             throw BackupLoadFailedException::from($e);
         }

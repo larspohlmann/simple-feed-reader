@@ -35,7 +35,7 @@ final readonly class SavedSearchMembershipSweep
         private EntryMembershipSweepRepository $entries,
         private SavedSearchMembershipWriterInterface $memberships,
         private SavedSearchMatcherInterface $matcher,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
@@ -178,7 +178,7 @@ final readonly class SavedSearchMembershipSweep
 
         // Insert and mark advance share one transaction: a run that dies here
         // leaves neither half-inserted rows nor a skipped chunk.
-        return $this->em->wrapInTransaction(function () use ($group, $matches, $now, $lastId): int {
+        return $this->entityManager->wrapInTransaction(function () use ($group, $matches, $now, $lastId): int {
             $inserted = $this->memberships->insertMissing($matches, $now);
             $this->searches->advanceMarks(self::idsOf($group), $lastId);
 

@@ -41,7 +41,7 @@ final readonly class CatalogFaviconWarmer
         private CatalogFeedRepository $feeds,
         private FaviconResolverInterface $faviconResolver,
         private FaviconFetcherInterface $fetcher,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
     }
@@ -129,7 +129,7 @@ final readonly class CatalogFaviconWarmer
             try {
                 $icon = $this->fetcher->download($iconUrl);
                 $feed->storeFavicon($icon->sourceUrl, $icon->bytes, $icon->contentType, $now);
-                $this->em->flush();
+                $this->entityManager->flush();
 
                 return true;
             } catch (FaviconUnavailableException) {
@@ -138,7 +138,7 @@ final readonly class CatalogFaviconWarmer
         }
 
         $feed->recordFaviconFailure($now);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return false;
     }

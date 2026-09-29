@@ -47,7 +47,7 @@ final readonly class AttestationVerifier
         private PasskeyCeremony $ceremony,
         private RegistrationOptionsFactory $optionsFactory,
         private PasskeyOffer $offer,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserPasskeyFactory $passkeyFactory,
     ) {
     }
@@ -146,7 +146,7 @@ final readonly class AttestationVerifier
      */
     private function persist(User $user, UserPasskey $passkey): void
     {
-        $this->em->persist($passkey);
+        $this->entityManager->persist($passkey);
 
         // Marked before the flush, not after: markAnswered() only mutates the
         // already-managed Preferences entity, so one flush covers both. Two
@@ -155,7 +155,7 @@ final readonly class AttestationVerifier
         $this->offer->markAnswered($user);
 
         try {
-            $this->em->flush();
+            $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
             throw new DuplicatePasskeyException();
         }

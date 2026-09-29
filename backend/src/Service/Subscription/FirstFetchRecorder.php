@@ -43,7 +43,7 @@ final readonly class FirstFetchRecorder
     public function __construct(
         private EntryIngestor $ingestor,
         private FeedScheduler $scheduler,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
         private EntryIndexer $indexer,
     ) {
@@ -74,7 +74,7 @@ final readonly class FirstFetchRecorder
         );
         $feed->recordCacheValidators($discovered->etag, $discovered->lastModified);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
-        $this->em->flush();
+        $this->entityManager->flush();
         // See FeedOutcomePersister's identical ordering: an id only exists after this
         // flush, so indexing has to happen after it, not before.
         $this->indexer->index($createdEntries);

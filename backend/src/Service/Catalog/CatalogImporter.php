@@ -21,20 +21,24 @@ final readonly class CatalogImporter
     public function __construct(
         private CatalogCategoryRepository $categories,
         private CatalogFeedRepository $feeds,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
     public function import(ParsedCatalogModel $document, CatalogImportMode $mode): CatalogImportResultModel
     {
-        return $this->em->wrapInTransaction(function () use ($document, $mode): CatalogImportResultModel {
-            $pass = new CatalogImportPass($this->em, $this->categories->findAllOrdered(), $this->feeds->findAll());
+        return $this->entityManager->wrapInTransaction(function () use ($document, $mode): CatalogImportResultModel {
+            $pass = new CatalogImportPass(
+                $this->entityManager,
+                $this->categories->findAllOrdered(),
+                $this->feeds->findAll(),
+            );
             $pass->apply($document);
             if (CatalogImportMode::Replace === $mode) {
                 $pass->removeUnmentioned();
             }
 
-            $this->em->flush();
+            $this->entityManager->flush();
 
             return $pass->result();
         });

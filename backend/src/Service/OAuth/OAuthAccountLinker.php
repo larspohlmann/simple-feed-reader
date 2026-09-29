@@ -41,7 +41,7 @@ use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 final readonly class OAuthAccountLinker
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private UserRepository $users,
         private UserIdentityRepository $identities,
         private ClockInterface $clock,
@@ -66,7 +66,7 @@ final readonly class OAuthAccountLinker
 
         if (null === $linkTarget) {
             $user = $this->userFactory->create($identity);
-            $this->em->persist($user);
+            $this->entityManager->persist($user);
             $enteredApprovalQueue = $this->policy->approvalRequired();
         } else {
             $user = $linkTarget;
@@ -74,7 +74,7 @@ final readonly class OAuthAccountLinker
         }
 
         $this->attach($user, $identity);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         if ($enteredApprovalQueue) {
             // After the flush, for the same reason RegistrationService dispatches
@@ -101,7 +101,7 @@ final readonly class OAuthAccountLinker
     {
         if ($identity->email !== $existing->getEmail()) {
             $existing->setEmail($identity->email);
-            $this->em->flush();
+            $this->entityManager->flush();
         }
 
         return $existing->getUser();
@@ -196,6 +196,6 @@ final readonly class OAuthAccountLinker
         );
         $link->setEmail($identity->email);
 
-        $this->em->persist($link);
+        $this->entityManager->persist($link);
     }
 }

@@ -12,14 +12,14 @@ use Doctrine\ORM\EntityManagerInterface;
 /** Bulk read-flips of existing entry-state rows; creating a missing row is the caller's job. */
 final readonly class EntryReadMarkRepository
 {
-    public function __construct(private EntityManagerInterface $em)
+    public function __construct(private EntityManagerInterface $entityManager)
     {
     }
 
     /** @param list<int> $feedIds */
     public function hideUnreadInFeedsUntil(ReadMarking $marking, array $feedIds, \DateTimeImmutable $until): void
     {
-        $this->em->createQuery(sprintf(
+        $this->entityManager->createQuery(sprintf(
             'UPDATE %s es SET es.isHidden = :true, es.hiddenAt = :now
                  WHERE es.user = :user AND es.isHidden = :false
                  AND es.entry IN (
@@ -41,7 +41,7 @@ final readonly class EntryReadMarkRepository
     /** @param list<int> $entryIds */
     public function hideUnreadAmong(ReadMarking $marking, array $entryIds): void
     {
-        $this->em->createQuery(
+        $this->entityManager->createQuery(
             'UPDATE ' . EntryState::class . ' es
              SET es.isHidden = :true, es.hiddenAt = :now
              WHERE es.user = :user AND es.isHidden = :false AND IDENTITY(es.entry) IN (:ids)',

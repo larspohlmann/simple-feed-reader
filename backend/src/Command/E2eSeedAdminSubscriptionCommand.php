@@ -71,7 +71,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         private readonly FeedRepository $feeds,
         private readonly EntryRepository $entries,
         private readonly EntryStateRepository $entryStates,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
         #[Autowire('%kernel.environment%')]
         private readonly string $appEnv,
@@ -134,8 +134,8 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         // over a host that never answers.
         $feed->recordSuccessfulFetch($this->clock->now(), $feed->getFetchIntervalMinutes());
 
-        $this->em->persist($feed);
-        $this->em->flush(); // assign an id before anything references it
+        $this->entityManager->persist($feed);
+        $this->entityManager->flush(); // assign an id before anything references it
 
         return $feed;
     }
@@ -154,8 +154,8 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         }
 
         $entry = $this->sampleEntry($feed, $this->clock->now());
-        $this->em->persist($entry);
-        $this->em->flush();
+        $this->entityManager->persist($entry);
+        $this->entityManager->flush();
 
         return $entry;
     }
@@ -170,8 +170,8 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         $subscription = new Subscription($admin, $feed, $this->clock->now());
         $subscription->setPosition($this->subscriptions->nextPositionForUser($admin->requireId()));
 
-        $this->em->persist($subscription);
-        $this->em->flush();
+        $this->entityManager->persist($subscription);
+        $this->entityManager->flush();
 
         return $subscription;
     }
@@ -200,7 +200,7 @@ final class E2eSeedAdminSubscriptionCommand extends Command
         }
 
         if ($needsFlush) {
-            $this->em->flush();
+            $this->entityManager->flush();
         }
     }
 

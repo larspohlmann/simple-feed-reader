@@ -35,7 +35,7 @@ final class E2eSeedAdminCommand extends Command
 {
     public function __construct(
         private readonly UserRepository $users,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $hasher,
         private readonly ClockInterface $clock,
         #[Autowire('%kernel.environment%')]
@@ -78,8 +78,8 @@ final class E2eSeedAdminCommand extends Command
         // fixture has to state the preference rather than inherit it.
         $user->getPreferences()->setScrapeFallbackEnabled(true);
 
-        $this->em->persist($user);
-        $this->em->flush();
+        $this->entityManager->persist($user);
+        $this->entityManager->flush();
 
         $io->success(\sprintf('Active admin ready: %s', $email));
 

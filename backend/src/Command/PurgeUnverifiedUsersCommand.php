@@ -30,7 +30,7 @@ final class PurgeUnverifiedUsersCommand extends Command
 
     public function __construct(
         private readonly UserRepository $users,
-        private readonly EntityManagerInterface $em,
+        private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
     ) {
         parent::__construct();
@@ -51,10 +51,10 @@ final class PurgeUnverifiedUsersCommand extends Command
             // unit of work aware of what left, and the action_token rows follow
             // via the FK's ON DELETE CASCADE. A bulk DELETE would bypass the
             // unit of work entirely.
-            $this->em->remove($user);
+            $this->entityManager->remove($user);
         }
 
-        $this->em->flush();
+        $this->entityManager->flush();
 
         $io->success(sprintf('Purged %d unverified account(s).', \count($stale)));
 

@@ -21,7 +21,7 @@ final readonly class EntryStateUpdater
     public function __construct(
         private EntryStateResolver $states,
         private EntryListRepository $rows,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
     }
@@ -31,7 +31,7 @@ final readonly class EntryStateUpdater
         $state = $this->states->resolve($user, $row);
         $this->applyTo($state, $change);
         $this->mirror($user, $row, $change);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return $state;
     }

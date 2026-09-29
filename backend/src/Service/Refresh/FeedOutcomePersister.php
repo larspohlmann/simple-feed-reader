@@ -31,7 +31,7 @@ final readonly class FeedOutcomePersister
     private const int URL_MAX = 750;
 
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private FeedRepository $feedRepository,
         private FeedBodyParser $bodyParser,
         private EntryIngestor $ingestor,
@@ -90,7 +90,7 @@ final readonly class FeedOutcomePersister
         // A moved feed can answer 304 at its new address; without this the redirect chain is re-walked every time.
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordNotModified($feed);
-        $this->em->flush();
+        $this->entityManager->flush();
 
         return FeedRefreshResultModel::of(FeedOutcome::NotModified);
     }
@@ -108,7 +108,7 @@ final readonly class FeedOutcomePersister
         $feed->recordCacheValidators($response->etag, $response->lastModified);
         $this->applyPermanentRedirect($feed, $response);
         $this->scheduler->recordSuccess($feed, \count($createdEntries));
-        $this->em->flush();
+        $this->entityManager->flush();
         // Only the flush assigns ids, so indexing has to follow it (#432).
         $this->indexer->index($createdEntries);
 
@@ -119,7 +119,7 @@ final readonly class FeedOutcomePersister
     private function recordThrottled(Feed $feed, FeedThrottledException $throttled): FeedRefreshResultModel
     {
         $this->scheduler->recordThrottled($feed, $throttled->retryAfterSeconds);
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->logger->info('Feed rate limited: {url}', ['url' => $feed->getUrl()]);
 
         return FeedRefreshResultModel::of(FeedOutcome::Throttled);
@@ -128,7 +128,7 @@ final readonly class FeedOutcomePersister
     private function recordGone(Feed $feed, FeedGoneException $gone): FeedRefreshResultModel
     {
         $this->scheduler->recordGone($feed, $gone->getMessage());
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->logger->warning('Feed gone: {url}', ['url' => $feed->getUrl(), 'exception' => $gone]);
 
         return FeedRefreshResultModel::of(FeedOutcome::Failed);
@@ -138,7 +138,7 @@ final readonly class FeedOutcomePersister
     private function recordFailure(Feed $feed, FetchException|FeedParseException $failure): FeedRefreshResultModel
     {
         $this->scheduler->recordFailure($feed, $failure->getMessage());
-        $this->em->flush();
+        $this->entityManager->flush();
         $this->logger->warning('Feed refresh failed: {url}', ['url' => $feed->getUrl(), 'exception' => $failure]);
 
         return FeedRefreshResultModel::of(FeedOutcome::Failed);

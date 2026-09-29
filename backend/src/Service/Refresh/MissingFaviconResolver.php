@@ -13,7 +13,7 @@ final readonly class MissingFaviconResolver
 {
     public function __construct(
         private FaviconResolverInterface $faviconResolver,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -35,7 +35,7 @@ final readonly class MissingFaviconResolver
             }
         }
 
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     /**

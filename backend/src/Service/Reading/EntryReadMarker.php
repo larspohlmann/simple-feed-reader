@@ -25,7 +25,7 @@ final readonly class EntryReadMarker
     public function __construct(
         private EntryStateRepository $states,
         private EntryReadMarkRepository $readMarks,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
     ) {
     }
@@ -44,7 +44,7 @@ final readonly class EntryReadMarker
         }
 
         // Atomic: the read-flip joins the transaction, which flushes the watermark changes before it commits.
-        $this->em->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
+        $this->entityManager->wrapInTransaction(function () use ($userId, $feedIds, $until): void {
             $this->readMarks->hideUnreadInFeedsUntil(new ReadMarking($userId, $this->clock->now()), $feedIds, $until);
         });
     }
@@ -65,8 +65,8 @@ final readonly class EntryReadMarker
         foreach (array_chunk($entryIds, self::BATCH) as $chunk) {
             $this->readMarks->hideUnreadAmong($marking, $chunk);
             $this->createMissing($marking, $chunk);
-            $this->em->flush();
-            $this->em->clear();
+            $this->entityManager->flush();
+            $this->entityManager->clear();
         }
     }
 
@@ -86,14 +86,14 @@ final readonly class EntryReadMarker
         if ($missing === []) {
             return;
         }
-        $userRef = $this->em->getReference(User::class, $marking->userId)
+        $userRef = $this->entityManager->getReference(User::class, $marking->userId)
             ?? throw new \LogicException('The current user has no reference.');
         foreach ($missing as $entryId) {
-            $entryRef = $this->em->getReference(Entry::class, $entryId)
+            $entryRef = $this->entityManager->getReference(Entry::class, $entryId)
                 ?? throw new \LogicException('An entry just selected for marking has no reference.');
             $state = new EntryState($userRef, $entryRef);
             $state->hide($marking->at);
-            $this->em->persist($state);
+            $this->entityManager->persist($state);
         }
     }
 }

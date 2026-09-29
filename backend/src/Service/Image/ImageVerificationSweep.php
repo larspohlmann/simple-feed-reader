@@ -21,7 +21,7 @@ final readonly class ImageVerificationSweep
     public function __construct(
         private PendingImageVerificationRepository $repository,
         private ImageVerifier $imageVerifier,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -48,7 +48,7 @@ final readonly class ImageVerificationSweep
         }
 
         if ($processed > 0) {
-            $this->em->flush();
+            $this->entityManager->flush();
         }
 
         return new ImageVerificationReportModel($measured, $kept, $dropped, $retried);

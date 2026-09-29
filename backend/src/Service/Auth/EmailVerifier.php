@@ -17,7 +17,7 @@ final readonly class EmailVerifier
     public function __construct(
         private ActionTokenService $tokens,
         private RegistrationPolicy $policy,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private EventDispatcherInterface $events,
         private ClockInterface $clock,
     ) {
@@ -38,7 +38,7 @@ final readonly class EmailVerifier
 
             if ($this->policy->approvalRequired()) {
                 $user->queueForApproval();
-                $this->em->flush();
+                $this->entityManager->flush();
 
                 // After the flush: the account is now persisted in the queue, so
                 // a listener that counts it sees the true number, and a failed
@@ -46,7 +46,7 @@ final readonly class EmailVerifier
                 $this->events->dispatch(new UserAwaitingApproval($user, RegistrationMethod::EmailPassword));
             } else {
                 $user->approve($now);
-                $this->em->flush();
+                $this->entityManager->flush();
             }
         }
 

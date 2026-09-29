@@ -19,7 +19,7 @@ final readonly class MailSettings
 {
     public function __construct(
         private MailServerSettingsRepository $repository,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private MailPasswordCipher $cipher,
         private MailFallback $fallback,
         private ProxySettings $proxySettings,
@@ -42,8 +42,8 @@ final readonly class MailSettings
     {
         $settings = $this->repository->findSingleton();
         if (null !== $settings) {
-            $this->em->remove($settings);
-            $this->em->flush();
+            $this->entityManager->remove($settings);
+            $this->entityManager->flush();
         }
     }
 
@@ -57,11 +57,11 @@ final readonly class MailSettings
         $settings = $existing;
         if (null === $settings) {
             $settings = new MailServerSettings();
-            $this->em->persist($settings);
+            $this->entityManager->persist($settings);
         }
 
         $this->apply($update, $settings);
-        $this->em->flush();
+        $this->entityManager->flush();
     }
 
     private function guardAgainstIncompleteAuthenticatedRow(

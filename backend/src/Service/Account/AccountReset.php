@@ -16,7 +16,7 @@ final readonly class AccountReset
 {
     public function __construct(
         private AccountWipeRepository $wipe,
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -25,7 +25,7 @@ final readonly class AccountReset
         $this->wipe->deleteRecommendationData($user);
         $this->wipe->deleteOwnedRows($user);
         $user->getPreferences()->setScrapeFallbackEnabled(false);
-        $this->em->flush();
-        $this->em->clear();
+        $this->entityManager->flush();
+        $this->entityManager->clear();
     }
 }

@@ -15,7 +15,7 @@ use Doctrine\ORM\QueryBuilder;
 final readonly class RecommendationCandidateRepository
 {
     public function __construct(
-        private EntityManagerInterface $em,
+        private EntityManagerInterface $entityManager,
         private DuplicateCollapseDql $collapse,
     ) {
     }
@@ -91,7 +91,7 @@ final readonly class RecommendationCandidateRepository
 
     private function candidateQueryBuilder(int $userId): QueryBuilder
     {
-        return $this->em->createQueryBuilder()
+        return $this->entityManager->createQueryBuilder()
             ->select('e', 'f', 's.customTitle AS customTitle')
             ->from(Entry::class, 'e')
             ->join('e.feed', 'f')
