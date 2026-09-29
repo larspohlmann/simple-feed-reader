@@ -43,9 +43,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     public function testAReadHiddenEntryStaysACandidate(): void
     {
-        // Read via the per-entry isHidden flag: no longer removed from the
-        // pool. Excluding read entries emptied the pool the moment the reader
-        // caught up, finishing the run with zero picks.
+        // A read entry stays in the pool: excluding read entries emptied it as soon as the reader caught up, and the
+        // run finished with zero picks.
         $readByFlag = $this->entry('read-by-flag', '2026-07-10T00:00:00Z');
         $state = new EntryState($this->user, $readByFlag);
         $state->hide(new \DateTimeImmutable('2026-07-01 09:00:00'));
@@ -59,10 +58,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
 
     public function testEntriesAtOrBeforeTheMarkedReadWatermarkStayCandidates(): void
     {
-        // "Mark all read up to here" is a bulk convenience, not a per-entry
-        // judgement, so it no longer removes entries from the pool. It was the
-        // watermark — set to now by "mark all read" — that covered every
-        // in-window entry and emptied the pool on Strato.
+        // "Mark all read" is a bulk convenience that sets the watermark to now, so excluding entries under it emptied
+        // the pool.
         $this->subscription->setMarkedReadUntil(new \DateTimeImmutable('2026-07-12T00:00:00Z'));
 
         $beforeWatermark = $this->entry('before-watermark', '2026-07-11T00:00:00Z');
@@ -145,9 +142,7 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $this->entry('older', '2026-07-10T00:00:00Z');
         $this->entry('newer', '2026-07-11T00:00:00Z');
 
-        // load() no longer promises newest-first order — it selects the
-        // newest N, then shuffles — so only membership and count are the
-        // contract now.
+        // load() selects the newest N and then shuffles them, so only membership and count are the contract.
         $lines = $this->loader()->load($this->userId(), $this->poolRequest());
 
         self::assertEqualsCanonicalizing(
@@ -263,12 +258,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
     }
 
     /**
-     * An empty id list must short-circuit before touching the database: an
-     * `IN ()` built by hand is a SQL syntax error, and even where the ORM
-     * would tolerate it, a result-only assertion cannot tell "the guard
-     * returned early" from "the query ran and happened to find nothing" —
-     * both produce []. Counting queries is the only way to pin the guard
-     * itself, not just its externally visible result.
+     * Counts queries: a result-only assertion cannot tell the early return from an `IN ()` query that found nothing,
+     * and a hand-built `IN ()` is a SQL syntax error.
      */
     public function testLinesForIdsWithAnEmptyIdListNeverQueriesTheDatabase(): void
     {
@@ -529,10 +520,8 @@ final class RecommendationCandidateLoaderTest extends DbTestCase
         $lower = $this->duplicateEntry($this->feed, 'lower-copy', 'urlhash-out-of-scope', '2026-07-10T09:00:00Z');
         $higher = $this->duplicateEntry($secondFeed, 'higher-copy', 'urlhash-out-of-scope', '2026-07-10T10:00:00Z');
 
-        // The lower-id copy has been viewed, so it fails poolScope's own not-interacted
-        // clause and is not itself a legitimate pool candidate. Without that clause
-        // carried into the collapse semi-join, this viewed copy would still count as
-        // an in-scope blocker and wrongly hide the higher copy -- a hole in the pool.
+        // The viewed lower-id copy fails poolScope's not-interacted clause. Without that clause in the collapse
+        // semi-join it would still block the higher copy and leave a hole in the pool.
         $state = new EntryState($this->user, $lower);
         $state->markViewed(new \DateTimeImmutable('2026-07-10T09:30:00Z'));
         $this->entityManager->persist($state);

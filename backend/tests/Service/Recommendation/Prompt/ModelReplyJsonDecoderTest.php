@@ -42,9 +42,8 @@ final class ModelReplyJsonDecoderTest extends TestCase
     }
 
     /**
-     * A lone closing fence is not stripped as a fence, so the direct decode
-     * fails — but the object before it is still recovered by the embedded
-     * fallback (#323), the same path that lifts an answer out of reasoning text.
+     * A lone closing fence is not stripped as a fence, so the direct decode fails, but the embedded-object fallback
+     * still recovers the object before it.
      */
     public function testAnObjectFollowedByStrayCharactersIsStillRecovered(): void
     {
@@ -61,11 +60,6 @@ final class ModelReplyJsonDecoderTest extends TestCase
         self::assertNull($this->decoder->decode('42'));
     }
 
-    /**
-     * #323: LM Studio routes a reasoning model's answer through the reasoning
-     * channel, where it can arrive wrapped in the model's thinking prose. The
-     * decoder lifts the JSON object out of the surrounding text.
-     */
     public function testAJsonObjectEmbeddedInSurroundingTextIsExtracted(): void
     {
         self::assertSame(
