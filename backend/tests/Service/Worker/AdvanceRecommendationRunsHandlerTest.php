@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Service\Worker;
 
 use App\Entity\AiProviderSettings;
+use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
@@ -706,12 +708,12 @@ final class AdvanceRecommendationRunsHandlerTest extends DbTestCase
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: $entryCount,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(
+                $entryCount,
+                RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+                RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            ),
             contextWindow: 200000,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

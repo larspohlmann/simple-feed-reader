@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Settings;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
@@ -67,12 +69,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,
@@ -84,9 +82,9 @@ final class RecommendationSettingsWriterTest extends DbTestCase
         self::assertNotNull($reloaded);
         $values = $reloaded->values();
         self::assertSame('Only cats.', $values->guidancePrompt);
-        self::assertSame(10, $values->favoritesCap);
-        self::assertSame(20, $values->keptCap);
-        self::assertSame(30, $values->viewedCap);
+        self::assertSame(10, $values->historyCaps->favorites);
+        self::assertSame(20, $values->historyCaps->kept);
+        self::assertSame(30, $values->historyCaps->viewed);
         self::assertSame(65536, $values->contextWindow);
         self::assertSame(RecommendationBatchSize::Large, $values->batchSize);
         self::assertTrue($values->debugEnabled);
@@ -103,12 +101,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
     {
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: false,
@@ -134,12 +128,8 @@ final class RecommendationSettingsWriterTest extends DbTestCase
 
         $this->writer->save($this->user, new RecommendationSettingsValues(
             guidancePrompt: 'Only cats.',
-            favoritesCap: 10,
-            keptCap: 20,
-            viewedCap: 30,
-            candidatePoolSize: 500,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: 50,
+            historyCaps: new RecommendationHistoryCaps(10, 20, 30),
+            poolLimits: new RecommendationPoolLimits(500, RecommendationSettings::DEFAULT_LOOKBACK_DAYS, 50),
             contextWindow: 65536,
             batchSize: RecommendationBatchSize::Large,
             debugEnabled: true,

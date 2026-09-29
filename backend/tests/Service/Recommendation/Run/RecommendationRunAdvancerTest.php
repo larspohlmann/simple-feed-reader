@@ -8,7 +8,9 @@ use App\Entity\AiProviderSettings;
 use App\Entity\Entry;
 use App\Entity\Exception\UnpersistedEntityException;
 use App\Entity\Feed;
+use App\Entity\RecommendationHistoryCaps;
 use App\Entity\RecommendationItem;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
@@ -198,12 +200,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: 5,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(
+                RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+                5,
+                RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            ),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
@@ -2981,12 +2983,12 @@ final class RecommendationRunAdvancerTest extends DbTestCase
         $settings = new RecommendationSettings($this->user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: $candidatePoolSize,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: $picksLimit,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(
+                $candidatePoolSize,
+                RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
+                $picksLimit,
+            ),
             contextWindow: self::MULTI_BATCH_CONTEXT_WINDOW,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,

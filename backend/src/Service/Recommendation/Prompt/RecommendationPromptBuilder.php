@@ -131,7 +131,7 @@ final readonly class RecommendationPromptBuilder
     public function consolidationInputSize(PromptContext $context, Reasoning $reasoning): int
     {
         $contextWindow = $context->settings->packing->contextWindow;
-        $picksLimit = $context->settings->picksLimit;
+        $picksLimit = $context->settings->poolLimits->picksLimit;
         $descriptionLength = $this->descriptionLength($contextWindow);
         $fixedInputTokens = self::FIXED_OVERHEAD_TOKENS
             + $this->tokens((string) $context->profile)

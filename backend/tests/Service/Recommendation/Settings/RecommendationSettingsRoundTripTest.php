@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Recommendation\Settings;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationSettings;
 use App\Entity\RecommendationSettingsValues;
 use App\Entity\User;
@@ -21,12 +23,12 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
     ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: $lookbackDays,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: new RecommendationPoolLimits(
+                RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
+                $lookbackDays,
+                RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            ),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: false,
@@ -70,10 +72,10 @@ final class RecommendationSettingsRoundTripTest extends KernelTestCase
         $em->flush();
 
         // No row at all resolves to the default, not to zero.
-        self::assertSame(2, $resolver->forUser($user)->lookbackDays);
+        self::assertSame(2, $resolver->forUser($user)->poolLimits->lookbackDays);
 
         $writer->save($user, $this->values(null, 5));
 
-        self::assertSame(5, $resolver->forUser($user)->lookbackDays);
+        self::assertSame(5, $resolver->forUser($user)->poolLimits->lookbackDays);
     }
 }

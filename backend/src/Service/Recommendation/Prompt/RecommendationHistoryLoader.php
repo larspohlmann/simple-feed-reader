@@ -18,10 +18,12 @@ final readonly class RecommendationHistoryLoader
 
     public function load(int $userId, EffectiveRecommendationSettingsModel $settings): RecommendationHistoryModel
     {
+        $caps = $settings->historyCaps;
+
         return new RecommendationHistoryModel(
-            favorites: array_map(PromptLineModel::of(...), $this->history->favorites($userId, $settings->favoritesCap)),
-            kept: array_map(PromptLineModel::of(...), $this->history->kept($userId, $settings->keptCap)),
-            viewed: array_map(PromptLineModel::of(...), $this->history->viewed($userId, $settings->viewedCap)),
+            favorites: array_map(PromptLineModel::of(...), $this->history->favorites($userId, $caps->favorites)),
+            kept: array_map(PromptLineModel::of(...), $this->history->kept($userId, $caps->kept)),
+            viewed: array_map(PromptLineModel::of(...), $this->history->viewed($userId, $caps->viewed)),
         );
     }
 }

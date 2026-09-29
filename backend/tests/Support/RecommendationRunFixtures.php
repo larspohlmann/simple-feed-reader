@@ -8,6 +8,8 @@ use App\Entity\AiProviderSettings;
 use App\Entity\CallOutcome;
 use App\Entity\Entry;
 use App\Entity\Feed;
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
 use App\Entity\RecommendationRun;
 use App\Entity\RecommendationRunLog;
 use App\Entity\RecommendationSettings;
@@ -262,12 +264,8 @@ final readonly class RecommendationRunFixtures
         $settings = new RecommendationSettings($user);
         $settings->update(new RecommendationSettingsValues(
             guidancePrompt: null,
-            favoritesCap: RecommendationSettings::DEFAULT_FAVORITES_CAP,
-            keptCap: RecommendationSettings::DEFAULT_KEPT_CAP,
-            viewedCap: RecommendationSettings::DEFAULT_VIEWED_CAP,
-            candidatePoolSize: RecommendationSettings::DEFAULT_CANDIDATE_POOL_SIZE,
-            lookbackDays: RecommendationSettings::DEFAULT_LOOKBACK_DAYS,
-            picksLimit: RecommendationSettings::DEFAULT_PICKS_LIMIT,
+            historyCaps: RecommendationHistoryCaps::defaults(),
+            poolLimits: RecommendationPoolLimits::defaults(),
             contextWindow: null,
             batchSize: RecommendationBatchSize::Medium,
             debugEnabled: $debugEnabled,

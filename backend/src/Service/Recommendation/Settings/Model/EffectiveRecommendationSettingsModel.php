@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service\Recommendation\Settings\Model;
 
+use App\Entity\RecommendationHistoryCaps;
+use App\Entity\RecommendationPoolLimits;
+
 /**
  * The recommendation settings a caller actually reads: every override from
  * RecommendationSettingsValues resolved against its default, with the
  * context window additionally resolved against the account's AI provider.
  * RecommendationSettingsResolver is the only producer.
- *
- * @SuppressWarnings("PHPMD.ExcessiveParameterList") pure data carrier that
- * mirrors RecommendationSettingsValues field-for-field, not a behavioural
- * method.
  */
 final readonly class EffectiveRecommendationSettingsModel
 {
@@ -20,13 +19,8 @@ final readonly class EffectiveRecommendationSettingsModel
 
     public function __construct(
         public ?string $guidancePrompt,
-        public int $favoritesCap,
-        public int $keptCap,
-        public int $viewedCap,
-        public int $candidatePoolSize,
-        /** How many days back the candidate pool reaches, counted as N x 24 h from the snapshot instant. */
-        public int $lookbackDays,
-        public int $picksLimit,
+        public RecommendationHistoryCaps $historyCaps,
+        public RecommendationPoolLimits $poolLimits,
         public RecommendationPackingSettingsModel $packing,
         public bool $debugEnabled,
         public ?int $autoGenerateIntervalHours = null,

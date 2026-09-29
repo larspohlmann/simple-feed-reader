@@ -68,12 +68,8 @@ final readonly class RecommendationSettingsWriter
 
         return new RecommendationSettingsValues(
             guidancePrompt: $guidancePrompt,
-            favoritesCap: $values->favoritesCap,
-            keptCap: $values->keptCap,
-            viewedCap: $values->viewedCap,
-            candidatePoolSize: $values->candidatePoolSize,
-            lookbackDays: $values->lookbackDays,
-            picksLimit: $values->picksLimit,
+            historyCaps: $values->historyCaps,
+            poolLimits: $values->poolLimits,
             contextWindow: $values->contextWindow,
             batchSize: $values->batchSize,
             debugEnabled: $values->debugEnabled,
@@ -88,12 +84,8 @@ final readonly class RecommendationSettingsWriter
     ): RecommendationSettingsValues {
         return new RecommendationSettingsValues(
             guidancePrompt: $values->guidancePrompt,
-            favoritesCap: $values->favoritesCap,
-            keptCap: $values->keptCap,
-            viewedCap: $values->viewedCap,
-            candidatePoolSize: $values->candidatePoolSize,
-            lookbackDays: $values->lookbackDays,
-            picksLimit: $values->picksLimit,
+            historyCaps: $values->historyCaps,
+            poolLimits: $values->poolLimits,
             contextWindow: $values->contextWindow,
             batchSize: $values->batchSize,
             debugEnabled: $values->debugEnabled,

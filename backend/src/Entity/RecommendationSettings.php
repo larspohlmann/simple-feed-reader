@@ -106,12 +106,12 @@ final class RecommendationSettings
     {
         $this->guidancePrompt = $values->guidancePrompt;
         $this->profileText = $values->profileText;
-        $this->favoritesCap = $values->favoritesCap;
-        $this->keptCap = $values->keptCap;
-        $this->viewedCap = $values->viewedCap;
-        $this->candidatePoolSize = $values->candidatePoolSize;
-        $this->lookbackDays = $values->lookbackDays;
-        $this->picksLimit = $values->picksLimit;
+        $this->favoritesCap = $values->historyCaps->favorites;
+        $this->keptCap = $values->historyCaps->kept;
+        $this->viewedCap = $values->historyCaps->viewed;
+        $this->candidatePoolSize = $values->poolLimits->candidatePoolSize;
+        $this->lookbackDays = $values->poolLimits->lookbackDays;
+        $this->picksLimit = $values->poolLimits->picksLimit;
         $this->contextWindow = $values->contextWindow;
         $this->batchSize = $values->batchSize;
         $this->debugEnabled = $values->debugEnabled;
@@ -124,12 +124,8 @@ final class RecommendationSettings
         return new RecommendationSettingsValues(
             guidancePrompt: $this->guidancePrompt,
             profileText: $this->profileText,
-            favoritesCap: $this->favoritesCap,
-            keptCap: $this->keptCap,
-            viewedCap: $this->viewedCap,
-            candidatePoolSize: $this->candidatePoolSize,
-            lookbackDays: $this->lookbackDays,
-            picksLimit: $this->picksLimit,
+            historyCaps: new RecommendationHistoryCaps($this->favoritesCap, $this->keptCap, $this->viewedCap),
+            poolLimits: new RecommendationPoolLimits($this->candidatePoolSize, $this->lookbackDays, $this->picksLimit),
             contextWindow: $this->contextWindow,
             batchSize: $this->batchSize,
             debugEnabled: $this->debugEnabled,
