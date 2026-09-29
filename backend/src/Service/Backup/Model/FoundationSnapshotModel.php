@@ -7,13 +7,8 @@ namespace App\Service\Backup\Model;
 use App\Service\Backup\Support\BackupSchema;
 
 /**
- * The foundation's record lines, encoded before the entry-part walk begins so
- * they name the same subscriptions and feeds the entry parts were built
- * against. The foundation is still written last (its header needs the part
- * count and totals the walk only knows once it ends), but its body is fixed up
- * front: a mid-export unsubscribe or a feed's 301 rewrite can no longer leave
- * the archive referencing a feed the foundation omits. The walk clear()s the
- * entity manager, so these must be plain strings, taken before the first clear.
+ * The foundation's record lines, encoded before the entry-part walk so they name the feeds the parts were built from,
+ * even if the account changes mid-export. Plain strings: the walk clear()s the entity manager.
  */
 final readonly class FoundationSnapshotModel
 {
