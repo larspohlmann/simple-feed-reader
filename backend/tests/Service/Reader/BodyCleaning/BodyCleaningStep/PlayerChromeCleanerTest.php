@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PlayerChromeCleaner;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class PlayerChromeCleanerTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string PROSE =
         'For people who prefer to listen or are visually impaired or are multitasking, '
         . 'listening as they organize their rubber band collection.';
@@ -326,8 +328,7 @@ final class PlayerChromeCleanerTest extends TestCase
 
     private function clean(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $this->cleaner->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();

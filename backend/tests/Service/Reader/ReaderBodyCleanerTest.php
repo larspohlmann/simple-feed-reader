@@ -41,15 +41,11 @@ use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
 {
-    private const string PROSE =
-        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
-        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
-        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
-
     private ReaderBodyCleaner $cleaner;
 
     protected function setUp(): void
@@ -92,7 +88,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $dek = 'Apple might recycle the name from Microsoft dual-screen device for its first folding iPhone.';
         $content = "<div><p>$dek</p></div><div><p>$dek</p></div>"
             . '<p><img src="https://x.test/stk071-apple-b.jpg?w=2400" alt="Apple event"></p>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
@@ -103,8 +99,9 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testSetsTheTrailingAuthorBioApartFromTheBody(): void
     {
         $content = '<div>'
-            . '<div><p>' . self::PROSE . ' Erster.</p><p>' . self::PROSE . ' Zweiter.</p></div>'
-            . '<div><p>' . self::PROSE . ' Zur Autorin.</p>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . ' Erster.</p><p>' . ProseParagraphs::SUBSTANTIAL
+            . ' Zweiter.</p></div>'
+            . '<div><p>' . ProseParagraphs::SUBSTANTIAL . ' Zur Autorin.</p>'
             . '<p><a href="https://news.test/author/jane-doe/">View Bio</a></p></div>'
             . '</div>';
 
@@ -115,7 +112,7 @@ final class ReaderBodyCleanerTest extends TestCase
 
     public function testRebuildsAnOrphanTeaserThumbnailAsAnInlinePlayer(): void
     {
-        $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
+        $content = '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p><img src="https://x.test/still.jpg"></p>';
         $teaser = new TeaserPlayerModel(
             MediaKind::Video,
             'https://x.test/clip.mp4',
@@ -134,7 +131,7 @@ final class ReaderBodyCleanerTest extends TestCase
 
     public function testDoesNotRebuildATeaserThePipelineAlreadyPlaced(): void
     {
-        $content = '<p>' . self::PROSE . '</p><p><img src="https://x.test/still.jpg"></p>';
+        $content = '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p><img src="https://x.test/still.jpg"></p>';
         $teaser = new TeaserPlayerModel(
             MediaKind::Video,
             'https://x.test/clip.mp4',
@@ -158,7 +155,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<span class="detail-item-label">Portionen</span>'
             . '<p class="detail-item-value">1</p>'
             . '<span class="detail-item-unit">Portionen</span></div></div>';
-        $content = '<div><p>' . self::PROSE . '</p>' . $facts . '</div>';
+        $content = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>' . $facts . '</div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
@@ -171,7 +168,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $header = '<div class="site-header"><nav><a href="/a">Editorial</a>'
             . '<a href="/b">Blog</a><a href="/c">Debate</a><a href="/d">About</a></nav></div>';
-        $content = '<div>' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
+        $content = '<div>' . $header . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main></div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
@@ -181,7 +178,7 @@ final class ReaderBodyCleanerTest extends TestCase
 
     public function testDropsTheLeadingDuplicateHeadingInOnePass(): void
     {
-        $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p></div>';
+        $content = '<div><h2>My Article</h2><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles(['My Article']));
 
@@ -192,7 +189,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testDropsADuplicateTitleThatSatBehindAKicker(): void
     {
         $title = 'Schwedens Wohlfahrtsstaat nach 30 Jahren neoliberalem Experiment';
-        $content = '<div><p>Kapitalismus</p><h2>' . $title . '</h2><p>' . self::PROSE . '</p></div>';
+        $content = '<div><p>Kapitalismus</p><h2>' . $title . '</h2><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles([$title]));
 
@@ -203,7 +200,7 @@ final class ReaderBodyCleanerTest extends TestCase
 
     public function testRemovesLeadingEngagementChromeInTheSamePass(): void
     {
-        $content = '<div><p>1.251 Klicks</p><p>❤️️</p><p>' . self::PROSE . '</p></div>';
+        $content = '<div><p>1.251 Klicks</p><p>❤️️</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
@@ -216,7 +213,8 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $content = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $content = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
@@ -229,8 +227,9 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $content = '<div><h2>My Article</h2><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
-            . '<p>' . self::PROSE . '</p>' . $grid . '</div>';
+        $content = '<div><h2>My Article</h2><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>' . $grid . '</div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withTitles(['My Article']));
 
@@ -248,7 +247,7 @@ final class ReaderBodyCleanerTest extends TestCase
 
     public function testRestoresTheLeadIntoATextOnlyBodyInTheSharedWindow(): void
     {
-        $content = '<div><p>' . self::PROSE . '</p></div>';
+        $content = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
         $candidate = new LeadImageCandidateModel('https://cdn.test/hero.jpg', BodyCleaningInputs::pageDrawingNothing());
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::withLeadImage($candidate));
@@ -260,7 +259,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testRewritesAnInBodyEmbedAndKeepsItsPosition(): void
     {
         $html = '<h3>One</h3><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
 
@@ -274,7 +273,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $html = '<h4>One</h4><div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
             . '<h4>Two</h4><div><iframe src="https://www.youtube.com/embed/bbbbbbbbbbb"></iframe></div>'
             . '<h4>Three</h4><div><iframe src="https://www.youtube.com/embed/ccccccccccc"></iframe></div>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
 
@@ -286,7 +285,7 @@ final class ReaderBodyCleanerTest extends TestCase
     /** A Spotify player embedded in the body survives as an embed link the client upgrades (#1053). */
     public function testRewritesAnInBodySpotifyEmbed(): void
     {
-        $html = '<p>' . self::PROSE . '</p><h3>Playlist</h3>'
+        $html = '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><h3>Playlist</h3>'
             . '<div><iframe src="https://open.spotify.com/embed/playlist/27uRYdAHvcKADidfnR8BN4"></iframe></div>';
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::nothingKnown());
@@ -299,7 +298,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testSuppressesDiscoveredEmbedsWhenTheBodyHadItsOwn(): void
     {
         $html = '<div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
         $discovered = new ArticleMediaModel([
             new MediaCandidateModel(
                 MediaKind::Embed,
@@ -319,7 +318,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testKeepsDiscoveredAudioEvenWhenTheBodyHadAnEmbed(): void
     {
         $html = '<div><iframe src="https://www.youtube.com/embed/aaaaaaaaaaa"></iframe></div>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
         $discovered = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withMedia($discovered));
@@ -335,7 +334,8 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
-        $html = '<div><p>' . self::PROSE . '</p><figure><img src="' . $bodyImg . '" alt=""></figure></div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><figure><img src="' . $bodyImg
+            . '" alt=""></figure></div>';
         $discovered = new ArticleMediaModel([
             new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster),
             new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3'),
@@ -359,7 +359,7 @@ final class ReaderBodyCleanerTest extends TestCase
      */
     public function testSuppressesTheHeroWhenARecoveredEmbedIsTopPlaced(): void
     {
-        $html = '<div><p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
         $lead = new LeadImageCandidateModel(
             'https://heise.cloudimg.example/thumb.jpg',
             BodyCleaningInputs::pageDrawingNothing(),
@@ -389,7 +389,7 @@ final class ReaderBodyCleanerTest extends TestCase
         $video1Body = 'https://media.tagesschau.de/image/80085f9c-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
         $video2Poster = 'https://media.tagesschau.de/image/58e272fd-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $mapImg = 'https://media.tagesschau.de/image/deadbeef-0000-0000-0000-000000000000/A/map.jpg';
-        $html = '<div><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<figure><img src="' . $video1Body . '" alt=""></figure>'
             . '<figure><img src="' . $mapImg . '" alt=""></figure></div>';
         $discovered = new ArticleMediaModel([
@@ -410,7 +410,7 @@ final class ReaderBodyCleanerTest extends TestCase
     {
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/A/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/B/16x9-big/t.jpg';
-        $html = '<div><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<a href="https://x.test/story"><img src="' . $bodyImg . '" alt=""></a></div>';
         $discovered = new ArticleMediaModel([
             new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster),
@@ -433,7 +433,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<div><p><time datetime="2026-08-25T10:44:42Z">Aug 25, 2026</time></p><p>∙ Paid</p></div>'
             . '<div><p><a href="https://x.substack.com/p/plants"><img src="' . $poster . '"'
             . ' alt="Video — open the original article to watch" width="1280" height="720"></a></p>'
-            . '<p>' . self::PROSE . '</p></div></div>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div></div>';
         $lead = new LeadImageCandidateModel($poster, BodyCleaningInputs::pageDrawingNothing());
 
         $out = $this->cleaner->clean($html, BodyCleaningInputs::withLeadImage($lead));
@@ -445,7 +445,7 @@ final class ReaderBodyCleanerTest extends TestCase
     public function testLinksABareSubstackPoster(): void
     {
         $content = '<p><img src="https://substackcdn.com/image/youtube/w_728/aaaaaaaaaaa"></p>'
-            . '<p>' . self::PROSE . '</p>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p>';
 
         $out = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 
@@ -462,7 +462,7 @@ final class ReaderBodyCleanerTest extends TestCase
             . '<a href="/b">Long Form Investigative Reporting Hub</a>'
             . '<a href="/c">Culture Arts And Entertainment Coverage</a>'
             . '<a href="/d">World News And Global Affairs Section</a></nav>';
-        $content = '<div id="wrap">' . $nav . '<main><p>' . self::PROSE . '</p></main></div>';
+        $content = '<div id="wrap">' . $nav . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main></div>';
 
         $result = $this->cleaner->clean($content, BodyCleaningInputs::nothingKnown());
 

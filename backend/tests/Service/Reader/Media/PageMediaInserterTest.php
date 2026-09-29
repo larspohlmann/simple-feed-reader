@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\MediaMarkup;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageMediaInserter;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaInserterTest extends TestCase
 {
+    use ParsesHtml;
+
     private PageMediaInserter $inserter;
 
     protected function setUp(): void
@@ -24,8 +27,7 @@ final class PageMediaInserterTest extends TestCase
 
     private function insert(string $html, ArticleMediaModel $media): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $plan = $this->inserter->plan($document, $media);
         $this->inserter->apply($document, $plan);
 
@@ -46,9 +48,8 @@ final class PageMediaInserterTest extends TestCase
     {
         // #907: a restored hero figure is handed in as the anchor, so the
         // top-placed narration player lands under the picture, not above it.
-        $document = HtmlDocumentParser::parseOrNull('<body><figure><img src="https://x.test/hero.jpg"></figure>'
+        $document = $this->document('<body><figure><img src="https://x.test/hero.jpg"></figure>'
             . '<p>Prose</p></body>');
-        self::assertNotNull($document);
         $hero = $document->querySelector('figure');
         self::assertNotNull($hero);
         $media = new ArticleMediaModel([new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3')]);
@@ -254,8 +255,6 @@ final class PageMediaInserterTest extends TestCase
         self::assertLessThan(strpos($out, 'v1.mp4'), strpos($out, 'v2.mp4'), 'the top-placed video leads');
     }
 
-    private const string PROSE = 'The paragraph the player followed on the source page, long enough to be prose.';
-
     public function testPlacesACandidateAfterTheBlockItFollowedOnThePage(): void
     {
         $media = new ArticleMediaModel([
@@ -264,21 +263,27 @@ final class PageMediaInserterTest extends TestCase
                 'https://x.test/v.mp4',
                 'https://x.test/p.jpg',
                 null,
-                self::PROSE,
+                ProseParagraphs::BEFORE_A_PLAYER,
             ),
         ]);
-        $html = '<body><p>Intro</p><p>' . self::PROSE . '</p><p>Tail</p></body>';
+        $html = '<body><p>Intro</p><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p><p>Tail</p></body>';
 
         $out = $this->insert($html, $media);
 
-        self::assertGreaterThan(strpos($out, self::PROSE), strpos($out, '<video'));
+        self::assertGreaterThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, '<video'));
         self::assertLessThan(strpos($out, 'Tail'), strpos($out, '<video'));
     }
 
     public function testMatchesTheBlockOnCollapsedText(): void
     {
         $media = new ArticleMediaModel([
-            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
         ]);
         $html = '<body><p>Intro</p><p>  The paragraph the player followed on the source page,' . "
 "
@@ -293,14 +298,26 @@ final class PageMediaInserterTest extends TestCase
     public function testTwoCandidatesAfterTheSameBlockKeepSourceOrder(): void
     {
         $media = new ArticleMediaModel([
-            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/first.mp3', null, null, self::PROSE),
-            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/second.mp3', null, null, self::PROSE),
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/first.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/second.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
         ]);
-        $html = '<body><p>' . self::PROSE . '</p><p>Tail</p></body>';
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p><p>Tail</p></body>';
 
         $out = $this->insert($html, $media);
 
-        self::assertGreaterThan(strpos($out, self::PROSE), strpos($out, 'first.mp3'));
+        self::assertGreaterThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, 'first.mp3'));
         self::assertLessThan(strpos($out, 'second.mp3'), strpos($out, 'first.mp3'));
         self::assertLessThan(strpos($out, 'Tail'), strpos($out, 'second.mp3'));
     }
@@ -308,9 +325,16 @@ final class PageMediaInserterTest extends TestCase
     public function testFollowsAListItemBlockWithTheWholeList(): void
     {
         $media = new ArticleMediaModel([
-            new MediaCandidateModel(MediaKind::Audio, 'https://x.test/a.mp3', null, null, self::PROSE),
+            new MediaCandidateModel(
+                MediaKind::Audio,
+                'https://x.test/a.mp3',
+                null,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
         ]);
-        $html = '<body><ul><li>' . self::PROSE . '</li><li>Second item</li></ul><p>Tail</p></body>';
+        $html = '<body><ul><li>' . ProseParagraphs::BEFORE_A_PLAYER
+            . '</li><li>Second item</li></ul><p>Tail</p></body>';
 
         $out = $this->insert($html, $media);
 
@@ -340,14 +364,21 @@ final class PageMediaInserterTest extends TestCase
         $poster = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/AAAAAA/16x9-1920/p.jpg';
         $bodyImg = 'https://media.tagesschau.de/image/7ad74081-1234-5678-9abc-def012345678/BBBBBB/16x9-big/t.jpg';
         $media = new ArticleMediaModel([
-            new MediaCandidateModel(MediaKind::Video, 'https://x.test/v.mp4', $poster, null, self::PROSE),
+            new MediaCandidateModel(
+                MediaKind::Video,
+                'https://x.test/v.mp4',
+                $poster,
+                null,
+                ProseParagraphs::BEFORE_A_PLAYER,
+            ),
         ]);
-        $html = '<body><figure><img src="' . $bodyImg . '" alt=""></figure><p>' . self::PROSE . '</p></body>';
+        $html = '<body><figure><img src="' . $bodyImg . '" alt=""></figure><p>' . ProseParagraphs::BEFORE_A_PLAYER
+            . '</p></body>';
 
         $out = $this->insert($html, $media);
 
         self::assertSame(1, substr_count($out, '<video'));
         self::assertStringNotContainsString('<img', $out);
-        self::assertLessThan(strpos($out, self::PROSE), strpos($out, '<video'));
+        self::assertLessThan(strpos($out, ProseParagraphs::BEFORE_A_PLAYER), strpos($out, '<video'));
     }
 }

@@ -6,11 +6,13 @@ namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\PageRepair\ImageWrapperClassRemover;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ImageWrapperClassRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private ImageWrapperClassRemover $remover;
 
     protected function setUp(): void
@@ -93,9 +95,8 @@ final class ImageWrapperClassRemoverTest extends TestCase
 
     private function stripped(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<html lang="en"><body class="page">' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body class="page">' . $bodyHtml . '</body></html>'
         );
         $this->remover->repairIn($document);
 

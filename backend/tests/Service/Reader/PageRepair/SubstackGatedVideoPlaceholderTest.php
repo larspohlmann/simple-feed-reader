@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\PageRepair\SubstackGatedVideoPlaceholder;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackGatedVideoPlaceholderTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string PLAYER =
         '<div class="shows-video-player-container container-abc">'
         . '<div class="settingsControlsContainer-x">'
@@ -202,8 +204,7 @@ final class SubstackGatedVideoPlaceholderTest extends TestCase
 
     private function repairIn(string $html): \Dom\HTMLDocument
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $this->placeholder->repairIn($document);
 
         return $document;

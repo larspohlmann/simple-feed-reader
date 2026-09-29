@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\NarrationSignals;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class NarrationSignalsTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testFlagsWhenTheFileUrlItselfNamesNarration(): void
     {
         self::assertTrue(
@@ -39,8 +41,7 @@ final class NarrationSignalsTest extends TestCase
 
     private function audioIn(string $html): Element
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $audio = $document->querySelector('audio');
         self::assertInstanceOf(Element::class, $audio);
 

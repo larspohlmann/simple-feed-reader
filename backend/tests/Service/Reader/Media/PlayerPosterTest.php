@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\PlayerPoster;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class PlayerPosterTest extends TestCase
 {
+    use ParsesHtml;
+
     private function holder(string $bodyHtml): Element
     {
-        $document = HtmlDocumentParser::parseOrNull('<html><body>' . $bodyHtml . '</body></html>');
-        self::assertNotNull($document);
+        $document = $this->document('<html><body>' . $bodyHtml . '</body></html>');
         $holder = $document->querySelector('[data-v]');
         self::assertInstanceOf(Element::class, $holder);
 

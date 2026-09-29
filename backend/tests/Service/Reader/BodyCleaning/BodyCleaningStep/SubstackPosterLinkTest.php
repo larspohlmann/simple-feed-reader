@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SubstackPosterLinkTest extends TestCase
 {
+    use ParsesHtml;
+
     private SubstackPosterLink $rule;
 
     protected function setUp(): void
@@ -20,8 +22,7 @@ final class SubstackPosterLinkTest extends TestCase
 
     private function link(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $this->rule->cleanIn(BodyCleaningPasses::over($document));
 
         return $document->saveHtml();

@@ -7,10 +7,13 @@ namespace App\Tests\Service\Reader\PageRepair;
 use App\Service\Html\DesktopViewport;
 use App\Service\Html\PictureSources;
 use App\Service\Reader\PageRepair\LazyImageSources;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class LazyImageSourcesTest extends TestCase
 {
+    use ParsesHtml;
+
     private LazyImageSources $lazyImages;
 
     protected function setUp(): void
@@ -501,9 +504,8 @@ final class LazyImageSourcesTest extends TestCase
 
     private function resolvedDocument(string $bodyHtml): \Dom\HTMLDocument
     {
-        $document = \Dom\HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
 
         $this->lazyImages->repairIn($document);

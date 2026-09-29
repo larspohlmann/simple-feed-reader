@@ -9,14 +9,12 @@ use App\Service\Reader\Media\EmbedProviders;
 use App\Service\Reader\Media\MediaCandidateSource\YouTubeIdAttributeSource;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class YouTubeIdAttributeSourceTest extends TestCase
 {
     use FindsMediaInRawPage;
-
-    private const string PROSE =
-        'The paragraph the player followed on the source page, long enough to be prose.';
 
     private function source(): YouTubeIdAttributeSource
     {
@@ -88,7 +86,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
 
     public function testARepeatedIdYieldsOneCandidateAnchoredWhereItFirstAppears(): void
     {
-        $html = '<body><p>' . self::PROSE . '</p>'
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<div data-component="youtube-atom" data-video-id="pz8VRrI0p0U"></div>'
             . '<p>Later prose, also long enough to count as a block of the article.</p>'
             . '<div class="embed--youtube" data-video-id="pz8VRrI0p0U"></div></body>';
@@ -96,7 +94,7 @@ final class YouTubeIdAttributeSourceTest extends TestCase
         $found = $this->find($html, 'https://x.test/a');
 
         self::assertCount(1, $found);
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testIgnoresUnparseableHtml(): void

@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class SlideCaptionResolverTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testReadsVisibleTextAndTheFirstAbsoluteLink(): void
     {
         $slide = $this->slide(
@@ -78,8 +80,7 @@ final class SlideCaptionResolverTest extends TestCase
 
     private function slide(string $html): Element
     {
-        $document = HtmlDocumentParser::parseOrNull('<body>' . $html . '</body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body>' . $html . '</body>');
         $slide = $document->querySelector('.swiper-slide');
         self::assertInstanceOf(Element::class, $slide);
 

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
@@ -12,11 +11,14 @@ use App\Service\Reader\Slideshow\Model\SlideModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowInserterTest extends TestCase
 {
+    use ParsesHtml;
+
     /** @param list<SlideshowModel> $slideshows */
     private function insert(HTMLDocument $document, array $slideshows): void
     {
@@ -33,11 +35,10 @@ final class SlideshowInserterTest extends TestCase
 
     public function testSeatsAfterTheAnchorAndRemovesTheOriginal(): void
     {
-        $document = HtmlDocumentParser::parseOrNull(
+        $document = $this->document(
             '<body><p>The anchor paragraph that is comfortably past forty characters.</p>'
             . '<div class="swiper broken-original">leftover</div></body>',
         );
-        self::assertNotNull($document);
         $show = SlideshowModel::fromSlides(
             $this->slides(),
             null,
@@ -57,8 +58,7 @@ final class SlideshowInserterTest extends TestCase
 
     public function testAppendsAtBodyEndWhenNoAnchorSurvives(): void
     {
-        $document = HtmlDocumentParser::parseOrNull('<body><p>short</p></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body><p>short</p></body>');
         $show = SlideshowModel::fromSlides(
             $this->slides(),
             null,
@@ -76,11 +76,10 @@ final class SlideshowInserterTest extends TestCase
     {
         $firstAnchor = 'The first anchor paragraph that is comfortably past forty characters.';
         $secondAnchor = 'The second anchor paragraph that is comfortably past forty characters.';
-        $document = HtmlDocumentParser::parseOrNull(
+        $document = $this->document(
             "<body><p>{$firstAnchor}</p><div class=\"swiper broken\">leftover one</div>"
             . "<p>{$secondAnchor}</p><div class=\"swiper broken\">leftover two</div></body>",
         );
-        self::assertNotNull($document);
         $signature = ContainerSignatureModel::fromClassAttribute('swiper broken');
         $first = SlideshowModel::fromSlides($this->slides(), null, $firstAnchor, $signature);
         $second = SlideshowModel::fromSlides($this->slides(), null, $secondAnchor, $signature);

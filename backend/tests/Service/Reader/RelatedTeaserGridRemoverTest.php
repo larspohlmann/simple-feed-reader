@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\RelatedTeaserGridRemover;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class RelatedTeaserGridRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string TEASER_TEXT =
         'Ein kurzer Anrisstext, der die verlinkte Schlagzeile begleitet und '
         . 'zusammen mit ihr die Teaser-Karte bildet.';
@@ -228,8 +230,7 @@ final class RelatedTeaserGridRemoverTest extends TestCase
      */
     private function removed(string $html, array $slideshowContainers = []): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         $this->remover->removeFrom($document, $slideshowContainers);
 

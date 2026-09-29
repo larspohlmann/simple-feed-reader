@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
@@ -13,21 +12,19 @@ use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\Teaser\Model\TeaserPlayerModel;
 use App\Service\Reader\Media\Teaser\TeaserPlayerMarkup;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class TeaserPlayerInserterTest extends TestCase
 {
+    use ParsesHtml;
+
     private TeaserPlayerInserter $inserter;
 
     protected function setUp(): void
     {
         $this->inserter = new TeaserPlayerInserter(new TeaserPlayerMarkup());
-    }
-
-    private function document(string $bodyHtml): HTMLDocument
-    {
-        return HtmlDocumentParser::parse('<body>' . $bodyHtml . '</body>');
     }
 
     /** @param list<TeaserPlayerModel> $teasers */

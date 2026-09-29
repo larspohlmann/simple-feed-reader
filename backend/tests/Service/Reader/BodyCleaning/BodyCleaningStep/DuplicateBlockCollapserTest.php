@@ -9,11 +9,13 @@ use App\Service\Reader\Media\EmbedProvider\VimeoEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
 use App\Tests\Support\BodyCleaningPasses;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class DuplicateBlockCollapserTest extends TestCase
 {
+    use ParsesHtml;
+
     private DuplicateBlockCollapser $collapser;
 
     protected function setUp(): void
@@ -146,9 +148,8 @@ final class DuplicateBlockCollapserTest extends TestCase
 
     private function collapsed(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
         $this->collapser->cleanIn(BodyCleaningPasses::over($document));
 

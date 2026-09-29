@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow\Model;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -20,16 +19,18 @@ use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Service\Reader\ReaderBodyCleanerTest;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SlideshowModelExtractionTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testTagesschauGalleryBecomesAReaderSlideshowAfterItsHeading(): void
     {
         $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($raw);
-        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
-        self::assertNotNull($rawDocument);
+        $rawDocument = $this->document($raw);
 
         $slideshows = $this->scanner()->scan($rawDocument);
 
@@ -47,8 +48,7 @@ final class SlideshowModelExtractionTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/swiper-teaser-carousel.html');
         self::assertIsString($raw);
-        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
-        self::assertNotNull($rawDocument);
+        $rawDocument = $this->document($raw);
 
         $body = '<p>An intro paragraph long enough to anchor the gallery that follows it here.</p>';
         $clean = $this->cleaner()->clean(
@@ -69,8 +69,7 @@ final class SlideshowModelExtractionTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/tagesschau-carousel.html');
         self::assertIsString($raw);
-        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
-        self::assertNotNull($rawDocument);
+        $rawDocument = $this->document($raw);
 
         // Readability dropped the header block, so its output carries no prose.
         $clean = $this->cleaner()->clean('<div></div>', new BodyCleaningInputModel(
@@ -90,8 +89,7 @@ final class SlideshowModelExtractionTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/toi-placeholder-carousel.html');
         self::assertIsString($raw);
-        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
-        self::assertNotNull($rawDocument);
+        $rawDocument = $this->document($raw);
 
         self::assertSame([], $this->scanner()->scan($rawDocument));
     }
@@ -100,8 +98,7 @@ final class SlideshowModelExtractionTest extends TestCase
     {
         $raw = file_get_contents(__DIR__ . '/../../../../Fixtures/Slideshow/lazy-placeholder-gallery.html');
         self::assertIsString($raw);
-        $rawDocument = HtmlDocumentParser::parseOrNull($raw);
-        self::assertNotNull($rawDocument);
+        $rawDocument = $this->document($raw);
 
         $slideshows = $this->scanner()->scan($rawDocument);
 

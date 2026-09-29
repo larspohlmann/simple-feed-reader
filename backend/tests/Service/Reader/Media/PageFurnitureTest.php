@@ -4,16 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Media;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\PageFurniture;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class PageFurnitureTest extends TestCase
 {
+    use ParsesHtml;
+
     private function holds(string $html): bool
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $element = $document->querySelector('#x');
         self::assertNotNull($element);
 

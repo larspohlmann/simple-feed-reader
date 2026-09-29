@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Paywall;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Paywall\OutsideFurniture;
 use App\Service\Reader\Paywall\PaywallBlocks;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class PaywallBlocksTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testFindsAGatedCallToAction(): void
     {
         self::assertTrue($this->hasGate('<article><p>Teaser.</p><div class="paywall-cta">Read on</div></article>'));
@@ -82,19 +84,17 @@ final class PaywallBlocksTest extends TestCase
     {
         // mopo.de tags every MOPO+ article template with `has-paywall` on <body>;
         // the whole page is not a gated region.
-        $document = HtmlDocumentParser::parseOrNull(
+        $document = $this->document(
             '<html class="has-paywall"><body class="article has-paywall">'
             . '<article><p>The full article, served in one piece.</p></article></body></html>',
         );
-        self::assertNotNull($document);
 
         self::assertFalse($this->blocks()->foundOutsideFurnitureIn($document));
     }
 
     private function hasGate(string $body): bool
     {
-        $document = HtmlDocumentParser::parseOrNull('<html><body>' . $body . '</body></html>');
-        self::assertNotNull($document);
+        $document = $this->document('<html><body>' . $body . '</body></html>');
 
         return $this->blocks()->foundOutsideFurnitureIn($document);
     }

@@ -15,14 +15,12 @@ use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\NarrationSignals;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Media\PlayerPoster;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class AttributeMediaSourceTest extends TestCase
 {
     use FindsMediaInRawPage;
-
-    private const string PROSE =
-        'The paragraph the player followed on the source page, long enough to be prose.';
 
     private function source(): AttributeMediaSource
     {
@@ -183,27 +181,27 @@ final class AttributeMediaSourceTest extends TestCase
         // The first (teaser) player sits earlier; the anchor belongs to the winner.
         $html = '<body><p>Teaser line, long enough to be a prose block on its own terms.</p>'
             . '<div data-audio-src="https://x.test/teaser-episode.mp3"></div>'
-            . '<p>' . self::PROSE . '</p>'
+            . '<p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div></body>';
 
         $found = $this->find($html, 'https://x.test/bildung-100.html');
 
         self::assertCount(1, $found);
         self::assertSame('https://x.test/bildung-episode.mp3', $found[0]->url);
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testAnchorsARepeatedUrlWhereItFirstAppears(): void
     {
         // ARD lists the same rendition in the player and again in a download menu.
-        $html = '<body><p>' . self::PROSE . '</p>'
+        $html = '<body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<div data-audio-src="https://x.test/bildung-episode.mp3"></div>'
             . '<p>A download menu paragraph, long enough to be a prose block of its own.</p>'
             . '<a data-download="https://x.test/bildung-episode.mp3">Download</a></body>';
 
         $found = $this->find($html, 'https://x.test/bildung-100.html');
 
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testYieldsAudioAndVideoFromTheSamePage(): void

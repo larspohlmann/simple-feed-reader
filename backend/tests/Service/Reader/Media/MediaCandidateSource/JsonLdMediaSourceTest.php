@@ -13,14 +13,12 @@ use App\Service\Reader\Media\MediaCandidateSource\JsonLdMediaSource;
 use App\Service\Reader\Media\MediaUrlKind;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Service\Reader\Media\PageFurniture;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class JsonLdMediaSourceTest extends TestCase
 {
     use FindsMediaInRawPage;
-
-    private const string PROSE =
-        'The paragraph the player followed on the source page, long enough to be prose.';
 
     private function source(): JsonLdMediaSource
     {
@@ -119,21 +117,21 @@ final class JsonLdMediaSourceTest extends TestCase
 
     public function testNamesTheProseBlockAnInBodyDeclarationFollows(): void
     {
-        $html = '<html lang="de"><body><p>' . self::PROSE . '</p><div>'
+        $html = '<html lang="de"><body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p><div>'
             . '<script type="application/ld+json">{"@type":"VideoObject",'
             . '"contentUrl":"https://x.test/v.mp4","thumbnailUrl":"https://x.test/poster.jpg"}</script>'
             . '</div></body></html>';
 
         $found = $this->find($html, 'https://x.test/a.html');
 
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testAnchorsARepeatedDeclarationWhereItFirstAppears(): void
     {
         $video = '{"@type":"VideoObject","contentUrl":"https://x.test/v.mp4",'
             . '"thumbnailUrl":"https://x.test/poster.jpg"}';
-        $html = '<html lang="de"><body><p>' . self::PROSE . '</p>'
+        $html = '<html lang="de"><body><p>' . ProseParagraphs::BEFORE_A_PLAYER . '</p>'
             . '<div><script type="application/ld+json">' . $video . '</script></div>'
             . '<p>A related-videos paragraph, long enough to be a prose block of its own.</p>'
             . '<div><script type="application/ld+json">' . $video . '</script></div></body></html>';
@@ -141,7 +139,7 @@ final class JsonLdMediaSourceTest extends TestCase
         $found = $this->find($html, 'https://x.test/a.html');
 
         self::assertCount(1, $found);
-        self::assertSame(self::PROSE, $found[0]->precedingText);
+        self::assertSame(ProseParagraphs::BEFORE_A_PLAYER, $found[0]->precedingText);
     }
 
     public function testSkipsADeclarationInsideANav(): void

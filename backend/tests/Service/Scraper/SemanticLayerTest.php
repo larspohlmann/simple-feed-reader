@@ -6,17 +6,19 @@ namespace App\Tests\Service\Scraper;
 
 use App\Service\Scraper\CardTitle;
 use App\Service\Scraper\ScrapeLayer\SemanticLayer;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class SemanticLayerTest extends TestCase
 {
+    use ParsesHtml;
+
     use ScrapedFixtures;
 
     /** @return list<\App\Service\Scraper\Model\ScrapedItemModel> */
     private function extract(string $fixture, string $baseUrl): array
     {
-        $doc = HTMLDocument::createFromString($this->scrapedFixture($fixture), \LIBXML_NOERROR);
+        $doc = $this->document($this->scrapedFixture($fixture));
 
         return new SemanticLayer(new CardTitle())->extract($doc, $baseUrl);
     }
@@ -31,10 +33,9 @@ final class SemanticLayerTest extends TestCase
 
     public function testFewerThanThreeArticlesYieldsNothing(): void
     {
-        $doc = HTMLDocument::createFromString(
+        $doc = $this->document(
             '<html lang="en"><body><article><h2><a href="/one">Single article headline</a></h2></article>'
-            . '</body></html>',
-            \LIBXML_NOERROR
+            . '</body></html>'
         );
         self::assertSame([], new SemanticLayer(new CardTitle())->extract($doc, 'https://blog.test/'));
     }

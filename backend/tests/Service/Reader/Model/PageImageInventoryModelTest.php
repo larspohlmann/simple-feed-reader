@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Model;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Model\ImageIdentityModel;
 use App\Service\Reader\Model\PageImageInventoryModel;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class PageImageInventoryModelTest extends TestCase
 {
+    use ParsesHtml;
+
     private function inventoryOf(string $html): PageImageInventoryModel
     {
-        return PageImageInventoryModel::fromDocument(HtmlDocumentParser::parse($html));
+        return PageImageInventoryModel::fromDocument($this->document($html));
     }
 
     public function testDrawsAPlainImageSource(): void

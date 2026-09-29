@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\ReaderAudit;
 
-use App\Service\Html\Support\HtmlDocumentParser;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Tests\Support\AuditMarkers;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementMarkersTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string PROSE =
         'Hamburg/Norderstedt - Ein Auto floh vor der Polizei und kollidierte mit einem Radfahrer. '
         . 'Die Rettungskräfte brachten den schwer verletzten Mann in ein Krankenhaus. '
@@ -102,8 +104,7 @@ final class LeadingEngagementMarkersTest extends TestCase
 
     private function clean(string $html, ?string $entryAuthor): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         LeadingEngagementCleaners::cleaner()->cleanIn(
             new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)),
         );

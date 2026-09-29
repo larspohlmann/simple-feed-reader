@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\EmbedProvider\SoundCloudEmbedProvider;
@@ -16,11 +15,14 @@ use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class InBodyEmbedRewriterTest extends TestCase
 {
+    use ParsesHtml;
+
     private InBodyEmbedRewriter $rewriter;
 
     protected function setUp(): void
@@ -33,7 +35,7 @@ final class InBodyEmbedRewriterTest extends TestCase
 
     private function rewrite(string $html): string
     {
-        $pass = BodyCleaningPasses::over(HtmlDocumentParser::parse($html));
+        $pass = BodyCleaningPasses::over($this->document($html));
         $this->rewriter->cleanIn($pass);
 
         return $pass->document->saveHtml();
@@ -88,11 +90,11 @@ final class InBodyEmbedRewriterTest extends TestCase
     {
         $discovered = $this->discoveredEmbed();
         $none = new BodyCleaningPass(
-            HtmlDocumentParser::parse('<body><p>text</p></body>'),
+            $this->document('<body><p>text</p></body>'),
             BodyCleaningInputs::withMedia($discovered),
         );
         $one = new BodyCleaningPass(
-            HtmlDocumentParser::parse('<body><iframe src="https://youtu.be/aaaaaaaaaaa"></iframe></body>'),
+            $this->document('<body><iframe src="https://youtu.be/aaaaaaaaaaa"></iframe></body>'),
             BodyCleaningInputs::withMedia($discovered),
         );
 
@@ -128,7 +130,7 @@ final class InBodyEmbedRewriterTest extends TestCase
     public function testRecordsRecoveryWhenOneOfSeveralIframesIsUnknown(string $iframes): void
     {
         $pass = new BodyCleaningPass(
-            HtmlDocumentParser::parse('<body>' . $iframes . '</body>'),
+            $this->document('<body>' . $iframes . '</body>'),
             BodyCleaningInputs::withMedia($this->discoveredEmbed()),
         );
 

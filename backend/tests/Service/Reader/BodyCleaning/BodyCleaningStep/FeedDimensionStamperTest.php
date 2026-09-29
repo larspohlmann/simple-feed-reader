@@ -11,11 +11,13 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Model\FeedMediaModel;
 use App\Tests\Support\BodyCleaningInputs;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class FeedDimensionStamperTest extends TestCase
 {
+    use ParsesHtml;
+
     /** @param list<EntryMedium> $media */
     private function feed(array $media): FeedMediaModel
     {
@@ -34,9 +36,8 @@ final class FeedDimensionStamperTest extends TestCase
 
     private function stamp(string $bodyHtml, FeedMediaModel $feed): string
     {
-        $document = HTMLDocument::createFromString(
-            '<!doctype html><html><body>' . $bodyHtml . '</body></html>',
-            \LIBXML_NOERROR,
+        $document = $this->document(
+            '<!doctype html><html><body>' . $bodyHtml . '</body></html>'
         );
         (new FeedDimensionStamper())->cleanIn(
             new BodyCleaningPass($document, BodyCleaningInputs::withFeedMedia($feed)),

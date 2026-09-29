@@ -4,17 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\SlideImageResolver;
+use App\Tests\Support\ParsesHtml;
 use Dom\Element;
 use PHPUnit\Framework\TestCase;
 
 final class SlideImageResolverTest extends TestCase
 {
+    use ParsesHtml;
+
     private function slide(string $inner): Element
     {
-        $document = HtmlDocumentParser::parseOrNull('<body><div class="slide">' . $inner . '</div></body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body><div class="slide">' . $inner . '</div></body>');
         $slide = $document->querySelector('.slide');
         self::assertNotNull($slide);
 
@@ -32,8 +33,7 @@ final class SlideImageResolverTest extends TestCase
         foreach ($inners as $inner) {
             $body .= '<div class="slide">' . $inner . '</div>';
         }
-        $document = HtmlDocumentParser::parseOrNull('<body>' . $body . '</body>');
-        self::assertNotNull($document);
+        $document = $this->document('<body>' . $body . '</body>');
 
         $slides = [];
         foreach ($document->querySelectorAll('.slide') as $slide) {

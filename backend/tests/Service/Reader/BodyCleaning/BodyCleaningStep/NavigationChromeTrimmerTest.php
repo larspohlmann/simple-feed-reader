@@ -4,17 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class NavigationChromeTrimmerTest extends TestCase
 {
-    private const string PROSE =
-        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
-        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
-        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
+    use ParsesHtml;
 
     private NavigationChromeTrimmer $trimmer;
 
@@ -36,25 +34,25 @@ final class NavigationChromeTrimmerTest extends TestCase
             . '<li><a href="/c">Debate</a></li><li><a href="/d">Books</a></li>'
             . '<li><a href="/e">About</a></li><li><a href="/f">Newsletter</a></li></ul></nav>'
             . '</div>';
-        $html = '<div id="wrap">' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
+        $html = '<div id="wrap">' . $header . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main></div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('site-header', $result);
         self::assertStringNotContainsString('{phrase}', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testRemovesALeadingHeaderElement(): void
     {
         $header = '<header><a href="/a">Editorial</a><a href="/b">Blog</a>'
             . '<a href="/c">Debate</a></header>';
-        $html = '<div>' . $header . '<main><p>' . self::PROSE . '</p></main></div>';
+        $html = '<div>' . $header . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main></div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('Editorial', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testRemovesALeadingRoleNavigationRegionCaseInsensitively(): void
@@ -62,12 +60,12 @@ final class NavigationChromeTrimmerTest extends TestCase
         // The role match lower-cases first, so a capitalised role still counts.
         $nav = '<div role="Navigation"><a href="/a">Editorial</a>'
             . '<a href="/b">Blog</a><a href="/c">Debate</a></div>';
-        $html = '<div>' . $nav . '<main><p>' . self::PROSE . '</p></main></div>';
+        $html = '<div>' . $nav . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main></div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('Editorial', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testRemovesEveryNavigationRegionNotJustTheFirst(): void
@@ -76,13 +74,13 @@ final class NavigationChromeTrimmerTest extends TestCase
             . '<a href="/b">Blog</a><a href="/c">Debate</a></nav></div>';
         $second = '<div class="nav-two"><nav><a href="/d">Jobs</a>'
             . '<a href="/e">About</a><a href="/f">Books</a></nav></div>';
-        $html = '<div>' . $first . '<main><p>' . self::PROSE . '</p></main>' . $second . '</div>';
+        $html = '<div>' . $first . '<main><p>' . ProseParagraphs::SUBSTANTIAL . '</p></main>' . $second . '</div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('nav-one', $result);
         self::assertStringNotContainsString('nav-two', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testKeepsAnInArticleNavYetStillRemovesLaterChrome(): void
@@ -90,7 +88,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         // The in-article nav is skipped, not a stopping point: a chrome region
         // that comes after it in document order is still removed.
         $toc = '<main><nav class="toc"><a href="https://example.test/x">Kapitel</a></nav>'
-            . '<p>' . self::PROSE . '</p></main>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></main>';
         $tail = '<div class="tail-nav"><nav><a href="/a">Editorial</a>'
             . '<a href="/b">Blog</a><a href="/c">Debate</a></nav></div>';
         $html = '<div>' . $toc . $tail . '</div>';
@@ -106,7 +104,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         // The boundary guard covers <article> as well as <main>: a nav inside a
         // semantic <article> is in-content and stays.
         $toc = '<article><nav><a href="https://example.test/a">Abschnitt A</a></nav>'
-            . '<p>' . self::PROSE . '</p></article>';
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></article>';
 
         self::assertStringContainsString('Abschnitt A', $this->trimmed($toc));
     }
@@ -117,16 +115,16 @@ final class NavigationChromeTrimmerTest extends TestCase
         // table of contents, not site chrome; the trimmer leaves it alone.
         $toc = '<nav><a href="https://example.test/a">Abschnitt A</a>'
             . '<a href="https://example.test/b">Abschnitt B</a></nav>';
-        $html = '<main>' . $toc . '<p>' . self::PROSE . '</p></main>';
+        $html = '<main>' . $toc . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></main>';
 
         self::assertStringContainsString('Abschnitt A', $this->trimmed($html));
     }
 
     public function testLeavesAnArticleWithoutNavigationLandmarksUnchanged(): void
     {
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
-        self::assertSame(2, substr_count($this->trimmed($html), self::PROSE));
+        self::assertSame(2, substr_count($this->trimmed($html), ProseParagraphs::SUBSTANTIAL));
     }
 
     public function testKeepsAPlainLinkListThatCarriesNoNavigationLandmark(): void
@@ -136,7 +134,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         // list like this is now removed — see
         // testRemovesALeadingMenuShapedListWithoutALandmark.
         $list = '<ul><li><a href="/a">A</a></li><li><a href="/b">B</a></li></ul>';
-        $html = '<div>' . $list . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div>' . $list . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringContainsString('href="/a"', $this->trimmed($html));
     }
@@ -150,12 +148,12 @@ final class NavigationChromeTrimmerTest extends TestCase
             . '<li><a href="https://d.test/magazine">Magazine</a></li>'
             . '<li><a href="https://d.test/online">Online</a></li>'
             . '<li><a href="https://d.test/store">Store</a></li></ul>';
-        $html = '<div>' . $menu . '<div><p>' . self::PROSE . '</p></div></div>';
+        $html = '<div>' . $menu . '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div></div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('side-nav', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testRemovesALeadingMenuListOfExactlyThreeLinks(): void
@@ -166,19 +164,19 @@ final class NavigationChromeTrimmerTest extends TestCase
         $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
             . '<li><a href="https://d.test/b">B</a></li>'
             . '<li><a href="https://d.test/c">C</a></li></ul>';
-        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('href="https://d.test/a"', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testKeepsALeadingListWithFewerThanThreeLinks(): void
     {
         $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
             . '<li><a href="https://d.test/b">B</a></li></ul>';
-        $html = '<div>' . $menu . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
     }
@@ -188,7 +186,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         // Every item is an in-page (#) link — the article's own affordance.
         $toc = '<ul><li><a href="#one">One</a></li><li><a href="#two">Two</a></li>'
             . '<li><a href="#three">Three</a></li><li><a href="#four">Four</a></li></ul>';
-        $html = '<div>' . $toc . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div>' . $toc . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringContainsString('#one', $this->trimmed($html));
     }
@@ -199,7 +197,7 @@ final class NavigationChromeTrimmerTest extends TestCase
         $menu = '<ul><li><a href="https://d.test/a">A</a></li>'
             . '<li><a href="https://d.test/b">B</a></li><li><a href="https://d.test/c">C</a></li>'
             . '<li><a href="https://d.test/d">D</a></li></ul>';
-        $html = '<div><p>' . self::PROSE . '</p>' . $menu . '</div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>' . $menu . '</div>';
 
         self::assertStringContainsString('href="https://d.test/a"', $this->trimmed($html));
     }
@@ -234,7 +232,8 @@ final class NavigationChromeTrimmerTest extends TestCase
         // instead, wrongly treating the list between them as a leading menu.
         $paragraphAtThreshold = str_repeat('x', 120);
         $menu = $this->fourLinkMenu();
-        $html = '<div><p>' . $paragraphAtThreshold . '</p>' . $menu . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . $paragraphAtThreshold . '</p>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p></div>';
 
         self::assertStringContainsString('d.test/a', $this->trimmed($html));
     }
@@ -248,7 +247,8 @@ final class NavigationChromeTrimmerTest extends TestCase
         // substantial and anchor there instead, keeping the menu.
         $shortMultibyteParagraph = str_repeat('ü', 65);
         $menu = $this->fourLinkMenu();
-        $html = '<div><p>' . $shortMultibyteParagraph . '</p>' . $menu . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . $shortMultibyteParagraph . '</p>' . $menu . '<p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p></div>';
 
         self::assertStringNotContainsString('d.test/a', $this->trimmed($html));
     }
@@ -335,8 +335,7 @@ final class NavigationChromeTrimmerTest extends TestCase
      */
     private function trimmed(string $bodyHtml): string
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        self::assertNotNull($document);
+        $document = $this->document($bodyHtml);
 
         $this->trimmer->cleanIn(BodyCleaningPasses::over($document));
 

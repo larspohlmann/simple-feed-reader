@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow\Model;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Slideshow\Model\ContainerSignatureModel;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ContainerSignatureModelTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testClassStringProducesASignature(): void
     {
         self::assertNotNull(ContainerSignatureModel::fromClassAttribute('carousel gallery 0'));
@@ -74,8 +76,7 @@ final class ContainerSignatureModelTest extends TestCase
 
     private function element(string $markup): \Dom\Element
     {
-        $document = HtmlDocumentParser::parseOrNull("<div>{$markup}</div>");
-        self::assertNotNull($document);
+        $document = $this->document("<div>{$markup}</div>");
 
         $element = $document->querySelector('div > *') ?? $document->querySelector('div');
         self::assertNotNull($element);

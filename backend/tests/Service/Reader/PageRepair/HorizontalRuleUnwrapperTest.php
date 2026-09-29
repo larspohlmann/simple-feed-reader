@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\HorizontalRuleUnwrapper;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class HorizontalRuleUnwrapperTest extends TestCase
 {
+    use ParsesHtml;
+
     private HorizontalRuleUnwrapper $unwrapper;
 
     protected function setUp(): void
@@ -55,9 +57,8 @@ final class HorizontalRuleUnwrapperTest extends TestCase
 
     private function repaired(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
         $this->unwrapper->repairIn($document);
 

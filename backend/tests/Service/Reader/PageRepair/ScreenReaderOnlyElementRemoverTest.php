@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Tests\Service\Reader\PageRepair;
 
 use App\Service\Reader\PageRepair\ScreenReaderOnlyElementRemover;
-use Dom\HTMLDocument;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ScreenReaderOnlyElementRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private ScreenReaderOnlyElementRemover $remover;
 
     protected function setUp(): void
@@ -34,9 +36,8 @@ final class ScreenReaderOnlyElementRemoverTest extends TestCase
 
     private function repaired(string $bodyHtml): string
     {
-        $document = HTMLDocument::createFromString(
-            '<html lang="en"><body>' . $bodyHtml . '</body></html>',
-            LIBXML_NOERROR,
+        $document = $this->document(
+            '<html lang="en"><body>' . $bodyHtml . '</body></html>'
         );
         $this->remover->repairIn($document);
 

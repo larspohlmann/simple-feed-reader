@@ -4,18 +4,19 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class MediaOnlyLedeTest extends TestCase
 {
+    use ParsesHtml;
+
     private function restore(string $body, ?string $excerpt): string
     {
-        $document = HtmlDocumentParser::parseOrNull($body);
-        self::assertNotNull($document);
+        $document = $this->document($body);
         (new MediaOnlyLede())->cleanIn(new BodyCleaningPass($document, BodyCleaningInputs::withExcerpt($excerpt)));
 
         return $document->saveHtml();

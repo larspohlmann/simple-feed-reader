@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Tests\Support\BodyCleaningInputs;
 use App\Tests\Support\LeadingEngagementCleaners;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementCleanerTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string PROSE =
         'Hamburg/Norderstedt - Ein Auto floh vor der Polizei und kollidierte mit einem Radfahrer. '
         . 'Die Rettungskräfte brachten den schwer verletzten Mann in ein Krankenhaus. '
@@ -400,8 +402,7 @@ final class LeadingEngagementCleanerTest extends TestCase
 
     private function clean(string $html, ?string $entryAuthor): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         $this->cleaner->cleanIn(new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)));
 
@@ -410,10 +411,7 @@ final class LeadingEngagementCleanerTest extends TestCase
 
     private function documentHtml(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
-
-        return $document->saveHtml();
+        return $this->document($html)->saveHtml();
     }
 
     private function entry494422(): string

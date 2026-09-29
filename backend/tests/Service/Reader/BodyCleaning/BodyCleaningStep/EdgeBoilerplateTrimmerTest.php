@@ -4,19 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
 use App\Service\Reader\BoilerplateVerdict;
 use App\Service\Reader\LinkListDetector;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class EdgeBoilerplateTrimmerTest extends TestCase
 {
-    private const string PROSE =
-        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
-        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
-        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
+    use ParsesHtml;
 
     private const string LONG_PROSE =
         'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
@@ -49,7 +47,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // middle, not an edge, so it is never eligible for removal.
         $middle = '<div class="related"><h3>Related posts</h3>'
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p>' . $middle . '<p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>' . $middle . '<p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
@@ -62,13 +61,14 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // trailing edge.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>';
 
         $result = $this->trimmed($html);
 
         self::assertStringNotContainsString('jp-relatedposts', $result);
-        self::assertStringContainsString(self::PROSE, $result);
+        self::assertStringContainsString(ProseParagraphs::SUBSTANTIAL, $result);
     }
 
     public function testRemovesATrailingNewsletterFormWithFingerprintAndForm(): void
@@ -77,7 +77,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // stays non-substantial and lands in the trailing edge alongside three
         // substantial paragraphs.
         $form = '<div class="newsletter"><form><input type="email"><button>Sign up</button></form></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $form . '</div>';
 
         self::assertStringNotContainsString('newsletter', $this->trimmed($html));
@@ -90,8 +91,9 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // substantial paragraph, so it is in the leading edge.
         $prompt = '<div class="comment-respond"><h3>Schreibe einen Kommentar</h3>'
             . '<p>Deine Meinung.</p></div>';
-        $html = '<div>' . $prompt . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>'
-            . self::PROSE . '</p></div>';
+        $html = '<div>' . $prompt . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringNotContainsString('comment-respond', $this->trimmed($html));
     }
@@ -103,7 +105,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // genuinely sits in the trailing edge, right after the last of three
         // leading substantial paragraphs.
         $block = '<div class="related"><p>Kurzer Hinweis.</p></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -116,7 +119,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // carries no fingerprint, link list or form is kept, even though it
         // genuinely sits in the trailing edge.
         $note = '<p>Read more about our work in the archive.</p>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $note . '</div>';
 
         self::assertStringContainsString('Read more', $this->trimmed($html));
@@ -130,7 +134,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // when it sits in a real trailing edge, right after three leading
         // substantial paragraphs.
         $block = '<div><h3>Related posts</h3><p>x</p></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('Related posts', $this->trimmed($html));
@@ -144,7 +149,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // trimmer descends into it and reaches the trailing grid.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>' . "   \n  ";
 
         self::assertStringNotContainsString('jp-relatedposts', $this->trimmed($html));
@@ -157,7 +163,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // so the trimmer descends into it and reaches the trailing grid (#779).
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $html = '<div><div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div><!--/esi/footer--><!--/esi/player--></div>';
 
         self::assertStringNotContainsString('jp-relatedposts', $this->trimmed($html));
@@ -170,7 +177,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // enough, is the anchor: no edge, the grid inside survives.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $html = '<div><div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>Ein loser Satz neben dem Container.</div>';
 
         self::assertStringContainsString('jp-relatedposts', $this->trimmed($html));
@@ -188,7 +196,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // testRemovesATrailingRelatedGridWithFingerprintAndLinkShape.
         $grid = '<div class="jp-relatedposts"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a><a href="/d">D</a></div>';
-        $html = '<span><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<span><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</span>';
 
         self::assertStringContainsString('jp-relatedposts', $this->trimmed($html));
@@ -201,8 +210,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // carry two structural signals (fingerprint + email input) as well as
         // enough prose to count as substantial — is the boundary anchor, not
         // an edge candidate, and must survive untouched.
-        $comboAnchor = '<div class="related"><input type="email">' . self::PROSE . self::PROSE . '</div>';
-        $html = '<div><p>Short lead.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p></div>';
+        $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
+            . ProseParagraphs::SUBSTANTIAL . '</div>';
+        $html = '<div><p>Short lead.</p>' . $comboAnchor . '<p>Filler.</p><p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
@@ -217,8 +228,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
         $html = '<div>'
-            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
-            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<p>Filler.</p>' . $boilerplate . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -232,8 +245,9 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // edge is [0] only; using the second substantial index instead of
         // the first would widen it to [0,1] and wrongly catch the combo
         // block at index 1.
-        $comboAnchor = '<div class="related"><input type="email">' . self::PROSE . self::PROSE . '</div>';
-        $html = '<div><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p><p>' . self::PROSE . '</p>'
+        $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
+            . ProseParagraphs::SUBSTANTIAL . '</div>';
+        $html = '<div><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<p>Filler.</p><p>Filler.</p><p>Filler.</p><p>Filler.</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -248,11 +262,13 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // trailing edge must start at 7 — the combo block at 6 is the
         // boundary anchor itself and must never be pulled into the trailing
         // edge alongside it.
-        $comboAnchor = '<div class="related"><input type="email">' . self::PROSE
-            . self::PROSE . '</div>';
+        $comboAnchor = '<div class="related"><input type="email">' . ProseParagraphs::SUBSTANTIAL
+            . ProseParagraphs::SUBSTANTIAL . '</div>';
         $html = '<div>'
-            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
-            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $comboAnchor . '<p>Filler.</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -272,9 +288,9 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // 7 and wrongly pull the boilerplate into a trailing edge.
         $boilerplate = '<div class="related"><a href="/a">A</a><a href="/b">B</a>'
             . '<a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p><p>F.</p>'
-            . $boilerplate . '<p>' . self::PROSE . '</p></div>';
+            . $boilerplate . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
@@ -288,7 +304,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // the fingerprint + link-list signals it carries.
         $padded = '<div class="related">' . str_repeat(' ', 250)
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $padded . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -304,7 +321,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // must stay removable.
         $target = '<div class="related">' . str_repeat('a', 185) . str_repeat('ä', 10)
             . '<input type="email"></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $target . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -319,7 +337,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // so if the threshold were exclusive it would wrongly fall into the
         // leading edge and get removed.
         $target = '<div class="related">' . str_repeat('x', 200) . '<input type="email"></div>';
-        $html = '<div>' . $target . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>Filler.</p></div>';
+        $html = '<div>' . $target . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p><p>Filler.</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
     }
@@ -336,7 +355,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // recompute the trailing edge from a stale, too-early anchor and
         // wrongly pull the combo block at index 6 into it.
         $comboAnchor = '<div class="related"><input type="email">' . str_repeat('x', 205) . '</div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>Filler.</p><p>Filler.</p><p>Filler.</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>Filler.</p><p>Filler.</p><p>Filler.</p>'
             . '<p>Filler.</p><p>Filler.</p>' . $comboAnchor . '<p>Filler.</p></div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -348,7 +367,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // MIN_LINKS_FOR_LIST boundary. Combined with the fingerprint, that
         // is two structural signals, so this trailing block must be removed.
         $grid = '<div class="related"><a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -361,7 +381,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // ratio is even considered — with only the fingerprint left as a
         // signal, this trailing block stays.
         $pair = '<div class="related"><a href="/a">A</a><a href="/b">B</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $pair . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -377,7 +398,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // must be removed.
         $grid = '<div class="related">' . str_repeat(' ', 300)
             . '<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -391,7 +413,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // ratio"). Combined with the fingerprint, that is two signals, so
         // this trailing block must be removed.
         $grid = '<div class="related">ää<a href="/a">A</a><a href="/b">B</a><a href="/c">C</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $grid . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -406,7 +429,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // byte-counting numerator would read 6 (each "ä" is 2 bytes) and
         // wrongly cross the ratio threshold (6/8 = 0.75).
         $block = '<div class="related">Hello<a href="/a">ä</a><a href="/b">ä</a><a href="/c">ä</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -421,7 +445,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // block stays. Without per-link collapsing, the padding would inflate
         // the numerator to 9 and wrongly push the ratio to ≈0.82.
         $block = '<div class="related">Hello<a href="/a"> A </a><a href="/b"> B </a><a href="/c"> C </a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -435,9 +460,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // this trailing block stays. Multiplying the two lengths instead of
         // dividing them would yield a huge number that clears any ratio
         // threshold and wrongly remove it.
-        $block = '<div class="related">' . self::PROSE
+        $block = '<div class="related">' . ProseParagraphs::SUBSTANTIAL
             . '<a href="/a">a</a><a href="/b">b</a><a href="/c">c</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -450,7 +476,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // with the fingerprint, that is two signals, so this trailing block
         // must be removed.
         $block = '<div class="related"><form><input type="text"></form></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -462,7 +489,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // Only an email-typed input should count as a signal here — with
         // just the fingerprint left, this trailing block stays.
         $block = '<div class="related"><input type="text"></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -478,8 +506,9 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // "comment-respond" fingerprint) plus this corroborating heading is
         // enough to remove this leading block.
         $prompt = '<div class="comment-respond"><h3>Ähnliche Beiträge</h3><p>Text.</p></div>';
-        $html = '<div>' . $prompt . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>'
-            . self::PROSE . '</p></div>';
+        $html = '<div>' . $prompt . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL
+            . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
         self::assertStringNotContainsString('comment-respond', $this->trimmed($html));
     }
@@ -491,7 +520,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // without a real corroborating phrase is not enough under the
         // conservative rule, so this trailing block stays.
         $block = '<div class="related"><h3>Our Team History</h3><p>Text.</p></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -502,10 +532,10 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // A realistic multi-paragraph article with no boilerplate anywhere: no
         // block is ever removed, so every paragraph of real prose survives the
         // trim untouched.
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
-            . '<p>' . self::PROSE . '</p><p>' . self::PROSE . '</p></div>';
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p>'
+            . '<p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p></div>';
 
-        self::assertSame(4, substr_count($this->trimmed($html), self::PROSE));
+        self::assertSame(4, substr_count($this->trimmed($html), ProseParagraphs::SUBSTANTIAL));
     }
 
     public function testRemovesAStandaloneLeadingAdvertisementLabel(): void
@@ -557,7 +587,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // section title in a <span> so no heading phrase can corroborate, but
         // three links that each wrap a picture and a title. Link-dominated
         // text plus picture cards are two structural signals (#779).
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
             . self::teaserCard('/b', 'Zweiter Beitrag') . self::teaserCard('/c', 'Dritter Beitrag')
             . '</section></div>';
@@ -569,7 +600,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // Three text-only links, no fingerprint, no phrase: the link-list shape
         // is the only signal, so a closing list of sources stays.
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<ul class="sources"><li><a href="/a">Alpha</a></li><li><a href="/b">Beta</a></li>'
             . '<li><a href="/c">Gamma</a></li></ul></div>';
 
@@ -580,7 +612,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
     {
         // Three links keep the link-list signal, but only two of them wrap a
         // picture — one short of a card list, so the block stays.
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
             . self::teaserCard('/b', 'Zweiter Beitrag') . '<a href="/c">Dritter Beitrag</a></section></div>';
 
@@ -592,7 +625,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // Carousels end in a text-only "show all" link. It is not a card, but
         // it must not count against the three cards either: the block is still
         // a card list and goes.
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<section class="swiper"><span>Mehr dazu</span>' . self::teaserCard('/a', 'Erster Beitrag')
             . self::teaserCard('/b', 'Zweiter Beitrag') . self::teaserCard('/c', 'Dritter Beitrag')
             . '<a href="/alle">Alle anzeigen</a></section></div>';
@@ -605,7 +639,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // A closing gallery: three linked pictures with a caption of prose
         // outside the links. The cards are one signal, but the text is not
         // link-dominated, so the gallery stays.
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<div class="gallery"><a href="/a"><img src="/a.jpg" alt=""></a>'
             . '<a href="/b"><img src="/b.jpg" alt=""></a><a href="/c"><img src="/c.jpg" alt=""></a>'
             . '<p>Drei Aufnahmen vom Abend, fotografiert von der Autorin.</p></div></div>';
@@ -623,7 +658,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         foreach (['a', 'b', 'c', 'd', 'e', 'f', 'g'] as $slug) {
             $cards .= self::teaserCard('/' . $slug, 'Ein Teaser mit einer langen Überschrift, wie Verlage sie setzen');
         }
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . '<section class="swiper"><span>Mehr dazu</span>' . $cards . '</section></div>';
 
         self::assertStringNotContainsString('swiper', $this->trimmed($html));
@@ -638,7 +674,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         $indent = "\n          ";
         $block = '<div class="related">' . $indent . '<a href="/a">Alpha</a>' . $indent
             . '<a href="/b">Beta</a>' . $indent . '<a href="/c">Gamma</a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -652,7 +689,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // this trailing block must be removed.
         $target = '<div class="related"><input type="email">' . str_repeat('x', 100)
             . str_repeat("\n", 60) . str_repeat('x', 90) . '</div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $target . '</div>';
 
         self::assertStringNotContainsString('class="related"', $this->trimmed($html));
@@ -664,7 +702,8 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
         // That is not link domination — with only the fingerprint left, this
         // trailing block stays.
         $block = '<div class="related"><a href="/a"></a><a href="/b"></a><a href="/c"></a></div>';
-        $html = '<div><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p><p>' . self::PROSE . '</p>'
+        $html = '<div><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>' . ProseParagraphs::SUBSTANTIAL . '</p><p>'
+            . ProseParagraphs::SUBSTANTIAL . '</p>'
             . $block . '</div>';
 
         self::assertStringContainsString('class="related"', $this->trimmed($html));
@@ -677,8 +716,7 @@ final class EdgeBoilerplateTrimmerTest extends TestCase
 
     private function trimmed(string $bodyHtml): string
     {
-        $document = HtmlDocumentParser::parseOrNull($bodyHtml);
-        self::assertNotNull($document);
+        $document = $this->document($bodyHtml);
 
         $this->trimmer->cleanIn(BodyCleaningPasses::over($document));
 

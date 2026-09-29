@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Slideshow\SlideshowRecognizer;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\PageTextBlocksModel;
 use App\Service\Reader\Slideshow\Model\SlideshowModel;
 use App\Service\Reader\Slideshow\SlideCaptionResolver;
 use App\Service\Reader\Slideshow\SlideImageResolver;
 use App\Service\Reader\Slideshow\SlideshowRecognizer\MarkupCarouselRecognizer;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class MarkupCarouselRecognizerTest extends TestCase
 {
+    use ParsesHtml;
+
     /** @return list<SlideshowModel> */
     private function recognize(string $html): array
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
 
         return (new MarkupCarouselRecognizer(new SlideImageResolver(), new SlideCaptionResolver()))
             ->recognize($document, PageTextBlocksModel::fromDocument($document));

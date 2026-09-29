@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\PageRepair;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\PageRepair\ShareIntentLinkRemover;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class ShareIntentLinkRemoverTest extends TestCase
 {
+    use ParsesHtml;
+
     private ShareIntentLinkRemover $remover;
 
     protected function setUp(): void
@@ -235,8 +237,7 @@ final class ShareIntentLinkRemoverTest extends TestCase
 
     private function cleaned(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $this->remover->repairIn($document);
 
         return $document->saveHtml();

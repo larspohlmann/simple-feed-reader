@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\PageMediaPlacement;
 use App\Service\Reader\BodyCleaning\Model\BodyCleaningInputModel;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
@@ -16,14 +15,13 @@ use App\Service\Reader\Media\PageMediaInserter;
 use App\Service\Reader\Model\LeadImageCandidateModel;
 use App\Service\Reader\ReaderLeadImage;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
+use App\Tests\Support\ProseParagraphs;
 use PHPUnit\Framework\TestCase;
 
 final class PageMediaPlacementTest extends TestCase
 {
-    private const string PROSE =
-        'Ein ausreichend langer Absatz mit echtem Fliesstext, der die Schwelle '
-        . 'fuer einen substantiellen Absatz sicher ueberschreitet und daher als '
-        . 'echter Artikelinhalt zaehlt und nicht als Randblock behandelt wird.';
+    use ParsesHtml;
 
     private PageMediaPlacement $placement;
 
@@ -74,7 +72,7 @@ final class PageMediaPlacementTest extends TestCase
             'Watch',
         );
         $pass = new BodyCleaningPass(
-            HtmlDocumentParser::parse('<p>' . self::PROSE . '</p>'),
+            $this->document('<p>' . ProseParagraphs::SUBSTANTIAL . '</p>'),
             BodyCleaningInputs::withMedia(new ArticleMediaModel([$embed])),
         );
         $pass->recordEmbedsRecoveredInBody();
@@ -91,7 +89,7 @@ final class PageMediaPlacementTest extends TestCase
 
     private function placed(BodyCleaningInputModel $input): string
     {
-        $pass = new BodyCleaningPass(HtmlDocumentParser::parse('<p>' . self::PROSE . '</p>'), $input);
+        $pass = new BodyCleaningPass($this->document('<p>' . ProseParagraphs::SUBSTANTIAL . '</p>'), $input);
         $this->placement->cleanIn($pass);
 
         return $pass->document->saveHtml();

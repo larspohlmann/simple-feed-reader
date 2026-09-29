@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Model;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Model\LeadFigureCaptionsModel;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class LeadFigureCaptionsModelTest extends TestCase
 {
+    use ParsesHtml;
+
     private function captionsOf(string $html): LeadFigureCaptionsModel
     {
-        return LeadFigureCaptionsModel::fromDocument(HtmlDocumentParser::parse($html));
+        return LeadFigureCaptionsModel::fromDocument($this->document($html));
     }
 
     public function testReturnsTheCaptionOfTheMatchingFigure(): void

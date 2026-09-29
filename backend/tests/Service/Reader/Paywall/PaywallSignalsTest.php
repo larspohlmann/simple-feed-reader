@@ -4,18 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\Paywall;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\Media\Model\RawPageModel;
 use App\Service\Reader\Media\PageFurniture;
 use App\Service\Reader\Paywall\MembershipCheckout;
 use App\Service\Reader\Paywall\OutsideFurniture;
 use App\Service\Reader\Paywall\PaywallBlocks;
 use App\Service\Reader\Paywall\PaywallSignals;
+use App\Tests\Support\ParsesHtml;
 use Dom\HTMLDocument;
 use PHPUnit\Framework\TestCase;
 
 final class PaywallSignalsTest extends TestCase
 {
+    use ParsesHtml;
+
     private const string BODY = "<article>\n<h1>Headline</h1>\n"
         . '<p>The preview paragraph carries enough prose to stand in for the article body.</p>' . "\n</article>";
     private const string CTA = '<div class="paywall-cta">'
@@ -68,7 +70,7 @@ final class PaywallSignalsTest extends TestCase
 
     private function isPreview(string $html): bool
     {
-        return self::paywallSignals()->isPreview($this->rawPage($html), HtmlDocumentParser::parse($html));
+        return self::paywallSignals()->isPreview($this->rawPage($html), $this->document($html));
     }
 
     private function rawPage(string $html): HTMLDocument

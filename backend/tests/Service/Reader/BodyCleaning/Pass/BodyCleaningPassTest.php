@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\Pass;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\Media\Model\ArticleMediaModel;
 use App\Service\Reader\Media\Model\MediaCandidateModel;
 use App\Service\Reader\Media\Model\MediaKind;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class BodyCleaningPassTest extends TestCase
 {
+    use ParsesHtml;
+
     public function testTheDiscoveredMediaAreTheInputMediaWhileTheBodyRecoveredNoEmbed(): void
     {
         $media = $this->embedAndAudio();
 
-        $pass = new BodyCleaningPass(HtmlDocumentParser::parse('<p>Body.</p>'), BodyCleaningInputs::withMedia($media));
+        $pass = new BodyCleaningPass($this->document('<p>Body.</p>'), BodyCleaningInputs::withMedia($media));
 
         self::assertSame($media, $pass->discoveredMedia());
     }
@@ -26,7 +28,7 @@ final class BodyCleaningPassTest extends TestCase
     public function testARecoveredEmbedDropsTheDiscoveredEmbedsButKeepsTheAudio(): void
     {
         $pass = new BodyCleaningPass(
-            HtmlDocumentParser::parse('<p>Body.</p>'),
+            $this->document('<p>Body.</p>'),
             BodyCleaningInputs::withMedia($this->embedAndAudio()),
         );
 

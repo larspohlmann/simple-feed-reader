@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Service\Reader\BodyCleaning\BodyCleaningStep;
 
-use App\Service\Html\Support\HtmlDocumentParser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\RecipeFactsCleaner;
 use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
 use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Sanitize\EntrySanitizer;
 use App\Service\Sanitize\TrailingBlankRemover;
 use App\Tests\Support\BodyCleaningPasses;
+use App\Tests\Support\ParsesHtml;
 use PHPUnit\Framework\TestCase;
 
 final class RecipeFactsCleanerTest extends TestCase
 {
+    use ParsesHtml;
+
     private function clean(string $html): string
     {
-        $document = HtmlDocumentParser::parseOrNull($html);
-        self::assertNotNull($document);
+        $document = $this->document($html);
         $cleaner = new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup());
         $cleaner->cleanIn(BodyCleaningPasses::over($document));
 
