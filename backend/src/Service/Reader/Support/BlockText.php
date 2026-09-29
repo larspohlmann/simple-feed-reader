@@ -8,31 +8,18 @@ use App\Service\Text\Support\Whitespace;
 use Dom\Element;
 
 /**
- * The two text measurements the edge trimmer reads off a block, both taken on
+ * The two text measurements read off a block, both taken on
  * whitespace-collapsed text: indentation between list items is markup, not
  * content, and left in it dilutes a teaser list's link share below the bar (#779).
  */
 final class BlockText
 {
-    /** A block whose link text is at least this share of its text is a link list. */
-    private const float LINK_TEXT_RATIO = 0.6;
-
     public static function collapsed(Element $element): string
     {
         return Whitespace::collapse($element->textContent);
     }
 
-    public static function isLinkDominated(Element $block): bool
-    {
-        $blockTextLength = mb_strlen(self::collapsed($block));
-        if ($blockTextLength === 0) {
-            return false;
-        }
-
-        return self::linkTextLength($block) / $blockTextLength >= self::LINK_TEXT_RATIO;
-    }
-
-    /** Collapsed text length of every descendant link, the share isLinkDominated weighs. */
+    /** Collapsed text length of every descendant link, the share LinkListDetector weighs. */
     public static function linkTextLength(Element $element): int
     {
         $length = 0;

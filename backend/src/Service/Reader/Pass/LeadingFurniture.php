@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service\Reader\Pass;
 
 use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\LeadingBlockJudge;
 use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Reader\Support\BlockText;
@@ -17,8 +18,11 @@ use App\Service\Reader\Support\LeadingEngagementBlocks;
  */
 final readonly class LeadingFurniture
 {
-    public function __construct(private ?string $entryAuthor, private DateLineRecognizer $dateLines)
-    {
+    public function __construct(
+        private ?string $entryAuthor,
+        private DateLineRecognizer $dateLines,
+        private LeadingBlockJudge $judge,
+    ) {
     }
 
     /**
@@ -45,7 +49,7 @@ final readonly class LeadingFurniture
 
     public function matches(LeadingBlockModel $block): bool
     {
-        if (LeadingEngagementBlocks::isProtectedContent($block->element)) {
+        if ($this->judge->isProtectedContent($block->element)) {
             return false;
         }
 
@@ -80,7 +84,7 @@ final readonly class LeadingFurniture
     {
         $count = count($blocks);
         for ($index = $from; $index < $count; $index++) {
-            if (LeadingEngagementBlocks::isProse($blocks[$index])) {
+            if ($this->judge->isProse($blocks[$index])) {
                 return $index;
             }
         }

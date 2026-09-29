@@ -6,6 +6,7 @@ namespace App\Service\Reader\BodyCleaning\BodyCleaningStep;
 
 use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Service\Reader\DateLineRecognizer;
+use App\Service\Reader\LeadingBlockJudge;
 use App\Service\Reader\LeadingEngagementRules;
 use App\Service\Reader\Model\LeadingBlockModel;
 use App\Service\Reader\Pass\LeadingFurniture;
@@ -19,8 +20,10 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
 {
     private const array MEDIA_TAGS = ['img', 'audio', 'video', 'iframe', 'svg'];
 
-    public function __construct(private DateLineRecognizer $dateLines)
-    {
+    public function __construct(
+        private DateLineRecognizer $dateLines,
+        private LeadingBlockJudge $judge,
+    ) {
     }
 
     public function cleanIn(BodyCleaningPass $pass): void
@@ -34,7 +37,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
             return;
         }
 
-        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines);
+        $furniture = new LeadingFurniture($entryAuthor, $this->dateLines, $this->judge);
         $root = $this->contentRoot($document->body);
         $blocks = LeadingEngagementBlocks::in($root);
         $anchor = $furniture->bodyStart($blocks);
@@ -111,8 +114,8 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
         foreach (iterator_to_array($root->getElementsByTagName('img')) as $image) {
             if (
                 $this->precedes($image, $anchor)
-                && LeadingEngagementBlocks::isDecorativeIcon($image)
-                && !LeadingEngagementBlocks::isProtectedContent($image)
+                && $this->judge->isDecorativeIcon($image)
+                && !$this->judge->isProtectedContent($image)
             ) {
                 $image->remove();
                 $removed = true;
@@ -180,7 +183,7 @@ final readonly class LeadingEngagementCleaner implements BodyCleaningStepInterfa
     private function isDuplicateByline(LeadingBlockModel $block, ?string $entryAuthor): bool
     {
         return LeadingEngagementRules::hasAuthor($entryAuthor)
-            && !LeadingEngagementBlocks::isProse($block)
+            && !$this->judge->isProse($block)
             && LeadingEngagementRules::isByline($block->text);
     }
 

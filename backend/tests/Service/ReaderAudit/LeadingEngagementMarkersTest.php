@@ -5,14 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Service\ReaderAudit;
 
 use App\Service\Html\Support\HtmlDocumentParser;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
-use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
-use App\Service\Reader\DateLineRecognizer;
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
 use App\Service\ReaderAudit\LeadingEngagementMarkers;
 use App\Service\ReaderAudit\Model\CleanupMarkerModel;
 use App\Service\ReaderAudit\Model\ExtractedBodyModel;
+use App\Service\Reader\BodyCleaning\Pass\BodyCleaningPass;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\LeadingEngagementCleaners;
 use PHPUnit\Framework\TestCase;
 
 final class LeadingEngagementMarkersTest extends TestCase
@@ -105,7 +103,7 @@ final class LeadingEngagementMarkersTest extends TestCase
     {
         $document = HtmlDocumentParser::parseOrNull($html);
         self::assertNotNull($document);
-        (new LeadingEngagementCleaner(new DateLineRecognizer(new StrictDateFormatterFactory())))->cleanIn(
+        LeadingEngagementCleaners::cleaner()->cleanIn(
             new BodyCleaningPass($document, BodyCleaningInputs::withEntryAuthor($entryAuthor)),
         );
 

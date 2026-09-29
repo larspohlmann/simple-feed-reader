@@ -11,7 +11,6 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\DuplicateBlockCollapser;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\EdgeBoilerplateTrimmer;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\FeedDimensionStamper;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\InBodyEmbedRewriter;
-use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingEngagementCleaner;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\LeadingTitleRemover;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\MediaOnlyLede;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\NavigationChromeTrimmer;
@@ -22,8 +21,7 @@ use App\Service\Reader\BodyCleaning\BodyCleaningStep\SlideshowInserter;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\SubstackPosterLink;
 use App\Service\Reader\BodyCleaning\BodyCleaningStep\TeaserPlayerInserter;
 use App\Service\Reader\BoilerplateVerdict;
-use App\Service\Reader\DateLineRecognizer;
-use App\Service\Reader\Factory\StrictDateFormatterFactory;
+use App\Service\Reader\LinkListDetector;
 use App\Service\Reader\Media\EmbedProvider\SpotifyEmbedProvider;
 use App\Service\Reader\Media\EmbedProvider\YouTubeEmbedProvider;
 use App\Service\Reader\Media\EmbedProviders;
@@ -42,6 +40,7 @@ use App\Service\Reader\RecipeFacts\RecipeFactsMarkup;
 use App\Service\Reader\RecipeFacts\RecipeFactsRecognizer;
 use App\Service\Reader\Slideshow\SlideshowMarkup;
 use App\Tests\Support\BodyCleaningInputs;
+use App\Tests\Support\LeadingEngagementCleaners;
 use PHPUnit\Framework\TestCase;
 
 final class ReaderBodyCleanerTest extends TestCase
@@ -70,16 +69,16 @@ final class ReaderBodyCleanerTest extends TestCase
             new SubstackPosterLink(),
             new PlayerChromeCleaner(new NarrationSignals()),
             new NavigationChromeTrimmer(),
-            new LeadingEngagementCleaner(new DateLineRecognizer(new StrictDateFormatterFactory())),
+            LeadingEngagementCleaners::cleaner(),
             new LeadingTitleRemover(),
-            new EdgeBoilerplateTrimmer(new BoilerplateVerdict()),
+            new EdgeBoilerplateTrimmer(new BoilerplateVerdict(new LinkListDetector()), new LinkListDetector()),
             new SlideshowInserter(new SlideshowMarkup()),
             new RecipeFactsCleaner(new RecipeFactsRecognizer(), new RecipeFactsMarkup()),
             new DuplicateBlockCollapser($embedProviders),
             new PageMediaPlacement(new PageMediaInserter($markup), new ReaderLeadImage()),
             new TeaserPlayerInserter(new TeaserPlayerMarkup()),
             new MediaOnlyLede(),
-            new AuthorBioSeparator(new AuthorProfileLink()),
+            new AuthorBioSeparator(new AuthorProfileLink(), new LinkListDetector()),
             new FeedDimensionStamper(),
         ];
     }
