@@ -18,12 +18,7 @@ use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 use Symfony\Component\Clock\ClockInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
-/**
- * The GET/PUT pair in front of Task 2's resolver and writer. No AI provider
- * row is seeded anywhere here, so the context window resolves to the
- * fallback unless a case sets it itself — that is what proves
- * `contextWindowSource`.
- */
+/** No AI provider row is seeded unless a case adds one, so the context window resolves to the fallback. */
 final class RecommendationSettingsControllerTest extends WebTestCase
 {
     use ProvidesWorkerHeartbeats;
@@ -115,9 +110,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
         // The score range, not the picks limit: the contract shown to the
         // reader is what the model is asked to produce per candidate.
         self::assertStringContainsString('"score": <0-1000>', $payload['fixedPrompt']['outputContract']);
-        // Pins the card to the live batch prompt over the deleted
-        // rank-then-dedup one (#493 Task 13, Ruling F): the old contract's
-        // template carried a "reason" field the batch call never asks for.
+        // The batch call asks for a score only, never a reason.
         self::assertStringNotContainsString('"reason"', $payload['fixedPrompt']['outputContract']);
         self::assertSame(40, $payload['favoritesCap']);
         self::assertSame(40, $payload['keptCap']);
@@ -259,14 +252,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     }
 
     /**
-     * These three bounds are load-bearing rather than cosmetic: zero picks
-     * makes a run meaningless, a smaller candidate pool degrades
-     * recommendations silently, and a context window below 4096 breaks the
-     * downstream prompt-budgeting maths. The maxima and the other minima are
-     * UI ceilings with no failure mode and are deliberately not swept here.
-     * lookbackDays is the one field whose maximum is also swept: unlike the
-     * other maxima, 8 is a real ceiling, since a window nobody can reach past
-     * is the entire point of the setting.
+     * Only the bounds that break a run: zero picks, a smaller candidate pool, a context window below 4096. The other
+     * maxima are UI ceilings, except lookbackDays', where 8 is a real ceiling.
      *
      * @return iterable<string, array{string, int|null}>
      */
@@ -304,10 +291,7 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     }
 
     /**
-     * The floor and ceiling in {@see rejectedLoadBearingBounds()} are proven
-     * only from the outside: those cases show 0 and 8 are refused, but say
-     * nothing about whether 1 and 7 themselves — the values `Assert\Range`
-     * is actually supposed to let through — still are.
+     * The inside edges of rejectedLoadBearingBounds()' lookbackDays cases: Assert\Range must still let 1 and 7 through.
      *
      * @return iterable<string, array{int}>
      */
@@ -468,11 +452,8 @@ final class RecommendationSettingsControllerTest extends WebTestCase
     }
 
     /**
-     * `workerAlive` hides the "you still need a cron entry for scheduled
-     * auto-generation" hint, so it must mean a PERSISTENT worker. The
-     * on-demand drainer only advances runs that already exist — it never
-     * starts a due one — so an operator who opens Settings while a drain
-     * happens to run must still be told to set the cron up (#371 follow-up).
+     * `workerAlive` hides the cron-entry hint, so it means a persistent worker: a drainer never starts a due run,
+     * and an operator who opens Settings during a drain still needs the cron entry.
      */
     public function testALiveDrainerIsNotReportedAsAWorker(): void
     {
